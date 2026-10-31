@@ -18,7 +18,10 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import AlertContainer, { AlertContainerProps, Kind } from "./AlertContainer"
+import AlertContainer, {
+  type AlertContainerProps,
+  Kind,
+} from "./AlertContainer"
 
 const getProps = (
   propOverrides: Partial<AlertContainerProps> = {}

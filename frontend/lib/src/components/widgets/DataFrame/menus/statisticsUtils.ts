@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
+import { TimeUnit } from "apache-arrow"
 import { getLogger } from "loglevel"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   toSafeBoolean,
   toSafeDate,
   toSafeNumber,
 } from "~lib/components/widgets/DataFrame/columns/utils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import {
+  convertTimestampToSeconds,
+  getArrowTimeUnit,
+} from "~lib/dataframes/arrowFormatUtils"
+import { isDurationType } from "~lib/dataframes/arrowTypeUtils"
+import type { DataFrameCell, Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("DataFrameStatistics")
@@ -190,6 +198,31 @@ export function supportsStatistics(columnKind: string): boolean {
 }
 
 /**
+ * Convert a Quiver cell to the value used for statistics.
+ *
+ * Duration cells store Arrow ticks; NumberColumn displays seconds, so
+ * numeric statistics use the same conversion.
+ */
+function toStatisticsValue(
+  cell: Pick<DataFrameCell, "content" | "contentType" | "field">,
+  convertDurationToSeconds: boolean
+): unknown {
+  // Only numeric stats use the NumberColumn second-count. Other kinds
+  // (text/date/datetime on a timedelta) skip this conversion.
+  if (
+    convertDurationToSeconds &&
+    isDurationType(cell.contentType) &&
+    (typeof cell.content === "number" || typeof cell.content === "bigint")
+  ) {
+    return convertTimestampToSeconds(
+      cell.content,
+      getArrowTimeUnit(cell.field, TimeUnit.NANOSECOND)
+    )
+  }
+  return cell.content
+}
+
+/**
  * Extract column values from Quiver data.
  * Applies sampling for large datasets.
  * Returns null if extraction fails (e.g., malformed Arrow buffer).
@@ -199,7 +232,8 @@ export function supportsStatistics(columnKind: string): boolean {
  */
 function extractColumnValues(
   data: Quiver,
-  columnIndex: number
+  columnIndex: number,
+  convertDurationToSeconds = false
 ): { values: unknown[]; isSampled: boolean } | null {
   try {
     const { numDataRows } = data.dimensions
@@ -220,12 +254,12 @@ function extractColumnValues(
         i += step
       ) {
         const cell = data.getCell(i, columnIndex)
-        values.push(cell.content)
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     } else {
       for (let i = 0; i < numDataRows; i++) {
         const cell = data.getCell(i, columnIndex)
-        values.push(cell.content)
+        values.push(toStatisticsValue(cell, convertDurationToSeconds))
       }
     }
 
@@ -287,7 +321,7 @@ export function computeNumericStatistics(
   }
 
   // Sort for median and percentiles
-  const sorted = [...values].sort((a, b) => a - b)
+  const sorted = values.toSorted((a, b) => a - b)
 
   const sum = values.reduce((acc, v) => acc + v, 0)
   const mean = sum / count
@@ -388,7 +422,7 @@ export function computeTextStatistics(
       if (v === "") {
         empty++
       } else {
-        valueCounts.set(v, (valueCounts.get(v) || 0) + 1)
+        valueCounts.set(v, (valueCounts.get(v) ?? 0) + 1)
         lengths.push(v.length)
         count++
       }
@@ -398,7 +432,7 @@ export function computeTextStatistics(
       typeof v === "boolean"
     ) {
       const str = v.toString()
-      valueCounts.set(str, (valueCounts.get(str) || 0) + 1)
+      valueCounts.set(str, (valueCounts.get(str) ?? 0) + 1)
       lengths.push(str.length)
       count++
     }
@@ -408,7 +442,9 @@ export function computeTextStatistics(
   const unique = valueCounts.size
 
   // Sort by count to get top values
-  const sortedEntries = [...valueCounts.entries()].sort((a, b) => b[1] - a[1])
+  const sortedEntries = [...valueCounts.entries()].toSorted(
+    (a, b) => b[1] - a[1]
+  )
 
   const topValues: TopValue[] = sortedEntries
     .slice(0, TOP_VALUES_COUNT)
@@ -474,7 +510,7 @@ export function computeDateTimeStatistics(
     // toSafeDate handles Date objects, bigints, numbers, and strings. It returns
     // null/undefined for empty or unparseable values.
     const date = isNullOrUndefined(v) ? null : toSafeDate(v)
-    const timestamp = notNullOrUndefined(date) ? date.getTime() : NaN
+    const timestamp = notNullOrUndefined(date) ? date.getTime() : Number.NaN
     if (Number.isFinite(timestamp)) {
       timestamps.push(timestamp)
     } else {
@@ -505,7 +541,7 @@ export function computeDateTimeStatistics(
     }
   }
 
-  const sorted = [...timestamps].sort((a, b) => a - b)
+  const sorted = timestamps.toSorted((a, b) => a - b)
   // Compute the mean incrementally to avoid summing into values above
   // Number.MAX_SAFE_INTEGER. Millisecond timestamps (~1.7e12) summed over the
   // sample cap (10k) reach ~1.7e16, which would lose integer precision.
@@ -631,7 +667,22 @@ export function computeStatistics(
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
 
-  const result = extractColumnValues(data, columnIndex)
+  // Numeric stats for a timedelta column use seconds, matching NumberColumn.
+  // Text, date, and datetime columns on a timedelta have no stats view.
+  // Read column type metadata instead of a cell, so malformed cell data
+  // cannot throw here.
+  if (
+    statsType !== "numeric" &&
+    isDurationType(data.columnTypes[columnIndex])
+  ) {
+    return null
+  }
+
+  const result = extractColumnValues(
+    data,
+    columnIndex,
+    statsType === "numeric"
+  )
   // If extraction failed (malformed data), return null to show "No data" state
   if (!result) return null
 
@@ -683,8 +734,9 @@ export function formatDatetime(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  // Use provided timezone, or default to UTC for consistency
-  const tz = timezone || "UTC"
+  // Use the provided timezone, or UTC when it is missing or empty (Intl
+  // rejects an empty timeZone).
+  const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (isDateOnly) {
     return date.toLocaleDateString(undefined, {
       year: "numeric",
@@ -787,7 +839,9 @@ export function formatTooltipDate(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  const tz = timezone || "UTC"
+  // Use the provided timezone, or UTC when it is missing or empty (Intl
+  // rejects an empty timeZone).
+  const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (includeTime) {
     return date.toLocaleString(undefined, {
       month: "short",

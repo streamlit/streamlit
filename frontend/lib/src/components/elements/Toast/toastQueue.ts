@@ -16,10 +16,22 @@
 
 import { UNSTABLE_ToastQueue as ToastQueue } from "react-aria-components/Toast"
 
-/** Content for a standard ``st.toast``: a markdown body and optional icon. */
+/** Content for a standard `st.toast`: a markdown body and optional icon. */
 export interface StreamlitToastContent {
   body: string
   icon?: string
+  /**
+   * Stable identity of the toast within the element tree (its delta path). The
+   * `Toast` component sets it to reconcile new content with a visible toast at
+   * the same position:
+   * - Identical content keeps the toast, so an unconditionally re-emitted
+   *   toast does not stack up.
+   * - Changed content replaces the toast, so `msg.toast()` updates it.
+   *
+   * Optional because only that reconciliation uses it, not rendering an
+   * individual toast.
+   */
+  toastId?: string
 }
 
 export const toastQueue = new ToastQueue<StreamlitToastContent>({

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { type ReactElement, useContext, useMemo } from "react"
 
 import {
   createSidebarTheme,
@@ -22,20 +22,23 @@ import {
   ThemeProvider,
 } from "@streamlit/lib"
 
-import Sidebar, { SidebarProps } from "./Sidebar"
+import Sidebar, { type SidebarProps } from "./Sidebar"
 
 const ThemedSidebar = ({
   children,
   ...sidebarProps
 }: Omit<SidebarProps, "chevronDownshift">): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
-  const sidebarTheme = createSidebarTheme(activeTheme)
+  // Memoize so the sidebar ThemeProvider value stays stable. Otherwise every
+  // descendant that depends on the theme object (custom components, Markdown)
+  // re-runs its effects on each sidebar render.
+  const sidebarTheme = useMemo(
+    () => createSidebarTheme(activeTheme),
+    [activeTheme]
+  )
 
   return (
-    <ThemeProvider
-      theme={sidebarTheme.emotion}
-      baseuiTheme={sidebarTheme.basewebTheme}
-    >
+    <ThemeProvider theme={sidebarTheme.emotion}>
       <Sidebar {...sidebarProps}>{children}</Sidebar>
     </ThemeProvider>
   )

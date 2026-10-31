@@ -3,7 +3,7 @@
 From `all_inline_comments.json`, triage the candidate inline comments from individual reviews:
 
 1. **Deduplicate** — merge near-identical comments targeting the same file and line (or adjacent lines) with similar feedback. Keep the clearest wording.
-2. **Rank** — order by impact and actionability. Prefer `high` severity, concrete suggestions, and security/correctness findings over style nits.
+2. **Rank** — order by impact and actionability. Prefer `high` severity, concrete suggestions, and security/correctness findings over style nits. Rank rare or theoretical edge cases without security or data-loss impact low, regardless of their stated severity, and drop those whose proposed fix would add more complexity than the case's likelihood and impact justify. Keep security and data-loss findings at their stated rank even when rare.
 3. **Cap** — keep only the top 20 comments. Drop the rest.
 
 Write the triaged results to `inline_comments.json` using this exact JSON structure:
@@ -28,3 +28,4 @@ Rules:
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
 - If no good inline candidates exist after triage, write `{"comments": []}`.
+- Drop comments that only ask for more detailed scripts or procedures in agent or skill instruction files. Those files are meant to stay high-level, and that is not a merge-blocking issue.

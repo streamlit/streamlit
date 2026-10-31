@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+import { compile, type TopLevelSpec } from "vega-lite"
+
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { lightTheme } from "~lib/theme/themeConfigs"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import type { VegaLiteChartElement } from "./arrowUtils"
+import { CANVAS_RENDERER_THRESHOLD } from "./largeDataDefaults"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 
 type VegaLiteSpec = {
@@ -748,6 +752,80 @@ describe("useVegaElementPreprocessor", () => {
 
       expect(result.current.baseSpecKey).toBe(initialKey)
     })
+
+    describe("with datasets named by their contents", () => {
+      /**
+       * A layered chart like Altair sends it: each layer reads a dataset
+       * named by a hash of its contents.
+       */
+      const layeredElement = (
+        [lineName, pointsName]: [string, string],
+        layerNames: [string, string] = [lineName, pointsName],
+        pointMark = "point"
+      ): VegaLiteChartElement =>
+        getElement({
+          spec: JSON.stringify({
+            layer: [
+              { data: { name: layerNames[0] }, mark: "line" },
+              { data: { name: layerNames[1] }, mark: pointMark },
+            ],
+          }),
+          datasets: [lineName, pointsName].map(name => ({
+            name,
+            hasName: true,
+            data: { dimensions: { numDataRows: 3 } } as unknown as Quiver,
+          })),
+        })
+      const renderLayered = (
+        element: VegaLiteChartElement
+      ): ReturnType<
+        typeof renderHook<
+          VegaLiteChartElement,
+          ReturnType<typeof useVegaElementPreprocessor>
+        >
+      > =>
+        renderHook(
+          (props: VegaLiteChartElement) =>
+            useVegaElementPreprocessor(props, 100, 100, false, false),
+          { initialProps: element }
+        )
+
+      it("stays stable when new data renames the datasets", () => {
+        const { result, rerender } = renderLayered(
+          layeredElement(["3f2a", "9c1b"])
+        )
+        const initialKey = result.current.baseSpecKey
+
+        rerender(layeredElement(["7d4e", "9c1b"]))
+
+        expect(result.current.baseSpecKey).toBe(initialKey)
+        // The spec that the view is created from keeps the real names.
+        const spec = result.current.spec as unknown as {
+          layer: { data: { name: string } }[]
+        }
+        expect(spec.layer[0].data.name).toBe("7d4e")
+      })
+
+      it.each([
+        [
+          "the spec changes along with the data",
+          layeredElement(["7d4e", "9c1b"], undefined, "tick"),
+        ],
+        [
+          "the layers swap their datasets",
+          layeredElement(["7d4e", "9c1b"], ["9c1b", "7d4e"]),
+        ],
+      ])("changes when %s", (_description, element) => {
+        const { result, rerender } = renderLayered(
+          layeredElement(["3f2a", "9c1b"])
+        )
+        const initialKey = result.current.baseSpecKey
+
+        rerender(element)
+
+        expect(result.current.baseSpecKey).not.toBe(initialKey)
+      })
+    })
   })
 
   describe("builtin color name resolution", () => {
@@ -920,14 +998,20 @@ describe("useVegaElementPreprocessor", () => {
       name: string
       select?:
         | string
-        | { type?: string; encodings?: string[]; [key: string]: unknown }
+        | {
+            type?: string
+            encodings?: string[]
+            fields?: string[]
+            [key: string]: unknown
+          }
+      bind?: unknown
       value?: unknown
     }
 
-    const renderWithParams = (
+    const renderSpecWithParams = (
       params: SelectParam[],
       selectionMode: string[] = ["point"]
-    ): SelectParam[] => {
+    ): VegaLiteSpec => {
       const { result } = renderHook(
         (element: VegaLiteChartElement) =>
           useVegaElementPreprocessor(
@@ -948,9 +1032,14 @@ describe("useVegaElementPreprocessor", () => {
           }),
         }
       )
-      return (result.current.spec as unknown as { params: SelectParam[] })
-        .params
+      return result.current.spec as unknown as VegaLiteSpec
     }
+
+    const renderWithParams = (
+      params: SelectParam[],
+      selectionMode: string[] = ["point"]
+    ): SelectParam[] =>
+      renderSpecWithParams(params, selectionMode).params as SelectParam[]
 
     it("adds all chart encodings to shorthand point selections", () => {
       const [param] = renderWithParams([{ name: "pt", select: "point" }])
@@ -993,6 +1082,59 @@ describe("useVegaElementPreprocessor", () => {
       // shorthand string is left as-is.
       expect(param.select).toBe("point")
     })
+
+    it("does not add encodings to point selections that already specify fields", () => {
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["Origin"] } },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["Origin"] })
+      expect(param.select).not.toHaveProperty("encodings")
+    })
+
+    it("does not add encodings to point selections with fields and a radio bind", () => {
+      // Issue #8765: Altair radio binds set fields, not encodings.
+      const bind = {
+        input: "radio",
+        options: ["USA", "Europe", "Japan"],
+        name: "Region: ",
+      }
+      const spec = renderSpecWithParams([
+        {
+          name: "og_select",
+          select: { type: "point", fields: ["Origin"], toggle: false },
+          bind,
+          value: "USA",
+        },
+      ])
+      const [param] = spec.params as SelectParam[]
+      expect(param.select).toEqual({
+        type: "point",
+        fields: ["Origin"],
+        toggle: false,
+      })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.bind).toEqual(bind)
+
+      const { spec: compiledSpec } = compile(spec as unknown as TopLevelSpec)
+      const radioBinds = (compiledSpec.signals ?? []).filter(signal => {
+        if (!("bind" in signal)) {
+          return false
+        }
+        const signalBind = signal.bind as { input?: string } | undefined
+        return signalBind?.input === "radio"
+      })
+      expect(radioBinds).toHaveLength(1)
+    })
+
+    it("does not add encodings when fields and a scalar value are set", () => {
+      // Issue #10308: fields plus a scalar value must stay fields-only.
+      const [param] = renderWithParams([
+        { name: "pt", select: { type: "point", fields: ["index"] }, value: 3 },
+      ])
+      expect(param.select).toEqual({ type: "point", fields: ["index"] })
+      expect(param.select).not.toHaveProperty("encodings")
+      expect(param.value).toBe(3)
+    })
   })
 
   describe("legacy and edge-case spec handling", () => {
@@ -1001,6 +1143,7 @@ describe("useVegaElementPreprocessor", () => {
       overrides: {
         vegaLiteTheme?: string
         useWidth?: boolean
+        alt?: string
       } = {}
     ): Record<string, unknown> => {
       const useWidth = overrides.useWidth ?? useContainerWidth
@@ -1018,6 +1161,7 @@ describe("useVegaElementPreprocessor", () => {
             vegaLiteTheme: overrides.vegaLiteTheme ?? "streamlit",
             useContainerWidth: useWidth,
             spec: JSON.stringify(specInput),
+            alt: overrides.alt,
           }),
         }
       )
@@ -1160,10 +1304,89 @@ describe("useVegaElementPreprocessor", () => {
       expect((second as { width?: number }).width).toBe(containerWidth)
     })
 
-    it("throws when datasets are included in the spec", () => {
-      expect(() => renderSpec({ mark: "bar", datasets: { foo: [] } })).toThrow(
-        "Datasets should not be passed as part of the spec"
+    it("preserves datasets included in the spec", () => {
+      const datasets = {
+        foo: { type: "FeatureCollection", features: [] },
+      }
+      const spec = renderSpec({ mark: "bar", datasets })
+      expect(spec.datasets).toEqual(datasets)
+
+      const specWithoutDatasets = renderSpec({ mark: "bar" })
+      expect(specWithoutDatasets).not.toHaveProperty("datasets")
+    })
+
+    it("sets description from alt when alt is non-empty", () => {
+      const spec = renderSpec(
+        { mark: "bar" },
+        { alt: "Accessible chart name" }
       )
+      expect(spec.description).toBe("Accessible chart name")
+    })
+
+    it("preserves author description when alt is unset", () => {
+      const spec = renderSpec({
+        mark: "bar",
+        description: "Author description",
+      })
+      expect(spec.description).toBe("Author description")
+    })
+
+    it("overrides author description when alt is set", () => {
+      const spec = renderSpec(
+        { mark: "bar", description: "Author description" },
+        { alt: "Streamlit alt" }
+      )
+      expect(spec.description).toBe("Streamlit alt")
+    })
+  })
+
+  describe("large data defaults", () => {
+    /** A dataset stand-in: the preprocessor only reads its row count. */
+    const pointsDataset = (
+      numDataRows: number
+    ): VegaLiteChartElement["datasets"] => [
+      {
+        name: "points",
+        hasName: true,
+        data: { dimensions: { numDataRows } } as unknown as Quiver,
+      },
+    ]
+    const pointsSpec = JSON.stringify({
+      data: { name: "points" },
+      mark: "point",
+      encoding: {
+        x: { field: "x", type: "quantitative" },
+        y: { field: "y", type: "quantitative" },
+      },
+    })
+    const elementWithRows = (numDataRows: number): VegaLiteChartElement =>
+      getElement({ spec: pointsSpec, datasets: pointsDataset(numDataRows) })
+    const rendererOf = (spec: unknown): unknown =>
+      (spec as { usermeta?: { embedOptions?: { renderer?: string } } })
+        .usermeta?.embedOptions?.renderer
+
+    it("follows the row count and keeps the spec while it doesn't change", () => {
+      const { result, rerender } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        { initialProps: elementWithRows(CANVAS_RENDERER_THRESHOLD + 1) }
+      )
+      const { spec, baseSpecKey } = result.current
+      expect(rendererOf(spec)).toBe("canvas")
+
+      // Every rerun delivers new dataset objects.
+      rerender(elementWithRows(CANVAS_RENDERER_THRESHOLD + 1))
+      expect(result.current.spec).toBe(spec)
+
+      rerender(elementWithRows(CANVAS_RENDERER_THRESHOLD))
+      expect(rendererOf(result.current.spec)).toBe(undefined)
+      expect(result.current.baseSpecKey).not.toBe(baseSpecKey)
     })
   })
 })

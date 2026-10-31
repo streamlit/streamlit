@@ -16,8 +16,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  type DeckProps,
+import type {
+  DeckProps,
   PickingInfo,
   ViewStateChangeParameters,
 } from "@deck.gl/core"
@@ -25,20 +25,21 @@ import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
-import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
   DeckGlElementState,
@@ -47,11 +48,37 @@ import type {
   ParsedDeckGlConfig,
 } from "./types"
 import {
-  FillFunction,
+  type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
+  resolveMapPrimaryFillColor,
 } from "./utils/colors"
-import { jsonConverter } from "./utils/jsonConverter"
+import { convertDeckJson } from "./utils/jsonConverter"
+import {
+  getProvidedViews,
+  isMapCompatibleViewSpec,
+  PYDECK_UNSET_MAP_STYLE,
+  sanitizeDeckParameters,
+  withDefaultMapViewIds,
+} from "./utils/mapShell"
+
+// Manually created by Carto for Streamlit stats only — not a paid/secure key.
+const CARTO_STREAMLIT_API_KEY = "x7g2plm9yq8vfrc"
+
+/**
+ * Deck.gl update triggers are a list or a single value. Scalars such as `0`
+ * and `false` are real triggers, so they must not be dropped or spread as a
+ * non-array.
+ */
+function toUpdateTriggerList(trigger: unknown): unknown[] {
+  if (Array.isArray(trigger)) {
+    return trigger
+  }
+  if (isNullOrUndefined(trigger)) {
+    return []
+  }
+  return [trigger]
+}
 
 /**
  * Extracted type from the DeckGL library since it is not exported correctly.
@@ -68,7 +95,9 @@ type UseDeckGlShape = {
   hasActiveSelection: boolean
   height: number | string
   isSelectionModeActivated: boolean
-  onViewStateChange: (params: ViewStateChangeParameters) => void
+  onViewStateChange: (
+    params: ViewStateChangeParameters<Record<string, unknown>>
+  ) => void
   selectionMode: DeckGlJsonChartProto.SelectionMode | undefined
   setSelection: React.Dispatch<
     React.SetStateAction<ValueWithSource<DeckGlElementState> | null>
@@ -99,7 +128,7 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
  * @returns {string} - The HTML-escaped string.
  */
 const escapeHtml = (value: unknown): string =>
-  String(value).replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
+  String(value).replaceAll(/[&<>"']/g, char => HTML_ESCAPE_MAP[char])
 
 export type UseDeckGlProps = Omit<DeckGLProps, "width"> & {
   isLightTheme: boolean
@@ -135,19 +164,30 @@ const interpolate = (
 ): string => {
   const matchedVariables = body.match(/{(.*?)}/g)
   if (matchedVariables) {
+    const pickedObject = info.object as Record<string, unknown> | undefined
+    if (!pickedObject) {
+      return body
+    }
+
     matchedVariables.forEach((match: string) => {
-      const variable = match.substring(1, match.length - 1)
+      const variable = match.slice(1, match.length - 1)
 
       let rawValue: unknown
-      if (Object.hasOwn(info.object, variable)) {
-        rawValue = info.object[variable]
-      } else if (
-        Object.hasOwn(info.object, "properties") &&
-        Object.hasOwn(info.object.properties, variable)
-      ) {
-        rawValue = info.object.properties[variable]
-      } else {
+      if (Object.hasOwn(pickedObject, variable)) {
+        rawValue = pickedObject[variable]
+      } else if (!Object.hasOwn(pickedObject, "properties")) {
         return
+      } else {
+        const properties = pickedObject.properties
+        if (
+          typeof properties === "object" &&
+          properties !== null &&
+          Object.hasOwn(properties, variable)
+        ) {
+          rawValue = (properties as Record<string, unknown>)[variable]
+        } else {
+          return
+        }
       }
 
       const value = shouldEscapeHtml ? escapeHtml(rawValue) : String(rawValue)
@@ -184,9 +224,9 @@ function getStateFromWidgetMgr(
   }
 
   const stringValue = widgetMgr.getStringValue(element)
-  const currState: DeckGlElementState | null = stringValue
-    ? JSON5.parse(stringValue)
-    : null
+  const currState = isNullOrEmptyString(stringValue)
+    ? null
+    : JSON5.parse<DeckGlElementState>(stringValue)
 
   return currState ?? EMPTY_STATE
 }
@@ -201,12 +241,11 @@ function updateWidgetMgrState(
     return
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(vws.value),
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(vws.value), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+  })
 }
 
 type LayerDataInfo = {
@@ -292,10 +331,7 @@ const filterValidIndicesForLayer = (
  * since we cannot validate indices against them.
  */
 const sanitizeSelection = (
-  currentSelection: {
-    indices: Record<string, number[]>
-    objects: Record<string, unknown[]>
-  },
+  currentSelection: DeckGlElementState["selection"],
   layerDataInfo: LayerDataInfo
 ): SanitizedSelection => {
   const { layerData, hasUnknownLayerId } = layerDataInfo
@@ -303,7 +339,10 @@ const sanitizeSelection = (
   const newObjects: Record<string, unknown[]> = {}
   let changed = false
 
-  for (const [layerId, indices] of Object.entries(currentSelection.indices)) {
+  for (const [layerId, indices = []] of Object.entries(
+    currentSelection.indices
+  )) {
+    const objects = currentSelection.objects[layerId] ?? []
     const layerDataForId = layerData.get(layerId)
     if (layerDataForId === undefined) {
       // Layer doesn't exist OR has non-array data (URL, GeoJSON).
@@ -312,7 +351,7 @@ const sanitizeSelection = (
         // at all (i.e., ALL layers lack IDs, so layerData is empty).
         if (hasUnknownLayerId && layerData.size === 0) {
           newIndices[layerId] = indices
-          newObjects[layerId] = currentSelection.objects[layerId] || []
+          newObjects[layerId] = objects
           continue
         }
         changed = true // layer no longer exists
@@ -320,11 +359,10 @@ const sanitizeSelection = (
       }
       // Non-array data: preserve all selections for this layer
       newIndices[layerId] = indices
-      newObjects[layerId] = currentSelection.objects[layerId] || []
+      newObjects[layerId] = objects
       continue
     }
 
-    const objects = currentSelection.objects[layerId] || []
     const result = filterValidIndicesForLayer(indices, objects, layerDataForId)
 
     if (result.changed) {
@@ -344,13 +382,12 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
     width: propsWidth,
-    expanded: propsIsFullScreen,
+    expanded: isFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
 
   const { element, fragmentId, isLightTheme, theme, widgetMgr, widthConfig } =
     props
   const { selectionMode: allSelectionModes, tooltip } = element
-  const isFullScreen = propsIsFullScreen ?? false
 
   // Determine if we should use container width based on layout config
   const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
@@ -378,12 +415,15 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     container: { height: fullScreenHeight, width: propsWidth },
     heightFallback:
       (viewState?.initialViewState as { height: number } | undefined)
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- zero height uses the default map height
         ?.height || theme.sizes.defaultMapHeight,
   })
 
   const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
     null
   )
+  /** Views spec last applied to viewState; a change resets the camera. */
+  const viewsSpecRef = useRef<ParsedDeckGlConfig["views"]>(undefined)
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -392,8 +432,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
    *
    * @see deck_gl_json_chart.py #parse_selection_mode
    */
-  const selectionMode: DeckGlJsonChartProto.SelectionMode | undefined =
-    allSelectionModes[0]
+  const selectionMode = allSelectionModes.at(0)
   const isSelectionModeActivated = selectionMode !== undefined
 
   const hasActiveSelection =
@@ -418,7 +457,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     if (sanitized.changed) {
       setSelection({
-        fromUi: false,
+        fromUser: false,
         value: {
           selection: {
             indices: sanitized.indices,
@@ -431,27 +470,42 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
+    jsonCopy.views = withDefaultMapViewIds(jsonCopy.views)
 
-    // If unset, use either the light or dark style based on Streamlit's theme.
-    if (!jsonCopy.mapStyle) {
-      jsonCopy.mapStyle = isLightTheme
-        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    // pydeck map_provider=None writes this sentinel instead of omitting mapStyle.
+    const hadUnsetMapStyleSentinel =
+      jsonCopy.mapStyle === PYDECK_UNSET_MAP_STYLE
+    if (hadUnsetMapStyleSentinel) {
+      delete jsonCopy.mapStyle
     }
 
     const isUsingCarto =
-      jsonCopy?.mapProvider == "carto" ||
-      (jsonCopy?.mapStyle && jsonCopy.mapStyle?.indexOf("cartocdn") >= 0)
+      jsonCopy.mapProvider === "carto" ||
+      jsonCopy.mapStyle?.includes("cartocdn") === true
 
-    if (isUsingCarto && !jsonCopy.cartoKey) {
-      // This key was manually created by Carto just for Streamlit. It is NOT
-      // connected to any paid accounts, or secure API access, or anything of
-      // the sort. It's is just used for Carto to be able to separate Streamlit
-      // usage from other types in their own internal stats.
-      jsonCopy.cartoKey = "x7g2plm9yq8vfrc"
+    if (isUsingCarto && isNullOrEmptyString(jsonCopy.cartoKey)) {
+      jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
     if (jsonCopy.layers) {
+      // Resolve st.map's "primary" fill placeholder before selection styling
+      // or Deck.gl conversion so default markers use the active theme primary.
+      jsonCopy.layers = jsonCopy.layers.map(layer => {
+        if (!layer || Array.isArray(layer)) {
+          return layer
+        }
+
+        const resolvedFillColor = resolveMapPrimaryFillColor(
+          layer.getFillColor,
+          theme.colors.primary
+        )
+        if (resolvedFillColor === layer.getFillColor) {
+          return layer
+        }
+
+        return { ...layer, getFillColor: resolvedFillColor }
+      })
+
       // Build a map of layer IDs to data lengths for validation
       const { layerData } = getLayerDataInfo(jsonCopy.layers)
 
@@ -463,18 +517,18 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       // indices, so we assume the selection is valid.
       const anyLayersHaveSelection = Object.entries(
         data.selection.indices
-      ).some(([layerId, indices]) => {
+      ).some(([layerId, indices = []]) => {
         const layerDataForId = layerData.get(layerId)
         // If layerDataForId is undefined but the layer exists, it has non-array data - assume valid.
         // If the layer doesn't exist, treat the selection as invalid to avoid dimming everything.
         if (layerDataForId === undefined) {
-          return layerData.has(layerId) && indices?.length > 0
+          return layerData.has(layerId) && indices.length > 0
         }
-        return indices?.some(idx => idx < layerDataForId.length)
+        return indices.some(idx => idx < layerDataForId.length)
       })
 
-      const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
-        Object.hasOwn(layer, "pickable")
+      const anyLayersHavePickableDefined = jsonCopy.layers.some(
+        layer => layer !== null && Object.hasOwn(layer, "pickable")
       )
 
       jsonCopy.layers = jsonCopy.layers.map(layer => {
@@ -496,9 +550,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
         const layerId = isNullOrUndefined(layer.id) ? undefined : `${layer.id}`
         const selectedIndices =
-          layerId !== undefined
-            ? data?.selection?.indices?.[layerId] || []
-            : []
+          layerId !== undefined ? (data.selection.indices[layerId] ?? []) : []
 
         const fillFunctions = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
 
@@ -513,7 +565,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
             // Without this, objects in layers will have stale colors when selection changes.
             // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
             [fillFunction]: [
-              ...(clonedLayer.updateTriggers?.[fillFunction] || []),
+              ...toUpdateTriggerList(layer.updateTriggers?.[fillFunction]),
               selectedIndices,
               anyLayersHaveSelection,
             ],
@@ -569,9 +621,37 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       })
     }
 
-    delete jsonCopy?.views // We are not using views. This avoids a console warning.
+    const converted = convertDeckJson(jsonCopy) as DeckObject
+    const providedViews = getProvidedViews(converted.views)
 
-    return jsonConverter.convert(jsonCopy) as DeckObject
+    // Carto after convert so unknown @@type (null → MapView) still gets tiles.
+    let { mapStyle, cartoKey } = converted
+    if (
+      !hadUnsetMapStyleSentinel &&
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- pydeck JSON may send null or an empty string for an unset style
+      !mapStyle &&
+      isMapCompatibleViewSpec(providedViews)
+    ) {
+      mapStyle = isLightTheme
+        ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+    }
+
+    if (
+      isNullOrEmptyString(cartoKey) &&
+      typeof mapStyle === "string" &&
+      mapStyle.includes("cartocdn")
+    ) {
+      cartoKey = CARTO_STREAMLIT_API_KEY
+    }
+
+    return {
+      ...converted,
+      views: providedViews,
+      mapStyle,
+      cartoKey,
+      parameters: sanitizeDeckParameters(converted.parameters),
+    }
   }, [
     data.selection.indices,
     isLightTheme,
@@ -582,7 +662,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   ])
 
   useEffect(() => {
-    // If the ViewState on the server has changed, apply the diff to the current state
+    // Reset the camera when the views change instead of merging the diff:
+    // viewState still holds the previous controller's viewport props (e.g.
+    // MapController's default Web Mercator maxBounds), which would constrain
+    // the new view (GlobeController clamps its zoom to them).
+    if (!isEqual(parsedPydeckJson.views, viewsSpecRef.current)) {
+      viewsSpecRef.current = parsedPydeckJson.views
+      setViewState({ ...deck.initialViewState })
+      initialViewStateRef.current = deck.initialViewState
+      return
+    }
+
+    // Same views: apply only the changed server keys so the user's camera
+    // changes survive reruns.
     if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
@@ -593,16 +685,14 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           return diffArg
         }
 
-        return {
-          ...diffArg,
-          [key]: deck.initialViewState[key],
-        }
+        diffArg[key] = deck.initialViewState[key]
+        return diffArg
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
       initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState])
+  }, [deck.initialViewState, parsedPydeckJson.views])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
@@ -610,12 +700,18 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         return null
       }
 
-      const parsedTooltip = JSON5.parse(tooltip)
+      const parsedTooltip = JSON5.parse<{ html?: string; text?: string }>(
+        tooltip
+      )
 
-      if (parsedTooltip.html) {
+      if (!isNullOrEmptyString(parsedTooltip.html)) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
-      } else {
+      } else if (!isNullOrEmptyString(parsedTooltip.text)) {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
+      } else {
+        // A tooltip with neither html nor text has nothing to render; returning
+        // null also avoids interpolating an undefined body.
+        return null
       }
 
       return parsedTooltip
@@ -624,7 +720,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const onViewStateChange = useCallback(
-    ({ viewState: viewStateArg }: ViewStateChangeParameters) => {
+    ({
+      viewState: viewStateArg,
+    }: ViewStateChangeParameters<Record<string, unknown>>) => {
       setViewState(viewStateArg)
     },
     [setViewState]

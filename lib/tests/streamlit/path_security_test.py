@@ -18,7 +18,47 @@ from __future__ import annotations
 
 import pytest
 
-from streamlit.path_security import is_unsafe_path_pattern
+from streamlit.path_security import is_unsafe_path_pattern, is_windows_unc_path
+
+
+class TestIsWindowsUncPath:
+    """Tests for the is_windows_unc_path function."""
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            pytest.param("\\\\server\\share\\page.py", id="backslash_unc"),
+            pytest.param("//server/share/page.py", id="forward_slash_unc"),
+            pytest.param("/\\server\\share\\page.py", id="forward_then_backslash_unc"),
+            pytest.param("\\/server/share/page.py", id="backslash_then_forward_unc"),
+            pytest.param("\\\\?\\UNC\\server\\share\\page.py", id="extended_unc"),
+            pytest.param("\\\\?\\C:\\Windows\\page.py", id="extended_length_local"),
+            pytest.param("\\\\.\\device\\page.py", id="device_namespace"),
+        ],
+    )
+    def test_detects_windows_network_paths(self, path: str) -> None:
+        """UNC and device-namespace prefixes are recognized as network paths.
+
+        Windows normalizes ``/`` to ``\\`` before resolving, so mixed leading
+        separators (``/\\``, ``\\/``) are UNC roots too and must be caught.
+        Extended-length local paths (``\\\\?\\C:\\...``) are also rejected
+        fail-closed: any ``\\\\``-prefixed input is treated as a network path.
+        """
+        assert is_windows_unc_path(path)
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            pytest.param("/absolute/page.py", id="posix_absolute"),
+            pytest.param("C:\\absolute\\page.py", id="windows_drive_absolute"),
+            pytest.param("\\rooted\\page.py", id="windows_rooted"),
+            pytest.param("../relative/page.py", id="parent_relative"),
+            pytest.param("relative/page.py", id="relative"),
+        ],
+    )
+    def test_allows_local_paths(self, path: str) -> None:
+        """Absolute, drive, rooted, and relative local paths are not network paths."""
+        assert not is_windows_unc_path(path)
 
 
 class TestIsUnsafePathPattern:

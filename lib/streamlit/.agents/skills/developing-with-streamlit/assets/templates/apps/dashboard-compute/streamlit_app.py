@@ -20,6 +20,8 @@ Demonstrates:
   rerun in isolation on widget interactions
 - ``st.skeleton`` placeholders while each card's data loads
 - ``@st.cache_data(ttl=...)`` loaders that keep data fresh and bounded
+- ``st.echarts_chart`` line and stacked bar charts that animate when a filter
+  changes, morph between chart types, and zoom with a ``dataZoom`` slider
 - Popover filters for each metric card
 - Chart/table view toggle
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
@@ -33,8 +35,8 @@ actual data source (e.g., Snowflake queries, cloud APIs, etc.).
 import hashlib
 from collections.abc import Callable
 from datetime import date, timedelta
+from typing import Any
 
-import altair as alt
 import numpy as np
 import pandas as pd
 
@@ -192,70 +194,107 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     return filtered
 
 
-def create_line_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_col: str,
-    color_col: str,
-    height: int,
-    show_percent: bool = False,
-) -> alt.Chart:
-    """Create a line chart."""
-    y_format = ".1%" if show_percent else ",.0f"
+def pivot_by_dimension(
+    df: pd.DataFrame, x_col: str, y_col: str, dim_col: str, categories: list[str]
+) -> pd.DataFrame:
+    """Pivot long data to one column per category, in ``categories`` order.
 
-    chart: alt.Chart = (
-        alt.Chart(df)
-        .mark_line()
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y(f"{y_col}:Q", title="Credits", axis=alt.Axis(format=y_format)),
-            color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip(
-                    f"{color_col}:N", title=color_col.replace("_", " ").title()
-                ),
-                alt.Tooltip(f"{y_col}:Q", title="Credits", format=y_format),
-            ],
-        )
-        .properties(height=height)
-        .interactive()
+    Each column becomes one ECharts series that reads it through ``encode``.
+    """
+    wide = df.pivot_table(index=x_col, columns=dim_col, values=y_col)
+    wide = wide.reindex(columns=categories).rename_axis(columns=None)
+    return wide.reset_index()
+
+
+def describe_credits(
+    source: pd.DataFrame, x_col: str, title: str, series: str, *, shares: bool
+) -> str:
+    """Summarize a chart's ``dataset.source`` frame for its ``alt`` text.
+
+    Shares always stack to 100%, so they report the leader's latest share.
+    """
+    values = source.drop(columns=x_col)
+    if values.empty:
+        return f"{title} ({series}): no data"
+    latest = values.iloc[-1]
+    span = (
+        f"{title} ({series}) from {source[x_col].iloc[0]:%Y-%m-%d} to "
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
-    return chart
+    if shares:
+        return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
+    totals = values.sum(axis=1)
+    if totals.iloc[0]:
+        trend = f"total {totals.iloc[-1] / totals.iloc[0] - 1:+.1%}"
+    else:
+        trend = f"latest total {totals.iloc[-1]:,.0f}"
+    return f"{span}: {trend}, {latest.idxmax()} highest"
+
+
+def _credits_option(
+    wide: pd.DataFrame, series: list[dict[str, Any]], *, show_percent: bool = False
+) -> dict[str, Any]:
+    """Build an ECharts option for credit series that share a time x-axis.
+
+    The dataframe goes in ``dataset.source``, so Streamlit sends it as Arrow.
+    ``universalTransition`` on each series morphs the chart when the card
+    switches between line and bar.
+    """
+    y_axis: dict[str, Any] = {"type": "value"}
+    if show_percent:
+        # ECharts label templates can't multiply values, so create_bar_chart
+        # scales shares to 0-100 before they reach the chart.
+        y_axis |= {"max": 100, "axisLabel": {"formatter": "{value}%"}}
+    return {
+        "dataset": {"source": wide},
+        "legend": {},
+        "tooltip": {
+            "trigger": "axis",
+            # Number formats use the same strings as ``st.metric``.
+            "valueFormatter": "%.1f%%" if show_percent else "%,.0f",
+        },
+        "xAxis": {"type": "time"},
+        "yAxis": y_axis,
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [{**s, "universalTransition": True} for s in series],
+    }
+
+
+def create_line_chart(
+    wide: pd.DataFrame, x_col: str, categories: list[str]
+) -> dict[str, Any]:
+    """Create a line chart with one line per category."""
+    series = [
+        {
+            "type": "line",
+            "name": category,
+            "encode": {"x": x_col, "y": category},
+            "showSymbol": False,
+        }
+        for category in categories
+    ]
+    return _credits_option(wide, series)
 
 
 def create_bar_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_col: str,
-    color_col: str,
-    height: int,
-    show_percent: bool = False,
-) -> alt.Chart:
-    """Create a stacked bar chart."""
-    y_format = ".1%" if show_percent else ",.0f"
+    wide: pd.DataFrame, x_col: str, categories: list[str], show_percent: bool = False
+) -> dict[str, Any]:
+    """Create a stacked bar chart, optionally as each category's daily share."""
+    if show_percent:
+        wide = wide.copy()
+        values = wide[categories]
+        wide[categories] = values.div(values.sum(axis=1), axis=0) * 100
 
-    chart: alt.Chart = (
-        alt.Chart(df)
-        .mark_bar()
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y(
-                f"{y_col}:Q",
-                title="Credits",
-                stack="normalize" if show_percent else True,
-                axis=alt.Axis(format=y_format),
-            ),
-            color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip(f"{color_col}:N"),
-                alt.Tooltip(f"{y_col}:Q", format=",.0f"),
-            ],
-        )
-        .properties(height=height)
-    )
-    return chart
+    series = [
+        {
+            "type": "bar",
+            "name": category,
+            "stack": "credits",
+            "encode": {"x": x_col, "y": category},
+        }
+        for category in categories
+    ]
+    return _credits_option(wide, series, show_percent=show_percent)
 
 
 # =============================================================================
@@ -386,18 +425,31 @@ def dimension_metric(
             filtered = filter_by_time_range(filtered, "ds", time_range or "All")
 
             y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
+            series = "7-day average" if "7-day MA" in line_options else "daily"
 
             if "table" in (view_mode or ""):
-                st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
-            elif "Bar" in (chart_type or ""):
-                st.altair_chart(
-                    create_bar_chart(
-                        filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
-                    ),
+                st.dataframe(
+                    filtered,
+                    height=CHART_HEIGHT,
+                    hide_index=True,
+                    alt=f"{title} data",
                 )
             else:
-                st.altair_chart(
-                    create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
+                categories = [category for category in options if category in selected]
+                wide = pivot_by_dimension(filtered, "ds", y_col, dim_col, categories)
+                shares = False
+                if "Bar" in (chart_type or ""):
+                    shares = show_percent
+                    option = create_bar_chart(wide, "ds", categories, shares)
+                    if shares:
+                        series = f"{series} share"
+                else:
+                    option = create_line_chart(wide, "ds", categories)
+                source = option["dataset"]["source"]
+                st.echarts_chart(
+                    option,
+                    height=CHART_HEIGHT,
+                    alt=describe_credits(source, "ds", title, series, shares=shares),
                 )
 
 

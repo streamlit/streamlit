@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useMemo } from "react"
+import {
+  forwardRef,
+  type HTMLAttributes,
+  useCallback,
+  useContext,
+  useMemo,
+} from "react"
 
 import Overflow from "rc-overflow"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import { NavigationContext } from "@streamlit/lib"
-import { IAppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 import SidebarNavLink from "./SidebarNavLink"
@@ -42,6 +48,37 @@ export interface Props {
   widgetsDisabled: boolean
 }
 
+/** A top-nav overflow item: one page, or a section (array of pages). */
+type OverflowNavItem = AppPage.$Properties | AppPage.$Properties[]
+
+/**
+ * Set `inert` on collapsed rc-overflow hosts so Tab skips their links.
+ *
+ * rc-overflow keeps those items mounted with `aria-hidden`, which leaves
+ * their links in the native tab order. Same approach as collapsed expanders.
+ *
+ * Pass `inert=""` rather than `true`: React 18 drops an unknown boolean prop.
+ */
+export const TopNavOverflowItem = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(function TopNavOverflowItem({ children, ...props }, ref) {
+  const isHidden =
+    props["aria-hidden"] === true || props["aria-hidden"] === "true"
+
+  return (
+    <div ref={ref} {...props} {...(isHidden ? { inert: "" } : {})}>
+      {children}
+    </div>
+  )
+})
+
+/**
+ * Responsive top navigation, rendered as the "App pages" `<nav>` landmark.
+ * Pass landmark attributes to rc-overflow's root, which is the measured flex host.
+ * Wrapping that root in another element shrinks the measured width and shows a
+ * false "N more" overflow.
+ */
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
@@ -50,19 +87,19 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
 
   const { data, itemKey } = useMemo((): {
-    data: (IAppPage | IAppPage[])[]
-    itemKey: (item: IAppPage | IAppPage[]) => string
+    data: OverflowNavItem[]
+    itemKey: (item: OverflowNavItem) => string
   } => {
     const navSections = groupPagesBySection(visiblePages)
     const processed = processNavigationStructure(navSections)
 
     // Combine individual pages and sections for the overflow component
-    const combinedData: (IAppPage | IAppPage[])[] = [
+    const combinedData: OverflowNavItem[] = [
       ...processed.individualPages,
       ...Object.values(processed.sections),
     ]
 
-    const keyFn = (item: IAppPage | IAppPage[]): string =>
+    const keyFn = (item: OverflowNavItem): string =>
       Array.isArray(item)
         ? (item[0]?.sectionHeader ?? "")
         : (item.pageScriptHash ?? "")
@@ -71,12 +108,12 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   }, [visiblePages])
 
   const renderItem = useCallback(
-    (item: IAppPage | IAppPage[], _info: unknown) => {
+    (item: OverflowNavItem, _info: unknown) => {
       if (Array.isArray(item)) {
         return (
           <TopNavSection
             sections={[item]}
-            title={item[0].sectionHeader || ""}
+            title={item[0].sectionHeader ?? ""}
             handlePageChange={onPageChange}
             endpoints={endpoints}
             pageLinkBaseUrl={pageLinkBaseUrl}
@@ -123,7 +160,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   const renderRest = useCallback(
-    (items: (IAppPage | IAppPage[])[]) => {
+    (items: OverflowNavItem[]) => {
       if (isNullOrUndefined(items)) {
         return null
       }
@@ -132,7 +169,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
       const title = `${totalNumPages} more`
 
       // Convert all items to sections format for the overflow menu
-      const sections: IAppPage[][] = items.map(item =>
+      const sections: AppPage.$Properties[][] = items.map(item =>
         Array.isArray(item) ? item : [item]
       )
 
@@ -159,8 +196,11 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   )
 
   return (
-    <Overflow<IAppPage | IAppPage[]>
+    <Overflow<OverflowNavItem>
       component={StyledOverflowContainer}
+      itemComponent={TopNavOverflowItem}
+      aria-label="App pages"
+      data-testid="stTopNav"
       itemKey={itemKey}
       data={data}
       maxCount={"responsive"}

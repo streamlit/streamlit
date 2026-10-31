@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,21 +35,29 @@ import {
 } from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
-  DataEditorRef,
+  type DataEditorRef,
   DataEditor as GlideDataEditor,
-  GridCell,
-  GridColumn,
-  GridMouseEventArgs,
-  GridSelection,
+  type GridCell,
+  type GridColumn,
+  type GridMouseEventArgs,
+  type GridSelection,
   type Item,
-  Rectangle,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -64,9 +72,15 @@ import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import {
+  type BaseColumn,
+  getTextCell,
+  ImageCellEditor,
+  toGlideColumn,
+} from "./columns"
+import { isServerSortableColumn } from "./hooks/sortUtils"
 import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
@@ -83,6 +97,7 @@ import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
 import useEditReconciliation from "./hooks/useEditReconciliation"
+import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -119,8 +134,8 @@ export interface DataFrameProps {
   fragmentId?: string
   // Custom toolbar actions (as React nodes) to display in the grid toolbar.
   customToolbarActions?: React.ReactNode[]
-  widthConfig?: streamlit.IWidthConfig | null
-  heightConfig?: streamlit.IHeightConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 /**
@@ -143,12 +158,28 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
-  // Use provided Quiver data or construct from proto's arrowData. The
-  // elementHash serves as the primary memoization key to avoid unnecessary
-  // re-parsing when the payload hasn't changed.
+  // Lazy mode metadata. When present, rows are loaded on demand in chunks from
+  // the backend instead of being delivered eagerly in `arrowData`.
+  const lazyData = element.lazyData ?? null
+  const isLazy = lazyData !== null
+  const hasButtonColumnInteractions =
+    Object.keys(element.buttonClickWidgets).length > 0
+
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
+  // Use provided Quiver data, the lazy initial chunk, or the eager arrowData.
+  // For lazy dataframes the initial chunk carries the schema plus the first
+  // visible rows. The elementHash serves as the primary memoization key to
+  // avoid unnecessary re-parsing when the payload hasn't changed.
   const data = useMemo(() => {
     if (dataProp !== undefined) {
       return dataProp
+    }
+    if (lazyData !== null) {
+      if (!lazyData.initialChunk) {
+        throw new Error("Lazy dataframe is missing its initial chunk")
+      }
+      return new Quiver(lazyData.initialChunk)
     }
     if (!element.arrowData) {
       throw new Error("DataFrame element is missing arrowData")
@@ -156,7 +187,7 @@ function DataFrame({
     return new Quiver(element.arrowData)
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataProp, elementHash, element.arrowData])
+  }, [dataProp, elementHash, element.arrowData, lazyData?.initialChunk])
 
   const {
     expanded: isFullScreen,
@@ -166,7 +197,8 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+  const flexContext = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = flexContext
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
@@ -218,18 +250,25 @@ function DataFrame({
     []
   )
 
-  // This is done to keep some backwards compatibility
-  // so that old arrow proto messages from the st.dataframe
-  // would still work. Those messages don't have the
-  // editingMode field defined.
+  // Old Arrow proto messages omit editingMode, even though the generated type
+  // marks it as required.
   const editingMode =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy messages omit editingMode
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
   const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
   const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
-  // Number of rows of the table minus 1 for the header row:
+  // Number of rows of the table minus 1 for the header row. For lazy
+  // dataframes the total row count comes from the lazy metadata, not from the
+  // (partial) initial chunk.
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.numDataRows)
+  const lazyRowCount =
+    typeof lazyData?.rowCount === "number"
+      ? lazyData.rowCount
+      : (lazyData?.rowCount?.toNumber() ?? 0)
+  const originalNumRows = isLazy
+    ? Math.max(0, lazyRowCount)
+    : Math.max(0, dataDimensions.numDataRows)
 
   // Centralized capability layer that determines which features are enabled
   const {
@@ -251,6 +290,9 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    isLazy,
+    lazySortable: lazyData?.sortable ?? false,
+    hasButtonColumnInteractions,
     disableDataExport,
   })
 
@@ -277,6 +319,7 @@ function DataFrame({
     editStateHydrationCount,
     updateNumRows,
     syncEditState,
+    flushEditState,
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
@@ -289,6 +332,47 @@ function DataFrame({
     originalColumns,
   })
 
+  const flushEditStateOnFinishedEditingRef = useRef(false)
+  const handleOutsideClick = useCallback(
+    (event: MouseEvent | TouchEvent): boolean => {
+      const target = event.target
+      flushEditStateOnFinishedEditingRef.current =
+        target instanceof Node &&
+        resizableContainerRef.current !== null &&
+        !resizableContainerRef.current.contains(target)
+
+      // Glide calls onFinishedEditing synchronously for an outside click. Clear
+      // the flag after the current event so other ways of closing the editor
+      // keep the normal debounce behavior.
+      queueMicrotask(() => {
+        flushEditStateOnFinishedEditingRef.current = false
+      })
+      // Always return true to keep glide's default containment check. This
+      // callback is used only for its side effect of arming the flush flag, not
+      // to change whether the click is treated as outside the editor.
+      return true
+    },
+    [resizableContainerRef]
+  )
+
+  const handleFinishedEditing = useCallback(
+    (_newValue: GridCell | undefined, [moveX, moveY]: Item): void => {
+      // Keyboard completions (Enter/Tab) report non-zero movement and do not
+      // arm the flag. This guard ensures we flush only for the outside-click
+      // path.
+      const shouldFlush =
+        flushEditStateOnFinishedEditingRef.current &&
+        moveX === 0 &&
+        moveY === 0
+      flushEditStateOnFinishedEditingRef.current = false
+
+      if (shouldFlush) {
+        flushEditState()
+      }
+    },
+    [flushEditState]
+  )
+
   const { getCellContent: getOriginalCellContent } = useDataLoader(
     data,
     originalColumns,
@@ -296,8 +380,48 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  // A single sort hook handles both modes: client-side (eager) sorting and
+  // server-side (lazy) sort state. In server mode it never runs Glide's
+  // client-side sorter over the lazy rows and exposes `serverSortState` for the
+  // lazy loader.
+  const {
+    columns,
+    sortColumn,
+    getOriginalIndex,
+    serverSortState,
+    getCellContent: eagerGetCellContent,
+  } = useColumnSort({
+    mode: isLazy ? "server" : "client",
+    numRows: originalNumRows,
+    columns: originalColumns,
+    getCellContent: getOriginalCellContent,
+  })
+
+  const { getCellContent: getLazyCellContent, onVisibleRegionChanged } =
+    useLazyDataLoader({
+      initialChunk: data,
+      columns: originalColumns,
+      numRows: originalNumRows,
+      sourceId: lazyData?.sourceId ?? "",
+      pageSize: lazyData?.pageSize ?? 1,
+      sortState: serverSortState,
+      backendOperationClient,
+    })
+
+  // In lazy mode, cells come from the chunked loader; otherwise from the
+  // client-sorted eager getter.
+  const getCellContent = isLazy ? getLazyCellContent : eagerGetCellContent
+
+  // Whether a specific column can be sorted in the current mode. Eager sorting
+  // is client-side and works for any column (incl. the index). Lazy sorting is
+  // server-side and keys on the backend Arrow field name, so columns without
+  // one (e.g. the index column) or with an unorderable nested type (list/struct)
+  // cannot be sorted — we hide the sort affordance for them instead of issuing a
+  // chunk request the backend would fail.
+  const isColumnSortable = (column: BaseColumn | undefined): boolean =>
+    canSort &&
+    column !== undefined &&
+    (!isLazy || isServerSortableColumn(column))
 
   const {
     buttonActionMenu,
@@ -319,8 +443,8 @@ function DataFrame({
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
 
-  // Ref to track the last processed selectionState to avoid proto mutation.
-  // Used to detect when a new programmatic selection arrives from the backend.
+  // Last applied programmatic selectionState JSON. Reset when the one-shot
+  // field is absent so a later identical payload can apply.
   const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
@@ -543,21 +667,22 @@ function DataFrame({
 
   /**
    * Apply programmatic selection changes set via st.session_state.
-   * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed). We track processed values via ref
-   * to avoid mutating the proto object.
+   * The backend sends selectionState only on the rerun where the value
+   * changed. This effect skips identical payloads across React re-renders
+   * of that message, and clears processedSelectionStateRef when
+   * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
-    // Skip if no selectionState or we've already processed this exact value
-    if (
-      !element.selectionState ||
-      element.selectionState === processedSelectionStateRef.current
-    ) {
+    if (isNullOrEmptyString(element.selectionState)) {
+      processedSelectionStateRef.current = null
+      return
+    }
+
+    if (element.selectionState === processedSelectionStateRef.current) {
       return
     }
 
     const selectionState = element.selectionState
-    // Mark as processed (using ref instead of proto mutation)
     processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -665,6 +790,7 @@ function DataFrame({
   // To activate the group row feature (multi-level headers),
   // we need more than one header row.
   const usesGroupRow = data.dimensions.numHeaderRows > 1
+  const hasFallbackHeight = hasStretchHeightFallback(flexContext)
   const {
     minHeight,
     maxHeight,
@@ -678,13 +804,13 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth || 0,
+    containerWidth ?? 0,
     fullScreenHeight,
     isFullScreen,
     widthConfig,
     heightConfig,
     measuredContainerHeight,
-    isInRoot
+    hasFallbackHeight
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -715,7 +841,7 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    containerWidth ?? 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
@@ -738,7 +864,7 @@ function DataFrame({
       // Get the bounds of the glide-data-grid scroll area (dvn-stack):
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
+        .querySelector(".dvn-stack")
         ?.getBoundingClientRect()
 
       // We might also be able to use the following as an alternative,
@@ -811,9 +937,7 @@ function DataFrame({
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
   // in a nested container.
   const disableResize =
-    isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
-      ? true
-      : false
+    isInHorizontalLayout || (widthConfig?.useContent === true && !isInRoot)
 
   // The search overlay may only be open while search is actually enabled.
   // Deriving it from `canSearch` ensures the overlay is hidden (instead of
@@ -821,6 +945,14 @@ function DataFrame({
   // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
+
+  // Name the grid (not the toolbar wrapper) only when alt is non-blank.
+  // role="region" (not "img") exposes the name without making Glide's
+  // operable canvas presentational.
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledResizableContainer
@@ -891,6 +1023,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -910,6 +1043,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -922,6 +1056,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -938,6 +1073,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -954,6 +1090,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -962,6 +1099,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -977,12 +1115,15 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
       <Resizable
         data-testid="stDataFrameResizable"
         ref={resizableRef}
+        aria-label={accessibleName}
+        {...(accessibleName !== undefined ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
@@ -1003,7 +1144,7 @@ function DataFrame({
           bottom: false,
           left: false,
           topRight: false,
-          bottomRight: disableResize ? false : true,
+          bottomRight: !disableResize,
           bottomLeft: false,
           topLeft: false,
         }}
@@ -1070,16 +1211,22 @@ function DataFrame({
           keybindings={{
             downFill: true,
             copy: !isClipboardCopyDisabled,
-            ...(isCellSelectionActivated || isLargeTable
+            ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection:
+                  // with too many selected cells being processed for cell selection.
+                  // For lazy dataframes this also prevents triggering load
+                  // requests for the entire dataset.
                   selectAll: false,
                 }
               : {}),
           }}
+          // Request chunks for the visible range (plus a small buffer) when the
+          // user scrolls a lazy dataframe.
+          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
           // Search needs to be activated manually, to support search
-          // via the toolbar:
+          // via the toolbar. Disabled for lazy dataframes since search would
+          // only operate on loaded chunks.
           onKeyDown={event => {
             if (
               canSearch &&
@@ -1099,9 +1246,13 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!canSort || isColumnSelectionActivated) {
-              // Deactivate sorting for empty state, for large dataframes, or
-              // when column selection is activated.
+            if (
+              !isColumnSortable(columns[columnIdx]) ||
+              isColumnSelectionActivated
+            ) {
+              // Deactivate sorting for empty state, large dataframes, columns
+              // that aren't sortable in the current mode (e.g. the index column
+              // in lazy mode), or when column selection is activated.
               return
             }
 
@@ -1239,6 +1390,9 @@ function DataFrame({
             fillHandle: supportsFillHandle,
             // Support editing:
             onCellEdited,
+            // Flush edits before an outside click can trigger a rerun.
+            isOutsideClick: handleOutsideClick,
+            onFinishedEditing: handleFinishedEditing,
             // Support pasting data for bulk editing:
             onPaste,
             // Support deleting cells & rows:
@@ -1270,7 +1424,7 @@ function DataFrame({
           })}
         />
       </Resizable>
-      {tooltip?.content && (
+      {tooltip !== undefined && (
         <Tooltip
           top={tooltip.top}
           left={tooltip.left}
@@ -1290,7 +1444,7 @@ function DataFrame({
             canShowColumnStatistics={canShowColumnStatistics}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              canSort
+              isColumnSortable(originalColumns[showMenu.columnIdx])
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {

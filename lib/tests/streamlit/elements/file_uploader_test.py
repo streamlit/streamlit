@@ -14,6 +14,7 @@
 
 """file_uploader unit test."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +26,11 @@ from streamlit.elements.widgets.file_uploader import (
     FileUploaderSerde,
     _get_upload_files,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import (
     FileUploaderState as FileUploaderStateProto,
 )
@@ -179,16 +184,15 @@ class FileUploaderTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object):
         """Test that invalid max_upload_size values raise an exception."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.file_uploader("the label", max_upload_size=max_upload_size)
 
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     @patch("streamlit.elements.widgets.file_uploader._get_upload_files")
     def test_unique_uploaded_file_instance(self, get_upload_files_patch):
@@ -265,11 +269,11 @@ class FileUploaderTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.file_uploader("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_shows_cached_widget_replay_warning(self):
@@ -647,3 +651,50 @@ class GetUploadFilesTest(DeltaGeneratorTestCase):
 
         result = _get_upload_files(proto)
         assert len(result) == 0
+
+
+class FileUploaderOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.file_uploader("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.file_uploader
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.file_uploader("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.file_uploader("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.file_uploader("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.file_uploader
+        assert c.ignore_rerun is True

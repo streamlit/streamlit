@@ -22,19 +22,17 @@ from typing import (
     Final,
     Literal,
     TypeAlias,
-    TypedDict,
     Union,
     cast,
     overload,
 )
-
-from typing_extensions import Required
 
 from streamlit import type_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -47,14 +45,24 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.streamlit_plotly_theme import (
     configure_streamlit_plotly_theme,
 )
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
+from streamlit.errors import StreamlitValueError
 from streamlit.logger import get_logger
 from streamlit.proto.PlotlyChart_pb2 import PlotlyChart as PlotlyChartProto
+from streamlit.runtime.agent import json_encoding
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -85,17 +93,27 @@ FigureOrData: TypeAlias = Union[
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
 _SELECTION_MODES: Final[set[SelectionMode]] = {"lasso", "points", "box"}
+_SELECTION_MODE_FROM_PROTO: Final[dict[int, SelectionMode]] = {
+    PlotlyChartProto.SelectionMode.POINTS: "points",
+    PlotlyChartProto.SelectionMode.BOX: "box",
+    PlotlyChartProto.SelectionMode.LASSO: "lasso",
+}
 
 _LOGGER: Final = get_logger(__name__)
 
+# What a Plotly template can add to a figure's content rather than its styling,
+# such as a "DRAFT" annotation. Kept when the agent API drops the rest of the
+# template.
+_TEMPLATE_CONTENT: Final = ("annotations", "shapes", "images")
 
-class PlotlySelectionState(TypedDict, total=False):
+
+class PlotlySelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart selection state.
 
-    The selection state is stored in a dictionary-like object that supports both
-    key and attribute notation. Selection states cannot be programmatically
-    changed or set through Session State.
+    The selection state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Selection states cannot be
+    programmatically changed or set through Session State.
 
     Attributes
     ----------
@@ -171,19 +189,39 @@ class PlotlySelectionState(TypedDict, total=False):
 
     """
 
-    points: Required[list[dict[str, Any]]]
-    point_indices: Required[list[int]]
-    box: Required[list[dict[str, Any]]]
-    lasso: Required[list[dict[str, Any]]]
+    points: list[dict[str, Any]]
+    point_indices: list[int]
+    box: list[dict[str, Any]]
+    lasso: list[dict[str, Any]]
+
+    @overload
+    def __getitem__(self, key: Literal["points"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["point_indices"]) -> list[int]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["box"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["lasso"]) -> list[dict[str, Any]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
 
 
-class PlotlyState(TypedDict, total=False):
+class PlotlyState(ReadOnlyAttributeDictionary):
     """
     The schema for the Plotly chart event state.
 
-    The event state is stored in a dictionary-like object that supports both
-    key and attribute notation. Event states cannot be programmatically
-    changed or set through Session State.
+    To use this type in an annotation, import it from ``streamlit.typing``.
+
+    The event state is stored in a read-only dictionary-like object that
+    supports both key and attribute notation. Event states cannot be
+    programmatically changed or set through Session State.
 
     Only selection events are supported at this time.
 
@@ -192,8 +230,7 @@ class PlotlyState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``PlotlySelectionState`` dictionary
-        schema.
+        The attributes are described by ``PlotlySelectionState``.
 
     Example
     -------
@@ -217,7 +254,27 @@ class PlotlyState(TypedDict, total=False):
 
     """
 
-    selection: Required[PlotlySelectionState]
+    selection: PlotlySelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to keep `selection` typed as
+    # PlotlySelectionState. Use dict.__getitem__ for the selection key so the
+    # read-only base class does not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> PlotlySelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, PlotlySelectionState):
+                item = PlotlySelectionState(item)
+                # Cache so repeated bracket/attribute access stays identity-stable.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
@@ -227,25 +284,30 @@ class PlotlyChartSelectionSerde:
     """
 
     def deserialize(self, ui_value: str | None) -> PlotlyState:
-        empty_selection_state: PlotlyState = {
-            "selection": {
-                "points": [],
-                "point_indices": [],
-                "box": [],
-                "lasso": [],
-            },
-        }
-
-        selection_state = (
-            empty_selection_state
-            if ui_value is None
-            else cast("PlotlyState", AttributeDictionary(json.loads(ui_value)))
+        empty_selection_state = PlotlyState(
+            {
+                "selection": PlotlySelectionState(
+                    {
+                        "points": [],
+                        "point_indices": [],
+                        "box": [],
+                        "lasso": [],
+                    }
+                ),
+            }
         )
 
-        if "selection" not in selection_state:  # pragma: no cover - defensive
-            selection_state = empty_selection_state  # type: ignore[unreachable]
+        if ui_value is None:
+            return empty_selection_state
 
-        return cast("PlotlyState", AttributeDictionary(selection_state))
+        parsed = json.loads(ui_value)
+        if "selection" not in parsed:  # pragma: no cover - defensive
+            return empty_selection_state
+
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        parsed["selection"] = PlotlySelectionState(parsed["selection"])
+        return PlotlyState(parsed)
 
     def serialize(self, selection_state: PlotlyState) -> str:
         return json.dumps(selection_state, default=str)
@@ -263,9 +325,9 @@ def parse_selection_mode(
         selection_mode_set = set(selection_mode)
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     parsed_selection_modes = []
@@ -373,6 +435,100 @@ def _resolve_content_height(height: Height, figure: Any) -> Height:
     return 450
 
 
+def _plotly_data(spec_json: str) -> dict[str, Any] | None:
+    """A Plotly figure's agent ``data``, whose values live inside its specification.
+
+    The theme is dropped, because it is weight without meaning for a non-visual
+    client: Plotly's `layout.template` is about nine tenths of a small figure.
+    Dropping it is named in `spec_omitted`, so a client can tell a trimmed
+    figure from one the app never configured. A template can also carry
+    content, such as a "DRAFT" annotation, and that is kept.
+
+    Nothing beyond the template is dropped, at any size: the specification
+    holds the figure's values, so trimming further would remove the only part
+    worth reading, and a large figure is large because it plots a lot of data,
+    the same bytes the app already sends its own client. The figure is
+    therefore `complete`, and a client has no `url` to look for.
+    """
+    spec = agent_data.parse_spec(spec_json)
+    if spec is None:
+        return None
+
+    data: dict[str, Any] = {}
+
+    layout = spec.get("layout") if isinstance(spec, dict) else None
+    if isinstance(layout, dict) and "template" in layout:
+        template = layout["template"]
+        template_layout = template.get("layout") if isinstance(template, dict) else None
+        if not isinstance(template_layout, dict):
+            template_layout = {}
+        content = {
+            name: template_layout[name]
+            for name in _TEMPLATE_CONTENT
+            if template_layout.get(name)
+        }
+        trimmed_layout = {
+            name: value for name, value in layout.items() if name != "template"
+        }
+        if content:
+            trimmed_layout["template"] = {"layout": content}
+            data["spec_omitted"] = [
+                f"layout.template.{name}" for name in template if name != "layout"
+            ] + [
+                f"layout.template.layout.{name}"
+                for name in template_layout
+                if name not in content
+            ]
+        else:
+            data["spec_omitted"] = ["layout.template"]
+        spec = {**spec, "layout": trimmed_layout}
+
+    data["spec"] = _expand_typed_arrays(spec)
+    data["complete"] = True
+    return data
+
+
+def _expand_typed_arrays(value: Any) -> Any:
+    """Expand Plotly's base64 typed arrays into lists of numbers, at any depth.
+
+    Plotly writes a NumPy array as `{"dtype": "f8", "bdata": "<base64>"}`,
+    which a browser decodes and a language model cannot read. Those arrays are
+    the values that make a figure `complete`, so they are reported as numbers,
+    at the cost of a longer specification.
+    """
+    if isinstance(value, list):
+        return [_expand_typed_arrays(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    if (
+        isinstance(value.get("bdata"), str)
+        and isinstance(value.get("dtype"), str)
+        and set(value) <= {"bdata", "dtype", "shape"}
+    ):
+        try:
+            return _decode_typed_array(value)
+        except Exception:
+            _LOGGER.debug("Could not decode a Plotly typed array.", exc_info=True)
+            return value
+    return {name: _expand_typed_arrays(item) for name, item in value.items()}
+
+
+def _decode_typed_array(value: dict[str, Any]) -> Any:
+    """Decode a Plotly base64 typed array (``bdata``) into JSON-compatible values."""
+    import base64
+
+    import numpy as np
+
+    # Plotly.js reads these buffers as little-endian.
+    dtype = np.dtype(value["dtype"]).newbyteorder("<")
+    array = np.frombuffer(base64.b64decode(value["bdata"]), dtype=dtype)
+    if shape := value.get("shape"):
+        dims = shape if isinstance(shape, list) else str(shape).split(",")
+        array = array.reshape([int(dim) for dim in dims])
+    # Through the JSON encoding, so a NaN in a float array becomes null.
+    return json_encoding.to_json_value(array.tolist())
+
+
 class PlotlyMixin:
     @overload
     def plotly_chart(
@@ -384,13 +540,14 @@ class PlotlyMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["ignore"],  # No default value here to make it work with mypy
+        on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -403,13 +560,15 @@ class PlotlyMixin:
         height: Height = "content",
         theme: Literal["streamlit"] | None = "streamlit",
         key: Key | None = None,
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = (
             "points",
             "box",
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
@@ -429,6 +588,7 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
@@ -436,6 +596,16 @@ class PlotlyMixin:
 
         To show Plotly charts in Streamlit, pass a Plotly ``Figure`` or
         ``Data`` object to ``st.plotly_chart``.
+
+        .. note::
+            For new 2D charts, prefer a Vega-based chart command
+            (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
+            ``st.scatter_chart``, or ``st.altair_chart``) or
+            ``st.echarts_chart``. Vega-based charts and ECharts follow the
+            app's theme more closely, load much less code in the browser, and
+            don't need an extra package. Use ``st.plotly_chart`` for 3D
+            charts, scientific chart types such as violin or ternary plots, or
+            a Plotly figure you already have.
 
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
@@ -456,14 +626,20 @@ class PlotlyMixin:
             https://plot.ly/python/ for examples of graph descriptions.
 
             .. note::
-                If your chart contains more than 1000 data points, Plotly will
-                use a WebGL renderer to display the chart. Different browsers
-                have different limits on the number of WebGL contexts per page.
-                If you have multiple WebGL contexts on a page, you may need to
-                switch to SVG rendering mode. You can do this by setting
-                ``render_mode="svg"`` within the figure. For example, the
-                following code defines a Plotly Express line chart that will
-                render in SVG mode when passed to ``st.plotly_chart``:
+                Plotly Express line and scatter charts with more than 1,000
+                data points use a WebGL renderer by default
+                (``render_mode="auto"``). Other figures render to SVG unless
+                they use a WebGL trace type such as ``go.Scattergl``. SVG
+                creates one page element per point, so use WebGL for line and
+                scatter charts with many thousands of points.
+
+                Different browsers have different limits on the number of
+                WebGL contexts per page. If you have many WebGL charts on a
+                page, you may need to switch some of them to SVG. You can do
+                this by setting ``render_mode="svg"`` within the figure. For
+                example, the following code defines a Plotly Express line
+                chart that will render in SVG mode when passed to
+                ``st.plotly_chart``:
                 ``px.line(df, x="x", y="y", render_mode="svg")``.
 
         width : "stretch", "content", or int
@@ -483,10 +659,16 @@ class PlotlyMixin:
 
             - ``"content"`` (default): The height of the element matches the
               height of its content.
-            - ``"stretch"``: The height of the element matches the height of
-              its content or the height of the parent container, whichever is
-              larger. If the element is not in a parent container, the height
-              of the element matches the height of its content.
+            - ``"stretch"``: The height of the element expands to fill the
+              available vertical space in its parent container. When multiple
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. Inside a
+              container that already has a fixed height, the chart keeps no
+              minimum height and can shrink to zero when the other elements
+              fill the container. Use an integer height to keep the chart
+              visible there. Otherwise, the chart uses its figure's
+              ``layout.height``, or 450 pixels when the figure does not set
+              one, and still grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
@@ -569,14 +751,27 @@ class PlotlyMixin:
             configuration options, see Plotly's documentation on `Configuration
             in Python <https://plotly.com/python/configuration-options/>`_.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Prefer a short, specific description; a vague one can be worse than
+            none. This is a short description of the chart, not a full text
+            alternative for dense graphics.
+
         Returns
         -------
-        element or dict
+        element or PlotlyState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the chart element. Otherwise, this command
-            returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``PlotlyState`` dictionary schema.
+            returns a ``PlotlyState`` object. This object is dictionary-like
+            and supports both key and attribute notation. To use this type in
+            an annotation, import it from ``streamlit.typing``.
 
         Examples
         --------
@@ -600,7 +795,9 @@ class PlotlyMixin:
         ...     hist_data, group_labels, bin_size=[0.1, 0.25, 0.5]
         ... )
         >>>
-        >>> st.plotly_chart(fig)
+        >>> st.plotly_chart(
+        ...     fig, alt="Distribution of three groups of random samples"
+        ... )
 
         .. output::
            https://doc-plotly-chart.streamlit.app/
@@ -608,11 +805,12 @@ class PlotlyMixin:
 
         **Example 2: Plotly Chart with configuration**
 
-        By default, Plotly charts have scroll zoom enabled. If you have a
-        longer page and want to avoid conflicts between page scrolling and
-        zooming, you can use Plotly's configuration options to disable scroll
-        zoom. In the following example, scroll zoom is disabled, but the zoom
-        buttons are still enabled in the modebar.
+        Use Plotly's configuration options to control chart interactions such
+        as scroll zoom. Plotly enables scroll zoom by default on 3D, geo, and
+        map subplots, but not on 2D charts. On a longer page, you can disable
+        it to avoid conflicts between page scrolling and zooming. The
+        following 2D chart already has scroll zoom off, so the configuration
+        only makes that explicit. The zoom buttons in the modebar still work.
 
         >>> import plotly.graph_objects as go
         >>> import streamlit as st
@@ -660,17 +858,14 @@ class PlotlyMixin:
         # keep it in sync with what Plotly calls it.
 
         if theme not in {"streamlit", None}:
-            raise StreamlitAPIException(
-                f'You set theme="{theme}" while Streamlit charts only support '
-                "theme=”streamlit” or theme=None to fallback to the default "
-                "library theme."
-            )
+            raise StreamlitValueError("theme", ["'streamlit'", "None"])
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -678,11 +873,11 @@ class PlotlyMixin:
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
 
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -704,11 +899,17 @@ class PlotlyMixin:
         plotly_chart_proto.spec = plotly.io.to_json(figure, validate=False)
         plotly_chart_proto.config = json.dumps(config)
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Carry alt on its own proto field so it is not baked into the
+            # wire spec JSON (frontend applies it as the chart accessible name).
+            plotly_chart_proto.alt = normalized_alt
+
         ctx = get_script_run_ctx()
 
-        # We are computing the widget id for all plotly uses
-        # to also allow non-widget Plotly charts to keep their state
-        # when the frontend component gets unmounted and remounted.
+        # Compute an ID for every Plotly chart so the frontend can restore
+        # state after remount. Always hash command kwargs (including alt),
+        # even when the author set a key, so changing alt remounts the chart.
         plotly_chart_proto.id = compute_and_register_element_id(
             "plotly_chart",
             user_key=key,
@@ -721,6 +922,7 @@ class PlotlyMixin:
             theme=theme,
             width=width,
             height=height,
+            alt=normalized_alt,
         )
 
         # Handle "content" width and height by inspecting the figure's natural dimensions
@@ -737,7 +939,7 @@ class PlotlyMixin:
 
             widget_state = register_widget(
                 plotly_chart_proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -746,13 +948,37 @@ class PlotlyMixin:
 
             layout_config = LayoutConfig(width=final_width, height=final_height)
             self.dg._enqueue(
-                "plotly_chart", plotly_chart_proto, layout_config=layout_config
+                "plotly_chart",
+                plotly_chart_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "plotly_chart",
+                    key=plotly_chart_proto.id,
+                    data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
+                    support="action_unsupported",
+                    selection_mode=sorted(
+                        _SELECTION_MODE_FROM_PROTO[mode]
+                        for mode in plotly_chart_proto.selection_mode
+                    )
+                    or None,
+                    # A callback reaches the server too, so it is "rerun".
+                    on_select="rerun",
+                    alt=plotly_chart_proto.alt or None,
+                ),
             )
             return widget_state.value
 
         layout_config = LayoutConfig(width=final_width, height=final_height)
         return self.dg._enqueue(
-            "plotly_chart", plotly_chart_proto, layout_config=layout_config
+            "plotly_chart",
+            plotly_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "plotly_chart",
+                key=key,
+                data_builder=lambda: _plotly_data(plotly_chart_proto.spec),
+                alt=plotly_chart_proto.alt or None,
+            ),
         )
 
     @property

@@ -27,12 +27,12 @@ from __future__ import annotations
 import importlib.metadata
 import importlib.util
 import os
+import tomllib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-import toml
 from packaging import utils as packaging_utils
 
 from streamlit.components.v2.component_path_utils import ComponentPathUtils
@@ -361,8 +361,8 @@ def _validate_pyproject_for_package(
         True if the file belongs to this package, False otherwise.
     """
     try:
-        with open(pyproject_path, encoding="utf-8") as f:
-            pyproject_data = toml.load(f)
+        with open(pyproject_path, "rb") as f:
+            pyproject_data = tomllib.load(f)
 
         # Check if this pyproject.toml is for the package we're looking for
         project_name = None
@@ -409,8 +409,8 @@ def _validate_pyproject_for_package(
 def _load_pyproject(pyproject_path: Path) -> dict[str, Any] | None:
     """Load and parse a pyproject.toml, returning parsed data or None on failure."""
     try:
-        with open(pyproject_path, encoding="utf-8") as f:
-            return toml.load(f)
+        with open(pyproject_path, "rb") as f:
+            return tomllib.load(f)
     except Exception as e:
         _LOGGER.debug("Failed to parse pyproject.toml at %s: %s", pyproject_path, e)
         return None

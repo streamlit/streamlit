@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import errno
 import os
 import shutil
 import sys
@@ -23,17 +24,108 @@ import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Final
+from typing import Final, Literal
 
 import click
 
 import streamlit
+from streamlit import env_util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
+
+# The full vocabulary of install-failure causes. Closed so the reason is safe to emit
+# as a telemetry label, and a Literal so mypy rejects a typo'd or ad-hoc reason at the
+# raise site rather than silently minting a label no query knows about.
+_InstallFailureReason = Literal[
+    "conflict",  # A pre-existing file or foreign symlink we won't overwrite.
+    "incomplete",  # Project symlinks failed and the global fallback was cancelled.
+    "no_skills",  # The bundled skills dir exists but contains nothing installable.
+    "non_interactive",  # No TTY to prompt on and --yes wasn't passed.
+    "source_missing",  # The bundled skills dir is absent from the installation.
+    "source_incomplete",  # The dir is present but a required file is missing.
+    "symlinks_unsupported",  # Project install needs symlinks; this OS won't make them.
+    "write_denied",  # Permissions, or a read-only filesystem.
+    "write_locked",  # Another process holds the path (antivirus, sync clients).
+    "write_name_too_long",  # The path exceeded the OS limit (Windows MAX_PATH).
+    "write_no_space",  # Out of disk, or over a quota.
+    "write_failed",  # A write failed for a reason none of the above cover.
+]
+
+# Why a project install was rerouted to a global copy. Split finely because most
+# Windows users take this path and then SUCCEED, so this - not the failure vocabulary
+# above - is where their diagnostic signal lives, and only the first is a cause a user
+# can fix themselves.
+_FallbackReason = Literal[
+    "symlinks_no_privilege",  # Windows Developer Mode off (ERROR_PRIVILEGE_NOT_HELD).
+    "symlinks_denied",  # Permissions on the project dir refused the probe.
+    "symlinks_unsupported",  # The filesystem/OS has no directory symlinks.
+    "symlink_failed",  # Pre-check passed, then an individual link would not lay.
+]
+
+# OSError.errno -> reason. Built by name so a platform missing one of these (they
+# are not all defined everywhere) simply omits it rather than failing at import.
+_ERRNO_GROUPS: Final[tuple[tuple[tuple[str, ...], _InstallFailureReason], ...]] = (
+    (("EACCES", "EPERM", "EROFS"), "write_denied"),
+    # EFBIG is deliberately absent: a file-size limit is not out of space.
+    (("ENOSPC", "EDQUOT"), "write_no_space"),
+    # EAGAIN belongs here on retry semantics rather than locking specifically.
+    (("EBUSY", "EAGAIN", "ETXTBSY"), "write_locked"),
+    (("ENAMETOOLONG",), "write_name_too_long"),
+)
+_WRITE_REASON_BY_ERRNO: Final[dict[int, _InstallFailureReason]] = {
+    code: reason
+    for names, reason in _ERRNO_GROUPS
+    for name in names
+    if (code := getattr(errno, name, None)) is not None
+}
+
+# Consulted BEFORE errno: CPython's mapping is lossy in the one direction that would
+# mislead us. A sharing violation (antivirus or a sync client holding the file) arrives
+# as EACCES, so trusting errno on Windows sends us after folder ACLs when the fix is to
+# retry.
+_WRITE_REASON_BY_WINERROR: Final[dict[int, _InstallFailureReason]] = {
+    5: "write_denied",  # ERROR_ACCESS_DENIED
+    19: "write_denied",  # ERROR_WRITE_PROTECT
+    32: "write_locked",  # ERROR_SHARING_VIOLATION
+    33: "write_locked",  # ERROR_LOCK_VIOLATION
+    39: "write_no_space",  # ERROR_HANDLE_DISK_FULL
+    112: "write_no_space",  # ERROR_DISK_FULL
+    206: "write_name_too_long",  # ERROR_FILENAME_EXCED_RANGE
+}
+
+
+def classify_write_error(error: OSError) -> _InstallFailureReason:
+    """Map a filesystem ``OSError`` to a bounded, actionable failure reason.
+
+    Only the error *class* is used, never the message, which can embed an absolute
+    server path - so the result stays safe to emit as a telemetry label. An
+    unrecognised code stays the generic ``"write_failed"`` rather than being guessed
+    into a specific bucket that would point at the wrong fix.
+    """
+    winerror = getattr(error, "winerror", None)
+    if isinstance(winerror, int) and winerror in _WRITE_REASON_BY_WINERROR:
+        return _WRITE_REASON_BY_WINERROR[winerror]
+    if error.errno is not None and error.errno in _WRITE_REASON_BY_ERRNO:
+        return _WRITE_REASON_BY_ERRNO[error.errno]
+    return "write_failed"
+
+
+class InstallError(click.ClickException):
+    """A skills-install failure carrying a stable machine-readable ``reason`` code.
+
+    The backend-operation handler forwards the ``reason`` to the client, which emits
+    it as a telemetry label suffix - hence the fixed :data:`_InstallFailureReason`
+    vocabulary, never user input. Behaves like a plain ``click.ClickException``
+    otherwise, so raising it changes nothing a user sees.
+    """
+
+    def __init__(self, message: str, *, reason: _InstallFailureReason) -> None:
+        super().__init__(message)
+        self.reason = reason
 
 
 def _generate_gitignore_snippet(
@@ -60,7 +152,20 @@ class _InstallResult:
 
     installed: list[str] = field(default_factory=list)
     up_to_date: list[str] = field(default_factory=list)
+    # Pre-existing files/symlinks we won't overwrite - a genuine "conflict".
     skipped: list[str] = field(default_factory=list)
+    # Filesystem failures during the global copy. Kept apart from ``skipped`` so a
+    # write failure is never misreported as a "conflict", in the CLI summary and in
+    # the nudge's telemetry reason. Only the copy path fills this.
+    errored: list[str] = field(default_factory=list)
+    # The distinct causes behind ``errored``. A set, not a per-entry list: the only
+    # consumer asks whether the failed targets agreed on one cause, never which
+    # target had which. Separate from the display strings above, which carry raw
+    # OSError text that must not reach the browser.
+    write_reasons: set[_InstallFailureReason] = field(default_factory=set)
+    # Set when a project install was rerouted to a global copy, naming why. Surfaced
+    # to telemetry so that cohort is countable - see InstallSkillsResponsePayload.
+    fallback_reason: _FallbackReason | None = None
 
 
 def _get_source_skills_dir() -> Path:
@@ -170,16 +275,73 @@ def _find_project_root(start: Path | None = None) -> Path:
     return start_dir
 
 
+def _claude_cli_on_path() -> bool:
+    """Whether a ``claude`` executable is reachable on the user's ``PATH``."""
+    found = shutil.which("claude")
+    if found is None:
+        return False
+    # Windows only: shutil.which() searches the current directory before PATH
+    # there, so without this a checkout shipping claude.exe/.bat/.cmd would
+    # decide where we write. Repo contents must not be an input to that.
+    return not env_util.IS_WINDOWS or _lives_in_a_path_entry(found)
+
+
+def _lives_in_a_path_entry(executable: str) -> bool:
+    """Whether ``executable`` sits in a directory ``PATH`` actually names.
+
+    A user who put "." on ``PATH`` themselves still counts - that is their
+    choice, not the repo's.
+    """
+    found_dir = os.path.normcase(os.path.dirname(os.path.abspath(executable)))
+    return found_dir in {
+        os.path.normcase(os.path.abspath(entry))
+        for entry in os.environ.get("PATH", "").split(os.pathsep)
+        if entry
+    }
+
+
+# Broader than the "claude" row in _HARNESSES, which keys on ~/.claude alone for
+# stable telemetry. Here a miss hides the skill from Claude Code, so we also
+# accept ~/.claude.json and a `claude` on PATH. In practice the two only disagree
+# for a CLI never invoked past `claude --version`: the first command that touches
+# config writes both markers, before login (checked against Claude Code 2.1.235).
+#
+# Cached: the nudge display gate calls this on every script rerun, and
+# shutil.which() walks all of PATH. A Claude Code install mid-session is missed
+# until the server restarts; the next session sees a partial install and offers
+# the repair.
+@lru_cache(maxsize=1)
+def _is_claude_code_present() -> bool:
+    """Whether Claude Code appears to be installed on this machine.
+
+    Claude Code reads only ``.claude/skills/``, never ``.agents/skills/``, so a
+    missed detection hides the skill while a false positive costs unused
+    symlinks. ``~/.claude`` is created lazily, so ``~/.claude.json`` or a
+    ``claude`` on ``PATH`` also counts.
+    """
+    try:
+        home = Path.home()
+    except RuntimeError:
+        # Path.home() raises when the home directory cannot be resolved. The
+        # marker checks are impossible then, but the CLI can still be on PATH -
+        # and a project-local .claude/skills/ install needs no home directory.
+        pass
+    else:
+        if (home / ".claude").exists() or (home / ".claude.json").exists():
+            return True
+
+    return _claude_cli_on_path()
+
+
 def _get_project_target_dirs(project_root: Path) -> list[Path]:
     """Get target directories for project skill installation.
 
     Always targets .agents/skills/. Also targets .claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    when Claude Code appears to be installed.
     """
     targets = [project_root / ".agents" / "skills"]
 
-    claude_home = Path.home() / ".claude"
-    if claude_home.exists():
+    if _is_claude_code_present():
         targets.append(project_root / ".claude" / "skills")
 
     return targets
@@ -189,55 +351,163 @@ def _get_global_target_dirs() -> list[Path]:
     """Get target directories for global skill installation.
 
     Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
-    when ~/.claude exists (Claude Code is installed).
+    when Claude Code appears to be installed.
     """
     home = Path.home()
     targets = [home / ".agents" / "skills"]
 
-    claude_home = home / ".claude"
-    if claude_home.exists():
-        targets.append(claude_home / "skills")
+    if _is_claude_code_present():
+        targets.append(home / ".claude" / "skills")
 
     return targets
 
 
-def are_skills_installed() -> bool:
-    """Check whether Streamlit agent skills appear to be installed.
+def _authoritative_global_target_dir() -> Path:
+    """The global target whose write failure fails the whole install.
 
-    Returns ``True`` if the bundled skill is present (as a symlink, copied
-    directory, or regular directory) in any of the project-local or global
-    target directories. This is a best-effort check used to decide whether to
-    recommend installing skills; it does not validate skill contents.
+    - Claude Code detected -> ``~/.claude/skills``. That is what Claude Code
+      reads; ``~/.agents/skills`` is best-effort.
+    - No Claude Code -> ``~/.agents/skills``. No target has a verified reader,
+      but leaving none authoritative would turn every write failure into silent
+      success.
+
+    Always one of :func:`_get_global_target_dirs`.
     """
-    candidate_dirs: list[Path] = []
+    home = Path.home()
+    if _is_claude_code_present():
+        return home / ".claude" / "skills"
+    return home / ".agents" / "skills"
+
+
+# Completeness against the directories `streamlit skills` writes. The key state
+# is ``partial``: the skill is in .agents/skills but not .claude/skills, so
+# Claude Code cannot see it.
+_InstallCompleteness = Literal[
+    "absent",  # No target dir in either scope has the skill.
+    "complete",  # Some scope has it in every target dir we could read.
+    "partial",  # Some scope has it in some target dirs, and neither is complete.
+    "unknown",  # There were target dirs, but not one of them could be read.
+]
+
+
+def _install_completeness(app_dir: str | None = None) -> _InstallCompleteness:
+    """How completely the bundled skill is installed across target directories.
+
+    Either scope (project or global) being complete is enough - a complete global
+    install means every agent can load the skill, so a half-finished project
+    install must not downgrade it.
+
+    Best-effort - a permissions error never reports a working install as
+    partial:
+
+    - Target dirs that cannot be resolved are skipped.
+    - Target dirs that cannot be read count as unknown, not missing.
+    - When no target dir in any scope can be read, the whole answer is
+      ``unknown``: "we could not look" is not evidence the skill is missing, and
+      marker detection cannot see through those dirs either.
+
+    Deliberately uncached, so repairing a partial install takes effect at once.
+
+    Parameters
+    ----------
+    app_dir
+        Directory of the running app's main script, used to resolve the project
+        root exactly as an install triggered from that app would. ``None`` falls
+        back to the current working directory.
+    """
+    project_dirs: list[Path] = []
+    global_dirs: list[Path] = []
     try:
-        project_root = _find_project_root()
+        project_root = _find_project_root(Path(app_dir) if app_dir else None)
     except (OSError, RuntimeError):
         # RuntimeError can be raised by Path.home() when the home directory
         # cannot be determined. This is a best-effort check, so skip project dirs.
         pass
     else:
         try:
-            candidate_dirs.extend(_get_project_target_dirs(project_root))
+            project_dirs.extend(_get_project_target_dirs(project_root))
         except (OSError, RuntimeError):
             # Same reasoning as above; still check global dirs.
             pass
 
     try:
-        candidate_dirs.extend(_get_global_target_dirs())
+        global_dirs.extend(_get_global_target_dirs())
     except (OSError, RuntimeError):
         # Keep any project dirs already collected above instead of discarding
         # them; still a best-effort check, so just skip the global dirs.
         pass
 
-    for target_dir in candidate_dirs:
-        skill_path = target_dir / _GLOBAL_SKILL_NAME
-        try:
-            if skill_path.is_symlink() or skill_path.exists():
-                return True
-        except OSError:
+    partial = False
+    read_a_target = False
+    # Project scope first, but either scope being complete returns immediately,
+    # so the order does not affect the result.
+    scopes = [scope_dirs for scope_dirs in (project_dirs, global_dirs) if scope_dirs]
+    for scope_dirs in scopes:
+        # Directories we could not read are dropped rather than treated as
+        # missing: an unreadable path means "unknown", and reporting the skill
+        # as uninstalled because of a permissions error would pester users who
+        # are in fact set up correctly.
+        known = [
+            present
+            for present in (_skill_present_in(target_dir) for target_dir in scope_dirs)
+            if present is not None
+        ]
+        if not known:
+            # Not one target in this scope answered, so it is evidence of
+            # nothing - neither an install nor a missing one.
             continue
-    return False
+        read_a_target = True
+        if all(known):
+            return "complete"
+        if any(known):
+            partial = True
+
+    if partial:
+        return "partial"
+    if scopes and not read_a_target:
+        # Targets existed but none could be read. "Absent" here would blame a
+        # permissions error for a missing install. (No targets at all stays
+        # "absent": an install can still succeed once the lookup recovers.)
+        return "unknown"
+    return "absent"
+
+
+def are_skills_installed() -> bool:
+    """Whether the startup recommendation should stay quiet about missing skills.
+
+    True for ``complete`` and ``unknown``. A partial install returns False, so
+    the startup recommendation prints again and the re-run fills in the missing
+    target. ``unknown`` (every target unreadable) returns True because the
+    recommendation has no dismissal path and the install it points at would hit
+    the same error.
+
+    Best-effort: it does not validate skill contents.
+    """
+    return _install_completeness() in {"complete", "unknown"}
+
+
+def _skill_present_in(target_dir: Path) -> bool | None:
+    """Whether the bundled skill path exists in ``target_dir``.
+
+    Returns ``None`` when the filesystem cannot determine this, so callers can
+    tell "not there" apart from "could not look". Dangling symlinks count as
+    present.
+    """
+    skill_path = target_dir / _GLOBAL_SKILL_NAME
+    try:
+        # lstat() instead of exists()/is_symlink(): those swallow OSError and
+        # collapse "could not look" into "missing". lstat() raises on permission
+        # errors and does not follow symlinks.
+        skill_path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        # Nothing there, or a parent component is a file - either way the skill
+        # is genuinely absent rather than unreadable.
+        return False
+    except OSError:
+        # Permissions, a dead mount, a path over the OS length limit: we could
+        # not look, which is not the same as "not installed".
+        return None
+    return True
 
 
 def _is_streamlit_owned_symlink(link_path: Path, bundled_skill_names: set[str]) -> bool:
@@ -279,17 +549,48 @@ def _skill_copy_matches(source_path: Path, target_path: Path) -> bool:
     return True
 
 
-def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
-    """Return whether project install can create directory symlinks."""
+@lru_cache(maxsize=8)
+def _symlink_blocker(project_root: Path, source_path: Path) -> _FallbackReason | None:
+    """Return why project install can't use symlinks here, or ``None`` if it can.
+
+    Probes by actually creating one in a temp dir, then classifies the failure rather
+    than collapsing it to "unsupported" - most Windows users land here and then
+    *succeed* via the global fallback, so this is what their success label carries,
+    and only ``symlinks_no_privilege`` (Developer Mode off) is a cause a user can fix.
+    """
+    # Cached: the probe WRITES (a temp dir plus a symlink) into project_root, and
+    # the nudge display gate calls this on every script rerun - uncached, a passive
+    # eligibility check would churn the user's project directory continuously.
+    # Symlink support is a property of the OS and filesystem rather than of a
+    # moment in time (enabling Windows Developer Mode needs a restart anyway), so
+    # a process-lifetime answer is accurate.
     try:
         with tempfile.TemporaryDirectory(
             prefix=".streamlit-skills-", dir=project_root
         ) as temp_dir:
             link_path = Path(temp_dir) / "skill-link"
             link_path.symlink_to(source_path, target_is_directory=True)
-            return link_path.is_symlink()
-    except (OSError, NotImplementedError):
-        return False
+            if link_path.is_symlink():
+                return None
+            # Created without error yet isn't a symlink: treat as unsupported rather
+            # than claiming success we can't verify.
+            return "symlinks_unsupported"
+    except NotImplementedError:
+        return "symlinks_unsupported"
+    except OSError as e:
+        # ERROR_PRIVILEGE_NOT_HELD: the account lacks SeCreateSymbolicLinkPrivilege,
+        # which in practice means Windows Developer Mode is off. Distinguishing this
+        # is the point of the exercise - it is the one cause a user can simply fix.
+        if getattr(e, "winerror", None) == 1314:
+            return "symlinks_no_privilege"
+        # ``errno`` is Optional on OSError, and dict.get is typed to reject None, so
+        # the guard is for the type checker rather than for runtime behaviour.
+        if (
+            e.errno is not None
+            and _WRITE_REASON_BY_ERRNO.get(e.errno) == "write_denied"
+        ):
+            return "symlinks_denied"
+        return "symlinks_unsupported"
 
 
 def _get_display_path(
@@ -301,6 +602,32 @@ def _get_display_path(
         return Path("~") / rel_path if use_tilde else rel_path
     except ValueError:
         return target_path
+
+
+def _symlink_target_would_conflict(target_path: Path) -> bool:
+    """Return whether a real (non-symlink) file or directory occupies the target,
+    blocking a project (symlink) install.
+    """
+    # Shared by _install_skill_symlink (which skips such a target) and the nudge
+    # display gate (_one_click_install_would_be_refused) so the two cannot drift.
+    # Symlinks are excluded because the installer replaces any symlink named
+    # after a bundled skill; a broken one has exists() == False regardless.
+    return target_path.exists() and not target_path.is_symlink()
+
+
+def _copy_target_would_conflict(target_path: Path) -> bool:
+    """Return whether a real (non-symlink) file occupies the target, blocking a
+    global (copy) install.
+    """
+    # The copy counterpart to _symlink_target_would_conflict, and deliberately
+    # narrower: the copy install replaces a real directory (staging to a temp dir
+    # first) and unlinks a name-owned symlink, so only a real file blocks it.
+    # Shared by _install_skill_copy and the nudge display gate, same as above.
+    return (
+        target_path.exists()
+        and not target_path.is_symlink()
+        and not target_path.is_dir()
+    )
 
 
 def _install_skill_symlink(
@@ -319,11 +646,19 @@ def _install_skill_symlink(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.cwd())
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # Pre-symlink filesystem work runs under one guard: any OSError here means we
+    # can't lay the symlink, so return False and let the caller fall back to a global
+    # copy rather than letting it escape and be misbooked as a hard write failure.
+    try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-    if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if it's a matching symlink
+        # A real (non-symlink) file or directory is a hard conflict - skip it.
+        if _symlink_target_would_conflict(target_path):
+            result.skipped.append(f"{rel_target_path} (existing file or directory)")
+            return True
+
+        # A symlink (valid or broken) at the target - replace it if it's ours.
         if target_path.is_symlink():
             try:
                 resolved = target_path.resolve()
@@ -340,10 +675,8 @@ def _install_skill_symlink(
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
                 return True
-        else:
-            # Regular file or directory - skip
-            result.skipped.append(f"{rel_target_path} (existing file or directory)")
-            return True
+    except (OSError, NotImplementedError):
+        return False
 
     # Compute the relative symlink target from the REAL (symlink-resolved) paths
     # of both ends. os.path.relpath counts ``..`` levels against the logical
@@ -385,13 +718,22 @@ def _install_skill_copy(
     target_path = target_dir / skill_name
     rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
-    # Ensure parent directory exists
-    target_dir.mkdir(parents=True, exist_ok=True)
+    # All filesystem work runs under one try so a failure at ANY step is recorded as
+    # a write failure classified by errno, instead of escaping as an uncaught OSError
+    # the caller can only classify as "unknown".
+    try:
+        # Ensure parent directory exists
+        target_dir.mkdir(parents=True, exist_ok=True)
 
-    old_target_to_remove: Path | None = None
+        old_target_to_remove: Path | None = None
 
-    if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if we can replace it
+        # A real (non-symlink) file is a hard conflict - skip it. Routed through the
+        # shared predicate so the nudge display gate's preflight cannot drift from what
+        # this actually skips.
+        if _copy_target_would_conflict(target_path):
+            result.skipped.append(f"{rel_target_path} (existing file)")
+            return
+
         if target_path.is_symlink():
             if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
                 target_path.unlink()
@@ -402,16 +744,11 @@ def _install_skill_copy(
             if _skill_copy_matches(source_path, target_path):
                 result.up_to_date.append(str(rel_target_path))
                 return
-            # Defer removal until after successful copy to ensure atomicity
             old_target_to_remove = target_path
-        else:
-            result.skipped.append(f"{rel_target_path} (existing file)")
-            return
 
-    # Copy skill directory - use temp location first to ensure atomicity
-    try:
+        # Copy to a temp location and swap, so a failed copy leaves the working
+        # installation in place.
         if old_target_to_remove is not None:
-            # Copy to temp location, then swap
             temp_path = target_path.with_name(f".{skill_name}.tmp")
             if temp_path.exists():
                 shutil.rmtree(temp_path)
@@ -429,7 +766,11 @@ def _install_skill_copy(
         temp_path = target_path.with_name(f".{skill_name}.tmp")
         if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
-        result.skipped.append(f"{rel_target_path} (copy failed: {e})")
+        # A write failure, not a conflict - record it in ``errored`` so it is
+        # classified as such, not "conflict", and note the errno-derived cause so the
+        # telemetry reason names which write failed.
+        result.errored.append(f"{rel_target_path} (copy failed: {e})")
+        result.write_reasons.add(classify_write_error(e))
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -452,6 +793,11 @@ def _print_result(result: _InstallResult) -> None:
         click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
             click.echo(f"  {click.style('→', fg='yellow')} {path}")
+
+    if result.errored:
+        click.secho("\n✗ Failed to write:", fg="red", bold=True)
+        for path in result.errored:
+            click.echo(f"  {click.style('→', fg='red')} {path}")
 
 
 def _prompt_install_mode() -> str:
@@ -550,7 +896,28 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     return click.confirm("Proceed with installation?", default=True)
 
 
-def _conflict_error(skipped: list[str]) -> click.ClickException:
+def _concise_install_paths(entries: list[str]) -> list[str]:
+    """Collapse ``_InstallResult`` entries to short paths safe to show a user.
+
+    Entries look like ``"<path> (why)"``. Both failure messages built from them are
+    shown verbatim in the in-app nudge, so keep only the ``<harness>/skills/<skill>``
+    tail and drop the parenthetical: neither an absolute server path nor a raw
+    ``OSError`` string may reach the browser.
+    """
+    paths = []
+    for entry in entries:
+        # Split from the RIGHT: the reason is always the last parenthetical, but a
+        # path component may legitimately contain " (" (e.g. "~/My App (old)/").
+        # Splitting from the left would truncate the path there, defeating the
+        # last-three-parts collapse below and leaking the leading directories —
+        # which on a real machine means the user's home dir and username.
+        raw = entry.rsplit(" (", 1)[0]
+        parts = Path(raw).parts
+        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    return paths
+
+
+def _conflict_error(skipped: list[str]) -> InstallError:
     """Build a specific "couldn't install" error that names the conflicting
     paths, rather than a vague "remove conflicting files".
 
@@ -562,16 +929,44 @@ def _conflict_error(skipped: list[str]) -> click.ClickException:
     stand on its own (the CLI's detailed ``_print_result`` output never reaches
     the browser).
     """
-    paths = []
-    for entry in skipped:
-        raw = entry.split(" (", 1)[0]
-        parts = Path(raw).parts
-        paths.append(Path(*parts[-3:]).as_posix() if len(parts) >= 3 else raw)
+    paths = _concise_install_paths(skipped)
     joined = ", ".join(paths)
     plural = len(paths) != 1
-    return click.ClickException(
+    return InstallError(
         f"{joined} already exist{'' if plural else 's'}. "
-        f"Remove {'them' if plural else 'it'} and try again."
+        f"Remove {'them' if plural else 'it'} and try again.",
+        reason="conflict",
+    )
+
+
+def _write_error(
+    result: _InstallResult,
+    reasons: set[_InstallFailureReason] | None = None,
+) -> InstallError:
+    """Build a write-failure error for the copy install path.
+
+    Distinct from :func:`_conflict_error` (pre-existing files).
+
+    ``reasons`` restricts which causes set the telemetry reason - in practice,
+    those from the authoritative target. ``None`` uses every recorded cause. A
+    best-effort target's failure still appears in the user-facing message, but it
+    must not pick the telemetry reason: the dir a harness actually reads decides
+    the label.
+
+    - All causes agree -> that cause.
+    - They disagree, or none was recorded -> ``write_failed``, since labelling a
+      half-permissions, half-disk-full set "permission denied" would point
+      whoever reads the telemetry at the wrong fix.
+    """
+    joined = ", ".join(_concise_install_paths(result.errored))
+    justifying = result.write_reasons if reasons is None else reasons
+    reason: _InstallFailureReason = (
+        next(iter(justifying)) if len(justifying) == 1 else "write_failed"
+    )
+    return InstallError(
+        f"Could not write {joined}. Check folder permissions and free disk "
+        "space, then try again.",
+        reason=reason,
     )
 
 
@@ -588,14 +983,17 @@ def _install_project_skills(
         # Keep the absolute path in the server log only - this message is shown
         # verbatim in the in-app nudge, so it must not leak a server path.
         _LOGGER.warning("Bundled skills directory not found at %s", source_skills_dir)
-        raise click.ClickException(
+        raise InstallError(
             "Bundled skills were not found in your Streamlit installation. "
-            "Reinstall Streamlit and try again."
+            "Reinstall Streamlit and try again.",
+            reason="source_missing",
         )
 
     skills = _discover_skills(source_skills_dir)
     if not skills:
-        raise click.ClickException("No installable skills found in Streamlit package.")
+        raise InstallError(
+            "No installable skills found in Streamlit package.", reason="no_skills"
+        )
 
     # Determine targets. The in-app installer passes ``app_dir`` so the project
     # root resolves from the running app's directory (matching the nudge's skill
@@ -603,7 +1001,8 @@ def _install_project_skills(
     project_root = _find_project_root(Path(app_dir) if app_dir else None)
     target_dirs = _get_project_target_dirs(project_root)
 
-    if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
+    symlink_blocker = _symlink_blocker(project_root, source_skills_dir / skills[0])
+    if symlink_blocker is not None:
         if fallback_to_global:
             click.secho(
                 "\n⚠ Symlinks not supported on this system.",
@@ -619,10 +1018,13 @@ def _install_project_skills(
                 "Developer Mode to use project installs."
             )
             click.echo()
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            global_result.fallback_reason = symlink_blocker
+            return global_result
 
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Confirm installation
@@ -659,20 +1061,26 @@ def _install_project_skills(
         click.echo("Falling back to global installation mode...")
         click.echo()
         try:
-            return _install_global_skills(yes=yes)
+            global_result = _install_global_skills(yes=yes)
+            # The pre-check said symlinks work here, yet laying one still failed -
+            # distinct from the categorical case above, and worth chasing separately.
+            global_result.fallback_reason = "symlink_failed"
+            return global_result
         except click.ClickException:
             # Global install failed - partial project symlinks remain as fallback
             raise
         except click.exceptions.Abort:
             # User cancelled global install - report that nothing was fully installed
-            raise click.ClickException(
+            raise InstallError(
                 "Installation incomplete. Project symlinks failed and global install "
-                "was cancelled."
+                "was cancelled.",
+                reason="incomplete",
             )
 
     if symlink_failed:
-        raise click.ClickException(
-            "Symlinks not supported. Use --global for global installation."
+        raise InstallError(
+            "Symlinks not supported. Use --global for global installation.",
+            reason="symlinks_unsupported",
         )
 
     # Report results
@@ -744,26 +1152,74 @@ def _install_global_skills(*, yes: bool = False) -> _InstallResult:
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
         )
-        raise click.ClickException(
+        raise InstallError(
             f"The bundled '{_GLOBAL_SKILL_NAME}' meta-skill was not found in your "
-            "Streamlit installation. Reinstall Streamlit and try again."
+            "Streamlit installation. Reinstall Streamlit and try again.",
+            # Distinct from source_missing: the directory is there but a required
+            # file is not, which points at a too-narrow package-data glob rather
+            # than skills being absent from the wheel entirely.
+            reason="source_incomplete",
         )
 
-    # Install to each target directory
+    # Per-target results let us judge each target's outcome. The merged
+    # _InstallResult cannot: write_reasons is a set, so identical failures on
+    # different targets are indistinguishable.
     result = _InstallResult()
     # For global install, only one skill is installed but we use a set for consistency
     bundled_skill_names = {_GLOBAL_SKILL_NAME}
+    authoritative_dir = _authoritative_global_target_dir()
+    authoritative_failed = False
+    authoritative_reasons: set[_InstallFailureReason] = set()
+    degraded_dirs: list[Path] = []
+
     for target_dir in target_dirs:
+        target_result = _InstallResult()
         _install_skill_copy(
             _GLOBAL_SKILL_NAME,
             meta_skill_dir,
             target_dir,
-            result,
+            target_result,
             bundled_skill_names,
         )
+        if target_result.errored:
+            if target_dir == authoritative_dir:
+                authoritative_failed = True
+                authoritative_reasons |= target_result.write_reasons
+            else:
+                degraded_dirs.append(target_dir)
+        result.installed += target_result.installed
+        result.up_to_date += target_result.up_to_date
+        result.skipped += target_result.skipped
+        result.errored += target_result.errored
+        result.write_reasons |= target_result.write_reasons
 
     # Report results
     _print_result(result)
+
+    # Fail only when the authoritative target failed: a detected harness reads
+    # that path, so the install reached no agent. A best-effort miss is not a
+    # failure - it avoids nudging a developer whose Claude Code works into a
+    # repair loop on an unwritable extra dir.
+    if authoritative_failed:
+        raise _write_error(result, authoritative_reasons)
+
+    # Backstop: nothing landed anywhere. Currently unreachable because the
+    # authoritative dir is always in target_dirs, but prevents a future extra
+    # target from turning a total failure into silent success.
+    if result.errored and not (result.installed or result.up_to_date):
+        raise _write_error(result)
+
+    if degraded_dirs:
+        # Not swallowed. _print_result above already lists it under "Failed to
+        # write" for a CLI user; this leaves the same trace in the server log for
+        # the in-app install, which has no terminal to print to.
+        _LOGGER.warning(
+            "Skills install wrote %s but could not write best-effort target(s) %s. "
+            "Reporting success: the skill is installed where a detected agent "
+            "reads it.",
+            authoritative_dir,
+            ", ".join(str(path) for path in degraded_dirs),
+        )
 
     if result.installed or result.up_to_date:
         click.echo()
@@ -815,8 +1271,9 @@ def install_skills(
     """
     # Check if running interactively
     if not yes and not sys.stdin.isatty():
-        raise click.ClickException(
-            "Non-interactive terminal detected. Use --yes to skip prompts."
+        raise InstallError(
+            "Non-interactive terminal detected. Use --yes to skip prompts.",
+            reason="non_interactive",
         )
 
     # Interactive mode selection (when not using flags)
@@ -930,12 +1387,9 @@ _MAX_REPO_ROOT_WALK_DEPTH: Final = 20
 def _find_git_root(start: str) -> str | None:
     """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
 
-    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
-    GitPython. GitPython's cold import adds ~170ms on first call, which shows
-    up on every hosted-app startup via the ``create_page_profile_message``
-    code path — for a signal that almost always resolves to ``None`` in those
-    environments. The stdlib walk is ~1ms cold and returns the same path we
-    need.
+    Uses a bounded stdlib ancestor walk instead of Git or a Git library. Hosted-app
+    startup hits this via ``create_page_profile_message``, and the walk stays ~1ms
+    cold for a signal that is usually ``None`` there.
     """
     current = os.path.abspath(start)
     for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
@@ -1057,13 +1511,142 @@ def clear_installed_skills_cache() -> None:
     _detect_installed_skills_cached.cache_clear()
 
 
+@lru_cache(maxsize=4)
+def _log_nudge_suppressed_by_conflict(blocked_paths: tuple[str, ...]) -> None:
+    """Warn that the 'install skills' nudge is being withheld, once per blocker set."""
+    # Cached purely to deduplicate: the display gate re-evaluates on every script
+    # rerun, so an unguarded warning would repeat for as long as the blockers do.
+    # Suppression is otherwise entirely silent, which leaves a developer no way to
+    # find out why the nudge never appears. Absolute paths are fine here - unlike
+    # the installer's ClickExceptions, this reaches only the server log.
+    _LOGGER.warning(
+        "Not recommending the 'install skills' nudge: %s already exist(s) and "
+        "would block a one-click install. Remove to enable it.",
+        ", ".join(blocked_paths),
+    )
+
+
+def _one_click_install_would_be_refused(app_dir: str | None) -> bool:
+    """Return whether the one-click install the nudge triggers would refuse
+    outright, hitting a conflict at every target it could write to.
+
+    Fails open (returns ``False``) on any error, so a probe failure never hides
+    the nudge. Deliberately uncached, so removing a blocker re-shows it.
+    """
+    # Without this the display gate and the installer disagree: a stray non-managed
+    # ``developing-with-streamlit`` path with no SKILL.md is invisible to the
+    # marker-based detection yet a hard conflict for the installer, so the nudge
+    # shows, the install refuses, and the loop repeats every session. The nudge
+    # triggers install_skills(global_mode=False), which installs project symlinks
+    # or - when symlinks are unsupported (e.g. Windows without Developer Mode) -
+    # falls back to a global copy, so both modes are mirrored below using the
+    # installer's own resolvers and conflict rules to keep the two from drifting.
+    try:
+        source_skills_dir = _get_source_skills_dir()
+        skill_names = _discover_skills(source_skills_dir)
+        if not skill_names:
+            return False
+        project_root = _find_project_root(Path(app_dir) if app_dir else None)
+
+        # Symlink mode installs every (skill, target) pair, so it only refuses
+        # when a real file/dir blocks all of them.
+        project_pairs = [
+            target_dir / skill_name
+            for target_dir in _get_project_target_dirs(project_root)
+            for skill_name in skill_names
+        ]
+        project_all_blocked = bool(project_pairs) and all(
+            _symlink_target_would_conflict(path) for path in project_pairs
+        )
+
+        # The copy fallback installs only the single global skill, and replaces a
+        # real dir rather than conflicting - hence the narrower rule.
+        global_pairs = [
+            target_dir / _GLOBAL_SKILL_NAME for target_dir in _get_global_target_dirs()
+        ]
+        global_all_blocked = bool(global_pairs) and all(
+            _copy_target_would_conflict(path) for path in global_pairs
+        )
+
+        if not project_all_blocked and not global_all_blocked:
+            # Neither mode is fully blocked, so the install can make progress.
+            return False
+
+        # One mode is fully blocked, so only the mode the installer would actually
+        # use decides. Sole branch needing the (cached) symlink probe; a ``None``
+        # blocker means symlinks work, so the project install is what runs.
+        if _symlink_blocker(project_root, source_skills_dir / skill_names[0]) is None:
+            refused, pairs = project_all_blocked, project_pairs
+        else:
+            refused, pairs = global_all_blocked, global_pairs
+
+        if refused:
+            # "Refused" means every pair conflicted, so the pairs ARE the blockers.
+            _log_nudge_suppressed_by_conflict(tuple(str(path) for path in pairs))
+        return refused
+    except (OSError, RuntimeError):
+        return False
+
+
+# The full vocabulary of reasons the nudge can be withheld. A closed set so the
+# reason stays safe to emit as a telemetry label; typing it as a Literal makes
+# mypy reject a typo or an ad-hoc reason at the return site instead of silently
+# minting a new label the analysis queries won't know about. ``conflict``
+# deliberately reuses the install-failure reason name for the same cause, so
+# "we withheld the nudge" and "we nudged and the install conflicted anyway" are
+# comparable in a single query.
+_NudgeSuppressionReason = Literal[
+    "",  # Not withheld - show the nudge.
+    "conflict",  # A one-click install would refuse at every install target.
+    "dismissed",  # The user asked never to see it again.
+    # Names the stage that failed, not just "error": the sibling telemetry labels
+    # are install failures, so a bare "error" would read as one.
+    "check_failed",  # The eligibility check raised.
+    # Split from check_failed because the fixes differ: a code-path failure is
+    # ours, an unreadable install tree is the user's permissions.
+    "check_unreadable",  # No install target could be read.
+    "headless",  # Headless mode: deployments, CI, SiS.
+    "installed",  # The bundled skills are already present.
+    "no_agent",  # No AI agent harness on this machine.
+    "welcome_hidden",  # The user suppressed startup messaging entirely.
+]
+
+
+# Shared by the nudge display gate and InstallSkillsHandler's action gate.
+# Different predicates would give either a nudge whose button refuses, or a
+# startup recommendation with no one-click repair to offer.
+def agent_harness_present() -> bool:
+    """Whether some agent harness would consume the installed skills.
+
+    True when :func:`detect_installed_agents` finds a home-dir harness *or*
+    :func:`_is_claude_code_present` reports True (so the installer writes
+    ``.claude/skills``). Both the nudge display gate and the install handler
+    share this predicate.
+    """
+    return bool(detect_installed_agents()) or _is_claude_code_present()
+
+
 def should_show_skills_nudge(app_dir: str | None = None) -> bool:
     """Return whether the in-app "install skills" nudge should be shown.
 
-    The nudge is recommended only for interactive local development where an
-    AI agent harness is present but the bundled Streamlit skills are not yet
-    installed, and the user has not permanently dismissed it. This mirrors the
-    gating of the CLI recommendation printed on app startup.
+    Thin wrapper over :func:`nudge_suppression_reason` for callers that only
+    need the yes/no answer; see it for the gating rules and error behavior.
+    """
+    return not nudge_suppression_reason(app_dir)
+
+
+def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionReason:
+    """Return why the in-app "install skills" nudge is being withheld, or ``""``
+    when it should be shown.
+
+    The nudge is shown only for interactive local development where
+    :func:`agent_harness_present` reports True and the bundled skills are not
+    already usable: either :func:`detect_installed_skills` finds no marker, or
+    :func:`_install_completeness` reports ``partial`` - our install missing one of
+    its own target dirs. Also withheld once the user dismisses it, and when a
+    one-click install would conflict at every target, so nobody is nudged toward
+    an install that can only fail. The startup recommendation gates on the same
+    completeness rule via :func:`are_skills_installed`.
 
     Parameters
     ----------
@@ -1074,25 +1657,52 @@ def should_show_skills_nudge(app_dir: str | None = None) -> bool:
         detection result. Falls back to the current working directory when
         ``None``.
 
-    Best-effort: returns ``False`` on any error so a detection failure never
-    blocks app startup or surfaces a spurious nudge.
+    Notes
+    -----
+    Best-effort: the nudge is withheld rather than guessed whenever the check
+    cannot answer, so a detection failure never blocks app startup or surfaces a
+    spurious nudge - ``"check_failed"`` when the check raised, and
+    ``"check_unreadable"`` when every install target was unreadable. These are
+    *reasons*, not falsy values: the nudge stays hidden either way.
     """
     from streamlit import config
 
     try:
         if config.get_option("server.headless"):
             # Don't nudge in headless mode (e.g. deployments, CI, SiS).
-            return False
+            return "headless"
         if config.get_option("logger.hideWelcomeMessage"):
-            return False
+            return "welcome_hidden"
         if _nudge_dismissed_marker_path().exists():
-            return False
-        # Gate on the same detection the page-profile telemetry uses (both now
-        # defined here): an agent must be present, and our skills must not be
-        # installed yet.
-        if not detect_installed_agents():
-            return False
-        # An agent is present; recommend installing only if our skills aren't.
-        return not detect_installed_skills(app_dir)
+            return "dismissed"
+        # An agent must be present, and our skills must not be installed yet.
+        # Either detector counts - see agent_harness_present(), which the in-app
+        # install handler's action gate shares so the two cannot drift.
+        if not agent_harness_present():
+            return "no_agent"
+        # A found marker is not proof the agent can load the skill: it may sit
+        # in .agents/skills while Claude Code, which reads only .claude/skills,
+        # has nothing. So of the states a found marker can pair with, only
+        # ``partial`` - our install missing one of its own targets - keeps the
+        # nudge, whose one-click install is exactly that repair. A marker from a
+        # harness we do not install for (a hand-placed .cursor/skills copy, say)
+        # suppresses: that user is already set up.
+        completeness = _install_completeness(app_dir)
+        if detect_installed_skills(app_dir) and completeness != "partial":
+            return "installed"
+        # Every target dir raised, so we cannot tell whether skills are
+        # installed. Withhold: the user's setup may be fine, and the install
+        # we'd offer would hit the same error.
+        # Own label (not check_failed): this is a permissions issue to
+        # investigate, not a code bug.
+        if completeness == "unknown":
+            return "check_unreadable"
+        # No usable install found. Withhold only on a deterministic conflict at
+        # every target; the other always-fail causes (missing bundled package, a
+        # copy that errors on permissions/path-length) stay fail-open, since those
+        # can resolve without the user removing anything.
+        if _one_click_install_would_be_refused(app_dir):
+            return "conflict"
+        return ""
     except Exception:  # pragma: no cover - defensive
-        return False
+        return "check_failed"

@@ -25,10 +25,10 @@ import {
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
+import { CustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
-import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
+import type { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -36,19 +36,19 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
-import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
 import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
 import type {
   CachedTheme,
+  DerivedColors,
   EmotionTheme,
+  EmotionThemeColors,
   ThemeConfig,
   ThemeSelection,
   ThemeSpacing,
 } from "./types"
-import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
 export const CUSTOM_THEME_NAME = "Custom Theme"
@@ -93,7 +93,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
   if (typeof obj === "object") {
     const sorted: Record<string, unknown> = {}
     Object.keys(obj)
-      .sort()
+      .toSorted()
       .forEach(key => {
         sorted[key] = sortThemeInputKeys((obj as Record<string, unknown>)[key])
       })
@@ -106,7 +106,7 @@ export function sortThemeInputKeys(obj: unknown): unknown {
 
 function mergeTheme(
   theme: ThemeConfig,
-  injectedTheme: ICustomThemeConfig | undefined
+  injectedTheme: CustomThemeConfig.$Properties | undefined
 ): ThemeConfig {
   // We confirm the injectedTheme is a valid object before merging it
   // since the type makes assumption about the implementation of the
@@ -128,8 +128,7 @@ export const getMergedDarkTheme = once(() =>
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  const prefersDark =
-    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
 
   return prefersDark ? "dark" : "light"
 }
@@ -213,16 +212,22 @@ export const parseFont = (
 
 /**
  * Helper function to parse/validate a config color value
- * @param color: a string - the color value passed in as a given config
+ * @param color: a theme field value that may be a color string
  * @param configKey: a string - the config that the color value was passed for
  * @param inSidebar: boolean - whether this is for sidebar theming (for error messages)
- * @returns the validated color value or undefined if the color is invalid
+ * @returns the validated color value, or undefined if blank/unset or invalid
  */
 const parseColor = (
-  color: string,
+  color: unknown,
   configKey: string,
   inSidebar: boolean = false
 ): string | undefined => {
+  // Blank and whitespace-only strings are unset (proto3's default is "").
+  // Non-strings, such as nested theme sections, are not colors.
+  if (typeof color !== "string" || !color.trim()) {
+    return undefined
+  }
+
   // First try the color as-is
   if (isColor(color)) {
     return color
@@ -242,6 +247,47 @@ const parseColor = (
     )
   }
 
+  return undefined
+}
+
+/**
+ * Normalize a color for hex equality checks. Accepts hashless hex the same way
+ * `parseColor` does. Returns undefined for invalid colors instead of throwing.
+ */
+const toComparableHex = (color: string): string | undefined => {
+  const normalized = isColor(color)
+    ? color
+    : isColor(`#${color}`)
+      ? `#${color}`
+      : undefined
+  if (normalized === undefined) {
+    return undefined
+  }
+  try {
+    return toHex(normalized)
+  } catch {
+    return undefined
+  }
+}
+
+const colorsMatchAsHex = (a: string, b: string): boolean => {
+  const aHex = toComparableHex(a)
+  const bHex = toComparableHex(b)
+  return aHex !== undefined && bHex !== undefined && aHex === bHex
+}
+
+/**
+ * First non-blank color that parses (hashless hex allowed). Blank or invalid
+ * values are treated as unset so they cannot suppress stock chrome fallbacks.
+ */
+const firstConfiguredColor = (
+  ...colors: Array<string | null | undefined>
+): string | undefined => {
+  for (const color of colors) {
+    if (color && toComparableHex(color) !== undefined) {
+      return color
+    }
+  }
   return undefined
 }
 
@@ -432,13 +478,13 @@ export const parseRadius = (
   } else if (processedRadius === "full") {
     radiusValue = 1.4
   } else if (processedRadius.endsWith("rem")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
   } else if (processedRadius.endsWith("px")) {
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
-  } else if (!isNaN(parseFloat(processedRadius))) {
+  } else if (!Number.isNaN(Number.parseFloat(processedRadius))) {
     // Fallback: if the value can be parsed as a number, treat it as pixels
-    radiusValue = parseFloat(processedRadius)
+    radiusValue = Number.parseFloat(processedRadius)
     cssUnit = "px"
   }
 
@@ -462,7 +508,7 @@ export const parseFontSize = (
     // If string, check its valid (ends with "rem" or "px")
     // and can be parsed as a number
     const processedFontSize = fontSize.trim().toLowerCase()
-    const parsedFontSize = parseFloat(processedFontSize)
+    const parsedFontSize = Number.parseFloat(processedFontSize)
     if (
       parsedFontSize &&
       (processedFontSize.endsWith("rem") || processedFontSize.endsWith("px"))
@@ -483,26 +529,117 @@ export const parseFontSize = (
 }
 
 /**
- * Validate a font weight config
+ * Parses a `paddingTop` or `paddingBottom` theme config value.
+ *
+ * Accepted formats (non-negative):
+ *  - `"1.5rem"` / `"16px"` — returned as a normalized `rem` or `px` string.
+ *  - `"16"` (bare number string) — treated as pixels, returned as `"16px"`.
+ *  - `"0"`, `"0rem"`, `"0px"` — all valid; returned as `"0px"` / `"0rem"`.
+ *
+ * Values are normalized through `Number()`, so `"1.50rem"` becomes `"1.5rem"`
+ * and `"1e1px"` becomes `"10px"`.
+ *
+ * Rejected: negative values, non-finite numbers, `%`, `vh`, `vw`, `calc()`,
+ * and other CSS units. On rejection, logs a warning and returns `undefined`
+ * so the caller keeps the built-in spacing.
+ *
+ * @param configName - The config key name, used in the warning message.
+ * @param value - The raw config string to validate. Host theme payloads may
+ *   send a non-string; those warn and fall back like invalid strings.
+ * @param inSidebar - When true, the warning message cites "theme.sidebar".
+ * @returns The normalised CSS length string, or `undefined` if invalid.
+ */
+export const parsePadding = (
+  configName: string,
+  value: string | null | undefined | number | boolean,
+  inSidebar: boolean
+): string | undefined => {
+  if (!notNullOrUndefined(value)) {
+    return undefined
+  }
+
+  const themeSection = inSidebar ? "theme.sidebar" : "theme"
+
+  // Host SET_CUSTOM_THEME_CONFIG can deliver a bare number; do not call trim().
+  if (typeof value !== "string") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: ${String(value)}. Use a quoted rem or px value. Falling back to default.`
+    )
+    return undefined
+  }
+
+  const trimmed = value.trim().toLowerCase()
+
+  // Only allow rem and px units (or unitless numbers → treated as px)
+  const hasRemUnit = trimmed.endsWith("rem")
+  const hasPxUnit = trimmed.endsWith("px")
+
+  let numericStr: string
+  if (hasRemUnit) {
+    numericStr = trimmed.slice(0, -3)
+  } else if (hasPxUnit) {
+    numericStr = trimmed.slice(0, -2)
+  } else {
+    // Must be a bare number (no unit)
+    numericStr = trimmed
+  }
+
+  const numericValue = Number(numericStr)
+
+  if (!Number.isFinite(numericValue) || numericStr === "") {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Only rem or px values are allowed (e.g. "1.5rem", "24px"). Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (numericValue < 0) {
+    LOG.warn(
+      `Invalid ${configName} in ${themeSection}: "${value}". Negative values are not allowed. Falling back to default.`
+    )
+    return undefined
+  }
+
+  if (hasRemUnit) {
+    return `${numericValue}rem`
+  }
+  // px or unitless — return as px
+  return `${numericValue}px`
+}
+
+/**
+ * Validates a font weight config value against three rules:
+ *   1. Must be an integer.
+ *   2. Must be an integer multiple of 50.
+ *   3. Must be within [`minWeight`, `maxWeight`] (inclusive).
+ *
+ * @param weightConfigName - Name of the config option, used in the warning message.
+ * @param fontWeight - The value to validate; null/undefined means "not configured".
+ * @param minWeight - Lower bound (inclusive).
+ * @param maxWeight - Upper bound (inclusive).
+ * @param inSidebar - When true, the warning message cites "theme.sidebar" instead of "theme".
+ * @returns `true` if the value is set and passes all three rules.
+ *   Returns `false` and logs a warning when the value is set but fails any rule.
+ *   Returns `false` silently when the value is null or undefined.
  */
 const isValidFontWeight = (
   weightConfigName: string,
   fontWeight: number | null | undefined,
   minWeight: number,
   maxWeight: number,
-  inSidebar?: boolean
+  inSidebar = false
 ): boolean => {
   const themeSection = inSidebar ? "theme.sidebar" : "theme"
 
   // If the font weight config is set, validate it (log warning if invalid)
   if (notNullOrUndefined(fontWeight)) {
     const isInteger = Number.isInteger(fontWeight)
-    const isIncrementOf100 = fontWeight % 100 === 0
+    const isIncrementOf50 = fontWeight % 50 === 0
     const isInRange = fontWeight >= minWeight && fontWeight <= maxWeight
 
-    if (!isInteger || !isIncrementOf100 || !isInRange) {
+    if (!isInteger || !isIncrementOf50 || !isInRange) {
       LOG.warn(
-        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 100. Falling back to default font weight.`
+        `Invalid ${weightConfigName}: ${fontWeight} in ${themeSection}. The ${weightConfigName} must be an integer ${minWeight}-${maxWeight}, and an increment of 50. Falling back to default font weight.`
       )
       return false
     }
@@ -532,11 +669,11 @@ const convertHeadingFontSizeToRem = (
   const validatedSize = parseFontSize(configName, fontSize, inSidebar)
 
   // Need each heading font size to be in rem
-  if (validatedSize?.endsWith("rem")) {
+  if (validatedSize?.endsWith("rem") === true) {
     return validatedSize
-  } else if (validatedSize?.endsWith("px")) {
+  } else if (validatedSize?.endsWith("px") === true) {
     // Convert the font size to rem, and round to nearest 8th
-    const remValue = parseFloat(validatedSize) / baseFontSize
+    const remValue = Number.parseFloat(validatedSize) / baseFontSize
     return `${remValue}rem`
   }
 
@@ -575,7 +712,8 @@ const setHeadingFontSizes = (
 
       // If valid configured value, overwrite the default heading font size
       if (convertedSize) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font sizes have no index signature
         headingFontSizesOverrides[headingFontSizeKey] = convertedSize
       }
     })
@@ -654,7 +792,8 @@ const setFontWeights = (
           inSidebar
         )
       ) {
-        // @ts-expect-error
+        // Computed h1-h6 key is a plain string.
+        // @ts-expect-error - font weights have no index signature
         fontWeightOverrides[headingFontWeightKey] = weight
       }
     })
@@ -683,7 +822,7 @@ const validateChartColors = (
 }
 
 export const createEmotionTheme = (
-  themeInput: Partial<ICustomThemeConfig>,
+  themeInput: Partial<CustomThemeConfig.$Properties>,
   baseThemeConfig = baseTheme
 ): EmotionTheme => {
   const { colors, genericFonts, inSidebar } = baseThemeConfig.emotion
@@ -709,12 +848,15 @@ export const createEmotionTheme = (
     // Metric value styling
     metricValueFontSize,
     metricValueFontWeight,
+    // Page content padding
+    paddingTop,
+    paddingBottom,
     ...customColors
   } = themeInput
 
   const parsedColors = Object.entries(customColors).reduce(
-    (colorsArg: Record<string, string>, [key, color]) => {
-      // @ts-expect-error
+    // parseColor drops unset or invalid colors, so a lookup can return undefined.
+    (colorsArg: Partial<Record<string, string>>, [key, color]) => {
       const validatedColor = parseColor(color, key, inSidebar)
       if (validatedColor) {
         colorsArg[key] = validatedColor
@@ -733,6 +875,7 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
+    dataframeHeaderTextColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -775,6 +918,8 @@ export const createEmotionTheme = (
     radii: EmotionTheme["radii"]
     fontSizes: EmotionTheme["fontSizes"]
     fontWeights: EmotionTheme["fontWeights"]
+    paddingTop: string | undefined
+    paddingBottom: string | undefined
   }
 
   const conditionalOverrides: ConditionalOverrides = {
@@ -788,15 +933,62 @@ export const createEmotionTheme = (
     radii: { ...baseThemeConfig.emotion.radii },
     fontSizes: { ...baseThemeConfig.emotion.fontSizes },
     fontWeights: { ...baseThemeConfig.emotion.fontWeights },
+    // Page content padding: parsed below. Undefined keeps the built-in spacing.
+    paddingTop: baseThemeConfig.emotion.paddingTop,
+    paddingBottom: baseThemeConfig.emotion.paddingBottom,
   }
 
   // Conditional Overrides - Colors
 
+  // Built-in themes keep the opaque chrome from themeColors.ts. A custom theme
+  // whose backgroundColor, secondaryBackgroundColor, or primaryColor differs
+  // from the base palette derives unset chrome from its own surfaces instead.
+  //
+  // Compare values, not presence: createTheme fills every theme input with the
+  // base primary/background colors, so presence alone is always true.
+  // textColor alone does not trigger derivation.
+  const shouldDeriveUnsetChrome =
+    (notNullOrUndefined(bgColor) &&
+      !colorsMatchAsHex(bgColor, colors.bgColor)) ||
+    (notNullOrUndefined(secondaryBg) &&
+      !colorsMatchAsHex(secondaryBg, colors.secondaryBg)) ||
+    (notNullOrUndefined(primary) && !colorsMatchAsHex(primary, colors.primary))
+
+  if (shouldDeriveUnsetChrome) {
+    if (!notNullOrUndefined(borderColor)) {
+      conditionalOverrides.colors.borderColor =
+        conditionalOverrides.colors.fadedText10
+      conditionalOverrides.colors.borderColorLight =
+        conditionalOverrides.colors.fadedText05
+      if (!notNullOrUndefined(dataframeBorderColor)) {
+        conditionalOverrides.colors.dataframeBorderColor =
+          conditionalOverrides.colors.fadedText05
+      }
+    }
+    if (!notNullOrUndefined(codeBackgroundColor)) {
+      conditionalOverrides.colors.codeBackgroundColor =
+        conditionalOverrides.colors.bgMix
+    }
+    if (!notNullOrUndefined(dataframeHeaderBackgroundColor)) {
+      conditionalOverrides.colors.dataframeHeaderBackgroundColor =
+        conditionalOverrides.colors.bgMix
+    }
+  }
+
+  // Configured code/header chrome wins over both stock and derived defaults.
   conditionalOverrides.colors.codeBackgroundColor =
-    codeBackgroundColor ?? colors.codeBackgroundColor
+    codeBackgroundColor ?? conditionalOverrides.colors.codeBackgroundColor
 
   conditionalOverrides.colors.dataframeHeaderBackgroundColor =
-    dataframeHeaderBackgroundColor ?? colors.dataframeHeaderBackgroundColor
+    dataframeHeaderBackgroundColor ??
+    conditionalOverrides.colors.dataframeHeaderBackgroundColor
+
+  // Use the configured header text color when set. Otherwise keep the
+  // fadedText70 default from createEmotionColors (which already tracks
+  // textColor).
+  conditionalOverrides.colors.dataframeHeaderTextColor =
+    dataframeHeaderTextColor ??
+    conditionalOverrides.colors.dataframeHeaderTextColor
 
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
@@ -804,16 +996,23 @@ export const createEmotionTheme = (
     const borderColorLight = transparentize(borderColor, 0.55)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
-    // Set the fallback here for dataframe & table border color
-    conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    // An author-set borderColor drives an unset dataframeBorderColor via the
+    // lighter variant; stock themes keep their own opaque dataframe border.
+    if (!notNullOrUndefined(dataframeBorderColor)) {
+      conditionalOverrides.colors.dataframeBorderColor = borderColorLight
+    }
   }
 
   if (notNullOrUndefined(dataframeBorderColor)) {
-    // If dataframeBorderColor explicitly set, override borderColorLight fallback
+    // If dataframeBorderColor explicitly set, override borderColor fallback
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder) {
+  if (showWidgetBorder === false) {
+    // Explicit off clears stock widgetBorderColor inherited from the base theme.
+    delete conditionalOverrides.colors.widgetBorderColor
+  } else {
+    // Unset or true: paint widget borders with the resolved borderColor.
     conditionalOverrides.colors.widgetBorderColor =
       conditionalOverrides.colors.borderColor
   }
@@ -835,10 +1034,16 @@ export const createEmotionTheme = (
   conditionalOverrides.colors.link =
     linkColor ?? conditionalOverrides.colors.blueTextColor
 
-  // Code text color should use the codeTextColor config if provided, otherwise
-  // use the greenTextColor (configured/derived or default) handled above
-  conditionalOverrides.colors.codeTextColor =
-    codeTextColor ?? conditionalOverrides.colors.greenTextColor
+  // Unset codeTextColor: derived themes follow greenTextColor; otherwise use
+  // body text so textColor-only themes stay ink-aligned without retinting
+  // borders/fills.
+  if (notNullOrUndefined(codeTextColor)) {
+    conditionalOverrides.colors.codeTextColor = codeTextColor
+  } else {
+    conditionalOverrides.colors.codeTextColor = shouldDeriveUnsetChrome
+      ? conditionalOverrides.colors.greenTextColor
+      : conditionalOverrides.colors.bodyText
+  }
 
   if (
     notNullOrUndefined(chartCategoricalColors) &&
@@ -903,7 +1108,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(baseRadius)) {
     const [radiusValue, cssUnit] = parseRadius(baseRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       const radiusWithCssUnit = addCssUnit(radiusValue, cssUnit)
       conditionalOverrides.radii.default = radiusWithCssUnit
 
@@ -939,7 +1144,7 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(buttonRadius)) {
     const [radiusValue, cssUnit] = parseRadius(buttonRadius)
 
-    if (notNullOrUndefined(radiusValue) && !isNaN(radiusValue)) {
+    if (notNullOrUndefined(radiusValue) && !Number.isNaN(radiusValue)) {
       // If valid buttonRadius set, override baseRadius fallback
       conditionalOverrides.radii.button = addCssUnit(radiusValue, cssUnit)
     } else {
@@ -988,7 +1193,7 @@ export const createEmotionTheme = (
     )
     if (parsedSize) {
       // Additional validation: must be greater than 0
-      const numericValue = parseFloat(parsedSize)
+      const numericValue = Number.parseFloat(parsedSize)
       if (numericValue <= 0) {
         LOG.warn(
           `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
@@ -1011,15 +1216,28 @@ export const createEmotionTheme = (
   )
 
   // Conditional Overrides - Metric Value Font Weight
-  if (metricValueFontWeight) {
-    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
-      conditionalOverrides.fontWeights.metricValueFontWeight =
-        metricValueFontWeight
-    } else {
-      LOG.warn(
-        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
-      )
-    }
+  if (
+    metricValueFontWeight &&
+    isValidFontWeight("metricValueFontWeight", metricValueFontWeight, 100, 900)
+  ) {
+    conditionalOverrides.fontWeights.metricValueFontWeight =
+      metricValueFontWeight
+  }
+
+  // Conditional Overrides - Page Content Padding
+
+  const parsedPaddingTop = parsePadding("paddingTop", paddingTop, inSidebar)
+  if (parsedPaddingTop !== undefined) {
+    conditionalOverrides.paddingTop = parsedPaddingTop
+  }
+
+  const parsedPaddingBottom = parsePadding(
+    "paddingBottom",
+    paddingBottom,
+    inSidebar
+  )
+  if (parsedPaddingBottom !== undefined) {
+    conditionalOverrides.paddingBottom = parsedPaddingBottom
   }
 
   // Font Overrides
@@ -1105,14 +1323,68 @@ export const toExportedTheme = (theme: EmotionTheme): ExportedTheme => {
   }
 }
 
+/** True for null, blank or whitespace-only strings, and empty arrays. */
+const isUnsetThemeValue = (value: unknown): boolean =>
+  value === null ||
+  (typeof value === "string" && !value.trim()) ||
+  (Array.isArray(value) && value.length === 0)
+
+/**
+ * Returns the own, non-unset fields of a theme input so lodash merges cannot
+ * copy them onto an empty destination.
+ *
+ * - protobufjs exposes proto3 defaults (for example `textColor = ""`) on the
+ *   message prototype, and `mergeWith` iterates inherited keys.
+ * - A customizer that returns `undefined` tells `mergeWith` to assign the
+ *   source, so skipping defaults still copies `""` onto a missing key.
+ * Nested sections are left as-is; callers run this on those objects too.
+ */
+const omitUnsetThemeValues = <T extends object>(
+  input: T | null | undefined
+): Partial<T> => {
+  if (!input) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => !isUnsetThemeValue(value))
+  ) as Partial<T>
+}
+
+/**
+ * Customizer for lodash mergeWith that skips unset theme values (blank or
+ * whitespace-only strings, null, empty arrays) so they do not overwrite valid
+ * values, and replaces non-empty arrays atomically instead of merging by index.
+ */
+const skipUnsetThemeValues = (
+  objValue: unknown,
+  srcValue: unknown
+): unknown => {
+  if (isUnsetThemeValue(srcValue)) {
+    return objValue
+  }
+  // Replace non-empty arrays wholesale — lodash index-merges arrays, which
+  // leaves leftover parent colors/sizes when a section override is shorter.
+  if (Array.isArray(srcValue) && srcValue.length > 0) {
+    return srcValue
+  }
+  return undefined
+}
+
 const completeThemeInput = (
   partialInput: Partial<CustomThemeConfig>,
   baseThemeArg: ThemeConfig
 ): CustomThemeConfig => {
-  return new CustomThemeConfig({
-    ...toThemeInput(baseThemeArg.emotion),
-    ...partialInput,
-  })
+  // Drop unset theme values ("", whitespace, null, []) so they don't override
+  // base theme values.
+  return new CustomThemeConfig(
+    mergeWith(
+      {},
+      toThemeInput(baseThemeArg.emotion),
+      omitUnsetThemeValues(partialInput),
+      skipUnsetThemeValues
+    )
+  )
 }
 
 export const createTheme = (
@@ -1142,29 +1414,17 @@ export const createTheme = (
   const bgColor = completedThemeInput.backgroundColor
   const startingTheme = merge(
     cloneDeep(
-      baseThemeConfig
-        ? baseThemeConfig
-        : getLuminance(bgColor) > 0.5
-          ? lightTheme
-          : darkTheme
+      baseThemeConfig ?? (getLuminance(bgColor) > 0.5 ? lightTheme : darkTheme)
     ),
     { emotion: { inSidebar } }
   )
 
   const emotion = createEmotionTheme(completedThemeInput, startingTheme)
 
-  // We need to deep clone the theme object to prevent a bug in BaseWeb that causes
-  // primitives to be modified globally. This cloning decouples our BaseWeb theme
-  // object from the shared primitive objects and prevents unintended side effects.
-  const basewebTheme = cloneDeep(
-    createBaseUiTheme(emotion, startingTheme.primitives)
-  )
-
   return {
     ...startingTheme,
     name: themeName,
     emotion,
-    basewebTheme,
     themeInput,
   }
 }
@@ -1342,7 +1602,7 @@ export function addCssUnit(n: number, unit: "px" | "rem"): string {
 }
 
 function roundToTwoDecimals(n: number): number {
-  return parseFloat(n.toFixed(2))
+  return Number.parseFloat(n.toFixed(2))
 }
 
 export function blend(color: string, background: string | undefined): string {
@@ -1359,41 +1619,23 @@ export function blend(color: string, background: string | undefined): string {
 }
 
 /**
- * Convert a SCSS rem value to pixels.
- * @param scssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * Convert a CSS rem value to pixels.
+ * @param cssValue: a string containing a value in rem units with or without the "rem" unit suffix
+ * @param rootFontSizePx: optional root font size. Prefer `theme.fontSizes.baseFontSize`
+ *   so the conversion matches the theme even before `html { font-size }` is applied.
  * @returns pixel value of the given rem value
  */
-export const convertRemToPx = (scssValue: string): number => {
-  const remValue = parseFloat(scssValue.replace(/rem$/, ""))
-  return (
-    // TODO(lukasmasuch): We might want to somehow cache this value at some point.
-    // However, I did experimented with the performance of calling this, and
-    // it seems not like a big deal to call it many times.
-    remValue *
-    // We fallback to 16px if the fontSize is not defined (should only happen in tests)
-    (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
-  )
-}
-
-/**
- * Customizer function for lodash mergeWith that skips protobuf default values
- * (empty strings, null, empty arrays) to prevent them from overwriting valid values.
- * @returns objValue (keep existing value) if srcValue is a protobuf default, undefined otherwise
- */
-const skipProtobufDefaults = (
-  objValue: unknown,
-  srcValue: unknown
-): unknown => {
-  // Exclude empty strings, empty arrays, and null values
-  if (
-    srcValue === "" ||
-    srcValue === null ||
-    (Array.isArray(srcValue) && srcValue.length === 0)
-  ) {
-    return objValue
-  }
-  // Let mergeWith handle all other cases normally
-  return undefined
+export const convertRemToPx = (
+  cssValue: string,
+  rootFontSizePx?: number
+): number => {
+  const remValue = Number.parseFloat(cssValue.replace(/rem$/, ""))
+  const fontSize =
+    rootFontSizePx ??
+    // Fall back to the live root font size, then 16px (tests without a document style).
+    (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
+      16)
+  return remValue * fontSize
 }
 
 /**
@@ -1420,27 +1662,26 @@ export const handleSectionInheritance = (
   // and light or dark variant sections
   const { light, dark, sidebar: baseSidebar, ...commonTheme } = themeInput
   const variantSection = isLightTheme ? light : dark
-  const { sidebar: variantSidebar, ...variantTheme } = variantSection || {}
+  const { sidebar: variantSidebar, ...variantTheme } = variantSection ?? {}
 
   // Merge common theme properties with variant overrides (excluding sidebars for now)
   // Note: base is set explicitly based on variant and is merged last to ensure it overrides
-  // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
+  // Omit unset theme values before merge so they are not copied onto {}.
   const result = mergeWith(
     {} as CustomThemeConfig,
-    commonTheme, // Common theme properties from themeInput
-    variantTheme, // Variant-specific theme overrides (without sidebar)
+    omitUnsetThemeValues(commonTheme),
+    omitUnsetThemeValues(variantTheme),
     { base }, // Set base last to override any base from commonTheme/variantTheme
-    skipProtobufDefaults
+    skipUnsetThemeValues
   )
 
   // Explicitly merge sidebars with correct precedence: baseSidebar < variantSidebar
   if (baseSidebar || variantSidebar) {
-    // Use mergeWith with skipProtobufDefaults to prevent empty values from overwriting valid ones
     result.sidebar = mergeWith(
       {},
-      baseSidebar,
-      variantSidebar,
-      skipProtobufDefaults
+      omitUnsetThemeValues(baseSidebar),
+      omitUnsetThemeValues(variantSidebar),
+      skipUnsetThemeValues
     )
   }
 
@@ -1455,7 +1696,7 @@ export const handleSectionInheritance = (
  * @returns true if the section has any actual values set
  */
 export const hasThemeSectionConfigs = (
-  section: ICustomThemeConfig | null | undefined
+  section: CustomThemeConfig.$Properties | null | undefined
 ): boolean => {
   if (!section) {
     return false
@@ -1550,7 +1791,115 @@ const setSidebarHeadingFontSizes = (
   ]
 
   // Merge config overrides with sidebar defaults (for arrays, merge replaces at each index)
-  return merge([], defaultHeadingFontSizes, configHeadingFontSizes || [])
+  return merge([], defaultHeadingFontSizes, configHeadingFontSizes ?? [])
+}
+
+/**
+ * Resolves the main theme's light/dark base. Named custom light and dark
+ * themes keep that base even when main-background luminance would imply the
+ * other one. Every other theme uses the main background's luminance.
+ */
+const getActiveThemeBase = (
+  activeTheme: ThemeConfig
+): CustomThemeConfig.BaseTheme => {
+  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
+    return CustomThemeConfig.BaseTheme.LIGHT
+  }
+  if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
+    return CustomThemeConfig.BaseTheme.DARK
+  }
+
+  return getLuminance(activeTheme.emotion.colors.bgColor) > 0.5
+    ? CustomThemeConfig.BaseTheme.LIGHT
+    : CustomThemeConfig.BaseTheme.DARK
+}
+
+/** Built-in main page surfaces used to decide stock vs swapped sidebar fallbacks. */
+const stockMainSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    bgColor: lightTheme.emotion.colors.bgColor,
+    secondaryBg: lightTheme.emotion.colors.secondaryBg,
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    bgColor: darkTheme.emotion.colors.bgColor,
+    secondaryBg: darkTheme.emotion.colors.secondaryBg,
+  },
+} as const
+
+/** Sidebar backgrounds used when main surfaces still match the built-in pair and `[theme.sidebar]` leaves a side unset. */
+export const stockSidebarSurfaces = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    backgroundColor: "#F8F8F7",
+    // Distinct from the sidebar background so widget fills stay visible.
+    secondaryBackgroundColor: "#F1F0EE",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    backgroundColor: "#21201D",
+    secondaryBackgroundColor: "#2D2B27",
+  },
+} as const
+
+/**
+ * Sidebar chrome for the built-in sidebar surface pair.
+ * createSidebarTheme copies a key only when the resolved sidebar surfaces
+ * match that pair, primary still matches stock (main or sidebar), and both
+ * `[theme]` and `[theme.sidebar]` left the key unset. codeTextColor is not in
+ * this table — the sidebar inherits the main theme's resolved code text so a
+ * textColor-only theme stays ink-aligned (stock sidebar surfaces differ from
+ * the main base and would otherwise derive greenTextColor).
+ */
+export const stockSidebarChrome = {
+  [CustomThemeConfig.BaseTheme.LIGHT]: {
+    borderColor: "#D7D3CF",
+    dataframeBorderColor: "#E5E2DF",
+    dataframeHeaderBackgroundColor: "#F3F3F2",
+    codeBackgroundColor: "#F1F1F0",
+  },
+  [CustomThemeConfig.BaseTheme.DARK]: {
+    borderColor: "#4A4742",
+    dataframeBorderColor: "#3F3D39",
+    dataframeHeaderBackgroundColor: "#2A2825",
+    codeBackgroundColor: "#1A1917",
+  },
+} as const
+
+/**
+ * Value to force through the last sidebar merge object for a chrome key.
+ * Valid sidebar values win via merge. Invalid non-blank sidebar values would
+ * otherwise overwrite a valid main color — write the main (or stock) value so
+ * the last merge wins.
+ */
+const stockChromeMergeFallback = (
+  sidebarVal: string | null | undefined,
+  mainVal: string | null | undefined,
+  stockVal: string | undefined
+): string | undefined => {
+  if (firstConfiguredColor(sidebarVal)) {
+    return undefined
+  }
+  const mainOk = firstConfiguredColor(mainVal)
+  if (sidebarVal?.trim() && mainOk) {
+    return mainOk
+  }
+  if (!mainOk) {
+    return stockVal
+  }
+  return undefined
+}
+
+const mainSurfacesAreStock = (
+  activeTheme: ThemeConfig,
+  mainThemeBase: CustomThemeConfig.BaseTheme
+): boolean => {
+  const stock = stockMainSurfaces[mainThemeBase]
+  const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  // Normalize both sides so equivalent spellings (white, #fff, #FFFFFF) still
+  // count as the built-in pair. A raw string compare would treat those as
+  // customized and swap the sidebar.
+  return (
+    toHex(bgColor) === toHex(stock.bgColor) &&
+    toHex(secondaryBg) === toHex(stock.secondaryBg)
+  )
 }
 
 /**
@@ -1562,44 +1911,149 @@ const setSidebarHeadingFontSizes = (
 export const createSidebarTheme = (activeTheme: ThemeConfig): ThemeConfig => {
   const sidebarThemeInput = activeTheme.themeInput?.sidebar
   const { bgColor, secondaryBg } = activeTheme.emotion.colors
+  const mainThemeBase = getActiveThemeBase(activeTheme)
+  const stockSurfaces = stockSidebarSurfaces[mainThemeBase]
+  const stockChrome = stockSidebarChrome[mainThemeBase]
 
-  // Either use the configured background color or secondary background from main theme:
-  const sidebarBackground = sidebarThemeInput?.backgroundColor || secondaryBg
+  // Built-in main surfaces → stock sidebar pair. Otherwise → classic swap
+  // (sidebar bg = main secondary, sidebar secondary = main bg).
+  const useStockSidebarSurfaces = mainSurfacesAreStock(
+    activeTheme,
+    mainThemeBase
+  )
+  const fallbackBackground = useStockSidebarSurfaces
+    ? stockSurfaces.backgroundColor
+    : secondaryBg
+  const fallbackSecondary = useStockSidebarSurfaces
+    ? stockSurfaces.secondaryBackgroundColor
+    : bgColor
 
-  // Either use the configured secondary background color or background from main theme:
+  const sidebarBackground =
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank/whitespace background color means unset
+    sidebarThemeInput?.backgroundColor?.trim() || fallbackBackground
+
   const secondaryBackgroundColor =
-    sidebarThemeInput?.secondaryBackgroundColor || bgColor
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank/whitespace secondary background color means unset
+    sidebarThemeInput?.secondaryBackgroundColor?.trim() || fallbackSecondary
 
   // Handle configured vs. default header font sizes for sidebar
   const headingFontSizes = setSidebarHeadingFontSizes(
     sidebarThemeInput?.headingFontSizes
   )
 
-  let baseTheme =
-    getLuminance(sidebarBackground) > 0.5
-      ? CustomThemeConfig.BaseTheme.LIGHT
-      : CustomThemeConfig.BaseTheme.DARK
+  // Named custom light/dark themes keep that base. Other themes follow
+  // the resolved sidebar background's luminance.
+  const baseTheme =
+    activeTheme.name === CUSTOM_THEME_LIGHT_NAME ||
+    activeTheme.name === CUSTOM_THEME_DARK_NAME
+      ? mainThemeBase
+      : getLuminance(sidebarBackground) > 0.5
+        ? CustomThemeConfig.BaseTheme.LIGHT
+        : CustomThemeConfig.BaseTheme.DARK
 
-  // If the active theme is a light/dark custom theme, use the expected base
-  if (activeTheme.name === CUSTOM_THEME_LIGHT_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.LIGHT
-  } else if (activeTheme.name === CUSTOM_THEME_DARK_NAME) {
-    baseTheme = CustomThemeConfig.BaseTheme.DARK
+  // Use stock sidebar chrome only when the sidebar still looks built-in:
+  // - resolved sidebar surfaces match stockSidebarSurfaces
+  // - resolved primary (sidebar override, else main) matches stock — a
+  //   primaryColor-only theme derives chrome in createEmotionTheme, so the
+  //   sidebar follows the same rule
+  // Each key is filled only if neither [theme] nor [theme.sidebar] sets a
+  // valid value (invalid sidebar values yield to a valid main color).
+  const stockPrimary =
+    mainThemeBase === CustomThemeConfig.BaseTheme.LIGHT
+      ? lightTheme.emotion.colors.primary
+      : darkTheme.emotion.colors.primary
+  const primaryForChromeGate =
+    firstConfiguredColor(sidebarThemeInput?.primaryColor) ??
+    activeTheme.emotion.colors.primary
+  const canUseStockSidebarChrome =
+    colorsMatchAsHex(sidebarBackground, stockSurfaces.backgroundColor) &&
+    colorsMatchAsHex(
+      secondaryBackgroundColor,
+      stockSurfaces.secondaryBackgroundColor
+    ) &&
+    colorsMatchAsHex(primaryForChromeGate, stockPrimary)
+
+  const stockChromeFallbacks: {
+    borderColor?: string
+    dataframeBorderColor?: string
+    dataframeHeaderBackgroundColor?: string
+    codeBackgroundColor?: string
+    codeTextColor?: string
+  } = {}
+  if (canUseStockSidebarChrome) {
+    const mainThemeInput = activeTheme.themeInput
+
+    const borderFallback = stockChromeMergeFallback(
+      sidebarThemeInput?.borderColor,
+      mainThemeInput?.borderColor,
+      stockChrome.borderColor
+    )
+    if (borderFallback !== undefined) {
+      stockChromeFallbacks.borderColor = borderFallback
+    }
+
+    // Distinct stock dataframe hex only when neither section set a valid
+    // border or dataframe border. Do not treat a stock border fallback as an
+    // author-set borderColor (that would skip the stock dataframe hex).
+    const resolvedBorder = firstConfiguredColor(
+      sidebarThemeInput?.borderColor,
+      mainThemeInput?.borderColor
+    )
+    const dataframeFallback = stockChromeMergeFallback(
+      sidebarThemeInput?.dataframeBorderColor,
+      mainThemeInput?.dataframeBorderColor,
+      resolvedBorder ? undefined : stockChrome.dataframeBorderColor
+    )
+    if (dataframeFallback !== undefined) {
+      stockChromeFallbacks.dataframeBorderColor = dataframeFallback
+    }
+
+    for (const key of [
+      "dataframeHeaderBackgroundColor",
+      "codeBackgroundColor",
+    ] as const) {
+      const fallback = stockChromeMergeFallback(
+        sidebarThemeInput?.[key],
+        mainThemeInput?.[key],
+        stockChrome[key]
+      )
+      if (fallback !== undefined) {
+        stockChromeFallbacks[key] = fallback
+      }
+    }
+
+    // Keep unset code text body-aligned for the stock sidebar surface pair
+    // (those surfaces differ from the main base and would otherwise derive
+    // greenTextColor). Prefer the sidebar's own textColor when set; otherwise
+    // inherit the main theme's resolved code text.
+    const codeTextStockVal =
+      firstConfiguredColor(sidebarThemeInput?.textColor) ??
+      activeTheme.emotion.colors.codeTextColor
+    const codeTextFallback = stockChromeMergeFallback(
+      sidebarThemeInput?.codeTextColor,
+      mainThemeInput?.codeTextColor,
+      codeTextStockVal
+    )
+    if (codeTextFallback !== undefined) {
+      stockChromeFallbacks.codeTextColor = codeTextFallback
+    }
   }
 
-  // Use mergeWith & skipProtobufDefaults to prevent empty sidebar values from overwriting main theme configs
+  // Omit unset theme values (e.g. textColor "") so they are not copied onto the
+  // empty destination and later rejected as invalid colors.
   const mergedSidebarThemeInput = mergeWith(
     {},
-    activeTheme.themeInput, // Use the theme props from the main theme as basis
-    sidebarThemeInput, // Merge sidebar configs
+    omitUnsetThemeValues(activeTheme.themeInput),
+    omitUnsetThemeValues(sidebarThemeInput),
     {
       // Explicit overrides that should always be applied
       base: baseTheme,
       backgroundColor: sidebarBackground,
       secondaryBackgroundColor: secondaryBackgroundColor,
       headingFontSizes: headingFontSizes,
+      ...stockChromeFallbacks,
     },
-    skipProtobufDefaults
+    skipUnsetThemeValues
   )
 
   // Create the theme with overrides

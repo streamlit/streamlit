@@ -329,8 +329,10 @@ class StatsProvider(Protocol):
         family_names : Sequence[str] | None
             If provided, only stats for these metric families should be computed
             and returned. If None, stats for all families this provider supports
-            should be returned. Providers should check this parameter and skip
-            computing expensive stats for families that aren't requested.
+            should be returned. Providers that serve multiple families should
+            check this parameter and skip computing unrequested families.
+            Single-family providers may rely on StatsManager only dispatching
+            them when their family is requested.
 
         Returns
         -------
@@ -359,6 +361,10 @@ class StatsManager:
             if family not in self._providers_by_family:
                 self._providers_by_family[family] = []
             self._providers_by_family[family].append(provider)
+
+    def registered_families(self) -> Sequence[str]:
+        """Return registered metric family names in registration order."""
+        return list(self._providers_by_family.keys())
 
     def get_stats(
         self, family_names: Sequence[str] | None = None

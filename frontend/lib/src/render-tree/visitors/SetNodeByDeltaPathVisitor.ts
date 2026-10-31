@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * A visitor that sets a node at a specific delta path, maintaining immutability
@@ -120,6 +125,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     // If the child at the current index is undefined, we assume we are out of bounds
     // This may be just an element being added at the end of the block.
     // So, we can just replace it with the nodeToSet assuming the path is valid.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- index access past the end (or into a hole) is undefined, which the AppNode[] type hides
     if (!node.children[currentIndex]) {
       if (remainingPath.length > 0) {
         throw new Error("Cannot set a node at a delta path")

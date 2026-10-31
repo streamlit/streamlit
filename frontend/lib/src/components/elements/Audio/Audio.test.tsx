@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
-import Audio, { AudioProps } from "./Audio"
+import Audio, { type AudioProps } from "./Audio"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -164,7 +164,7 @@ describe("Audio Element", () => {
     render(<Audio {...props} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 0
-    fireEvent.loadedMetadata(audioElement)
+    audioElement.dispatchEvent(new Event("loadedmetadata"))
     expect(audioElement.currentTime).toBe(14)
   })
 
@@ -187,7 +187,7 @@ describe("Audio Element", () => {
     render(<Audio {...getProps({ endTime: 5, loop: false, startTime: 0 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 5.1
-    fireEvent.timeUpdate(audioElement)
+    audioElement.dispatchEvent(new Event("timeupdate"))
     expect(pauseSpy).toHaveBeenCalledTimes(1)
     pauseSpy.mockRestore()
   })
@@ -197,8 +197,8 @@ describe("Audio Element", () => {
     render(<Audio {...getProps({ endTime: 5, loop: false, startTime: 0 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 5.2
-    fireEvent.timeUpdate(audioElement)
-    fireEvent.timeUpdate(audioElement)
+    audioElement.dispatchEvent(new Event("timeupdate"))
+    audioElement.dispatchEvent(new Event("timeupdate"))
     expect(pauseSpy).toHaveBeenCalledTimes(1)
     pauseSpy.mockRestore()
   })
@@ -218,7 +218,7 @@ describe("Audio Element", () => {
     )
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 5
-    fireEvent.timeUpdate(audioElement)
+    audioElement.dispatchEvent(new Event("timeupdate"))
     expect(audioElement.currentTime).toBe(2)
     expect(playSpy).toHaveBeenCalled()
     playSpy.mockRestore()
@@ -244,7 +244,7 @@ describe("Audio Element", () => {
     render(<Audio {...getProps({ loop: true, startTime: 0 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 8
-    fireEvent.ended(audioElement)
+    audioElement.dispatchEvent(new Event("ended"))
     expect(audioElement.currentTime).toBe(0)
     expect(playSpy).toHaveBeenCalled()
     playSpy.mockRestore()
@@ -257,7 +257,7 @@ describe("Audio Element", () => {
     render(<Audio {...getProps({ loop: false, startTime: 3 })} />)
     const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
     audioElement.currentTime = 8
-    fireEvent.ended(audioElement)
+    audioElement.dispatchEvent(new Event("ended"))
     expect(audioElement.currentTime).toBe(8)
     expect(playSpy).not.toHaveBeenCalled()
     playSpy.mockRestore()
@@ -288,7 +288,7 @@ describe("Audio Element", () => {
     const audioElement = screen.getByTestId("stAudio")
     expect(audioElement).toBeInTheDocument()
 
-    fireEvent.error(audioElement)
+    audioElement.dispatchEvent(new Event("error"))
 
     expect(sendClientErrorToHost).toHaveBeenCalledWith(
       "Audio",
@@ -296,6 +296,31 @@ describe("Audio Element", () => {
       "onerror triggered",
       "https://mock.media.url/"
     )
+  })
+
+  describe("alt (accessible description)", () => {
+    it("sets aria-label when alt is provided", () => {
+      render(<Audio {...getProps({ alt: "A cat purring" })} />)
+      expect(screen.getByTestId("stAudio")).toHaveAttribute(
+        "aria-label",
+        "A cat purring"
+      )
+    })
+
+    it("omits aria-label entirely when alt is not provided", () => {
+      render(<Audio {...getProps()} />)
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", (_label, alt) => {
+      render(<Audio {...getProps({ alt })} />)
+      expect(screen.getByTestId("stAudio")).not.toHaveAttribute("aria-label")
+    })
   })
 
   describe("crossOrigin attribute", () => {

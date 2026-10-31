@@ -16,7 +16,12 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import { type EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+
+import {
+  getSidebarResizeHandleBackgroundImage,
+  getSidebarResizeHandleHoverBorderColor,
+} from "./utils"
 
 /**
  * Returns the horizontal spacing for the sidebar, taking into consideration
@@ -49,8 +54,12 @@ interface StyledSidebarProps {
 
 export const StyledSidebar = styled.section<StyledSidebarProps>(
   ({ theme, isCollapsed, adjustTop, sidebarWidth, windowInnerWidth }) => {
-    const minWidth = isCollapsed ? 0 : Math.min(200, windowInnerWidth)
-    const maxWidth = isCollapsed ? 0 : Math.min(600, windowInnerWidth * 0.9)
+    const minWidth = isCollapsed
+      ? 0
+      : `min(${theme.sizes.minSidebarWidth}, ${windowInnerWidth}px)`
+    const maxWidth = isCollapsed
+      ? 0
+      : `min(${theme.sizes.maxSidebarWidth}, ${windowInnerWidth * 0.9}px)`
 
     return {
       position: "relative",
@@ -97,10 +106,23 @@ interface StyledSidebarUserContentProps {
 }
 
 export const StyledSidebarUserContent =
-  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => ({
-    paddingTop: hasPageNavAbove ? theme.spacing.twoXL : 0,
-    paddingBottom: theme.sizes.sidebarTopSpace,
-  }))
+  styled.div<StyledSidebarUserContentProps>(({ hasPageNavAbove, theme }) => {
+    const configuredTop = theme.paddingTop
+
+    let paddingTop: string | number
+    if (configuredTop !== undefined) {
+      // Set + page nav: gap goes onto user-content paddingTop (header→nav already separate)
+      // Set + no nav:   gap goes onto header marginBottom (see StyledSidebarHeaderContainer)
+      paddingTop = hasPageNavAbove ? configuredTop : 0
+    } else {
+      // Unset keeps the built-in gap: twoXL under page nav, otherwise none.
+      paddingTop = hasPageNavAbove ? theme.spacing.twoXL : 0
+    }
+
+    const paddingBottom = theme.paddingBottom ?? theme.sizes.sidebarTopSpace
+
+    return { paddingTop, paddingBottom }
+  })
 
 interface StyledSidebarContentProps {
   scrollbarGutterSize: number
@@ -129,28 +151,63 @@ export const StyledSidebarContent = styled.div<StyledSidebarContentProps>(
 
 export const RESIZE_HANDLE_WIDTH = "8px"
 
-export const StyledResizeHandle = styled.div(({ theme }) => ({
-  position: "absolute",
-  width: RESIZE_HANDLE_WIDTH,
-  height: "100%",
-  cursor: "col-resize",
-  zIndex: theme.zIndices.sidebarMobile,
-  backgroundImage: theme.showSidebarBorder
-    ? `linear-gradient(to right, transparent 20%, ${theme.colors.borderColor} 28%, transparent 36%)`
-    : "none",
+export const StyledResizeHandle = styled.div(({ theme }) => {
+  const { borderColor } = theme.colors
+  // When the border is already visible, bump opacity on hover. Hidden-border
+  // hover still reveals the un-bumped borderColor via the gradient below.
+  const hoverBorderColor = theme.showSidebarBorder
+    ? getSidebarResizeHandleHoverBorderColor(borderColor)
+    : borderColor
 
-  "&:hover": {
-    backgroundImage: `linear-gradient(to right, transparent 20%, ${theme.colors.borderColor} 28%, transparent 44%)`,
-  },
-}))
+  return {
+    position: "absolute",
+    width: RESIZE_HANDLE_WIDTH,
+    height: "100%",
+    cursor: "col-resize",
+    zIndex: theme.zIndices.sidebarMobile,
+    backgroundImage: theme.showSidebarBorder
+      ? getSidebarResizeHandleBackgroundImage(borderColor, {
+          isHovered: false,
+        })
+      : "none",
 
-export const StyledSidebarHeaderContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: theme.spacing.lg,
-  height: theme.sizes.headerHeight,
-}))
+    "&:hover": {
+      backgroundImage: getSidebarResizeHandleBackgroundImage(
+        hoverBorderColor,
+        {
+          isHovered: true,
+        }
+      ),
+    },
+  }
+})
+
+interface StyledSidebarHeaderContainerProps {
+  hasPageNavAbove: boolean
+}
+
+export const StyledSidebarHeaderContainer =
+  styled.div<StyledSidebarHeaderContainerProps>(
+    ({ hasPageNavAbove, theme }) => {
+      const configuredTop = theme.paddingTop
+
+      // When paddingTop is configured and there is no page nav, the gap between
+      // chrome and the first widget is expressed as marginBottom on this header
+      // row (the header→nav spacing stays at spacing.lg when nav is present).
+      const marginBottom =
+        configuredTop !== undefined && !hasPageNavAbove
+          ? configuredTop
+          : theme.spacing.lg
+
+      return {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom,
+        height: theme.sizes.headerHeight,
+      }
+    }
+  )
 
 export const StyledLogoLink = styled.a({
   "&:hover": {
@@ -187,8 +244,8 @@ function translateLogoHeight(theme: EmotionTheme, size: string): string {
 export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   height: translateLogoHeight(theme, size),
   // Extra margin to align small logo with sidebar collapse arrow
-  marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-  marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
+  marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
   marginLeft: theme.spacing.none,
   zIndex: theme.zIndices.header,
   objectFit: "contain",
@@ -203,8 +260,8 @@ export const StyledIconLogo = styled.div<StyledLogoProps>(
     alignItems: "center",
     justifyContent: "flex-start",
     height: translateLogoHeight(theme, size),
-    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
     marginLeft: theme.spacing.none,
     zIndex: theme.zIndices.header,
     fontSize: translateLogoHeight(theme, size),

@@ -28,97 +28,102 @@ if "change" not in st.session_state:
     st.session_state["change"] = False
 
 
-def on_click_1():
+# Apply tab mutations inside on_click callbacks, not from button return
+# values. Each button disables itself (disabled=st.session_state.add_tab),
+# so its trigger value is discarded on the run it becomes disabled.
+# Callbacks fire before re-registration — the reliable place to mutate.
+def _append_tab(label: str) -> None:
+    if label not in st.session_state.tabs:
+        st.session_state.tabs.append(label)
+
+
+def _remove_tab(label: str) -> None:
+    if label in st.session_state.tabs:
+        st.session_state.tabs.pop(st.session_state.tabs.index(label))
+
+
+def _rename_tab(old_label: str, new_label: str) -> None:
+    if old_label in st.session_state.tabs:
+        st.session_state.tabs[st.session_state.tabs.index(old_label)] = new_label
+
+
+def _on_add_tab_3_click():
     st.session_state.add_tab = True
+    _append_tab("Tab 3")
 
 
-def on_click_2():
+def _on_remove_tab_1_click():
     st.session_state.remove_1 = True
+    _remove_tab("Tab 1")
 
 
-def on_click_3():
+def _on_remove_tab_2_click():
     st.session_state.remove_2 = True
+    _remove_tab("Tab 2")
 
 
-def on_click_4():
+def _on_change_tabs_1_and_3_click():
     st.session_state.change = True
-    on_click_1()
-    on_click_2()
-    on_click_3()
+    st.session_state.add_tab = True
+    st.session_state.remove_1 = True
+    st.session_state.remove_2 = True
+    _rename_tab("Tab 1", "Tab A")
+    _rename_tab("Tab 3", "Tab C")
 
 
-def on_click_5():
-    on_click_4()
+def _on_change_all_tabs_click():
+    st.session_state.change = True
+    st.session_state.add_tab = True
+    st.session_state.remove_1 = True
+    st.session_state.remove_2 = True
+    _rename_tab("Tab 1", "Tab A")
+    _rename_tab("Tab 2", "Tab B")
+    _rename_tab("Tab 3", "Tab C")
 
 
-def reset():
+def _on_reset_click():
     st.session_state.clear()
 
 
 col1, col2, col3, col4, col5 = st.columns([0.8, 1, 1, 1.2, 1], gap="small")
 with col1:
-    add_tab = st.button(
+    st.button(
         "Add Tab 3",
-        on_click=on_click_1,
+        on_click=_on_add_tab_3_click,
         disabled=st.session_state.add_tab,
         width="stretch",
     )
 with col2:
-    remove_1 = st.button(
+    st.button(
         "Remove Tab 1",
-        on_click=on_click_2,
+        on_click=_on_remove_tab_1_click,
         disabled=st.session_state.remove_1,
         width="stretch",
     )
 with col3:
-    remove_2 = st.button(
+    st.button(
         "Remove Tab 2",
-        on_click=on_click_3,
+        on_click=_on_remove_tab_2_click,
         disabled=st.session_state.remove_2,
         width="stretch",
     )
 with col4:
-    change_some = st.button(
+    st.button(
         "Change Tab 1 & 3",
-        on_click=on_click_4,
+        on_click=_on_change_tabs_1_and_3_click,
         disabled=st.session_state.change,
         width="stretch",
     )
-    change = st.button(
+    st.button(
         "Change All Tabs",
-        on_click=on_click_5,
+        on_click=_on_change_all_tabs_click,
         disabled=st.session_state.change,
         width="stretch",
     )
 with col5:
-    st.button("**Reset Tabs**", on_click=reset)
+    st.button("**Reset Tabs**", on_click=_on_reset_click)
 
 st.subheader("Tabs Example", divider="green")
-
-if add_tab:
-    st.session_state.tabs.append("Tab 3")
-
-if remove_1:
-    index = st.session_state.tabs.index("Tab 1")
-    st.session_state.tabs.pop(index)
-
-if remove_2:
-    index = st.session_state.tabs.index("Tab 2")
-    st.session_state.tabs.pop(index)
-
-if change:
-    if "Tab 1" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 1")] = "Tab A"
-    if "Tab 2" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 2")] = "Tab B"
-    if "Tab 3" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 3")] = "Tab C"
-
-if change_some:
-    if "Tab 1" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 1")] = "Tab A"
-    if "Tab 3" in st.session_state.tabs:
-        st.session_state.tabs[st.session_state.tabs.index("Tab 3")] = "Tab C"
 
 
 tabs = st.tabs(st.session_state.tabs)

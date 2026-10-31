@@ -25,7 +25,7 @@ export type MinFlexElementWidth = "fit-content" | "14rem" | "8rem" | undefined
 
 export function getDirectionOfBlock(block: BlockProto): Direction {
   if (block.flexContainer) {
-    return block.flexContainer.direction ==
+    return block.flexContainer.direction ===
       BlockProto.FlexContainer.Direction.HORIZONTAL
       ? Direction.HORIZONTAL
       : Direction.VERTICAL
@@ -40,17 +40,17 @@ export function getDirectionOfBlock(block: BlockProto): Direction {
 }
 
 export function shouldWidthStretch(
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 ): boolean {
   // Some elements (e.g. ButtonGroup) need styles applied to the element itself, to support
   // the width configuration.
-  return !!(widthConfig?.useStretch || widthConfig?.pixelWidth)
+  return widthConfig?.useStretch === true || !!widthConfig?.pixelWidth
 }
 
 export function shouldHeightStretch(
-  heightConfig: streamlit.IHeightConfig | undefined | null
+  heightConfig: streamlit.HeightConfig.$Properties | undefined | null
 ): boolean {
-  return !!(heightConfig?.useStretch || heightConfig?.pixelHeight)
+  return heightConfig?.useStretch === true || !!heightConfig?.pixelHeight
 }
 
 const alignmentMap: Record<
@@ -71,11 +71,11 @@ const alignmentMap: Record<
  * @returns CSS text-align value or undefined if not set
  */
 export function getTextAlignmentStyle(
-  config?: streamlit.ITextAlignmentConfig | null
+  config?: streamlit.TextAlignmentConfig.$Properties | null
 ): React.CSSProperties["textAlign"] {
   if (!config?.alignment) {
     return undefined
   }
 
-  return alignmentMap[config.alignment] || "left"
+  return alignmentMap[config.alignment] ?? "left"
 }

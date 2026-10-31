@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback } from "react"
+import { type FC, memo, useCallback } from "react"
 
-import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
+import type { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -49,17 +50,13 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  // Default to a sensible color if proto default is not set
-  // Defensive as backend always sets default
-  return element.default ?? "#000000"
+  return element.default
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  // Return the current value, falling back to default if not set
-  // Defensive as backend always sets default
-  return element.value ?? element.default ?? "#000000"
+  return element.value
 }
 
 const updateWidgetMgrState = (
@@ -68,12 +65,15 @@ const updateWidgetMgrState = (
   valueWithSource: ValueWithSource<ColorPickerValue>,
   fragmentId: string | undefined
 ): void => {
-  widgetMgr.setStringValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 const ColorPicker: FC<Props> = ({
@@ -82,7 +82,7 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
@@ -108,7 +108,7 @@ const ColorPicker: FC<Props> = ({
 
   const handleColorClose = useCallback(
     (color: string): void => {
-      setValueWithSource({ value: color, fromUi: true })
+      setValueWithSource({ value: color, fromUser: true })
     },
     [setValueWithSource]
   )

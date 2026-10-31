@@ -6,6 +6,6 @@
     "allowImportingTsExtensions": false,
     "noEmit": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../vitest-jest-dom.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

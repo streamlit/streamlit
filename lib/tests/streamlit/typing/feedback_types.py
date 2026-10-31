@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
@@ -28,3 +26,40 @@ if TYPE_CHECKING:
     assert_type(feedback("thumbs"), Literal[0, 1] | None)
     assert_type(feedback("faces"), Literal[0, 1, 2, 3, 4] | None)
     assert_type(feedback("stars"), Literal[0, 1, 2, 3, 4] | None)
+
+    def on_feedback(value: int, label: str) -> None: ...
+
+    assert_type(
+        feedback(
+            "stars",
+            key="rating",
+            default=4,
+            disabled=False,
+            on_change=on_feedback,
+            args=(4,),
+            kwargs={"label": "excellent"},
+            width="stretch",
+            bind="query-params",
+            persist_state="session",
+        ),
+        Literal[0, 1, 2, 3, 4] | None,
+    )
+    assert_type(
+        feedback("thumbs", key="bound_thumbs", bind="query-params"),
+        Literal[0, 1] | None,
+    )
+    assert_type(
+        feedback("faces", key="unbound_faces", bind=None),
+        Literal[0, 1, 2, 3, 4] | None,
+    )
+    assert_type(
+        feedback("thumbs", key="persisted_thumbs", persist_state="page"),
+        Literal[0, 1] | None,
+    )
+    assert_type(
+        feedback("faces", key="unpersisted_faces", persist_state=None),
+        Literal[0, 1, 2, 3, 4] | None,
+    )
+    assert_type(feedback("thumbs", on_change=None), Literal[0, 1] | None)
+    assert_type(feedback("thumbs", on_change="rerun"), Literal[0, 1] | None)
+    assert_type(feedback("thumbs", on_change="ignore"), Literal[0, 1] | None)

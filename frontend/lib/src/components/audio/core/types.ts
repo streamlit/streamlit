@@ -48,24 +48,24 @@ export interface WaveformController {
   readonly isPlaybackPlaying: boolean
   readonly mountRef: RefObject<HTMLDivElement>
 
-  start(): Promise<void>
-
-  stop(): Promise<StopResult>
-
-  approve(blob?: Blob): Promise<void>
-
-  cancel(): void
-
-  destroy(): void
+  start: () => Promise<void>
+  /**
+   * Rejects with `RecordingCancelledError` when the stop is abandoned (cancel,
+   * reset, or teardown); callers should skip approval without showing an error.
+   */
+  stop: () => Promise<StopResult>
+  approve: (blob?: Blob) => Promise<void>
+  cancel: () => void
+  destroy: () => void
 
   playback: {
-    isPlaying(): boolean
-    play(): Promise<void>
-    pause(): void
-    load(source: Blob | ArrayBuffer | string): Promise<void>
-    getCurrentTimeMs(): number
-    getDurationMs(): number
+    isPlaying: () => boolean
+    play: () => Promise<void>
+    pause: () => void
+    load: (source: Blob | ArrayBuffer | string) => Promise<void>
+    getCurrentTimeMs: () => number
+    getDurationMs: () => number
   }
 
-  setEventHandlers(events: WaveformControllerEvents): void
+  setEventHandlers: (events: WaveformControllerEvents) => void
 }

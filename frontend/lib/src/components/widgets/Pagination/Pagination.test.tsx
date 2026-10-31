@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Pagination as PaginationProto } from "@streamlit/protobuf"
@@ -23,7 +23,7 @@ import * as useResizeObserverModule from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Pagination, { Props } from "./Pagination"
+import Pagination, { type Props } from "./Pagination"
 
 const getProps = (
   elementProps: Partial<PaginationProto> = {},
@@ -147,10 +147,9 @@ describe("Pagination widget", () => {
       await user.click(getNextButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         2,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -164,10 +163,9 @@ describe("Pagination widget", () => {
       await user.click(getPrevButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         4,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -182,10 +180,9 @@ describe("Pagination widget", () => {
       await user.click(page3Button)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         3,
-        { fromUi: true },
-        undefined
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
     })
   })
@@ -327,6 +324,59 @@ describe("Pagination widget", () => {
       ])
     })
 
+    it.each([
+      {
+        defaultPage: 2,
+        slots: "start",
+        expected: ["1", "2", "3", "4", "5", "20"],
+      },
+      {
+        defaultPage: 19,
+        slots: "end",
+        expected: ["1", "16", "17", "18", "19", "20"],
+      },
+    ])(
+      "expands extra $slots slots when current page is near the $slots",
+      ({ defaultPage, expected }) => {
+        const props = getProps({
+          numPages: 20,
+          default: defaultPage,
+          maxVisiblePages: 7,
+        })
+        render(<Pagination {...props} />)
+
+        expect(getPageButtons().map(b => b.textContent)).toEqual(expected)
+        expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      }
+    )
+
+    it("recenters the window when a large maxVisiblePages still hits the last page", () => {
+      const props = getProps({
+        numPages: 20,
+        default: 17,
+        maxVisiblePages: 11,
+      })
+      render(<Pagination {...props} />)
+
+      // Without recentering, the middle window would start at 14 instead of 13.
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+      ])
+      // Pre-existing: needRightEllipsis is currentPage < numPages - 2, so a
+      // trailing ellipsis still appears between 19 and 20 even though it hides
+      // no pages.
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
+      expect(getActivePageButton()).toHaveTextContent("17")
+    })
+
     it("handles max_visible_pages=3 with current page in middle", () => {
       const props = getProps({ numPages: 10, default: 5, maxVisiblePages: 3 })
       render(<Pagination {...props} />)
@@ -346,7 +396,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
       expect(getActivePageButton()).toHaveTextContent("19")
     })
@@ -357,7 +407,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
       expect(getActivePageButton()).toHaveTextContent("2")
     })
@@ -368,7 +418,7 @@ describe("Pagination widget", () => {
 
       const pageButtons = getPageButtons()
       expect(pageButtons[0]).toHaveTextContent("1")
-      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(pageButtons.at(-1)).toHaveTextContent("20")
       expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
       expect(getActivePageButton()).toHaveTextContent("10")
     })
@@ -492,10 +542,13 @@ describe("Pagination widget", () => {
       render(<Pagination {...props} />)
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         5,
-        { fromUi: false },
-        undefined
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: false,
+        }
       )
     })
 
@@ -512,11 +565,159 @@ describe("Pagination widget", () => {
       await user.click(getNextButton())
 
       expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         2,
-        { fromUi: true },
-        "test-fragment"
+        {
+          formId: props.element.formId,
+          fragmentId: "test-fragment",
+          fromUser: true,
+        }
       )
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it.each([
+    ["a page button", 1, "Page 3", 3],
+    ["previous", 5, "Previous page", 4],
+    ["next", 1, "Next page", 2],
+  ] as const)(
+    "passes triggerRerun: false when %s commits with ignoreRerun",
+    async (_label, defaultPage, buttonName, expectedPage) => {
+      const user = userEvent.setup()
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps(
+        { ignoreRerun: true, numPages: 5, default: defaultPage },
+        { widgetMgr }
+      )
+      const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<Pagination {...props} />)
+      setIntValueSpy.mockClear()
+      sendRerunBackMsg.mockClear()
+
+      await user.click(screen.getByRole("button", { name: buttonName }))
+
+      expect(setIntValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        expectedPage,
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { ignoreRerun: false, numPages: 5, default: 1 },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 2, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+        numPages: 5,
+        default: 1,
+      },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+
+    expect(setIntValueSpy).toHaveBeenLastCalledWith(props.element.id, 2, {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit when the current page is clicked", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(
+      { ignoreRerun: true, numPages: 5, default: 1 },
+      { widgetMgr }
+    )
+    const setIntValueSpy = vi.spyOn(props.widgetMgr, "setIntValue")
+
+    render(<Pagination {...props} />)
+    setIntValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("button", { name: "Page 1" }))
+
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })

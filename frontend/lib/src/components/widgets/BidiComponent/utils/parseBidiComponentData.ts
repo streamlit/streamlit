@@ -15,9 +15,10 @@
  */
 
 import type {
+  ArrowData,
   BidiComponent as BidiComponentProto,
-  IArrowData,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { assertNever } from "~lib/util/assertNever"
 
@@ -28,8 +29,8 @@ type BaseParseArgs = Pick<BidiComponentProto, "json" | "bytes">
 type BidiComponentDataField = BidiComponentProto["data"]
 
 export type ParseBidiComponentDataArgs = BaseParseArgs & {
-  arrowBlobs?: Record<string, IArrowData>
-  arrowData?: IArrowData["data"] | undefined
+  arrowBlobs?: Record<string, ArrowData.$Properties>
+  arrowData?: ArrowData.$Properties["data"] | undefined
   data?: BidiComponentDataField | "mixed"
   mixedJson?: string
 }
@@ -49,18 +50,18 @@ export const parseBidiComponentData = ({
 }: ParseBidiComponentDataArgs): ParsedComponentData => {
   switch (data) {
     case "json":
-      return json ? JSON.parse(json) : null
+      return isNullOrEmptyString(json) ? null : JSON.parse(json)
     case "arrowData":
       return arrowData ?? null
     case "bytes":
       return bytes ?? null
     case "mixed": {
-      if (mixedJson && arrowBlobs) {
-        const jsonData = JSON.parse(mixedJson)
+      if (!isNullOrEmptyString(mixedJson) && arrowBlobs) {
+        const jsonData: unknown = JSON.parse(mixedJson)
 
         const arrowBlobsMap: Record<string, Uint8Array> = {}
         Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
-          if (arrowProto?.data) {
+          if (arrowProto.data) {
             arrowBlobsMap[key] = arrowProto.data
           }
         })

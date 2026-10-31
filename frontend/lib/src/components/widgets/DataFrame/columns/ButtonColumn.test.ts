@@ -20,7 +20,7 @@ import { Field, Utf8 } from "apache-arrow"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import ButtonColumn from "./ButtonColumn"
-import { ButtonCell } from "./cells/ButtonCell"
+import type { ButtonCell } from "./cells/ButtonCell"
 
 const MOCK_BUTTON_COLUMN_PROPS = {
   id: "1",

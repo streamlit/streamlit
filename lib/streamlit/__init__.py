@@ -61,7 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
-from typing import cast as _cast
+from typing import Final as _Final, cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
@@ -127,7 +127,6 @@ from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_deco
 from streamlit.runtime.caching import (
     cache_resource as _cache_resource,
     cache_data as _cache_data,
-    cache as _cache,
 )
 from streamlit.runtime.connection_factory import (
     connection_factory as _connection,
@@ -147,6 +146,7 @@ from streamlit.user_info import (
 )
 
 import streamlit.column_config as _column_config
+import streamlit.typing as _typing
 
 # Modules that the user should have access to. These are imported with the "as" syntax
 # and the same name; note that renaming the import with "as" does not make it an
@@ -158,8 +158,12 @@ import streamlit.column_config as _column_config
 
 from streamlit.commands.echo import echo as echo
 from streamlit.commands.logo import logo as logo
-from streamlit.commands.navigation import navigation as navigation
 from streamlit.navigation.page import Page as Page
+from streamlit.commands.navigation import navigation as _navigation
+
+# Declare the command so type checkers resolve `st.navigation` to this callable,
+# not the `streamlit.navigation` package of the same name.
+navigation: _Final = _navigation
 
 from streamlit.commands.page_config import set_page_config as set_page_config
 from streamlit.commands.execution_control import (
@@ -206,6 +210,7 @@ date_input = _main.date_input
 datetime_input = _main.datetime_input
 divider = _main.divider
 download_button = _main.download_button
+echarts_chart = _main.echarts_chart
 expander = _main.expander
 feedback = _main.feedback
 pydeck_chart = _main.pydeck_chart
@@ -288,11 +293,10 @@ context = _ContextProxy()
 # Caching
 cache_data = _cache_data
 cache_resource = _cache_resource
-# `st.cache` is deprecated and should be removed soon
-cache = _cache
 
 # Namespaces
 column_config = _column_config
+typing = _typing
 
 # Connection
 connection = _connection
@@ -315,5 +319,61 @@ from streamlit.starlette import App as App
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports
+# Explicitly re-export the namespace because type checkers don't infer it from
+# the submodule import side effects below.
+from streamlit import components as components
 import streamlit.components.v1  # noqa: F401
 import streamlit.components.v2  # noqa: F401
+
+# Runtime-only module ``__getattr__``. Hide it from type checkers so unknown
+# ``st.*`` names stay type errors. mypy only honors the unaliased
+# ``TYPE_CHECKING`` name here; an alias made unknown names type-check as
+# valid. Deleting it afterward keeps it off the public ``st`` surface.
+from types import ModuleType as _ModuleType
+from typing import TYPE_CHECKING
+
+
+class _MissingStreamlitAttributeMessage:
+    """Lazy ``AttributeError`` argument for a missing top-level ``st.*`` name.
+
+    ``hasattr``, ``getattr`` with a default, and ``from streamlit import``
+    catch this error without formatting it. The suggestion text is built
+    only when ``str()`` runs, so those lookups do not import
+    ``streamlit.command_suggestions`` or ``difflib``.
+    """
+
+    def __init__(self, name: str, module: _ModuleType) -> None:
+        self._name = name
+        self._module = module
+
+    def __str__(self) -> str:
+        try:
+            # Import the submodule directly so a failed load hits the fallback
+            # below. ``from streamlit import`` looks the name up first and
+            # re-enters ``__getattr__``.
+            import streamlit.command_suggestions as command_suggestions  # noqa: PLR0402
+
+            return command_suggestions.missing_streamlit_attribute_message(
+                self._name, self._module
+            )
+        except Exception:  # pragma: no cover - defensive
+            return f"module 'streamlit' has no attribute '{self._name}'"
+
+
+if not TYPE_CHECKING:
+
+    def __getattr__(name: str) -> object:
+        import sys
+
+        module = sys.modules[__name__]
+        # Telemetry records AttributeError.name and .obj as
+        # AttributeError:<attribute> instead of parsing the message.
+        raise AttributeError(
+            _MissingStreamlitAttributeMessage(name, module),
+            name=name,
+            obj=module,
+        )
+
+
+# Drop TYPE_CHECKING so it is not a public ``st`` name.
+del TYPE_CHECKING

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
@@ -22,9 +22,9 @@ import { Video as VideoProto } from "@streamlit/protobuf"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
-import { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager as ElementStateManager } from "~lib/WidgetStateManager"
 
-import Video, { VideoProps } from "./Video"
+import Video, { type VideoProps } from "./Video"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -105,7 +105,7 @@ describe("Video Element", () => {
     const videoElement = screen.getByTestId("stVideo")
     expect(videoElement).toBeInTheDocument()
 
-    fireEvent.error(videoElement)
+    videoElement.dispatchEvent(new Event("error"))
 
     expect(sendClientErrorToHost).toHaveBeenCalledWith(
       "Video",
@@ -168,6 +168,80 @@ describe("Video Element", () => {
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
     expect(mockSetElementState).not.toHaveBeenCalled()
+  })
+
+  describe("alt (accessible description)", () => {
+    it("sets aria-label on the native video when alt is provided", async () => {
+      render(<Video {...getProps({ alt: "A short animated film" })} />)
+      // Query by accessible name rather than test id: that is the name a
+      // screen reader announces, and AGENTS.md ranks it above getByTestId.
+      expect(
+        await screen.findByLabelText("A short animated film")
+      ).toBeVisible()
+    })
+
+    it("omits aria-label entirely when alt is not provided", async () => {
+      render(<Video {...getProps()} />)
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty.
+      expect(await screen.findByTestId("stVideo")).not.toHaveAttribute(
+        "aria-label"
+      )
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits aria-label when alt is %s", async (_label, alt) => {
+      render(<Video {...getProps({ alt })} />)
+      expect(await screen.findByTestId("stVideo")).not.toHaveAttribute(
+        "aria-label"
+      )
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])(
+      "falls back to the url for the iframe title when alt is %s",
+      async (_label, alt) => {
+        // A blank title would leave the iframe effectively untitled, which is
+        // an outright accessibility failure - the url must win instead.
+        render(
+          <Video
+            {...getProps({ type: VideoProto.Type.YOUTUBE_IFRAME, alt })}
+          />
+        )
+        expect(await screen.findByTestId("stVideo")).toHaveAttribute(
+          "title",
+          "https://www.w3schools.com/html/mov_bbb.mp4"
+        )
+      }
+    )
+
+    it("uses alt as the youtube iframe title when provided", async () => {
+      render(
+        <Video
+          {...getProps({
+            type: VideoProto.Type.YOUTUBE_IFRAME,
+            alt: "A short animated film",
+          })}
+        />
+      )
+      expect(await screen.findByTestId("stVideo")).toHaveAttribute(
+        "title",
+        "A short animated film"
+      )
+    })
+
+    it("falls back to the url for the youtube iframe title", async () => {
+      // An iframe always needs a title, so the url remains the fallback.
+      render(<Video {...getProps({ type: VideoProto.Type.YOUTUBE_IFRAME })} />)
+      expect(await screen.findByTestId("stVideo")).toHaveAttribute(
+        "title",
+        "https://www.w3schools.com/html/mov_bbb.mp4"
+      )
+    })
   })
 
   describe("YouTube", () => {
@@ -258,12 +332,12 @@ describe("Video Element", () => {
       const { rerender } = render(<Video {...getProps({ startTime: 12 })} />)
       const video: HTMLVideoElement = await screen.findByTestId("stVideo")
       video.currentTime = 0
-      fireEvent.loadedMetadata(video)
+      video.dispatchEvent(new Event("loadedmetadata"))
       expect(video.currentTime).toBe(12)
 
       rerender(<Video {...getProps({ startTime: 3 })} />)
       video.currentTime = 0
-      fireEvent.loadedMetadata(video)
+      video.dispatchEvent(new Event("loadedmetadata"))
       expect(video.currentTime).toBe(3)
     })
   })
@@ -278,14 +352,14 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 9
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).not.toHaveBeenCalled()
 
       video.currentTime = 10
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).toHaveBeenCalledTimes(1)
 
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(pauseSpy).toHaveBeenCalledTimes(1)
     })
 
@@ -302,7 +376,7 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 10
-      fireEvent.timeUpdate(video)
+      video.dispatchEvent(new Event("timeupdate"))
       expect(video.currentTime).toBe(4)
       expect(playSpy).toHaveBeenCalledTimes(1)
     })
@@ -316,7 +390,7 @@ describe("Video Element", () => {
 
       await user.click(video)
       video.currentTime = 99
-      fireEvent.ended(video)
+      video.dispatchEvent(new Event("ended"))
       expect(video.currentTime).toBe(7)
       expect(playSpy).toHaveBeenCalledTimes(1)
     })

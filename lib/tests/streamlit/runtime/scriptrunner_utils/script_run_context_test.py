@@ -14,9 +14,11 @@
 
 from __future__ import annotations
 
+import contextvars
 import threading
 import unittest
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 import pytest
 
@@ -34,6 +36,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     add_script_run_ctx,
     enqueue_message,
+    get_run_yield_check,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.runtime.state import SafeSessionState, SessionState
@@ -402,6 +405,41 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx.parallel_coordinator._yield_check()
         assert calls == [1]
 
+    def test_get_run_yield_check_returns_latest_reset_callback(self):
+        """The helper returns the yield check from the most recent reset."""
+        ctx = _create_script_run_context(lambda _msg: None)
+
+        def first_callback() -> None:
+            pass
+
+        def second_callback() -> None:
+            pass
+
+        add_script_run_ctx(ctx=ctx)
+
+        ctx.reset(yield_check=first_callback)
+        assert get_run_yield_check() is first_callback
+
+        ctx.reset(yield_check=second_callback)
+        assert get_run_yield_check() is second_callback
+
+    def test_get_run_yield_check_returns_none_off_thread_without_warning(self):
+        """The helper quietly returns None on a thread without a run context."""
+        result: list[Callable[[], None] | None] = []
+
+        with patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context._LOGGER.warning"
+        ) as warning:
+            thread = threading.Thread(
+                target=lambda: result.append(get_run_yield_check())
+            )
+            thread.start()
+            thread.join(timeout=1)
+
+        assert not thread.is_alive()
+        assert result == [None]
+        warning.assert_not_called()
+
     def test_add_script_run_ctx_propagates_thread_state_to_child(self):
         """Child threads observe the parent's ``FragmentThreadState``
         snapshot on start; child mutations stay isolated from the parent's
@@ -442,6 +480,59 @@ class ScriptRunContextTest(unittest.TestCase):
         assert parent_ts.delta_path == (1, 2, 3)
         assert parent_ts.active_script_hash == "parent_hash"
 
+    def test_add_script_run_ctx_does_not_copy_command_tracking_deactivated(self):
+        """Helper threads start with tracking on even if the parent is nested.
+
+        ``command_tracking_deactivated`` is per execution stack. Copying a
+        parent's ``True`` would leave helper-thread commands untracked for
+        the thread's life because the snapshot is not live-shared.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        captured: dict[str, object] = {}
+        try:
+
+            def child_target() -> None:
+                captured["flag"] = ThreadState.get().command_tracking_deactivated
+
+            t = threading.Thread(target=child_target)
+            add_script_run_ctx(t, ctx)
+            t.start()
+            t.join(timeout=5)
+
+            assert not t.is_alive()
+            assert captured["flag"] is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
+
+    def test_add_script_run_ctx_self_attach_clears_inherited_command_tracking(
+        self,
+    ):
+        """Self-attach in a copied context starts tracking even if the parent is nested."""
+        pages_manager = PagesManager("/main/script/path")
+        enable_mpa_v2_mode(pages_manager)
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        copied = contextvars.copy_context()
+        captured: dict[str, object] = {}
+        try:
+
+            def in_copied_context() -> None:
+                add_script_run_ctx(ctx=ctx)
+                captured["flag"] = ThreadState.get().command_tracking_deactivated
+
+            copied.run(in_copied_context)
+
+            assert captured["flag"] is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
+
     def test_ctx_construction_creates_shared(self):
         """A freshly constructed ScriptRunContext owns its own SharedRunState."""
         ctx_a = _create_script_run_context(lambda _msg: None)
@@ -471,12 +562,13 @@ class ScriptRunContextTest(unittest.TestCase):
         assert ctx.shared.tracked_commands == ()
         assert ctx.shared.tracked_commands_count == 0
 
-    def test_run_wrapper_accepts_positional_args(self):
-        """The _run_with_thread_state wrapper must accept positional arguments.
+    def test_run_wrapper_tolerates_extra_positional_arg_from_thread_wrapper(self):
+        """The wrapper must tolerate an extra positional argument without
+        forwarding it to the already-bound original run().
 
-        Regression test for GitHub issue #15374: some threading patterns call
-        thread.run() with positional arguments. The wrapper installed by
-        add_script_run_ctx must handle this gracefully to avoid TypeError.
+        Regression test for GitHub issues #15374 and #16139, where a thread
+        wrapper (Sentry's ThreadingIntegration) re-invokes the wrapper with the
+        thread as an extra positional arg; forwarding it raised a TypeError.
         """
         pages_manager = PagesManager("/main/script/path")
         enable_mpa_v2_mode(pages_manager)
@@ -484,20 +576,22 @@ class ScriptRunContextTest(unittest.TestCase):
 
         ThreadState.initialize(fragment_id="test_fragment")
 
-        received_args: list[object] = []
+        run_calls: list[object] = []
 
-        class ThreadWithRunArgs(threading.Thread):
-            """Thread subclass whose run() accepts extra arguments."""
+        class NoArgRunThread(threading.Thread):
+            """Thread whose run() takes no args, like threading.Thread/Timer."""
 
-            def run(self, *args: object) -> None:
-                received_args.extend(args)
+            def run(self) -> None:
+                run_calls.append(ThreadState.get().fragment_id)
 
-        t = ThreadWithRunArgs()
+        t = NoArgRunThread()
         add_script_run_ctx(t, ctx)
 
-        t.run("test_arg")
+        # Simulate the Sentry ThreadingIntegration calling pattern: the wrapper
+        # is invoked with the thread instance as an extra positional argument.
+        t.run(t)
 
-        assert received_args == ["test_arg"]
+        assert run_calls == ["test_fragment"]
 
 
 def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:

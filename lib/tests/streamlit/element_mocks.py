@@ -129,6 +129,21 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         lambda: st.plotly_chart(px.line(pd.DataFrame()), on_select="rerun"),
     ),
     (
+        "echarts_chart",
+        lambda: st.echarts_chart(
+            {
+                "series": [
+                    {
+                        "type": "bar",
+                        "data": [1, 2, 3],
+                        "selectedMode": "multiple",
+                    }
+                ]
+            },
+            on_select="rerun",
+        ),
+    ),
+    (
         "pydeck_chart",
         lambda: st.pydeck_chart(
             pdk.Deck(
@@ -233,6 +248,13 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     (
         "plotly_chart",
         lambda: st.plotly_chart(px.line(_CHART_DATA), on_select="ignore"),
+    ),
+    (
+        "echarts_chart",
+        lambda: st.echarts_chart(
+            {"series": [{"type": "bar", "data": [1, 2, 3]}]},
+            on_select="ignore",
+        ),
     ),
     ("pydeck_chart", lambda: st.pydeck_chart(pdk.Deck())),
     (

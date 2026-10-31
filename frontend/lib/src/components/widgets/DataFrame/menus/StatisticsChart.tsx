@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
-import { CSSObject, Global } from "@emotion/react"
+import { type CSSObject, Global } from "@emotion/react"
 import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
-import { TopLevelSpec } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
@@ -28,12 +28,12 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 
 import {
-  ColumnStatistics,
+  type ColumnStatistics,
   createLabeledBarDatum,
   formatTooltipDate,
   formatTooltipNumber,
-  HistogramBin,
-  LabeledBarDatum,
+  type HistogramBin,
+  type LabeledBarDatum,
 } from "./statisticsUtils"
 import {
   StyledStatisticsBarChart,
@@ -112,7 +112,9 @@ function createHistogramSpec(
   }))
 
   const spec: TopLevelSpec = {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    // Keep the schema's major version in sync with the bundled vega-lite
+    // package. vega-embed logs a version mismatch warning otherwise.
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: CHART_WIDTH,
     height: CHART_HEIGHT,
     data: { values: data },
@@ -277,6 +279,7 @@ function StatisticsChart({
           } else {
             embedResult = result
           }
+          return
         })
         .catch((error: unknown) => {
           // Embed errors are expected when the component unmounts mid-render, so

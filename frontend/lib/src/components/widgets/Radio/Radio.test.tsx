@@ -22,7 +22,7 @@ import { Radio as RadioProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Radio, { Props } from "./Radio"
+import Radio, { type Props } from "./Radio"
 
 const getProps = (
   elementProps: Partial<RadioProto> = {},
@@ -62,10 +62,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - the default option string at index 0 is "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: false }
     )
   })
 
@@ -75,10 +74,13 @@ describe("Radio widget", () => {
     render(<Radio {...props} />)
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      { fromUi: false },
-      "myFragmentId"
+      {
+        formId: props.element.formId,
+        fragmentId: "myFragmentId",
+        fromUser: false,
+      }
     )
   })
 
@@ -104,7 +106,7 @@ describe("Radio widget", () => {
     const radioOptions = screen.getAllByRole("radio")
     expect(radioOptions).toHaveLength(3)
 
-    // @ts-expect-error
+    // @ts-expect-error - default can be null, which is not an array index
     const checked = radioOptions[props.element.default]
     expect(checked).toBeChecked()
   })
@@ -145,12 +147,14 @@ describe("Radio widget", () => {
     })
   })
 
-  it("renders non-blank captions", () => {
+  it("skips blank captions", () => {
     const props = getProps({ captions: ["caption1", "", ""] })
     render(<Radio {...props} />)
 
-    expect(screen.getAllByTestId("stCaptionContainer")).toHaveLength(3)
-    expect(screen.getByText("caption1")).toBeInTheDocument()
+    // Blank captions render nothing, so they cannot claim the description slot
+    // and point aria-describedby at empty content.
+    expect(screen.getAllByTestId("stRadioCaption")).toHaveLength(1)
+    expect(screen.getByText("caption1")).toBeVisible()
   })
 
   it("shows a message when there are no options to be shown", () => {
@@ -176,10 +180,9 @@ describe("Radio widget", () => {
 
     // Widget uses string values - selecting index 1 sends option "b"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
     expect(secondOption).toBeChecked()
   })
@@ -201,10 +204,9 @@ describe("Radio widget", () => {
     expect(secondOption).toBeChecked()
 
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "b",
-      { fromUi: true },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
 
     // "Submit" the form
@@ -213,18 +215,15 @@ describe("Radio widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    // @ts-expect-error
+    // @ts-expect-error - default can be null, which is not an array index
     const defaultValue = radioOptions[props.element.default]
     expect(defaultValue).toBeChecked()
 
     // Reset sends the default option string "a"
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-      props.element,
+      props.element.id,
       "a",
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
     )
   })
 })
@@ -288,5 +287,107 @@ describe("Radio query param binding", () => {
       true,
       undefined
     )
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Let a scheduled rerun flush before asserting whether one was sent.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: true }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Radio {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "b" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ ignoreRerun: false }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Radio {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "b" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    let pendingFormIds = new Set<string>()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(newData => {
+        pendingFormIds = newData.formsWithPendingChanges
+      }),
+    })
+    const props = getProps(
+      {
+        ignoreRerun: true,
+        formId: "testForm",
+      },
+      { widgetMgr }
+    )
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+
+    render(<Radio {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getByRole("radio", { name: "b" }))
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(props.element.id, "b", {
+      formId: "testForm",
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
 })

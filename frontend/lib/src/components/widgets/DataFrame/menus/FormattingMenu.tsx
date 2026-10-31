@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { DataFrameOverlayPortal } from "~lib/components/widgets/DataFrame/DataFrameOverlayPortal"
@@ -27,8 +27,11 @@ import {
   StyledSubMenuPanel,
 } from "./styled-components"
 
+/** Marks the portal panel so ColumnMenu's outside-click detection can ignore it. */
+export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
+
 /**
- * A list of formats available for number columns (number & progress).
+ * Formats available for number columns.
  * Each format has a label, icon, and format ID.
  */
 const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
@@ -82,7 +85,19 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     label: "Accounting",
     icon: ":material/finance_chip:",
   },
+  {
+    format: "duration",
+    label: "Duration",
+    icon: ":material/timelapse:",
+  },
 ]
+
+// ProgressColumn does not support the duration format, so progress columns
+// offer the number formats without it.
+const PROGRESS_FORMATS = NUMBER_FORMATS.filter(
+  option => option.format !== "duration"
+)
+
 /**
  * A mapping of column kinds to their available formats.
  * Each column kind has an array of objects, each representing a format
@@ -94,7 +109,7 @@ const COLUMN_KIND_FORMAT_MAPPING: Record<
   { format: string; label: string; icon: string }[]
 > = {
   number: NUMBER_FORMATS,
-  progress: NUMBER_FORMATS,
+  progress: PROGRESS_FORMATS,
   datetime: [
     {
       format: "",
@@ -181,8 +196,10 @@ function FormattingMenu({
   onChangeFormat,
   onCloseMenu,
   children,
-}: FormattingMenuProps): ReactElement {
-  const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
+}: FormattingMenuProps): ReactElement | null {
+  const formats = Object.hasOwn(COLUMN_KIND_FORMAT_MAPPING, columnKind)
+    ? COLUMN_KIND_FORMAT_MAPPING[columnKind]
+    : []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
     isOpen,
@@ -193,7 +210,7 @@ function FormattingMenu({
   if (formats.length === 0) {
     // If there are no formats available for the column kind,
     // we don't show the formatting menu option.
-    return <></>
+    return null
   }
 
   return (
@@ -204,6 +221,7 @@ function FormattingMenu({
       {isOpen && (
         <DataFrameOverlayPortal>
           <StyledSubMenuPanel
+            className={FORMATTING_MENU_CLASS}
             ref={setFloatingRef}
             style={floatingStyles}
             data-testid="stDataFrameColumnFormattingMenu"

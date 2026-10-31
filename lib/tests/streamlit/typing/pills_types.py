@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Literal, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 if TYPE_CHECKING:
@@ -53,6 +51,12 @@ if TYPE_CHECKING:
         pills("foo", options, selection_mode="multi", default=[1]),
         list[int],
     )
+    optional_default: list[int] | None = None
+    # Sequence overload includes None so this matches without union expansion.
+    assert_type(
+        pills("foo", options, selection_mode="multi", default=optional_default),
+        list[int],
+    )
 
     # Check bind parameter
     assert_type(pills("foo", options, bind="query-params"), int | None)
@@ -84,7 +88,68 @@ if TYPE_CHECKING:
         int | None,  # Explicitly None default still returns V | None
     )
 
-    # Note: required=True with selection_mode="multi" is invalid and raises
-    # StreamlitAPIException at runtime. This combination cannot be caught at
-    # type-check time because the overload fallback accepts it. The validation
-    # is enforced in _internal_button_group() at runtime.
+    # A variable typed as the full Literal union returns both result types.
+    selection_mode: Literal["single", "multi"] = "single"
+    # ty infers `int | None` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        pills("foo", options, selection_mode=selection_mode),
+        int | list[int] | None,
+    )
+    # Non-literal required still infers V | None in the default single-select mode.
+    required: bool = False
+    assert_type(pills("foo", options, required=required), int | None)
+
+    # required=True with selection_mode="multi" raises StreamlitAPIException at
+    # runtime, so the overloads reject it statically too.
+    pills(  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
+        "foo", options, selection_mode="multi", required=True
+    )
+    # Inherent limitation of the Literal[False] discriminator: a required: bool
+    # variable matches no multi-select overload, even when it is False
+    # (mypy only; ty accepts this call).
+    pills(  # type: ignore[call-overload]
+        "foo", options, selection_mode="multi", required=required
+    )
+
+    # Check wrap parameter
+    assert_type(pills("foo", options, wrap=True), int | None)
+    assert_type(pills("foo", options, wrap=False), int | None)
+    assert_type(pills("foo", options, wrap=None), int | None)
+    assert_type(
+        pills("foo", options, selection_mode="multi", wrap=False),
+        list[int],
+    )
+
+    # Check on_change parameter modes
+    assert_type(pills("foo", options, on_change=None), int | None)
+    assert_type(pills("foo", options, on_change="rerun"), int | None)
+    assert_type(pills("foo", options, on_change="ignore"), int | None)
+    assert_type(pills("foo", options, on_change=lambda: None), int | None)
+    assert_type(
+        pills("foo", options, selection_mode="single", on_change="ignore"),
+        int | None,
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change=None),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change="rerun"),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change="ignore"),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, selection_mode="multi", on_change=lambda: None),
+        list[int],
+    )
+    assert_type(
+        pills("foo", options, default=1, required=True, on_change="ignore"),
+        int,
+    )
+    assert_type(
+        pills("foo", options, required=True, on_change="ignore"),
+        int | None,
+    )

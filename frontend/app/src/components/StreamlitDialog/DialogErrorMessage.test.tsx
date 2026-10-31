@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest"
 import { render } from "@streamlit/lib/testing"
 
 import DialogErrorMessage, {
-  DialogErrorMessageProps,
+  type DialogErrorMessageProps,
 } from "./DialogErrorMessage"
 
 function renderDialogErrorMessage(

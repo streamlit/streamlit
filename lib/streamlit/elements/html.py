@@ -14,14 +14,15 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Html_pb2 import Html as HtmlProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -30,6 +31,15 @@ from streamlit.type_util import SupportsReprHtml, SupportsStr, has_callable_attr
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
+
+_STRING_FILE_PATH_WARNING: Final = (
+    "Passing a local file path as a string to `st.html` is no longer supported. "
+    "To load a local file, pass a `pathlib.Path` object instead."
+)
+
+# Maximum path length to check - skip filesystem calls for obviously long
+# strings that are likely HTML content. Most OS path limits are 256-4096 chars.
+_MAX_PATH_LENGTH: Final = 4096
 
 
 class HtmlMixin:
@@ -55,15 +65,20 @@ class HtmlMixin:
         ``unsafe_allow_javascript=True``. Use this with caution and never pass
         untrusted input.
 
+        .. note::
+            Prefer native Streamlit features and theming over custom CSS or
+            HTML.
+
         Parameters
         ----------
         body : any
             The HTML code to insert. This can be one of the following:
 
             - A string of HTML code.
-            - A path to a local file with HTML code. The path can be a ``str``
-              or ``Path`` object. Paths can be absolute or relative to the
-              working directory (where you execute ``streamlit run``).
+            - A ``pathlib.Path`` object pointing to a local file with HTML
+              code. Paths can be absolute or relative to the working directory
+              (where you execute ``streamlit run``). Local file paths passed
+              as strings are treated as HTML content.
             - Any object. If ``body`` is not a string or path, Streamlit will
               convert the object to a string. ``body._repr_html_()`` takes
               precedence over ``str(body)`` when available.
@@ -71,11 +86,11 @@ class HtmlMixin:
             If the resulting HTML content is empty, Streamlit will raise an
             error.
 
-            If ``body`` is a path to a CSS file, Streamlit will wrap the CSS
-            content in ``<style>`` tags automatically. When the resulting HTML
-            content only contains style tags, Streamlit will send the content
-            to the event container instead of the main container to avoid
-            taking up space in the app.
+            If ``body`` is a ``Path`` to a CSS file, Streamlit will wrap the
+            CSS content in ``<style>`` tags automatically. When the resulting
+            HTML content only contains style tags, Streamlit will send the
+            content to the event container instead of the main container to
+            avoid taking up space in the app.
 
         width : "stretch", "content", or int
             The width of the HTML element. This can be one of the following:
@@ -114,8 +129,8 @@ class HtmlMixin:
         if has_callable_attr(body, "_repr_html_"):
             html_content = cast("SupportsReprHtml", body)._repr_html_()
 
-        # Check if the body is a file path. May include filesystem lookup.
-        elif isinstance(body, Path) or _is_file(body):
+        # Path objects explicitly opt in to reading from the local filesystem.
+        elif isinstance(body, Path):
             file_path = str(body)
             with open(file_path, encoding="utf-8") as f:
                 html_content = f.read()
@@ -124,13 +139,18 @@ class HtmlMixin:
             if Path(file_path).suffix.lower() == ".css":
                 html_content = f"<style>{html_content}</style>"
 
+        # Keep the filesystem lookup temporarily so existing string paths can
+        # receive a migration warning, but never read from a string path.
+        elif isinstance(body, str) and _is_file(body):
+            show_deprecation_warning(_STRING_FILE_PATH_WARNING)
+            html_content = clean_text(body)
+
         # OK, let's just try converting to string and hope for the best.
         else:
             html_content = clean_text(cast("SupportsStr", body))
 
-        # Raise an error if the body is empty
         if html_content == "":
-            raise StreamlitAPIException("`st.html` body cannot be empty")
+            raise StreamlitMissingRequiredParameterError("body")
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
@@ -139,12 +159,32 @@ class HtmlMixin:
         if _html_only_style_tags(html_content):
             # If true, there are only style tags - send html to the event container
             html_proto.body = html_content
-            return self._event_dg._enqueue("html", html_proto)
+            return self._event_dg._enqueue(
+                "html",
+                html_proto,
+                # Style-only HTML renders nothing and goes to the event
+                # container, so there is no content for a client to read and
+                # the snapshot leaves it out.
+                agent_props=agent_spec.element("html"),
+            )
         # Otherwise, send the html to the main container as normal
         # Only set the unsafe JS flag for non-style-only HTML content
         html_proto.unsafe_allow_javascript = unsafe_allow_javascript
         html_proto.body = html_content
-        return self.dg._enqueue("html", html_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "html",
+            html_proto,
+            layout_config=layout_config,
+            # The body is the content, read as source the way Markdown is. Only
+            # scripts the author allowed to run can make what renders differ
+            # from it, and this interface does not run them.
+            agent_props=agent_spec.element(
+                "html",
+                support="browser_required" if unsafe_allow_javascript else None,
+                body=html_content,
+                unsafe_allow_javascript=unsafe_allow_javascript,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -174,12 +214,15 @@ def _html_only_style_tags(html_content: str) -> bool:
     return html_without_styles_and_comments.strip() == ""
 
 
-def _is_file(obj: Any) -> bool:
-    """Checks if obj is a file, and doesn't throw if not.
+def _is_file(obj: str) -> bool:
+    """Check if obj is a file path, without throwing if not."""
+    # Skip the filesystem check for long strings (likely HTML content) or
+    # strings containing '<' (likely HTML tags) to avoid unnecessary I/O.
+    if len(obj) > _MAX_PATH_LENGTH or "<" in obj:
+        return False
 
-    The "not throwing" part is important!
-    """
     try:
-        return os.path.isfile(obj)
-    except TypeError:
+        return Path(obj).is_file()
+    except (TypeError, OSError, ValueError):
+        # ValueError can be raised on some platforms for strings with null bytes.
         return False

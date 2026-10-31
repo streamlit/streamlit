@@ -248,14 +248,26 @@ def render_company_dialog(
     with col1:
         with st.container(border=True):
             st.markdown("**Daily usage**")
-            st.line_chart(company_data, x="date", y="daily_credits", height=250)
+            st.line_chart(
+                company_data,
+                x="date",
+                y="daily_credits",
+                height=250,
+                alt="Daily credit usage over time",
+            )
 
     with col2:
         with st.container(border=True):
             st.markdown("**Cumulative usage**")
             chart_data = company_data.copy()
             chart_data["cumulative"] = chart_data["daily_credits"].cumsum()
-            st.area_chart(chart_data, x="date", y="cumulative", height=250)
+            st.area_chart(
+                chart_data,
+                x="date",
+                y="cumulative",
+                height=250,
+                alt="Cumulative credit usage over time",
+            )
 
 
 # =============================================================================
@@ -394,11 +406,12 @@ with st.container(border=True):
         on_select="rerun",
         selection_mode="single-cell",
         key="company_leaderboard",
+        alt="Company usage leaderboard",
     )
 
 # Company drill-down via dialog when Company column cell is clicked
-if selection.selection.cells:  # type: ignore[attr-defined]
-    cell = selection.selection.cells[0]  # type: ignore[attr-defined]  # tuple: (row_index, column_name)
+if selection.selection.cells:
+    cell = selection.selection.cells[0]  # tuple: (row_index, column_name)
     row_idx, col_name = cell
     # Check if the clicked cell is in the company_name column
     if col_name == "company_name":

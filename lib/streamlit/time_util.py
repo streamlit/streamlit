@@ -22,19 +22,28 @@ from streamlit.errors import StreamlitAPIException, StreamlitBadTimeStringError
 
 
 def adjust_years(input_date: date, years: int) -> date:
-    """Add or subtract years from a date."""
+    """Add or subtract years from a date, clamping at ``date.min`` / ``date.max``.
+
+    A target year outside 1-9999 saturates at the calendar endpoint
+    (``0001-01-01`` / ``9999-12-31``) rather than raising.
+    """
+    target_year = input_date.year + years
+    if target_year > date.max.year:
+        return date.max
+    if target_year < date.min.year:
+        return date.min
     try:
-        # Attempt to directly add/subtract years
-        return input_date.replace(year=input_date.year + years)
+        return input_date.replace(year=target_year)
     except ValueError as err:
         # Handle case for leap year date (February 29) that doesn't exist in the target year
         # by moving the date to February 28
         if input_date.month == 2 and input_date.day == 29:
-            return input_date.replace(year=input_date.year + years, month=2, day=28)
+            return input_date.replace(year=target_year, month=2, day=28)
 
         raise StreamlitAPIException(  # pragma: no cover - defensive
-            f"Date {input_date} does not exist in the target year {input_date.year + years}. "
-            "This should never happen. Please report this bug."
+            f"Date {input_date} does not exist in the target year {target_year}. "
+            "This should never happen. Please report this bug.",
+            error_id="date-does-not-exist-in-year",
         ) from err
 
 

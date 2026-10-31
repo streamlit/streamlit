@@ -30,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 43
+IMAGE_ELEMENTS_USING_MEDIA_ENDPOINT = 40
 
 
 def check_image_source_error_count(messages: list[str], expected_count: int):
@@ -102,23 +102,6 @@ def test_image_formats(app: Page):
     )
     expect(get_image(app, "GIF as PNG.").locator("img")).to_have_attribute(
         "src", re.compile(r"^.*\.png$")
-    )
-
-
-def test_use_column_width_parameter(app: Page, assert_snapshot: ImageCompareFunction):
-    columns_container = (
-        get_element_by_key(app, "use_column_width")
-        .get_by_test_id("stHorizontalBlock")
-        .first
-    )
-    expect(columns_container).to_be_visible()
-    columns_container.scroll_into_view_if_needed()
-    expect_no_skeletons(columns_container)
-    assert_snapshot(columns_container, name="st_image-use_column_width")
-
-    expect(app.get_by_test_id("stMainBlockContainer")).to_contain_text(
-        "The use_column_width parameter has been deprecated and will be removed in a "
-        "future release. Please utilize the width parameter instead."
     )
 
 
@@ -373,14 +356,51 @@ def test_image_link_parameter(app: Page):
     expect(unlinked_image.get_by_test_id("stImageLink")).to_have_count(0)
 
 
-def test_image_sanitizes_dangerous_link(app: Page):
-    """Test that a dangerous javascript: link URL is neutralized to '#'.
-
-    This relies on real-browser URL normalization that jsdom cannot fully
-    replicate, so it complements the frontend unit tests.
-    """
+def test_image_blocks_dangerous_link(app: Page):
+    """A dangerous javascript: link renders the image with no anchor at all."""
     dangerous_image = get_image(app, "Image with dangerous link.")
-    link = dangerous_image.get_by_test_id("stImageLink")
+    expect(dangerous_image.get_by_test_id("stImageLink")).to_have_count(0)
+    expect(dangerous_image.get_by_role("link")).to_have_count(0)
+    expect(dangerous_image.locator("img")).to_be_visible()
+    expect(dangerous_image.get_by_test_id("stImageCaption")).to_have_text(
+        "Image with dangerous link."
+    )
 
-    expect(link).to_have_attribute("href", "#")
-    expect(link).to_have_attribute("target", "_self")
+
+def test_image_omits_index_alt(app: Page):
+    """Images with no authored alt must omit the alt attribute, including when a caption is set."""
+    single = get_image(app, "Black Square as JPEG.").locator("img")
+    expect(single).to_be_visible()
+    expect(single).not_to_have_attribute("alt")
+
+    list_images = get_image(app, "Image list").locator("img")
+    expect(list_images).to_have_count(3)
+    for img in list_images.all():
+        expect(img).to_be_visible()
+        expect(img).not_to_have_attribute("alt")
+
+
+def test_image_alt_and_link_accessible_names(app: Page):
+    """Verify authored, decorative, and omitted img alt, plus linked caption naming."""
+    labeled = get_element_by_key(app, "img_alt_labeled").locator("img")
+    expect(labeled).to_have_accessible_name("Sunrise over a mountain ridge")
+    expect(labeled).to_have_attribute("alt", "Sunrise over a mountain ridge")
+
+    decorative = get_element_by_key(app, "img_alt_decorative").locator("img")
+    expect(decorative).to_have_attribute("alt", "")
+    expect(decorative).to_have_accessible_name("")
+
+    unlabeled = get_element_by_key(app, "img_alt_unlabeled").locator("img")
+    expect(unlabeled).not_to_have_attribute("alt")
+
+    linked = get_element_by_key(app, "img_alt_linked_caption").get_by_test_id(
+        "stImageLink"
+    )
+    expect(linked).to_have_accessible_name("Revenue by quarter")
+    expect(linked).not_to_have_accessible_name(
+        "Should not name the link when caption exists"
+    )
+    linked_img = get_element_by_key(app, "img_alt_linked_caption").locator("img")
+    expect(linked_img).to_have_attribute(
+        "alt", "Should not name the link when caption exists"
+    )

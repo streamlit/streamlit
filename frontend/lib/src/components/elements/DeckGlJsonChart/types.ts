@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import type { DeckProps } from "@deck.gl/core"
+import type { DeckProps, View } from "@deck.gl/core"
 
 import type {
   DeckGlJsonChart as DeckGlJsonChartProto,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 type SerializedLayer = {
   /** @see https://deck.gl/docs/api-reference/json/conversion-reference */
@@ -32,9 +32,15 @@ type SerializedLayer = {
 } & Record<string, unknown>
 
 export type ParsedDeckGlConfig = {
-  layers: SerializedLayer[]
-  initialViewState: DeckProps["initialViewState"]
-  views: DeckProps["views"]
+  /**
+   * Absent when `st.pydeck_chart(None)` sends an empty map. Entries are
+   * `null` where pydeck serializes a `None` layer.
+   */
+  layers?: Array<SerializedLayer | null>
+  initialViewState: Record<string, unknown>
+  views?: unknown
+  /** GPU parameters from pydeck (`{ cull: true }` in examples). */
+  parameters?: DeckProps["parameters"]
   mapStyle?: string
   mapProvider?: string
   cartoKey?: string
@@ -45,9 +51,9 @@ export interface DeckGLProps {
   disableFullscreenMode?: boolean
   element: DeckGlJsonChartProto
   fragmentId: string | undefined
-  heightConfig?: streamlit.IHeightConfig | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
   widgetMgr: WidgetStateManager
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 }
 
 export interface DeckObject {
@@ -56,6 +62,8 @@ export interface DeckObject {
     width: number
   }
   layers: DeckProps["layers"]
+  views?: View | View[]
+  parameters?: DeckProps["parameters"]
   mapStyle?: string | Array<string>
   mapProvider?: string
   cartoKey?: string
@@ -65,8 +73,9 @@ export interface DeckObject {
  * @see PydeckState in the backend for the corresponding Python type.
  */
 export type DeckGlElementState = {
+  /** Keyed by layer ID. Layers without a selection have no entry. */
   selection: {
-    indices: { [layerId: string]: number[] }
-    objects: { [layerId: string]: unknown[] }
+    indices: { [layerId: string]: number[] | undefined }
+    objects: { [layerId: string]: unknown[] | undefined }
   }
 }

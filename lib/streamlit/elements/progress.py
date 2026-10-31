@@ -17,8 +17,12 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
 
@@ -60,20 +64,18 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
 
 def _get_value(value: FloatOrInt) -> int:
     if isinstance(value, int):
-        if 0 <= value <= 100:
-            return value
-        raise StreamlitAPIException(
-            f"Progress Value has invalid value [0, 100]: {value}"
-        )
+        if not 0 <= value <= 100:
+            raise StreamlitValueOutOfRangeError("value", value, 0, 100)
+        return value
 
     if isinstance(value, float):
-        if _check_float_between(value, low=0.0, high=1.0):
-            return int(value * 100)
-        raise StreamlitAPIException(
-            f"Progress Value has invalid value [0.0, 1.0]: {value}"
-        )
-    raise StreamlitAPIException(
-        f"Progress Value has invalid type: {type(value).__name__}"
+        if not _check_float_between(value, low=0.0, high=1.0):
+            raise StreamlitValueOutOfRangeError("value", value, 0.0, 1.0)
+        return int(value * 100)
+    raise StreamlitInvalidParameterTypeError(
+        "value",
+        type(value).__name__,
+        ["int", "float"],
     )
 
 
@@ -82,9 +84,10 @@ def _get_text(text: str | None) -> str | None:
         return None
     if isinstance(text, str):
         return clean_text(text)
-    raise StreamlitAPIException(
-        f"Progress Text is of type {type(text)}, which is not an accepted type."
-        "Text only accepts: str. Please convert the text to an accepted type."
+    raise StreamlitInvalidParameterTypeError(
+        "text",
+        type(text).__name__,
+        ["str"],
     )
 
 
@@ -163,7 +166,19 @@ class ProgressMixin:
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "progress",
+            progress_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "progress",
+                # Always a fraction: an int is a percent and a float a fraction,
+                # which JSON cannot tell apart. Taken from the proto's whole
+                # percent, which is all the browser receives.
+                value=progress_proto.value / 100,
+                text=text,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

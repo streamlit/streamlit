@@ -17,11 +17,11 @@
 import { useCallback } from "react"
 
 import {
-  DataEditorProps,
-  GridCell,
+  type DataEditorProps,
+  type GridCell,
   GridCellKind,
-  ProvideEditorCallback,
-  ProvideEditorCallbackResult,
+  type ProvideEditorCallback,
+  type ProvideEditorCallbackResult,
 } from "@glideapps/glide-data-grid"
 
 import { isMaybeJson } from "~lib/components/widgets/DataFrame/columns"
@@ -45,7 +45,7 @@ function useCustomEditors(): CustomEditorsReturn {
     (cell: GridCell): ProvideEditorCallbackResult<GridCell> => {
       if (
         cell.kind === GridCellKind.Text &&
-        cell.readonly &&
+        cell.readonly === true &&
         isMaybeJson(cell.data)
       ) {
         return {

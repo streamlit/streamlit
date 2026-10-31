@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -33,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     get_text_area,
 )
 
-NUM_TEXT_AREAS = 28
+NUM_TEXT_AREAS = 32
 
 
 def test_text_area_widget_rendering(
@@ -97,10 +98,17 @@ def test_text_area_dimensions(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
         get_text_area(app, "text area 12 (height=75)"), name="st_text_area-height_75"
     )
-    # Expect this to default to the minimum height of 68px
-    assert_snapshot(
-        get_text_area(app, "text area 13 (height=60)"), name="st_text_area-height_60"
-    )
+    # The requested height is clamped to the 68px minimum.
+    min_height_text_area = get_text_area(app, "text area 13 (height=60)")
+    assert_snapshot(min_height_text_area, name="st_text_area-height_60")
+    # The 68px minimum includes the field border, matching other large widgets.
+    min_height_field = min_height_text_area.get_by_test_id("stTextAreaRootElement")
+
+    def _field_has_min_height() -> bool:
+        box = min_height_field.bounding_box()
+        return box is not None and round(box["height"]) == 68
+
+    wait_until(app, _field_has_min_height)
     # gh-12867: Test very small height that produces negative calculation
     # Should clamp to 0px and use minHeight (68px)
     assert_snapshot(
@@ -465,3 +473,164 @@ def test_text_area_query_param_max_chars_truncation(page: Page, app_port: int):
 
     # Should be truncated to 5 characters
     expect_prefixed_markdown(page, "bound area max value:", "veryl")
+
+
+def test_text_area_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text_area="))
+
+    text_area_field = (
+        get_text_area(app, "Ignore change text area").locator("textarea").first
+    )
+
+    # Fill without committing - URL should not update until Control+Enter.
+    text_area_field.fill("world")
+    expect(text_area_field).to_have_value("world")
+    # Wait long enough that a keystroke-triggered rerun would have landed.
+    wait_for_app_run(app)
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_text_area="))
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+
+    # Commit with Control+Enter - should NOT trigger a rerun, but should update the URL
+    text_area_field.press("Control+Enter")
+
+    # Give a spurious rerun a chance to land before asserting the counter.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(text_area_field).to_have_value("world")
+    expect_prefixed_markdown(app, "Ignore text area value:", "hello")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_text_area=world"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore text area", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore text area value: world", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text area value: world", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: blur commits the dirty value, then the button reruns.
+    text_area_field.fill("blurred")
+    expect(text_area_field).to_have_value("blurred")
+    app.get_by_role("button", name="Apply ignore text area", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(
+        app.get_by_text("Ignore text area value: blurred", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore text area value: blurred", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(
+        get_text_area(app, "Ignore change text area").locator("textarea").first
+    ).to_have_value("blurred")
+    expect_prefixed_markdown(app, "Ignore text area value:", "blurred")
+
+
+def test_text_area_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Test that required blocks empty form submits and empty commits outside forms."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+
+    message_widget = get_element_by_key(app, "required_message")
+    details_widget = get_element_by_key(app, "required_details")
+    message_field = message_widget.locator("textarea").first
+    details_field = details_widget.locator("textarea").first
+    expect(message_widget.get_by_test_id("stTextAreaErrorIcon")).not_to_be_visible()
+    expect(message_field).to_have_attribute("aria-required", "true")
+    expect(message_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    # An empty form submit is blocked and every empty field shows the error.
+    submit_button = app.get_by_role(
+        "button", name="Submit required text area form", exact=True
+    )
+    submit_button.click()
+    expect(message_widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    expect(details_widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    expect(message_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(details_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(message_field).to_have_attribute("aria-invalid", "true")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Filling one field clears its error, but the other one still blocks.
+    message_field.fill("Hello\nWorld")
+    submit_button.click()
+    expect(message_widget.get_by_test_id("stTextAreaErrorIcon")).not_to_be_visible()
+    expect(details_widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    expect(message_field).to_have_value("Hello\nWorld")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Ctrl+Enter submits the form once every required field has a value.
+    details_field.type("Some details")
+    details_field.press("Control+Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required form submitted: True")
+    expect_prefixed_markdown(app, "required message:", re.compile(r"Hello\s*World"))
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(details_widget.get_by_test_id("stTextAreaErrorIcon")).not_to_be_visible()
+    # clear_on_submit resets the fields after the successful submit.
+    expect(message_field).to_have_value("")
+
+    # Outside a form, a non-empty commit reruns the app.
+    notes_widget = get_element_by_key(app, "required_notes")
+    notes_field = notes_widget.locator("textarea").first
+    notes_field.fill("select 1")
+    notes_field.press("Control+Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required notes: select 1")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+
+    # Clearing and blurring is blocked: no rerun and the last value is kept.
+    notes_field.fill("")
+    notes_field.blur()
+    expect(notes_widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    expect(notes_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required notes: select 1")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+
+    # A rerun from another widget does not snap the field back.
+    app.get_by_role("button", name="Apply ignore text area", exact=True).click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(notes_field).to_have_value("")
+    expect(notes_widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    expect_markdown(app, "required notes: select 1")
+
+    # Typing clears the error, and the next blur commits the new value.
+    notes_field.fill("select 2")
+    expect(notes_widget.get_by_test_id("stTextAreaErrorIcon")).not_to_be_visible()
+    notes_field.blur()
+    wait_for_app_run(app)
+    expect_markdown(app, "required notes: select 2")
+    expect(app.get_by_text("Runs: 5", exact=True)).to_be_visible()
+
+
+def test_text_area_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error chrome."""
+    widget = get_element_by_key(themed_app, "required_notes")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_text_area-required_marker")
+
+    field = widget.locator("textarea").first
+    field.fill("select 1")
+    field.press("Control+Enter")
+    wait_for_app_run(themed_app)
+    field.fill("")
+    field.blur()
+    expect(widget.get_by_test_id("stTextAreaErrorIcon")).to_be_visible()
+    assert_snapshot(widget, name="st_text_area-required_error")

@@ -56,6 +56,10 @@ message MetricsEvent {
 
   // Menu Click Event field:
   string label = 22;
+  // Which UI surface emitted the menu click (e.g. "toast", "errorCallout").
+  // Used to attribute skills-install funnel events to the surface that drove
+  // them. Empty for menu clicks that don't set it.
+  string surface = 48;
 
   // Page Profile Event fields:
   // Same as PageProfile msg
@@ -79,8 +83,10 @@ message MetricsEvent {
   string server_mode = 45;
   repeated string installed_skills = 46;
   repeated string installed_agents = 47;
+  // Same as PageProfile.agent_api_usage.
+  AgentApiUsage agent_api_usage = 49;
 
-  // Next ID: 48
+  // Next ID: 50
 }
 
 message BrowserInfo {

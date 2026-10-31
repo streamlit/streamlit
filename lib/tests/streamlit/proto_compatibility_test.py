@@ -84,7 +84,7 @@ pytestmark = pytest.mark.filterwarnings(
                 ("is_hello", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("recommend_skills_install", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 (
-                    "skills_nudge_suppressed_locality",
+                    "skills_nudge_suppressed_reason",
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),
@@ -136,6 +136,11 @@ pytestmark = pytest.mark.filterwarnings(
                     FD.LABEL_OPTIONAL,
                     FD.TYPE_STRING,
                 ),
+                (
+                    "dataframe_header_text_color",
+                    FD.LABEL_OPTIONAL,
+                    FD.TYPE_STRING,
+                ),
                 ("show_sidebar_border", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
                 ("chart_categorical_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("chart_sequential_colors", FD.LABEL_REPEATED, FD.TYPE_STRING),
@@ -163,6 +168,8 @@ pytestmark = pytest.mark.filterwarnings(
                 ("gray_text_color", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_size", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("metric_value_font_weight", FD.LABEL_OPTIONAL, FD.TYPE_INT32),
+                ("padding_top", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("padding_bottom", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("sidebar", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("light", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("dark", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
@@ -273,6 +280,7 @@ def test_exception_proto_stable():
         ("stack_trace", FD.LABEL_REPEATED, FD.TYPE_STRING),
         ("is_warning", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
         ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
+        ("is_streamlit_exception", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
     }
 
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
 import { Table } from "@streamlit/protobuf"
 
@@ -22,7 +22,8 @@ import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdow
 import type { EmotionTheme } from "~lib/theme/types"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.md,
+  // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
+  fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
   lineHeight: theme.lineHeights.small,
   captionSide: "bottom",
@@ -42,7 +43,7 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   paddingTop: theme.spacing.sm,
   paddingBottom: 0,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   textAlign: "left",
   wordWrap: "break-word",
   display: "inline-block",
@@ -51,7 +52,7 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
 export const StyledTableBorder = styled.div<{
   borderMode: Table.BorderMode
   hasScrollableHeight?: boolean
-}>(({ theme, borderMode, hasScrollableHeight }) => ({
+}>(({ theme, borderMode, hasScrollableHeight = false }) => ({
   // Add the enclosing border on an extra wrapper around the table. This ensures that
   // when the table scrolls horizontally on small windows, it still shows a border all
   // around the table and the table doesn't look cut off.
@@ -79,7 +80,7 @@ export const StyledTableBorder = styled.div<{
 export const StyledTable = styled.table<{
   useContentWidth?: boolean
   hasScrollableWidth?: boolean
-}>(({ theme, useContentWidth, hasScrollableWidth }) => ({
+}>(({ theme, useContentWidth = false, hasScrollableWidth = false }) => ({
   color: theme.colors.bodyText,
   borderSpacing: 0,
   // Inline-table helps preserve content-based column sizing, so narrow
@@ -139,6 +140,15 @@ const styleCellFunction = (
     paddingLeft: border === Table.BorderMode.NONE ? "0" : theme.spacing.xs,
   },
   fontWeight: theme.fontWeights.normal,
+  // Always inherit the table font size for cell markdown. StreamlitMarkdown
+  // defaults to body size (md), and the global `p, ol, ul, dl { font-size: 1rem }`
+  // rule (theme/globalStyles.ts) would otherwise keep these text containers at
+  // 16px even when the container uses sm. Defined outside the truncate/
+  // non-truncate branches so both modes inherit it.
+  [`${StyledStreamlitMarkdown}, ${StyledStreamlitMarkdown} :is(p, ol, ul, dl)`]:
+    {
+      fontSize: "inherit",
+    },
   ...(truncateContent
     ? {
         // Apply truncation only for fixed-width tables to avoid clipping
@@ -156,7 +166,8 @@ const styleCellFunction = (
 
         // StreamlitMarkdown defaults to width: 100% and aggressive word
         // breaking. Override this in table cells so columns size by content,
-        // and wrapping only happens at the max column width.
+        // and wrapping only happens at the max column width. Font size is
+        // handled by the compound selector above (which this does not redefine).
         [`${StyledStreamlitMarkdown}`]: {
           display: "inline-block",
           width: "fit-content",
@@ -225,7 +236,7 @@ export const StyledTableCellHeader = styled.th<{
     const baseStyles = {
       ...styleCellFunction(theme, borderMode, truncateContent),
       textAlign: "inherit" as const,
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       // Remove left padding from first cell when no borders, so that the table aligns
       // with the rest of the page.
       "&:first-of-type": {
@@ -277,6 +288,6 @@ export const StyledEmptyTableCell = styled(StyledTableCell)<{
 }>(({ theme }) => ({
   color: theme.colors.gray70,
   fontStyle: "italic",
-  fontSize: theme.fontSizes.md,
+  fontSize: theme.fontSizes.sm,
   textAlign: "center",
 }))

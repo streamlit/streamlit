@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import builtins
 import contextlib
-import datetime
+import contextvars
 import inspect
 import sys
+import threading
 import unittest
 from collections import Counter
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -33,18 +35,44 @@ import streamlit.components.v1 as components
 from streamlit import config
 from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SQLConnection
+from streamlit.errors import (
+    LocalizableStreamlitException,
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueAssignmentNotAllowedError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+    StreamlitWidgetAlreadyInstantiatedError,
+)
+from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
+from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
-from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
+from streamlit.runtime.media_file_storage import MediaFileStorageError
+from streamlit.runtime.scriptrunner import (
+    add_script_run_ctx,
+    get_script_run_ctx,
+    magic_funcs,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    ScriptRunContext,
+    ThreadState,
+)
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web import skills
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.testutil import create_pep649_function
+from tests.streamlit.runtime.agent import usage_counts
+from tests.testutil import create_mock_script_run_ctx, create_pep649_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Sequence
     from pathlib import Path
 
 MAC = "mac"
@@ -57,10 +85,42 @@ def _mock_script_run_ctx() -> MagicMock:
     """Build a script run context for ``gather_metrics`` tests."""
     ctx = MagicMock()
     ctx.gather_usage_stats = True
-    ctx.command_tracking_deactivated = False
     ctx.shared = SharedRunState()
     ctx.fragment_ids_this_run = []
+    ThreadState.initialize()
     return ctx
+
+
+_THREAD_TIMEOUT = 5.0
+
+
+@pytest.fixture
+def tracking_ctx() -> Iterator[ScriptRunContext]:
+    """Attach a ScriptRunContext with usage-stats gathering, then restore."""
+    thread = threading.current_thread()
+    previous_ctx = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    ctx = create_mock_script_run_ctx()
+    ctx.gather_usage_stats = True
+    add_script_run_ctx(thread, ctx)
+    try:
+        yield ctx
+    finally:
+        if previous_ctx is None:
+            if hasattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME):
+                delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+        else:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous_ctx)
+
+
+def _join_threads(threads: Sequence[threading.Thread]) -> None:
+    """Join worker threads with a timeout so a hang fails the test."""
+    for thread in threads:
+        thread.join(timeout=_THREAD_TIMEOUT)
+        assert not thread.is_alive()
+
+
+def _command_names(ctx: ScriptRunContext) -> list[str]:
+    return [command.name.split(":")[-1] for command in ctx.shared.tracked_commands]
 
 
 class MetricsUtilTest(unittest.TestCase):
@@ -191,12 +251,12 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             (["1"], "list"),
             ({"foo": "bar"}, "dict"),
             ("foo", "str"),
-            (datetime.date.today(), "datetime.date"),
-            (datetime.datetime.today().time(), "datetime.time"),
+            (date.today(), "datetime.date"),
+            (datetime.today().time(), "datetime.time"),
             (pd.DataFrame(), "DataFrame"),
             (pd.Series(dtype="float64"), "PandasSeries"),
             # Also support classes as input
-            (datetime.date, "datetime.date"),
+            (date, "datetime.date"),
             (pd.DataFrame, "DataFrame"),
             (SQLConnection, "SQLConnection"),
         ]
@@ -236,6 +296,73 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert (
             str(command_metadata.args[2]).strip()
             == 'k: "disabled"\nt: "bool"\nm: "val:True"'
+        )
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_page_constructor_telemetry(self) -> None:
+        """Page records the same command name and argument metadata as the
+        previous function-based st.Page."""
+        st.Page(
+            "foo.py",
+            title="Title",
+            icon="🔥",
+            url_path="foo",
+            default=False,
+            visibility="hidden",
+        )
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        command = ctx.shared.tracked_commands[0]
+        assert command.name == "Page"
+        assert len(command.args) == 6
+        assert str(command.args[0]).strip() == 'k: "page"\nt: "str"\nm: "len:6"'
+        # ``_positional_arg_offset=1`` must place the first real argument at
+        # position 0 (like a plain function), not 1 (shifted by ``self``).
+        # ``str()`` above omits the proto default ``p: 0``, so assert it directly.
+        assert command.args[0].p == 0
+        assert str(command.args[1]).strip() == 'k: "title"\nt: "str"\nm: "len:5"'
+        assert str(command.args[2]).strip() == 'k: "icon"\nt: "str"\nm: "len:1"'
+        assert str(command.args[3]).strip() == 'k: "url_path"\nt: "str"\nm: "len:3"'
+        assert str(command.args[4]).strip() == 'k: "default"\nt: "bool"\nm: "val:False"'
+        assert str(command.args[5]).strip() == 'k: "visibility"\nt: "str"\nm: "len:6"'
+
+    def test_page_constructor_exception_is_tracked(self) -> None:
+        """Page constructor failures retain the existing telemetry event."""
+        with pytest.raises(StreamlitValueError):
+            st.Page("foo.py", visibility="invalid")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        assert ctx.shared.tracked_commands[0].name == "Page"
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_internal_page_creation_is_not_tracked(self) -> None:
+        """Legacy pages-directory bootstrapping does not emit Page commands."""
+        _create_page("foo.py")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert ctx.shared.tracked_commands == ()
+
+    def test_decorated_method_positional_metadata_is_unchanged(self) -> None:
+        """The Page-specific position offset does not affect other methods."""
+
+        class Example:
+            @metrics_util.gather_metrics("tracked_method")
+            def tracked_method(self, value: str) -> None:
+                pass
+
+        Example().tracked_method("value")
+
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        assert len(ctx.shared.tracked_commands) == 1
+        assert (
+            str(ctx.shared.tracked_commands[0].args[0]).strip()
+            == 'k: "value"\nt: "str"\nm: "len:5"\np: 1'
         )
 
     def test_get_command_telemetry_custom_component_v2(self):
@@ -764,6 +891,467 @@ def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
     assert ctx.shared.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
 
 
+def test_nested_commands_are_suppressed_in_the_same_context(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Nested commands in one execution context record only the outer command."""
+    ctx = tracking_ctx
+    assert ThreadState.get().command_tracking_deactivated is False
+
+    @metrics_util.gather_metrics("inner")
+    def inner() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        assert ThreadState.get().command_tracking_deactivated is True
+        inner()
+
+    outer()
+
+    assert _command_names(ctx) == ["outer"]
+    assert ThreadState.get().command_tracking_deactivated is False
+
+
+def test_parallel_contexts_record_independent_top_level_commands(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Two copied execution contexts record overlapping top-level commands."""
+    ctx = tracking_ctx
+    overlap = threading.Barrier(2, timeout=_THREAD_TIMEOUT)
+    copied_a = contextvars.copy_context()
+    copied_b = contextvars.copy_context()
+
+    @metrics_util.gather_metrics("worker_a")
+    def worker_a() -> None:
+        overlap.wait()
+        overlap.wait()
+
+    @metrics_util.gather_metrics("worker_b")
+    def worker_b() -> None:
+        overlap.wait()
+        overlap.wait()
+
+    errors: list[BaseException] = []
+
+    def run(copied: contextvars.Context, fn: Callable[[], None]) -> None:
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied.run(fn)
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [
+        threading.Thread(target=run, args=(copied_a, worker_a)),
+        threading.Thread(target=run, args=(copied_b, worker_b)),
+    ]
+    for thread in threads:
+        thread.start()
+    _join_threads(threads)
+    if errors:
+        raise errors[0]
+
+    assert set(_command_names(ctx)) == {"worker_a", "worker_b"}
+
+
+def test_finishing_one_context_does_not_reactivate_nested_tracking(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """One context restoring tracking must not un-suppress another context's nesting."""
+    ctx = tracking_ctx
+    both_inside = threading.Barrier(2, timeout=_THREAD_TIMEOUT)
+    a_finished = threading.Event()
+    copied_a = contextvars.copy_context()
+    copied_b = contextvars.copy_context()
+    errors: list[BaseException] = []
+
+    @metrics_util.gather_metrics("nested_b")
+    def nested_b() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer_a")
+    def outer_a() -> None:
+        both_inside.wait()
+
+    @metrics_util.gather_metrics("outer_b")
+    def outer_b() -> None:
+        both_inside.wait()
+        if not a_finished.wait(timeout=_THREAD_TIMEOUT):
+            raise TimeoutError("outer_a did not finish")
+        nested_b()
+
+    def run_a() -> None:
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied_a.run(outer_a)
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            a_finished.set()
+
+    def run_b() -> None:
+        try:
+            setattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+            copied_b.run(outer_b)
+        except BaseException as exc:
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run_a), threading.Thread(target=run_b)]
+    for thread in threads:
+        thread.start()
+    _join_threads(threads)
+    if errors:
+        raise errors[0]
+
+    assert set(_command_names(ctx)) == {"outer_a", "outer_b"}
+
+
+def test_command_tracking_flag_restored_after_exception(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """An exception in a tracked command must restore nested-command tracking."""
+    ctx = tracking_ctx
+
+    @metrics_util.gather_metrics("boom")
+    def boom() -> None:
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        boom()
+
+    assert ThreadState.get().command_tracking_deactivated is False
+    assert _command_names(ctx) == ["boom"]
+
+    @metrics_util.gather_metrics("after_boom")
+    def after_boom() -> None:
+        pass
+
+    after_boom()
+    assert _command_names(ctx) == ["boom", "after_boom"]
+
+
+def test_command_tracking_flag_restored_after_rerun_exception(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A RerunException must restore nested-command tracking for later commands."""
+    ctx = tracking_ctx
+
+    @metrics_util.gather_metrics("rerun_cmd")
+    def rerun_cmd() -> None:
+        raise RerunException(None)
+
+    with pytest.raises(RerunException):
+        rerun_cmd()
+
+    assert ThreadState.get().command_tracking_deactivated is False
+    assert _command_names(ctx) == ["rerun_cmd"]
+
+
+def test_gather_metrics_without_script_run_context_does_not_raise() -> None:
+    """Commands without an active ScriptRunContext stay untracked without raising."""
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=None):
+
+        @metrics_util.gather_metrics("no_ctx")
+        def no_ctx() -> str:
+            return "ok"
+
+        assert no_ctx() == "ok"
+
+
+def test_helper_thread_started_inside_tracked_command_records_its_own_top_level(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A helper attached during an outer command still records its own top-level commands."""
+    done = threading.Event()
+    errors: list[BaseException] = []
+
+    @metrics_util.gather_metrics("helper_cmd")
+    def helper_cmd() -> None:
+        pass
+
+    def helper_target() -> None:
+        try:
+            helper_cmd()
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            done.set()
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        helper = threading.Thread(target=helper_target)
+        add_script_run_ctx(helper, tracking_ctx)
+        helper.start()
+        assert done.wait(timeout=_THREAD_TIMEOUT)
+        _join_threads([helper])
+
+    outer()
+    if errors:
+        raise errors[0]
+    assert set(_command_names(tracking_ctx)) == {"outer", "helper_cmd"}
+
+
+def test_gather_metrics_without_thread_state_does_not_raise() -> None:
+    """A ScriptRunContext without ThreadState must not raise into the wrapped call."""
+    ctx = MagicMock()
+    ctx.gather_usage_stats = True
+    ctx.shared = SharedRunState()
+    result: list[int] = []
+    error: list[BaseException] = []
+
+    def run_in_fresh_thread() -> None:
+        try:
+            with patch(
+                "streamlit.runtime.metrics_util.get_script_run_ctx",
+                return_value=ctx,
+            ):
+
+                @metrics_util.gather_metrics("no_thread_state")
+                def no_thread_state() -> int:
+                    return 7
+
+                result.append(no_thread_state())
+        except BaseException as exc:
+            error.append(exc)
+
+    thread = threading.Thread(target=run_in_fresh_thread)
+    thread.start()
+    _join_threads([thread])
+    if error:
+        raise error[0]
+    assert result == [7]
+    assert ctx.shared.tracked_commands == ()
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected"),
+    [
+        (
+            TypeError(
+                "button() got an unexpected keyword argument 'use_container_width'"
+            ),
+            "TypeError:use_container_width",
+        ),
+        (
+            TypeError("button() missing 1 required positional argument: 'label'"),
+            "TypeError:missing:label",
+        ),
+        (
+            TypeError("button() takes 2 positional arguments but 3 were given"),
+            "TypeError",
+        ),
+        (
+            TypeError("bad argument type for built-in operation"),
+            "TypeError",
+        ),
+        (
+            TypeError("a bytes-like object is required, not 'Figure'"),
+            "TypeError",
+        ),
+        (
+            StreamlitValueError("width", ["stretch", "content"]),
+            "StreamlitValueError:width",
+        ),
+        (
+            StreamlitValueError(
+                "scope",
+                ["'global'", "'session'"],
+                detail="Connection class Foo has an invalid scope.",
+            ),
+            "StreamlitValueError:scope",
+        ),
+        (
+            StreamlitMissingRequiredParameterError("label"),
+            "StreamlitMissingRequiredParameterError:label",
+        ),
+        (
+            StreamlitInvalidParameterTypeError("spec", "str", ["int", "list"]),
+            "StreamlitInvalidParameterTypeError:spec",
+        ),
+        (
+            StreamlitInvalidMinMaxError(10, 5),
+            "StreamlitInvalidMinMaxError",
+        ),
+        (
+            StreamlitValueOutOfRangeError("index", 5, 0, 2),
+            "StreamlitValueOutOfRangeError:index",
+        ),
+        (
+            StreamlitIncompatibleParametersError(
+                "wrap=False", "unsafe_allow_html=True"
+            ),
+            "StreamlitIncompatibleParametersError",
+        ),
+        (
+            StreamlitWidgetAlreadyInstantiatedError("user_key"),
+            "StreamlitWidgetAlreadyInstantiatedError",
+        ),
+        (
+            StreamlitValueAssignmentNotAllowedError("user_key"),
+            "StreamlitValueAssignmentNotAllowedError",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            ),
+            "StreamlitInvalidLayoutContextError",
+        ),
+        (
+            StreamlitAPIException("Failed to load secrets"),
+            "StreamlitAPIException",
+        ),
+        (
+            StreamlitAPIException(
+                "Failed to load secrets",
+                error_id="failed-loading-secrets-file",
+            ),
+            "StreamlitAPIException:failed-loading-secrets-file",
+        ),
+        (
+            StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms.",
+                error_id="nested-forms-not-allowed",
+            ),
+            "StreamlitInvalidLayoutContextError:nested-forms-not-allowed",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Error parsing secrets file at {path}",
+                path="secrets.toml",
+                error_id="failed-parsing-secrets-file",
+            ),
+            "LocalizableStreamlitException:failed-parsing-secrets-file",
+        ),
+        (
+            LocalizableStreamlitException(
+                "Invalid {parameter}",
+                parameter="width",
+                error_id="should-not-appear",
+            ),
+            "LocalizableStreamlitException:width",
+        ),
+        (
+            ModuleNotFoundError("No module named 'pyarrow'"),
+            "ModuleNotFoundError:pyarrow",
+        ),
+        (
+            ImportError("cannot import name 'Table' from 'pyarrow'"),
+            "ImportError:pyarrow",
+        ),
+        (
+            ModuleNotFoundError("No module named 'custom_pkg'"),
+            "ModuleNotFoundError",
+        ),
+        (
+            ModuleNotFoundError(
+                "No module named 'streamlit.runtime.missing'",
+                name="streamlit.runtime.missing",
+            ),
+            "ModuleNotFoundError:streamlit.runtime.missing",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Engine' from 'sqlalchemy.engine'",
+                name="sqlalchemy.engine",
+            ),
+            "ImportError:sqlalchemy.engine",
+        ),
+        (
+            ImportError(
+                "cannot import name 'Widget' from 'custom_pkg'", name="custom_pkg"
+            ),
+            "ImportError",
+        ),
+        (
+            AttributeError(
+                "module 'streamlit' has no attribute 'foo'", name="foo", obj=st
+            ),
+            "AttributeError:foo",
+        ),
+        (
+            AttributeError("module 'streamlit' has no attribute 'bar'"),
+            "AttributeError:bar",
+        ),
+        (
+            AttributeError("Widget has no attribute 'foo'", name="foo", obj=object()),
+            "AttributeError",
+        ),
+        (
+            MediaFileStorageError("Error opening 'foo.png'"),
+            "MediaFileStorageError",
+        ),
+        (
+            MediaFileStorageError("Callable execution failed"),
+            "MediaFileStorageError",
+        ),
+        (ValueError("boom"), "ValueError"),
+        (TypeError("other"), "TypeError"),
+    ],
+    ids=[
+        "unexpected-kwarg",
+        "missing-positional",
+        "unsupported-too-many-positional",
+        "unsupported-proto-type",
+        "unsupported-byteslike",
+        "streamlit-value-error",
+        "streamlit-value-error-detail",
+        "streamlit-missing-required-parameter",
+        "invalid-parameter-type",
+        "invalid-min-max",
+        "value-out-of-range",
+        "incompatible-parameters",
+        "widget-already-instantiated-no-key-suffix",
+        "value-assignment-not-allowed-no-key-suffix",
+        "invalid-context-no-command-suffix",
+        "streamlit-api-exception-plain",
+        "streamlit-api-exception-error-id",
+        "streamlit-api-exception-subclass-error-id",
+        "localizable-error-id-without-parameter",
+        "localizable-parameter-takes-precedence-over-error-id",
+        "modulenotfound-message-fallback",
+        "import-error-message-fallback",
+        "modulenotfound-private-module",
+        "modulenotfound-streamlit-module",
+        "import-error-feature-dependency",
+        "import-error-private-module",
+        "streamlit-attribute-structured",
+        "streamlit-attribute-message-fallback",
+        "non-streamlit-attribute",
+        "media-file-storage",
+        "media-file-other",
+        "plain-value-error",
+        "other-type-error",
+    ],
+)
+def test_format_uncaught_exception(exc: BaseException, expected: str) -> None:
+    """Return ``ExceptionType:<param>`` for known parameter failures; otherwise the bare type name."""
+    assert metrics_util.format_uncaught_exception(exc) == expected
+
+
+def test_format_uncaught_exception_swallows_enrichment_errors() -> None:
+    """Enrichment failures fall back to the bare type name and never raise."""
+
+    class BrokenTypeError(TypeError):
+        def __str__(self) -> str:
+            raise RuntimeError("broken str")
+
+    class BrokenStreamlitValueError(StreamlitValueError):
+        @property
+        def exec_kwargs(self) -> dict[str, Any]:  # type: ignore[override]
+            raise RuntimeError("broken exec_kwargs")
+
+    assert (
+        metrics_util.format_uncaught_exception(BrokenTypeError("unused"))
+        == "BrokenTypeError"
+    )
+    # Bypass StreamlitValueError.__init__; only the type is needed for isinstance.
+    broken_value_error = BrokenStreamlitValueError.__new__(BrokenStreamlitValueError)
+    assert (
+        metrics_util.format_uncaught_exception(broken_value_error)
+        == "BrokenStreamlitValueError"
+    )
+
+
 @pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
 def test_create_page_profile_message_sets_server_mode(server_mode: str) -> None:
     """``server_mode`` is copied from ``config._server_mode`` when it is set."""
@@ -779,6 +1367,24 @@ def test_create_page_profile_message_sets_uncaught_exception() -> None:
         [], 0, 0, uncaught_exception=exc_text
     )
     assert msg.page_profile.uncaught_exception == exc_text
+
+
+def test_create_page_profile_message_reports_agent_api_usage() -> None:
+    """``agent_api_usage`` carries the process's agent API counts, and is unset
+    while nothing has been counted.
+    """
+    with usage_counts.fresh(), patch_config_options(usage_counts.USAGE_STATS_ON):
+        before = metrics_util.create_page_profile_message([], 0, 0)
+        agent_usage.record_interaction("http")
+        agent_usage.record("sessions")
+        after = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not before.page_profile.HasField("agent_api_usage")
+    reported = after.page_profile.agent_api_usage
+    assert reported.http_interactions == 1
+    assert reported.mcp_interactions == 0
+    assert reported.sessions == 1
+    assert reported.instance_id
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:

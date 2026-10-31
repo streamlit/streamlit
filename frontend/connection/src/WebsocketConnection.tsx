@@ -16,7 +16,7 @@
 
 import { getLogger } from "loglevel"
 
-import { BackMsg, ForwardMsg, IBackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 import {
   getCookie,
   isNullOrUndefined,
@@ -34,12 +34,12 @@ import {
   WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import {
-  AsyncPingRequest,
+  type AsyncPingRequest,
   doInitPings,
   PingCancelledError,
 } from "./DoInitPings"
 import { ForwardMsgCache } from "./ForwardMessageCache"
-import {
+import type {
   ErrorDetails,
   Event,
   IHostConfigProperties,
@@ -49,6 +49,10 @@ import {
   StreamlitEndpoints,
 } from "./types"
 import { buildWsUri } from "./utils"
+import {
+  formatWebsocketCloseLog,
+  isNormalWebsocketClosure,
+} from "./websocketCloseDiagnostics"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -116,10 +120,6 @@ export interface Args {
    * asynchronously in the background for error handling and configuration.
    */
   enableBypass?: boolean
-}
-
-interface MessageQueue {
-  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -213,10 +213,10 @@ export class WebsocketConnection {
   private nextMessageIndex = 0
 
   /**
-   * This dictionary stores received messages that we haven't sent out yet
-   * (because we're still decoding previous messages)
+   * Incoming messages that we haven't dispatched yet because earlier
+   * messages are still being decoded. Keyed by transmission order.
    */
-  private readonly messageQueue: MessageQueue = {}
+  private readonly messageQueue = new Map<number, ForwardMsg>()
 
   /**
    * The current state of this object's state machine.
@@ -362,6 +362,7 @@ export class WebsocketConnection {
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
       this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank error message uses the fallback
         message: errMsg || "Unknown error",
       })
       return
@@ -373,7 +374,7 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          if (this.args.enableBypass) {
+          if (this.args.enableBypass === true) {
             // Bypass: Start connecting to the websocket immediately while
             // running health and host-config pings in parallel (rather than
             // sequentially). Both must succeed, but they don't gate the WS connection.
@@ -698,8 +699,17 @@ export class WebsocketConnection {
 
     this.websocket.addEventListener("message", (event: MessageEvent) => {
       if (checkWebsocket()) {
-        this.handleMessage(event.data).catch(reason => {
-          const err = `Failed to process a Websocket message. ${reason}`
+        const payload: unknown = event.data
+        if (!(payload instanceof ArrayBuffer)) {
+          // binaryType is "arraybuffer"; any other frame type is a protocol
+          // mismatch, same as a decode failure.
+          const err = `Unexpected Websocket message type: ${Object.prototype.toString.call(payload)}`
+          LOG.error(err)
+          this.stepFsm("FATAL_ERROR", err)
+          return
+        }
+        this.handleMessage(payload).catch((reason: unknown) => {
+          const err = `Failed to process a Websocket message. ${String(reason)}`
           LOG.error(err)
           this.stepFsm("FATAL_ERROR", err)
         })
@@ -713,9 +723,14 @@ export class WebsocketConnection {
       }
     })
 
-    this.websocket.addEventListener("close", () => {
+    this.websocket.addEventListener("close", (event: CloseEvent) => {
       if (checkWebsocket()) {
-        LOG.warn("WebSocket onclose")
+        const closeLog = formatWebsocketCloseLog(event, this.state)
+        if (isNormalWebsocketClosure(event.code, event.wasClean)) {
+          LOG.info(closeLog)
+        } else {
+          LOG.warn(closeLog)
+        }
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }
@@ -811,7 +826,7 @@ export class WebsocketConnection {
    * Encodes the message with the outgoingMessageType and sends it over the
    * wire.
    */
-  public sendMessage(obj: IBackMsg): void {
+  public sendMessage(obj: BackMsg.$Properties): void {
     if (!this.websocket) {
       return
     }
@@ -853,21 +868,24 @@ export class WebsocketConnection {
     const encodedMsg = new Uint8Array(data)
     const msg = ForwardMsg.decode(encodedMsg)
 
-    this.messageQueue[messageIndex] = await this.cache.processMessagePayload(
-      msg,
-      encodedMsg
+    this.messageQueue.set(
+      messageIndex,
+      await this.cache.processMessagePayload(msg, encodedMsg)
     )
 
     // Dispatch any pending messages in the queue. This may *not* result
     // in our just-decoded message being dispatched: if there are other
     // messages that were received earlier than this one but are being
     // downloaded, our message won't be sent until they're done.
-    while (this.lastDispatchedMessageIndex + 1 in this.messageQueue) {
+    let queuedMessage = this.messageQueue.get(
+      this.lastDispatchedMessageIndex + 1
+    )
+    while (queuedMessage !== undefined) {
       const dispatchMessageIndex = this.lastDispatchedMessageIndex + 1
-      this.args.onMessage(this.messageQueue[dispatchMessageIndex])
-
-      delete this.messageQueue[dispatchMessageIndex]
+      this.args.onMessage(queuedMessage)
+      this.messageQueue.delete(dispatchMessageIndex)
       this.lastDispatchedMessageIndex = dispatchMessageIndex
+      queuedMessage = this.messageQueue.get(dispatchMessageIndex + 1)
     }
   }
 }

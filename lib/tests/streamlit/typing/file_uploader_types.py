@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.file_uploader
 # The return type depends on the accept_multiple_files parameter:
@@ -24,7 +22,7 @@ from typing_extensions import assert_type
 # - accept_multiple_files=True or "directory" -> returns list[UploadedFile]
 if TYPE_CHECKING:
     from streamlit.elements.widgets.file_uploader import FileUploaderMixin
-    from streamlit.runtime.uploaded_file_manager import UploadedFile
+    from streamlit.typing import UploadedFile
 
     file_uploader = FileUploaderMixin().file_uploader
 
@@ -47,6 +45,19 @@ if TYPE_CHECKING:
     assert_type(
         file_uploader("Upload directory", accept_multiple_files="directory"),
         list[UploadedFile],
+    )
+
+    # Non-literal values return the union of single- and multi-file results.
+    accept_multiple_files: bool = True
+    # ty infers `list[UploadedFile]` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        file_uploader("Upload", accept_multiple_files=accept_multiple_files),
+        UploadedFile | list[UploadedFile] | None,
+    )
+    # ty infers `list[UploadedFile]` rather than the union of both overloads.
+    assert_type(  # ty: ignore[type-assertion-failure]
+        file_uploader("Upload", None, accept_multiple_files),
+        UploadedFile | list[UploadedFile] | None,
     )
 
     # =====================================================================
@@ -194,8 +205,18 @@ if TYPE_CHECKING:
         UploadedFile | None,
     )
     assert_type(file_uploader("Upload", on_change=None), UploadedFile | None)
+    assert_type(file_uploader("Upload", on_change="rerun"), UploadedFile | None)
+    assert_type(file_uploader("Upload", on_change="ignore"), UploadedFile | None)
     assert_type(
         file_uploader("Upload", accept_multiple_files=True, on_change=my_callback),
+        list[UploadedFile],
+    )
+    assert_type(
+        file_uploader("Upload", accept_multiple_files=True, on_change="rerun"),
+        list[UploadedFile],
+    )
+    assert_type(
+        file_uploader("Upload", accept_multiple_files=True, on_change="ignore"),
         list[UploadedFile],
     )
     assert_type(

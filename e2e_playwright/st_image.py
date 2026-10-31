@@ -186,19 +186,6 @@ red_bgr_img = np.array(red_image)[..., ["BGR".index(s) for s in "RGB"]]
 st.image(red_bgr_img, caption="BGR channel (red).", channels="BGR", width=100)
 st.image(red_bgr_img, caption="RGB channel (blue).", channels="RGB", width=100)
 
-st.header("use_column_width parameter (deprecated)")
-
-with st.container(key="use_column_width"):
-    col1, col2, col3, col4 = st.columns(4)
-    col1.image(img)  # 100 px
-    col1.image(img, use_column_width="auto")  # 100 px
-    col1.image(img, use_column_width="never")  # 100 px
-    col1.image(img, use_column_width=False)  # 100 px
-
-    col2.image(img, use_column_width="always")  # column width
-    col2.image(img, use_column_width=True)  # column width
-    col2.image(img800, use_column_width="auto")  # column width
-
 st.header("List of images")
 
 st.image(
@@ -270,11 +257,31 @@ st.image(
     link="https://streamlit.io",
 )
 
-# Image with a dangerous javascript: link. The frontend must neutralize this to
-# "#" to prevent XSS when the link is clicked.
+# Image with a dangerous javascript: link. The frontend must not wrap the
+# image in an anchor (no focusable neutralized href).
 st.image(
     img,
     width=100,
     caption="Image with dangerous link.",
     link="javascript:alert('xss')",
 )
+
+st.header("alt parameter")
+with st.container(key="img_alt_labeled"):
+    st.image(
+        img,
+        width=100,
+        alt="Sunrise over a mountain ridge",
+    )
+with st.container(key="img_alt_decorative"):
+    st.image(img, width=100, alt="")
+with st.container(key="img_alt_unlabeled"):
+    st.image(img, width=100)
+with st.container(key="img_alt_linked_caption"):
+    st.image(
+        img,
+        width=100,
+        caption="**Revenue** by quarter",
+        link="https://streamlit.io",
+        alt="Should not name the link when caption exists",
+    )

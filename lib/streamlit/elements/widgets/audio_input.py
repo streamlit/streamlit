@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from textwrap import dedent
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -33,19 +33,22 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.elements.widgets.file_uploader import _get_upload_files
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
 from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStateProto
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
+from streamlit.string_util import to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -95,7 +98,7 @@ class AudioInputMixin:
         sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -163,9 +166,30 @@ class AudioInputMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this audio input's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the audio input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the audio input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (after a recording upload completes
+              or a recording is cleared).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The audio input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. The WAV
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -199,7 +223,8 @@ class AudioInputMixin:
             The ``UploadedFile`` class is a subclass of ``BytesIO``, and
             therefore is "file-like". This means you can pass an instance of it
             anywhere a file is expected. The MIME type for the audio data is
-            ``audio/wav``.
+            ``audio/wav``. To use this type in an annotation, import it from
+            ``streamlit.typing``.
 
             .. Note::
                 The resulting ``UploadedFile`` is subject to the size
@@ -243,9 +268,9 @@ class AudioInputMixin:
         """
         # Validate sample_rate parameter
         if sample_rate is not None and sample_rate not in ALLOWED_SAMPLE_RATES:
-            raise StreamlitAPIException(
-                f"Invalid sample_rate: {sample_rate}. "
-                f"Must be one of {sorted(ALLOWED_SAMPLE_RATES)} Hz, or None for browser default."
+            raise StreamlitValueError(
+                "sample_rate",
+                [str(rate) for rate in sorted(ALLOWED_SAMPLE_RATES)] + ["None"],
             )
 
         ctx = get_script_run_ctx()
@@ -269,7 +294,7 @@ class AudioInputMixin:
         sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -279,15 +304,19 @@ class AudioInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
-        maybe_raise_label_warnings(label, label_visibility)
+        label = maybe_raise_label_warnings(label, label_visibility)
 
         element_id = compute_and_register_element_id(
             "audio_input",
@@ -315,7 +344,10 @@ class AudioInputMixin:
             audio_input_proto.sample_rate = sample_rate
 
         if label and help is not None:
-            audio_input_proto.help = dedent(help)
+            audio_input_proto.help = to_help_str(help)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            audio_input_proto.ignore_rerun = True
 
         layout_config = create_layout_config(width=width)
 
@@ -323,16 +355,32 @@ class AudioInputMixin:
 
         audio_input_state = register_widget(
             audio_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="file_uploader_state_value",
+            disabled=disabled,
         )
 
-        self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "audio_input",
+            audio_input_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "audio_input",
+                key=element_id,
+                support="action_unsupported",
+                label=label,
+                sample_rate=sample_rate,
+                help=audio_input_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
+        )
 
         if isinstance(audio_input_state.value, DeletedFile):
             return None

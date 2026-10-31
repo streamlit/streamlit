@@ -14,14 +14,26 @@
  * limitations under the License.
  */
 
-import { createContext, FC, PropsWithChildren, useMemo } from "react"
+import { createContext, type FC, type PropsWithChildren, useMemo } from "react"
 
 import { Direction } from "./utils"
 
 export interface IFlexContext {
   direction: Direction | undefined
   isInHorizontalLayout: boolean
+  /**
+   * True when widgets here are direct layout children of an `st.columns`
+   * column. Nested layout providers create a new context and leave this
+   * false. Transparent blocks do not create a provider, so they keep the
+   * parent value.
+   */
+  isDirectlyInColumn: boolean
   isInRoot: boolean
+  /**
+   * Whether the nearest flex container allows children to wrap onto additional
+   * rows. Defaults to true when unset for backwards compatibility.
+   */
+  wrap?: boolean
   /**
    * The width of the parent container in pixels, if the container has a fixed
    * pixel width set via widthConfig.pixelWidth. Undefined otherwise.
@@ -33,10 +45,32 @@ export interface IFlexContext {
    * Returns false if there's a fixed-width container that is closer than any content-width container.
    */
   isInContentWidthContainer: boolean
+  /**
+   * Whether this container gives its stretch-height children a definite
+   * height to fill:
+   * - true for pixel- and rem-height containers, and for stretch-height
+   *   containers whose own parent has a definite height. Tab panels use their
+   *   tab container's height.
+   * - false (or unset) for the root and content-height containers, where
+   *   stretch elements size to their content.
+   */
+  hasDefiniteHeight?: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
 FlexContext.displayName = "FlexContext"
+
+/**
+ * Whether a stretch-height element should use its default height. It should
+ * only do so when its container has no definite height to fill. Inside a
+ * definite-height container, a default height would stop the element from
+ * shrinking to fit next to its siblings.
+ */
+export function hasStretchHeightFallback(
+  flexContext: IFlexContext | null
+): boolean {
+  return flexContext?.hasDefiniteHeight !== true
+}
 
 /**
  * FlexContextProvider sets the current `FlexContext` value to one of the
@@ -56,10 +90,14 @@ FlexContext.displayName = "FlexContext"
  * @returns direction: The direction of the nearest `st.container` ancestor.
  * @returns isInHorizontalLayout: Whether the nearest `st.container` ancestor is
  *   a horizontal layout.
+ * @returns isDirectlyInColumn: Whether widgets in this context are direct
+ *   layout children of an `st.columns` column.
  * @returns parentWidth: The width of the parent container in pixels, if it has
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
  *   container, unless a closer fixed-width container overrides it.
+ * @returns hasDefiniteHeight: Whether stretch-height children get a definite
+ *   height from this container.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
@@ -68,18 +106,26 @@ export const FlexContextProvider: FC<
   PropsWithChildren<{
     direction: Direction
     isRoot?: boolean
+    isDirectlyInColumn?: boolean
+    wrap?: boolean
     parentWidth?: number
     hasContentWidth?: boolean
     hasFixedWidth?: boolean
+    hasFixedHeight?: boolean
+    hasStretchHeight?: boolean
     parentContext?: IFlexContext | null
   }>
 > = ({
   children,
   direction,
   isRoot,
+  isDirectlyInColumn = false,
+  wrap = true,
   parentWidth,
   hasContentWidth = false,
   hasFixedWidth = false,
+  hasFixedHeight = false,
+  hasStretchHeight = false,
   parentContext = null,
 }) => {
   const value = useMemo<IFlexContext>(() => {
@@ -99,19 +145,30 @@ export const FlexContextProvider: FC<
         parentContext?.isInContentWidthContainer ?? false
     }
 
+    const hasDefiniteHeight =
+      hasFixedHeight ||
+      (hasStretchHeight && Boolean(parentContext?.hasDefiniteHeight))
+
     return {
       direction,
       isInHorizontalLayout,
+      isDirectlyInColumn,
       isInRoot: isRoot ?? false,
+      wrap,
       parentWidth,
       isInContentWidthContainer,
+      hasDefiniteHeight,
     }
   }, [
     direction,
     isRoot,
+    isDirectlyInColumn,
+    wrap,
     parentWidth,
     hasContentWidth,
     hasFixedWidth,
+    hasFixedHeight,
+    hasStretchHeight,
     parentContext,
   ])
 

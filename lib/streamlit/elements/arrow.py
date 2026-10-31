@@ -28,14 +28,18 @@ from typing import (
 )
 
 from streamlit import dataframe_util
+from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
@@ -52,14 +56,32 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitIncompatibleParametersError,
+    StreamlitValueError,
+)
+from streamlit.proto.Dataframe_pb2 import (
+    Dataframe as DataframeProto,
+)
+from streamlit.proto.Dataframe_pb2 import (
+    LazyDataframe as LazyDataframeProto,
+)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -68,6 +90,7 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
+    from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 
 
 SelectionMode: TypeAlias = Literal[
@@ -95,14 +118,29 @@ _ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
 }
 
 
-class DataframeSelectionState(TypedDict, total=False):
+class DataframeSelectionStateInput(TypedDict, total=False):
+    """The accepted dictionary schema for a dataframe selection."""
+
+    rows: list[int]
+    columns: list[str]
+    cells: list[tuple[int, str]]
+
+
+class DataframeStateInput(TypedDict):
+    """The accepted dictionary schema for a dataframe event state."""
+
+    selection: DataframeSelectionStateInput
+
+
+class DataframeSelectionState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe selection state.
 
     The selection state is stored in a dictionary-like object that supports both
     key and attribute notation. Selection states can be programmatically set
-    through Session State by assigning a ``DataframeSelectionState`` dictionary
-    to the ``"selection"`` key of a ``DataframeState`` dictionary.
+    through Session State by assigning a dictionary matching
+    ``DataframeSelectionStateInput`` to the ``"selection"`` key of a
+    ``DataframeStateInput`` dictionary.
 
     Programmatic selection is supported for all selection modes
     except ``"multi-cell"``. If ``"single-cell"`` isn't included in the
@@ -204,10 +242,27 @@ class DataframeSelectionState(TypedDict, total=False):
     columns: list[str]
     cells: list[tuple[int, str]]
 
+    @overload
+    def __getitem__(self, key: Literal["rows"]) -> list[int]: ...
 
-class DataframeState(TypedDict, total=False):
+    @overload
+    def __getitem__(self, key: Literal["columns"]) -> list[str]: ...
+
+    @overload
+    def __getitem__(self, key: Literal["cells"]) -> list[tuple[int, str]]: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        return super().__getitem__(key)
+
+
+class DataframeState(ReadOnlyAttributeDictionary):
     """
     The schema for the dataframe event state.
+
+    To use this type in an annotation, import it from ``streamlit.typing``.
 
     The event state is stored in a dictionary-like object that supports both
     key and attribute notation. Event states can be programmatically set
@@ -222,24 +277,47 @@ class DataframeState(TypedDict, total=False):
     selection : dict
         The state of the ``on_select`` event. This attribute returns a
         dictionary-like object that supports both key and attribute notation.
-        The attributes are described by the ``DataframeSelectionState``
-        dictionary schema.
+        The attributes are described by ``DataframeSelectionState``.
 
     """
 
     selection: DataframeSelectionState
+
+    # ReadOnlyAttributeDictionary routes attribute access through __getitem__,
+    # so the override below is enough to return DataframeSelectionState. Use
+    # dict.__getitem__ for the selection key so the read-only base class does
+    # not re-wrap the already-typed nested instance.
+    @overload
+    def __getitem__(self, key: Literal["selection"]) -> DataframeSelectionState: ...
+
+    @overload
+    def __getitem__(self, key: Any) -> Any: ...
+
+    def __getitem__(self, key: Any) -> Any:
+        if key == "selection":
+            item = dict.__getitem__(self, key)
+            if not isinstance(item, DataframeSelectionState):
+                item = DataframeSelectionState(item)
+                # Cache via dict.__setitem__ — ReadOnlyAttributeDictionary
+                # blocks normal mutation, but storing the wrapped instance
+                # keeps identity stable across accesses.
+                dict.__setitem__(self, key, item)
+            return item
+        return super().__getitem__(key)
 
 
 @dataclass
 class DataframeSelectionSerde:
     """DataframeSelectionSerde is used to serialize and deserialize the dataframe selection state."""
 
-    selection_default: DataframeState | None = None
+    selection_default: DataframeStateInput | DataframeState | None = None
     is_required_row_mode: bool = False
     num_rows: int = 0
 
     def deserialize(self, ui_value: str | None) -> DataframeState:
-        empty_selection_state: DataframeState = {
+        # Keep the empty selection as a plain dict until the end so required-row
+        # and missing-key mutations below can still run before we wrap.
+        empty_selection_state: dict[str, Any] = {
             "selection": {
                 "rows": [],
                 "columns": [],
@@ -248,12 +326,13 @@ class DataframeSelectionSerde:
         }
 
         if ui_value is not None:
-            selection_state: DataframeState = json.loads(ui_value)
+            selection_state: Any = json.loads(ui_value)
         elif self.selection_default is not None:
             # When a selection_default is provided, use it as the initial
             # deserialized value so the first-render Python return matches
             # the default selection the frontend will display.
-            selection_state = self.selection_default
+            # Shallow copy to avoid mutating the caller's default.
+            selection_state = {"selection": dict(self.selection_default["selection"])}
         else:
             selection_state = empty_selection_state
 
@@ -273,8 +352,10 @@ class DataframeSelectionSerde:
             # This is necessary since there isn't a concept of tuples in JSON
             # The format that the data is transferred to the backend.
             selection_state["selection"]["cells"] = [
-                tuple(cell)  # type: ignore
-                for cell in selection_state["selection"]["cells"]
+                tuple(cell)
+                for cell in cast(
+                    "list[list[Any]]", selection_state["selection"]["cells"]
+                )
             ]
 
         # In single-row-required mode, auto-select the first row if no rows
@@ -286,9 +367,14 @@ class DataframeSelectionSerde:
         ):
             selection_state["selection"]["rows"] = [0]
 
-        return cast("DataframeState", ReadOnlyAttributeDictionary(selection_state))
+        # Eagerly wrap selection so bracket access returns a stable typed
+        # instance instead of creating a shallow copy on every access.
+        selection_state["selection"] = DataframeSelectionState(
+            selection_state["selection"]
+        )
+        return DataframeState(selection_state)
 
-    def serialize(self, state: DataframeState) -> str:
+    def serialize(self, state: DataframeState | DataframeStateInput) -> str:
         return json.dumps(state)
 
 
@@ -312,9 +398,9 @@ def _normalize_selection_mode(
         raw_selection_mode_set = set(selection_mode)
 
     if not raw_selection_mode_set <= _SELECTION_MODES:
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. "
-            f"Valid options are: {_SELECTION_MODES}"
+        raise StreamlitValueError(
+            "selection_mode",
+            [f"'{mode}'" for mode in sorted(_SELECTION_MODES)],
         )
 
     # Intersection preserves the SelectionMode literal type for ty/mypy.
@@ -323,19 +409,22 @@ def _normalize_selection_mode(
     # Ensure at most one row selection mode is specified.
     row_modes = selection_mode_set & _ROW_SELECTION_MODES
     if len(row_modes) > 1:
-        raise StreamlitAPIException(
-            "Only one row selection mode can be specified. "
-            f"Found: {', '.join(f'`{m}`' for m in sorted(row_modes))}."
+        mode_uses = [f"selection_mode='{mode}'" for mode in sorted(row_modes)]
+        raise StreamlitIncompatibleParametersError(
+            *mode_uses,
+            explanation="Only one row selection mode can be specified.",
         )
 
     if selection_mode_set.issuperset({"single-column", "multi-column"}):
-        raise StreamlitAPIException(
-            "Only one of `single-column` or `multi-column` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-column'",
+            "selection_mode='multi-column'",
         )
 
     if selection_mode_set.issuperset({"single-cell", "multi-cell"}):
-        raise StreamlitAPIException(
-            "Only one of `single-cell` or `multi-cell` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-cell'",
+            "selection_mode='multi-cell'",
         )
 
     return selection_mode_set
@@ -354,6 +443,16 @@ _SELECTION_MODE_TO_PROTO: Final[
 }
 
 
+_ACCESS_MODE_TO_PROTO: Final[
+    dict[dataframe_source.AccessMode, LazyDataframeProto.AccessMode.ValueType]
+] = {
+    dataframe_source.AccessMode.RANDOM_ACCESS: (
+        LazyDataframeProto.AccessMode.RANDOM_ACCESS
+    ),
+    dataframe_source.AccessMode.SEQUENTIAL: LazyDataframeProto.AccessMode.SEQUENTIAL,
+}
+
+
 def _selection_mode_set_to_proto_values(
     selection_mode_set: set[SelectionMode],
 ) -> set[DataframeProto.SelectionMode.ValueType]:
@@ -366,7 +465,7 @@ def _validate_selection_state(
     num_rows: int,
     column_names: list[str],
     selection_mode_set: set[SelectionMode],
-) -> DataframeState:
+) -> DataframeStateInput:
     """Validate a programmatically set selection state.
 
     Parameters
@@ -394,12 +493,13 @@ def _validate_selection_state(
     if not isinstance(value, dict) or not isinstance(value.get("selection"), dict):
         raise StreamlitAPIException(
             "Selection state must be a dictionary with a 'selection' key "
-            "containing 'rows', 'columns', and 'cells' arrays."
+            "containing 'rows', 'columns', and 'cells' arrays.",
+            error_id="dataframe-invalid-selection-state",
         )
 
     selection = value["selection"]
 
-    validated_selection: DataframeSelectionState = {
+    validated_selection: DataframeSelectionStateInput = {
         "rows": [],
         "columns": [],
         "cells": [],
@@ -473,6 +573,84 @@ def _validate_selection_state(
     return {"selection": validated_selection}
 
 
+def _get_dataframe_source_mgr() -> DataframeSourceManager | None:
+    """Return the runtime's dataframe source manager, or ``None`` if no runtime.
+
+    Lazy delivery requires a running Streamlit server to serve chunk requests.
+    In bare "python myscript.py" mode there is no frontend, so callers fall back
+    to eager rendering.
+    """
+    from streamlit import runtime
+
+    if not runtime.exists():
+        return None
+    return runtime.get_instance().dataframe_source_mgr
+
+
+def _marshall_lazy_dataframe(
+    proto: DataframeProto,
+    source: dataframe_source.DataframeSource,
+    dg: DeltaGenerator,
+) -> bool:
+    """Register ``source`` and populate ``proto.lazy_data``.
+
+    Returns ``True`` if the source was registered and lazy metadata was set, or
+    ``False`` if lazy delivery is unavailable (no active runtime), in which case
+    the caller should fall back to eager rendering.
+    """
+    source_mgr = _get_dataframe_source_mgr()
+    if source_mgr is None:
+        return False
+
+    # Resolve every source-dependent value and serialize the first page before
+    # registration. If loading or serialization fails, no coordinate reference
+    # is left behind retaining a potentially large in-memory or remote source.
+    page_size = dataframe_source.DEFAULT_PAGE_SIZE
+    row_count = source.row_count
+    access_mode = source.access_mode
+    sortable = source.sortable
+    initial_table = source.load_rows(0, page_size)
+    initial_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(initial_table)
+
+    coordinates = dg._get_delta_path_str()
+    registered = source_mgr.register_source(source, coordinates, page_size=page_size)
+
+    lazy_data = proto.lazy_data
+    lazy_data.source_id = registered.source_id
+    lazy_data.page_size = registered.page_size
+    lazy_data.access_mode = _ACCESS_MODE_TO_PROTO[access_mode]
+    lazy_data.sortable = sortable
+    # ``row_count`` is optional in the proto: unknown-size (future sequential)
+    # sources report ``None`` and leave the field unset.
+    if row_count is not None:
+        lazy_data.row_count = row_count
+
+    # Serve the first page as the initial chunk. It carries the Arrow schema and
+    # the first visible rows so the frontend can render columns immediately.
+    lazy_data.initial_chunk.data = initial_bytes
+    return True
+
+
+def _lazy_dataframe_data(lazy_data: LazyDataframeProto) -> dict[str, Any] | None:
+    """A lazily loaded dataframe's agent ``data``, previewed from its first chunk.
+
+    The preview is the first ``server.agentPreviewRows`` rows of the chunk the
+    browser receives, the same cap as any table. Rows past the chunk are only
+    fetched by a browser as it scrolls, so nothing serves them, and the chunk
+    alone would pass for the whole table. The row count is the source's,
+    reported only when the source knows it.
+    """
+    data = agent_data.summarize_arrow(lazy_data.initial_chunk.data)
+    if data is None:
+        return None
+    data.update(agent_data.unavailable("lazy_loading"))
+    if lazy_data.HasField("row_count"):
+        data["row_count"] = lazy_data.row_count
+    else:
+        del data["row_count"]
+    return data
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -488,9 +666,11 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -507,9 +687,11 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -526,9 +708,11 @@ class ArrowMixin:
         key: Key | None = None,
         on_select: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         selection_mode: SelectionMode | Iterable[SelectionMode] = "multi-row",
-        selection_default: DataframeState | None = None,
+        selection_default: DataframeStateInput | DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -569,9 +753,12 @@ class ArrowMixin:
             underlying ``pandas.DataFrame``. Streamlit supports custom cell
             values, colors, and font weights. It does not support some of the
             more exotic styling options, like bar charts, hovering, and
-            captions. For these styling options, use column configuration
-            instead. Text and number formatting from ``column_config`` always
-            takes precedence over text and number formatting from ``pandas.Styler``.
+            captions. For these options, use column configuration where an
+            equivalent exists (for example, ``BarChartColumn`` or
+            ``ProgressColumn`` instead of Styler bars), or use ``st.table``
+            for small, static tables that need fuller Pandas Styler support.
+            Text and number formatting from ``column_config`` always takes
+            precedence over text and number formatting from ``pandas.Styler``.
 
             Collection-like objects include all Python-native ``Collection``
             types, such as ``dict``, ``list``, and ``set``.
@@ -600,11 +787,13 @@ class ArrowMixin:
               performance issues with very large dataframes.
             - ``"stretch"``: The height of the element expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The dataframe will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. In a fixed-height
+              container, or a stretch container that fills one, the dataframe
+              keeps a minimum height that displays up to three rows and shrinks
+              to the remaining space when that minimum fits. Otherwise, the
+              dataframe uses its default height (at most ten rows) and still
+              grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height.
 
@@ -747,14 +936,62 @@ class ArrowMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        lazy : bool or None
+            Whether to load rows lazily from the app server instead of sending
+            the full dataset to the browser. When rows are loaded lazily,
+            Streamlit sends only the rows the user is viewing and fetches more
+            as they scroll or sort. This is useful for datasets that are too
+            large to send to the browser all at once. It can also make your app
+            faster on reruns, since far less data needs to be transferred from
+            the app server to the client (browser). This can be one of the
+            following:
+
+            - ``None`` (default): Streamlit chooses automatically. In-memory
+              ``pandas`` and ``polars`` dataframes and ``pyarrow.Table`` objects
+              are loaded lazily when they have more than 150,000 rows.
+              Unevaluated objects, such as a Polars ``LazyFrame``, are loaded
+              lazily when they have more than 10,000 rows. Everything else is
+              loaded eagerly, including the capped preview for unsupported
+              unevaluated objects.
+            - ``True``: Always load rows lazily. For inputs that support lazy
+              access natively (for example, a Polars ``LazyFrame``), Streamlit
+              reads rows directly from the source. Other supported inputs are
+              held in the app server's memory and served in chunks. Small
+              datasets (1,000 rows or fewer) are still loaded eagerly as an
+              optimization. If lazy loading is incompatible with the data or the
+              other parameters (for example, dataframes with multi-level,
+              ``MultiIndex``, column headers), Streamlit raises a
+              ``StreamlitAPIException``.
+            - ``False``: Never load rows lazily. Streamlit loads data eagerly
+              and uses the capped preview for unevaluated data objects.
+
+            .. note::
+                When rows are loaded lazily, search, CSV download, selections
+                (``on_select``), and ``pandas.Styler`` styling are not
+                supported. Server-side sorting is supported. To use these
+                features, set ``lazy=False``.
+
+        alt : str or None
+            A short, plain-text accessible name for the dataframe. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Top 20 customers by
+            revenue") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
-        element or dict
+        element or DataframeState
             If ``on_select`` is ``"ignore"`` (default), this command returns an
             internal placeholder for the dataframe element. Otherwise, this
-            command returns a dictionary-like object that supports both key and
-            attribute notation. The attributes are described by the
-            ``DataframeState`` dictionary schema.
+            command returns a ``DataframeState`` object. This object is
+            dictionary-like and supports both key and attribute notation. To
+            use this type in an annotation, import it from
+            ``streamlit.typing``.
 
         Examples
         --------
@@ -853,7 +1090,7 @@ class ArrowMixin:
         ...             "Total": np.random.randint(1000, 5000, size=3),
         ...         }
         ...     )
-        >>>     df.set_index("Date", inplace=True)
+        >>>     df = df.set_index("Date")
         >>>     return df
         >>>
         >>> df = load_data()
@@ -871,28 +1108,34 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitAPIException(
-                f"You have passed {on_select} to `on_select`. But only 'ignore', "
-                "'rerun', or a callable is supported."
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
         selection_mode_set: set[SelectionMode] = set()
 
         if selection_default is not None and not is_selection_activated:
-            raise StreamlitAPIException(
-                "selection_default can only be used when on_select is not 'ignore'."
+            raise StreamlitIncompatibleParametersError(
+                "selection_default",
+                "on_select='ignore'",
+                explanation=(
+                    "Set `on_select` to `'rerun'` or a callback to use "
+                    "`selection_default`."
+                ),
             )
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select) if is_callback else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -923,6 +1166,18 @@ class ArrowMixin:
             additional_allowed=["auto"],
         )
 
+        # Resolve whether this dataframe should be delivered lazily. This may
+        # raise a StreamlitAPIException for incompatible `lazy=True` requests.
+        resolved_dataframe = dataframe_source.resolve_lazy_source(
+            data, lazy, is_selection_activated=is_selection_activated
+        )
+        if isinstance(resolved_dataframe, dataframe_source.EagerDataframeFallback):
+            eager_fallback_data = resolved_dataframe.data
+            lazy_source = None
+        else:
+            eager_fallback_data = None
+            lazy_source = resolved_dataframe
+
         processed_column_config, button_columns = extract_button_column_configs(
             column_config
         )
@@ -931,6 +1186,10 @@ class ArrowMixin:
         column_config_mapping = process_config_mapping(processed_column_config)
 
         proto = DataframeProto()
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height
@@ -948,7 +1207,26 @@ class ArrowMixin:
         column_names: list[str] = []
 
         has_range_index: bool = False
-        if isinstance(data, pa.Table):
+
+        # Try lazy delivery first. If there's no active runtime (e.g. bare
+        # "python myscript.py" mode), fall back to eager rendering below.
+        lazy_marshalled = False
+        if lazy_source is not None:
+            lazy_marshalled = _marshall_lazy_dataframe(proto, lazy_source, self.dg)
+            if lazy_marshalled:
+                apply_data_specific_configs(
+                    column_config_mapping, dataframe_util.determine_data_format(data)
+                )
+                # Unknown-size (future sequential) sources report ``None``; the
+                # eager num_rows bookkeeping falls back to 0 for those.
+                num_rows = lazy_source.row_count or 0
+                column_names = list(lazy_source.schema.names)
+
+        if lazy_marshalled:
+            # Lazy data is already marshalled into proto.lazy_data; the eager
+            # arrow_data field stays empty.
+            pass
+        elif isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
             proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
                 data
@@ -972,7 +1250,8 @@ class ArrowMixin:
 
             # Convert the input data into a pandas.DataFrame
             data_df = dataframe_util.convert_anything_to_pandas_df(
-                data, ensure_copy=False
+                eager_fallback_data if eager_fallback_data is not None else data,
+                ensure_copy=False,
             )
             has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
@@ -983,20 +1262,23 @@ class ArrowMixin:
             num_rows = len(data_df)
             column_names = list(data_df.columns)
 
-        if hide_index is not None:
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
-            )
-
-        elif (
-            # Hide index column if row selections are activated and the dataframe has a range index.
-            # The range index usually does not add a lot of value.
-            is_selection_activated
+        # A selectable range index is hidden even when the author left
+        # hide_index unset. The description has to report that effective value:
+        # the index entry's own hidden flag is stripped because hide_index
+        # carries it.
+        effective_hide_index = hide_index
+        if (
+            effective_hide_index is None
+            and is_selection_activated
             and has_range_index
             and selection_mode_set & _ROW_SELECTION_MODES
         ):
+            effective_hide_index = True
+        if effective_hide_index is not None:
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping,
+                INDEX_IDENTIFIER,
+                {"hidden": effective_hide_index},
             )
 
         marshall_column_config(proto, column_config_mapping)
@@ -1023,6 +1305,51 @@ class ArrowMixin:
             width=width, height=height if height != "auto" else None
         )
 
+        def dataframe_agent_props() -> str | None:
+            """The agent description for this dataframe.
+
+            Called at each enqueue so the selection path can read ``proto.id``
+            after it is assigned. Column config is walked and the data block
+            built only while recording.
+            """
+            if not agent_spec.is_recording():
+                return None
+            return agent_spec.element(
+                "dataframe",
+                # A display dataframe has no element ID, only the author's key.
+                key=proto.id or key,
+                # A lazy table has no `arrow_data`, so nothing is served: its
+                # first chunk, served alone, would pass for the whole table.
+                data_builder=(
+                    lambda: (
+                        _lazy_dataframe_data(proto.lazy_data)
+                        if lazy_marshalled
+                        else agent_data.arrow(
+                            proto.arrow_data.data,
+                            coordinates=self.dg._get_write_delta_path_str(),
+                        )
+                    )
+                ),
+                # A browser user can select rows or press a button column. This
+                # API only reports that. A display-only table has nothing to
+                # withhold, so it is fully supported.
+                support="action_unsupported"
+                if is_selection_activated or button_columns
+                else None,
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                selection_mode=sorted(selection_mode_set) or None,
+                # Reported only with selections on; the documented default,
+                # "ignore", is left out. A callback reaches the server too, so
+                # it is "rerun".
+                on_select="rerun" if is_selection_activated else None,
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
+
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
             # element as a widget.
@@ -1033,7 +1360,7 @@ class ArrowMixin:
             normalized_selection_mode = tuple(sorted(selection_mode_set))
 
             selection_default_json: str | None = None
-            validated_default: DataframeState | None = None
+            validated_default: DataframeStateInput | None = None
             if selection_default is not None:
                 validated_default = _validate_selection_state(
                     selection_default,
@@ -1064,6 +1391,7 @@ class ArrowMixin:
                 selection_default=selection_default_json,
                 row_height=row_height,
                 placeholder=placeholder,
+                alt=normalized_alt,
             )
 
             serde = DataframeSelectionSerde(
@@ -1073,7 +1401,7 @@ class ArrowMixin:
             )
             widget_state = register_widget(
                 proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -1094,18 +1422,31 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
+                    agent_props=dataframe_agent_props(),
                 )
-                # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
-                return cast(
-                    "DataframeState", ReadOnlyAttributeDictionary(validated_state)
+                # Eagerly wrap like deserialize so nested selection identity
+                # stays stable on this one-shot programmatic path.
+                return DataframeState(
+                    {
+                        "selection": DataframeSelectionState(
+                            validated_state["selection"]
+                        ),
+                    }
                 )
 
-            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
-            # Wrap in ReadOnlyAttributeDictionary for attribute-style access
-            return cast(
-                "DataframeState", ReadOnlyAttributeDictionary(widget_state.value)
+            self.dg._enqueue(
+                "dataframe",
+                proto,
+                layout_config=layout_config,
+                agent_props=dataframe_agent_props(),
             )
-        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            return DataframeState(widget_state.value)
+        return self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            agent_props=dataframe_agent_props(),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -1138,7 +1479,8 @@ def marshall(
         # and `None` otherwise.
         if not isinstance(default_uuid, str):
             raise StreamlitAPIException(
-                "Default UUID must be a string for Styler data."
+                "Default UUID must be a string for Styler data.",
+                error_id="styler-default-uuid-must-be-string",
             )
         marshall_styler(proto, data, default_uuid)
 

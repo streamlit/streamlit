@@ -21,14 +21,14 @@ export const showDevelopmentOptions = (
   hostIsOwner: boolean | undefined,
   toolbarMode: Config.ToolbarMode
 ): boolean => {
-  if (toolbarMode == Config.ToolbarMode.DEVELOPER) {
+  if (toolbarMode === Config.ToolbarMode.DEVELOPER) {
     return true
   }
   if (
-    Config.ToolbarMode.VIEWER == toolbarMode ||
-    Config.ToolbarMode.MINIMAL == toolbarMode
+    Config.ToolbarMode.VIEWER === toolbarMode ||
+    Config.ToolbarMode.MINIMAL === toolbarMode
   ) {
     return false
   }
-  return hostIsOwner || isLocalhost()
+  return hostIsOwner === true || isLocalhost()
 }

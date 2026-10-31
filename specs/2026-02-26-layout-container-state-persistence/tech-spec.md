@@ -69,12 +69,19 @@ The key is included in the hash, producing the standard `$$ID-<hash>-<user_key>`
 # no widget registration.
 if is_stateful:
     element_id = compute_and_register_element_id(
-        element_type, user_key=user_key, key_as_main_identity=False, dg=dg, **kwargs,
+        element_type,
+        user_key=user_key,
+        key_as_main_identity=False,
+        dg=dg,
+        **kwargs,
     )
     block_proto.id = element_id
 elif user_key:
     block_proto.id = compute_and_register_element_id(
-        element_type, user_key=user_key, key_as_main_identity=False, dg=dg,
+        element_type,
+        user_key=user_key,
+        key_as_main_identity=False,
+        dg=dg,
     )
 ```
 

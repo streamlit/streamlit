@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
-import { MarkdownCell } from "./cells/MarkdownCell"
+import type { MarkdownCell } from "./cells/MarkdownCell"
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   removeLineBreaks,
   toSafeString,
@@ -45,7 +45,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
   }
 
   const validateInput = (data?: unknown): boolean =>
-    !(isNullOrUndefined(data) && props.isRequired)
+    !(isNullOrUndefined(data) && props.isRequired === true)
 
   return {
     ...props,
@@ -54,7 +54,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/markdown:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
-      if (validate && !validateInput(data)) {
+      if (validate === true && !validateInput(data)) {
         return getErrorCell(toSafeString(data), "Invalid input.")
       }
 
@@ -67,12 +67,14 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
         data: {
           ...cellTemplate.data,
           value: cellData,
-          displayValue: cellData ? removeLineBreaks(cellData) : "",
+          displayValue: isNullOrUndefined(cellData)
+            ? ""
+            : removeLineBreaks(cellData),
         },
       } as MarkdownCell
     },
     getCellValue(cell: MarkdownCell): string | null {
-      return cell.data?.value ?? null
+      return cell.data.value ?? null
     },
   }
 }

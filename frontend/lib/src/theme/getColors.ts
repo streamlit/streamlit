@@ -17,7 +17,7 @@
 import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
 
 import { BACKGROUND_ONLY_COLORS, NAMED_COLOR_CONFIG } from "./namedColors"
-import {
+import type {
   DerivedColors,
   EmotionTheme,
   EmotionThemeColors,
@@ -35,7 +35,12 @@ export const computeDerivedColors = (
   const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
   const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
   const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
-  const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
+  // Muted icons, disabled controls, and other non-text strokes (60% opacity);
+  // use fadedText70 for readable text. transparentize() takes the transparent fraction.
+  const fadedText60 = transparentize(bodyText, 0.4)
+  // Secondary / muted text (70% opacity); meets 4.5:1 on default page,
+  // secondary, and dataframe-header fills.
+  const fadedText70 = transparentize(bodyText, 0.3)
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
@@ -54,6 +59,7 @@ export const computeDerivedColors = (
     fadedText20,
     fadedText40,
     fadedText60,
+    fadedText70,
 
     bgMix,
     darkenedBgMix100,
@@ -86,14 +92,10 @@ export const createEmotionColors = (
 
     link: genericColors.blueTextColor,
 
-    codeTextColor: genericColors.greenTextColor,
-    codeBackgroundColor: derivedColors.bgMix,
-
-    borderColor: derivedColors.fadedText10,
-    borderColorLight: derivedColors.fadedText05,
-
-    dataframeBorderColor: derivedColors.fadedText05,
-    dataframeHeaderBackgroundColor: derivedColors.bgMix,
+    // border, code, and dataframe colors are copied from genericColors.
+    // borderColorLight is that border at 45% opacity.
+    borderColorLight: transparentize(genericColors.borderColor, 0.55),
+    dataframeHeaderTextColor: derivedColors.fadedText70,
 
     headingColor: genericColors.bodyText,
 

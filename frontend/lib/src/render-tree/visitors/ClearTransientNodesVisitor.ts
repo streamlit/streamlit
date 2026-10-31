@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  type TransientNode,
+} from "~lib/AppNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears transient nodes from the render tree. It does this by:
@@ -47,7 +52,7 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
 
     const newChildren: AppNode[] = []
     let childrenChanged = false
-    node.children.forEach(child => {
+    for (const child of node.children) {
       const filteredChild = child.accept(this)
       if (filteredChild !== child) {
         childrenChanged = true
@@ -55,7 +60,7 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
-    })
+    }
 
     // Performance optimization: If the children haven't changed, return the same node.
     if (!childrenChanged) {

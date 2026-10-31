@@ -71,17 +71,17 @@ Run the agent-name subagent to [do the task].
 Example for `fixing-pr`:
 ```markdown
 ---
-description: Fix CI failures and address PR review comments
+description: Fix CI failures, resolve merge conflicts with the base branch, and address PR review comments
 ---
 
-Run the fixing-pr subagent to fix CI failures and address PR review comments for the current branch.
+Run the fixing-pr subagent to fix CI failures, resolve merge conflicts with the base branch, and address PR review comments for the current branch.
 ```
 
 ## Agent Inventory
 
 | Agent | Purpose |
 |-------|---------|
-| `fixing-pr` | Fix CI failures and address PR review comments |
+| `fixing-pr` | Fix CI failures, resolve merge conflicts with the base branch, and address PR review comments |
 | `qa-testing-feature` | QA test features using Playwright |
-| `reviewing-local-changes` | Code review for quality, security, best practices |
+| `reviewing-local-changes` | Code review for quality, security, best practices, and product/API alignment |
 | `simplifying-local-changes` | Simplify and refine code changes |

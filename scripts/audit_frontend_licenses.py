@@ -51,6 +51,10 @@ ACCEPTABLE_LICENSES = {
     "Zlib",  # https://opensource.org/licenses/Zlib
     "Unlicense",  # https://unlicense.org/
     "WTFPL",  # http://www.wtfpl.net/about/
+    # Mermaid depends on elkjs for diagram layout. EPL-2.0 is weak copyleft
+    # and the full notice is included in NOTICES.
+    # https://www.eclipse.org/legal/epl-2.0/
+    "EPL-2.0",
     # Multi-licenses are acceptable if at least one of the licenses is acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",
@@ -77,9 +81,9 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         "UNKNOWN",
     ),
     (
-        # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
-        "@plotly/mapbox-gl@npm:1.13.4",
-        "SEE LICENSE IN LICENSE.txt",
+        # MIT license: https://github.com/mapbox/jsonlint
+        "@mapbox/jsonlint-lines-primitives@npm:2.0.3",
+        "UNKNOWN",
     ),
     (
         # Mapbox Web SDK license: https://github.com/mapbox/mapbox-gl-js/blob/main/LICENSE.txt
@@ -100,12 +104,6 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         # MIT license: https://github.com/felixge/node-stack-trace/blob/master/License
         "stack-trace@npm:0.0.9",
         "UNKNOWN",
-    ),
-    (
-        # Licenses has a typo, is meant to be BSD-3-Clause
-        # https://github.com/luizbarboza/splaytree-ts/blob/master/LICENSE
-        "splaytree-ts@npm:1.0.2",
-        "BDS-3-Clause",
     ),
     (
         # MIT license: https://github.com/fabiospampinato/khroma/blob/master/license

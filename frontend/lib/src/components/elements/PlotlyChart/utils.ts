@@ -17,17 +17,14 @@
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { EmotionTheme } from "~lib/theme/types"
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  replaceTemporaryColors,
-} from "./CustomTheme"
+import { applyStreamlitTheme, replaceTemporaryColors } from "./CustomTheme"
 
 // Copied and Pasted from Plotly type def
 interface SelectionRange {
@@ -52,8 +49,15 @@ interface PlotlySelectionShape extends Record<string, unknown> {
   path?: string
 }
 
-interface PlotlySelectionEventWithSelections
-  extends Plotly.PlotSelectionEvent {
+/**
+ * Plotly selection event as emitted at runtime. The upstream type omits
+ * `selections` and marks `points` as always present.
+ */
+interface PlotlySelectionEventWithSelections extends Omit<
+  Plotly.PlotSelectionEvent,
+  "points"
+> {
+  points?: Plotly.PlotSelectionEvent["points"]
   selections?: PlotlySelectionShape[]
 }
 
@@ -63,10 +67,18 @@ interface PlotlySelectionEventWithSelections
  * with additional properties that exist at runtime.
  */
 interface PlotlySelectionPoint extends Plotly.PlotDatum {
-  data: Plotly.PlotData & { legendgroup?: string }
   fullData?: unknown
   pointIndices?: number[]
   legendgroup?: string
+}
+
+function getLegendGroup(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null) {
+    return undefined
+  }
+  const { legendgroup } = data as { legendgroup?: string }
+  // Omit an empty legend group.
+  return isNullOrEmptyString(legendgroup) ? undefined : legendgroup
 }
 
 /**
@@ -183,7 +195,9 @@ export function parseBoxSelection(
  * Apply theming to the Plotly figure.
  *
  * @param plotlyFigure The Plotly figure to apply theming to
- * @param chartTheme The theme of the chart (streamlit or empty string)
+ * @param chartTheme `"streamlit"` applies Streamlit layout defaults. Any other
+ *   value, including `""` (`theme=None`), leaves layout fonts and backgrounds
+ *   as authored. Both paths still resolve template color stand-ins.
  * @param theme The current theme of the app
  * @returns The Plotly figure with theming applied
  */
@@ -194,27 +208,25 @@ export function applyTheming(
 ): PlotlyFigureType {
   const spec = JSON.parse(
     replaceTemporaryColors(JSON.stringify(plotlyFigure), theme, chartTheme)
-  )
+  ) as Record<string, unknown>
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(spec.layout, theme)
   }
-  return spec
+  return spec as unknown as PlotlyFigureType
 }
 
 /**
  * Handles the selection event from Plotly and sends the selection state to the backend.
  * The selection state is sent as a stringified JSON object.
  *
- * @param event The Plotly selection event
+ * @param event The Plotly selection event. Plotly can emit `plotly_selected`
+ *   without event data.
  * @param widgetMgr The widget manager
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
  */
 export function handleSelection(
-  event: Readonly<Plotly.PlotSelectionEvent>,
+  event: Readonly<PlotlySelectionEventWithSelections> | undefined,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
@@ -237,14 +249,13 @@ export function handleSelection(
   const selectedLassos: PlotlySelection[] = []
   const selectedPoints: Array<Record<string, unknown>> = []
 
-  const { selections, points } =
-    event as Readonly<PlotlySelectionEventWithSelections>
+  const { selections, points } = event
 
   if (points) {
     points.forEach(function (point: PlotlySelectionPoint) {
       selectedPoints.push({
         ...point,
-        legendgroup: point.data.legendgroup || undefined,
+        legendgroup: getLegendGroup(point.data),
         // Remove data and full data as they have been deemed to be unnecessary data overhead
         data: undefined,
         fullData: undefined,
@@ -280,7 +291,7 @@ export function handleSelection(
         selectedBoxes.push(returnSelection)
       }
       // lasso selection
-      if (selection.type === "path" && selection.path) {
+      if (selection.type === "path" && !isNullOrEmptyString(selection.path)) {
         const xAndy = parseLassoPath(selection.path)
         const returnSelection: PlotlySelection = {
           xref: selection.xref,
@@ -323,12 +334,11 @@ export function handleSelection(
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
     // Only update the widget state if it has changed
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }
 
@@ -353,12 +363,11 @@ export function sendEmptySelection(
     },
   }
 
-  widgetMgr.setStringValue(
-    element,
-    JSON.stringify(emptySelectionState),
-    { fromUi: true },
-    fragmentId
-  )
+  widgetMgr.setStringValue(element.id, JSON.stringify(emptySelectionState), {
+    formId: element.formId,
+    fragmentId,
+    fromUser: true,
+  })
 }
 
 /**
@@ -366,18 +375,19 @@ export function sendEmptySelection(
  * emit plotly_selected events but do emit plotly_click events.
  * The click data is sent as selection state to maintain API consistency.
  *
- * @param event The Plotly click event
+ * @param event The Plotly click event, or undefined when Plotly invokes the
+ *   callback without event data. A present event includes points.
  * @param widgetMgr The widget manager
  * @param element The PlotlyChartProto element
  * @param fragmentId The fragment id
  */
 export function handleClickEvent(
-  event: Readonly<Plotly.PlotMouseEvent>,
+  event: Readonly<Plotly.PlotMouseEvent> | undefined,
   widgetMgr: WidgetStateManager,
   element: PlotlyChartProto,
   fragmentId: string | undefined
 ): void {
-  if (!event?.points?.length) {
+  if (!event?.points.length) {
     return
   }
 
@@ -417,11 +427,10 @@ export function handleClickEvent(
   const currentSelectionState = widgetMgr.getStringValue(element)
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
-    widgetMgr.setStringValue(
-      element,
-      newSelectionState,
-      { fromUi: true },
-      fragmentId
-    )
+    widgetMgr.setStringValue(element.id, newSelectionState, {
+      formId: element.formId,
+      fragmentId,
+      fromUser: true,
+    })
   }
 }

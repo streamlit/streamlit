@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { Field, makeVector, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
@@ -22,7 +22,7 @@ import JsonColumn from "./JsonColumn"
 import {
   arrayToCopyValue,
   arrayValuesEqual,
-  BaseColumnProps,
+  type BaseColumnProps,
   countDecimals,
   getEmptyCell,
   getErrorCell,
@@ -234,6 +234,19 @@ describe("toSafeArray", () => {
     ],
     // Plain objects are serialized into a single stringified element
     [{ foo: "bar" }, ["[object Object]"]],
+    // Dict items (e.g. a list of structs) are serialized to JSON
+    [
+      [{ a: 1 }, { b: BigInt(2) }, null],
+      ['{"a":1}', '{"b":2}', ""],
+    ],
+    // Null struct fields of other items are dropped
+    [
+      [
+        { a: 1, b: null },
+        { a: null, b: 2 },
+      ],
+      ['{"a":1}', '{"b":2}'],
+    ],
   ])("converts %s to a valid array: %s", (input, expected) => {
     expect(toSafeArray(input)).toEqual(expected)
   })
@@ -351,15 +364,15 @@ describe("toSafeNumber", () => {
     [null, null],
     [undefined, null],
     ["", null],
-    ["foo", NaN],
-    [["foo"], NaN],
+    ["foo", Number.NaN],
+    [["foo"], Number.NaN],
     [
       {
         foo: "bar",
       },
-      NaN,
+      Number.NaN,
     ],
-    [[], NaN],
+    [[], Number.NaN],
     ["123", 123],
     ["123 ", 123],
     [" 123 ", 123],
@@ -464,7 +477,7 @@ describe("toSafeDate", () => {
     // empty string
     ["", null],
     // invalid number
-    [NaN, undefined],
+    [Number.NaN, undefined],
     // invalid string
     ["foo", undefined],
     // valid date string
@@ -566,7 +579,7 @@ describe("truncateDecimals", () => {
   )
 
   it("returns NaN unchanged", () => {
-    expect(truncateDecimals(NaN, 2)).toBeNaN()
+    expect(truncateDecimals(Number.NaN, 2)).toBeNaN()
   })
 })
 

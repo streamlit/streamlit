@@ -13,5 +13,8 @@
       "@streamlit/lib/testing": ["./src/testing.ts"]
     }
   },
-  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"]
+  "include": ["src/**/*", "declarations.d.ts", "emotion.d.ts"],
+  // Declaration emit only needs shipped sources. Test files pull in test-only
+  // types, and proto.js has no declarations to emit.
+  "exclude": ["src/**/*.test.*", "**/proto.js"]
 }

@@ -16,35 +16,39 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
 
 import { Delete, FileDownload } from "@emotion-icons/material-outlined"
 
-import { AudioInput as AudioInputProto } from "@streamlit/protobuf"
+import type { AudioInput as AudioInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import useDownloadUrl from "~lib/hooks/useDownloadUrl"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
+import { plainTextWithBlockGaps } from "~lib/util/plainText"
 import { uploadFiles } from "~lib/util/uploadFiles"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import AudioInputActionButtons from "./AudioInputActionButtons"
 import AudioInputErrorState from "./AudioInputErrorState"
@@ -66,6 +70,15 @@ export interface Props {
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disabled: boolean
+}
+
+/**
+ * Re-read whether `signal` is aborted. TypeScript treats an earlier
+ * `signal.aborted` check as stuck false, including across `await`, but
+ * `abort()` can still run.
+ */
+function isSignalAborted(signal: AbortSignal): boolean {
+  return signal.aborted
 }
 
 const AudioInput: React.FC<Props> = ({
@@ -131,7 +144,7 @@ const AudioInput: React.FC<Props> = ({
         if (notNullOrUndefined(widgetFormId))
           widgetMgr.setFormsWithUploadsInProgress(new Set([widgetFormId]))
 
-        if (abortController.signal.aborted) {
+        if (isSignalAborted(abortController.signal)) {
           return
         }
 
@@ -139,7 +152,7 @@ const AudioInput: React.FC<Props> = ({
         try {
           blobUrl = URL.createObjectURL(wavBlob)
           if (
-            currentBlobUrlRef.current &&
+            currentBlobUrlRef.current !== null &&
             currentBlobUrlRef.current !== blobUrl
           ) {
             URL.revokeObjectURL(currentBlobUrlRef.current)
@@ -154,7 +167,7 @@ const AudioInput: React.FC<Props> = ({
           return
         }
 
-        if (abortController.signal.aborted) {
+        if (isSignalAborted(abortController.signal)) {
           URL.revokeObjectURL(blobUrl)
           currentBlobUrlRef.current = null
           return
@@ -165,7 +178,7 @@ const AudioInput: React.FC<Props> = ({
         const timestamp = new Date()
           .toISOString()
           .slice(0, 16)
-          .replace(/:/g, "-")
+          .replaceAll(":", "-")
         const file = new File([wavBlob], `${timestamp}_audio.wav`, {
           type: wavBlob.type,
         })
@@ -178,9 +191,13 @@ const AudioInput: React.FC<Props> = ({
             widgetInfo: { id: widgetId, formId: widgetFormId },
             fragmentId,
             signal: abortController.signal,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
           })
 
-          if (abortController.signal.aborted) {
+          if (isSignalAborted(abortController.signal)) {
             return
           }
 
@@ -190,25 +207,25 @@ const AudioInput: React.FC<Props> = ({
           }
 
           setIsError(false)
-          const upload = successfulUploads[0]
-          if (upload?.fileUrl?.deleteUrl) {
-            setDeleteFileUrl(upload.fileUrl.deleteUrl)
+          const deleteUrl = successfulUploads.at(0)?.fileUrl.deleteUrl
+          if (!isNullOrEmptyString(deleteUrl)) {
+            setDeleteFileUrl(deleteUrl)
           }
         } catch {
           // File upload failed - set error state unless request was cancelled
-          if (!abortController.signal.aborted) {
+          if (!isSignalAborted(abortController.signal)) {
             setIsError(true)
           }
         } finally {
           if (notNullOrUndefined(widgetFormId))
             widgetMgr.setFormsWithUploadsInProgress(new Set())
-          if (!abortController.signal.aborted) {
+          if (!isSignalAborted(abortController.signal)) {
             setIsUploading(false)
           }
         }
       } catch {
         // Unexpected error during upload process - cleanup and set error state
-        if (!abortController.signal.aborted) {
+        if (!isSignalAborted(abortController.signal)) {
           setIsError(true)
           setIsUploading(false)
         }
@@ -222,6 +239,7 @@ const AudioInput: React.FC<Props> = ({
       widgetId,
       widgetFormId,
       fragmentId,
+      element.ignoreRerun,
       setDeleteFileUrl,
       setRecordingUrl,
     ]
@@ -274,24 +292,11 @@ const AudioInput: React.FC<Props> = ({
     },
   })
 
-  // Update the ref after controller is initialized
+  // Handlers read this ref so they call the latest controller. The hook returns
+  // a new object every render.
   controllerRef.current = controller
 
-  const {
-    state,
-    isPlaybackPlaying,
-    start: startController,
-    stop: stopController,
-    approve: approveController,
-    cancel: cancelController,
-    playback: {
-      play: playbackPlayFn,
-      pause: playbackPauseFn,
-      load: playbackLoadFn,
-      getCurrentTimeMs: playbackGetCurrentTimeMsFn,
-      getDurationMs: playbackGetDurationMsFn,
-    },
-  } = controller
+  const { state, isPlaybackPlaying, playback } = controller
 
   const handleClear = useCallback(
     async ({
@@ -303,7 +308,7 @@ const AudioInput: React.FC<Props> = ({
     }): Promise<void> => {
       const urlToRevoke = recordingUrl
 
-      if (urlToRevoke && currentBlobUrlRef.current === urlToRevoke) {
+      if (urlToRevoke !== null && currentBlobUrlRef.current === urlToRevoke) {
         URL.revokeObjectURL(urlToRevoke)
         currentBlobUrlRef.current = null
       }
@@ -318,18 +323,25 @@ const AudioInput: React.FC<Props> = ({
       setProgressTime(STARTING_TIME_STRING)
       setRecordingTime(STARTING_TIME_STRING)
 
-      cancelController()
+      controllerRef.current?.cancel()
 
       if (updateWidgetManager) {
         widgetMgr.setFileUploaderStateValue(
-          element,
+          element.id,
           {},
-          { fromUi: true },
-          fragmentId
+          {
+            formId: element.formId,
+            fragmentId,
+            fromUser: true,
+            // on_change="ignore" buffers the value without scheduling a rerun.
+            // WidgetStateManager ignores triggerRerun inside forms (the form owns
+            // commit timing).
+            ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+          }
         )
       }
 
-      if (deleteFile && deleteFileUrl) {
+      if (deleteFile && deleteFileUrl !== null) {
         try {
           await uploadClient.deleteFile(deleteFileUrl)
         } catch {
@@ -345,7 +357,6 @@ const AudioInput: React.FC<Props> = ({
       deleteFileUrl,
       recordingUrl,
       uploadClient,
-      cancelController,
       element,
       widgetMgr,
       fragmentId,
@@ -358,7 +369,7 @@ const AudioInput: React.FC<Props> = ({
   useEffect(() => {
     const updatePlaybackTime = (): void => {
       if (isPlaybackPlaying) {
-        setProgressTime(formatTime(playbackGetCurrentTimeMsFn()))
+        setProgressTime(formatTime(playback.getCurrentTimeMs()))
         playbackTimerRef.current = requestAnimationFrame(updatePlaybackTime)
       }
     }
@@ -376,10 +387,10 @@ const AudioInput: React.FC<Props> = ({
         playbackTimerRef.current = null
       }
     }
-  }, [isPlaybackPlaying, playbackGetCurrentTimeMsFn])
+  }, [isPlaybackPlaying, playback])
 
   useEffect(() => {
-    if (!recordingUrl) {
+    if (recordingUrl === null) {
       return
     }
 
@@ -388,12 +399,12 @@ const AudioInput: React.FC<Props> = ({
 
     const loadRecording = async (): Promise<void> => {
       try {
-        await playbackLoadFn(recordingUrl)
+        await playback.load(recordingUrl)
         if (cancelled) {
           return
         }
 
-        const durationMs = playbackGetDurationMsFn()
+        const durationMs = playback.getDurationMs()
         if (durationMs > 0) {
           setProgressTime(formatTime(durationMs))
         }
@@ -410,7 +421,7 @@ const AudioInput: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [recordingUrl, recordingTime, playbackLoadFn, playbackGetDurationMsFn])
+  }, [recordingUrl, recordingTime, playback])
 
   useEffect(() => {
     if (isNullOrUndefined(widgetFormId)) return
@@ -433,7 +444,7 @@ const AudioInput: React.FC<Props> = ({
         cancelAnimationFrame(playbackTimerRef.current)
         playbackTimerRef.current = null
       }
-      if (currentBlobUrlRef.current) {
+      if (currentBlobUrlRef.current !== null) {
         URL.revokeObjectURL(currentBlobUrlRef.current)
         currentBlobUrlRef.current = null
       }
@@ -443,52 +454,53 @@ const AudioInput: React.FC<Props> = ({
   const onClickPlayPause = useCallback(async () => {
     try {
       if (isPlaybackPlaying) {
-        const currentTime = playbackGetCurrentTimeMsFn()
-        playbackPauseFn()
+        const currentTime = playback.getCurrentTimeMs()
+        playback.pause()
         setProgressTime(formatTime(currentTime))
-      } else if (state === "idle" && recordingUrl) {
+      } else if (state === "idle" && recordingUrl !== null) {
         // WaveSurfer can report a tiny non-zero offset (~<100ms) at start of playback.
         // Snap the UI timer back to the canonical start value so the display stays deterministic.
-        if (playbackGetCurrentTimeMsFn() <= 100) {
+        if (playback.getCurrentTimeMs() <= 100) {
           setProgressTime(STARTING_TIME_STRING)
         }
-        await playbackPlayFn()
+        await playback.play()
       }
     } catch {
       // Playback control error - set error state for user feedback
       setIsError(true)
     }
-  }, [
-    isPlaybackPlaying,
-    playbackGetCurrentTimeMsFn,
-    playbackPauseFn,
-    playbackPlayFn,
-    recordingUrl,
-    state,
-  ])
+  }, [isPlaybackPlaying, recordingUrl, state, playback])
 
   const startRecording = useCallback(async () => {
-    if (recordingUrl) {
+    if (recordingUrl !== null) {
       await handleClear({ updateWidgetManager: false, deleteFile: true })
     }
 
     try {
       setProgressTime(STARTING_TIME_STRING)
-      await startController()
+      await controllerRef.current?.start()
     } catch {
       // Error handling is done via event listeners
     }
-  }, [handleClear, recordingUrl, startController])
+  }, [handleClear, recordingUrl])
 
   const stopRecording = useCallback(async () => {
     try {
-      const { blob } = await stopController()
-      await approveController(blob)
-    } catch {
+      const current = controllerRef.current
+      if (!current) {
+        return
+      }
+      const { blob } = await current.stop()
+      await current.approve(blob)
+    } catch (error) {
+      // A cancelled stop (clear, reset, unmount) is not a failure.
+      if (error instanceof RecordingCancelledError) {
+        return
+      }
       // Stop recording or approval error - set error state for user feedback
       setIsError(true)
     }
-  }, [approveController, stopController])
+  }, [])
 
   const downloadRecording = useDownloadUrl(recordingUrl, "recording.wav")
 
@@ -520,9 +532,37 @@ const AudioInput: React.FC<Props> = ({
   const isPlaying = isPlaybackPlaying
   const displayedTime = isRecording ? recordingTime : progressTime
   const showPlaceholder =
-    state === "idle" && !hasNoMicPermissions && !recordingUrl
+    state === "idle" && !hasNoMicPermissions && recordingUrl === null
   const showNoMicPermissionsOrPlaceholderOrError =
     hasNoMicPermissions || showPlaceholder || isError
+
+  const labelTextRef = useRef<HTMLSpanElement>(null)
+  // Widget labels are markdown; compose rendered plain text into toolbar names,
+  // not the markdown source. Observe the visual label node for late markdown
+  // (KaTeX/emoji skeletons), matching the image-caption path.
+  const [labelContext, setLabelContext] = useState<string | undefined>()
+  useLayoutEffect(() => {
+    const node = labelTextRef.current
+    if (!element.label || !node) {
+      setLabelContext(undefined)
+      return
+    }
+
+    const syncLabelPlainText = (): void => {
+      const text = plainTextWithBlockGaps(node)
+      setLabelContext(text || undefined)
+    }
+
+    syncLabelPlainText()
+
+    const observer = new MutationObserver(syncLabelPlainText)
+    observer.observe(node, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    })
+    return () => observer.disconnect()
+  }, [element.label])
 
   return (
     <StyledAudioInputContainerDiv
@@ -535,6 +575,7 @@ const AudioInput: React.FC<Props> = ({
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
+        labelTextRef={labelTextRef}
       >
         {element.help && (
           <WidgetLabelHelpIcon
@@ -550,18 +591,20 @@ const AudioInput: React.FC<Props> = ({
           disableFullscreenMode={true}
           target={StyledWaveformContainerDiv}
         >
-          {recordingUrl && (
+          {recordingUrl !== null && (
             <ToolbarAction
               label="Download as WAV"
               icon={FileDownload}
               onClick={handleDownloadClick}
+              labelContext={labelContext}
             />
           )}
-          {deleteFileUrl && (
+          {deleteFileUrl !== null && (
             <ToolbarAction
               label="Clear recording"
               icon={Delete}
               onClick={handleDeleteClick}
+              labelContext={labelContext}
             />
           )}
         </Toolbar>

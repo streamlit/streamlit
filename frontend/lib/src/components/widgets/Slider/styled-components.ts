@@ -28,10 +28,9 @@ export const StyledSlider = styled.div({
   },
 })
 
-/** Wraps RASlider with position:relative and insets it by half the thumb radius on
- * each side. This mirrors BaseUI's StyledThumbWrapper (left/right: thumbSize/2) so
- * thumbs at min/max do not overflow the widget boundary. The SliderTickBar lives
- * inside StyledSliderTrack so it aligns with these inset bounds. */
+/** Insets the slider by half the thumb radius on each side so thumbs at min/max
+ * do not overflow the widget boundary. The SliderTickBar lives inside
+ * StyledSliderTrack so it aligns with these inset bounds. */
 export const StyledRASlider = styled(RASlider)(({ theme }) => ({
   position: "relative",
   width: "100%",
@@ -150,7 +149,7 @@ export const StyledSliderTickBar = styled.div<StyledSliderTickBarProps>(
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
-    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+    color: isDisabled ? theme.colors.fadedText40 : theme.colors.fadedText70,
     opacity: isHovered ? 1 : "var(--slider-focused, 0)",
     transition: isHovered ? "none" : "opacity 300ms 200ms",
   })

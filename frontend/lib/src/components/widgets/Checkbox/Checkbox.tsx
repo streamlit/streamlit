@@ -14,26 +14,31 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback } from "react"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StyledCheckbox,
+  StyledCheckboxButton,
+  StyledCheckboxField,
   StyledCheckboxIndicator,
-  StyledCheckboxRoot,
   StyledContent,
-  StyledSwitchRoot,
+  StyledLabelText,
+  StyledSwitchButton,
+  StyledSwitchField,
   StyledToggleThumb,
   StyledToggleTrack,
 } from "./styled-components"
@@ -51,7 +56,7 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "bool_value" as const,
@@ -76,7 +81,7 @@ function Checkbox({
 
   const handleChange = useCallback(
     (isSelected: boolean): void => {
-      setValueWithSource({ value: isSelected, fromUi: true })
+      setValueWithSource({ value: isSelected, fromUser: true })
     },
     [setValueWithSource]
   )
@@ -86,9 +91,35 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
+  // Checkbox help uses a separate icon, so a clipped label can keep its
+  // native title alongside the help tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const truncate = !wrap
+  const { titleRef, labelTextRef } = useLabelTitleTooltip(
+    truncate,
+    element.label
+  )
+
   const labelContent = (
-    <StyledContent visibility={labelVisibility} data-testid="stWidgetLabel">
-      <StreamlitMarkdown source={element.label} allowHTML={false} isLabel />
+    <StyledContent
+      visibility={labelVisibility}
+      $truncate={truncate}
+      data-testid="stWidgetLabel"
+    >
+      {/* The title is scoped to the label (not the help icon) so hovering the
+          help icon shows only its tooltip. The inner `display: contents` span
+          lets us read the label's plain text without adding a box. */}
+      <StyledLabelText ref={titleRef} $truncate={truncate}>
+        <span ref={labelTextRef} style={{ display: "contents" }}>
+          <StreamlitMarkdown
+            source={element.label}
+            allowHTML={false}
+            isLabel
+            truncate={truncate}
+            inheritLineHeight
+          />
+        </span>
+      </StyledLabelText>
       {element.help && (
         <WidgetLabelHelpIconInline
           content={element.help}
@@ -101,16 +132,15 @@ function Checkbox({
 
   if (isToggle) {
     return (
-      <StyledCheckbox
+      <StyledSwitchField
         className="row-widget stCheckbox"
         data-testid="stCheckbox"
+        isSelected={value}
+        isDisabled={disabled}
+        onChange={handleChange}
+        aria-label={element.label}
       >
-        <StyledSwitchRoot
-          isSelected={value}
-          isDisabled={disabled}
-          onChange={handleChange}
-          aria-label={element.label}
-        >
+        <StyledSwitchButton $truncate={truncate}>
           {({ isSelected, isHovered, isDisabled: isDisab }) => (
             <>
               <StyledToggleTrack
@@ -126,24 +156,27 @@ function Checkbox({
               {labelContent}
             </>
           )}
-        </StyledSwitchRoot>
-      </StyledCheckbox>
+        </StyledSwitchButton>
+      </StyledSwitchField>
     )
   }
 
   return (
-    <StyledCheckbox className="row-widget stCheckbox" data-testid="stCheckbox">
-      <StyledCheckboxRoot
-        isSelected={value}
-        isDisabled={disabled}
-        onChange={handleChange}
-        aria-label={element.label}
-      >
-        {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
+    <StyledCheckboxField
+      className="row-widget stCheckbox"
+      data-testid="stCheckbox"
+      isSelected={value}
+      isDisabled={disabled}
+      onChange={handleChange}
+      aria-label={element.label}
+    >
+      <StyledCheckboxButton $truncate={truncate}>
+        {({ isSelected, isFocusVisible, isHovered, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
               $isSelected={isSelected}
               $isFocusVisible={isFocusVisible}
+              $isHovered={isHovered}
               $isDisabled={isDisab}
             >
               {isSelected && (
@@ -155,8 +188,8 @@ function Checkbox({
             {labelContent}
           </>
         )}
-      </StyledCheckboxRoot>
-    </StyledCheckbox>
+      </StyledCheckboxButton>
+    </StyledCheckboxField>
   )
 }
 
@@ -168,11 +201,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? false
+  return element.default
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? false
+  return element.value
 }
 
 function updateWidgetMgrState(
@@ -181,12 +214,15 @@ function updateWidgetMgrState(
   vws: ValueWithSource<boolean>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setBoolValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  widgetMgr.setBoolValue(element.id, vws.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 export default memo(Checkbox)

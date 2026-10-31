@@ -21,5 +21,7 @@ Rules for inline comments:
 - `line` must be an integer targeting an added or modified line that appears in the PR diff for that `path`. Comments are posted on the RIGHT side of the diff. Lines outside the diff will be rejected by the GitHub Reviews API (422).
 - `body` must be concise, specific, and MUST use [Conventional Comments](https://conventionalcomments.org/) syntax. Prefix every body with a label such as `issue:`, `suggestion:`, `nitpick:`, `question:`, or `thought:`.
 - `severity` must be one of: `high`, `medium`, `low`.
+- Edge-case comments must name the concrete trigger, say how likely real apps are to hit it, and propose a fix in proportion to that. Rare or theoretical cases without security or data-loss impact get `low` severity and a `suggestion:` or `thought:` label, not `issue:`. Do not propose new state, abstractions, or broad special-casing for them.
 - If there are no suitable inline comments, write `{"comments": []}`.
 - Do not duplicate inline comment findings in the PR-level review body (`review.md`). Each finding should appear in exactly one place: either as an inline comment (for line-specific issues) or in the summary (for high-level concerns), not both.
+- Do not comment on agent or skill instruction files only to request a script or a more detailed procedure. Those instructions are meant to stay high-level.

@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
@@ -46,8 +46,8 @@ EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
 PROTECTED_QUERY_PARAMS: Final[frozenset[str]] = frozenset(
     [EMBED_QUERY_PARAM, EMBED_OPTIONS_QUERY_PARAM]
 )
-_CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
-_CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
+CLIENT_STATE_QUERY_STRING_MAX_LENGTH: Final[int] = 512 * 1024  # 512Ki characters
+CLIENT_STATE_QUERY_STRING_MAX_FIELDS: Final[int] = 1000
 
 
 def sanitize_query_string(query_string: str) -> str:
@@ -55,22 +55,22 @@ def sanitize_query_string(query_string: str) -> str:
     if not query_string:
         return ""
 
-    if len(query_string) > _CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
+    if len(query_string) > CLIENT_STATE_QUERY_STRING_MAX_LENGTH:
         _LOGGER.warning(
             "Ignoring query string with %d characters because it exceeds the "
             "%d character limit.",
             len(query_string),
-            _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+            CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
         )
         return ""
 
     num_fields = query_string.count("&") + 1
-    if num_fields > _CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
+    if num_fields > CLIENT_STATE_QUERY_STRING_MAX_FIELDS:
         _LOGGER.warning(
             "Ignoring query string with %d parameters because it exceeds the "
             "%d parameter limit.",
             num_fields,
-            _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+            CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
         )
         return ""
 
@@ -124,7 +124,7 @@ def is_empty_url_value(value: str | list[str]) -> bool:
     return value == ""
 
 
-_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 _SECONDS_TO_MICROS: Final = 1000 * 1000
 _DAYS_TO_MICROS: Final = 24 * 60 * 60 * _SECONDS_TO_MICROS
 
@@ -159,7 +159,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
             dt = datetime.fromisoformat(s)
             if dt.tzinfo is not None:
                 return None
-            return float(_delta_to_micros(dt.replace(tzinfo=timezone.utc) - _UTC_EPOCH))
+            return float(_delta_to_micros(dt.replace(tzinfo=UTC) - _UTC_EPOCH))
         except ValueError:
             return None
 
@@ -167,7 +167,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
     if "-" in s:
         try:
             d = date.fromisoformat(s)
-            dt = datetime.combine(d, time(), tzinfo=timezone.utc)
+            dt = datetime.combine(d, time(), tzinfo=UTC)
             return float(_delta_to_micros(dt - _UTC_EPOCH))
         except ValueError:
             return None
@@ -178,7 +178,7 @@ def _try_parse_iso_to_micros(s: str) -> float | None:
             t = time.fromisoformat(s)
             if t.tzinfo is not None:
                 return None
-            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=timezone.utc)
+            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=UTC)
             return float(_delta_to_micros(dt - _UTC_EPOCH))
         except ValueError:
             return None
@@ -257,7 +257,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     # Try ISO date/time/datetime parsing for date/time sliders.
                     # Converts human-readable ISO strings to microsecond floats.
                     micros = _try_parse_iso_to_micros(part)
@@ -273,7 +273,7 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     result_int.append(part)
             return result_int
         case _:
@@ -364,7 +364,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly set query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-set",
             )
         self._set_item_internal(key, value)
         self._send_query_param_msg()
@@ -379,7 +380,8 @@ class QueryParams(MutableMapping[str, str]):
         if self.is_bound(key):
             raise StreamlitAPIException(
                 f"Cannot directly delete query parameter '{key}' - "
-                f"it is bound to a widget. Modify the widget value instead."
+                f"it is bound to a widget. Modify the widget value instead.",
+                error_id="query-param-bound-cannot-delete",
             )
         try:
             del self._query_params[key]
@@ -389,10 +391,10 @@ class QueryParams(MutableMapping[str, str]):
 
     def update(
         self,
-        other: Iterable[tuple[str, str | Iterable[str]]]
-        | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
+        other: Iterable[tuple[str, QueryParamValue]]
+        | SupportsKeysAndGetItem[str, QueryParamValue] = (),
         /,
-        **kwds: str,
+        **kwds: QueryParamValue,
     ) -> None:
         # This overrides the `update` provided by MutableMapping
         # to ensure only one one ForwardMsg is sent.
@@ -400,9 +402,9 @@ class QueryParams(MutableMapping[str, str]):
         # Consume dict-like objects into a list upfront to avoid iterating twice
         # (once for keys, once for values). This prevents potential issues if
         # `other` is modified during iteration.
-        other_as_list: list[tuple[str, str | Iterable[str]]]
+        other_as_list: list[tuple[str, QueryParamValue]]
         if hasattr(other, "keys") and hasattr(other, "__getitem__"):
-            other_dict = cast("SupportsKeysAndGetItem[str, str | Iterable[str]]", other)
+            other_dict = cast("SupportsKeysAndGetItem[str, QueryParamValue]", other)
             keys = list(other_dict.keys())
             other_as_list = [(k, other_dict[k]) for k in keys]
         else:
@@ -418,7 +420,8 @@ class QueryParams(MutableMapping[str, str]):
             if self.is_bound(key):
                 raise StreamlitAPIException(
                     f"Cannot directly set query parameter '{key}' - "
-                    f"it is bound to a widget. Modify the widget value instead."
+                    f"it is bound to a widget. Modify the widget value instead.",
+                    error_id="query-param-bound-cannot-set",
                 )
 
         # Now apply the updates
@@ -465,7 +468,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot clear query parameters - the following are bound to widgets: "
                 f"{', '.join(repr(k) for k in bound_params)}. "
-                f"Modify the widget values instead, or remove the bind parameter."
+                f"Modify the widget values instead, or remove the bind parameter.",
+                error_id="query-param-bound-cannot-clear",
             )
         self.clear_with_no_forward_msg(preserve_embed=True)
         self._send_query_param_msg()
@@ -535,7 +539,8 @@ class QueryParams(MutableMapping[str, str]):
             raise StreamlitAPIException(
                 f"Cannot bind to reserved query parameter '{param_key}'. "
                 f"'{EMBED_QUERY_PARAM}' and '{EMBED_OPTIONS_QUERY_PARAM}' are "
-                f"used internally for Streamlit's embed functionality."
+                f"used internally for Streamlit's embed functionality.",
+                error_id="query-param-reserved-cannot-bind",
             )
 
         # Clean up old binding if a different widget was bound to this param
@@ -883,7 +888,8 @@ def _set_item_in_dict(
 
     if key.lower() in EMBED_QUERY_PARAMS_KEYS:
         raise StreamlitAPIException(
-            "Query param embed and embed_options (case-insensitive) cannot be set programmatically."
+            "Query param embed and embed_options (case-insensitive) cannot be set programmatically.",
+            error_id="query-param-embed-cannot-set",
         )
     # Type checking users should handle the string serialization themselves
     # We will accept any type for the list and serialize to str just in case

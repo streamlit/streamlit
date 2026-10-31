@@ -31,7 +31,10 @@ from streamlit.components.v2.component_registry import (
     BidiComponentRegistry,
 )
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
-from streamlit.errors import StreamlitAPIException, StreamlitComponentRegistryError
+from streamlit.errors import (
+    StreamlitComponentRegistryError,
+    StreamlitInvalidParameterTypeError,
+)
 
 
 def _mk_file(path: os.PathLike[str] | str, content: bytes | str = b"x") -> str:
@@ -479,23 +482,23 @@ def test_public_api_path_object_rejection() -> None:
     """Verify the public API rejects non-string path-like objects."""
     from pathlib import Path
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", js=Path("test.js"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
-    with pytest.raises(StreamlitAPIException) as exc_info:
+    with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
         component("test", css=Path("test.css"))
     msg = str(exc_info.value)
-    assert "string or None" in msg
+    assert "Expected one of: str, None" in msg
     assert "string path or glob" in msg
 
     # Still raise for other invalid types
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", js=123)  # Integer instead of string/Path
 
-    with pytest.raises(StreamlitAPIException):
+    with pytest.raises(StreamlitInvalidParameterTypeError):
         component("test", css=["invalid", "list"])  # List instead of string/Path
 
 
@@ -537,6 +540,32 @@ def test_component_mount_ignores_isolate_styles_kwarg() -> None:
     assert kwargs["isolate_styles"] is False
     assert kwargs["key"] == "k"
     assert kwargs["on_clicked_change"] is on_clicked_change
+
+
+def test_mount_without_script_run_or_runtime_does_not_create_a_manager() -> None:
+    """A mount with no script run and no runtime does not create a manager."""
+    import streamlit as st
+
+    mount = component("mount_without_runtime", html="<p>x</p>")
+
+    with (
+        patch(
+            "streamlit.runtime.scriptrunner_utils.script_run_context.get_script_run_ctx",
+            return_value=None,
+        ) as mock_ctx,
+        patch("streamlit.runtime.Runtime.exists", return_value=False),
+        patch(
+            "streamlit.runtime.Runtime.instance",
+            side_effect=AssertionError("runtime created"),
+        ),
+        patch.object(BidiComponentManager, "__init__", return_value=None) as mock_init,
+        patch.object(st, "_bidi_component", return_value=MagicMock()) as mock_mount,
+    ):
+        mount(key="k")
+
+    mock_init.assert_not_called()
+    mock_mount.assert_called_once()
+    mock_ctx.assert_called_once_with(suppress_warning=True)
 
 
 def test_register_from_manifest_basic(temp_manager_setup) -> None:
@@ -796,7 +825,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test successful resolution
         resolved = ComponentPathUtils.resolve_glob_pattern("test-*.js", package_root)
-        assert str(resolved.resolve()) == Path(test_file).resolve().as_posix()
+        assert resolved.resolve() == Path(test_file).resolve()
 
         # Test no matches
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
@@ -1046,3 +1075,68 @@ def test_register_overwrites_real_definition_with_warning() -> None:
 
         # Verify warning WAS logged
         mock_logger.warning.assert_called_once()
+
+
+def test_register_if_missing_or_placeholder_stores_missing_name() -> None:
+    """A missing name is stored and the call returns True."""
+    reg = BidiComponentRegistry()
+    definition = BidiComponentDefinition(
+        name="missing_component",
+        html="<p>new</p>",
+    )
+
+    wrote = reg.register_if_missing_or_placeholder(definition)
+
+    assert wrote is True
+    assert reg.get(definition.name) == definition
+
+
+def test_register_if_missing_or_placeholder_replaces_manifest_discovery() -> None:
+    """A manifest discovery is replaced and no warning is logged."""
+    reg = BidiComponentRegistry()
+    name = "placeholder_component"
+    reg.register_components_from_definitions({name: {"name": name}})
+    discovered = reg.get(name)
+    assert discovered is not None
+    assert discovered.is_manifest_discovery
+    real_def = BidiComponentDefinition(name=name, html="<div>Content</div>")
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        wrote = reg.register_if_missing_or_placeholder(real_def)
+
+    assert wrote is True
+    assert reg.get(name) == real_def
+    mock_logger.warning.assert_not_called()
+
+
+def test_register_if_missing_or_placeholder_leaves_explicit_empty_registration() -> (
+    None
+):
+    """An explicit empty registration is not treated as a manifest discovery."""
+    reg = BidiComponentRegistry()
+    name = "empty_component"
+    empty = BidiComponentDefinition(name=name)
+    reg.register(empty)
+    assert not empty.is_manifest_discovery
+    incoming = BidiComponentDefinition(name=name, html="<div>Content</div>")
+
+    wrote = reg.register_if_missing_or_placeholder(incoming)
+
+    assert wrote is False
+    assert reg.get(name) is empty
+
+
+def test_register_if_missing_or_placeholder_leaves_real_definition() -> None:
+    """A resolved definition with different HTML is left unchanged."""
+    reg = BidiComponentRegistry()
+    name = "kept_component"
+    existing = BidiComponentDefinition(name=name, html="<p>kept</p>")
+    reg.register(existing)
+    incoming = BidiComponentDefinition(name=name, html="<p>other</p>")
+
+    with patch("streamlit.components.v2.component_registry._LOGGER") as mock_logger:
+        wrote = reg.register_if_missing_or_placeholder(incoming)
+
+    assert wrote is False
+    assert reg.get(name) is existing
+    mock_logger.warning.assert_not_called()

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
-import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
+import { BlockNodeRenderer, type BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
 type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
@@ -33,18 +33,19 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
  * boundaries.
  *
  * This visitor accumulates React elements in a mutable array and tracks
- * rendered element IDs to prevent duplicate rendering of widgets.
+ * rendered element and block IDs so a rerun cannot mount the same widget or
+ * keyed container twice.
  *
  * Usage:
  * ```typescript
  * const elements = RenderNodeVisitor.collectReactElements(props, disableFullscreen)
- * return <>{elements}</>
+ * return elements
  * ```
  */
 export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
   private readonly props: BlockPropsWithoutWidth
   private readonly elementKeyOverride?: string
-  private readonly elementKeySet: Set<string>
+  private readonly renderedKeySet: Set<string>
   public readonly reactElements: ReactElement[]
   private index: number
   private transientElementCount: number
@@ -52,7 +53,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   constructor(props: BlockPropsWithoutWidth, elementKeyOverride?: string) {
     this.props = props
     this.elementKeyOverride = elementKeyOverride
-    this.elementKeySet = new Set<string>()
+    this.renderedKeySet = new Set<string>()
     this.reactElements = []
     // Initialize index to 0 as we will use it as a key in the React component
     this.index = 0
@@ -60,6 +61,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   }
 
   private getCurrentKey(elementId?: string): string {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank key override falls through to the element id
     return this.elementKeyOverride || elementId || this.index.toString()
   }
 
@@ -86,8 +88,22 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // Use blockId as React key when available so that keyed containers
     // maintain component identity across positional shifts (e.g. when a
     // conditional element above the container causes it to move).
-    const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
+    const blockId = node.deltaBlock.id || undefined
+    const key = this.getCurrentKey(blockId)
     this.index += 1
+    // Keep the first sibling with this block id and skip later copies. A rerun
+    // writes the updated block at its new index but only clears stale nodes when
+    // the run finishes, so the old copy can still sit at a later index. Rendering
+    // both would give two siblings the same React key, which makes React warn and
+    // can remount the container. visitElementNode dedupes widgets the same way.
+    if (blockId) {
+      if (this.renderedKeySet.has(key)) {
+        return null
+      }
+      this.renderedKeySet.add(key)
+    }
+
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)
 
@@ -134,11 +150,11 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // correctly and we assume the second one is therefore stale (or throw an error).
     // Also, our setIn logic pushes stale widgets down in the list of elements, so the
     // most recent one should always come first.
-    if (this.elementKeySet.has(key)) {
+    if (this.renderedKeySet.has(key)) {
       return null
     }
 
-    this.elementKeySet.add(key)
+    this.renderedKeySet.add(key)
 
     const renderer = <ElementNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)
@@ -158,14 +174,10 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    *
    * @example
    * const ChildRenderer = (props) => {
-   *   return <>{RenderNodeVisitor.collectReactElements(props, false)}</>
+   *   return RenderNodeVisitor.collectReactElements(props, false)
    * }
    */
   static collectReactElements(props: BlockPropsWithoutWidth): ReactElement[] {
-    if (!props.node.children) {
-      return []
-    }
-
     const visitor = new RenderNodeVisitor(props)
     // Visit all the children nodes and collect the react elements
     props.node.children.forEach(childNode => childNode.accept(visitor))

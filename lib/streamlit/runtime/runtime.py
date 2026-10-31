@@ -31,9 +31,14 @@ from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
     get_resource_cache_stats_provider,
 )
+from streamlit.runtime.caching.global_cache_budget import (
+    get_global_cache_budget,
+    reconfigure_global_cache_budget_from_config,
+)
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -217,6 +222,7 @@ class Runtime:
         self._bidi_component_registry = config.bidi_component_registry
         self._uploaded_file_mgr = config.uploaded_file_manager
         self._media_file_mgr = MediaFileManager(storage=config.media_file_storage)
+        self._dataframe_source_mgr = DataframeSourceManager()
         self._cache_storage_manager = config.cache_storage_manager
         self._script_cache = ScriptCache()
 
@@ -240,6 +246,8 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
+        reconfigure_global_cache_budget_from_config()
+        self._stats_mgr.register_provider(get_global_cache_budget())
         if self._uploaded_file_mgr is not None:
             self._stats_mgr.register_provider(self._uploaded_file_mgr)
         # Register media file storage for stats if it implements StatsProvider
@@ -276,6 +284,10 @@ class Runtime:
         return self._media_file_mgr
 
     @property
+    def dataframe_source_mgr(self) -> DataframeSourceManager:
+        return self._dataframe_source_mgr
+
+    @property
     def stats_mgr(self) -> StatsManager:
         return self._stats_mgr
 
@@ -284,8 +296,8 @@ class Runtime:
         """A Future that completes when the Runtime's run loop has exited."""
         return self._get_async_objs().stopped
 
-    # NOTE: A few Runtime methods listed as threadsafe (get_client and
-    # is_active_session) currently rely on the implementation detail that
+    # NOTE: A few Runtime methods listed as threadsafe (get_client, get_app_session,
+    # and is_active_session) currently rely on the implementation detail that
     # WebsocketSessionManager's get_active_session_info and is_active_session methods
     # happen to be threadsafe. This may change with future SessionManager implementations,
     # at which point we'll need to formalize our thread safety rules for each
@@ -303,16 +315,98 @@ class Runtime:
             return None
         return session_info.client
 
-    def clear_user_info_for_session(self, session_id: str) -> None:
-        """Clear the user_info for the given session_id.
+    def get_app_session(self, session_id: str) -> AppSession | None:
+        """Get the AppSession for the given session_id, or None
+        if no such active session exists.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread. The returned AppSession
+        is not thread-safe; most of its methods must be called on the event
+        loop thread.
+        """
+        session_info = self._session_mgr.get_active_session_info(session_id)
+        if session_info is None:
+            return None
+        return session_info.session
+
+    def mark_session_nonresumable(self, session_id: str) -> None:
+        """Prevent a later connection from resuming ``session_id``.
+
+        A connection that names the id as its existing session gets a new
+        session instead. Closing the session releases the mark.
 
         Notes
         -----
         Threading: SAFE. May be called on any thread.
         """
-        session_info = self._session_mgr.get_session_info(session_id)
-        if session_info is not None:
-            session_info.session.clear_user_info()
+        self._session_mgr.mark_session_nonresumable(session_id)
+
+    def clear_user_info_for_session(self, session_id: str) -> None:
+        """Clear user info for ``session_id`` and prevent that session from resuming.
+
+        An active session stays connected so its client can still receive the
+        logout redirect. A session that exists only in storage is closed on
+        the event loop so a later connection cannot resume it.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread. The non-resumable mark
+        is published before this returns and does not touch session storage.
+        Storage lookup and deletion run on the event loop.
+        """
+        # Publish the mark before looking at the active map. A concurrent
+        # disconnect or reconnect then cannot save or adopt this id, and this
+        # path never calls get_session_info() (that read mutates storage).
+        self._session_mgr.mark_session_nonresumable(session_id)
+
+        active_session = self._session_mgr.get_active_session_info(session_id)
+        if active_session is not None:
+            active_session.session.clear_user_info()
+            return
+
+        self._close_inactive_session_on_event_loop(session_id)
+
+    def _close_inactive_session_on_event_loop(self, session_id: str) -> None:
+        """Close a stored session on the event loop.
+
+        The session is already marked non-resumable, so a reconnect cannot
+        adopt it before this close runs. Session storage is only touched here,
+        on the event loop.
+        """
+        async_objs = self._get_async_objs()
+
+        def close_if_inactive() -> None:
+            active = self._session_mgr.get_active_session_info(session_id)
+            if active is not None:
+                # Only the logged-out session is cleared. A replacement that
+                # reused the id is left alone.
+                if not active.session.is_resumable():
+                    active.session.clear_user_info()
+            else:
+                # close_session drops the id even when storage no longer has
+                # it. get_session_info would skip that when the id is gone.
+                self._session_mgr.close_session(session_id)
+                self._on_session_disconnected()
+
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is async_objs.eventloop:
+            close_if_inactive()
+            return
+
+        try:
+            async_objs.eventloop.call_soon_threadsafe(close_if_inactive)
+        except RuntimeError:
+            if not async_objs.eventloop.is_closed():
+                raise
+            _LOGGER.debug(
+                "Dropped logout close for session %s because the event loop is closed.",
+                session_id,
+            )
 
     async def start(self) -> None:
         """Start the runtime. This must be called only once, before
@@ -482,7 +576,9 @@ class Runtime:
             self._session_mgr.close_session(session_id)
         self._on_session_disconnected()
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(
+        self, session_id: str, *, client: SessionClient | None = None
+    ) -> None:
         """Disconnect a session. It will stop producing ForwardMsgs.
 
         Differs from close_session because disconnected sessions can be reconnected to
@@ -496,17 +592,21 @@ class Runtime:
         ----------
         session_id
             The session's unique ID.
+        client
+            If set, only disconnect the session if it is still connected to this client.
 
         Notes
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
         session_info = self._session_mgr.get_active_session_info(session_id)
-        if session_info:
+        if session_info and (client is None or session_info.client is client):
             self._session_mgr.disconnect_session(session_id)
         self._on_session_disconnected()
 
-    def handle_backmsg(self, session_id: str, msg: BackMsg) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: BackMsg, *, client: SessionClient | None = None
+    ) -> None:
         """Send a BackMsg to an active session.
 
         Parameters
@@ -515,6 +615,9 @@ class Runtime:
             The session's unique ID.
         msg
             The BackMsg to deliver to the session.
+        client
+            If set, only handle the message if the session is still connected to this
+            client.
 
         Notes
         -----
@@ -530,12 +633,29 @@ class Runtime:
             )
             return
 
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg for session with stale client (id=%s)", session_id
+            )
+            return
+
         session_info.session.handle_backmsg(msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        *,
+        client: SessionClient | None = None,
     ) -> None:
         """Handle an Exception raised during deserialization of a BackMsg.
+
+        The bundled Starlette server does not call this method. A frame that
+        fails to parse is a protocol violation. That server closes the
+        connection instead. This entry point remains for other hosts. It reports
+        the failure through `AppSession`, which applies the
+        `client.showErrorDetails` redaction before it sends anything to the
+        browser.
 
         Parameters
         ----------
@@ -543,6 +663,9 @@ class Runtime:
             The session's unique ID.
         exc
             The Exception.
+        client
+            If set, only handle the exception if the session is still connected to this
+            client.
 
         Notes
         -----
@@ -557,6 +680,13 @@ class Runtime:
         if session_info is None:
             _LOGGER.debug(
                 "Discarding BackMsg Exception for disconnected session (id=%s)",
+                session_id,
+            )
+            return
+
+        if client is not None and session_info.client is not client:
+            _LOGGER.debug(
+                "Discarding BackMsg Exception for session with stale client (id=%s)",
                 session_id,
             )
             return
@@ -675,12 +805,20 @@ class Runtime:
                             try:
                                 self._send_message(active_session_info, msg)
                             except SessionClientDisconnectedError:
-                                self._session_mgr.disconnect_session(
-                                    active_session_info.session.id
+                                # Only disconnect if the session is still bound to
+                                # this (now-disconnected) client. A reconnect during
+                                # the flush loop can swap in a new client for the same
+                                # session id, and we must not tear that freshly
+                                # reconnected session down.
+                                self.disconnect_session(
+                                    active_session_info.session.id,
+                                    client=active_session_info.client,
                                 )
 
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
+
+                        active_session_info.session.on_flushed_messages_sent()
 
                     # Yield briefly between session message flushing cycles.
                     await asyncio.sleep(MESSAGE_FLUSH_INTERVAL_SECS)

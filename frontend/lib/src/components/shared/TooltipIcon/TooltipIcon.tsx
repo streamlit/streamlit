@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import { isValidElement, memo, ReactElement } from "react"
+import { isValidElement, memo, type ReactElement } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import StreamlitMarkdown, {
   type Props as StreamlitMarkdownProps,
@@ -38,6 +40,7 @@ interface TooltipIconCommonProps {
   markdownProps?: Partial<StreamlitMarkdownProps>
   onMouseEnterDelay?: number
   containerWidth?: boolean
+  constrainWidth?: boolean
 }
 
 /**
@@ -83,6 +86,7 @@ const TooltipIcon = memo(function TooltipIcon(
     markdownProps,
     onMouseEnterDelay,
     containerWidth = false,
+    constrainWidth = false,
   } = props
   const theme = useEmotionTheme()
 
@@ -140,13 +144,14 @@ const TooltipIcon = memo(function TooltipIcon(
             style={{ fontSize: theme.fontSizes.sm }}
             source={content}
             allowHTML={false}
-            {...(markdownProps || {})}
+            {...(markdownProps ?? {})}
           />
         }
         placement={placement}
         onMouseEnterDelay={onMouseEnterDelay}
         inline
         containerWidth={containerWidth}
+        constrainWidth={constrainWidth}
       >
         {renderTrigger()}
       </Tooltip>
@@ -160,8 +165,9 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
   // label), so we fall back to a generic "Help" label rather than returning an
   // empty accessible name.
   const trimmed = label?.trim()
-  const normalized = trimmed ? trimmed.replace(/\s+/g, " ") : null
-  return normalized ? `Help for ${normalized}` : "Help"
+  return isNullOrEmptyString(trimmed)
+    ? "Help"
+    : `Help for ${trimmed.replaceAll(/\s+/g, " ")}`
 }
 
 /**
@@ -182,6 +188,7 @@ export const InlineTooltipIcon = ({
   markdownProps,
   onMouseEnterDelay,
   containerWidth,
+  constrainWidth,
   ariaLabel = "Help",
 }: InlineTooltipIconProps): ReactElement => {
   return (
@@ -193,6 +200,7 @@ export const InlineTooltipIcon = ({
         markdownProps={markdownProps}
         onMouseEnterDelay={onMouseEnterDelay}
         containerWidth={containerWidth}
+        constrainWidth={constrainWidth}
         ariaLabel={ariaLabel}
       />
     </StyledLabelHelpInline>

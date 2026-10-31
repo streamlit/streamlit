@@ -14,21 +14,28 @@
  * limitations under the License.
  */
 
-import { FC, memo, PropsWithChildren, useCallback, useMemo } from "react"
+import {
+  type FC,
+  memo,
+  type PropsWithChildren,
+  useCallback,
+  useMemo,
+} from "react"
 
 import type { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   BidiComponentContext,
-  BidiComponentContextShape,
+  type BidiComponentContextShape,
 } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { parseBidiComponentData } from "~lib/components/widgets/BidiComponent/utils/parseBidiComponentData"
 import { extractComponentsV2Theme } from "~lib/components/widgets/BidiComponent/utils/theme"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
+import type { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
-import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
@@ -64,12 +71,12 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
     const getWidgetValue = useCallback(() => {
       const raw = widgetMgr.getJsonValue(widgetInfo)
 
-      if (!raw) {
+      if (isNullOrEmptyString(raw)) {
         return {}
       }
 
       try {
-        return JSON.parse(raw)
+        return JSON.parse(raw) as Record<string, unknown>
       } catch (e) {
         const err = ensureError(e)
         LOG.warn(
@@ -98,12 +105,13 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
     // when the payloads haven't changed, even if wrappers are re-instantiated.
     const parsedData = useMemo(() => {
       return parseBidiComponentData({
-        arrowBlobs: mixed?.arrowBlobs || undefined,
-        arrowData: arrowData?.data || undefined,
+        arrowBlobs: mixed?.arrowBlobs ?? undefined,
+        arrowData: arrowData?.data ?? undefined,
         bytes,
         data,
         json,
-        mixedJson: mixed?.json || undefined,
+        // Blank JSON means no mixed payload, not an empty document.
+        mixedJson: isNullOrEmptyString(mixed?.json) ? undefined : mixed?.json,
       })
     }, [data, json, arrowData?.data, bytes, mixed?.json, mixed?.arrowBlobs])
 
@@ -117,15 +125,20 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         componentName,
         componentRegistry,
         cssContent: cssContent?.trim(),
-        cssSourcePath: cssSourcePath || undefined,
+        cssSourcePath: isNullOrEmptyString(cssSourcePath)
+          ? undefined
+          : cssSourcePath,
         data: parsedData,
         fragmentId,
         getWidgetValue,
         htmlContent: htmlContent?.trim(),
         id,
+        // formId is a plain protobuf string. "" means the widget is not in a form.
         formId: element.formId || undefined,
-        jsContent: jsContent || undefined,
-        jsSourcePath: jsSourcePath || undefined,
+        jsContent: isNullOrEmptyString(jsContent) ? undefined : jsContent,
+        jsSourcePath: isNullOrEmptyString(jsSourcePath)
+          ? undefined
+          : jsSourcePath,
         theme,
         widgetMgr,
       }

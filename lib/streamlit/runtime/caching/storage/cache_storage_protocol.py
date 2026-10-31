@@ -30,7 +30,7 @@ How these classes work together
 - CacheStorageManager : each instance of this is able to create CacheStorage
 instances, and optionally to clear data of all cache storages.
 
-- CacheStorage : each instance of this is able to get, set, delete, and clear
+- CacheStorage : each instance of this is able to check, get, set, delete, and clear
 entries for a single `@st.cache_data` decorated function.
 
   ┌───────────────────────────────┐
@@ -46,6 +46,7 @@ entries for a single `@st.cache_data` decorated function.
      │                │  CacheStorage        │
      │ create(context)│                      │
      └────────────────►    - get             │
+                      │    - has             │
                       │    - set             │
                       │    - delete          │
                       │    - close (optional)│
@@ -102,6 +103,12 @@ class CacheStorageContext:
         Legacy parameter, that used in Streamlit current cache storage implementation.
         Could be ignored by cache storage implementation, if storage does not support
         persistence or it persistent by default.
+
+    max_size_bytes : int or None
+        The maximum serialized size of the in-memory cache in bytes.
+        If None, the cache storage will not limit its byte size. Custom storage
+        managers honor this setting only if they use
+        ``InMemoryCacheStorageWrapper`` or implement equivalent byte-size eviction.
     """
 
     function_key: str
@@ -109,6 +116,7 @@ class CacheStorageContext:
     ttl_seconds: float | None = None
     max_entries: int | None = None
     persist: Literal["disk"] | None = None
+    max_size_bytes: int | None = None
 
 
 class CacheStorage(Protocol):
@@ -124,6 +132,11 @@ class CacheStorage(Protocol):
     This is a responsibility of the concrete implementation to ensure thread safety
     guarantees.
     """
+
+    @abstractmethod
+    def has(self, key: str) -> bool:
+        """Return whether the key is present without reading its stored value."""
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get(self, key: str) -> bytes:

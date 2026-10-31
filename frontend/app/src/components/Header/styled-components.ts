@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "@streamlit/lib"
+import type { EmotionTheme } from "@streamlit/lib"
 
 export const StyledLogoContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.lg,
@@ -27,7 +27,7 @@ interface StyledHeaderProps {
 }
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
-  ({ theme, isTransparentBackground }) => ({
+  ({ theme, isTransparentBackground = false }) => ({
     position: "absolute",
     top: 0,
     left: 0,

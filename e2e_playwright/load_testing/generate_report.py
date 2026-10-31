@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +191,7 @@ def _generate_report(
         return "# Load Test Results\n\nNo results found.\n"
 
     metadata = metadata or {}
-    timestamp = metadata.get("timestamp", datetime.now(timezone.utc).isoformat())
+    timestamp = metadata.get("timestamp", datetime.now(UTC).isoformat())
     git_sha = metadata.get("git_sha", "unknown")
     git_branch = metadata.get("git_branch", "unknown")
 

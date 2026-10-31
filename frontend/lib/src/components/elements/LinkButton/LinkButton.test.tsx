@@ -24,13 +24,15 @@ import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import LinkButton, { Props } from "./LinkButton"
+import LinkButton, { type Props } from "./LinkButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
-  formatShortcutForDisplay: vi.fn(
-    (shortcut: string | null | undefined) =>
-      shortcut?.replace(/\+/g, " + ") || undefined
+  formatShortcutForDisplay: vi.fn((shortcut: string | null | undefined) =>
+    // The mock omits an empty shortcut.
+    shortcut === null || shortcut === undefined || shortcut === ""
+      ? undefined
+      : shortcut.replaceAll("+", " + ")
   ),
 }))
 
@@ -207,9 +209,8 @@ describe("LinkButton widget", () => {
     await user.click(screen.getByRole("link"))
 
     expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
-      props.element,
-      { fromUi: true },
-      fragmentId
+      props.element.id,
+      { formId: undefined, fragmentId: fragmentId, fromUser: true }
     )
   })
 

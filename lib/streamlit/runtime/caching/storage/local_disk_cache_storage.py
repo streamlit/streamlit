@@ -29,9 +29,9 @@ and to clear data from cache storage folder. It is also LocalDiskCacheStorageMan
 responsibility to check if the context is valid for the storage, and to log warning
 if the context is not valid.
 
-- LocalDiskCacheStorage : each instance of this is able to get, set, delete, and clear
-entries from disk for a single `@st.cache_data` decorated function if `persist="disk"`
-is used in CacheStorageContext.
+- LocalDiskCacheStorage : each instance of this is able to check, get, set, delete, and
+clear entries from disk for a single `@st.cache_data` decorated function if
+`persist="disk"` is used in CacheStorageContext.
 
 
     ┌───────────────────────────────┐
@@ -80,8 +80,6 @@ from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
 _LOGGER: Final = get_logger(__name__)
 
 # Streamlit directory where persisted @st.cache_data objects live.
-# (This is the same directory that @st.cache persisted objects live.
-# But @st.cache_data uses a different extension, so they don't overlap.)
 _CACHE_DIR_NAME: Final = "cache"
 
 # The extension for our persisted @st.cache_data objects.
@@ -133,6 +131,10 @@ class LocalDiskCacheStorage(CacheStorage):
     @property
     def max_entries(self) -> float:
         return float(self._max_entries) if self._max_entries is not None else math.inf
+
+    def has(self, key: str) -> bool:
+        """Return whether a persisted value exists without reading its contents."""
+        return self.persist == "disk" and os.path.isfile(self._get_cache_file_path(key))
 
     def get(self, key: str) -> bytes:
         """

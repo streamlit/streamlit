@@ -73,7 +73,7 @@ sns.despine()
 
 st.pyplot(fig)
 
-st.write("Advanced Seaborn figure using kwargs (low dpi):")
+st.write("Advanced Seaborn figure using deprecated kwargs (low dpi):")
 
 kwargs = {
     "dpi": 50,  # We use a low dpi to show a stark difference to the figure above.
@@ -82,14 +82,8 @@ kwargs = {
     "format": "png",  # Required for some Matplotlib backends.
 }
 
-# We need to set clear_figure=True, otherwise the global object
-# test below would not work.
-st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type]
-
-st.write("Figure using deprecated global object:")
-plot = plt.plot(data2)
-st.pyplot()
-plt.clf()
+# Deprecated savefig kwargs are still exercised here until removal.
+st.pyplot(fig, clear_figure=True, **kwargs)  # type: ignore[arg-type] # ty: ignore[invalid-argument-type]
 
 fig, ax = plt.subplots()
 st.pyplot(fig)
@@ -101,14 +95,17 @@ fig_width_test, ax_width_test = plt.subplots(figsize=(4, 3))
 ax_width_test.plot([1, 2, 3, 4], [1, 4, 2, 3])
 ax_width_test.set_title("Width Parameter Test")
 
-st.write("width='content' (default):")
-st.pyplot(fig_width_test, width="content")
+st.write("width='content':")
+with st.container(key="pyplot-width-content"):
+    st.pyplot(fig_width_test, width="content")
 
 st.write("width='stretch':")
-st.pyplot(fig_width_test, width="stretch")
+with st.container(key="pyplot-width-stretch"):
+    st.pyplot(fig_width_test, width="stretch")
 
 st.write("width=200 (pixels):")
-st.pyplot(fig_width_test, width=200)
+with st.container(key="pyplot-width-pixel"):
+    st.pyplot(fig_width_test, width=200)
 
 
 st.write(
@@ -127,3 +124,11 @@ with st.container(border=True, key="content-pyplot-in-container"):
 
 with st.container(border=True, key="pixel-pyplot-in-container"):
     st.pyplot(fig_regression, width=500)
+
+st.header("alt parameter")
+fig_alt, ax_alt = plt.subplots()
+ax_alt.hist(np.random.normal(1, 1, size=50), bins=10)
+with st.container(key="pyplot-alt-labeled"):
+    st.pyplot(fig_alt, alt="Histogram of sample values")
+with st.container(key="pyplot-alt-unlabeled"):
+    st.pyplot(fig_alt)

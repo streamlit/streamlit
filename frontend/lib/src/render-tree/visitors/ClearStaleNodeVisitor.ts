@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:
@@ -29,6 +34,12 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *    then we indicate this to our children in case they were not modified by the current run,
  *    which means they are stale.
  * 4. We recursively clear our children.
+ *
+ * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
+ * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
+ * the agent API's message buffer. The agent API checks writes against what
+ * that buffer keeps, so a rule that differs lets an agent write to widgets the
+ * browser removed.
  *
  * Usage:
  * ```typescript
@@ -97,7 +108,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     // Recursively clear our children.
     const newChildren: AppNode[] = []
     let childrenChanged = false
-    node.children.forEach(child => {
+    for (const child of node.children) {
       const filteredChild = child.accept(clearStaleNodeVisitor ?? this)
       if (filteredChild !== child) {
         childrenChanged = true
@@ -105,7 +116,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
-    })
+    }
 
     // Performance optimization: If the children haven't changed, return the same node.
     if (!childrenChanged) {
@@ -123,6 +134,21 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   }
 
   visitElementNode(node: ElementNode): AppNode | undefined {
+    // Toasts are fire-and-forget event notifications whose lifetime is governed
+    // by the frontend toast queue (react-aria timeout / manual dismissal), not
+    // by the element tree. Never treat them as stale: a toast emitted in a run
+    // that is interrupted by st.rerun() carries the interrupted run's
+    // scriptRunId, so pruning it here can remove its node before the Toast
+    // component mounts and registers it with the queue - which, when the
+    // retained delta and the next run's messages are applied in a single React
+    // batch, means the toast would never show at all (issue #7740). The node
+    // renders nothing on its own (the visible toast lives in a portal), so
+    // keeping it is safe; it is overwritten in place when a toast is re-emitted
+    // at the same delta path.
+    if (node.element.type === "toast") {
+      return node
+    }
+
     if (this.isFragmentRun) {
       // If we're currently running a fragment, nodes unrelated to the fragment
       // shouldn't be cleared. This can happen when,

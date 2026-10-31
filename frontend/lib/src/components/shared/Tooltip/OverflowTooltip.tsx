@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
+import {
+  type ReactElement,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { StyledEllipsizedDiv, StyledWrapper } from "./styled-components"
-import Tooltip, { Placement } from "./Tooltip"
+import Tooltip, { type Placement } from "./Tooltip"
 
 interface OverflowTooltipProps {
   content: ReactNode
@@ -42,7 +48,7 @@ function OverflowTooltip({
   const [allowTooltip, setAllowTooltip] = useState(false)
 
   useEffect(() => {
-    const newAllowTooltip = childRef?.current
+    const newAllowTooltip = childRef.current
       ? // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
         childRef.current.offsetWidth < childRef.current.scrollWidth
       : false

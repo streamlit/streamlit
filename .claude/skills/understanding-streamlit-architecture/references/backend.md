@@ -43,16 +43,26 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
 ## AppSession (`lib/streamlit/runtime/app_session.py`)
 
-Represents a single browser tab.
+Represents a single browser tab or agent API session.
 
-**Lifecycle**:
+**Lifecycle (browser)**:
 1. WebSocket connects -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
 3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
+
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
+
+**Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
+
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has been sent to the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs. Only sessions that call `track_settling()` (agent sessions) keep it.
+
+- Creating a runner clears the signal.
+- The runner's `SHUTDOWN` marks a settle as pending and requests a flush cycle. After sending a session's flushed batch, the Runtime loop calls `on_flushed_messages_sent()`, which settles the session once its queue is empty.
+- `await wait_until_settled()` has no timeout of its own, so callers wrap it in `asyncio.timeout`.
 
 ## Session bootstrap ordering
 
@@ -83,6 +93,7 @@ Executes user scripts in isolated thread.
 - `SCRIPT_STOPPED_WITH_COMPILE_ERROR`
 - `SCRIPT_STOPPED_FOR_RERUN` (st.rerun() called)
 - `FRAGMENT_STOPPED_WITH_SUCCESS`
+- `SHUTDOWN` (the ScriptRunner is exiting)
 
 **Interrupt points**: Most `st.*` commands check for stop/rerun requests and raise `RerunException` or `StopException`.
 
@@ -112,14 +123,22 @@ The `st` object users interact with.
 - `LockedCursor`: Fixed position for updating elements
 - Delta path: `[0, 2, 3]` uniquely identifies element position
 
+**Block delta paths**: `_block()` does not always write to the position that the parent cursor points to.
+
+- It can redirect the write into one or more outside-container wrapper blocks, so the new block lands deeper in the tree (see the fragment system section below).
+- Blocks that re-send their own proto later, such as `st.status` and `st.dialog`, must read `DeltaGenerator._block_delta_path` after `_block()` returns. Do not read `delta_path` from the parent cursor.
+- A stored path that points at a wrapper instead of the block makes the update overwrite the wrapper and blank the app.
+
 **Element creation**:
 ```
 st.button("Click")
   -> ButtonMixin.button()
-  -> _enqueue("button", ButtonProto(...))
-  -> ForwardMsg with delta path
+  -> _enqueue("button", ButtonProto(...), agent_props=...)
+  -> ForwardMsg with delta path; agent_props on metadata when set
   -> ScriptRunContext.enqueue()
 ```
+
+`agent_props` is JSON describing the command that emitted the delta: the public command name, its parameters, and a widget's value schema. Only a session the agent API created attaches it (`agent_spec.is_recording()`); a browser session passes `None`. See [communication.md](communication.md#agent-command-descriptions).
 
 ## SessionState (`lib/streamlit/runtime/state/session_state.py`)
 
@@ -143,7 +162,9 @@ register_widget(
 
 **Lifecycle hooks**:
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks
-- `on_script_finished()`: Clean up stale widgets not seen this run
+- `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
+
+**Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
 
 ## Caching (`lib/streamlit/runtime/caching/`)
 
@@ -157,6 +178,8 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay. A replayed description whose `data` has a `url` registers its Arrow copy again from the element's payload, under the replayed element's delta path; the entry stores no copy of its own.
+
 ## Web server (`lib/streamlit/web/server/`)
 
 **Key endpoints**:
@@ -166,6 +189,8 @@ register_widget(
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
+- `/_stcore/agent/interact`: Agent API (POST only; off unless `server.enableAgentApi` is set)
+- `/_stcore/agent/openapi.json`: The agent API's OpenAPI document (GET; always served, and with the API off it only reports that the API is disabled, via `info.x-streamlit-agent-api`)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -176,6 +201,8 @@ Browser connects -> Runtime.connect_session()
                  -> Messages flow bidirectionally
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
+
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies. While `browser.gatherUsageStats` is on, `runtime/agent/usage.py` counts each `interact()` call, each session created, and, with the API off, each POST that passes the Host, Origin, and content-type checks. The next page profile a browser session reports carries the counts. `GET /_stcore/agent/openapi.json` serves the OpenAPI document `runtime/agent/protocol.py` builds from the error catalog and the request validator; with the API off, it only reports that. Every response from either route carries `Link: <openapi.json>; rel="service-desc"`, and the app's `index.html` links the document too.
 
 ## Key abstractions
 
@@ -225,11 +252,26 @@ sequenceDiagram
 - Each fragment gets a unique `fragment_id` (hash of function identity + delta-path context)
 - Frontend tracks `fragmentIdsThisRun` to know which fragments are active
 - Delta messages include `fragment_id` for proper tree updates
+- `@st.fragment(key=...)` also indexes that `fragment_id` under the user-facing name in `FragmentStorage` (`"app"` and `"fragment"` are reserved and cannot be used as keys)
+
+**Keyed / event-scoped reruns**:
+- `st.rerun("<key>")` or `st.rerun(["k1", "k2"])` from a widget callback (`on_click` / `on_change`) resolves those names to fragment ids and reruns only those fragments, replacing the interaction's default rerun.
+- This form is only valid from a callback. Calling it from the main script body or a fragment body raises `StreamlitAPIException`.
+- When the interaction's default rerun is app-wide (the widget lives in the main script, not inside a fragment), a sibling callback that returns normally or calls `st.rerun()` escalates the result to a full-app rerun. Interactions originating inside a fragment keep the targeted scope unless a sibling explicitly calls plain `st.rerun()`; a pending `st.switch_page()` is exempt.
+- A full-app run prunes `FragmentStorage` down to the fragments that actually executed during it, so a fragment skipped by a `False` conditional loses its key.
 
 **Staleness with fragments**:
 - Elements track both `scriptRunId` and `fragmentId`
 - During fragment reruns, stale cleanup uses `scriptRunId` + `fragmentIdsThisRun` to prune affected subtrees while preserving unrelated nodes
 - Main script elements are preserved during fragment-only reruns
+
+**Outside-container writes**:
+- A fragment can write into a container that the script declares outside the fragment body.
+- The first such write creates a layout-transparent wrapper block inside that container. See `_needs_outside_wrapper()` and `_get_or_create_outside_wrapper()` in `lib/streamlit/delta_generator.py`.
+- The wrapper isolates the writes of one fragment, so repeated fragment reruns overwrite in place instead of appending past the end of the outside container.
+- `FragmentStorage` caches each wrapper as an `OutsideContainerWrapper` (`lib/streamlit/runtime/outside_container_wrapper.py`), keyed by fragment and container.
+- Before a fragment reruns, the runtime evicts the wrappers whose outside containers this fragment rebuilds, then re-emits and resets the wrappers that survive (`_reset_outside_wrappers()` in `lib/streamlit/runtime/fragment.py`). A full script run clears all wrappers.
+- Each wrapper adds a level to the delta path. Code that stores a delta path for a later update must use the path that the write actually reached. See `_block_delta_path` in the `DeltaGenerator` section above.
 
 **Script events for fragments**:
 - `FRAGMENT_STOPPED_WITH_SUCCESS`: Fragment completed successfully
@@ -277,6 +319,22 @@ sequenceDiagram
     Storage-->>SM: Session entry expires (next connect creates a new AppSession)
 ```
 
+**Reconnecting to a still-active session**:
+
+An unclean WebSocket close can leave a session still marked active when a new
+connection arrives reusing the same `existing_session_id` (before the previous
+connection's cleanup runs). In this case `WebsocketSessionManager.connect_session()`
+disconnects the stale active session first (moving it to storage) and then
+reconnects the new client to it, preserving state instead of creating a brand-new
+session and discarding the previous state.
+
+To keep the old and new connections from interfering during this handoff,
+`Runtime.disconnect_session()`, `Runtime.handle_backmsg()`, and
+`Runtime.handle_backmsg_deserialization_exception()` accept an optional `client`.
+When provided, the call is a no-op if the session's current client is no longer
+that client, so the old connection's late cleanup or in-flight BackMsgs cannot
+disrupt the newly reconnected client.
+
 **Key components**:
 - `WebsocketSessionManager` (`lib/streamlit/runtime/websocket_session_manager.py`): Manages session lifecycle
 - `MemorySessionStorage` (`lib/streamlit/runtime/memory_session_storage.py`): Default in-memory storage with TTL
@@ -300,7 +358,7 @@ sequenceDiagram
 
 ## Media file management (`lib/streamlit/runtime/media_file_manager.py`)
 
-Media files (images, audio, video) are managed separately from the protobuf element tree.
+Media files (images, audio, video, and an agent session's Arrow data copies from `elements/lib/agent_data.py`) are managed separately from the protobuf element tree.
 
 **Flow**:
 1. `st.image(data)` -> `MediaFileManager.add()` registers file with unique ID

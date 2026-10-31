@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-import { ErrorCode as FileErrorCode, type FileRejection } from "react-dropzone"
+import { ErrorCode as FileErrorCode } from "react-dropzone"
 
 import {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
-  type IFileURLs,
 } from "@streamlit/protobuf"
 
 import type { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import type { FileUploadClient } from "~lib/FileUploadClient"
 import { createTestFile } from "~lib/test_util"
-import { getRejectedFileInfo } from "~lib/util/FileHelper"
+import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { createDropHandler } from "./createDropHandler"
 import { validateFileType } from "./fileUploadUtils"
@@ -183,7 +182,9 @@ describe("createDropHandler", () => {
   })
 
   it("recovers the file from a TooManyFiles rejection when single-file mode and nothing else was accepted", () => {
-    const fetchFileURLs = vi.fn().mockResolvedValue([] as IFileURLs[])
+    const fetchFileURLs = vi
+      .fn()
+      .mockResolvedValue([] as FileURLsProto.$Properties[])
     const params = createMockParams({
       acceptMultipleFiles: false,
       uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
@@ -211,7 +212,9 @@ describe("createDropHandler", () => {
   })
 
   it("keeps only the first file and rejects the rest in single-file mode when multiple files bypass react-dropzone", () => {
-    const fetchFileURLs = vi.fn().mockResolvedValue([] as IFileURLs[])
+    const fetchFileURLs = vi
+      .fn()
+      .mockResolvedValue([] as FileURLsProto.$Properties[])
     const params = createMockParams({
       acceptMultipleFiles: false,
       uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
@@ -236,7 +239,9 @@ describe("createDropHandler", () => {
   })
 
   it("keeps all files in multi-file mode when several bypass react-dropzone", () => {
-    const fetchFileURLs = vi.fn().mockResolvedValue([] as IFileURLs[])
+    const fetchFileURLs = vi
+      .fn()
+      .mockResolvedValue([] as FileURLsProto.$Properties[])
     const params = createMockParams({
       acceptMultipleFiles: true,
       uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
@@ -253,7 +258,9 @@ describe("createDropHandler", () => {
   it("calls uploadClient.fetchFileURLs with accepted files", async () => {
     const file = createTestFile("up.txt")
     const fileURLs = FileURLsProto.create({})
-    const fetchFileURLs = vi.fn().mockResolvedValue([fileURLs] as IFileURLs[])
+    const fetchFileURLs = vi
+      .fn()
+      .mockResolvedValue([fileURLs] as FileURLsProto.$Properties[])
     const params = createMockParams({
       uploadClient: { fetchFileURLs } as unknown as FileUploadClient,
     })

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 28
+NUM_SELECTBOXES = 35
 
 
 def get_selectbox_input(
@@ -151,6 +151,7 @@ def test_selectbox_has_correct_initial_values(app: Page):
     expect_markdown(app, "value 21: None")
     expect_markdown(app, "value 22: None")
     expect_markdown(app, "value 23: None")
+    expect_markdown(app, "value 26: None")
 
 
 def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFunction):
@@ -191,6 +192,13 @@ def test_handles_option_selection_via_typing(app: Page):
     # Click to open dropdown, then fill to filter by the desired option:
     selectbox_input.click()
     selectbox_input.fill("e2e/scripts/st_warning.py")
+    # Wait for the filter to settle before Enter (fill can race the React update).
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(
+        selection_dropdown.get_by_role(
+            "option", name="e2e/scripts/st_warning.py", exact=True
+        )
+    ).to_be_visible()
     selectbox_input.press("Enter")
 
     # Check that selection worked:
@@ -203,12 +211,27 @@ def test_shows_correct_options_via_fuzzy_search(
     """Test that the fuzzy matching of options via typing works correctly."""
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Click to open dropdown, then fill to filter:
+    # Click to open dropdown, then type to filter:
     selectbox_input.click()
-    selectbox_input.fill("exp")
+    selectbox_input.press_sequentially("exp")
 
-    # Check filtered options
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    expect(options).to_have_count(1)
+    expect(options.first).to_have_text("e2e/scripts/st_expander.py")
+
+    # Typing alone must set aria-activedescendant on the Enter target (#16841).
+    # Assert without arrow keys so the check cannot pass via keyboard navigation.
+    expect(options.first).to_have_attribute("data-focused", "true")
+    expect(selectbox_input).to_have_attribute(
+        "aria-activedescendant", re.compile(r".+")
+    )
+    active_id = selectbox_input.get_attribute("aria-activedescendant")
+    assert active_id is not None
+    expect(app.locator(f'[id="{active_id}"]')).to_have_text(
+        "e2e/scripts/st_expander.py"
+    )
+
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -241,6 +264,34 @@ def test_type_to_search_replaces_committed_value(app: Page):
 
     selectbox_input.press("Enter")
     expect_markdown(app, "value 1: female")
+
+
+def test_escape_clears_typed_query_and_restores_committed_value(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16004.
+
+    While the user is actively filtering, pressing Escape must discard the
+    typed query and restore the committed label. The committed value must not change.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
+    expect(selectbox_input).to_have_value("male")
+
+    selectbox_input.click()
+    selectbox_input.press_sequentially("fem")
+    # The query has replaced the committed label in the input.
+    expect(selectbox_input).to_have_value("fem")
+
+    # Verify the dropdown is filtering on the query before Escape.
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
+
+    selectbox_input.press("Escape")
+
+    # The typed query is cleared and the committed label is restored.
+    expect(selectbox_input).to_have_value("male")
+    # The dropdown is closed after Escape.
+    expect(selection_dropdown).not_to_be_visible()
+    # The committed selection did not change — no rerun with a new value.
+    expect_markdown(app, "value 1: male")
 
 
 def test_empty_selectbox_behaves_correctly(
@@ -433,6 +484,11 @@ def test_accept_new_options_feature(app: Page):
     # Check that the new option was accepted and selected
     expect_markdown(app, "value 15: new_custom_option")
     expect_markdown(app, "value 15 (session_state): new_custom_option")
+    # Custom-value Enter must close the menu; otherwise a second Enter can
+    # re-commit the first option after the filter resets.
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 15: new_custom_option")
 
 
 def test_does_not_accept_new_options_feature(app: Page):
@@ -586,13 +642,16 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     selectbox_input.click()
     expect(selectbox_input).to_be_focused()
 
-    # ArrowDown reliably opens the dropdown (backup for pointer-triggered open,
-    # matching select_selectbox_option) and highlights the first option.
-    selectbox_input.press("ArrowDown")
+    # ArrowDown opens if click did not; ArrowUp clamps to first for one-ArrowDown→No.
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    if selectbox_input.get_attribute("aria-expanded") != "true":
+        selectbox_input.press("ArrowDown")
     expect(selection_dropdown).to_be_visible()
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
+    for _ in range(3):
+        selectbox_input.press("ArrowUp")
+    expect(options.first).to_have_attribute("data-focused", "true")
 
     # Typing must NOT filter the list: character input is blocked, so all
     # options stay visible.
@@ -605,8 +664,7 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     # toHaveValue("")).
     expect(selectbox_input).to_have_value("")
 
-    # Keyboard navigation still selects: a second ArrowDown reaches "No" and
-    # Enter commits it, proving Arrow/Enter work after focusing via click.
+    # One ArrowDown from the first option moves to "No"; Enter commits.
     selectbox_input.press("ArrowDown")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 23: No")
@@ -658,6 +716,43 @@ def test_selectbox_virtualizes_large_option_list(
     selectbox_input.fill("Option 987")
     selectbox_input.press("Enter")
     expect_markdown(app, "value 25: Option 987")
+
+
+def test_selectbox_fuzzy_filter_mode_keeps_non_contiguous_matches(app: Page):
+    """Regression test for https://github.com/streamlit/streamlit/issues/16003.
+
+    Fuzzy (default) filtering must keep non-contiguous matches. The react-aria
+    ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+    result, dropping matches whose query is not a contiguous substring.
+    """
+    selectbox_input = get_selectbox_input(app, "selectbox 26 (fuzzy filter mode)")
+    selectbox_input.click()
+    selectbox_input.fill("ape")
+
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    options = selection_dropdown.get_by_role("option")
+    # "Grape" (contains "ape") and "Apple" (fuzzy A-p-...-e) both match; the
+    # contiguous match ranks first in the fuzzy-sorted result.
+    expect(options).to_have_count(2)
+    expect(options.nth(0)).to_have_text("Grape")
+    expect(options.nth(1)).to_have_text("Apple")
+    # Non-matching options must NOT be shown, and there must be no empty state.
+    expect(
+        selection_dropdown.get_by_role("option", name="Banana", exact=True)
+    ).to_have_count(0)
+    expect(
+        selection_dropdown.get_by_role("option", name="No results", exact=True)
+    ).to_have_count(0)
+
+    # A query that is not a contiguous substring of any option must still
+    # fuzzy-match: "aple" -> "Apple" only (A-p-l-e), without falling back to the
+    # "No results" empty state.
+    selectbox_input.fill("aple")
+    expect(options).to_have_count(1)
+    expect(options.nth(0)).to_have_text("Apple")
+
+    selectbox_input.press("Enter")
+    expect_markdown(app, "value 26: Apple")
 
 
 # --- Query param binding tests ---
@@ -745,3 +840,195 @@ def test_selectbox_query_param_non_clearable_empty_value(page: Page, app_port: i
     # Non-clearable selectbox should reject empty value, show default "cat"
     expect_prefixed_markdown(page, "bound select value:", "cat")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_select="))
+
+
+def test_selectbox_in_sidebar_flips_up_within_viewport(app: Page):
+    """A selectbox near the bottom of the sidebar must flip its dropdown up and
+    stay within the viewport instead of opening downward and overflowing past
+    the bottom.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16181,
+    where flip was disabled inside the sidebar so the dropdown always opened
+    downward and got clipped.
+    """
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    selectbox = get_element_by_key(app, "sidebar_bottom_select")
+    selectbox.scroll_into_view_if_needed()
+
+    trigger_box = selectbox.bounding_box()
+    assert trigger_box is not None, "selectbox trigger must have a bounding box"
+
+    selectbox.locator("input").click()
+
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    expect(dropdown.get_by_role("option")).to_have_count(7)
+
+    dropdown_box = dropdown.bounding_box()
+    assert dropdown_box is not None, "dropdown must have a bounding box"
+
+    viewport = app.viewport_size
+    assert viewport is not None
+
+    # Primary regression check: the dropdown must not overflow past the bottom
+    # of the viewport. A 1px epsilon guards against subpixel layout differences.
+    epsilon = 1
+    assert dropdown_box["y"] + dropdown_box["height"] <= viewport["height"] + epsilon, (
+        f"dropdown overflows the viewport bottom: {dropdown_box}, viewport={viewport}"
+    )
+
+    # The dropdown must open above the trigger (flip up), not below it.
+    assert dropdown_box["y"] < trigger_box["y"], (
+        f"dropdown did not flip up: dropdown={dropdown_box}, trigger={trigger_box}"
+    )
+
+
+def test_selectbox_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    ignore_input = get_selectbox_input(app, "Ignore change selectbox")
+
+    # Filtering does not commit the value, so Python and the URL remain unchanged.
+    ignore_input.click()
+    ignore_input.fill("be")
+    expect(ignore_input).to_have_value("be")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_select="))
+
+    # Reset the combobox so the later option click does not toggle an already-open dropdown.
+    ignore_input.press("Escape")
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).not_to_be_visible()
+
+    # Choosing an option updates the URL without rerunning the app.
+    select_selectbox_option(app, "Ignore change selectbox", "beta")
+
+    # Extra settle on top of select_selectbox_option's wait_for_app_run, to catch a delayed rerun.
+    wait_for_app_run(app)
+
+    # Verify no rerun occurred (run count should still be 1)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_input).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "alpha")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_select=beta"))
+
+    # Click button to trigger a rerun - buffered value should be sent
+    app.get_by_role("button", name="Apply ignore selectbox", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore selectbox value: beta", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore selectbox value: beta", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_selectbox_input(app, "Ignore change selectbox")).to_have_value("beta")
+    expect_prefixed_markdown(app, "Ignore selectbox value:", "beta")
+
+
+def test_selectbox_required_blocks_empty_form_submits_and_clearing(app: Page):
+    """Test that required gates empty form submits and blocks clearing a selection."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+
+    country_widget = get_element_by_key(app, "required_country")
+    city_widget = get_element_by_key(app, "required_city")
+    country_input = country_widget.get_by_role("combobox")
+    expect(country_input).to_have_attribute("aria-required", "true")
+    expect(country_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    expect(country_widget.get_by_test_id("stSelectboxErrorIcon")).to_have_count(0)
+
+    # An empty form submit is blocked and every empty field shows the error.
+    submit_button = app.get_by_role(
+        "button", name="Submit required selectbox form", exact=True
+    )
+    submit_button.click()
+    expect(country_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(city_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(country_widget.get_by_test_id("stSelectboxErrorIcon")).to_be_visible()
+    expect(country_input).to_have_attribute("aria-invalid", "true")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Selecting an option clears that field's error, but the other one still blocks.
+    select_selectbox_option(app, "Required country", "Germany")
+    expect(country_widget.get_by_role("alert")).to_have_count(0)
+    submit_button.click()
+    expect(city_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(country_widget.get_by_role("alert")).to_have_count(0)
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    # Once every required field has a value, the form submits.
+    select_selectbox_option(app, "Required city", "Berlin")
+    submit_button.click()
+    wait_for_app_run(app)
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required country: Germany")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(city_widget.get_by_role("alert")).to_have_count(0)
+    # clear_on_submit resets the fields after the successful submit.
+    expect(country_input).to_have_value("")
+
+    # Outside a form, a required selectbox has no clear button.
+    color_widget = get_element_by_key(app, "required_color")
+    color_input = color_widget.get_by_role("combobox")
+    expect(color_widget.get_by_role("button", name="Clear value")).to_have_count(0)
+    select_selectbox_option(app, "Required color", "green")
+    expect_markdown(app, "required color: green")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(color_widget.get_by_role("button", name="Clear value")).to_have_count(0)
+
+    # Escape does not clear the selection.
+    color_input.click()
+    color_input.press("Escape")
+    expect(color_input).to_have_value("green")
+
+    # Deleting the text and blurring restores the selection without a rerun.
+    color_input.fill("")
+    color_input.blur()
+    expect(color_input).to_have_value("green")
+    wait_for_app_run(app)
+    expect_markdown(app, "required color: green")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+
+    # A different option, including a new one, can still replace the selection.
+    color_input.fill("purple")
+    color_input.press("Enter")
+    wait_for_app_run(app)
+    expect_markdown(app, "required color: purple")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    # Outside a form there is no empty commit, so no error is ever shown.
+    expect(color_widget.get_by_role("alert")).to_have_count(0)
+
+    # A hidden label omits the marker but keeps aria-required.
+    hidden_widget = get_element_by_key(app, "required_hidden_select")
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+    expect(hidden_widget.get_by_role("combobox")).to_have_attribute(
+        "aria-required", "true"
+    )
+
+
+def test_selectbox_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error chrome."""
+    widget = get_element_by_key(themed_app, "required_country")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_selectbox-required_marker")
+
+    themed_app.get_by_role(
+        "button", name="Submit required selectbox form", exact=True
+    ).click()
+    expect(widget.get_by_test_id("stSelectboxErrorIcon")).to_be_visible()
+    assert_snapshot(widget, name="st_selectbox-required_error")

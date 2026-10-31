@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import Button, {
   BaseButtonKind,
@@ -33,18 +35,32 @@ import {
   type StyledToolbarWrapperProps,
 } from "./styled-components"
 
+/**
+ * Compose an icon-only toolbar button's accessible name.
+ * The tooltip and visible label stay as `label`. When `labelContext` is
+ * non-blank, aria-label becomes `{label}: {context}`
+ * (e.g. "Fullscreen: Revenue table").
+ */
+function toolbarActionAriaLabel(label: string, labelContext?: string): string {
+  const context = labelContext?.trim()
+  return isNullOrEmptyString(context) ? label : `${label}: ${context}`
+}
+
 export interface ToolbarActionProps {
   label: string
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
+  /** Element name composed into aria-label only (not the tooltip). */
+  labelContext?: string
 }
 
 export function ToolbarAction({
   label,
-  show_label,
+  show_label = false,
   icon,
   onClick,
+  labelContext,
 }: ToolbarActionProps): ReactElement {
   const theme = useEmotionTheme()
 
@@ -70,13 +86,11 @@ export function ToolbarAction({
       >
         <Button
           onClick={event => {
-            if (onClick) {
-              onClick()
-            }
+            onClick()
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
-          aria-label={label}
+          aria-label={toolbarActionAriaLabel(label, labelContext)}
         >
           {icon && (
             <Icon
@@ -99,21 +113,27 @@ export interface ToolbarProps {
   locked?: boolean
   target?: StyledToolbarWrapperProps["target"]
   disableFullscreenMode?: boolean
+  /**
+   * Element name composed into Fullscreen / Close fullscreen aria-labels.
+   * Child ToolbarActions must pass the same prop.
+   */
+  labelContext?: string
 }
 
 const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
-  isFullScreen,
-  locked,
+  isFullScreen = false,
+  locked = false,
   children,
   target,
-  disableFullscreenMode,
+  disableFullscreenMode = false,
+  labelContext,
 }): ReactElement => {
   const showFullscreenButton =
-    onExpand && !disableFullscreenMode && !isFullScreen
+    onExpand !== undefined && !disableFullscreenMode && !isFullScreen
   const showCloseFullscreenButton =
-    onCollapse && !disableFullscreenMode && isFullScreen
+    onCollapse !== undefined && !disableFullscreenMode && isFullScreen
 
   return (
     <StyledToolbarWrapper
@@ -129,6 +149,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
             label="Fullscreen"
             icon={Fullscreen}
             onClick={() => onExpand()}
+            labelContext={labelContext}
           />
         )}
         {showCloseFullscreenButton && (
@@ -136,6 +157,7 @@ const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
             label="Close fullscreen"
             icon={FullscreenExit}
             onClick={() => onCollapse()}
+            labelContext={labelContext}
           />
         )}
       </StyledToolbar>

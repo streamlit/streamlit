@@ -264,6 +264,19 @@ v25 = st.selectbox(
 )
 st.write("value 25:", v25)
 
+# Regression test for https://github.com/streamlit/streamlit/issues/16003:
+# fuzzy (default) filter mode must keep non-contiguous matches. The react-aria
+# ComboBox used to apply its own "contains" filter on top of Streamlit's fuzzy
+# result, dropping matches whose query is not a contiguous substring (e.g. "ape"
+# fuzzy-matches "Apple", and "aple" is not a contiguous substring of any option).
+v26 = st.selectbox(
+    "selectbox 26 (fuzzy filter mode)",
+    ["Apple", "Apricot", "Banana", "Cherry", "Grape"],
+    index=None,
+    key="selectbox_26",
+)
+st.write("value 26:", v26)
+
 # --- Bound widgets (query-params) ---
 
 v_bound = st.selectbox(
@@ -282,3 +295,78 @@ v_bound_clear = st.selectbox(
     bind="query-params",
 )
 st.write("bound select clear value:", v_bound_clear)
+
+# --- on_change="ignore" selectbox ---
+# Run counter so test_selectbox_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_select = st.selectbox(
+    "Ignore change selectbox",
+    ["alpha", "beta", "gamma"],
+    key="ignore_select",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore selectbox value:", ignore_select)
+
+if st.button("Apply ignore selectbox", key="apply_ignore_selectbox"):
+    st.write("Applied ignore selectbox value:", ignore_select)
+
+# --- required selectboxes ---
+st.markdown("Required selectboxes:")
+
+with st.form("required_selectbox_form", clear_on_submit=True):
+    st.selectbox(
+        "Required country",
+        ["France", "Germany", "Italy"],
+        index=None,
+        key="required_country",
+        required=True,
+    )
+    st.selectbox(
+        "Required city",
+        ["Paris", "Berlin", "Rome"],
+        index=None,
+        key="required_city",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required selectbox form")
+st.write("required form submitted:", required_form_submitted)
+st.write("required country:", st.session_state.get("required_country"))
+
+required_color = st.selectbox(
+    "Required color",
+    ["red", "green", "blue"],
+    index=None,
+    key="required_color",
+    required=True,
+    accept_new_options=True,
+)
+st.write("required color:", required_color)
+
+st.selectbox(
+    "Required hidden",
+    ["a", "b"],
+    index=None,
+    key="required_hidden_select",
+    required=True,
+    label_visibility="hidden",
+)
+
+# Regression test for https://github.com/streamlit/streamlit/issues/16181:
+# a selectbox near the bottom of the sidebar must flip its dropdown up and stay
+# within the viewport instead of opening downward and overflowing. The
+# fixed-height spacer pushes the trigger toward the bottom so there is
+# insufficient room below for the dropdown.
+with st.sidebar:
+    st.container(height=500, border=False)
+    v_sidebar_bottom = st.selectbox(
+        "sidebar selectbox (bottom)",
+        [f"Option {i}" for i in range(1, 8)],
+        index=None,
+        key="sidebar_bottom_select",
+    )
+    st.write("sidebar bottom value:", v_sidebar_bottom)

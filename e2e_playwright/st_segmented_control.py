@@ -379,3 +379,97 @@ not_required_sc = st.segmented_control(
     key="sc_not_required",
 )
 st.text(f"not_required_sc: {not_required_sc}")
+
+# --- Wrap parameter ---
+
+st.header("Segmented control - wrap")
+
+_WRAP_OPTIONS = [
+    "Today",
+    "7 days",
+    "30 days",
+    "Quarter",
+    "Year",
+    "All time",
+    "Custom range",
+    "Last 90 days",
+    "Last 180 days",
+    "Year to date",
+    "Previous year",
+    "Lifetime",
+]
+
+st.segmented_control(
+    "Wrap false scroll",
+    _WRAP_OPTIONS,
+    wrap=False,
+    width=220,
+    key="sc_wrap_false",
+)
+
+with st.container(horizontal=True, width=260, key="sc_wrap_auto_horizontal"):
+    st.segmented_control(
+        "Wrap auto horizontal",
+        _WRAP_OPTIONS,
+        key="sc_wrap_auto_h",
+    )
+
+st.segmented_control(
+    "Wrap false selected into view",
+    _WRAP_OPTIONS,
+    default="Lifetime",
+    wrap=False,
+    width=220,
+    key="sc_wrap_selected_into_view",
+)
+
+_sc_wrap_toggle = st.toggle("Enable SC wrap", value=False, key="sc_wrap_toggle")
+_sc_wrap_val = st.segmented_control(
+    "Wrap toggle preserves selection",
+    ["Alpha", "Beta", "Gamma"],
+    default="Beta",
+    wrap=_sc_wrap_toggle,
+    key="sc_wrap_preserve",
+)
+st.text(f"sc_wrap_preserve: {_sc_wrap_val}")
+
+# --- on_change="ignore" segmented control ---
+# Reuses the script-run counter above ("Runs:").
+
+ignore_single = st.segmented_control(
+    "Ignore change segmented control",
+    ["alpha", "beta", "gamma"],
+    key="ignore_sc",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_sc: {ignore_single}")
+
+ignore_multi = st.segmented_control(
+    "Ignore change multi segmented control",
+    ["Red", "Green", "Blue"],
+    selection_mode="multi",
+    key="ignore_sc_multi",
+    on_change="ignore",
+    bind="query-params",
+)
+st.text(f"ignore_sc_multi: {ignore_multi}")
+
+if st.button("Apply ignore segmented control", key="apply_ignore_sc"):
+    st.text(f"Applied ignore segmented control: {ignore_single}")
+    st.text(f"Applied ignore multi segmented control: {ignore_multi}")
+
+# Keep this block last so it does not shift elements that earlier snapshot
+# tests capture.
+# A stretched, selected segment sits directly above a dataframe so the
+# dataframe toolbar overlaps that segment on hover.
+with st.container(key="segmented_control_toolbar_overlap"):
+    st.segmented_control(
+        "Toolbar overlap",
+        ["Left", "Right"],
+        key="segmented_control_toolbar_overlap_sc",
+        default="Right",
+        width="stretch",
+        label_visibility="collapsed",
+    )
+    st.dataframe({"a": [1, 2, 3]})

@@ -1,4 +1,4 @@
-import { ReactNode } from "react"
+import type { ReactNode } from "react"
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -18,15 +18,15 @@ import { ReactNode } from "react"
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { Element, IAlert, streamlit } from "@streamlit/protobuf"
+import { type Alert, Element, streamlit } from "@streamlit/protobuf"
 
 import { FlexContextProvider } from "./FlexContext"
 import {
   extractLayoutSubElement,
   useLayoutStyles,
-  UseLayoutStylesShape,
+  type UseLayoutStylesShape,
 } from "./useLayoutStyles"
-import { Direction, MinFlexElementWidth } from "./utils"
+import { Direction, type MinFlexElementWidth } from "./utils"
 
 function withFlexContextProvider(
   direction: Direction,
@@ -80,7 +80,7 @@ describe("#useLayoutStyles", () => {
         [undefined, getDefaultStyles({})],
         [0, getDefaultStyles({})],
         [-100, getDefaultStyles({})],
-        [NaN, getDefaultStyles({})],
+        [Number.NaN, getDefaultStyles({})],
         [100, getDefaultStyles({ width: "100px" })],
       ])("and with a width value of %s, returns %o", (width, expected) => {
         const element = new MockElement()
@@ -99,7 +99,7 @@ describe("#useLayoutStyles", () => {
         [undefined, getDefaultStyles({ width: "100%" })],
         [0, getDefaultStyles({ width: "100%" })],
         [-100, getDefaultStyles({ width: "100%" })],
-        [NaN, getDefaultStyles({ width: "100%" })],
+        [Number.NaN, getDefaultStyles({ width: "100%" })],
         [100, getDefaultStyles({ width: "100%" })],
       ])("and with a width value of %s, returns %o", (width, expected) => {
         const element = new MockElement()
@@ -178,10 +178,10 @@ describe("#useLayoutStyles", () => {
     describe("that has widthConfig set to invalid pixelWidth values", () => {
       it.each([
         [-100, false, getDefaultStyles({})],
-        [NaN, false, getDefaultStyles({})],
+        [Number.NaN, false, getDefaultStyles({})],
         [100, false, getDefaultStyles({ width: "100px" })],
         [-100, true, getDefaultStyles({ width: "100%" })],
-        [NaN, true, getDefaultStyles({ width: "100%" })],
+        [Number.NaN, true, getDefaultStyles({ width: "100%" })],
         [100, true, getDefaultStyles({ width: "100%" })],
       ])(
         "and with a pixelWidth value of %s and useContainerWidth %s, returns %o",
@@ -272,7 +272,7 @@ describe("#useLayoutStyles", () => {
         ],
         [
           {
-            widthConfig: new streamlit.WidthConfig({ pixelWidth: NaN }),
+            widthConfig: new streamlit.WidthConfig({ pixelWidth: Number.NaN }),
             width: 100,
           },
           false,
@@ -400,7 +400,7 @@ describe("#useLayoutStyles", () => {
     describe("that has heightConfig set to invalid pixelHeight values", () => {
       it.each([
         [-100, getDefaultStyles({})],
-        [NaN, getDefaultStyles({})],
+        [Number.NaN, getDefaultStyles({})],
       ])(
         "and with a pixelHeight value of %s, returns %o",
         (pixelHeight, expected) => {
@@ -435,7 +435,7 @@ describe("#useLayoutStyles", () => {
         ],
         [0, null, getDefaultStyles({})],
         [-100, null, getDefaultStyles({})],
-        [NaN, null, getDefaultStyles({})],
+        [Number.NaN, null, getDefaultStyles({})],
         [
           100,
           undefined,
@@ -456,7 +456,7 @@ describe("#useLayoutStyles", () => {
         ],
         [0, undefined, getDefaultStyles({})],
         [-100, undefined, getDefaultStyles({})],
-        [NaN, undefined, getDefaultStyles({})],
+        [Number.NaN, undefined, getDefaultStyles({})],
       ])(
         "and with a height value of %s and heightConfig %s, returns %o",
         (height, heightConfig, expected) => {
@@ -502,7 +502,7 @@ describe("#useLayoutStyles", () => {
         it.each([
           [0, getDefaultStyles({})],
           [-100, getDefaultStyles({})],
-          [NaN, getDefaultStyles({})],
+          [Number.NaN, getDefaultStyles({})],
         ])("and with a height value of %s, returns %o", (height, expected) => {
           const element = new MockElement()
           const subElement = { height }
@@ -580,7 +580,9 @@ describe("#useLayoutStyles", () => {
           ],
           [
             {
-              heightConfig: new streamlit.HeightConfig({ pixelHeight: NaN }),
+              heightConfig: new streamlit.HeightConfig({
+                pixelHeight: Number.NaN,
+              }),
               height: 100,
             },
             getDefaultStyles({}),
@@ -710,7 +712,7 @@ describe("#useLayoutStyles", () => {
           // Use type assertion to bypass TypeScript checks
           const subElement = {
             widthConfig: props.subElementWidthConfig,
-          } as IAlert
+          } as Alert.$Properties
 
           const { result } = renderHook(() =>
             useLayoutStyles({
@@ -763,6 +765,51 @@ describe("#useLayoutStyles", () => {
         })
         expect(result.current.flex).toBeUndefined()
       })
+
+      it("uses a percentage height and no alignSelf for stretch height in vertical direction", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.VERTICAL),
+        })
+        expect(result.current.height).toBe("100%")
+        expect(result.current.alignSelf).toBeUndefined()
+        expect(result.current.minHeight).toBeUndefined()
+        expect(result.current.maxHeight).toBeUndefined()
+      })
+
+      it("stretches along the cross axis for stretch height in horizontal direction", () => {
+        const element = new MockElement({
+          heightConfig: new streamlit.HeightConfig({ useStretch: true }),
+        })
+        const { result } = renderHook(() => useLayoutStyles({ element }), {
+          wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+        })
+        expect(result.current.alignSelf).toBe("stretch")
+        // A percentage height would block the cross-axis stretch.
+        expect(result.current.height).toBe("auto")
+        // Keep the element exactly as tall as a fixed-height row.
+        expect(result.current.minHeight).toBe("100%")
+        expect(result.current.maxHeight).toBe("100%")
+        expect(result.current.flex).toBeUndefined()
+      })
+
+      it.each([
+        ["pixel", { pixelHeight: 250 }],
+        ["content", { useContent: true }],
+      ])(
+        "does not set alignSelf for %s height in horizontal direction",
+        (_label, heightConfig) => {
+          const element = new MockElement({
+            heightConfig: new streamlit.HeightConfig(heightConfig),
+          })
+          const { result } = renderHook(() => useLayoutStyles({ element }), {
+            wrapper: withFlexContextProvider(Direction.HORIZONTAL),
+          })
+          expect(result.current.alignSelf).toBeUndefined()
+        }
+      )
 
       it("should not include flex for horizontal direction with pixel height", () => {
         const element = new MockElement({
@@ -1151,15 +1198,6 @@ describe("#useLayoutStyles", () => {
           overflow: "visible",
           textAlign: "right", // Override value
         })
-      })
-    })
-
-    describe("without an element", () => {
-      it("returns default auto styles when element is nullish", () => {
-        const { result } = renderHook(() =>
-          useLayoutStyles({ element: undefined as unknown as Element })
-        )
-        expect(result.current).toEqual(getDefaultStyles({}))
       })
     })
 

@@ -16,11 +16,11 @@
 
 import styled from "@emotion/styled"
 
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import type { Metric as MetricProto } from "@streamlit/protobuf"
 
 import {
   StyledWidgetLabel,
-  StyledWidgetProps,
+  type StyledWidgetProps,
 } from "~lib/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -124,4 +124,17 @@ export const StyledDeltaDescription = styled.div({
   overflow: "hidden",
   flexShrink: 1,
   minWidth: 0,
+})
+
+export const StyledMetricLabelRow = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  minWidth: 0,
+}))
+
+export const StyledMetricIcon = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
 })

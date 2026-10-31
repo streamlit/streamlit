@@ -18,8 +18,8 @@ st.dataframe(df)
 ```
 
 **Why st.connection:**
-- Automatic connection pooling
-- Built-in caching
+- Created once and reused across reruns (cached with `st.cache_resource`)
+- Built-in query caching (without `ttl`, results are cached indefinitely; see [Cached queries](#cached-queries))
 - Handles reconnection
 - Works with st.secrets
 
@@ -40,7 +40,7 @@ This is useful when:
 
 ## Cached queries
 
-Use the built-in `ttl` parameter to cache query results:
+`conn.query` caches results. Without `ttl` they are cached indefinitely, so set `ttl` for data that changes:
 
 ```python
 from datetime import timedelta
@@ -54,11 +54,21 @@ df = conn.query("SELECT * FROM metrics", ttl=timedelta(minutes=10))
 df = conn.query("SELECT * FROM reference_data", ttl=3600)
 ```
 
+`st.connection` itself also takes `ttl`, which caches the connection object.
+Omitting `ttl` picks up the server's `runner.connectionDefaultTTL` (itself
+`None`/no-expiry by default). Passing `ttl` explicitly -- including
+`ttl=None` -- always keeps that call's own value and ignores the server
+default. The server default applies to every connection type, including
+`snowflake-callers-rights` and the `snowflake` connection in Streamlit in
+Snowflake: expiry closes the connection and the next `st.connection` call
+opens a new one. Set the server default via `.streamlit/config.toml` or
+`STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL`.
+
 ## Configure with st.secrets
 
 Store credentials in `.streamlit/secrets.toml` (never commit this file).
 
-**CRITICAL**: Derive the `account` and `host` values from the user's Snowflake CLI connection config. Run `snow connection list` and use the exact values. A wrong `account` will redirect to the wrong login page.
+If `snow connection list` shows a connection with `is_default` set to `True`, skip `[connections.snowflake]`: `st.connection("snowflake")` uses that default. To use a different connection from that list, see [Named connections](#named-connections-from-a-snowflake-config-file). Otherwise, or when the app runs on a host that doesn't have that default, copy `account` and `host` exactly from the user's connection details, because a wrong `account` redirects to the wrong login page.
 
 ```toml
 # .streamlit/secrets.toml
@@ -84,11 +94,8 @@ Use parameters to prevent SQL injection:
 ```python
 conn = st.connection("snowflake")
 
-# Safe: parameterized
-df = conn.query(
-    "SELECT * FROM users WHERE region = :region",
-    params={"region": selected_region}
-)
+# Safe: parameterized (Streamlit uses qmark binding: `?` placeholders, list params)
+df = conn.query("SELECT * FROM users WHERE region = ?", params=[selected_region])
 
 # UNSAFE: string formatting - don't do this
 # df = conn.query(f"SELECT * FROM users WHERE region = '{selected_region}'")
@@ -106,7 +113,7 @@ session = conn.session()
 session.write_pandas(df, "MY_TABLE", auto_create_table=True)
 
 # Execute statements
-session.sql("INSERT INTO logs VALUES (:ts, :msg)", params={...}).collect()
+session.sql("INSERT INTO logs VALUES (?, ?)", params=[ts, msg]).collect()
 ```
 
 ## Multiple connections

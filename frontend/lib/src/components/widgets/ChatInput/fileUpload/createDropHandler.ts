@@ -15,17 +15,18 @@
  */
 
 import { zip } from "lodash-es"
-import { ErrorCode as FileErrorCode, FileRejection } from "react-dropzone"
+import { ErrorCode as FileErrorCode } from "react-dropzone"
 
-import {
+import type {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
-  IFileURLs,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
-import { getRejectedFileInfo } from "~lib/util/FileHelper"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import { ensureError } from "~lib/util/ErrorHandling"
+import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
 
@@ -33,7 +34,7 @@ interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
   maxFileSize: number
   uploadClient: FileUploadClient
-  uploadFile: (fileURLs: FileURLsProto, file: File) => void
+  uploadFile: (fileURLs: FileURLsProto.$Properties, file: File) => void
   addFiles: (files: UploadFileInfo[]) => void
   getNextLocalFileId: () => number
   deleteExistingFiles: () => void
@@ -78,7 +79,9 @@ const filterFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
-            message: validation.errorMessage || "File type not allowed.",
+            message: isNullOrEmptyString(validation.errorMessage)
+              ? "File type not allowed."
+              : validation.errorMessage,
           },
         ],
       })
@@ -128,7 +131,7 @@ export const createDropHandler =
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
-        file => file.errors?.[0].code === FileErrorCode.TooManyFiles
+        file => file.errors[0].code === FileErrorCode.TooManyFiles
       )
 
       if (firstFileIndex >= 0) {
@@ -163,14 +166,18 @@ export const createDropHandler =
 
     uploadClient
       .fetchFileURLs(acceptedFiles)
-      .then((fileURLsArray: IFileURLs[]) => {
+      .then((fileURLsArray: FileURLsProto.$Properties[]) => {
         zip(fileURLsArray, acceptedFiles).forEach(
           ([fileURLs, acceptedFile]) => {
-            uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
+            uploadFile(
+              fileURLs as FileURLsProto.$Properties,
+              acceptedFile as File
+            )
           }
         )
+        return
       })
-      .catch((errorMessage: string) => {
+      .catch((error: unknown) => {
         addFiles(
           acceptedFiles.map(f => {
             return new UploadFileInfo(
@@ -179,7 +186,8 @@ export const createDropHandler =
               getNextLocalFileId(),
               {
                 type: "error",
-                errorMessage,
+                // fetchFileURLs rejects with the backend error string
+                errorMessage: ensureError(error).message,
               },
               f
             )

@@ -25,10 +25,18 @@ vi.mock("@streamlit/utils", async () => {
   }
 })
 
-import { MockInstance } from "vitest"
+// Delegates to the real implementation so tests can override single calls to
+// simulate ping failures that the real retry loop never produces.
+vi.mock("./DoInitPings", async importOriginal => {
+  const actual = await importOriginal<typeof DoInitPingsModule>()
+  return { ...actual, doInitPings: vi.fn(actual.doInitPings) }
+})
+
+import { getLogger } from "loglevel"
+import type { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
-import { BackMsg } from "@streamlit/protobuf"
+import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import {
@@ -38,11 +46,14 @@ import {
   RECONNECT_BASE_RETRY_PERIOD_MS,
   RECONNECT_MAXIMUM_RETRY_PERIOD_MS,
   RECONNECT_MINIMUM_RETRY_PERIOD_MS,
+  WEBSOCKET_TIMEOUT_MS,
 } from "./constants"
 import { doInitPings, PingCancelledError } from "./DoInitPings"
+import type * as DoInitPingsModule from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails, OnRetry } from "./types"
-import { Args, WebsocketConnection } from "./WebsocketConnection"
+import type { ErrorDetails, Event as FsmEvent, OnRetry } from "./types"
+import { MISSING_WEBSOCKET_CLOSE_REASON } from "./websocketCloseDiagnostics"
+import { type Args, WebsocketConnection } from "./WebsocketConnection"
 
 const expectedFirstReconnectDelayMs =
   RECONNECT_MINIMUM_RETRY_PERIOD_MS +
@@ -76,6 +87,18 @@ function createErrorResponse(
   statusText: string,
   data?: unknown
 ): Response {
+  // DoInitPings treats status 0 as "no response", but `new Response()` rejects
+  // that status. Use a stand-in so this path can still be tested.
+  if (status === 0) {
+    return {
+      ok: false,
+      status: 0,
+      statusText,
+      json: () => Promise.resolve(data ?? null),
+      text: () => Promise.resolve(data ? JSON.stringify(data) : ""),
+    } as Response
+  }
+
   return new Response(data ? JSON.stringify(data) : "", {
     status,
     statusText,
@@ -100,28 +123,26 @@ function createNetworkError(message = "Failed to fetch"): TypeError {
 // Sets up fetch mock to fail a specific number of times before succeeding
 function setupFetchMockWithFailures(
   retryCount: number,
-  errorType: "response" | "network" | "timeout",
-  responseOptions?: { status: number; statusText: string; data?: unknown }
+  errorType: "response" | "network" | "timeout" | "error",
+  responseOptions?: { status: number; statusText: string; data?: unknown },
+  error?: Error
 ): typeof fetch {
-  const mock = vi.fn()
+  const mock = vi.fn<typeof fetch>()
 
   // Each "totalTries" increment involves cycling through all URIs
   // Each URI requires 2 fetch calls (health + config)
   // So total failed calls needed = retryCount * numUris * 2
   const totalFailedCalls = retryCount * 2 * 2
 
-  // Setup all the rejected/error calls
   for (let i = 0; i < totalFailedCalls; i++) {
     if (errorType === "timeout") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createAbortError()
-      )
+      mock.mockRejectedValueOnce(createAbortError())
     } else if (errorType === "network") {
-      ;(mock as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        createNetworkError()
-      )
-    } else if (errorType === "response" && responseOptions) {
-      ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      mock.mockRejectedValueOnce(createNetworkError())
+    } else if (errorType === "error") {
+      mock.mockRejectedValueOnce(error ?? new Error("request setup failed"))
+    } else if (responseOptions) {
+      mock.mockResolvedValueOnce(
         createErrorResponse(
           responseOptions.status,
           responseOptions.statusText,
@@ -131,13 +152,8 @@ function setupFetchMockWithFailures(
     }
   }
 
-  // Add final successful calls to break the loop
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HEALTH_RESPONSE)
-  ) // healthzUri success
-  ;(mock as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE)
-  ) // hostConfigUri success
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+  mock.mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
 
   return mock
 }
@@ -355,6 +371,52 @@ describe("doInitPings", () => {
     expect(MOCK_PING_DATA.setAllowedOrigins).toHaveBeenCalledWith(
       MOCK_ALLOWED_ORIGINS_CONFIG
     )
+  })
+
+  it("retries with the thrown message when onHostConfigResp throws a non-FetchError", async () => {
+    const hostConfigFailure = "invalid host config"
+    // Two URIs per try; keep throwing through the sendClientError threshold.
+    const throwsBeforeSuccess =
+      MAX_RETRIES_BEFORE_CLIENT_ERROR * MOCK_PING_DATA.uri.length
+    let hostConfigCalls = 0
+    const setAllowedOrigins = vi.fn().mockImplementation(() => {
+      hostConfigCalls += 1
+      if (hostConfigCalls <= throwsBeforeSuccess) {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- pin String(error) retry text
+        throw hostConfigFailure
+      }
+    })
+
+    globalThis.fetch = createFetchMock()
+
+    const retryCallback = createTimerAdvancingRetryCallback(
+      MOCK_PING_DATA.retryCallback
+    )
+    const sendClientErrorSpy = vi.fn()
+
+    const { promise } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      sendClientErrorSpy,
+      setAllowedOrigins
+    )
+
+    await vi.runAllTimersAsync()
+    await promise
+
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(MOCK_PING_DATA.retryCallback).toHaveBeenCalledWith(
+      MAX_RETRIES_BEFORE_CLIENT_ERROR,
+      expect.objectContaining({ message: hostConfigFailure }),
+      expect.anything()
+    )
+    expect(sendClientErrorSpy).not.toHaveBeenCalled()
   })
 
   it("calls retry with the corresponding error message if there was an error", async () => {
@@ -886,101 +948,89 @@ If you are trying to access a Streamlit app running on another server, this coul
   })
 
   describe("calls sendClientError when we've reached connection error threshold", () => {
-    it("with status = 403 response", async () => {
-      const sendClientErrorSpy = vi.fn()
+    it.each([
+      {
+        name: "with status = 403 response",
+        errorType: "response" as const,
+        responseOptions: { status: 403, statusText: "Forbidden" },
+        expectedError: 403,
+        expectedMessage: "Forbidden",
+      },
+      {
+        name: "with status = 500 response",
+        errorType: "response" as const,
+        responseOptions: {
+          status: 500,
+          statusText: "Internal Server Error",
+        },
+        expectedError: 500,
+        expectedMessage: "Internal Server Error",
+      },
+      {
+        name: "with network error",
+        errorType: "network" as const,
+        expectedError: "No response received from server",
+        expectedMessage: "Network error",
+      },
+      {
+        name: "with timeout",
+        errorType: "timeout" as const,
+        expectedError: "DoInitPings timed out",
+        expectedMessage: "Connection timed out - ECONNABORTED",
+      },
+      {
+        name: "with HTTP status 0",
+        errorType: "response" as const,
+        responseOptions: { status: 0, statusText: "No Response" },
+        expectedError: "Response received with status 0",
+        expectedMessage: "No Response",
+      },
+      {
+        name: "with a generic request setup error",
+        errorType: "error" as const,
+        error: new Error("request setup failed"),
+        expectedError: "Error setting up request to server",
+        expectedMessage: "request setup failed",
+      },
+    ])(
+      "$name",
+      async ({
+        errorType,
+        responseOptions,
+        error,
+        expectedError,
+        expectedMessage,
+      }) => {
+        const sendClientErrorSpy = vi.fn()
 
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 403, statusText: "Forbidden" }
-      )
+        globalThis.fetch = setupFetchMockWithFailures(
+          MAX_RETRIES_BEFORE_CLIENT_ERROR,
+          errorType,
+          responseOptions,
+          error
+        )
 
-      const retryCallback = createTimerAdvancingRetryCallback()
+        const retryCallback = createTimerAdvancingRetryCallback()
 
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
+        const { promise } = doInitPings(
+          MOCK_PING_DATA.uri,
+          MOCK_PING_DATA.timeoutMs,
+          MOCK_PING_DATA.maxTimeoutMs,
+          retryCallback,
+          sendClientErrorSpy,
+          MOCK_PING_DATA.setAllowedOrigins
+        )
 
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
+        await vi.runAllTimersAsync()
+        await promise
 
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        403,
-        "Forbidden",
-        expect.any(String)
-      )
-    })
-
-    it("with status = 500 response", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "response",
-        { status: 500, statusText: "Internal Server Error" }
-      )
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        500,
-        "Internal Server Error",
-        expect.any(String)
-      )
-    })
-
-    it("with network error", async () => {
-      const sendClientErrorSpy = vi.fn()
-
-      // We need to mock fetch to simulate connection error threshold
-      globalThis.fetch = setupFetchMockWithFailures(
-        MAX_RETRIES_BEFORE_CLIENT_ERROR,
-        "network",
-        undefined
-      )
-
-      const retryCallback = createTimerAdvancingRetryCallback()
-
-      const { promise } = doInitPings(
-        MOCK_PING_DATA.uri,
-        MOCK_PING_DATA.timeoutMs,
-        MOCK_PING_DATA.maxTimeoutMs,
-        retryCallback,
-        sendClientErrorSpy,
-        MOCK_PING_DATA.setAllowedOrigins
-      )
-
-      // Run any remaining timers to complete the ping process
-      await vi.runAllTimersAsync()
-      await promise
-
-      expect(sendClientErrorSpy).toHaveBeenCalledWith(
-        "No response received from server",
-        "Network error",
-        expect.any(String)
-      )
-    })
+        expect(sendClientErrorSpy).toHaveBeenCalledWith(
+          expectedError,
+          expectedMessage,
+          expect.any(String)
+        )
+      }
+    )
   })
 
   it("stops the loop on cancel and does not resurrect when an in-flight request settles", async () => {
@@ -1063,6 +1113,38 @@ If you are trying to access a Streamlit app running on another server, this coul
     expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
     expect(MOCK_PING_DATA.retryCallback).not.toHaveBeenCalled()
   })
+
+  it("does not schedule another ping after cancel is called from the retry callback", async () => {
+    // Extra success responses would be consumed if cancel failed to stop the loop.
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(createNetworkError())
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse({}))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    let cancelPing: (() => void) | undefined = undefined
+    const retryCallback: OnRetry = vi.fn(() => {
+      cancelPing?.()
+    })
+
+    const { promise, cancel } = doInitPings(
+      MOCK_PING_DATA.uri,
+      MOCK_PING_DATA.timeoutMs,
+      MOCK_PING_DATA.maxTimeoutMs,
+      retryCallback,
+      MOCK_PING_DATA.sendClientError,
+      MOCK_PING_DATA.setAllowedOrigins
+    )
+    cancelPing = cancel
+
+    await expect(promise).rejects.toBeInstanceOf(PingCancelledError)
+
+    await vi.advanceTimersByTimeAsync(MOCK_PING_DATA.maxTimeoutMs + 100)
+
+    expect(vi.mocked(globalThis.fetch).mock.calls.length).toBe(2)
+    expect(MOCK_PING_DATA.setAllowedOrigins).not.toHaveBeenCalled()
+  })
 })
 
 describe("WebsocketConnection", () => {
@@ -1083,9 +1165,9 @@ describe("WebsocketConnection", () => {
   afterEach(async () => {
     globalThis.fetch = originalFetch
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     if (client.websocket) {
-      // @ts-expect-error
+      // @ts-expect-error - websocket is private
       client.websocket.close()
     }
     client.disconnect()
@@ -1100,9 +1182,9 @@ describe("WebsocketConnection", () => {
   it("disconnect closes connection and sets state to DISCONNECTED_FOREVER", () => {
     client.disconnect()
 
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.DISCONNECTED_FOREVER)
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     expect(client.websocket).toBe(undefined)
   })
 
@@ -1110,7 +1192,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.CONNECTED
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1265,7 +1347,7 @@ describe("WebsocketConnection", () => {
     // @ts-expect-error - accessing private property for testing
     client.state = ConnectionState.PINGING_SERVER
     client.reconnect()
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     expect(client.state).toBe(ConnectionState.PINGING_SERVER)
   })
 
@@ -1438,7 +1520,7 @@ describe("WebsocketConnection", () => {
 
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
-      // @ts-expect-error
+      // @ts-expect-error - cache is private
       client.cache,
       "incrementRunCount"
     )
@@ -1454,7 +1536,7 @@ describe("WebsocketConnection", () => {
   it("gets cached message hashes from cache", () => {
     const getCachedMessageHashesSpy = vi
       .spyOn(
-        // @ts-expect-error
+        // @ts-expect-error - cache is private
         client.cache,
         "getCachedMessageHashes"
       )
@@ -1471,7 +1553,7 @@ describe("WebsocketConnection", () => {
     await vi.runAllTimersAsync()
     await server.connected
 
-    // @ts-expect-error
+    // @ts-expect-error - websocket is private
     const sendSpy = vi.spyOn(client.websocket, "send")
 
     const TEST_BACK_MSG = {}
@@ -1488,9 +1570,77 @@ describe("WebsocketConnection", () => {
     expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
   })
 
+  it("sends context fields set to false or 0, which the server reads as stated", async () => {
+    await vi.runAllTimersAsync()
+    await server.connected
+
+    // @ts-expect-error - websocket is private
+    const sendSpy = vi.spyOn(client.websocket, "send")
+
+    client.sendMessage({
+      rerunScript: { contextInfo: { isEmbedded: false, timezoneOffset: 0 } },
+    })
+
+    const [sentBytes] = sendSpy.mock.calls[0] as unknown as [Uint8Array]
+    const contextInfo = BackMsg.decode(sentBytes).rerunScript?.contextInfo
+    expect(contextInfo?.isEmbedded).toBe(false)
+    expect(contextInfo?.timezoneOffset).toBe(0)
+    expect(contextInfo?.locale).toBeNull()
+  })
+
+  it("dispatches queued messages in arrival order if a later payload resolves first", async () => {
+    // @ts-expect-error - private args for test
+    const onMessage = client.args.onMessage as ReturnType<typeof vi.fn>
+    onMessage.mockClear()
+
+    const firstPayload = Promise.withResolvers<ForwardMsg>()
+    const secondPayload = Promise.withResolvers<ForwardMsg>()
+    const payloads = [firstPayload, secondPayload]
+    let callIndex = 0
+
+    // @ts-expect-error - private cache for test
+    vi.spyOn(client.cache, "processMessagePayload").mockImplementation(
+      async () => {
+        const deferred = payloads[callIndex]
+        callIndex += 1
+        return deferred.promise
+      }
+    )
+
+    const firstMsg = ForwardMsg.fromObject({ hash: "msg-0" })
+    const secondMsg = ForwardMsg.fromObject({ hash: "msg-1" })
+    const encode = (msg: ForwardMsg): ArrayBuffer => {
+      const bytes = ForwardMsg.encode(msg).finish()
+      const copy = new Uint8Array(bytes.byteLength)
+      copy.set(bytes)
+      return copy.buffer
+    }
+
+    // @ts-expect-error - private handleMessage for test
+    const firstHandle = client.handleMessage(encode(firstMsg))
+    // @ts-expect-error - private handleMessage for test
+    const secondHandle = client.handleMessage(encode(secondMsg))
+
+    secondPayload.resolve(secondMsg)
+    await secondHandle
+    expect(onMessage).not.toHaveBeenCalled()
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(1)
+
+    firstPayload.resolve(firstMsg)
+    await firstHandle
+
+    expect(onMessage.mock.calls.map(call => call[0].hash)).toEqual([
+      "msg-0",
+      "msg-1",
+    ])
+    // @ts-expect-error - private messageQueue for test
+    expect(client.messageQueue.size).toBe(0)
+  })
+
   describe("getBaseUriParts", () => {
     it("returns correct base uri parts when ConnectionState == Connected", () => {
-      // @ts-expect-error
+      // @ts-expect-error - state is private
       client.state = ConnectionState.CONNECTED
 
       expect(client.getBaseUriParts()).toEqual(
@@ -1570,6 +1720,7 @@ describe("WebsocketConnection auth token handling", () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     globalThis.fetch = originalFetch
     globalThis.WebSocket = originalWebSocket
     pingServerSpy.mockRestore()
@@ -1580,9 +1731,9 @@ describe("WebsocketConnection auth token handling", () => {
     const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1602,9 +1753,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
@@ -1619,9 +1770,9 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     // "lastSessionId" should be the WebSocket's session token
@@ -1642,15 +1793,67 @@ describe("WebsocketConnection auth token handling", () => {
     )
 
     // Set correct state for this action
-    // @ts-expect-error
+    // @ts-expect-error - state is private
     ws.state = ConnectionState.CONNECTING
 
-    // @ts-expect-error
+    // @ts-expect-error - connectToWebSocket is private
     await ws.connectToWebSocket()
 
     expect(websocketSpy).toHaveBeenCalledWith(
       "ws://localhost:1234/_stcore/stream",
       ["streamlit", "iAmAnAuthToken", "lastSessionId"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  const mockDocumentCookieReadFailure = (): void => {
+    vi.spyOn(document, "cookie", "get").mockImplementation(() => {
+      throw new DOMException(
+        "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+        "SecurityError"
+      )
+    })
+  }
+
+  it("uses the placeholder auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(createMockArgs({ resetHostAuthToken }))
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "PLACEHOLDER_AUTH_TOKEN"]
+    )
+    expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+
+  it("prefers the host auth token when document.cookie throws", async () => {
+    mockDocumentCookieReadFailure()
+
+    const resetHostAuthToken = vi.fn()
+    const ws = new WebsocketConnection(
+      createMockArgs({
+        claimHostAuthToken: () => Promise.resolve("iAmAnAuthToken"),
+        resetHostAuthToken,
+      })
+    )
+
+    // Set correct state for this action
+    // @ts-expect-error - state is private
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - connectToWebSocket is private
+    await ws.connectToWebSocket()
+
+    expect(websocketSpy).toHaveBeenCalledWith(
+      "ws://localhost:1234/_stcore/stream",
+      ["streamlit", "iAmAnAuthToken"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
   })
@@ -1823,17 +2026,15 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
   })
 
   it("handles background ping cancellation gracefully on disconnect", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(
-        () =>
-          new Promise(resolve =>
-            setTimeout(
-              () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
-              1000
-            )
+    globalThis.fetch = vi.fn().mockImplementation(
+      () =>
+        new Promise(resolve => {
+          setTimeout(
+            () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
+            1000
           )
-      )
+        })
+    )
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)
@@ -1915,5 +2116,770 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
 
     // The test passing without errors verifies the fix works correctly
+  })
+})
+
+describe("WebsocketConnection unexpected frames", () => {
+  type SocketListener = (event: MessageEvent) => void
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly listeners = new Map<string, SocketListener[]>()
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchMessage(data: unknown): void {
+      for (const listener of this.listeners.get("message") ?? []) {
+        listener({ data } as MessageEvent)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: these tests only dispatch inbound frames
+    }
+  }
+
+  let originalWebSocket: typeof WebSocket
+  let lastSocket: MockWebSocket | undefined
+  let pingServerSpy: MockInstance
+
+  function createMockWebSocket(
+    url: string,
+    protocols?: string | string[]
+  ): MockWebSocket {
+    const socket = new MockWebSocket(url, protocols)
+    lastSocket = socket
+    return socket
+  }
+
+  beforeEach(() => {
+    originalWebSocket = globalThis.WebSocket
+    lastSocket = undefined
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
+  })
+
+  async function connectClient(): Promise<{
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }> {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    if (!lastSocket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    return { ws, socket: lastSocket, args }
+  }
+
+  function spyHandleMessage(ws: WebsocketConnection): MockInstance {
+    return vi.spyOn(
+      ws as unknown as {
+        handleMessage: (data: ArrayBuffer) => Promise<void>
+      },
+      "handleMessage"
+    )
+  }
+
+  it("treats a non-ArrayBuffer frame as a fatal protocol mismatch", async () => {
+    const { ws, socket, args } = await connectClient()
+    const handleMessage = spyHandleMessage(ws)
+
+    socket.dispatchMessage("proxy-keepalive")
+
+    expect(handleMessage).not.toHaveBeenCalled()
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection fatal error encountered",
+      expect.stringContaining("Unexpected Websocket message type"),
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.objectContaining({
+        message: expect.stringContaining("Unexpected Websocket message type"),
+      })
+    )
+    ws.disconnect()
+  })
+
+  it("forwards ArrayBuffer frames to handleMessage", async () => {
+    const { ws, socket, args } = await connectClient()
+    const handleMessage = spyHandleMessage(ws).mockResolvedValue(undefined)
+    const payload = new ArrayBuffer(8)
+
+    socket.dispatchMessage(payload)
+
+    expect(handleMessage).toHaveBeenCalledWith(payload)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      expect.anything()
+    )
+    ws.disconnect()
+  })
+})
+
+describe("WebsocketConnection close diagnostics", () => {
+  type SocketListener = (event: Event) => void
+
+  class MockWebSocket {
+    public url: string
+    public protocols?: string | string[]
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly listeners = new Map<string, SocketListener[]>()
+
+    constructor(url: string, protocols?: string | string[]) {
+      this.url = url
+      this.protocols = protocols
+    }
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatchClose(event: {
+      code: number
+      reason: string
+      wasClean: boolean
+    }): void {
+      for (const listener of this.listeners.get("close") ?? []) {
+        listener(event as CloseEvent)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+
+    public send(_data: unknown): void {
+      // No-op: these tests only dispatch inbound close events
+    }
+  }
+
+  let originalWebSocket: typeof WebSocket
+  let lastSocket: MockWebSocket | undefined
+  let pingServerSpy: MockInstance
+  const logger = getLogger("WebsocketConnection")
+
+  function createMockWebSocket(
+    url: string,
+    protocols?: string | string[]
+  ): MockWebSocket {
+    const socket = new MockWebSocket(url, protocols)
+    lastSocket = socket
+    return socket
+  }
+
+  beforeEach(() => {
+    originalWebSocket = globalThis.WebSocket
+    lastSocket = undefined
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    globalThis.WebSocket = originalWebSocket
+    pingServerSpy.mockRestore()
+    vi.restoreAllMocks()
+  })
+
+  async function connectClient(): Promise<{
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }> {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = ConnectionState.CONNECTING
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    if (!lastSocket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    return { ws, socket: lastSocket, args }
+  }
+
+  function getCloseLogCalls(spy: MockInstance): string[] {
+    return spy.mock.calls
+      .map(call => String(call[0]))
+      .filter(message => message.includes("WebSocket onclose"))
+  }
+
+  async function closeAndCaptureLogs(event: {
+    code: number
+    reason: string
+    wasClean: boolean
+  }): Promise<{
+    infoLogs: string[]
+    warnLogs: string[]
+    args: Args
+    ws: WebsocketConnection
+  }> {
+    const { ws, socket, args } = await connectClient()
+    vi.mocked(args.onConnectionStateChange).mockClear()
+    vi.mocked(args.sendClientError).mockClear()
+    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {})
+    const warnSpy = vi.spyOn(logger, "warn").mockImplementation(() => {})
+    socket.dispatchClose(event)
+    return {
+      infoLogs: getCloseLogCalls(infoSpy),
+      warnLogs: getCloseLogCalls(warnSpy),
+      args,
+      ws,
+    }
+  }
+
+  it("logs a clean normal closure at info and does not send telemetry", async () => {
+    const { infoLogs, warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1000,
+      reason: "client shutdown",
+      wasClean: true,
+    })
+
+    expect(infoLogs).toHaveLength(1)
+    expect(infoLogs[0]).toContain("code=1000 (normal closure)")
+    expect(infoLogs[0]).toContain('reason="client shutdown"')
+    expect(infoLogs[0]).toContain("wasClean=true")
+    expect(infoLogs[0]).toContain(`state=${ConnectionState.CONNECTING}`)
+    expect(warnLogs).toHaveLength(0)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    ws.disconnect()
+  })
+
+  it("logs an abnormal closure at warning with code, wasClean, and state", async () => {
+    const { infoLogs, warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1006,
+      reason: "",
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1006 (abnormal closure)")
+    expect(warnLogs[0]).toContain(`reason="${MISSING_WEBSOCKET_CLOSE_REASON}"`)
+    expect(warnLogs[0]).toContain("wasClean=false")
+    expect(warnLogs[0]).toContain(`state=${ConnectionState.CONNECTING}`)
+    expect(infoLogs).toHaveLength(0)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    ws.disconnect()
+  })
+
+  it("uses a placeholder when the close reason is empty", async () => {
+    const { warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1009,
+      reason: "   ",
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1009 (message too big)")
+    expect(warnLogs[0]).toContain(`reason="${MISSING_WEBSOCKET_CLOSE_REASON}"`)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    ws.disconnect()
+  })
+
+  it("redacts URLs and session IDs in the close reason and does not send telemetry", async () => {
+    const sessionId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    const { warnLogs, args, ws } = await closeAndCaptureLogs({
+      code: 1011,
+      reason: `failed at wss://app.example.com/stream session=${sessionId}`,
+      wasClean: false,
+    })
+
+    expect(warnLogs).toHaveLength(1)
+    expect(warnLogs[0]).toContain("code=1011 (internal server error)")
+    expect(warnLogs[0]).toContain("[redacted]")
+    expect(warnLogs[0]).not.toContain("wss://")
+    expect(warnLogs[0]).not.toContain("app.example.com")
+    expect(warnLogs[0]).not.toContain(sessionId)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    ws.disconnect()
+  })
+})
+
+describe("WebsocketConnection state machine", () => {
+  type SocketEventType = "open" | "message" | "close" | "error"
+  type SocketListener = (event: unknown) => void
+
+  class MockWebSocket {
+    public binaryType = "blob"
+    public readyState = 0
+    public readonly send = vi.fn()
+    private readonly listeners = new Map<string, SocketListener[]>()
+
+    public addEventListener(type: string, listener: SocketListener): void {
+      const existing = this.listeners.get(type) ?? []
+      existing.push(listener)
+      this.listeners.set(type, existing)
+    }
+
+    public dispatch(type: SocketEventType, event: unknown = {}): void {
+      for (const listener of this.listeners.get(type) ?? []) {
+        listener(event)
+      }
+    }
+
+    public close(): void {
+      this.readyState = 3
+    }
+  }
+
+  const ABNORMAL_CLOSE_EVENT = { code: 1006, reason: "", wasClean: false }
+
+  let originalWebSocket: typeof WebSocket
+  let sockets: MockWebSocket[]
+  let pingServerSpy: MockInstance
+
+  function createMockWebSocket(): MockWebSocket {
+    const socket = new MockWebSocket()
+    sockets.push(socket)
+    return socket
+  }
+
+  function stepFsm(
+    ws: WebsocketConnection,
+    event: FsmEvent,
+    errMsg?: string
+  ): void {
+    // @ts-expect-error - private stepFsm for test
+    ws.stepFsm(event, errMsg)
+  }
+
+  type SocketClient = {
+    ws: WebsocketConnection
+    socket: MockWebSocket
+    args: Args
+  }
+
+  /** Creates a connection forced into `state`, with prior state changes cleared. */
+  function createClientInState(state: ConnectionState): {
+    ws: WebsocketConnection
+    args: Args
+  } {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    // @ts-expect-error - private state for test
+    ws.state = state
+    vi.mocked(args.onConnectionStateChange).mockClear()
+    return { ws, args }
+  }
+
+  async function createConnectingClient(): Promise<SocketClient> {
+    const { ws, args } = createClientInState(ConnectionState.CONNECTING)
+    // @ts-expect-error - private connectToWebSocket for test
+    await ws.connectToWebSocket()
+    const socket = sockets.at(-1)
+    if (!socket) {
+      throw new Error("Expected MockWebSocket to be constructed")
+    }
+    pingServerSpy.mockClear()
+    return { ws, socket, args }
+  }
+
+  async function createConnectedClient(): Promise<SocketClient> {
+    const client = await createConnectingClient()
+    client.socket.readyState = 1
+    client.socket.dispatch("open")
+    expect(client.args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.CONNECTED,
+      undefined
+    )
+    vi.mocked(client.args.onConnectionStateChange).mockClear()
+    return client
+  }
+
+  function encodeForwardMsg(msg: ForwardMsg): ArrayBuffer {
+    const bytes = ForwardMsg.encode(msg).finish()
+    const copy = new Uint8Array(bytes.byteLength)
+    copy.set(bytes)
+    return copy.buffer
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    originalWebSocket = globalThis.WebSocket
+    sockets = []
+    globalThis.WebSocket = createMockWebSocket as unknown as typeof WebSocket
+
+    pingServerSpy = vi
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
+      .mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    globalThis.WebSocket = originalWebSocket
+    vi.restoreAllMocks()
+  })
+
+  it.each<{ state: ConnectionState; event: FsmEvent }>([
+    { state: ConnectionState.INITIAL, event: "CONNECTION_SUCCEEDED" },
+    { state: ConnectionState.CONNECTING, event: "SERVER_PING_SUCCEEDED" },
+    { state: ConnectionState.CONNECTED, event: "CONNECTION_SUCCEEDED" },
+    { state: ConnectionState.PINGING_SERVER, event: "CONNECTION_CLOSED" },
+    { state: ConnectionState.STATIC_CONNECTED, event: "CONNECTION_CLOSED" },
+  ])(
+    "rejects $event while in $state without changing state",
+    ({ state, event }) => {
+      const { ws, args } = createClientInState(state)
+
+      expect(() => stepFsm(ws, event)).toThrow(
+        `Unsupported state transition.\nState: ${state}\nEvent: ${event}`
+      )
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+      expect(args.sendClientError).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    }
+  )
+
+  it.each([
+    ConnectionState.INITIAL,
+    ConnectionState.PINGING_SERVER,
+    ConnectionState.CONNECTING,
+    ConnectionState.CONNECTED,
+    ConnectionState.STATIC_CONNECTED,
+  ])("disconnects forever and reports a fatal error raised in %s", state => {
+    const { ws, args } = createClientInState(state)
+
+    stepFsm(ws, "FATAL_ERROR", "something broke")
+
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection fatal error encountered",
+      "something broke",
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "something broke" }
+    )
+  })
+
+  it("reports 'Unknown error' for a fatal error without a message", () => {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+
+    stepFsm(ws, "FATAL_ERROR", "")
+
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "Unknown error" }
+    )
+    expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "" }
+    )
+  })
+
+  it.each<FsmEvent>([
+    "FATAL_ERROR",
+    "CONNECTION_CLOSED",
+    "SERVER_PING_SUCCEEDED",
+  ])("discards %s once disconnected forever", event => {
+    const args = createMockArgs()
+    const ws = new WebsocketConnection(args)
+    ws.disconnect()
+    vi.mocked(args.onConnectionStateChange).mockClear()
+
+    expect(() => stepFsm(ws, event, "late error")).not.toThrow()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+    expect(args.sendClientError).not.toHaveBeenCalled()
+  })
+
+  it.each<{
+    from: ConnectionState
+    eventType: SocketEventType
+    expectedClientErrors: string[]
+  }>([
+    {
+      from: ConnectionState.CONNECTING,
+      eventType: "error",
+      expectedClientErrors: ["Websocket connection onerror triggered"],
+    },
+    {
+      from: ConnectionState.CONNECTED,
+      eventType: "error",
+      expectedClientErrors: ["Websocket connection onerror triggered"],
+    },
+    {
+      from: ConnectionState.CONNECTED,
+      eventType: "close",
+      expectedClientErrors: [],
+    },
+  ])(
+    "returns to PINGING_SERVER and schedules a delayed health probe on socket $eventType while $from",
+    async ({ from, eventType, expectedClientErrors }) => {
+      const { ws, socket, args } =
+        from === ConnectionState.CONNECTED
+          ? await createConnectedClient()
+          : await createConnectingClient()
+
+      socket.dispatch(eventType, ABNORMAL_CLOSE_EVENT)
+
+      expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+      expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+        ConnectionState.PINGING_SERVER,
+        undefined
+      )
+      expect(socket.readyState).toBe(3)
+      expect(
+        vi.mocked(args.sendClientError).mock.calls.map(([error]) => error)
+      ).toEqual(expectedClientErrors)
+
+      // The health probe is delayed by the reconnect backoff window.
+      expect(pingServerSpy).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS)
+      expect(pingServerSpy).toHaveBeenCalledTimes(1)
+
+      ws.disconnect()
+    }
+  )
+
+  it("times out and retries when the socket is still connecting after the timeout", async () => {
+    const { ws, socket, args } = await createConnectingClient()
+
+    await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS - 1)
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(args.sendClientError).toHaveBeenCalledWith(
+      "Websocket connection timed out",
+      "ws://localhost:1234/_stcore/stream timed out",
+      "Websocket Connection"
+    )
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.PINGING_SERVER,
+      undefined
+    )
+    expect(socket.readyState).toBe(3)
+
+    ws.disconnect()
+  })
+
+  it("does not time out once the socket has opened", async () => {
+    const { ws, socket, args } = await createConnectedClient()
+
+    await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS)
+
+    expect(args.sendClientError).not.toHaveBeenCalled()
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+    expect(socket.readyState).toBe(1)
+
+    ws.disconnect()
+  })
+
+  it.each<SocketEventType>(["open", "message", "close", "error"])(
+    "ignores a %s event from a socket that has already been closed",
+    async eventType => {
+      const { ws, socket, args } = await createConnectedClient()
+      socket.dispatch("close", ABNORMAL_CLOSE_EVENT)
+      vi.mocked(args.onConnectionStateChange).mockClear()
+
+      socket.dispatch(
+        eventType,
+        eventType === "message"
+          ? { data: encodeForwardMsg(ForwardMsg.create()) }
+          : ABNORMAL_CLOSE_EVENT
+      )
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+      expect(args.sendClientError).not.toHaveBeenCalled()
+      expect(args.onMessage).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    }
+  )
+
+  it("forwards decoded frames from the socket to onMessage", async () => {
+    const { ws, socket, args } = await createConnectedClient()
+
+    socket.dispatch("message", {
+      data: encodeForwardMsg(ForwardMsg.fromObject({ hash: "frame-hash" })),
+    })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(args.onMessage).toHaveBeenCalledTimes(1)
+    expect(args.onMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: "frame-hash" })
+    )
+    expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("disconnects forever when a frame cannot be decoded", async () => {
+    const { socket, args } = await createConnectedClient()
+
+    // A lone varint continuation byte is a truncated protobuf message.
+    socket.dispatch("message", { data: new Uint8Array([0xff]).buffer })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      {
+        message: expect.stringContaining(
+          "Failed to process a Websocket message"
+        ),
+      }
+    )
+    expect(args.onMessage).not.toHaveBeenCalled()
+    expect(socket.readyState).toBe(3)
+  })
+
+  it("sends messages while connected and drops them once the socket is closed", async () => {
+    const { ws, socket } = await createConnectedClient()
+
+    ws.sendMessage({})
+    expect(socket.send).toHaveBeenCalledTimes(1)
+
+    socket.dispatch("close", ABNORMAL_CLOSE_EVENT)
+    socket.send.mockClear()
+
+    expect(() => ws.sendMessage({})).not.toThrow()
+    expect(socket.send).not.toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("refuses to open a second socket while one already exists", async () => {
+    const { ws } = await createConnectingClient()
+
+    // @ts-expect-error - private connectToWebSocket for test
+    await expect(ws.connectToWebSocket()).rejects.toThrow(
+      "Websocket already exists"
+    )
+    expect(sockets).toHaveLength(1)
+
+    ws.disconnect()
+  })
+
+  describe("ping cycle failures", () => {
+    afterEach(() => {
+      vi.mocked(doInitPings).mockReset()
+    })
+
+    /** Uses the real pingServer, with the next doInitPings call rejecting. */
+    function rejectNextPing(reason: unknown): void {
+      pingServerSpy.mockRestore()
+      vi.mocked(doInitPings).mockReturnValueOnce({
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- covers the String(reason) fallback for non-Error rejections
+        promise: Promise.reject(reason),
+        cancel: vi.fn(),
+      })
+    }
+
+    it.each([
+      { reason: new Error("ping exploded"), enableBypass: false },
+      { reason: "ping exploded", enableBypass: false },
+      { reason: new Error("ping exploded"), enableBypass: true },
+      { reason: "ping exploded", enableBypass: true },
+    ])(
+      "disconnects forever on an unexpected rejection ($reason, enableBypass=$enableBypass)",
+      async ({ reason, enableBypass }) => {
+        rejectNextPing(reason)
+
+        const args = createMockArgs({ enableBypass })
+        const ws = new WebsocketConnection(args)
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(args.sendClientError).toHaveBeenCalledWith(
+          "Websocket connection fatal error encountered",
+          "ping exploded",
+          "Websocket Connection"
+        )
+        expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+          ConnectionState.DISCONNECTED_FOREVER,
+          { message: "ping exploded" }
+        )
+        expect(args.onConnectionStateChange).not.toHaveBeenCalledWith(
+          ConnectionState.CONNECTED,
+          undefined
+        )
+
+        ws.disconnect()
+      }
+    )
+
+    it("stays in PINGING_SERVER without reporting an error when the ping is cancelled", async () => {
+      rejectNextPing(new PingCancelledError())
+
+      const args = createMockArgs()
+      const ws = new WebsocketConnection(args)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+      expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+        ConnectionState.PINGING_SERVER,
+        undefined
+      )
+      expect(args.sendClientError).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    })
   })
 })

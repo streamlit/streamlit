@@ -16,7 +16,7 @@ from collections.abc import Callable
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -26,7 +26,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_CAMERA_INPUT_WIDGETS = 6
+NUM_CAMERA_INPUT_WIDGETS = 7
 
 
 def check_dimensions_func(camera_input: Locator) -> Callable[[], bool]:
@@ -115,9 +115,9 @@ def test_take_photo_button_styling(app: Page):
     # state between sequential expect() calls when the webcam layout reflows.
     take_photo_button.scroll_into_view_if_needed()
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("color", "rgb(255, 75, 75)")
+    expect(take_photo_button).to_have_css("color", "rgb(197, 57, 72)")
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("border-color", "rgb(255, 75, 75)")
+    expect(take_photo_button).to_have_css("border-color", "rgb(197, 57, 72)")
     take_photo_button.hover()
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
@@ -131,8 +131,9 @@ def test_take_photo_button_styling(app: Page):
 
     # Check that the button is styled correctly when hovered over
     take_photo_button.hover()
-    expect(take_photo_button).to_have_css("color", "rgba(49, 51, 63, 0.4)")
-    expect(take_photo_button).to_have_css("border-color", "rgba(49, 51, 63, 0.2)")
+    expect(take_photo_button).to_have_css("color", "rgba(47, 45, 43, 0.4)")
+    # Default borderColor is opaque #DCD8D4.
+    expect(take_photo_button).to_have_css("border-color", "rgb(220, 216, 212)")
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
 
@@ -243,3 +244,52 @@ def test_dynamic_camera_input_props(app: Page):
     )
     dynamic_camera_input.scroll_into_view_if_needed()
     expect_help_tooltip(app, dynamic_camera_input, "updated help")
+
+
+@pytest.mark.only_browser("chromium")
+def test_camera_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore camera value:", "False")
+
+    ignore_camera = get_element_by_key(app, "ignore_camera")
+    take_photo_button = ignore_camera.get_by_test_id("stCameraInputButton").first
+    expect(take_photo_button).to_be_enabled()
+    take_photo_button.click()
+
+    # "Clear photo" is briefly visible before the JPEG upload starts, so it is
+    # not a completion signal. Snapshot opacity reaches 1 only after upload
+    # finishes (shutter is cleared in onUploadComplete).
+    expect(ignore_camera.get_by_alt_text("Snapshot")).to_have_css("opacity", "1")
+    expect(ignore_camera.get_by_text("Clear photo")).to_be_visible()
+    expect(ignore_camera.get_by_test_id("stCameraInputButton").first).to_be_enabled()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore camera value:", "False")
+
+    app.get_by_role("button", name="Apply ignore camera", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore camera value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore camera value: True", exact=True)
+    ).to_be_visible()
+
+    ignore_camera.get_by_text("Clear photo").click()
+    expect(ignore_camera.get_by_test_id("stCameraInputButton").first).to_be_enabled()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore camera value: True", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore camera", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore camera value: False", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore camera value: False", exact=True)
+    ).to_be_visible()

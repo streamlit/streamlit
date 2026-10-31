@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, useEffect } from "react"
+import { memo, type ReactElement, type ReactNode, useEffect } from "react"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledForm } from "./styled-components"
 
@@ -31,6 +31,8 @@ export interface Props {
   // we are using a portal to render the toolbars. But we want to
   // do a patch to reduce the impact on existing usages of st.form.
   overflow?: React.CSSProperties["overflow"]
+  /** Whether the form fills its parent and grows to fit taller content. */
+  isStretchHeight?: boolean
 }
 
 function Form(props: Props): ReactElement {
@@ -42,6 +44,7 @@ function Form(props: Props): ReactElement {
     enterToSubmit,
     border,
     overflow,
+    isStretchHeight = false,
   } = props
 
   // Tell WidgetStateManager if this form is `clearOnSubmit` and `enterToSubmit`
@@ -55,6 +58,7 @@ function Form(props: Props): ReactElement {
       data-testid="stForm"
       border={border}
       overflow={overflow}
+      isStretchHeight={isStretchHeight}
     >
       {children}
     </StyledForm>

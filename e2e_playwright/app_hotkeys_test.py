@@ -32,6 +32,12 @@ modifier_keys = ["Control", "Meta"]
 def test_does_not_show_clear_cache_when_modifier_c_is_pressed(app: Page):
     for key in modifier_keys:
         app.keyboard.press(f"{key}+c")
+        # Releasing the modifier before "c" must not turn the "c" keyup into a
+        # bare-key shortcut.
+        app.keyboard.down(key)
+        app.keyboard.down("c")
+        app.keyboard.up(key)
+        app.keyboard.up("c")
     expect(app.get_by_test_id("stClearCacheDialog")).not_to_be_visible()
 
 

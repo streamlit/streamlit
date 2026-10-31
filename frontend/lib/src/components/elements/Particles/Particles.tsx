@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useContext, useMemo } from "react"
+import { type FC, memo, useContext, useMemo } from "react"
 
 import { range } from "lodash-es"
 

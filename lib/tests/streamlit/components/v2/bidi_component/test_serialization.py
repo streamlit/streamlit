@@ -260,3 +260,25 @@ def test_extract_dataframes_from_dict_fallback_on_arrow_failure(monkeypatch):
 
     result = ser._extract_dataframes_from_dict({"df": obj})
     assert result["df"] is obj
+
+
+def test_described_bidi_data_covers_each_payload() -> None:
+    """JSON and mixed JSON are reported, bytes by length, and Arrow is omitted."""
+    from streamlit.components.v2.bidi_component.main import _described_bidi_data
+    from streamlit.elements.lib.agent_spec import Content
+
+    json_proto = BidiComponentProto()
+    json_proto.json = '{"a": 1}'
+    assert _described_bidi_data(json_proto) == Content({"a": 1})
+
+    bytes_proto = BidiComponentProto()
+    bytes_proto.bytes = b"abc"
+    assert _described_bidi_data(bytes_proto) == {"bytes": 3}
+
+    mixed_proto = BidiComponentProto()
+    mixed_proto.mixed.json = '{"rows": 1}'
+    assert _described_bidi_data(mixed_proto) == Content({"rows": 1})
+
+    arrow_proto = BidiComponentProto()
+    arrow_proto.arrow_data.SetInParent()
+    assert _described_bidi_data(arrow_proto) is None

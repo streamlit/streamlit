@@ -32,10 +32,9 @@ export function getSelectFilterMode(
   return filterMode ?? streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY
 }
 
-// Add a custom filterOptions method to filter options only based on labels.
-// The baseweb default method filters based on labels or indices
+// Filter and fuzzy-rank options by label only (not by index) so typing "1"
+// does not match the first item by position.
 // More details: https://github.com/streamlit/streamlit/issues/1010
-// Also filters using fuzzy search.
 export function fuzzyFilterSelectOptions<T extends LabeledOption>(
   options: readonly T[],
   pattern: string
@@ -79,6 +78,7 @@ export function filterSelectOptions<T extends LabeledOption>(
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- protobuf keeps unknown enum numbers, so modes from a newer backend can reach here
   if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX) {
     return options.filter((opt: T) =>
       normalizeFilterValue(opt.label).startsWith(normalizedPattern)

@@ -40,6 +40,9 @@ class MemoryCacheStorageManager(CacheStorageManager):
 
 
 class DummyCacheStorage(CacheStorage):
+    def has(self, key: str) -> bool:  # noqa: ARG002
+        return False
+
     def get(self, key: str) -> bytes:  # noqa: ARG002
         """
         Dummy gets the value for a given key,

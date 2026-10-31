@@ -33,7 +33,6 @@ from streamlit.runtime.caching.cache_resource_api import (
 from streamlit.runtime.caching.cache_resource_api import (
     clear_session_cache as clear_session_resource_cache,
 )
-from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 
 if TYPE_CHECKING:
     from google.protobuf.message import Message
@@ -49,6 +48,7 @@ def save_element_message(
     used_dg_id: str,
     returned_dg_id: str,
     layout_config: LayoutConfig | None = None,
+    agent_props: str | None = None,
 ) -> None:
     """Save the message for an element to a thread-local callstack, so it can
     be used later to replay the element when a cache-decorated function's
@@ -61,6 +61,7 @@ def save_element_message(
         used_dg_id,
         returned_dg_id,
         layout_config,
+        agent_props,
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_element_message(
         delta_type,
@@ -69,6 +70,7 @@ def save_element_message(
         used_dg_id,
         returned_dg_id,
         layout_config,
+        agent_props,
     )
 
 
@@ -77,16 +79,17 @@ def save_block_message(
     invoked_dg_id: str,
     used_dg_id: str,
     returned_dg_id: str,
+    agent_props: str | None = None,
 ) -> None:
     """Save the message for a block to a thread-local callstack, so it can
     be used later to replay the block when a cache-decorated function's
     execution is skipped.
     """
     CACHE_DATA_MESSAGE_REPLAY_CTX.save_block_message(
-        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id, agent_props
     )
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX.save_block_message(
-        block_proto, invoked_dg_id, used_dg_id, returned_dg_id
+        block_proto, invoked_dg_id, used_dg_id, returned_dg_id, agent_props
     )
 
 
@@ -98,14 +101,10 @@ def save_media_data(media_data: bytes | str, mimetype: str, media_id: str) -> No
 # Create and export public API singletons.
 cache_data = CacheDataAPI(decorator_metric_name="cache_data")
 cache_resource = CacheResourceAPI(decorator_metric_name="cache_resource")
-# TODO(lukasmasuch): This is the legacy cache API name which is deprecated
-# and it should be removed in the future.
-cache = _cache
 
 
 __all__ = [
     "CACHE_DOCS_URL",
-    "cache",
     "cache_data",
     "cache_resource",
     "clear_session_data_cache",

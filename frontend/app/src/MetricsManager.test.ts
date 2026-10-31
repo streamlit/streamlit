@@ -17,15 +17,14 @@
 // Disable Typescript checking, since mm.track has private scope
 // @ts-nocheck
 
-import UAParser from "ua-parser-js"
-
 import {
-  MetricsEvent,
+  type MetricsEvent,
   mockSessionInfo,
   mockSessionInfoProps,
-  SessionInfo,
+  type SessionInfo,
   setCookie,
 } from "@streamlit/lib"
+import { PageProfile } from "@streamlit/protobuf"
 
 import { DEFAULT_METRICS_CONFIG, MetricsManager } from "./MetricsManager"
 
@@ -34,7 +33,7 @@ const getMetricsManager = (
   metricsConfig: string = DEFAULT_METRICS_CONFIG,
   mockRequestDefaultMetricsConfig = true
 ): MetricsManager => {
-  const mm = new MetricsManager(sessionInfo || mockSessionInfo())
+  const mm = new MetricsManager(sessionInfo ?? mockSessionInfo())
   if (mockRequestDefaultMetricsConfig) {
     mm.requestDefaultMetricsConfig = vi.fn()
   }
@@ -74,6 +73,7 @@ const DEFAULT_EVENT_DATA = {
   contextPagePath: window.location.pathname,
   contextPageReferrer: document.referrer,
   contextPageSearch: window.location.search,
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank userLanguage falls through to language
   contextLocale: window.navigator.userLanguage || window.navigator.language,
   contextUserAgent: window.navigator.userAgent,
 }
@@ -183,7 +183,7 @@ describe("initialize", () => {
     await mm.initialize({ gatherUsageStats: true })
 
     // Checks for cached config first
-    expect(getItemSpy).toBeCalledWith("stMetricsConfig")
+    expect(getItemSpy).toHaveBeenCalledWith("stMetricsConfig")
     // Fetches if no cached config
     expect(fetch.mock.calls.length).toBe(1)
     expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
@@ -191,8 +191,6 @@ describe("initialize", () => {
 })
 
 describe("metrics helpers", () => {
-  const RESULT = new UAParser().getResult()
-
   const PAGE_PROFILE_DATA = {
     commands: [],
     execTime: 50,
@@ -203,7 +201,7 @@ describe("metrics helpers", () => {
     timezone: "('UTC', 'UTC')",
     headless: false,
     isFragmentRun: false,
-    os: RESULT.os.name || "Unknown",
+    os: "Test OS",
     appId: "mockAppId",
     numPages: 1,
     sessionId: "mockSessionId",
@@ -211,9 +209,9 @@ describe("metrics helpers", () => {
     pageScriptHash: "mockPageScriptHash",
     activeTheme: "Use system setting",
     totalLoadTime: 100,
-    browserName: RESULT.browser.name || "Unknown",
-    browserVersion: RESULT.browser.version || "Unknown",
-    deviceType: RESULT.device.type || "Unknown",
+    browserName: "Test Browser",
+    browserVersion: "1.2.3",
+    deviceType: "desktop",
     serverMode: "starlette-managed",
     installedSkills: [
       "home:claude:developing-with-streamlit",
@@ -295,6 +293,47 @@ describe("metrics helpers", () => {
     )
   })
 
+  it("buildEventProto forwards agentApiUsage through toJSON - pageProfile", async () => {
+    // Round-trips through the wire format and converts like
+    // App.handlePageProfileMsg, so field presence and int64 handling match a
+    // message from the server.
+    const decodedPageProfile = (
+      props: PageProfile.$Properties
+    ): ReturnType<typeof PageProfile.toObject> =>
+      PageProfile.toObject(
+        PageProfile.decode(
+          PageProfile.encode(PageProfile.create(props)).finish()
+        )
+      )
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          agentApiUsage: {
+            instanceId: "0123abcd",
+            httpInteractions: 3,
+            sessions: 1,
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // The event's JSON carries each int64 as a decimal string and omits zero
+    // counts, such as mcpInteractions here.
+    expect(withUsage.agentApiUsage).toStrictEqual({
+      instanceId: "0123abcd",
+      httpInteractions: "3",
+      sessions: "1",
+    })
+    expect(withoutUsage).not.toHaveProperty("agentApiUsage")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
@@ -306,6 +345,20 @@ describe("metrics helpers", () => {
     checkDefaultEventData(menuClickProto)
     // Additional Menu Click Event Fields
     expect(menuClickProto.label).toEqual("mockLabel")
+    // surface is left empty when not provided.
+    expect(menuClickProto.surface).toEqual("")
+  })
+
+  it("buildEventProto sets the surface dimension when provided - menuClick", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+    const menuClickProto = mm.buildEventProto("menuClick", {
+      label: "skillsNudgeInstall",
+      surface: "errorCallout",
+    })
+    expect(menuClickProto.label).toEqual("skillsNudgeInstall")
+    expect(menuClickProto.surface).toEqual("errorCallout")
   })
 
   it("getAnonymousId is called on initialization, saves uuid to this.anonymousId", async () => {
@@ -328,7 +381,7 @@ describe("metrics helpers", () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(getItemSpy).toBeCalledWith("ajs_anonymous_id")
+    expect(getItemSpy).toHaveBeenCalledWith("ajs_anonymous_id")
     expect(getCookieSpy).toHaveBeenCalled()
     expect(setCookieSpy).toHaveBeenCalled()
     expect(setItemSpy).toHaveBeenCalled()

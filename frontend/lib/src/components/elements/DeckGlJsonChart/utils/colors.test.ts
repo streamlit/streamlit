@@ -14,7 +14,30 @@
  * limitations under the License.
  */
 
-import { getContextualFillColor, SerializedColorArray } from "./colors"
+import {
+  getContextualFillColor,
+  MAP_DEFAULT_MARKER_ALPHA,
+  MAP_PRIMARY_FILL_PLACEHOLDER,
+  resolveMapPrimaryFillColor,
+  type SerializedColorArray,
+} from "./colors"
+
+describe("#resolveMapPrimaryFillColor", () => {
+  it("resolves the primary placeholder to theme primary RGB with map default alpha", () => {
+    expect(
+      resolveMapPrimaryFillColor(MAP_PRIMARY_FILL_PLACEHOLDER, "#ff4b4b")
+    ).toEqual([255, 75, 75, MAP_DEFAULT_MARKER_ALPHA])
+  })
+
+  it("leaves concrete RGBA arrays unchanged", () => {
+    const fill = [200, 30, 0, 160]
+    expect(resolveMapPrimaryFillColor(fill, "#ff4b4b")).toBe(fill)
+  })
+
+  it("leaves column accessors unchanged", () => {
+    expect(resolveMapPrimaryFillColor("@@=color", "#ff4b4b")).toBe("@@=color")
+  })
+})
 
 describe("#getContextualFillColor", () => {
   const object = { count: 10 }
@@ -147,6 +170,78 @@ describe("#getContextualFillColor", () => {
         unselectedColor,
       },
       [0, 0, 0, 255],
+    ],
+    [
+      "should preserve an explicit zero alpha when not selected",
+      {
+        isSelected: false,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => [255, 0, 0, 0],
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha to full opacity when selected",
+      {
+        isSelected: true,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => [255, 0, 0, 0],
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
+    ],
+    [
+      "should preserve an explicit zero alpha from a @@= expression when not selected",
+      {
+        isSelected: false,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=[255, 0, 0, 0]",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha from a @@= expression when selected",
+      {
+        isSelected: true,
+        object,
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=[255, 0, 0, 0]",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
+    ],
+    [
+      "should preserve an explicit zero alpha from @@=color when not selected",
+      {
+        isSelected: false,
+        object: { color: [255, 0, 0, 0] },
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=color",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 0],
+    ],
+    [
+      "should boost an explicit zero alpha from @@=color when selected",
+      {
+        isSelected: true,
+        object: { color: [255, 0, 0, 0] },
+        objectInfo: { index: 0 },
+        originalFillFunction: () => "@@=color",
+        selectedColor,
+        unselectedColor,
+      },
+      [255, 0, 0, 255],
     ],
   ]
 

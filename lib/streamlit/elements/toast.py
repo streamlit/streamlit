@@ -16,7 +16,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, cast
 
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.elements.lib import agent_spec
+from streamlit.errors import (
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Toast_pb2 import Toast as ToastProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text, validate_icon_or_emoji
@@ -28,8 +32,9 @@ if TYPE_CHECKING:
 
 def validate_text(toast_text: SupportsStr) -> SupportsStr:
     if str(toast_text) == "":
-        raise StreamlitAPIException(
-            "Toast body cannot be blank - please provide a message."
+        raise StreamlitMissingRequiredParameterError(
+            "body",
+            detail="Please provide a message.",
         )
     return toast_text
 
@@ -167,7 +172,17 @@ class ToastMixin:
                 "duration", ["short", "long", "infinite", "a positive integer"]
             )
 
-        return self.dg._enqueue("toast", toast_proto, has_one_shot_effect=True)
+        return self.dg._enqueue(
+            "toast",
+            toast_proto,
+            has_one_shot_effect=True,
+            agent_props=agent_spec.element(
+                "toast",
+                body=toast_proto.body,
+                icon=toast_proto.icon or None,
+                duration=duration,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

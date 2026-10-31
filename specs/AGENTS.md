@@ -221,7 +221,7 @@ st.text_input("Password", password=True)
 # Good: Enum allows expansion
 st.text_input("Password", type="password")
 st.text_input("Email", type="email")  # Easy to add later
-st.text_input("Phone", type="tel")    # And again
+st.text_input("Phone", type="tel")  # And again
 ```
 
 Exception: `disabled=True/False` is fine because there will never be a third state.
@@ -345,11 +345,11 @@ data.
 
 ```python
 # All of these should work for options:
-st.selectbox("Pick", ["a", "b", "c"])            # list
-st.selectbox("Pick", ("a", "b", "c"))            # tuple
-st.selectbox("Pick", {"a", "b", "c"})            # set
+st.selectbox("Pick", ["a", "b", "c"])  # list
+st.selectbox("Pick", ("a", "b", "c"))  # tuple
+st.selectbox("Pick", {"a", "b", "c"})  # set
 st.selectbox("Pick", np.array(["a", "b", "c"]))  # numpy
-st.selectbox("Pick", pd.Series(["a", "b", "c"])) # pandas
+st.selectbox("Pick", pd.Series(["a", "b", "c"]))  # pandas
 ```
 
 ## 30. Drop-In Replacement for Scripts
@@ -387,7 +387,7 @@ top-to-bottom on every interaction."
 
 ```python
 name = st.text_input("Name")  # Does NOT block
-st.write(f"Hello {name}")     # Always runs (name may be "")
+st.write(f"Hello {name}")  # Always runs (name may be "")
 ```
 
 ## 33. Deterministic Output

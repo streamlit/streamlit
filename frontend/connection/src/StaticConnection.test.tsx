@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
 
@@ -65,7 +65,7 @@ describe("StaticConnection", () => {
       const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
 
       // Mock fetch for our static asset location
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -90,7 +90,7 @@ describe("StaticConnection", () => {
       // eslint-disable-next-line no-proto
       vi.spyOn(window.localStorage.__proto__, "getItem").mockReturnValue(null)
       // Mock fetch for our static asset location
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
@@ -114,7 +114,7 @@ describe("StaticConnection", () => {
       const staticConfigUrl = "www.example.com"
 
       // Mock fetch for our protos
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -136,7 +136,7 @@ describe("StaticConnection", () => {
       const staticConfigUrl = "www.example.com"
 
       // Mock fetch for our protos
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
@@ -162,7 +162,7 @@ describe("StaticConnection", () => {
 
     it("decodes and dispatches messages", async () => {
       // Handles getProtoResponse
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -193,7 +193,7 @@ describe("StaticConnection", () => {
 
     it("logs error if arrayBuffer is undefined", async () => {
       // Handles getProtoResponse
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
@@ -238,7 +238,7 @@ describe("StaticConnection", () => {
       )
 
       // Handles getProtoResponse
-      // @ts-expect-error
+      // @ts-expect-error - fetch mock does not return a Response
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,

@@ -125,11 +125,20 @@ def configure_streamlit_plotly_theme() -> None:
                     go.layout.template.data.Histogram2d(colorscale=streamlit_colorscale)
                 ],
                 icicle=[
+                    # NOTE: Keep this trace-level textfont in sync with
+                    # getStreamlitInjectedTextfontColors in
+                    # frontend/lib/src/components/elements/PlotlyChart/CustomTheme.tsx
+                    # — the frontend needs the exact color to distinguish
+                    # Streamlit's injected default from a user-owned custom
+                    # template.
                     go.layout.template.data.Icicle(
                         textfont=go.icicle.Textfont(color="white")
                     )
                 ],
                 sankey=[
+                    # NOTE: Keep this trace-level textfont in sync with
+                    # getStreamlitInjectedTextfontColors in
+                    # frontend/lib/src/components/elements/PlotlyChart/CustomTheme.tsx.
                     go.layout.template.data.Sankey(
                         textfont=go.sankey.Textfont(color=GRAY_70)
                     )

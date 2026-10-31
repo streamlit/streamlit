@@ -18,11 +18,13 @@ import asyncio
 import os
 import shutil
 import tempfile
+import threading
 import unittest
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
+from parameterized import parameterized
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.v2.component_manager import BidiComponentManager
@@ -36,6 +38,9 @@ from streamlit.runtime import (
     SessionClient,
     SessionClientDisconnectedError,
 )
+from streamlit.runtime.caching.storage.dummy_cache_storage import (
+    MemoryCacheStorageManager,
+)
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
     LocalDiskCacheStorageManager,
 )
@@ -44,6 +49,8 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.runtime import AsyncObjects, RuntimeStoppedError
+from streamlit.runtime.scriptrunner import ScriptRunnerEvent
+from streamlit.runtime.session_manager import ActiveSessionInfo
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 from streamlit.watcher import event_based_path_watcher
 from tests.streamlit.message_mocks import (
@@ -52,6 +59,8 @@ from tests.streamlit.message_mocks import (
 from tests.streamlit.runtime.runtime_test_case import RuntimeTestCase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 
@@ -116,9 +125,6 @@ class RuntimeSingletonTest(unittest.TestCase):
         We construct a RuntimeConfig with a sentinel ``MemoryCacheStorageManager``
         and verify the property returns the same instance.
         """
-        from streamlit.runtime.caching.storage.dummy_cache_storage import (
-            MemoryCacheStorageManager,
-        )
 
         sentinel_manager = MemoryCacheStorageManager()
         config = RuntimeConfig(
@@ -267,6 +273,39 @@ class RuntimeTest(RuntimeTestCase):
             patched_disconnect_session.assert_called_once_with(session_id)
             patched_on_session_disconnected.assert_called_once()
 
+    async def test_disconnect_session_with_matching_client_disconnects(self):
+        """Passing the session's current client should still disconnect it."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=client)
+            patched_disconnect_session.assert_called_once_with(session_id)
+
+    async def test_disconnect_session_with_stale_client_is_noop(self):
+        """A stale websocket should not disconnect a session after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch.object(
+            self.runtime._session_mgr, "disconnect_session", new=MagicMock()
+        ) as patched_disconnect_session:
+            self.runtime.disconnect_session(session_id, client=old_client)
+            patched_disconnect_session.assert_not_called()
+
+        assert self.runtime.is_active_session(session_id)
+
     async def test_close_session_closes_appsession(self):
         await self.runtime.start()
 
@@ -392,6 +431,39 @@ class RuntimeTest(RuntimeTestCase):
         app_session = session_info.session
         app_session.handle_backmsg.assert_called_once_with(back_msg)
 
+    @patch("streamlit.runtime.app_session.AppSession.handle_backmsg", new=MagicMock())
+    async def test_handle_backmsg_with_matching_client_is_delivered(self):
+        """A BackMsg from the session's current client should still be delivered."""
+        await self.runtime.start()
+
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        back_msg = MagicMock()
+        self.runtime.handle_backmsg(session_id, back_msg, client=client)
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.session.handle_backmsg.assert_called_once_with(back_msg)
+
+    async def test_handle_backmsg_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsgs after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg"
+        ) as patched_handle_backmsg:
+            self.runtime.handle_backmsg(session_id, MagicMock(), client=old_client)
+            patched_handle_backmsg.assert_not_called()
+
     async def test_handle_backmsg_invalid_session(self):
         """A BackMsg for an invalid session should get dropped without an error."""
         await self.runtime.start()
@@ -417,6 +489,26 @@ class RuntimeTest(RuntimeTestCase):
         assert session_info is not None
         app_session = session_info.session
         app_session.handle_backmsg_exception.assert_called_once_with(exception)
+
+    async def test_handle_backmsg_exception_with_stale_client_is_noop(self):
+        """A stale websocket should not deliver BackMsg exceptions after reconnect."""
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session_info.client = MockSessionClient()
+
+        with patch(
+            "streamlit.runtime.app_session.AppSession.handle_backmsg_exception"
+        ) as patched_handle_backmsg_exception:
+            self.runtime.handle_backmsg_deserialization_exception(
+                session_id, MagicMock(), client=old_client
+            )
+            patched_handle_backmsg_exception.assert_not_called()
 
     async def test_handle_backmsg_exception_invalid_session(self):
         """A BackMsg exception for an invalid session should get dropped without an
@@ -444,6 +536,23 @@ class RuntimeTest(RuntimeTestCase):
         with pytest.raises(RuntimeStoppedError):
             self.runtime.handle_backmsg("not_a_session_id", MagicMock())
 
+    async def test_handle_backmsg_deserialization_exception_after_stop(self):
+        """After Runtime.stop is called, BackMsg exception handling is an error."""
+        await self.runtime.start()
+        self.runtime.stop()
+        await self.tick_runtime_loop()
+
+        with pytest.raises(RuntimeStoppedError):
+            self.runtime.handle_backmsg_deserialization_exception(
+                "not_a_session_id", MagicMock()
+            )
+
+    async def test_is_ready_for_browser_connection_when_unavailable(self):
+        """The runtime is unavailable for browser connections before start."""
+        ready, message = await self.runtime.is_ready_for_browser_connection
+        assert ready is False
+        assert message == "unavailable"
+
     async def test_handle_session_client_disconnected(self):
         """Runtime should gracefully handle `SessionClient.write_forward_msg`
         raising a `SessionClientDisconnectedError`.
@@ -469,6 +578,54 @@ class RuntimeTest(RuntimeTestCase):
         # Assert that our error was raised, and that our session was disconnected.
         raise_disconnected_error.assert_called_once()
         assert not self.runtime.is_active_session(session_id)
+
+    async def test_flush_loop_stale_client_error_keeps_reconnected_session(self):
+        """A stale client error during the flush loop must not disconnect a
+        session that has been reconnected to a new client.
+
+        Regression test for a reconnect-while-flushing race: the outbound flush
+        loop can still hold the pre-reconnect ``ActiveSessionInfo`` (old client)
+        when a reconnect swaps in a new client for the same session id. A
+        ``SessionClientDisconnectedError`` from the old client must be routed
+        through the client-aware disconnect guard so the freshly reconnected
+        session is preserved.
+        """
+        await self.runtime.start()
+
+        old_client = MockSessionClient()
+        session_id = self.runtime.connect_session(
+            client=old_client, user_info=MagicMock()
+        )
+
+        session_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert session_info is not None
+        session = session_info.session
+
+        # The flush loop still holds the pre-reconnect session info (old client),
+        # while the session manager has swapped in a new client for the same id
+        # (as a reconnect would do after the disconnect+restore handoff).
+        new_client = MockSessionClient()
+        session_info.client = new_client
+        stale_session_info = ActiveSessionInfo(old_client, session)
+
+        raise_disconnected_error = MagicMock(side_effect=SessionClientDisconnectedError)
+        old_client.write_forward_msg = raise_disconnected_error
+
+        with patch.object(
+            self.runtime._session_mgr,
+            "list_active_sessions",
+            return_value=[stale_session_info],
+        ):
+            self.enqueue_forward_msg(session_id, create_dataframe_msg([1, 2, 3]))
+            await self.tick_runtime_loop()
+
+        # The stale client raised, but the reconnected session stays active and
+        # remains bound to the new client instead of being torn down.
+        raise_disconnected_error.assert_called_once()
+        assert self.runtime.is_active_session(session_id)
+        reconnected_info = self.runtime._session_mgr.get_active_session_info(session_id)
+        assert reconnected_info is not None
+        assert reconnected_info.client is new_client
 
     async def test_stable_number_of_async_tasks(self):
         """Test that the number of async tasks remains stable.
@@ -505,6 +662,67 @@ class RuntimeTest(RuntimeTestCase):
         received = client.forward_msgs.pop()
         populate_hash_if_needed(msg)
         assert msg.hash == received.hash
+
+    async def test_wait_until_settled_returns_after_client_received_trailing_messages(
+        self,
+    ) -> None:
+        """The settle signal fires only once the Runtime loop has sent every
+        message enqueued before the runner's SHUTDOWN.
+        """
+        await self.runtime.start()
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+        session = self.runtime.get_app_session(session_id)
+        assert session is not None
+        session.track_settling()
+
+        runner = MagicMock()
+        with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):
+            session.request_rerun(None)
+
+        async def received_when_settled() -> list[ForwardMsg]:
+            await session.wait_until_settled()
+            return list(client.forward_msgs)
+
+        waiter = asyncio.create_task(received_when_settled())
+        # More than one message, so a settle on the flush that hands them out
+        # would wake the waiter while the loop is still sending them.
+        trailing_msgs = [create_dataframe_msg([1, 2, 3], id=i) for i in range(3)]
+        for msg in trailing_msgs:
+            session._on_scriptrunner_event(
+                runner, ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+            )
+        session._on_scriptrunner_event(runner, ScriptRunnerEvent.SHUTDOWN)
+
+        assert await asyncio.wait_for(waiter, timeout=5) == trailing_msgs
+
+    async def test_wait_until_settled_returns_when_nothing_is_left_to_send(
+        self,
+    ) -> None:
+        """A run chain whose messages were all sent before its SHUTDOWN still
+        settles, through the flush cycle the SHUTDOWN requests.
+        """
+        await self.runtime.start()
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+        session = self.runtime.get_app_session(session_id)
+        assert session is not None
+        session.track_settling()
+
+        runner = MagicMock()
+        with patch("streamlit.runtime.app_session.ScriptRunner", return_value=runner):
+            session.request_rerun(None)
+        session._on_scriptrunner_event(
+            runner,
+            ScriptRunnerEvent.ENQUEUE_FORWARD_MSG,
+            forward_msg=create_dataframe_msg([1, 2, 3]),
+        )
+        await self.tick_runtime_loop()
+        assert len(client.forward_msgs) == 1
+
+        session._on_scriptrunner_event(runner, ScriptRunnerEvent.SHUTDOWN)
+
+        await asyncio.wait_for(session.wait_until_settled(), timeout=5)
 
     async def test_get_async_objs(self):
         """Runtime._get_async_objs() will raise an error if called before the
@@ -563,6 +781,21 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         assert self.runtime.get_client("not_a_session_id") is None
 
+    async def test_get_app_session_returns_active_sessions_only(self) -> None:
+        """get_app_session returns the session while it is active, else None."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        session_info = self.runtime._session_mgr.get_session_info(session_id)
+        assert session_info is not None
+
+        assert self.runtime.get_app_session(session_id) is session_info.session
+        assert self.runtime.get_app_session("not_a_session_id") is None
+
+        self.runtime.close_session(session_id)
+        assert self.runtime.get_app_session(session_id) is None
+
     async def test_clear_user_info_for_session_calls_session(self):
         """clear_user_info_for_session calls clear_user_info on the AppSession."""
         await self.runtime.start()
@@ -583,6 +816,285 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.start()
         # Should not raise.
         self.runtime.clear_user_info_for_session("not_a_session_id")
+
+    async def test_clear_user_info_for_active_session_stays_connected(self) -> None:
+        """An active session stays connected after its user info is cleared."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info={"email": "alice@example.com"}
+        )
+
+        self.runtime.clear_user_info_for_session(session_id)
+
+        assert self.runtime.is_active_session(session_id)
+        session_info = self.runtime._session_mgr.get_session_info(session_id)
+        assert session_info is not None
+        assert session_info.session.is_resumable() is False
+        assert session_info.session._user_info == {}
+
+    async def test_start_keeps_sessions_connected_before_loop_starts(self) -> None:
+        """Starting the loop does not reset a state that already has sessions.
+
+        Sessions cannot connect before ``start``, so this state is set directly
+        to exercise the loop's defensive start-state handling.
+        """
+        self.runtime._set_state(RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
+
+        await asyncio.wait_for(self.runtime.start(), timeout=5)
+
+        assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+
+    async def test_loop_shuts_down_on_unexpected_state(self) -> None:
+        """The loop exits and closes sessions when it wakes in a non-running state."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info=MagicMock()
+        )
+        await self.tick_runtime_loop()
+
+        # Wake the loop without setting must_stop, so only the state check can
+        # end it.
+        self.runtime._set_state(RuntimeState.STOPPING)
+        self.runtime._get_async_objs().need_send_data.set()
+
+        await asyncio.wait_for(self.runtime.stopped, timeout=5)
+        assert self.runtime.state == RuntimeState.STOPPED
+        assert self.runtime._session_mgr.get_session_info(session_id) is None
+
+    async def test_loop_keeps_running_across_signal_check_timeouts(self) -> None:
+        """Periodic signal-check wakeups neither stop the loop nor block sending."""
+        real_wait = asyncio.wait
+        timed_out_states: list[RuntimeState] = []
+
+        async def recording_wait(*args: Any, **kwargs: Any) -> Any:
+            done, pending = await real_wait(*args, **kwargs)
+            if not done:
+                timed_out_states.append(self.runtime.state)
+            return done, pending
+
+        with (
+            patch("streamlit.runtime.runtime._SIGNAL_CHECK_INTERVAL", 0.001),
+            patch("streamlit.runtime.runtime.asyncio.wait", new=recording_wait),
+        ):
+            await self.runtime.start()
+            # Time out repeatedly while waiting for a connection.
+            await asyncio.sleep(0.05)
+            assert RuntimeState.NO_SESSIONS_CONNECTED in timed_out_states
+            assert self.runtime.state == RuntimeState.NO_SESSIONS_CONNECTED
+            assert not self.runtime._get_async_objs().stopped.done()
+
+            client = MockSessionClient()
+            session_id = self.runtime.connect_session(
+                client=client, user_info=MagicMock()
+            )
+            # Time out repeatedly while waiting for messages to send.
+            await asyncio.sleep(0.05)
+            assert RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED in timed_out_states
+            assert self.runtime.state == RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED
+
+            msg = create_dataframe_msg([1, 2, 3])
+            self.enqueue_forward_msg(session_id, msg)
+            await self.tick_runtime_loop()
+
+        received = client.forward_msgs.pop()
+        populate_hash_if_needed(msg)
+        assert received.hash == msg.hash
+
+
+class ClearUserInfoStoredSessionRuntimeTest(RuntimeTestCase):
+    """clear_user_info_for_session deletes a disconnected session from storage.
+
+    Uses WebsocketSessionManager. RuntimeTestCase's MockSessionManager does
+    not persist disconnected sessions.
+    """
+
+    async def asyncSetUp(self) -> None:
+        Runtime._instance = None
+        self.runtime = Runtime(
+            RuntimeConfig(
+                script_path="mock/script/path.py",
+                media_file_storage=MemoryMediaFileStorage("/mock/media"),
+                uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+                cache_storage_manager=MemoryCacheStorageManager(),
+                session_manager_class=WebsocketSessionManager,
+                session_storage=MemorySessionStorage(),
+            )
+        )
+
+    async def test_clear_user_info_for_stored_session_drops_it(self) -> None:
+        """clear_user_info_for_session deletes a disconnected stored session."""
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+            assert self.runtime._session_mgr.get_session_info(session_id) is not None
+
+            self.runtime.clear_user_info_for_session(session_id)
+            assert self.runtime._session_mgr.get_session_info(session_id) is None
+
+            new_session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={},
+                existing_session_id=session_id,
+            )
+
+        assert new_session_id != session_id
+
+    async def test_clear_user_info_for_stored_session_from_script_thread(self) -> None:
+        """A script-thread logout closes a stored session on the event loop."""
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+
+            storage = self.runtime._session_mgr._session_storage
+            worker_ids: list[int] = []
+            get_callers: list[int] = []
+            original_get = storage.get
+
+            def tracking_get(stored_session_id: str):
+                get_callers.append(threading.get_ident())
+                return original_get(stored_session_id)
+
+            def run_clear() -> None:
+                worker_ids.append(threading.get_ident())
+                self.runtime.clear_user_info_for_session(session_id)
+
+            with patch.object(storage, "get", side_effect=tracking_get):
+                thread = threading.Thread(target=run_clear)
+                thread.start()
+                thread.join()
+
+                # The script thread publishes the tombstone and does not read
+                # storage. The close stays queued until this coroutine yields.
+                assert worker_ids
+                assert worker_ids[0] not in get_callers
+                assert (
+                    self.runtime._session_mgr.get_session_info(session_id) is not None
+                )
+                new_session_id = self.runtime.connect_session(
+                    client=MockSessionClient(),
+                    user_info={},
+                    existing_session_id=session_id,
+                )
+                assert new_session_id != session_id
+                await asyncio.sleep(0)
+                assert self.runtime._session_mgr.get_session_info(session_id) is None
+                assert worker_ids[0] not in get_callers
+
+    @parameterized.expand(
+        [
+            ("logged_out", True, {}),
+            ("resumable", False, {"email": "alice@example.com"}),
+        ]
+    )
+    async def test_queued_close_keeps_session_that_became_active(
+        self,
+        _name: str,
+        logged_out: bool,
+        expected_user_info: dict[str, str],
+    ) -> None:
+        """A queued logout close leaves a session that became active connected.
+
+        SessionManager is pluggable, so this simulates a manager that does not
+        honor the non-resumable mark and lets the session become active again
+        before the close runs. Only a logged-out session has its user info
+        cleared again. A resumable session that holds the id keeps its owner.
+        """
+        await self.runtime.start()
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            session_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+            )
+            self.runtime.disconnect_session(session_id)
+
+            # Queue the close from a script thread without publishing the
+            # non-resumable mark, as a manager that ignores it would, so the
+            # reconnect below can make the session active before the close runs.
+            thread = threading.Thread(
+                target=self.runtime._close_inactive_session_on_event_loop,
+                args=(session_id,),
+            )
+            thread.start()
+            thread.join()
+            resumed_id = self.runtime.connect_session(
+                client=MockSessionClient(),
+                user_info={"email": "alice@example.com"},
+                existing_session_id=session_id,
+            )
+            assert resumed_id == session_id
+
+            session = self.runtime.get_app_session(session_id)
+            assert session is not None
+            if logged_out:
+                session.clear_user_info()
+
+            with patch.object(
+                session, "clear_user_info", wraps=session.clear_user_info
+            ) as spy_clear_user_info:
+                await asyncio.sleep(0)
+
+        assert self.runtime.is_active_session(session_id)
+        assert session._user_info == expected_user_info
+        assert spy_clear_user_info.call_count == (1 if logged_out else 0)
+
+
+class MarkSessionNonresumableRuntimeTest(RuntimeTestCase):
+    """mark_session_nonresumable with a session manager that resumes sessions."""
+
+    async def asyncSetUp(self) -> None:
+        Runtime._instance = None
+        self.runtime = Runtime(
+            RuntimeConfig(
+                script_path="mock/script/path.py",
+                media_file_storage=MemoryMediaFileStorage("/mock/media"),
+                uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),
+                cache_storage_manager=MemoryCacheStorageManager(),
+                session_manager_class=WebsocketSessionManager,
+                session_storage=MemorySessionStorage(),
+            )
+        )
+
+    async def test_reconnect_naming_a_marked_session_gets_a_new_session(
+        self,
+    ) -> None:
+        """A connection naming a marked session's id cannot take it over, and
+        closing the session releases the mark.
+        """
+        await self.runtime.start()
+        session_mgr = self.runtime._session_mgr
+        assert isinstance(session_mgr, WebsocketSessionManager)
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher", new=MagicMock()
+        ):
+            original_client = MockSessionClient()
+            session_id = self.runtime.connect_session(
+                client=original_client, user_info={}
+            )
+            self.runtime.mark_session_nonresumable(session_id)
+
+            new_session_id = self.runtime.connect_session(
+                client=MockSessionClient(), user_info={}, existing_session_id=session_id
+            )
+
+        assert new_session_id != session_id
+        assert self.runtime.get_client(session_id) is original_client
+
+        self.runtime.close_session(session_id)
+        assert session_id not in session_mgr._nonresumable_session_ids
 
 
 class ScriptCheckTest(RuntimeTestCase):
@@ -714,3 +1226,104 @@ class BidiComponentManagerTest(unittest.TestCase):
         # Verify that our custom component manager is used
         assert runtime.bidi_component_registry is custom_component_manager
         assert runtime.bidi_component_registry.get("test_component") is not None
+
+
+@pytest.fixture
+def mock_runtime() -> Iterator[Runtime]:
+    """Yield a Runtime whose session manager is a mock with no active sessions."""
+    Runtime._instance = None
+    runtime = Runtime(MagicMock())
+    runtime._session_mgr.get_active_session_info.return_value = None
+    yield runtime
+    Runtime._instance = None
+
+
+def _async_objs_for_loop(eventloop: asyncio.AbstractEventLoop) -> AsyncObjects:
+    return AsyncObjects(
+        eventloop=eventloop,
+        must_stop=MagicMock(),
+        has_connection=MagicMock(),
+        need_send_data=MagicMock(),
+        started=MagicMock(),
+        stopped=MagicMock(),
+    )
+
+
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_logout_close_is_dropped_when_event_loop_is_closed(
+    patched_logger: MagicMock, mock_runtime: Runtime
+) -> None:
+    """A logout after the event loop closed keeps the mark and skips the close."""
+    closed_loop = asyncio.new_event_loop()
+    closed_loop.close()
+    mock_runtime._async_objs = _async_objs_for_loop(closed_loop)
+
+    mock_runtime.clear_user_info_for_session("session-1")
+
+    mock_runtime._session_mgr.mark_session_nonresumable.assert_called_once_with(
+        "session-1"
+    )
+    mock_runtime._session_mgr.close_session.assert_not_called()
+    patched_logger.debug.assert_called_once_with(
+        "Dropped logout close for session %s because the event loop is closed.",
+        "session-1",
+    )
+
+
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_logout_close_reraises_runtime_error_from_open_event_loop(
+    patched_logger: MagicMock, mock_runtime: Runtime
+) -> None:
+    """A scheduling failure on an open event loop is not silently dropped."""
+    eventloop = MagicMock()
+    eventloop.call_soon_threadsafe.side_effect = RuntimeError("scheduling failed")
+    eventloop.is_closed.return_value = False
+    mock_runtime._async_objs = _async_objs_for_loop(eventloop)
+
+    with pytest.raises(RuntimeError, match="scheduling failed"):
+        mock_runtime.clear_user_info_for_session("session-1")
+
+    patched_logger.debug.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "start_state",
+    [
+        RuntimeState.NO_SESSIONS_CONNECTED,
+        RuntimeState.STOPPING,
+        RuntimeState.STOPPED,
+    ],
+)
+@patch("streamlit.runtime.runtime.traceback.print_exc")
+@patch("streamlit.runtime.runtime._LOGGER")
+def test_loop_coroutine_fails_stopped_future_on_bad_start_state(
+    patched_logger: MagicMock,
+    patched_print_exc: MagicMock,
+    mock_runtime: Runtime,
+    start_state: RuntimeState,
+) -> None:
+    """The loop reports a bad start state through `stopped` and keeps the state."""
+
+    async def run_loop() -> AsyncObjects:
+        async_objs = AsyncObjects(
+            eventloop=asyncio.get_running_loop(),
+            must_stop=asyncio.Event(),
+            has_connection=asyncio.Event(),
+            need_send_data=asyncio.Event(),
+            started=asyncio.Future(),
+            stopped=asyncio.Future(),
+        )
+        mock_runtime._async_objs = async_objs
+        mock_runtime._set_state(start_state)
+        await mock_runtime._loop_coroutine()
+        return async_objs
+
+    async_objs = asyncio.run(run_loop())
+
+    error = async_objs.stopped.exception()
+    assert isinstance(error, RuntimeError)
+    assert "Bad Runtime state at start" in str(error)
+    assert mock_runtime.state == start_state
+    patched_print_exc.assert_called_once_with()
+    patched_logger.info.assert_called_once()
+    assert "report this bug" in patched_logger.info.call_args.args[0]

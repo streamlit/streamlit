@@ -15,6 +15,7 @@
 """date_input unit test."""
 
 from datetime import date, datetime, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,8 +25,12 @@ import streamlit as st
 from streamlit.elements.widgets.time_widgets import DateInputSerde, _DateInputValues
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitInvalidMinMaxError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitValueAboveMaxError,
+    StreamlitValueBelowMinError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
@@ -51,6 +56,7 @@ class DateInputTest(DeltaGeneratorTestCase):
             datetime.strptime(c.default[0], "%Y-%m-%d").date() <= datetime.now().date()
         )
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -68,6 +74,58 @@ class DateInputTest(DeltaGeneratorTestCase):
         # If a proto property is null is not determined by this value,
         # but by the check via the HasField method:
         assert c.default == []
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.date_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike format, required cannot make a stored date illegal, so it is
+        not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.date_input("the label", key="date_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.date_input.id
+            st.date_input("the label", key="date_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.date_input.id
+            assert id1 == id2
+
+    def test_required_does_not_change_today_default(self) -> None:
+        """required=True does not replace the today default with an empty value."""
+        st.date_input("the label", required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert len(c.default) == 1
+        assert c.required
+
+    def test_required_with_none_value_stays_empty(self) -> None:
+        """Empty required fields still need an explicit empty value."""
+        st.date_input("the label", value=None, required=True)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.default == []
+        assert c.required
 
     @parameterized.expand(
         [
@@ -133,6 +191,9 @@ class DateInputTest(DeltaGeneratorTestCase):
             #       Add test for empty value list case
             ([date(2021, 4, 26)], "2011-04-26", "2031-04-26"),
             ([date(2007, 2, 4), date(2012, 1, 3)], "1997-02-04", "2022-01-03"),
+            # GH#7427: date.max / date.min clamp instead of overflowing
+            (date.max, "9989-12-31", "9999-12-31"),
+            (date.min, "0001-01-01", "0011-01-01"),
         ]
     )
     def test_min_max_values(self, arg_value, min_date_value, max_date_value):
@@ -150,42 +211,39 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 TODAY + timedelta(days=8),
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
             (
                 [TODAY, TODAY + timedelta(2)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY + timedelta(days=7),
                 TODAY + timedelta(days=14),
+                StreamlitValueBelowMinError,
             ),
             (
                 [TODAY, TODAY + timedelta(8)],
                 TODAY,
                 TODAY + timedelta(days=7),
+                StreamlitValueAboveMaxError,
             ),
         ]
     )
-    def test_value_out_of_range(self, value, min_date, max_date):
-        with pytest.raises(StreamlitAPIException) as exc_message:
+    def test_value_out_of_range(self, value, min_date, max_date, expected_error):
+        with pytest.raises(expected_error):
             st.date_input(
                 "the label", value=value, min_value=min_date, max_value=max_date
             )
-        if isinstance(value, (date, datetime)):
-            value = [value]
-        value = [v.date() if isinstance(v, datetime) else v for v in value]
-        assert (
-            f"The default `value` of {value} must lie between the `min_value` of {min_date.date()} "
-            f"and the `max_value` of {max_date.date()}, inclusively."
-            == str(exc_message.value)
-        )
 
     @parameterized.expand(
         [
@@ -210,11 +268,21 @@ class DateInputTest(DeltaGeneratorTestCase):
                 TODAY,
                 TODAY + timedelta(days=14),
             ),
+            (TODAY, TODAY, TODAY),
         ]
     )
     def test_value_in_range(self, value, min_date, max_date):
         st.date_input("the label", value=value, min_value=min_date, max_value=max_date)
         # No need to assert anything. Testing if not throwing an error.
+
+    def test_min_max_exception(self):
+        """min_value after max_value raises StreamlitInvalidMinMaxError."""
+        with pytest.raises(StreamlitInvalidMinMaxError, match="cannot be greater than"):
+            st.date_input(
+                "the label",
+                min_value=date(2022, 1, 1),
+                max_value=date(2020, 1, 1),
+            )
 
     def test_default_min_if_today_is_before_min(self):
         min_date = date(9998, 2, 28)
@@ -278,11 +346,11 @@ class DateInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.date_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     @parameterized.expand(
@@ -320,14 +388,19 @@ class DateInputTest(DeltaGeneratorTestCase):
             ("YYYY/QQ/DD"),  # Unsupported format
             ("YYYY/Q/DD"),  # Unsupported format
             ("YYYY/MM/DD HH:mm:ss"),  # Unsupported format
+            ("YYYY/MM-DD"),  # Mixed separators are not supported
             (""),  # Empty not allowed
         ]
     )
     def test_invalid_date_format_values(self, format: str):
         """Test that it raises an exception for invalid date formats."""
-        with pytest.raises(StreamlitAPIException) as ex:
+        with pytest.raises(StreamlitValueError):
             st.date_input("the label", format=format)
-        assert str(ex.value).startswith("The provided format")
+
+    def test_invalid_date_format_type(self) -> None:
+        """Non-string format values raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.date_input("the label", format=123)  # type: ignore[arg-type]
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
@@ -427,6 +500,8 @@ class DateInputTest(DeltaGeneratorTestCase):
                 max_value=date(2025, 1, 1),
                 # Whitelisted kwargs:
                 format="YYYY/MM/DD",
+                # Not on the format allowlist; must not change keyed identity.
+                required=True,
             )
             c2 = self.get_delta_from_queue().new_element.date_input
             id2 = c2.id
@@ -587,7 +662,7 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
     """Test that value resets to default when dynamically changing min_value makes current value invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -598,18 +673,18 @@ def test_dynamic_min_value_resets_value_when_below_new_min():
             # New min_value makes the previous value invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 6, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 7, 15),
+                value=date(2024, 7, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -635,7 +710,7 @@ def test_dynamic_max_value_resets_value_when_above_new_max():
     """Test that value resets to default when dynamically changing max_value makes current value invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -646,18 +721,18 @@ def test_dynamic_max_value_resets_value_when_above_new_max():
             # New max_value makes the previous value invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 6, 30),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 6, 30),
                 key="date",
-                value=datetime.date(2024, 3, 15),
+                value=date(2024, 3, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -683,7 +758,7 @@ def test_dynamic_bounds_preserves_valid_value():
     """Test that value is preserved when it remains valid after bound changes."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -694,18 +769,18 @@ def test_dynamic_bounds_preserves_valid_value():
             # Changing bounds but May 15 is still valid (between Apr 1 and Sep 30)
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 4, 1),
-                max_value=datetime.date(2024, 9, 30),
+                min_value=date(2024, 4, 1),
+                max_value=date(2024, 9, 30),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=datetime.date(2024, 5, 15),
+                value=date(2024, 5, 15),
             )
         st.write(f"value: {value}")
 
@@ -727,7 +802,7 @@ def test_dynamic_bounds_with_range_resets_when_start_below_min():
     """Test that range date input resets when start date becomes invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -738,18 +813,18 @@ def test_dynamic_bounds_with_range_resets_when_start_below_min():
             # New min_value makes the start date of the previous range invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 6, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 6, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 7, 1), datetime.date(2024, 8, 1)),
+                value=(date(2024, 7, 1), date(2024, 8, 1)),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+                value=(date(2024, 5, 1), date(2024, 6, 1)),
             )
         st.write(f"value: {value}")
 
@@ -775,7 +850,7 @@ def test_dynamic_bounds_with_range_resets_when_end_above_max():
     """Test that range date input resets when end date becomes invalid."""
 
     def script():
-        import datetime
+        from datetime import date
 
         import streamlit as st
 
@@ -786,18 +861,18 @@ def test_dynamic_bounds_with_range_resets_when_end_above_max():
             # New max_value makes the end date of the previous range invalid
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 6, 30),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 6, 30),
                 key="date",
-                value=(datetime.date(2024, 3, 1), datetime.date(2024, 4, 1)),
+                value=(date(2024, 3, 1), date(2024, 4, 1)),
             )
         else:
             value = st.date_input(
                 "date",
-                min_value=datetime.date(2024, 1, 1),
-                max_value=datetime.date(2024, 12, 31),
+                min_value=date(2024, 1, 1),
+                max_value=date(2024, 12, 31),
                 key="date",
-                value=(datetime.date(2024, 5, 1), datetime.date(2024, 6, 1)),
+                value=(date(2024, 5, 1), date(2024, 6, 1)),
             )
         st.write(f"value: {value}")
 
@@ -872,8 +947,8 @@ class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == ""
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.date_input("the label", key="my_key", bind="invalid-value")
 
     def test_bind_query_params_with_explicit_value(self):
@@ -1045,20 +1120,20 @@ def test_datetime_session_state_value_with_date_bounds():
     from datetime import datetime as dt
 
     def script():
-        import datetime
+        from datetime import date, datetime
 
         import streamlit as st
 
         # Initialize session_state with a datetime value
         if "date" not in st.session_state:
-            st.session_state["date"] = datetime.datetime(2025, 6, 15, 12, 30, 0)
+            st.session_state["date"] = datetime(2025, 6, 15, 12, 30, 0)
 
         # Use date_input with date bounds - this should not raise TypeError
         result = st.date_input(
             "Select date",
             key="date",
-            min_value=datetime.date(2025, 1, 1),
-            max_value=datetime.date(2025, 12, 31),
+            min_value=date(2025, 1, 1),
+            max_value=date(2025, 12, 31),
         )
         st.write(f"result: {result}")
 
@@ -1067,3 +1142,50 @@ def test_datetime_session_state_value_with_date_bounds():
     assert not at.exception
     # The widget preserves the datetime type from session_state
     assert at.date_input[0].value == dt(2025, 6, 15, 12, 30, 0)
+
+
+class DateInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.date_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.date_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.date_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.date_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.date_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.date_input
+        assert c.ignore_rerun is True

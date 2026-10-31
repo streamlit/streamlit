@@ -17,7 +17,10 @@
 import styled from "@emotion/styled"
 import { Input as RAInput } from "react-aria-components"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
+import {
+  getBorderColor,
+  getSecondaryIconButtonColorStyles,
+} from "~lib/components/shared/Base/styled-components"
 
 interface StyledInputContainerProps {
   $isFocused: boolean
@@ -100,7 +103,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
-  "::placeholder": { color: theme.colors.fadedText60 },
+  "::placeholder": { color: theme.colors.fadedText70 },
   // Suppress the native spin buttons — NumberInput renders its own controls.
   MozAppearance: "textfield",
   "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
@@ -144,14 +147,8 @@ export const StyledClearButton = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.twoXS}`,
-  color: theme.colors.grayTextColor,
   flexShrink: 0,
-  "&:hover:not(:disabled)": {
-    color: theme.colors.bodyText,
-  },
-  "&:disabled": {
-    cursor: "not-allowed",
-  },
+  ...getSecondaryIconButtonColorStyles(theme),
 }))
 
 export const StyledEndEnhancer = styled.div(({ theme }) => ({

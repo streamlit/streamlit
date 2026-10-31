@@ -16,12 +16,12 @@
 
 import { getLogger } from "loglevel"
 
-import { BackMsg, ForwardMsg } from "@streamlit/protobuf"
+import type { BackMsg, ForwardMsg } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
-import {
+import type {
   ErrorDetails,
   IHostConfigProperties,
   StreamlitEndpoints,
@@ -160,7 +160,7 @@ export class ConnectionManager {
   public getCachedMessageHashes(): string[] {
     // StaticConnection does not use a MessageCache.
     if (this.websocketConnection instanceof WebsocketConnection) {
-      return this.websocketConnection?.getCachedMessageHashes() ?? []
+      return this.websocketConnection.getCachedMessageHashes()
     }
     return []
   }

@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from streamlit.delta_generator_singletons import context_dg_stack
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidLayoutContextError
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class BottomContainerProxy:
         object.__setattr__(self, "_bottom_dg", bottom_dg)
 
     def _check_context(self) -> None:
-        """Raise StreamlitAPIException if st.bottom is used in an invalid context."""
+        """Raise ``StreamlitInvalidLayoutContextError`` if ``st.bottom`` is used outside the main app area."""
         current_stack = context_dg_stack.get()
         if not current_stack:
             return
@@ -51,19 +51,19 @@ class BottomContainerProxy:
         root_container = current_dg._root_container
 
         if root_container == RootContainer.SIDEBAR:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "`st.bottom` cannot be used inside `st.sidebar`. "
                 "The bottom container is only available in the main app area."
             )
         # Check for dialog first since dialogs use EVENT root container
         # but should get a more specific error message
         if "dialog" in current_dg._ancestor_block_types:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "`st.bottom` cannot be used inside a dialog. "
                 "The bottom container is only available in the main app area."
             )
         if root_container == RootContainer.EVENT:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "`st.bottom` cannot be used inside event containers. "
                 "The bottom container is only available in the main app area."
             )

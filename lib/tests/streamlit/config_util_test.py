@@ -21,6 +21,7 @@ import os
 import re
 import tempfile
 import textwrap
+import tomllib
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -131,7 +132,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         # Config options not explicitly set should be commented out.
@@ -150,7 +151,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         assert "[ui]" not in lines
@@ -161,11 +162,11 @@ class ConfigUtilTest(unittest.TestCase):
             # Nothing changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 False,
@@ -173,11 +174,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A non-server config option changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "SHHHHHHH!!!!!! >:(",
+                    "browser.gatherUsageStats": False,
                     "server.address": "localhost",
                 },
                 False,
@@ -185,11 +186,11 @@ class ConfigUtilTest(unittest.TestCase):
             # A server config option changed.
             (
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "localhost",
                 },
                 {
-                    "mapbox.token": "shhhhhhh",
+                    "browser.gatherUsageStats": True,
                     "server.address": "streamlit.io",
                 },
                 True,
@@ -220,7 +221,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         assert "# This option has multiple lines." in lines
@@ -246,7 +247,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
         description_index = lines.index(
             "# This option's description starts from third line."
@@ -277,7 +278,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         # Find the index of the description and the option in the output.
@@ -297,7 +298,7 @@ class ConfigUtilTest(unittest.TestCase):
         config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         assert "[server]" in lines
@@ -319,10 +320,63 @@ class ConfigUtilTest(unittest.TestCase):
         config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         assert "# This is a hidden option." not in lines
+
+    @patch("click.secho")
+    def test_show_config_comments_unset_none_and_multiline_list(self, patched_echo):
+        """Unset None and multiline list defaults stay commented out."""
+        config_options = {
+            "server.missing": ConfigOption(
+                key="server.missing",
+                description="An unset option.",
+                default_val=None,
+            ),
+            "server.origins": ConfigOption(
+                key="server.origins",
+                description="Allowed origins.",
+                default_val=["https://example.com", "https://streamlit.io"],
+            ),
+        }
+        config_util.show_config({"server": "Server settings."}, config_options)
+
+        [(args, _)] = patched_echo.call_args_list
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
+
+        # The banner comment is indented, so parse from the section header.
+        server_output = "[server]" + output.split("[server]", 1)[1]
+        parsed = tomllib.loads(server_output)
+        assert "missing" not in parsed["server"]
+        assert "origins" not in parsed["server"]
+        lines = output.split("\n")
+        assert "# missing =" in lines
+
+        default_start = lines.index("# Default: [")
+        default_block = lines[default_start : default_start + 4]
+        assert default_block == [
+            "# Default: [",
+            '#     "https://example.com",',
+            '#     "https://streamlit.io",',
+            "# ]",
+        ]
+
+        start = lines.index("# origins = [")
+        commented_list = lines[start : start + 4]
+        assert commented_list == [
+            "# origins = [",
+            '#     "https://example.com",',
+            '#     "https://streamlit.io",',
+            "# ]",
+        ]
+        round_trip = tomllib.loads(
+            "[server]\n" + "\n".join(line.removeprefix("# ") for line in commented_list)
+        )
+        assert round_trip["server"]["origins"] == [
+            "https://example.com",
+            "https://streamlit.io",
+        ]
 
     @patch("click.secho")
     def test_correctly_handles_show_error_details(self, patched_echo):
@@ -335,7 +389,7 @@ class ConfigUtilTest(unittest.TestCase):
         )
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
 
         assert 'showErrorDetails = "full"' in output
 
@@ -690,6 +744,8 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "greenColor",
             "greenBackgroundColor",
             "greenTextColor",
+            "paddingTop",
+            "paddingBottom",
         }
         assert expected_sidebar.issubset(section_options)
 
@@ -700,10 +756,15 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight",
             "fontFaces",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
         }
         assert main_only_options.isdisjoint(section_options)
+
+        # Chart colors are allowed in all theme sections, including sidebar
+        assert {
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
+        }.issubset(section_options)
 
         # Test that we get the expected number of theme.sidebar options
         expected_count = self._get_expected_theme_options_count(section="theme.sidebar")
@@ -908,8 +969,6 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             "baseFontWeight": "bold",
             "fontFaces": "Arial, sans-serif",
             "showSidebarBorder": True,
-            "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
-            "chartSequentialColors": ["#ff0000", "#00ff00", "#0000ff"],
         }
 
         for main_only_option, option_value in main_only_options.items():
@@ -943,15 +1002,33 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             # Verify valid main option was preserved
             assert filtered_theme["theme"]["primaryColor"] == "#ff0000"
 
-    def test_load_theme_file_missing_toml(self):
-        """Test _load_theme_file when toml module is missing."""
+    def test_validate_theme_file_content_allows_chart_colors_in_sidebar(self):
+        """Chart color options are valid in theme.sidebar sections."""
+        theme_content = {
+            "theme": {
+                "primaryColor": "#ff0000",
+                "sidebar": {
+                    "chartCategoricalColors": ["#ff0000", "#00ff00", "#0000ff"],
+                    "chartSequentialColors": [f"#{i:02x}0000" for i in range(10)],
+                    "chartDivergingColors": [f"#00{i:02x}00" for i in range(10)],
+                },
+            }
+        }
 
-        # Mock the import toml statement to raise ImportError
-        with patch.dict("sys.modules", {"toml": None}):
-            with pytest.raises(StreamlitAPIException) as cm:
-                config_util._load_theme_file("theme.toml", self.config_template)
+        with patch("streamlit.config_util._get_logger") as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
+            filtered_theme = config_util._validate_theme_file_content(
+                theme_content, "test_theme.toml", self.config_template
+            )
+            mock_logger.warning.assert_not_called()
 
-            assert "toml' package is required" in str(cm.value)
+        assert filtered_theme["theme"]["sidebar"]["chartCategoricalColors"] == [
+            "#ff0000",
+            "#00ff00",
+            "#0000ff",
+        ]
+        assert len(filtered_theme["theme"]["sidebar"]["chartSequentialColors"]) == 10
+        assert len(filtered_theme["theme"]["sidebar"]["chartDivergingColors"]) == 10
 
     def test_load_theme_file_local_success(self):
         """Test loading theme file from local path successfully."""
@@ -1529,3 +1606,68 @@ def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None
     assert "THIS IS DEPRECATED." in output
     assert "Use server.newOption instead." in output
     assert "This option will be removed on or after 2030-01-01" in output
+
+
+@patch("click.secho")
+def test_show_config_font_faces_stay_under_theme_header(
+    patched_echo: MagicMock,
+) -> None:
+    """A set font face stays an inline table under the printed ``[theme]`` header.
+
+    ``[[fontFaces]]`` would close that section when the printed text is parsed.
+    """
+    face = {
+        "family": "A very long family name that might exceed one line",
+        "url": "https://example.com/fonts/extremely/long/path/font_file.woff2",
+        "unicodeRange": "U+0000-00FF",
+        "style": "normal",
+        "weight": "400",
+    }
+    option = ConfigOption(
+        key="theme.fontFaces",
+        description="Font files for the theme.",
+        default_val=None,
+    )
+    option.set_value([face], "test")
+
+    config_util.show_config({"theme": "Theme settings."}, {"theme.fontFaces": option})
+
+    [(args, _)] = patched_echo.call_args_list
+    output = re.sub(r"\x1b[^m]*m", "", args[0])
+    assert "[[fontFaces]]" not in output
+
+    theme_output = "[theme]" + output.split("[theme]", 1)[1]
+    parsed = tomllib.loads(theme_output)
+    assert "fontFaces" not in parsed
+    assert parsed["theme"]["fontFaces"] == [face]
+
+
+def test_dump_toml_value_names_option_for_unsupported_value() -> None:
+    """An unsupported value names the option ``config show`` cannot print."""
+    with pytest.raises(TypeError, match="Cannot show config option 'fontFaces'"):
+        config_util._dump_toml_value("fontFaces", [{"family": ["sans", "serif"]}])
+
+
+@pytest.mark.parametrize(
+    "attribute",
+    ["default_val", "value"],
+    ids=["default", "value"],
+)
+def test_dump_toml_value_round_trips_config_options(attribute: str) -> None:
+    """Values printed by ``streamlit config show`` parse back as the same type."""
+    for option in config._config_options_template.values():
+        # Unit tests register throwaway options in sections such as "_test".
+        # ``show_config`` skips that section. Some of those options call
+        # ``get_option`` for keys that are absent from the parsed config.
+        if option.section.startswith("_"):
+            continue
+        raw = getattr(option, attribute)
+        rendered = config_util._dump_toml_value(option.name, raw)
+        if raw is None:
+            assert rendered == "", option.key
+            continue
+
+        parsed = tomllib.loads(rendered)[option.name]
+        # isinstance() treats bool as int, so compare types directly.
+        assert type(parsed) is type(raw), option.key
+        assert parsed == raw, option.key

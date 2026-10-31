@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
-import FormattingMenu, { FormattingMenuProps } from "./FormattingMenu"
+import FormattingMenu, { type FormattingMenuProps } from "./FormattingMenu"
 
 describe("DataFrame FormattingMenu", () => {
   const defaultChildren = <div>Trigger</div>
@@ -41,14 +41,23 @@ describe("DataFrame FormattingMenu", () => {
       <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
     )
 
+    expect(screen.getByTestId("stDataFrameColumnFormattingMenu")).toHaveClass(
+      "stDataFrameColumnFormattingMenu"
+    )
+
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
+    expect(screen.getByText("Duration")).toBeVisible()
     expect(screen.getByText("Dollar")).toBeInTheDocument()
     expect(screen.getByText("Euro")).toBeInTheDocument()
     expect(screen.getByText("Yen")).toBeInTheDocument()
     expect(screen.getByText("Percent")).toBeInTheDocument()
     expect(screen.getByText("Scientific")).toBeInTheDocument()
     expect(screen.getByText("Accounting")).toBeInTheDocument()
+
+    const menuItems = screen.getAllByRole("menuitem")
+    expect(menuItems[0]).toHaveTextContent("Automatic")
+    expect(menuItems.at(-1)).toHaveTextContent("Duration")
   })
 
   it("renders datetime format options when columnKind is datetime", () => {
@@ -67,6 +76,19 @@ describe("DataFrame FormattingMenu", () => {
     // Verify number formats are not present
     expect(screen.queryByText("Dollar")).not.toBeInTheDocument()
     expect(screen.queryByText("Scientific")).not.toBeInTheDocument()
+    expect(screen.queryByText("Duration")).not.toBeInTheDocument()
+  })
+
+  it("does not offer duration format for progress columns", () => {
+    render(
+      <FormattingMenu {...defaultProps} columnKind="progress">
+        {defaultChildren}
+      </FormattingMenu>
+    )
+
+    expect(screen.getByText("Dollar")).toBeVisible()
+    expect(screen.getByText("Compact")).toBeVisible()
+    expect(screen.queryByText("Duration")).not.toBeInTheDocument()
   })
 
   it("renders date format options when columnKind is date", () => {

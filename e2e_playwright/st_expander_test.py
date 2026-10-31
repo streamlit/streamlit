@@ -17,7 +17,13 @@ from typing import Final
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+    wait_until,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -28,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 27
+NUMBER_OF_EXPANDERS: Final = 29
 
 
 def test_expander_displays_correctly(
@@ -480,3 +486,105 @@ def test_programmatic_close_does_not_reopen_other_expander(app: Page):
 
     # Expander A must NOT have reopened (the bug from #14943)
     expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
+
+
+def test_rapid_toggle_does_not_clip_content(app: Page):
+    """Rapid open/close should not leave inline height/overflow locks on the
+    <details> element that clip content.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/16027.
+    """
+    expander = get_expander(app, "Long expanded")
+    details = expander.locator("details")
+    summary = details.locator(EXPANDER_HEADER_IDENTIFIER)
+
+    # Rapid toggle sequence: close → open → close → open, without waiting
+    # for the ~500ms height animation to settle between clicks. Each click
+    # interrupts the previous animation via cancelAnimation.
+    for _ in range(4):
+        summary.click(no_wait_after=True)
+
+    # Content must be visible (final state is open) and NOT clipped by a
+    # stale inline height / overflow lock left behind by an interrupted
+    # animation. Poll until the animation settles instead of a fixed sleep so
+    # the test tolerates slow CI runners.
+    body_text = expander.get_by_text("Integer et justo orci", exact=False)
+    expect(body_text).to_be_visible()
+
+    def styles_cleared() -> bool:
+        return bool(
+            details.evaluate("el => el.style.height === '' && el.style.overflow === ''")
+        )
+
+    wait_until(app, styles_cleared, timeout=3000)
+
+    # After the ~1.5s stall-guard window, a superseded close animation must not
+    # have force-finished and slammed the expander shut. The <details> must
+    # still be open and the body text still visible.
+    app.wait_for_timeout(1600)
+    expect(details).to_have_attribute("open", "")
+    expect(body_text).to_be_visible()
+
+
+# --- bind="query-params" Tests ---
+
+
+def test_expander_query_param_binding_url_updates_on_toggle(app: Page):
+    """Test that toggling a bound expander updates the browser URL."""
+    exp = get_element_by_key(app, "qp_exp")
+
+    # Initially collapsed — URL must not have the param
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
+
+    # Expand it — URL should gain ?qp_exp=true
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"qp_exp=true"))
+    expect(exp.get_by_text("Query param expander content")).to_be_visible()
+    expect(app.get_by_text("QP expander state: True", exact=True)).to_be_visible()
+
+    # Collapse it — URL param should be removed (default state = collapsed)
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp="))
+    expect(exp.get_by_text("Query param expander content")).not_to_be_visible()
+    expect(app.get_by_text("QP expander state: False", exact=True)).to_be_visible()
+
+
+def test_expander_query_param_seeding_from_url(page: Page, app_base_url: str):
+    """Test that a bound expander starts expanded when seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"qp_exp": "true"}))
+    wait_for_app_loaded(page)
+
+    exp = get_element_by_key(page, "qp_exp")
+    expect(exp.get_by_text("Query param expander content")).to_be_visible()
+    expect(page).to_have_url(re.compile(r"qp_exp=true"))
+    expect(page.get_by_text("QP expander state: True", exact=True)).to_be_visible()
+
+    # The other bound expander stays at its expanded default, so its param is omitted.
+    expect(page).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+
+
+def test_expander_query_param_omitted_in_default_expanded_state(app: Page):
+    """Test that a bound expander with expanded=True has no URL param in default state."""
+    exp = get_element_by_key(app, "qp_exp_true")
+
+    # Starts expanded (default) — URL must NOT have the param (default state = expanded)
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).to_be_visible()
+
+    # Collapse it — URL should gain the param (non-default state)
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"qp_exp_true=false"))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).not_to_be_visible()
+
+    # Reopen it — URL param should be removed (back to default expanded state)
+    exp.locator(EXPANDER_HEADER_IDENTIFIER).click()
+    wait_for_app_run(app)
+
+    expect(app).not_to_have_url(re.compile(r"[?&]qp_exp_true="))
+    expect(exp.get_by_text("Starts expanded, bind=query-params")).to_be_visible()

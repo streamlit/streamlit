@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext, useMemo } from "react"
-
-import classNames from "classnames"
+import {
+  type JSX,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+  useMemo,
+} from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
-import { BlockNode } from "~lib/AppNode"
+import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
   extractLayoutSubElement,
   useLayoutStyles,
@@ -32,7 +37,7 @@ import {
 import {
   Direction,
   getDirectionOfBlock,
-  MinFlexElementWidth,
+  type MinFlexElementWidth,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
@@ -40,8 +45,7 @@ import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
-import Tabs from "~lib/components/elements/Tabs/Tabs"
-import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -50,13 +54,14 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
+  StyledDialogContentEndPad,
   StyledFlexContainerBlock,
-  StyledFlexContainerBlockProps,
+  type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
 import {
   assignDividerColor,
-  BaseBlockProps,
+  type BaseBlockProps,
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,
@@ -66,9 +71,10 @@ import {
   isComponentStale,
   shouldActivateScrollToBottom,
   shouldComponentBeEnabled,
+  shouldHideStaleDialog,
 } from "./utils"
 
-const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
+const ChildRenderer = (props: BlockPropsWithoutWidth): ReactNode => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
@@ -108,19 +114,73 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     ]
   )
 
-  return <>{elements}</>
+  return elements
 }
+
+/**
+ * Maps a column's vertical alignment to the justify-content of its contents.
+ * The column itself stretches to the row height, so its contents are aligned
+ * inside it instead of shrinking the column.
+ */
+const COLUMN_CONTENT_JUSTIFY: Partial<
+  Record<BlockProto.Column.VerticalAlignment, BlockProto.FlexContainer.Justify>
+> = {
+  [BlockProto.Column.VerticalAlignment.CENTER]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+  [BlockProto.Column.VerticalAlignment.BOTTOM]:
+    BlockProto.FlexContainer.Justify.JUSTIFY_END,
+}
+
+/**
+ * Layout wrapper overrides for a stretch-height container or form, keyed by
+ * its parent's direction. The block fills its parent but grows to fit taller
+ * content instead of letting it spill past its border. Tabs don't use these
+ * because they scroll inside the active panel instead.
+ */
+const STRETCH_BLOCK_WRAPPER_STYLES = {
+  /**
+   * Replaces the `height: 100%` from `useLayoutStyles` with a flex basis, so
+   * the block's automatic minimum size is its content height. The flexed size
+   * still counts as definite for nested stretch children.
+   */
+  [Direction.VERTICAL]: { height: "auto", flex: "0 1 100%" },
+  /**
+   * Drops the `maxHeight: 100%` from `useLayoutStyles`, so taller content can
+   * grow the block past a fixed-height row. In a single-line row
+   * (`wrap=False`), `align-self: stretch` keeps the wrapper at the row height,
+   * so the inner block grows by overflowing it and the row scrolls to it.
+   */
+  [Direction.HORIZONTAL]: { maxHeight: undefined },
+} as const
+
+/** Derives a block's FlexContextProvider height props from its height config. */
+const getHeightContextProps = (
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
+): { hasFixedHeight: boolean; hasStretchHeight: boolean } => ({
+  hasFixedHeight:
+    (heightConfig?.pixelHeight ?? 0) > 0 || (heightConfig?.remHeight ?? 0) > 0,
+  hasStretchHeight: heightConfig?.useStretch ?? false,
+})
 
 interface ContainerContentsWrapperProps extends BaseBlockProps {
   node: BlockNode
   height: React.CSSProperties["height"]
   isRoot?: boolean
+  /** Extra in-flow space after the last widget. Used by side-drawer dialogs. */
+  padContentEnd?: boolean
+  /**
+   * Height config that decides whether stretch-height children get a
+   * definite height. Defaults to the node's own config. Tab panels pass the
+   * tab container's config because the tab nodes have none.
+   */
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export const ContainerContentsWrapper = (
   props: ContainerContentsWrapperProps
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
+  const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
@@ -129,12 +189,24 @@ export const ContainerContentsWrapper = (
     height: props.height,
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
+    justify: notNullOrUndefined(columnAlignment)
+      ? COLUMN_CONTENT_JUSTIFY[columnAlignment]
+      : undefined,
   }
 
   return (
     <FlexContextProvider
       direction={Direction.VERTICAL}
       isRoot={props.isRoot}
+      // True only when this node is itself an `st.columns` column, so auto wrap
+      // stays compact for the column's direct children. Deliberately not inherited
+      // from parentContext. Nested providers that use this wrapper (form, expander,
+      // tabs, …) are not columns, so the flag resets to false. Nested st.container
+      // resets the same way because FlexBoxContainer omits this prop.
+      isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
+      {...getHeightContextProps(
+        props.heightConfig ?? props.node.deltaBlock.heightConfig
+      )}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -143,6 +215,12 @@ export const ContainerContentsWrapper = (
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
+        {props.padContentEnd === true && (
+          <StyledDialogContentEndPad
+            aria-hidden="true"
+            data-testid="stDialogContentEndPad"
+          />
+        )}
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -166,6 +244,14 @@ export const FlexBoxContainer = (
     subElement: extractLayoutSubElement(props.node.deltaBlock),
   })
 
+  // Absent wrap on a FlexContainer message means nowrap. This is also
+  // backwards compatible, since older messages did not set wrap.
+  const wrap = props.node.deltaBlock.flexContainer?.wrap ?? false
+  // A horizontal container with `wrap=false` (including st.columns(wrap=False))
+  // keeps its elements in a single row and scrolls horizontally when they
+  // don't fit, instead of wrapping.
+  const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
+
   const styles = {
     gap:
       // This is backwards compatible with old proto messages since previously
@@ -174,13 +260,18 @@ export const FlexBoxContainer = (
         gapSize: streamlit.GapSize.SMALL,
       },
     direction: direction,
-    // This is also backwards compatible since previously wrap was not added
-    // to the flex container.
-    $wrap: props.node.deltaBlock.flexContainer?.wrap ?? false,
+    $wrap: wrap,
     overflow: layout_styles.overflow,
+    overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // We need the height on the container for scrolling.
-    height: layout_styles.height,
+    // Block height:
+    // - pixel: set here so the block can scroll.
+    // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
+    //   auto height lets taller content grow the wrapper instead of overflowing.
+    height:
+      props.node.deltaBlock.heightConfig?.useStretch === true
+        ? "auto"
+        : layout_styles.height,
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -203,18 +294,23 @@ export const FlexBoxContainer = (
   return (
     <FlexContextProvider
       direction={direction}
+      wrap={wrap}
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
+      {...getHeightContextProps(props.node.deltaBlock.heightConfig)}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
         {...styles}
-        className={classNames(
+        className={[
           getClassnamePrefix(direction),
-          convertKeyToClassName(userKey)
-        )}
+          convertKeyToClassName(userKey),
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid={getClassnamePrefix(direction)}
+        data-test-wrap={String(wrap)}
         ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
@@ -230,20 +326,21 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
   node: BlockNode
 }
 
-const LARGE_STRETCH_BEHAVIOR = ["tabContainer"]
-const MEDIUM_STRETCH_BEHAVIOR = ["chatInput"]
+const LARGE_STRETCH_BEHAVIOR = new Set(["tabContainer"])
+const MEDIUM_STRETCH_BEHAVIOR = new Set(["chatInput"])
 
 export const BlockNodeRenderer = (
   props: BlockPropsWithoutWidth
-): ReactElement => {
+): ReactElement | null => {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
+  const flexContext = useContext(FlexContext)
 
   let minStretchBehavior: MinFlexElementWidth
-  if (LARGE_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "14rem"
-  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.deltaBlock.type ?? "")) {
+  } else if (MEDIUM_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
     minStretchBehavior = "8rem"
   } else if (node.deltaBlock.type === "chatMessage") {
     if (node.isEmpty) {
@@ -266,7 +363,7 @@ export const BlockNodeRenderer = (
   })
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
-    return <></>
+    return null
   }
 
   const enable = shouldComponentBeEnabled("", scriptRunState)
@@ -284,7 +381,7 @@ export const BlockNodeRenderer = (
   // (e.g., via libConfig or ancestor dialog/popover),
   // or if this block itself is a dialog or popover
   const disableFullscreenMode =
-    props.disableFullscreenMode ||
+    props.disableFullscreenMode === true ||
     notNullOrUndefined(node.deltaBlock.dialog) ||
     notNullOrUndefined(node.deltaBlock.popover)
 
@@ -306,6 +403,21 @@ export const BlockNodeRenderer = (
   // and popover only.
   let keyClassOnWrapper = false
 
+  // Marks the wrapper as a timeline step so the parent flex container can let
+  // the step's connector line bridge the gap to an adjacent step. Empty steps
+  // must be marked too: they draw no connector of their own, but the preceding
+  // step extends its line to whatever step follows it, which is how a trailing
+  // empty step terminates a timeline at its icon.
+  const isStepBlock =
+    node.deltaBlock.expandable?.type === BlockProto.Expandable.Type.STEP
+
+  const isStretchHeight = node.deltaBlock.heightConfig?.useStretch ?? false
+  const stretchWrapperStyles = isStretchHeight
+    ? STRETCH_BLOCK_WRAPPER_STYLES[
+        flexContext?.direction ?? Direction.VERTICAL
+      ]
+    : undefined
+
   const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
@@ -320,14 +432,41 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.dialog) {
+    // Hide leftover dialogs from a previous full-app run as soon as the next
+    // full-app run starts. Stale-node cleanup waits until the run finishes,
+    // which would leave the overlay up during blocking work (issue #9405).
+    // Same unmount as that later prune. Do not go through Dialog's onClose:
+    // that path is user dismiss and would newly fire on_dismiss.
+    // Re-opening the same dialog in this run remounts it when the new delta
+    // arrives; keeping a dialog open across st.rerun() is not supported.
+    if (
+      shouldHideStaleDialog(
+        node,
+        scriptRunState,
+        scriptRunId,
+        fragmentIdsThisRun
+      )
+    ) {
+      return null
+    }
+
+    const dialog = node.deltaBlock.dialog as BlockProto.Dialog
+    const isDrawer =
+      dialog.position === BlockProto.Dialog.DialogPosition.LEFT ||
+      dialog.position === BlockProto.Dialog.DialogPosition.RIGHT
     return (
       <Dialog
-        element={node.deltaBlock.dialog as BlockProto.Dialog}
+        element={dialog}
         deltaMsgReceivedAt={node.deltaMsgReceivedAt}
         widgetMgr={props.widgetMgr}
         fragmentId={node.fragmentId}
       >
-        {child}
+        <ContainerContentsWrapper
+          {...childProps}
+          disableFullscreenMode={disableFullscreenMode}
+          height="100%"
+          padContentEnd={isDrawer}
+        />
       </Dialog>
     )
   }
@@ -338,7 +477,9 @@ export const BlockNodeRenderer = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        empty={node.isEmpty}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
@@ -355,6 +496,7 @@ export const BlockNodeRenderer = (
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
         widgetMgr={props.widgetMgr}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank block id means unset
         blockId={node.deltaBlock.id || undefined}
         fragmentId={node.fragmentId}
       >
@@ -374,6 +516,7 @@ export const BlockNodeRenderer = (
         widgetMgr={props.widgetMgr}
         border={border}
         overflow={styles.overflow}
+        isStretchHeight={isStretchHeight}
       >
         {child}
       </Form>
@@ -400,6 +543,8 @@ export const BlockNodeRenderer = (
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
         showBorder={node.deltaBlock.column.showBorder ?? false}
+        // Inherit parent row wrap; default true when FlexContext is absent.
+        $wrap={flexContext?.wrap ?? true}
         className="stColumn"
         data-testid="stColumn"
       >
@@ -416,7 +561,7 @@ export const BlockNodeRenderer = (
     // shadows).
     const heightConfig = node.deltaBlock.heightConfig
     const hasConstrainingHeight =
-      notNullOrUndefined(heightConfig) && !heightConfig.useContent
+      notNullOrUndefined(heightConfig) && heightConfig.useContent !== true
     const contentHeight = hasConstrainingHeight ? "100%" : "auto"
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
@@ -426,6 +571,7 @@ export const BlockNodeRenderer = (
         <ContainerContentsWrapper
           {...mappedChildProps}
           height={contentHeight}
+          heightConfig={heightConfig}
         />
       )
     }
@@ -439,6 +585,9 @@ export const BlockNodeRenderer = (
       width: styles.width,
       height: hasConstrainingHeight ? styles.height : undefined,
       flex: styles.flex,
+      alignSelf: styles.alignSelf,
+      minHeight: styles.minHeight,
+      maxHeight: styles.maxHeight,
       fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
@@ -448,10 +597,12 @@ export const BlockNodeRenderer = (
     return (
       <StyledLayoutWrapper
         data-testid="stLayoutWrapper"
+        {...{ [STEP_BLOCK_ATTRIBUTE]: isStepBlock ? "true" : undefined }}
         className={convertKeyToClassName(
           keyClassOnWrapper ? userKey : undefined
         )}
         {...styles}
+        {...stretchWrapperStyles}
       >
         {containerElement}
       </StyledLayoutWrapper>

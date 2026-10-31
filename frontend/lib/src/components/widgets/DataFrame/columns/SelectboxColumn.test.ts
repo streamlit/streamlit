@@ -15,16 +15,23 @@
  */
 
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
-import { Bool, Field, Int8 } from "apache-arrow"
+import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
+import { Bool, DateDay, Dictionary, Field, Int8 } from "apache-arrow"
 
-import { ArrowType, DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
+import { Quiver } from "~lib/dataframes/Quiver"
+import { CATEGORICAL_COLUMN } from "~lib/mocks/arrow/types/categoricalColumn"
+import { INTERVAL_CATEGORICAL } from "~lib/mocks/arrow/types/intervalCategorical"
+import { PERIOD_EXTENSION } from "~lib/mocks/arrow/types/periodExtension"
 
 import SelectboxColumn, {
   prepareOptions,
-  SelectboxColumnParams,
+  type SelectboxColumnParams,
 } from "./SelectboxColumn"
-import { BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
+import { type BaseColumnProps, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_CATEGORICAL_TYPE: ArrowType = {
   type: DataFrameCellType.DATA,
@@ -260,6 +267,72 @@ describe("SelectboxColumn", () => {
     })
     const errorCell = mockColumn.getCell("3", true)
     expect(isErrorCell(errorCell)).toEqual(true)
+  })
+
+  it.each([
+    // [categories, arrow data, column index, raw cell value, expected label]
+    ["pd.cut", INTERVAL_CATEGORICAL, 0, '{"left": 0, "right": 1}', "(0, 1]"],
+    ["dictionary-encoded period", PERIOD_EXTENSION, 1, "601", "2020-02"],
+  ])(
+    "labels %s categories with the formatted value",
+    (_name, data, columnIndex, rawValue, label) => {
+      const { content, contentType } = new Quiver({ data }).getCell(
+        0,
+        columnIndex
+      )
+      const mockColumn = getSelectboxColumn(contentType)
+      const mockCell = mockColumn.getCell(content, true) as DropdownCellType
+
+      // The grid draws the label of the option that matches the cell value.
+      expect(isErrorCell(mockCell)).toEqual(false)
+      expect(mockCell.data.value).toEqual(rawValue)
+      expect(mockCell.data.allowedValues).toContainEqual({
+        value: rawValue,
+        label,
+      })
+      expect(mockCell.data.allowedValues).not.toContainEqual({
+        value: rawValue,
+        label: rawValue,
+      })
+    }
+  )
+
+  it("labels date categories with the formatted date", () => {
+    const mockColumn = getSelectboxColumn({
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Dictionary(new DateDay(), new Int8())),
+      pandasType: undefined,
+      // ArrowJS reads date categories as epoch milliseconds.
+      categoricalOptions: [
+        1704067200000, 1704153600000,
+      ] as unknown as string[],
+    })
+    const mockCell = mockColumn.getCell(
+      1704153600000,
+      true
+    ) as DropdownCellType
+
+    expect(isErrorCell(mockCell)).toEqual(false)
+    expect(mockCell.data.allowedValues).toEqual([
+      null,
+      { value: "1704067200000", label: "2024-01-01" },
+      { value: "1704153600000", label: "2024-01-02" },
+    ])
+  })
+
+  it("keeps unlabeled options for other categorical columns", () => {
+    const { contentType } = new Quiver({ data: CATEGORICAL_COLUMN }).getCell(
+      0,
+      1
+    )
+    const mockColumn = getSelectboxColumn(contentType)
+    const mockCell = mockColumn.getCell("foo") as DropdownCellType
+
+    expect(mockCell.data.allowedValues).toEqual([
+      null,
+      { value: "bar", label: "bar" },
+      { value: "foo", label: "foo" },
+    ])
   })
 })
 

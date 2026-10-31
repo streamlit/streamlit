@@ -14,20 +14,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.utils import compute_and_register_element_id
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -36,22 +35,92 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large", "medium"]
+DialogWidth: TypeAlias = Literal["small", "medium", "large"] | int
+DialogPosition: TypeAlias = Literal["left", "center", "right"]
+
+# pixel_width is a uint32. Values above this cannot be stored on the proto.
+_MAX_DIALOG_PIXEL_WIDTH = 2**32 - 1
 
 
 def _process_dialog_width_input(
     width: DialogWidth,
-) -> BlockProto.Dialog.DialogWidth.ValueType:
-    """Maps the user-provided literal to a value of the DialogWidth proto enum.
+) -> tuple[BlockProto.Dialog.DialogWidth.ValueType, int | None]:
+    """Map a dialog width to the proto enum and an optional pixel width.
 
-    Returns the mapped enum field for "small" by default and otherwise the mapped type.
+    Presets map to the enum and leave the pixel width unset. A positive int
+    sets the pixel width and uses SMALL so a client that ignores the pixel
+    field still renders the small preset.
     """
     if width == "large":
-        return BlockProto.Dialog.DialogWidth.LARGE
+        return BlockProto.Dialog.DialogWidth.LARGE, None
     if width == "medium":
-        return BlockProto.Dialog.DialogWidth.MEDIUM
+        return BlockProto.Dialog.DialogWidth.MEDIUM, None
+    if width == "small":
+        return BlockProto.Dialog.DialogWidth.SMALL, None
+    # bool subclasses int. Reject it so True is not a 1px dialog.
+    # Also reject ints that do not fit in the uint32 proto field.
+    if (
+        isinstance(width, int)
+        and not isinstance(width, bool)
+        and 0 < width <= _MAX_DIALOG_PIXEL_WIDTH
+    ):
+        return BlockProto.Dialog.DialogWidth.SMALL, width
 
-    return BlockProto.Dialog.DialogWidth.SMALL
+    raise StreamlitValueError(
+        "width",
+        ["'small'", "'medium'", "'large'", "a positive integer"],
+        detail=f"Got {width!r}.",
+    )
+
+
+_POSITION_NAMES: Final = {
+    BlockProto.Dialog.DialogPosition.CENTER: "center",
+    BlockProto.Dialog.DialogPosition.LEFT: "left",
+    BlockProto.Dialog.DialogPosition.RIGHT: "right",
+}
+
+
+def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None:
+    """Describe this dialog for the agent API.
+
+    Called when the dialog is created and again when it is re-sent, so
+    ``is_open`` matches that message. ``key`` and ``action`` are set only when
+    ``on_dismiss`` registered a widget. The block id only keeps the frontend
+    from showing a stale dialog, and nothing is registered under it.
+    """
+    dialog = block_proto.dialog
+    # Empty means no dismiss widget. A callback reaches the server, which is
+    # the same mode as "rerun": firing the overlay's key closes the dialog.
+    can_dismiss = bool(dialog.id)
+    return agent_spec.block(
+        "dialog",
+        key=dialog.id if can_dismiss else None,
+        action="trigger" if can_dismiss else None,
+        title=dialog.title,
+        icon=dialog.icon or None,
+        position=_POSITION_NAMES.get(dialog.position, "center"),
+        dismissible=dialog.dismissible,
+        on_dismiss="rerun" if can_dismiss else "ignore",
+        is_open=is_open,
+    )
+
+
+def _process_dialog_position_input(
+    position: DialogPosition,
+) -> BlockProto.Dialog.DialogPosition.ValueType:
+    """Map a user-facing position literal to the DialogPosition proto enum.
+
+    Unrecognized positions raise StreamlitValueError. There is no fallback
+    to center.
+    """
+    if position == "left":
+        return BlockProto.Dialog.DialogPosition.LEFT
+    if position == "right":
+        return BlockProto.Dialog.DialogPosition.RIGHT
+    if position == "center":
+        return BlockProto.Dialog.DialogPosition.CENTER
+
+    raise StreamlitValueError("position", ["'left'", "'center'", "'right'"])
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -63,7 +132,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
 
     Raises
     ------
-    StreamlitAPIException
+    StreamlitInvalidLayoutContextError
         Raised when a dialog has already been opened in the current script run.
     """
     script_run_ctx = get_script_run_ctx()
@@ -72,7 +141,7 @@ def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
     # this might need to change.
     if should_open and script_run_ctx:
         if script_run_ctx.has_dialog_opened:
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 "Only one dialog is allowed to be opened at the same time. "
                 "Please make sure to not call a dialog-decorated function more than once in a script run."
             )
@@ -85,22 +154,28 @@ class Dialog(DeltaGenerator):
         parent: DeltaGenerator,
         title: str,
         *,
-        dismissible: bool = True,
         width: DialogWidth = "small",
+        position: DialogPosition = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
-        # Validation for on_dismiss parameter
-        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitAPIException(
-                f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
-                "'rerun', or a callable is supported."
-            )
+        on_dismiss_callback = validate_on_change_mode(
+            on_dismiss,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_dismiss",
+        )
 
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
-        block_proto.dialog.width = _process_dialog_width_input(width)
+        dialog_width, pixel_width = _process_dialog_width_input(width)
+        block_proto.dialog.width = dialog_width
+        # Presets leave pixel_width unset so the frontend uses the enum.
+        if pixel_width is not None:
+            block_proto.dialog.pixel_width = pixel_width
+        block_proto.dialog.position = _process_dialog_position_input(position)
         block_proto.dialog.icon = validate_icon_or_emoji(icon)
 
         # Compute a stable identity for the dialog based on its attributes.
@@ -117,6 +192,7 @@ class Dialog(DeltaGenerator):
             title=title,
             dismissible=dismissible,
             width=width,
+            position=position,
             icon=icon,
             on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
         )
@@ -140,22 +216,28 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
-                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values
                 ctx=ctx,
                 value_type="trigger_value",
             )
 
-        # We store the delta path here, because in _update we enqueue a new proto
-        # message to update the open status. Without this, the dialog content is gone
-        # when the _update message is sent
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
+        dialog = cast(
+            "Dialog",
+            parent._block(
+                block_proto=block_proto,
+                dg_type=Dialog,
+                agent_props=_dialog_agent_props(block_proto, is_open=False),
+            ),
         )
-        dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
 
-        dialog._delta_path = delta_path
+        # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
+        # to, not the parent cursor, so the update targets the block even if a wrapper
+        # sits between them. Dialogs land top level in the event container, which never
+        # gets a wrapper, so this is a no-op today and stays correct if that changes.
+        # Same idiom as StatusContainer. See issue #16281.
+        dialog._delta_path = dialog._block_delta_path
         dialog._current_proto = block_proto
 
         return dialog
@@ -187,6 +269,12 @@ class Dialog(DeltaGenerator):
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
+        # This message replaces the one sent at the same delta path, so it has
+        # to carry a description too, rebuilt so `is_open` reflects this update
+        # rather than the value the dialog was created with.
+        agent_props = _dialog_agent_props(self._current_proto, is_open=should_open)
+        if agent_props is not None:
+            msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open
         self._current_proto = msg.delta.add_block
 
@@ -198,7 +286,7 @@ class Dialog(DeltaGenerator):
     def close(self) -> None:
         self._update(False)
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?
@@ -207,8 +295,8 @@ class Dialog(DeltaGenerator):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
-        return super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(typ, exc, tb)

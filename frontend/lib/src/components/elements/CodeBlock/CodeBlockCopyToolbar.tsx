@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback } from "react"
 
 import { Check, ContentCopy } from "@emotion-icons/material-outlined"
 

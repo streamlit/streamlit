@@ -16,17 +16,23 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.feedback import FeedbackSerde
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.runtime.state.widgets import register_widget_from_metadata
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -42,32 +48,32 @@ class TestFeedbackSerde:
 
     def test_serialize_value_to_string(self):
         """Test that int value is serialized to string."""
-        serde = FeedbackSerde()
+        serde = FeedbackSerde(num_options=5)
         assert serde.serialize(3) == "3"
 
     def test_serialize_none_to_empty_string(self):
         """Test that None is serialized to empty string (cleared state)."""
-        serde = FeedbackSerde()
+        serde = FeedbackSerde(num_options=5)
         assert serde.serialize(None) == ""
 
     def test_deserialize_string_value_to_int(self):
         """Test that string value is deserialized to int."""
-        serde = FeedbackSerde()
+        serde = FeedbackSerde(num_options=5)
         assert serde.deserialize("3") == 3
 
     def test_deserialize_none_returns_default(self):
         """Test that None (no UI interaction) returns default value."""
-        serde = FeedbackSerde(default_value=2)
+        serde = FeedbackSerde(num_options=5, default_value=2)
         assert serde.deserialize(None) == 2
 
     def test_deserialize_none_without_default(self):
         """Test that None returns None when no default is set."""
-        serde = FeedbackSerde()
+        serde = FeedbackSerde(num_options=5)
         assert serde.deserialize(None) is None
 
     def test_deserialize_empty_string_returns_none(self):
         """Test that empty string (cleared state) returns None, even with default."""
-        serde = FeedbackSerde(default_value=2)
+        serde = FeedbackSerde(num_options=5, default_value=2)
         # This is the key behavior: empty string means "user cleared"
         # and should return None, not the default
         assert serde.deserialize("") is None
@@ -78,7 +84,7 @@ class TestFeedbackSerde:
         When a user has default=2 and clicks to deselect, the widget should
         return None, not revert to the default.
         """
-        serde = FeedbackSerde(default_value=2)
+        serde = FeedbackSerde(num_options=5, default_value=2)
 
         # Initial state: no interaction -> returns default
         assert serde.deserialize(None) == 2
@@ -89,6 +95,22 @@ class TestFeedbackSerde:
         # User clears (clicks selected option again) -> returns None, NOT default
         assert serde.deserialize("") is None
         assert serde.deserialize("") != 2  # Explicitly verify it's not the default
+
+    @pytest.mark.parametrize(
+        ("ui_value", "default", "expected"),
+        [
+            ("1", None, 1),
+            ("2", None, None),
+            ("-1", None, None),
+            ("2", 1, 1),
+        ],
+    )
+    def test_deserialize_out_of_range_index_returns_default(
+        self, ui_value: str, default: int | None, expected: int | None
+    ) -> None:
+        """Test that an index outside the options deserializes to the default."""
+        serde = FeedbackSerde(num_options=2, default_value=default)
+        assert serde.deserialize(ui_value) == expected
 
 
 class TestFeedbackCommand(DeltaGeneratorTestCase):
@@ -113,12 +135,11 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         assert delta.type == expected_type
 
     def test_invalid_option_literal(self):
-        """Test that invalid option raises StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that invalid option raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as e:
             st.feedback("foo")
         assert str(e.value) == (
-            "The options argument to st.feedback must be one of "
-            "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
+            "Invalid `options` value. Supported values: 'thumbs', 'faces', 'stars'."
         )
 
     @parameterized.expand([(0,), (1,)])
@@ -127,6 +148,53 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         st.session_state.feedback_key = session_state_index
         val = st.feedback("thumbs", key="feedback_key")
         assert val == session_state_index
+
+    @parameterized.expand(
+        [
+            (2, None),
+            (4, 1),
+            (-1, None),
+            ("1", None),
+            (True, None),
+            (0.5, 1),
+        ]
+    )
+    def test_invalid_session_state_value_resets_to_default(
+        self, session_state_value: Any, default: int | None
+    ) -> None:
+        """Test that a session state value that isn't a valid index resets to the default."""
+        st.session_state.feedback_key = session_state_value
+        val = st.feedback("thumbs", key="feedback_key", default=default)
+
+        assert val == default
+        assert st.session_state.feedback_key == default
+        proto = self.get_delta_from_queue().new_element.feedback
+        assert proto.set_value is True
+        assert proto.HasField("value") is (default is not None)
+
+    def test_numpy_integer_session_state_value_is_kept(self) -> None:
+        """Test that an in-range NumPy integer in session state is not reset."""
+        st.session_state.feedback_key = np.int64(1)
+        val = st.feedback("thumbs", key="feedback_key", default=0)
+
+        assert val == 1
+        assert self.get_delta_from_queue().new_element.feedback.value == 1
+
+    def test_persist_state_passed_to_metadata(self) -> None:
+        """Test that persist_state is threaded onto the widget's WidgetMetadata."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.feedback("stars", key="my_key", persist_state="session")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.persist_state == "session"
+
+    def test_persist_state_without_key_raises(self) -> None:
+        """Test that persist_state without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.feedback("stars", persist_state="session")
 
     def test_default_value_thumbs(self):
         """Test that default value is set correctly for thumbs."""
@@ -157,23 +225,23 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
         val = st.feedback("thumbs")
         assert val is None
 
-    def test_invalid_default_for_thumbs(self):
-        """Test that invalid default for thumbs raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("thumbs", default=2)
-        assert "must be a number between 0 and 1" in str(e.value)
-
-    def test_invalid_default_for_faces(self):
-        """Test that invalid default for faces raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("faces", default=5)
-        assert "must be a number between 0 and 4" in str(e.value)
-
-    def test_invalid_default_for_stars(self):
-        """Test that invalid default for stars raises exception."""
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("stars", default=-1)
-        assert "must be a number between 0 and 4" in str(e.value)
+    @parameterized.expand(
+        [
+            ("thumbs", 2, "[0, 1]"),
+            ("faces", 5, "[0, 4]"),
+            ("stars", -1, "[0, 4]"),
+        ]
+    )
+    def test_invalid_default(
+        self,
+        options: Literal["thumbs", "faces", "stars"],
+        default: int,
+        expected_range: str,
+    ):
+        """Out-of-range default raises StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as e:
+            st.feedback(options, default=default)
+        assert f"required range {expected_range}" in str(e.value)
 
     def test_disabled_state(self):
         """Test that disabled state is set correctly."""
@@ -242,6 +310,93 @@ class TestFeedbackCommand(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.feedback
         assert proto.type == FeedbackProto.FeedbackType.THUMBS
+
+
+class TestFeedbackBindQueryParams(DeltaGeneratorTestCase):
+    """Tests for st.feedback bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self) -> None:
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.feedback("stars", key="rating", bind="query-params")
+
+        proto = self.get_delta_from_queue().new_element.feedback
+        assert proto.query_param_key == "rating"
+
+    def test_bind_query_params_without_key_raises_exception(self) -> None:
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.feedback("stars", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self) -> None:
+        """Test that without bind parameter, query_param_key is not set."""
+        st.feedback("stars", key="rating")
+
+        proto = self.get_delta_from_queue().new_element.feedback
+        assert not proto.HasField("query_param_key")
+
+    def test_invalid_bind_value_raises_exception(self) -> None:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
+            st.feedback("stars", key="rating", bind="invalid-value")
+
+    def test_bind_passed_to_metadata_as_clearable(self) -> None:
+        """Test that bind is registered with clearable=True, since a rating can be cleared."""
+        with patch(
+            "streamlit.runtime.state.widgets.register_widget_from_metadata",
+            wraps=register_widget_from_metadata,
+        ) as patched:
+            st.feedback("stars", key="rating", bind="query-params")
+
+        metadata = patched.call_args[0][0]
+        assert metadata.bind == "query-params"
+        assert metadata.clearable is True
+
+
+class FeedbackOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.feedback("thumbs", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.feedback
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that an invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.feedback("thumbs", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.feedback("thumbs", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.feedback("thumbs", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.feedback
+        assert c.ignore_rerun is True
 
 
 class TestFeedbackWidthConfig(DeltaGeneratorTestCase):
@@ -444,3 +599,133 @@ def test_apptest_feedback_value_retained_on_rerun():
 
     # Value should be retained
     assert at.feedback[0].value == 2
+
+
+@pytest.mark.parametrize(
+    ("persist_clause", "default", "selected", "value_after_show"),
+    [
+        (', persist_state="page"', None, 3, 3),
+        (', persist_state="session"', None, 3, 3),
+        # A cleared rating is restored as cleared, not as the default.
+        (', persist_state="session"', 2, None, None),
+        ("", None, 3, None),
+    ],
+    ids=["page", "session", "session_cleared_rating", "not_persisted"],
+)
+def test_apptest_feedback_persist_state_hide_show(
+    persist_clause: str,
+    default: int | None,
+    selected: int | None,
+    value_after_show: int | None,
+) -> None:
+    """Test that a hidden feedback widget keeps its value only with persist_state."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        'if st.toggle("Show", key="show"):\n'
+        f'    st.feedback("stars", key="rating", default={default}{persist_clause})\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.feedback[0].set_value(selected).run()
+    at.toggle[0].set_value(False).run()
+    assert not at.feedback
+
+    at.toggle[0].set_value(True).run()
+    assert at.feedback[0].value == value_after_show
+
+
+def test_apptest_feedback_persisted_value_reset_when_out_of_range() -> None:
+    """Test that a persisted rating outside the new options resets to the default."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        'options = st.session_state.get("options", "stars")\n'
+        'if st.toggle("Show", key="show"):\n'
+        '    st.feedback(options, key="rating", persist_state="session")\n'
+    )
+    at = AppTest.from_string(script).run()
+    at.toggle[0].set_value(True).run()
+    at.feedback[0].set_value(4).run()
+    at.toggle[0].set_value(False).run()
+    at.session_state["options"] = "thumbs"
+    at.run()
+    assert at.session_state["rating"] == 4
+
+    at.toggle[0].set_value(True).run()
+    assert at.feedback[0].value is None
+    assert at.session_state["rating"] is None
+
+    # The reset widget still accepts a valid selection.
+    at.feedback[0].set_value(1).run()
+    assert at.feedback[0].value == 1
+
+
+@pytest.mark.parametrize(
+    ("options", "default", "url_value", "expected_value", "expected_param"),
+    [
+        ("stars", None, "4", 4, "4"),
+        ("thumbs", None, "1", 1, "1"),
+        # An empty param clears a rating that has a default.
+        ("stars", 2, "", None, ""),
+        # The default is not kept in the URL.
+        ("stars", 2, "2", 2, None),
+        # Invalid values fall back to the default and are removed from the URL.
+        ("thumbs", None, "4", None, None),
+        ("stars", 1, "-1", 1, None),
+        ("stars", None, "abc", None, None),
+        ("faces", None, "1.0", None, None),
+    ],
+    ids=[
+        "stars",
+        "thumbs",
+        "empty_clears_default",
+        "default_removed",
+        "out_of_range",
+        "negative",
+        "non_numeric",
+        "float",
+    ],
+)
+def test_apptest_feedback_bind_seeds_from_url(
+    options: str,
+    default: int | None,
+    url_value: str,
+    expected_value: int | None,
+    expected_param: str | None,
+) -> None:
+    """Test that a bound feedback widget is seeded from its URL query parameter."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        f'st.feedback("{options}", key="rating", default={default}, '
+        'bind="query-params")\n'
+    )
+    at = AppTest.from_string(script)
+    at.query_params["rating"] = url_value
+    at.run()
+
+    assert not at.exception
+    assert at.feedback[0].value == expected_value
+    assert at.query_params.get("rating") == expected_param
+
+
+def test_apptest_feedback_bind_syncs_session_state_to_url() -> None:
+    """Test that a programmatic change to a bound feedback widget updates the URL."""
+    from streamlit.testing.v1 import AppTest
+
+    script = (
+        "import streamlit as st\n"
+        'if st.button("Rate"):\n'
+        "    st.session_state.rating = 3\n"
+        'st.feedback("stars", key="rating", bind="query-params")\n'
+    )
+    at = AppTest.from_string(script).run()
+    assert "rating" not in at.query_params
+
+    at.button[0].click().run()
+    assert at.feedback[0].value == 3
+    assert at.query_params["rating"] == "3"

@@ -26,7 +26,7 @@ from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
@@ -45,7 +45,7 @@ class SpinnerMixin:
         show_time: bool = False,
         _cache: bool = False,
         width: Width = "content",
-    ) -> Iterator[None]:
+    ) -> Generator[None, None, None]:
         """Display a loading spinner while executing a block of code.
 
         Parameters

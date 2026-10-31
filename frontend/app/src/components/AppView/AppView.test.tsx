@@ -14,27 +14,31 @@
  * limitations under the License.
  */
 
-import { act, fireEvent, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import {
   AppRoot,
   BlockNode,
   ComponentRegistry,
+  createTheme,
   ElementNode,
   FileUploadClient,
   makeElementWithInfoText,
   mockEndpoints,
   mockSessionInfo,
   mockTheme,
-  NavigationContextProps,
+  type NavigationContextProps,
+  ThemeProvider,
   toastQueue,
+  TransientNode,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
   render,
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import {
   Block as BlockProto,
@@ -45,7 +49,7 @@ import {
   PageConfig,
 } from "@streamlit/protobuf"
 
-import AppView, { AppViewProps } from "./AppView"
+import AppView, { type AppViewProps } from "./AppView"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -122,11 +126,11 @@ function renderAppView(
   }
 ): ReturnType<typeof renderWithContexts> {
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    overrides?.sidebarConfigContext || {}
+    overrides?.sidebarConfigContext ?? {}
   )
 
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<AppView {...getProps(props)} />, {
@@ -135,12 +139,78 @@ function renderAppView(
   })
 }
 
+function createAllowEmptyBlock(
+  children: Array<BlockNode | ElementNode | TransientNode> = []
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    new BlockProto({ allowEmpty: true })
+  )
+}
+
+function createChatInputNode(
+  id: string,
+  isAutoPositionedAtBottom = false
+): ElementNode {
+  return new ElementNode(
+    new Element({
+      chatInput: {
+        id,
+        placeholder: "Enter Text Here",
+        disabled: false,
+        default: "",
+        isAutoPositionedAtBottom,
+      },
+    }),
+    ForwardMsgMetadata.create({}),
+    "no script run id",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function appRootWithBottom(
+  children: Array<BlockNode | ElementNode | TransientNode>
+): AppRoot {
+  return new AppRoot(
+    FAKE_SCRIPT_HASH,
+    new BlockNode(FAKE_SCRIPT_HASH, [
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(),
+      createAllowEmptyBlock(children),
+    ])
+  )
+}
+
 describe("AppView element", () => {
   it("renders without crashing", () => {
     render(<AppView {...getProps()} />)
     const appViewContainer = screen.getByTestId("stAppViewContainer")
     expect(appViewContainer).toBeInTheDocument()
     expect(appViewContainer).toHaveClass("stAppViewContainer")
+  })
+
+  it("exposes a main landmark targeted by the skip link", async () => {
+    const user = userEvent.setup()
+    const hashBefore = window.location.hash
+    render(<AppView {...getProps()} />)
+
+    const main = screen.getByRole("main")
+    expect(main).toHaveAttribute("id", "stMain")
+    expect(main).toHaveAttribute("data-testid", "stMain")
+
+    const skipLink = screen.getByRole("link", { name: "Skip to main content" })
+    expect(skipLink).toHaveAttribute("href", "#stMain")
+    expect(skipLink).toHaveAttribute("data-testid", "stSkipToContent")
+    // The app shell renders the skip link before all other chrome.
+    expect(screen.getByTestId("stAppViewContainer").firstChild).toBe(skipLink)
+
+    // Activation focuses main without writing location.hash (embed hosts
+    // mirror hashchange as UPDATE_HASH).
+    await user.click(skipLink)
+    expect(main).toHaveFocus()
+    expect(window.location.hash).toBe(hashBefore)
   })
 
   it("renders the toast container when toasts are present", () => {
@@ -615,7 +685,7 @@ describe("AppView element", () => {
       })
 
       describe("without show_padding or show_toolbar options", () => {
-        it("uses 2.25rem top padding when no header content", () => {
+        it("uses overlay-toolbar clearance padding when no header content", () => {
           render(
             <AppView
               {...getProps({
@@ -627,9 +697,13 @@ describe("AppView element", () => {
             />
           )
 
-          const style = getMainBlockContainerStyle()
-          expect(style.paddingTop).toEqual("2.25rem")
-          expect(style.paddingBottom).toEqual("1rem")
+          const mainBlock = screen.getByTestId("stMainBlockContainer")
+          // calc(...) keeps clearance at baseFontSize < 16; equals 2.35rem at 16px.
+          // Use toHaveStyle (not getComputedStyle): jsdom does not resolve max() in calc.
+          expect(mainBlock).toHaveStyle(
+            "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+          )
+          expect(getMainBlockContainerStyle().paddingBottom).toEqual("1rem")
         })
 
         it("uses 4.5rem top padding when header content exists (logo)", () => {
@@ -801,6 +875,117 @@ describe("AppView element", () => {
     })
   })
 
+  describe("configured padding (theme.paddingTop / theme.paddingBottom)", () => {
+    const getMainBlockContainerStyle = (): CSSStyleDeclaration => {
+      return window.getComputedStyle(
+        screen.getByTestId("stMainBlockContainer")
+      )
+    }
+
+    /** Render AppView with a custom Emotion theme so styled-components pick up paddingTop/Bottom. */
+    const renderWithPaddingTheme = (
+      themeOverrides: { paddingTop?: string; paddingBottom?: string },
+      appViewProps: Partial<AppViewProps> = {},
+      overrides?: {
+        navigationContext?: Partial<NavigationContextProps>
+      }
+    ): ReturnType<typeof renderWithContexts> => {
+      const customTheme = createTheme("Custom", themeOverrides)
+      return renderWithContexts(
+        <ThemeProvider theme={customTheme.emotion}>
+          <AppView {...getProps(appViewProps)} />
+        </ThemeProvider>,
+        {
+          sidebarConfigContext: getSidebarConfigContextOutput(),
+          navigationContext: getNavigationContextOutput(
+            overrides?.navigationContext
+          ),
+        }
+      )
+    }
+
+    it("applies configured paddingTop directly when no header chrome is shown", () => {
+      // showToolbar: false → hasHeader = false → author gap is used as-is
+      renderWithPaddingTheme(
+        { paddingTop: "2rem" },
+        { embedded: false, showToolbar: false }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("2rem")
+    })
+
+    it("adds headerHeight to configured paddingTop when header chrome is shown", () => {
+      // showToolbar: true (default) → hasHeader = true → calc(headerHeight + authorGap)
+      renderWithPaddingTheme({ paddingTop: "1rem" }, { embedded: false })
+      const style = getMainBlockContainerStyle()
+      // headerHeight is 3.75rem from the base theme
+      expect(style.paddingTop).toEqual("calc(3.75rem + 1rem)")
+    })
+
+    it("keeps configured paddingTop as calc(headerHeight + value) with top nav", () => {
+      // Unset top-nav path is 8rem; configured path must stay headerHeight +
+      // value and must not pick up the legacy +2rem.
+      renderWithPaddingTheme(
+        { paddingTop: "1rem" },
+        {
+          embedded: false,
+          navigationPosition: Navigation.Position.TOP,
+        },
+        {
+          navigationContext: {
+            appPages: [
+              { pageName: "page1", pageScriptHash: "hash1" },
+              { pageName: "page2", pageScriptHash: "hash2" },
+            ],
+          },
+        }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("calc(3.75rem + 1rem)")
+    })
+
+    it("preserves unset 6rem path when paddingTop is not configured", () => {
+      render(<AppView {...getProps({ embedded: false })} />)
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("6rem")
+    })
+
+    it("uses configured paddingBottom regardless of showPadding", () => {
+      renderWithPaddingTheme(
+        { paddingBottom: "4rem" },
+        { embedded: false, showPadding: true }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("4rem")
+    })
+
+    it("uses configured paddingBottom when showPadding=false", () => {
+      renderWithPaddingTheme(
+        { paddingBottom: "1rem" },
+        { embedded: false, showPadding: false }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("1rem")
+    })
+
+    it("preserves unset 10rem bottom path when paddingBottom is not configured", () => {
+      render(<AppView {...getProps({ embedded: false, showPadding: true })} />)
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingBottom).toEqual("10rem")
+    })
+
+    it("embed URL options do not clamp configured paddingTop", () => {
+      // Embedded with showPadding=true — unset path is 6rem; configured value
+      // must stay as-is (with headerHeight when the toolbar is shown).
+      renderWithPaddingTheme(
+        { paddingTop: "2rem" },
+        { embedded: true, showPadding: true, showToolbar: true }
+      )
+      const style = getMainBlockContainerStyle()
+      expect(style.paddingTop).toEqual("calc(3.75rem + 2rem)")
+    })
+  })
+
   describe("handles logo rendering with no sidebar", () => {
     const imageOnly = LogoProto.create({
       image:
@@ -884,7 +1069,7 @@ describe("AppView element", () => {
       const logoElement = screen.getByTestId("stHeaderLogo")
       expect(logoElement).toBeInTheDocument()
 
-      fireEvent.error(logoElement)
+      logoElement.dispatchEvent(new Event("error"))
 
       expect(sendClientErrorToHost).toHaveBeenCalledWith(
         "Header Logo",
@@ -897,7 +1082,9 @@ describe("AppView element", () => {
 
   describe("when window.location.hash changes", () => {
     let originalLocation: Location
-    beforeEach(() => (originalLocation = window.location))
+    beforeEach(() => {
+      originalLocation = window.location
+    })
     afterEach(() => {
       Object.defineProperty(window, "location", {
         value: originalLocation,
@@ -927,53 +1114,73 @@ describe("AppView element", () => {
     expect(stbContainer).not.toBeInTheDocument()
   })
 
-  it("renders a Scroll To Bottom container if there is an element in the bottom container.", () => {
-    const chatInputElement = new ElementNode(
+  it("does not activate app autoscroll for explicit bottom placement", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123")]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
+  })
+
+  it("activates app autoscroll for automatic bottom positioning", () => {
+    const props = getProps({
+      elements: appRootWithBottom([createChatInputNode("123", true)]),
+    })
+
+    render(<AppView {...props} />)
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it.each([
+    {
+      name: "a transient node in the bottom holds a chat input",
+      transient: () =>
+        new TransientNode("no script run id", undefined, [
+          createChatInputNode("transient-chat", true),
+        ]),
+    },
+    {
+      name: "a transient node's anchor is a chat input",
+      transient: () =>
+        new TransientNode(
+          "no script run id",
+          createChatInputNode("anchor-chat", true),
+          []
+        ),
+    },
+  ])("renders a Scroll To Bottom container when $name", ({ transient }) => {
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient()]) })} />
+    )
+
+    expect(screen.getByTestId("stAppScrollToBottomContainer")).toBeVisible()
+  })
+
+  it("does not render a Scroll To Bottom container for a transient node without chat input", () => {
+    const textElement = new ElementNode(
       new Element({
-        chatInput: {
-          id: "123",
-          placeholder: "Enter Text Here",
-          disabled: false,
-          default: "",
-        },
+        text: { body: "hello" },
       }),
       ForwardMsgMetadata.create({}),
       "no script run id",
       FAKE_SCRIPT_HASH
     )
+    const transient = new TransientNode("no script run id", undefined, [
+      textElement,
+    ])
 
-    const main = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const sidebar = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const event = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [],
-      new BlockProto({ allowEmpty: true })
-    )
-    const bottom = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [chatInputElement],
-      new BlockProto({ allowEmpty: true })
+    render(
+      <AppView {...getProps({ elements: appRootWithBottom([transient]) })} />
     )
 
-    const props = getProps({
-      elements: new AppRoot(
-        FAKE_SCRIPT_HASH,
-        new BlockNode(FAKE_SCRIPT_HASH, [main, sidebar, event, bottom])
-      ),
-    })
-
-    render(<AppView {...props} />)
-
-    const stbContainer = screen.queryByTestId("stAppScrollToBottomContainer")
-    expect(stbContainer).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stAppScrollToBottomContainer")
+    ).not.toBeInTheDocument()
   })
 
   describe("navigation position rendering", () => {
@@ -1289,7 +1496,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered and expanded when initialSidebarState is AUTO
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
 
       // Now simulate receiving page config with collapsed state
       rerenderWithContexts(<AppView {...props} />, {
@@ -1301,7 +1508,7 @@ describe("AppView element", () => {
       // Now sidebar should be rendered but collapsed
       const sidebarAfterConfig = screen.getByTestId("stSidebar")
       expect(sidebarAfterConfig).toBeInTheDocument()
-      expect(sidebarAfterConfig).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarAfterConfig).toHaveAttribute("data-collapsed", "true")
     })
 
     it("renders sidebar immediately when initialSidebarState is COLLAPSED", () => {
@@ -1340,7 +1547,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("renders sidebar immediately when initialSidebarState is EXPANDED", () => {
@@ -1379,7 +1586,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered immediately when state is known
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("shows sidebar when multiple pages exist even with AUTO state", () => {
@@ -1401,7 +1608,7 @@ describe("AppView element", () => {
       // Sidebar should be rendered and expanded initially
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("sidebar shows after first script run when no page config is set", () => {
@@ -1439,7 +1646,7 @@ describe("AppView element", () => {
       })
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toBeInTheDocument()
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
 
       // Simulate script finished event without page config change
       // This tests the showSidebarOverride logic would apply
@@ -1516,7 +1723,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("uses initial sidebar config for collapsed state when no localStorage value exists", () => {
@@ -1525,7 +1732,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("restores collapsed state from localStorage on initial load", () => {
@@ -1534,7 +1741,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "false")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "true")
     })
 
     it("restores expanded state from localStorage on initial load", () => {
@@ -1543,7 +1750,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.COLLAPSED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("handles invalid localStorage values gracefully", () => {
@@ -1552,7 +1759,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("ignores a stale collapsed localStorage value when sidebar is locked", () => {
@@ -1563,7 +1770,7 @@ describe("AppView element", () => {
       renderAppViewWithSidebar(PageConfig.SidebarState.LOCKED)
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
     })
 
     it("renders locked sidebar open at desktop viewport width", () => {
@@ -1579,11 +1786,37 @@ describe("AppView element", () => {
       )
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
-      expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
+      expect(sidebarDOMElement).toHaveAttribute("data-collapsed", "false")
       // Collapse button must not exist in the DOM for a locked desktop sidebar
       expect(
         screen.queryByTestId("stSidebarCollapseButton")
       ).not.toBeInTheDocument()
+    })
+
+    it("persists sidebar collapsed state when the user toggles the sidebar", async () => {
+      const user = userEvent.setup()
+      renderAppViewWithSidebar(PageConfig.SidebarState.EXPANDED)
+
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      await user.click(
+        within(screen.getByTestId("stSidebarCollapseButton")).getByRole(
+          "button"
+        )
+      )
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "data-collapsed",
+        "true"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("true")
+
+      await user.click(screen.getByTestId("stExpandSidebarButton"))
+
+      expect(screen.getByTestId("stSidebar")).toHaveAttribute(
+        "data-collapsed",
+        "false"
+      )
+      expect(window.localStorage.getItem("stSidebarCollapsed-")).toBe("false")
     })
   })
 })

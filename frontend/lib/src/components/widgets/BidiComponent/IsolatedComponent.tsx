@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useRef, useState } from "react"
+import { type FC, memo, useEffect, useRef, useState } from "react"
 
 import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"

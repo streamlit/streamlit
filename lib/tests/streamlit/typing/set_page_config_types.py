@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, assert_type
 
 # Verify that all valid InitialSideBarState literals are accepted by mypy.
 if TYPE_CHECKING:
@@ -26,3 +26,16 @@ if TYPE_CHECKING:
     set_page_config(initial_sidebar_state="locked")
     set_page_config(initial_sidebar_state=300)
     set_page_config(initial_sidebar_state=None)
+
+    assert_type(
+        set_page_config(
+            page_title="Analytics",
+            page_icon="📊",
+            layout="wide",
+            menu_items={
+                "Get help": "https://example.com/help",
+                "About": "Analytics dashboard",
+            },
+        ),
+        None,
+    )

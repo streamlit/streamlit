@@ -21,7 +21,11 @@ from typing import Literal
 from streamlit import url_util
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidURLError,
+    StreamlitValueError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Logo_pb2 import Logo as LogoProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -210,17 +214,17 @@ def logo(
         fwd_msg.logo.image = image_value
         fwd_msg.logo.image_type = image_type
     except Exception as ex:
-        raise StreamlitAPIException(_invalid_logo_text("image")) from ex
+        raise StreamlitAPIException(
+            _invalid_logo_text("image"),
+            error_id="logo-invalid-image",
+        ) from ex
 
     if link:
         # Handle external links:
         if url_util.is_url(link, ("http", "https")):
             fwd_msg.logo.link = link
         else:
-            raise StreamlitAPIException(
-                f"Invalid link: {link} - the link param supports external links only and must "
-                f"start with either http:// or https://."
-            )
+            raise StreamlitInvalidURLError(link, ("http", "https"))
 
     if icon_image:
         try:
@@ -230,7 +234,10 @@ def logo(
             fwd_msg.logo.icon_image = icon_image_value
             fwd_msg.logo.icon_image_type = icon_image_type
         except Exception as ex:
-            raise StreamlitAPIException(_invalid_logo_text("icon_image")) from ex
+            raise StreamlitAPIException(
+                _invalid_logo_text("icon_image"),
+                error_id="logo-invalid-icon-image",
+            ) from ex
 
     def validate_size(size: str) -> str:
         if isinstance(size, str):
@@ -240,10 +247,7 @@ def logo(
             if image_size in valid_sizes:
                 return image_size
 
-        raise StreamlitAPIException(
-            f'The size argument to st.logo must be "small", "medium", or "large". \n'
-            f"The argument passed was {size}."
-        )
+        raise StreamlitValueError("size", ["'small'", "'medium'", "'large'"])
 
     fwd_msg.logo.size = validate_size(size)
 

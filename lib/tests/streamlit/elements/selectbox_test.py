@@ -27,9 +27,11 @@ from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
     StreamlitAPIException,
-    StreamlitInvalidBindValueError,
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
@@ -61,6 +63,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.default == 0
         assert c.HasField("default")
         assert not c.disabled
+        assert not c.required
         # Default placeholders are now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
@@ -72,6 +75,75 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.selectbox("the label", ("m", "f"), required=required)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.required is required
+
+    @parameterized.expand(
+        [
+            ("unkeyed", None, False),
+            ("keyed", "selectbox_key", True),
+        ]
+    )
+    def test_required_changes_widget_id_only_without_key(
+        self, _: str, key: str | None, expect_same_id: bool
+    ) -> None:
+        """Toggling required changes the widget id only when it has no key."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.selectbox("the label", ("m", "f"), key=key, required=False)
+            id1 = self.get_delta_from_queue().new_element.selectbox.id
+            st.selectbox("the label", ("m", "f"), key=key, required=True)
+            id2 = self.get_delta_from_queue().new_element.selectbox.id
+
+            if expect_same_id:
+                assert id1 == id2
+            else:
+                assert id1 != id2
+
+    def test_disabled_required_does_not_raise(self) -> None:
+        """Disabled required selectboxes are valid and can start empty."""
+        st.selectbox("label", ("m", "f"), index=None, disabled=True, required=True)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.disabled
+        assert c.required
+        assert not c.HasField("default")
+
+    def test_required_true_keeps_default_index(self) -> None:
+        """required=True does not change the first-option default."""
+        st.selectbox("label", ("m", "f"), required=True)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.required
+        assert c.HasField("default")
+        assert c.default == 0
+
+    def test_index_none_required_has_no_default(self) -> None:
+        """index=None with required=True is an empty required selectbox."""
+        st.selectbox("label", ("m", "f"), index=None, required=True)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.required
+        assert not c.HasField("default")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_required_inside_form_keeps_form_id(self) -> None:
+        """A required selectbox inside a form keeps its form id."""
+        with st.form("form"):
+            st.selectbox("label", ("m", "f"), index=None, required=True)
+
+        form_proto = self.get_delta_from_queue(0).add_block
+        c = self.get_delta_from_queue(1).new_element.selectbox
+        assert c.required
+        assert c.form_id == form_proto.form.form_id
 
     def test_valid_value(self):
         """Test that valid value is an int."""
@@ -176,32 +248,31 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     def test_filter_mode_none_with_accept_new_options_raises_exception(self):
         """Test that filter_mode=None is incompatible with accept_new_options=True."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be None when `accept_new_options=True`",
-        ):
+        with pytest.raises(StreamlitIncompatibleParametersError):
             st.selectbox(
                 "the label", ("m", "f"), filter_mode=None, accept_new_options=True
             )
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match=r"Expected one of: int, None\. Provided type: str\.",
+        ):
             st.selectbox("the label", ("m", "f"), "1")
 
     def test_invalid_value_range(self):
         """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueOutOfRangeError):
             st.selectbox("the label", ("m", "f"), 2)
 
-    def test_raises_exception_of_index_larger_than_options(self):
-        """Test that it raises an exception if index is larger than options."""
-        with pytest.raises(StreamlitAPIException) as ex:
+    def test_index_out_of_range_error_message(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.selectbox("Test box", ["a"], index=1)
 
-        assert (
-            str(ex.value)
-            == "Selectbox index must be greater than or equal to 0 and less than the length of options."
+        assert str(ex.value) == (
+            "The `index` parameter, set to 1, is outside the required range [0, 0]."
         )
 
     def test_outside_form(self):
@@ -241,11 +312,11 @@ class SelectboxTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.selectbox("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_placeholder(self):
@@ -324,6 +395,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 index=0,
                 help="Help 1",
                 disabled=False,
+                required=False,
                 width="stretch",
                 on_change=lambda: None,
                 args=("arg1", "arg2"),
@@ -346,6 +418,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 index=None,
                 help="Help 2",
                 disabled=True,
+                required=True,
                 width=200,
                 on_change=lambda: None,
                 args=("arg_1", "arg_2"),
@@ -418,6 +491,30 @@ def test_selectbox_interaction():
     at = selectbox.set_value(None).run()
     selectbox = at.selectbox[0]
     assert selectbox.value is None
+
+
+def test_selectbox_required_is_exposed_in_app_test() -> None:
+    """Test that AppTest exposes required and still allows clearing the value.
+
+    The required check runs in the browser, so AppTest can still set None.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.selectbox("the label", ("m", "f"), index=None, required=True)
+
+    at = AppTest.from_function(script).run()
+    selectbox = at.selectbox[0]
+    assert selectbox.required is True
+    assert selectbox.value is None
+
+    at = selectbox.set_value("m").run()
+    selectbox = at.selectbox[0]
+    assert selectbox.value == "m"
+
+    at = selectbox.set_value(None).run()
+    assert at.selectbox[0].value is None
 
 
 def test_selectbox_preserves_selection_when_options_expand():
@@ -1012,8 +1109,8 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_persist_state_passed_to_metadata(self) -> None:
@@ -1062,6 +1159,22 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == "my_key"
         assert not c.HasField("default")
 
+    def test_bind_with_index_none_and_required(self) -> None:
+        """Test that bind composes with an empty required selectbox."""
+        st.selectbox(
+            "the label",
+            ["a", "b", "c"],
+            index=None,
+            key="my_key",
+            bind="query-params",
+            required=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")
+        assert c.required
+
     def test_bind_with_accept_new_options(self):
         """Test that bind works with accept_new_options=True."""
         st.selectbox(
@@ -1075,3 +1188,60 @@ class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.query_param_key == "my_key"
         assert c.accept_new_options
+
+
+class SelectboxOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.selectbox("the label", ("a", "b"), on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.selectbox("the label", ("a", "b"), on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.selectbox("the label", ("a", "b"), on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.selectbox
+        assert c.ignore_rerun is True
+
+    def test_on_change_ignore_composes_with_required(self) -> None:
+        """Test that on_change='ignore' and required set both proto fields."""
+        st.selectbox(
+            "the label", ("a", "b"), index=None, on_change="ignore", required=True
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.ignore_rerun is True
+        assert c.required is True

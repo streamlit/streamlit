@@ -16,7 +16,7 @@
 
 import { text } from "~lib/render-tree/test-utils"
 import { TransientNode } from "~lib/render-tree/TransientNode"
-import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import {
   DebugVisitor,
   MAX_HASH_LENGTH,
@@ -106,10 +106,11 @@ describe("TransientNode", () => {
       const t2 = text("t2")
       const node = new TransientNode("run-xyz", anchor, [t1, t2], 5)
 
+      // eslint-disable-next-line testing-library/no-debugging-utils -- TransientNode.debug() is a tree printer, not Testing Library's screen.debug().
       const debug = node.debug()
 
       expect(debug.split("\n")[0]).toBe(
-        `└── TransientNode [2 transient] (run: ${"run-xyz".substring(0, MAX_HASH_LENGTH)})`
+        `└── TransientNode [2 transient] (run: ${"run-xyz".slice(0, MAX_HASH_LENGTH)})`
       )
       expect(debug).toContain("anchor:")
       expect(debug).toContain("ElementNode [text]")

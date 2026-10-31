@@ -323,11 +323,13 @@ for i, placeholder in enumerate(placeholders):
 import streamlit as st
 import time
 
+
 @st.fragment
 def data_section():
     placeholder = st.skeleton(height=100)
     time.sleep(1)
     placeholder.write("Fragment content loaded!")
+
 
 data_section()
 ```
@@ -435,7 +437,7 @@ Future iterations could support different shapes:
 
 ```python
 st.skeleton(height=100, shape="circle")  # For avatars
-st.skeleton(height=20, shape="text")     # For text lines
+st.skeleton(height=20, shape="text")  # For text lines
 ```
 
 The initial implementation uses only the rectangular shape.
@@ -482,8 +484,7 @@ Automatic skeleton display during cache misses could be a future enhancement:
 
 ```python
 @st.cache_data(show_skeleton=True)
-def load_data():
-    ...
+def load_data(): ...
 ```
 
 ## Checklist

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import os
+import time
+import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -65,6 +70,41 @@ if st.button("Cached function with element replay"):
     st.write("Cache return", replay_element())
 
 
+def _wait_for_release_file(release_file: Path) -> None:
+    while not release_file.exists():
+        time.sleep(0.05)
+
+
+@st.cache_data(show_spinner="Computing async cache_data value...")
+async def async_cache_data_value(
+    session_key: str,  # noqa: ARG001 - Parameter is the per-session cache key.
+) -> dict[str, int]:
+    st.session_state.async_cache_data_executions = (
+        st.session_state.get("async_cache_data_executions", 0) + 1
+    )
+    st.markdown(
+        f"Inside async cache_data: {st.session_state.async_cache_data_executions}"
+    )
+    release_file = Path(os.environ["STREAMLIT_ASYNC_CACHE_DATA_RELEASE_FILE"])
+    await asyncio.to_thread(_wait_for_release_file, release_file)
+    return {"execution": st.session_state.async_cache_data_executions}
+
+
+async def render_async_cache_data_value() -> None:
+    value = await async_cache_data_value(st.session_state.async_cache_data_key)
+    st.markdown(f"Async cache_data result: {value['execution']}")
+
+
+if "async_cache_data_key" not in st.session_state:
+    st.session_state.async_cache_data_key = uuid.uuid4().hex
+
+if st.button("Run async cache_data E2E scenario"):
+    st.session_state.run_async_cache_data_e2e_scenario = True
+
+if st.session_state.get("run_async_cache_data_e2e_scenario", False):
+    asyncio.run(render_async_cache_data_value())
+
+
 @st.cache_data
 def audio():
     url = "https://www.w3schools.com/html/horse.ogg"
@@ -99,3 +139,87 @@ def image():
 
 if st.checkbox("Show image", True):
     image()
+
+
+# Keep the background-refresh scenario opt-in so its warning and display output don't
+# interfere with the other cache_data tests in this app.
+_BACKGROUND_REFRESH_TTL_SECONDS = 8
+
+if "cache_data_background_refresh_key" not in st.session_state:
+    st.session_state.cache_data_background_refresh_key = uuid.uuid4().hex
+
+
+@st.cache_resource(show_spinner=False)
+def background_refresh_execution_counter(
+    session_key: str,  # noqa: ARG001 - Parameter is the per-session cache key.
+) -> dict[str, int]:
+    return {"count": 0}
+
+
+@st.cache_data(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_value(session_key: str) -> int:
+    counter = background_refresh_execution_counter(session_key)
+    counter["count"] += 1
+    return counter["count"]
+
+
+@st.cache_data(
+    ttl=_BACKGROUND_REFRESH_TTL_SECONDS,
+    refresh_mode="background",
+    show_spinner=False,
+)
+def background_refresh_with_display(session_key: str) -> None:  # noqa: ARG001
+    st.markdown("Inside background cache_data function")
+
+
+if st.button("Run cache_data background refresh test"):
+    st.session_state.run_cache_data_background_refresh_test = True
+
+if st.session_state.get("run_cache_data_background_refresh_test", False):
+    background_refresh_key = st.session_state.cache_data_background_refresh_key
+    st.markdown(
+        f"Background refresh value: {background_refresh_value(background_refresh_key)}"
+    )
+    background_refresh_with_display(background_refresh_key)
+
+
+@st.cache_resource(show_spinner=False)
+def max_size_execution_counts(session_key: str) -> dict[str, int]:  # noqa: ARG001
+    return {}
+
+
+@st.cache_data(max_size="1MiB", show_spinner=False)
+def max_size_lru_value(session_key: str, key: str) -> bytes:
+    counts = max_size_execution_counts(session_key)
+    counts[key] = counts.get(key, 0) + 1
+    return bytes(400_000)
+
+
+@st.cache_data(max_size="1B", show_spinner=False)
+def max_size_oversized_value(session_key: str) -> bytes:
+    counts = max_size_execution_counts(session_key)
+    counts["oversized"] = counts.get("oversized", 0) + 1
+    return bytes(200)
+
+
+if st.button("Run cache_data max_size test"):
+    max_size_key = uuid.uuid4().hex
+    max_size_lru_value(max_size_key, "a")
+    max_size_lru_value(max_size_key, "b")
+    max_size_lru_value(max_size_key, "a")
+    max_size_lru_value(max_size_key, "c")
+    max_size_lru_value(max_size_key, "b")
+    max_size_oversized_value(max_size_key)
+    max_size_oversized_value(max_size_key)
+    counts = max_size_execution_counts(max_size_key)
+    st.session_state.cache_data_max_size_result = (
+        f"a={counts.get('a', 0)}, b={counts.get('b', 0)}, "
+        f"c={counts.get('c', 0)}; oversized={counts.get('oversized', 0)}"
+    )
+
+if result := st.session_state.get("cache_data_max_size_result"):
+    st.markdown(f"cache_data max_size executions: {result}")

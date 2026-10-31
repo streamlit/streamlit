@@ -40,7 +40,7 @@ utc_df = pd.DataFrame(
     }
 )
 
-utc_df.set_index("index", inplace=True)
+utc_df = utc_df.set_index("index")
 
 # Dataframe to test the color parameter support:
 N = 100
@@ -90,3 +90,27 @@ with st.container(
     border=True, horizontal=True, key="test_fixed_width_in_horizontal_container"
 ):
     st.line_chart(df, width=300)
+
+# Keep the remaining cases last because existing E2E assertions use positional
+# chart indexes.
+with st.container(key="line_alt"):
+    st.line_chart(df, alt="Line chart of columns a, b, and c")
+with st.container(key="line_no_alt"):
+    st.line_chart(df)
+
+# New data moves the line far away from a zoomed-in window, so the zoom resets.
+st.session_state.setdefault("zoom_reset_offset", 0)
+
+
+def _shift_zoom_reset_data() -> None:
+    st.session_state.zoom_reset_offset += 1000
+
+
+st.button("Shift chart data", on_click=_shift_zoom_reset_data)
+_offset = st.session_state.zoom_reset_offset
+with st.container(key="line_zoom_reset"):
+    st.line_chart(
+        pd.DataFrame({"x": np.arange(100) + _offset, "y": np.arange(100) + _offset}),
+        x="x",
+        y="y",
+    )

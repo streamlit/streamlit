@@ -21,7 +21,7 @@ describe("inputUtils", () => {
     const event = {
       key: "Enter",
       keyCode: 0,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
     }
     expect(isEnterKeyPressed(event)).toBe(true)
   })
@@ -29,7 +29,7 @@ describe("inputUtils", () => {
     const event = {
       key: "SomeKey",
       keyCode: 13,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
     }
     expect(isEnterKeyPressed(event)).toBe(true)
   })
@@ -37,7 +37,7 @@ describe("inputUtils", () => {
     const event = {
       key: "SomeKey",
       keyCode: 10,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
     }
     expect(isEnterKeyPressed(event)).toBe(true)
   })
@@ -45,7 +45,15 @@ describe("inputUtils", () => {
     const event = {
       key: "SomeKey",
       keyCode: 9,
-      nativeEvent: undefined as never,
+      nativeEvent: new KeyboardEvent("keydown"),
+    }
+    expect(isEnterKeyPressed(event)).toBe(false)
+  })
+  it("isEnterKeyPressed should return false while an IME composition is active", () => {
+    const event = {
+      key: "Enter",
+      keyCode: 13,
+      nativeEvent: new KeyboardEvent("keydown", { isComposing: true }),
     }
     expect(isEnterKeyPressed(event)).toBe(false)
   })

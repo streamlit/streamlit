@@ -96,12 +96,14 @@ st.table(df_custom)  # Index shown
 
 ```python
 # KEY_VALUE_DICT format - headers auto-hidden
-st.table({
-    "Price": "$145.00",
-    "Customer": "Bobby Jones",
-    "Address": "129 Market St, NYC",
-    "Store": "Trader Joe's"
-})
+st.table(
+    {
+        "Price": "$145.00",
+        "Customer": "Bobby Jones",
+        "Address": "129 Market St, NYC",
+        "Store": "Trader Joe's",
+    }
+)
 
 # LIST_OF_ROWS format - headers auto-hidden
 st.table([["Alice", 25], ["Bob", 30]])

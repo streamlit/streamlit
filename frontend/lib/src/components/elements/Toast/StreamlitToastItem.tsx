@@ -15,7 +15,7 @@
  */
 
 import {
-  ReactElement,
+  type ReactElement,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -23,7 +23,9 @@ import {
 } from "react"
 
 import { Close } from "@emotion-icons/material-rounded"
-import { type QueuedToast } from "react-aria-components/Toast"
+import type { QueuedToast } from "react-aria-components/Toast"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -37,7 +39,7 @@ import {
   StyledToastWrapper,
   StyledViewButton,
 } from "./styled-components"
-import { type StreamlitToastContent } from "./toastQueue"
+import type { StreamlitToastContent } from "./toastQueue"
 
 export function StreamlitToastItem({
   toast,
@@ -52,7 +54,8 @@ export function StreamlitToastItem({
   useLayoutEffect(() => {
     const el = textRef.current
     if (el) {
-      const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20
+      const lineHeight =
+        Number.parseFloat(getComputedStyle(el).lineHeight) || 20
       const maxVisibleHeight = lineHeight * 3 + 1
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Batched with the getComputedStyle read above.
       setIsOverflowing(el.scrollHeight > maxVisibleHeight)
@@ -66,7 +69,7 @@ export function StreamlitToastItem({
   return (
     <StyledToast toast={toast} data-testid="stToast" className="stToast">
       <StyledToastWrapper>
-        {icon && (
+        {!isNullOrEmptyString(icon) && (
           <DynamicIcon
             iconValue={icon}
             size="xl"

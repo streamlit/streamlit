@@ -46,7 +46,7 @@ interface StyledLabelHelpWrapperProps {
 }
 
 export const StyledTooltipIconWrapper =
-  styled.span<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
+  styled.span<StyledTooltipIconWrapperProps>(({ isLatex = false, theme }) => ({
     display: "flex",
     alignItems: "center",
     marginTop: isLatex ? theme.spacing.md : "0",
@@ -62,7 +62,7 @@ export const StyledTooltipIconWrapper =
   }))
 
 export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
-  ({ isLatex }) => ({
+  ({ isLatex = false }) => ({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
@@ -70,6 +70,7 @@ export const StyledLabelHelpWrapper = styled.div<StyledLabelHelpWrapperProps>(
     // For LaTeX, use fit-content to keep icon close, but constrain with maxWidth
     // so long formulas can scroll. Center using margin-inline: auto
     width: isLatex ? "fit-content" : "100%",
+    minWidth: 0,
     ...(isLatex ? { maxWidth: "100%", marginInline: "auto" } : {}),
   })
 )
@@ -79,4 +80,5 @@ export const StyledLabelHelpInline = styled.label(({ theme }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "row",
+  flexShrink: 0,
 }))

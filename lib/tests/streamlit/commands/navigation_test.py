@@ -18,8 +18,13 @@ import pytest
 
 import streamlit as st
 from streamlit.commands.navigation import convert_to_streamlit_page
-from streamlit.errors import StreamlitAPIException
-from streamlit.navigation.page import StreamlitPage
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
+from streamlit.navigation.page import Page, StreamlitPage
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
@@ -31,14 +36,17 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_no_pages(self):
         """Test that an error is thrown with no pages"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError) as exc:
             st.navigation([])
+        assert "Provide at least one `st.Page`" in str(exc.value)
 
     def test_single_page(self):
         """Test that a single page is returned"""
         single_page = st.Page("page1.py")
         page = st.navigation([single_page])
-        assert page == single_page
+        assert page is single_page
+        assert type(page) is Page
+        assert isinstance(page, StreamlitPage)
 
     def test_single_page_with_path(self):
         """Test that a single page is returned with a Path object"""
@@ -86,6 +94,108 @@ class NavigationTest(DeltaGeneratorTestCase):
                     st.Page("foo.py"),
                 ]
             )
+
+    def test_duplicate_url_path_across_sections_names_both_pages(self) -> None:
+        """Test that a cross-section collision names both page files and sections."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                {
+                    "": [st.Page("home.py")],
+                    "Admin": [st.Page("admin/settings.py")],
+                    "User": [st.Page("user/settings.py")],
+                }
+            )
+
+        message = str(exc.value)
+        assert exc.value.error_id == "navigation-duplicate-url-pathname"
+        assert f'`{Path("admin/settings.py")}` (section "Admin")' in message
+        assert f'`{Path("user/settings.py")}` (section "User")' in message
+        assert "Two pages resolve to the URL pathname `/settings`:" in message
+        assert "including pages in different sections" in message
+        assert "default page" not in message
+
+    def test_duplicate_url_path_with_hidden_page_names_both_pages(self) -> None:
+        """Test that a hidden page colliding with a callable page is identified."""
+
+        def foo() -> None:
+            pass
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page("foo.py", visibility="hidden"),
+                    st.Page(foo),
+                ]
+            )
+
+        message = str(exc.value)
+        assert '`foo.py` (hidden) and callable titled "foo"' in message
+        assert "Two pages resolve to the URL pathname `/foo`:" in message
+
+    def test_duplicate_url_path_with_lambdas_uses_titles(self) -> None:
+        """Test that lambdas sharing the inferred pathname are identified by title."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(lambda: None, title="Alpha"),
+                    st.Page(lambda: None, title="Beta"),
+                ]
+            )
+
+        message = str(exc.value)
+        assert 'callable titled "Alpha" and callable titled "Beta"' in message
+        assert "callable `<lambda>`" not in message
+
+    def test_duplicate_url_path_outside_entrypoint_dir_shows_absolute_path(
+        self,
+    ) -> None:
+        """Test that a page file outside the entrypoint directory stays absolute."""
+        outside_page = Path("/abs/elsewhere/settings.py")
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("home.py"),
+                    st.Page(outside_page),
+                    st.Page("settings.py"),
+                ]
+            )
+
+        assert f"`{outside_page.resolve()}` and `settings.py`" in str(exc.value)
+
+    def test_duplicate_url_path_with_later_default_page_shows_reserved_pathname(
+        self,
+    ) -> None:
+        """Test that a default page collision shows the pathname it reserves."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation(
+                [
+                    st.Page("page1.py", url_path="home"),
+                    st.Page("home.py", default=True),
+                ]
+            )
+
+        message = str(exc.value)
+        assert "`page1.py` and `home.py` (default page)" in message
+        assert "Two pages resolve to the URL pathname `/home`:" in message
+        assert "still reserves this pathname" in message
+
+    def test_duplicate_url_path_with_implicit_default_page_shows_reservation(
+        self,
+    ) -> None:
+        """Test that the implicit first default page is labeled in a collision."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.navigation([st.Page("admin/settings.py"), st.Page("user/settings.py")])
+
+        message = str(exc.value)
+        assert (
+            f"`{Path('admin/settings.py')}` (default page) and "
+            f"`{Path('user/settings.py')}`. Each page"
+        ) in message
+        assert "Two pages resolve to the URL pathname `/settings`:" in message
+        assert "still reserves this pathname" in message
 
     def test_page_found_by_hash(self):
         found_page = st.Page("page2.py")
@@ -215,56 +325,58 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_navigation_message_with_expanded_negative_raises(self):
         """Test that negative expanded values raise an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 expanded=-1,
             )
-        assert "must be a non-negative integer" in str(exc.value)
+        assert "a non-negative integer" in str(exc.value)
+        assert "Provided value: -1" in str(exc.value)
 
     def test_navigation_message_with_expanded_invalid_type_raises(self):
         """Test that invalid expanded type raises an error."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 expanded="invalid",  # type: ignore[arg-type]
             )
-        assert "must be a bool or a non-negative integer" in str(exc.value)
+        assert "Invalid `expanded` type" in str(exc.value)
 
     def test_convert_to_streamlit_page_with_string(self):
-        """Test converting string path to StreamlitPage"""
+        """Test converting string path to Page."""
         page = convert_to_streamlit_page("page1.py")
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         assert isinstance(page._page, Path)
         assert str(page._page) == str(Path("page1.py").absolute())
 
     def test_convert_to_streamlit_page_with_function(self):
-        """Test converting function to StreamlitPage"""
+        """Test converting function to Page."""
 
         def test_page():
             pass
 
         page = convert_to_streamlit_page(test_page)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         assert page._page == test_page
 
     def test_convert_to_streamlit_page_with_streamlit_page(self):
-        """Test passing StreamlitPage directly"""
+        """Test passing Page directly."""
         original_page = st.Page("page1.py")
         page = convert_to_streamlit_page(original_page)
-        assert page == original_page
+        assert page is original_page
+        assert isinstance(page, StreamlitPage)
 
     def test_convert_to_streamlit_page_invalid_type(self):
         """Test that invalid types raise exception"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
             convert_to_streamlit_page(123)
-        assert "Invalid page type" in str(exc_info.value)
+        assert exc_info.value.exec_kwargs["parameter"] == "pages"
 
     def test_navigation_with_string_list(self):
         """Test navigation with list of strings"""
         pages = ["page1.py", "page2.py", "page3.py"]
         page = st.navigation(pages)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 3
         assert c.app_pages[0].is_default
@@ -282,21 +394,21 @@ class NavigationTest(DeltaGeneratorTestCase):
 
         pages = [page1, page2]
         page = st.navigation(pages)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 2
         assert c.app_pages[0].is_default
         assert not c.app_pages[1].is_default
 
     def test_navigation_with_mixed_list(self):
-        """Test navigation with mixed list of strings, functions and StreamlitPages"""
+        """Test navigation with mixed list of strings, functions, and Pages."""
 
         def page2():
             pass
 
         pages = ["page1.py", page2, st.Page("page3.py")]
         page = st.navigation(pages)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 3
         assert c.app_pages[0].is_default
@@ -332,9 +444,9 @@ class NavigationTest(DeltaGeneratorTestCase):
             )
 
     def test_convert_to_streamlit_page_with_pathlib_path(self):
-        """Test converting pathlib.Path to StreamlitPage"""
+        """Test converting pathlib.Path to Page."""
         page = convert_to_streamlit_page(Path("page1.py"))
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         assert isinstance(page._page, Path)
         assert str(page._page) == str(Path("page1.py").absolute())
 
@@ -342,7 +454,7 @@ class NavigationTest(DeltaGeneratorTestCase):
         """Test navigation with list of pathlib.Path"""
         pages = [Path("page1.py"), Path("page2.py"), Path("page3.py")]
         page = st.navigation(pages)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 3
         assert c.app_pages[0].is_default
@@ -357,7 +469,7 @@ class NavigationTest(DeltaGeneratorTestCase):
 
         pages = [Path("page1.py"), page2, st.Page("page3.py")]
         page = st.navigation(pages)
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 3
         assert c.app_pages[0].is_default
@@ -390,7 +502,7 @@ class NavigationTest(DeltaGeneratorTestCase):
                 st.Page("page2.py", icon=":material/settings:"),
             ]
         )
-        assert isinstance(page, StreamlitPage)
+        assert type(page) is Page
         c = self.get_message_from_queue().navigation
         assert len(c.app_pages) == 2
         assert c.app_pages[0].icon == "emoji:🚀"
@@ -436,14 +548,12 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_navigation_with_invalid_position(self):
         """Test that invalid position value raises appropriate error"""
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.navigation(
                 [st.Page("page1.py"), st.Page("page2.py")],
                 position="foo",  # Invalid position
             )
-        assert "Invalid position" in str(exc_info.value) or "position must be" in str(
-            exc_info.value
-        )
+        assert "Invalid `position` value" in str(exc_info.value)
 
     def test_navigation_top_position_no_fallback_with_config(self):
         """Test that position="top" remains TOP even when client.showSidebarNavigation=False"""
@@ -624,20 +734,24 @@ class NavigationTest(DeltaGeneratorTestCase):
 
     def test_external_and_internal_duplicate_url_path_raises(self):
         """Test that duplicate url_path between external and internal pages raises."""
-        with pytest.raises(
-            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
-        ):
+        with pytest.raises(StreamlitAPIException) as exc:
             st.navigation(
                 [
+                    st.Page("page1.py"),
                     st.Page("https://example.com", title="foo", url_path="foo"),
-                    st.Page("page1.py", url_path="foo"),
+                    st.Page("page2.py", url_path="foo"),
                 ]
             )
+
+        message = str(exc.value)
+        assert "external URL `https://example.com` and `page2.py`" in message
+        assert "Two pages resolve to the URL pathname `/foo`:" in message
 
     def test_two_external_pages_duplicate_url_path_raises(self):
         """Test that duplicate url_path between two external pages raises."""
         with pytest.raises(
-            StreamlitAPIException, match="Multiple Pages specified with URL pathname"
+            StreamlitAPIException,
+            match="Two pages resolve to the URL pathname `/shared`:",
         ):
             st.navigation(
                 [

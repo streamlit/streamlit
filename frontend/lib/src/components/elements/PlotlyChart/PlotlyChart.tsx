@@ -15,10 +15,11 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -26,8 +27,20 @@ import {
 
 import type * as Plotly from "plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import {
+  PlotlyChart as PlotlyChartProto,
+  type streamlit,
+} from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
+import {
+  shouldHeightStretch,
+  shouldWidthStretch,
+} from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
@@ -38,8 +51,12 @@ import useTimeout from "~lib/hooks/useTimeout"
 import Plot, {
   type Figure as PlotlyFigureType,
 } from "~lib/util/reactPlotlyCompat"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import {
+  migratePlotlyMapboxConfig,
+  migratePlotlyMapboxFigure,
+} from "./mapboxCompat"
 import { StyledPlotlyChartContainer } from "./styled-components"
 import {
   applyTheming,
@@ -57,8 +74,16 @@ const MIN_WIDTH = 150
  * preventing the selection state from being immediately overwritten due to plotly's update cycle.
  */
 const RESET_SELECTION_TIMEOUT_MS = 50
-// Default height for Plotly charts when no height is specified
+// Default height for Plotly charts when no height is specified.
+// Plotly.js replaces a layout height below this minimum with 450.
 const DEFAULT_PLOTLY_HEIGHT = 450
+const PLOTLY_MIN_LAYOUT_HEIGHT = 10
+
+/** Returns `height` when Plotly.js accepts it (>= 10); otherwise Plotly's 450px default. */
+const plotlyLayoutHeight = (height: number | undefined): number =>
+  height !== undefined && height >= PLOTLY_MIN_LAYOUT_HEIGHT
+    ? height
+    : DEFAULT_PLOTLY_HEIGHT
 
 // Custom icon used in the fullscreen expand toolbar button:
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
@@ -84,6 +109,8 @@ interface PlotlyChartProps {
   fragmentId?: string
   disableFullscreenMode?: boolean
   width: number
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+  heightConfig?: streamlit.HeightConfig.$Properties | null
 }
 
 export function PlotlyChart({
@@ -92,6 +119,8 @@ export function PlotlyChart({
   disabled,
   fragmentId,
   disableFullscreenMode,
+  widthConfig,
+  heightConfig,
 }: Readonly<PlotlyChartProps>): ReactElement {
   const theme = useEmotionTheme()
   const {
@@ -105,22 +134,35 @@ export function PlotlyChart({
   const { height: chartContainerHeight, elementRef: containerRef } =
     useCalculatedDimensions([], 0)
 
-  const width = elWidth || 0
+  const width = elWidth ?? 0
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
     if (!element.spec) {
-      return {
+      const emptyFigure: PlotlyFigureType = {
         layout: {},
         data: [],
-        frames: undefined,
+        frames: null,
       }
+      return emptyFigure
     }
 
-    return JSON.parse(element.spec)
+    const spec: unknown = JSON.parse(element.spec)
+    return migratePlotlyMapboxFigure(spec)
     // We want to reload the initialFigureSpec object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [element.id, element.spec])
+
+  // Size-contain charts with stretch or pixel width and height so the
+  // rendered plot cannot grow its parent. Without a definite parent
+  // height, use the figure height or the default height. Fullscreen sets
+  // its own size.
+  const isSizeContained =
+    !isFullScreen &&
+    shouldWidthStretch(widthConfig) &&
+    shouldHeightStretch(heightConfig)
+  const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
+  const fallbackHeight = plotlyLayoutHeight(initialFigureSpec.layout.height)
 
   const [plotlyFigure, setPlotlyFigure] = useState<PlotlyFigureType>(() => {
     // If there was already a state with a figure using the same id,
@@ -131,7 +173,7 @@ export function PlotlyChart({
       "figure"
     )
     if (initialFigureState) {
-      return initialFigureState
+      return migratePlotlyMapboxFigure(initialFigureState)
     }
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
@@ -148,26 +190,26 @@ export function PlotlyChart({
     element.selectionMode.includes(PlotlyChartProto.SelectionMode.POINTS)
 
   const plotlyConfig = useMemo(() => {
-    if (!element.config) {
-      // If there is no config, return an empty object
-      return {}
-    }
-
-    const config = JSON.parse(element.config)
+    const config = migratePlotlyMapboxConfig(
+      (element.config ? JSON.parse(element.config) : {}) as Plotly.Config
+    )
 
     // Customize the plotly toolbar:
-    if (!disableFullscreenMode) {
+    if (disableFullscreenMode !== true) {
       // Add a fullscreen button to the plotly toolbar:
+      const fullscreenLabel = isFullScreen ? "Close fullscreen" : "Fullscreen"
       config.modeBarButtonsToAdd = [
         {
-          name: isFullScreen ? "Close fullscreen" : "Fullscreen",
+          name: fullscreenLabel,
+          // ModeBarButton requires title (hover / accessible name); keep it aligned with name.
+          title: fullscreenLabel,
           icon: isFullScreen
             ? FULLSCREEN_COLLAPSE_ICON
             : FULLSCREEN_EXPAND_ICON,
           click: () => {
-            if (isFullScreen && collapse) {
+            if (isFullScreen) {
               collapse()
-            } else if (expand) {
+            } else {
               expand()
             }
           },
@@ -176,32 +218,44 @@ export function PlotlyChart({
       ]
     }
 
-    if (!config.modeBarButtonsToRemove) {
-      // Only modify the mode bar buttons if it's not already set
-      // in the config provided by the user.
+    // plotly.js v4 adds `sendChartToCloud` when `showSendToCloud` is true.
+    // Default the flag off, and also remove the button so layout.modebar.add
+    // cannot put it back unless the app opts in with showSendToCloud: true.
+    config.showSendToCloud ??= false
 
-      // Hide the logo by default
-      config.displaylogo = false
+    // Hide the Plotly logo unless the user explicitly opts in.
+    config.displaylogo ??= false
 
-      const modeBarButtonsToRemove = ["sendDataToCloud"]
+    const modeBarButtonsToRemove: NonNullable<
+      Plotly.Config["modeBarButtonsToRemove"]
+    > = Array.isArray(config.modeBarButtonsToRemove)
+      ? [...config.modeBarButtonsToRemove]
+      : []
 
-      if (!isSelectionActivated) {
-        // Remove lasso & select buttons in read-only charts:
-        modeBarButtonsToRemove.push("lasso2d", "select2d")
-      } else {
-        if (!isLassoSelectionActivated) {
-          // Remove the lasso button if lasso selection is not activated
-          modeBarButtonsToRemove.push("lasso2d")
-        }
-
-        if (!isBoxSelectionActivated) {
-          // Remove the box select button if box selection is not activated
-          modeBarButtonsToRemove.push("select2d")
-        }
+    const removeModeBarButton = (name: Plotly.ModeBarDefaultButtons): void => {
+      if (!modeBarButtonsToRemove.includes(name)) {
+        modeBarButtonsToRemove.push(name)
       }
-
-      config.modeBarButtonsToRemove = modeBarButtonsToRemove
     }
+
+    if (!isSelectionActivated) {
+      // Remove lasso & select buttons in read-only charts
+      removeModeBarButton("lasso2d")
+      removeModeBarButton("select2d")
+    } else {
+      if (!isLassoSelectionActivated) {
+        removeModeBarButton("lasso2d")
+      }
+      if (!isBoxSelectionActivated) {
+        removeModeBarButton("select2d")
+      }
+    }
+
+    if (config.showSendToCloud !== true) {
+      removeModeBarButton("sendChartToCloud")
+    }
+
+    config.modeBarButtonsToRemove = modeBarButtonsToRemove
     return config
     // We want to reload the plotlyConfig object whenever the element id changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
@@ -236,9 +290,10 @@ export function PlotlyChart({
       updatedClickMode = "none"
       updatedDragMode = "pan"
     } else if (isSelectionActivated) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- Plotly types clickmode with `string & {}`, which the rule reads as an object; see comment below
       if (!initialFigureSpec.layout.clickmode) {
-        // If the user has already set the clickmode, we don't want to override it here.
-        // Otherwise, we are selecting the best clickmode based on the selection modes.
+        // A user-set clickmode is kept. Missing and empty clickmode count as
+        // unset and get the best click mode for the selection modes.
         if (isPointsSelectionActivated) {
           // https://plotly.com/javascript/reference/layout/#layout-clickmode
           // This allows single point selections and shift click to add / remove selections
@@ -249,14 +304,17 @@ export function PlotlyChart({
         }
       }
 
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment below
       if (!initialFigureSpec.layout.hovermode) {
-        // If the user has already set the hovermode, we don't want to override it here.
+        // A user-set hovermode is kept. Missing, empty, and `false` count as
+        // unset and take the selection default.
         updatedHoverMode = "closest"
       }
 
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment below
       if (!initialFigureSpec.layout.dragmode) {
-        // If the user has already set the dragmode, we don't want to override it here.
-        // If not, we are selecting the best drag mode based on the selection modes.
+        // A user-set dragmode is kept. Missing, empty, and `false` count as
+        // unset and get the best drag mode for the selection modes.
         if (isPointsSelectionActivated) {
           // Pan drag mode has priority in case points selection is activated
           updatedDragMode = "pan"
@@ -309,7 +367,7 @@ export function PlotlyChart({
       ? // In some situations - e.g. initial loading of tabs - the width is set to -1
         // before its able to determine the real width. We want to keep the previous
         // width in this case.
-        plotlyFigure.layout?.width
+        plotlyFigure.layout.width
       : Math.max(
           width,
           // Apply a min width to prevent the chart running into issues with negative
@@ -317,10 +375,18 @@ export function PlotlyChart({
           MIN_WIDTH
         )
 
+  // Plotly.js replaces layout.height below 10 with its default of 450,
+  // which paints out of a size-contained box. Hide the plot instead of
+  // passing that height.
+  const isShrunkPlotHidden =
+    isSizeContained &&
+    !hasFallbackHeight &&
+    chartContainerHeight < PLOTLY_MIN_LAYOUT_HEIGHT
+
   let calculatedHeight =
-    chartContainerHeight > 0
+    chartContainerHeight >= PLOTLY_MIN_LAYOUT_HEIGHT
       ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : plotlyLayoutHeight(plotlyFigure.layout.height)
 
   if (isFullScreen) {
     calculatedWidth = width
@@ -376,19 +442,18 @@ export function PlotlyChart({
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
         return {
           ...prevFigure,
-          data: prevFigure.data.map((trace: Plotly.Data) => {
+          data: prevFigure.data.map(trace => {
             return {
               ...trace,
               // Set to null to clear the selection an empty
               // array here would still show everything as opaque
               selectedpoints: null,
-            } as Plotly.Data
+            }
           }),
           layout: {
             ...prevFigure.layout,
-            // selections is not part of the plotly typing:
             selections: [],
-          } as PlotlyFigureType["layout"],
+          },
         }
       })
     },
@@ -455,8 +520,8 @@ export function PlotlyChart({
     // if the dragmode is set to select or lasso.
     let clickmode: "event+select" | "event" | "none"
     if (
-      plotlyFigure.layout?.dragmode === "select" ||
-      plotlyFigure.layout?.dragmode === "lasso"
+      plotlyFigure.layout.dragmode === "select" ||
+      plotlyFigure.layout.dragmode === "lasso"
     ) {
       clickmode = "event"
     } else {
@@ -465,7 +530,7 @@ export function PlotlyChart({
       clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
-    if (plotlyFigure.layout?.clickmode !== clickmode) {
+    if (plotlyFigure.layout.clickmode !== clickmode) {
       setPlotlyFigure((prevFigure: PlotlyFigureType) => {
         return {
           ...prevFigure,
@@ -478,13 +543,27 @@ export function PlotlyChart({
     }
     // We only want to trigger this effect if the dragmode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [plotlyFigure.layout?.dragmode])
+  }, [plotlyFigure.layout.dragmode])
+
+  // Only name the container when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. role="figure" (not "img")
+  // is required to legally expose aria-label on this otherwise-generic div
+  // without making Plotly's focusable modebar presentational.
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledPlotlyChartContainer
       ref={containerRef}
+      isSizeContained={isSizeContained}
+      fallbackHeight={hasFallbackHeight ? fallbackHeight : undefined}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
+      role={accessibleName !== undefined ? "figure" : undefined}
+      aria-label={accessibleName}
     >
       <Plot
         data={plotlyFigure.data}
@@ -495,7 +574,8 @@ export function PlotlyChart({
           // Hide the plotly chart if the width is not defined yet
           // to prevent flickering issues.
           visibility:
-            plotlyFigure.layout?.width === undefined ? "hidden" : undefined,
+            plotlyFigure.layout.width === undefined ? "hidden" : undefined,
+          display: isShrunkPlotHidden ? "none" : undefined,
           // If the scrollbars are activated, it leads to flickering issues.
           // We don't need overflow here since the parent container and plot dimensions are in sync.
           overflow: "hidden",

@@ -14,20 +14,24 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import { memo, type ReactElement, useCallback, useMemo } from "react"
 
-import { Pagination as PaginationProto, streamlit } from "@streamlit/protobuf"
+import type {
+  Pagination as PaginationProto,
+  streamlit,
+} from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { convertRemToPx } from "~lib/theme/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledArrowButton,
@@ -42,7 +46,7 @@ export interface Props {
   element: PaginationProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
-  widthConfig: streamlit.IWidthConfig | undefined | null
+  widthConfig: streamlit.WidthConfig.$Properties | undefined | null
 }
 
 /**
@@ -228,12 +232,15 @@ function updateWidgetMgrState(
   valueWithSource: ValueWithSource<number>,
   fragmentId: string | undefined
 ): void {
-  widgetMgr.setIntValue(
-    element,
-    valueWithSource.value,
-    { fromUi: valueWithSource.fromUi },
-    fragmentId
-  )
+  widgetMgr.setIntValue(element.id, valueWithSource.value, {
+    formId: element.formId,
+    fragmentId,
+    fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+  })
 }
 
 function Pagination(props: Readonly<Props>): ReactElement {
@@ -263,7 +270,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
   )
 
   // Query param binding for URL synchronization
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "int_value" as const,
@@ -335,7 +342,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
   const handlePageClick = useCallback(
     (page: number): void => {
       if (page >= 1 && page <= numPages && page !== currentPage) {
-        setValueWithSource({ value: page, fromUi: true })
+        setValueWithSource({ value: page, fromUser: true })
       }
     },
     [currentPage, numPages, setValueWithSource]
@@ -343,13 +350,13 @@ function Pagination(props: Readonly<Props>): ReactElement {
 
   const handlePrevClick = useCallback((): void => {
     if (currentPage > 1) {
-      setValueWithSource({ value: currentPage - 1, fromUi: true })
+      setValueWithSource({ value: currentPage - 1, fromUser: true })
     }
   }, [currentPage, setValueWithSource])
 
   const handleNextClick = useCallback((): void => {
     if (currentPage < numPages) {
-      setValueWithSource({ value: currentPage + 1, fromUi: true })
+      setValueWithSource({ value: currentPage + 1, fromUser: true })
     }
   }, [currentPage, numPages, setValueWithSource])
 
