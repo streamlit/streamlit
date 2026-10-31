@@ -370,7 +370,7 @@ function collectGridCellSources(
       node.deltaBlock.transparent &&
       !node.deltaBlock.gridCell
     ) {
-      return collectGridCellSources(node.children ?? [], sourceKey)
+      return collectGridCellSources(node.children, sourceKey)
     }
     return [{ node, sourceKey }]
   })
@@ -421,7 +421,7 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
       Math.abs(current - widthPx) < 0.5 ? current : widthPx
     )
   }, [])
-  const observedWidth = observedWidths[0]
+  const observedWidth = observedWidths.at(0)
   // The resize observer reports after paint, so a nested grid (sidebar,
   // column) would flash the 704px fallback for a frame. Read the laid-out
   // width before paint. A width of 0 is jsdom or a hidden tab.
@@ -531,7 +531,7 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
       componentRegistry,
     })
 
-    return collectGridCellSources(node.children ?? []).flatMap(
+    return collectGridCellSources(node.children).flatMap(
       ({ node: childNode, sourceKey }) => {
         // A spinner wraps the anchor in a TransientNode, which has no id of
         // its own. Key and span come from the anchor so the cell stays
@@ -548,7 +548,7 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           nodeId = layoutNode.deltaBlock.id || undefined
           if (layoutNode.deltaBlock.gridCell) {
             const gridCell = layoutNode.deltaBlock.gridCell
-            if (gridCell.columnSpanAll) {
+            if (gridCell.columnSpanAll === true) {
               columnSpanAll = true
             } else if (gridCell.columnSpan && gridCell.columnSpan > 1) {
               columnSpan = gridCell.columnSpan

@@ -407,7 +407,7 @@ export const useLayoutStyles = ({
     // above a chart does not make the chart 100% of the whole cell.
     // Horizontal stretch keeps the min/max heights set above.
     if (
-      flexContext?.verticalStretchGrows &&
+      flexContext?.verticalStretchGrows === true &&
       direction === Direction.VERTICAL &&
       heightConfig.type === DimensionType.STRETCH
     ) {

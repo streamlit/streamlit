@@ -527,7 +527,7 @@ export const StyledGridContainerBlock =
           overflowY: "hidden" as const,
         }),
         // Dense packing mode fills gaps by reordering items
-        ...($dense && { gridAutoFlow: "dense" }),
+        ...($dense === true && { gridAutoFlow: "dense" }),
       }
     }
   )
@@ -586,7 +586,7 @@ export const StyledGridContentMeasure = styled.div<{
   $minWidthPx?: number
   $passthrough?: boolean
 }>(({ $minWidthPx, $passthrough }) => {
-  if ($passthrough) {
+  if ($passthrough === true) {
     return { display: "contents" }
   }
 
@@ -676,8 +676,8 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
           borderRadius: theme.radii.default,
           padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
         }),
-        ...($columnSpanAll && { gridColumn: "1 / -1" }),
-        ...(!$columnSpanAll &&
+        ...($columnSpanAll === true && { gridColumn: "1 / -1" }),
+        ...($columnSpanAll !== true &&
           $columnSpan &&
           $columnSpan > 1 && { gridColumn: `span ${$columnSpan}` }),
         ...($rowSpan && $rowSpan > 1 && { gridRow: `span ${$rowSpan}` }),
@@ -703,7 +703,7 @@ export const StyledGridCellBody = styled.div<{
 }>(({ $scroll, $passthrough }) => {
   // Content rows keep the node so toggling row_height does not remount
   // cell contents. The box itself stays out of layout.
-  if ($passthrough) {
+  if ($passthrough === true) {
     return { display: "contents" }
   }
 
@@ -736,7 +736,7 @@ interface StyledGridCellContentProps {
  */
 export const StyledGridCellContent = styled.div<StyledGridCellContentProps>(
   ({ verticalAlignment, $passthrough }) => {
-    if ($passthrough) {
+    if ($passthrough === true) {
       return { display: "contents" }
     }
 
