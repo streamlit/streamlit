@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from playwright.sync_api import FrameLocator, Locator, Page, Route, expect
 
+from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
@@ -187,6 +188,44 @@ def test_dataframe_column_menu_opens_in_fullscreen(app: Page):
     expect(column_menu).to_be_in_viewport()
     column_menu.get_by_text("Sort ascending").click()
     expect(column_menu).not_to_be_visible()
+
+
+def test_fixed_height_dataframe_expands_in_fullscreen(app: Page):
+    """Fixed pixel height dataframes should grow past that height in fullscreen.
+
+    Regression for https://github.com/streamlit/streamlit/issues/17771
+    """
+    # Must match FIXED_HEIGHT_FULLSCREEN in st_dataframe_interactions.py.
+    configured_height = (12 + 1) * 35 + 3  # 458
+    dataframe_element = (
+        get_element_by_key(app, "fixed-height-fullscreen")
+        .get_by_test_id("stDataFrame")
+        .first
+    )
+    expect(dataframe_element).to_be_visible()
+    expect(dataframe_element).to_have_css("height", f"{configured_height}px")
+
+    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
+    dataframe_element.hover()
+    expect(dataframe_toolbar).to_have_css("opacity", "1")
+
+    dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()
+    expect(
+        dataframe_toolbar.get_by_role("button", name="Close fullscreen")
+    ).to_be_visible()
+
+    # Must expand beyond the configured height; must not stay stuck at 458px.
+    expect(dataframe_element).not_to_have_css("height", f"{configured_height}px")
+
+    def _is_expanded() -> bool:
+        box = dataframe_element.bounding_box()
+        return box is not None and box["height"] > configured_height + 100
+
+    wait_until(app, _is_expanded)
+
+    dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()
+    expect(dataframe_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
+    expect(dataframe_element).to_have_css("height", f"{configured_height}px")
 
 
 def _test_csv_download(
