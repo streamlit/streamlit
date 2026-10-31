@@ -44,6 +44,7 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
+from streamlit.elements.widgets.utils import get_assign_target_name
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidLayoutContextError,
@@ -162,6 +163,7 @@ def _page_link_agent_props(proto: PageLinkProto) -> str | None:
 
 
 class ButtonMixin:
+    @get_assign_target_name
     @gather_metrics("button")
     def button(
         self,
