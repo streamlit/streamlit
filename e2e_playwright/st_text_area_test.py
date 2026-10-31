@@ -601,7 +601,7 @@ def test_text_area_required_blocks_empty_commits_and_form_submits(app: Page):
     expect_markdown(app, "required notes: select 1")
     expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
 
-    # A rerun from another widget does not snap the field back.
+    # A sibling rerun must not snap the blocked empty value back.
     app.get_by_role("button", name="Apply ignore text area", exact=True).click()
     wait_for_app_run(app)
     expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
