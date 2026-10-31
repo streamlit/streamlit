@@ -73,11 +73,29 @@ export interface Props {
 
 type TextAreaValue = string | null
 
+/**
+ * Frontend-only key for a required empty edit that was blocked on commit.
+ * Survives remount so a sibling-triggered rerun that briefly removes the
+ * field (e.g. a conditional element rendered above it) cannot snap the UI
+ * back to the last accepted WidgetStateManager value.
+ */
+const REQUIRED_BLOCKED_UI_KEY = "requiredBlockedUiValue"
+
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
 ): TextAreaValue | null => {
   return widgetMgr.getStringValue(element) ?? null
+}
+
+const readBlockedUiValue = (
+  widgetMgr: WidgetStateManager,
+  elementId: string
+): TextAreaValue | undefined => {
+  return widgetMgr.getElementState<TextAreaValue>(
+    elementId,
+    REQUIRED_BLOCKED_UI_KEY
+  )
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
@@ -119,8 +137,11 @@ const TextArea: FC<Props> = ({
 
   /**
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
+   * Restored from element state when a blocked empty edit survived remount.
    */
-  const [dirty, setDirty] = useState(false)
+  const [dirty, setDirty] = useState(
+    () => readBlockedUiValue(widgetMgr, element.id) !== undefined
+  )
   /**
    * Whether the area is currently focused.
    */
@@ -130,7 +151,9 @@ const TextArea: FC<Props> = ({
    * required and empty. The displayed error is derived from this flag, the
    * current `required` flag, and the current value.
    */
-  const [hasRequiredError, setHasRequiredError] = useState(false)
+  const [hasRequiredError, setHasRequiredError] = useState(
+    () => readBlockedUiValue(widgetMgr, element.id) !== undefined
+  )
 
   // Determine if we should use auto-expansion.
   const isAutoHeight = outerElement.heightConfig?.useContent ?? false
@@ -146,11 +169,16 @@ const TextArea: FC<Props> = ({
 
   /**
    * The value specified by the user via the UI. If the user didn't touch this
-   * widget's UI, the default value is used.
+   * widget's UI, the default value is used. After remount, prefer a blocked
+   * empty edit persisted in element state over the last accepted value.
    */
-  const [uiValue, setUiValue] = useState<string | null>(
-    () => getStateFromWidgetMgr(widgetMgr, element) ?? null
-  )
+  const [uiValue, setUiValue] = useState<string | null>(() => {
+    const blockedUi = readBlockedUiValue(widgetMgr, element.id)
+    if (blockedUi !== undefined) {
+      return blockedUi ?? null
+    }
+    return getStateFromWidgetMgr(widgetMgr, element) ?? null
+  })
 
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
@@ -215,6 +243,29 @@ const TextArea: FC<Props> = ({
     setHasRequiredError(false)
   }
   const hasError = Boolean(requiredError)
+
+  // Keep a blocked empty edit in WidgetStateManager element state so a remount
+  // during a sibling-triggered rerun restores the empty UI instead of the last
+  // accepted value. Clear it once the field is no longer in that state.
+  useEffect(() => {
+    if (
+      element.required &&
+      dirty &&
+      hasRequiredError &&
+      isRequiredEmptyText(uiValue)
+    ) {
+      widgetMgr.setElementState(element.id, REQUIRED_BLOCKED_UI_KEY, uiValue)
+    } else {
+      widgetMgr.deleteElementState(element.id, REQUIRED_BLOCKED_UI_KEY)
+    }
+  }, [
+    dirty,
+    element.id,
+    element.required,
+    hasRequiredError,
+    uiValue,
+    widgetMgr,
+  ])
 
   const theme = useEmotionTheme()
 
