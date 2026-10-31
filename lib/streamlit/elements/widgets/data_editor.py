@@ -436,8 +436,7 @@ def _apply_cell_edits(
                         value, dataframe_schema[INDEX_IDENTIFIER]
                     )
                     # Relabel only the edited row, even if other rows share its label.
-                    # Assigning df.index edits df in place and keeps the column
-                    # data without copying it.
+                    # Assigning df.index edits df in place without copying column data.
                     df.index = df.index.delete(row_pos).insert(row_pos, new_idx_value)
                 else:
                     col_pos = df.columns.get_loc(col_name)
@@ -610,7 +609,7 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> pd.DataFr
     Parameters
     ----------
     df : pd.DataFrame
-        The dataframe to apply the row deletions to.
+        The source dataframe. This function does not modify it.
 
     deleted_rows : List[int]
         A list of row numbers to delete.
@@ -618,8 +617,8 @@ def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> pd.DataFr
     Returns
     -------
     pd.DataFrame
-        A new dataframe without the deleted rows. ``df`` is left unchanged.
-        Rows that share a deleted row's index label are deleted too.
+        A new dataframe without the deleted rows. Rows that share a deleted
+        row's index label are deleted too.
     """
     # drop() takes labels, so map the row positions to their index labels.
     return df.drop(df.index[deleted_rows])
@@ -650,7 +649,7 @@ def _apply_dataframe_edits(
     Returns
     -------
     pd.DataFrame
-        The edited dataframe. It is a new object if any rows were deleted.
+        The edited dataframe.
     """
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
