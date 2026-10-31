@@ -41,7 +41,7 @@ from streamlit.web.server.starlette import (
     starlette_agent_routes,
     starlette_app_utils,
 )
-from tests.streamlit.runtime.agent import openapi_validation, run_gate
+from tests.streamlit.runtime.agent import openapi_validation, run_gate, usage_counts
 from tests.streamlit.web.server.starlette import agent_served_app
 from tests.testutil import patch_config_options
 
@@ -106,6 +106,82 @@ def test_off_answers_not_available(runtime: MagicMock, interact: AsyncMock) -> N
     assert response.json()["error"]["code"] == "not_available"
     interact.assert_not_awaited()
     runtime.connect_session.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"{}", b"{", b"[]", b""],
+    ids=["object", "invalid_json", "not_an_object", "empty"],
+)
+def test_off_counts_a_post_whatever_its_body(runtime: MagicMock, body: bytes) -> None:
+    """With the API off, a POST counts as an agent's attempt; its body is never
+    read, so it counts even when the API would refuse it.
+    """
+    with (
+        usage_counts.fresh(),
+        # A limit the body exceeds, which the off path never checks.
+        patch.object(runtime_util, "get_max_widget_state_size_bytes", return_value=1),
+        _client(runtime, enabled=False, **usage_counts.USAGE_STATS_ON) as client,
+    ):
+        response = client.post(_PATH, content=body)
+        counts = usage_counts.reported()
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "not_available"
+    assert counts == {"http_interactions": 1, "mcp_interactions": 0, "sessions": 0}
+
+
+@pytest.mark.parametrize(
+    ("headers", "overrides"),
+    [
+        ({"Host": "evil.example"}, {"server.allowedHosts": ["app.example"]}),
+        ({"Origin": "https://evil.example"}, {}),
+        (
+            {"Origin": "https://app.example", "Content-Type": "text/plain"},
+            {"server.corsAllowedOrigins": ["https://app.example"]},
+        ),
+    ],
+    ids=["refused_host", "refused_origin", "listed_page_without_json"],
+)
+def test_off_counts_nothing_the_route_would_refuse(
+    runtime: MagicMock, headers: dict[str, str], overrides: dict[str, Any]
+) -> None:
+    """With the API off, a request the checks refuse is not an agent, so the
+    route counts nothing and still answers only that the API is off.
+    """
+    with (
+        usage_counts.fresh(),
+        _client(
+            runtime, enabled=False, **usage_counts.USAGE_STATS_ON, **overrides
+        ) as client,
+    ):
+        response = client.post(_PATH, content=b"{}", headers=headers)
+        counts = usage_counts.reported()
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "not_available"
+    assert counts == {}
+
+
+def test_route_with_api_on_counts_nothing_itself(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """With the API on, the route counts nothing itself, neither a request it
+    passes on nor one it refuses, so no request is counted twice.
+    """
+    hosts = {"server.allowedHosts": ["app.example"]}
+    with (
+        usage_counts.fresh(),
+        _client(runtime, **usage_counts.USAGE_STATS_ON, **hosts) as client,
+    ):
+        passed = client.post(_PATH, json={}, headers={"Host": "app.example"})
+        refused = client.post(_PATH, json={}, headers={"Host": "evil.example"})
+        counts = usage_counts.reported()
+
+    assert passed.status_code == 200
+    assert refused.json()["error"]["code"] == "host_not_allowed"
+    assert counts == {}
+    interact.assert_awaited_once()
 
 
 def test_disallowed_host_is_refused(runtime: MagicMock, interact: AsyncMock) -> None:
@@ -315,6 +391,7 @@ def test_interact_gets_the_request_headers_and_trusted_identity(
         client.post(_PATH, json={"page": "x"}, headers={"X-Email": "a@example.com"})
 
     assert interact.await_args is not None
+    assert interact.await_args.kwargs["transport"] == "http"
     assert interact.await_args.kwargs["user_info"] == {"email": "a@example.com"}
     assert ("x-email", "a@example.com") in interact.await_args.kwargs["headers"]
 
@@ -918,6 +995,7 @@ _SPEC_EXAMPLE: Final = json.loads(
               "label_visibility": "visible",
               "accept_new_options": false,
               "filter_mode": "fuzzy",
+              "required": false,
               "on_change": "rerun"
             },
             "value_schema": { "type": "string" },

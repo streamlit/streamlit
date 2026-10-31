@@ -19,6 +19,7 @@ import { memo, type ReactElement, useMemo } from "react"
 import { range } from "lodash-es"
 
 import { type streamlit, Table as TableProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -141,12 +142,14 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // Blank input is treated as absent: aria-label=" " computes to an empty
   // accessible name, which is worse than none. Native <table> already has
   // the table role — do not add role="figure" or role="img".
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledTableContainer className="stTable" data-testid="stTable">
-      {cssStyles && <style>{cssStyles}</style>}
+      {!isNullOrEmptyString(cssStyles) && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
       <StyledTableBorder
@@ -219,7 +222,9 @@ export function Table(props: Readonly<TableProps>): ReactElement {
       function) and I couldn't find a single example on GitHub that actually does this
       for `st.table`. We might want to revisit this if we add captions/labels as a
       native feature or do a pass on accessibility. */}
-      {caption && <StyledTableCaption>{caption}</StyledTableCaption>}
+      {!isNullOrEmptyString(caption) && (
+        <StyledTableCaption>{caption}</StyledTableCaption>
+      )}
     </StyledTableContainer>
   )
 }

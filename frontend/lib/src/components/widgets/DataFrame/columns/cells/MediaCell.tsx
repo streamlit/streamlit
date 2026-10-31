@@ -22,6 +22,8 @@ import {
   type ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { genericFonts } from "~lib/theme/primitives/typography"
 
 export type MediaType = "audio" | "video"
@@ -62,7 +64,7 @@ export const MediaCellEditor: ReturnType<
 > = cell => {
   const { src, mediaType } = cell.value.data
 
-  if (!src) {
+  if (isNullOrEmptyString(src)) {
     return null
   }
 
@@ -97,7 +99,7 @@ const renderer: CustomRenderer<MediaCell> = {
   draw: (args, cell) => {
     const { ctx, theme, rect } = args
     const { src, mediaType } = cell.data
-    if (!src) {
+    if (isNullOrEmptyString(src)) {
       return true
     }
 

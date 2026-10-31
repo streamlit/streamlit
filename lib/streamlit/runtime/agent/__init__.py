@@ -26,5 +26,6 @@ request with its snapshot, and ``errors`` lists the codes the API answers a
 refused request with. ``protocol`` builds the OpenAPI document served at
 ``/_stcore/agent/openapi.json``, and ``mcp`` serves the same protocol as a
 remote MCP server at ``/_stcore/agent/mcp``, whose tools ``protocol`` also
-describes.
+describes. ``usage`` counts agent requests and sessions in this process for
+the page profile that browser sessions report.
 """

@@ -1284,7 +1284,7 @@ describe("createEmotionTheme", () => {
   it("uses default dataframeHeaderTextColor if not configured", () => {
     const theme = createEmotionTheme({})
     expect(theme.colors.dataframeHeaderTextColor).toBe(
-      theme.colors.fadedText60
+      theme.colors.fadedText70
     )
   })
 
@@ -1295,7 +1295,7 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.dataframeHeaderTextColor).toBe(
-      theme.colors.fadedText60
+      theme.colors.fadedText70
     )
     expect(theme.colors.dataframeHeaderTextColor).not.toBe("#123456")
   })
@@ -1309,7 +1309,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.dataframeHeaderTextColor).toBe("#FFC0CB")
     expect(theme.colors.dataframeHeaderTextColor).not.toBe(
-      theme.colors.fadedText60
+      theme.colors.fadedText70
     )
     expect(theme.colors.bodyText).toBe("#123456")
   })
@@ -1388,9 +1388,9 @@ describe("createEmotionTheme", () => {
     )
     // Unset code text follows body text; borders/fills stay on stock chrome.
     expect(theme.colors.codeTextColor).toBe(theme.colors.bodyText)
-    // Header text still tracks the configured body text via fadedText60.
+    // Header text still tracks the configured body text via fadedText70.
     expect(theme.colors.dataframeHeaderTextColor).toBe(
-      theme.colors.fadedText60
+      theme.colors.fadedText70
     )
   })
 

@@ -27,6 +27,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     click_form_button,
@@ -119,6 +120,56 @@ def _get_callback_chart(app: Page) -> Locator:
 
 def _get_in_fragment_chart(app: Page) -> Locator:
     return get_vega_graphics_document(app.get_by_test_id("stVegaLiteChart").nth(11))
+
+
+def _get_x_interval_scatter_chart(app: Page) -> Locator:
+    return get_vega_graphics_document(get_element_by_key(app, "scatter_interval_x"))
+
+
+def _click_unmount_button(app: Page) -> None:
+    app.get_by_test_id("stButton").filter(
+        has_text="Create some elements to unmount component"
+    ).locator("button").click()
+    wait_for_app_run(app, wait_delay=4000)
+
+
+def _selection_markdown_text(app: Page, pattern: re.Pattern[str]) -> str:
+    locator = app.get_by_test_id("stMarkdownContainer").filter(has_text=pattern)
+    expect(locator).to_have_count(1)
+    return locator.inner_text()
+
+
+def _x_interval_brush_extent(chart: Locator) -> tuple[float, float] | None:
+    """Return the x-interval brush edges as fractions of the plot width.
+
+    The fractions only depend on the selected data range, so they stay the same
+    when the chart is redrawn at another size.
+    """
+    brush_box = chart.locator("g.x_interval_brush").bounding_box()
+    plot_box = chart.locator("g.role-axis:not([aria-label])").first.bounding_box()
+    if brush_box is None or plot_box is None or brush_box["width"] == 0:
+        return None
+    left = (brush_box["x"] - plot_box["x"]) / plot_box["width"]
+    return left, left + brush_box["width"] / plot_box["width"]
+
+
+def _wait_for_x_interval_brush_extent(
+    app: Page, chart: Locator, expected: tuple[float, float]
+) -> None:
+    def matches() -> bool:
+        extent = _x_interval_brush_extent(chart)
+        return extent is not None and extent == pytest.approx(expected, abs=0.01)
+
+    wait_until(app, matches)
+
+
+def _assert_restore_did_not_rerun(app: Page, runs_text: str) -> None:
+    expect(app.get_by_text(runs_text, exact=True)).to_be_visible()
+    # Wait past the 150ms hover/wheel debounce so a restore pulse cannot
+    # sneak in another run.
+    app.wait_for_timeout(400)
+    next_run = f"Runs: {int(runs_text.rsplit(' ', 1)[-1]) + 1}"
+    expect(app.get_by_text(next_run, exact=True)).not_to_be_visible()
 
 
 def test_point_bar_chart_displays_selection_text(app: Page):
@@ -496,7 +547,9 @@ def test_selection_persists_after_data_update(app: Page):
 
     This verifies the key_as_main_identity feature for st.altair_chart selections.
     When a key is provided and selection_mode stays the same, selections should
-    be preserved even when the underlying data changes.
+    be preserved even when the underlying data changes. The keyed chart also
+    keeps its Vega view: the new rows are swapped into it. Without a key, the
+    data is part of the chart's identity, so the selection resets.
     """
     chart = _get_persistent_selection_chart(app)
     expect(chart).to_be_visible()
@@ -517,6 +570,22 @@ def test_selection_persists_after_data_update(app: Page):
     )
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
 
+    unkeyed_chart = get_vega_graphics_document(
+        get_element_by_key(app, "unkeyed_selection_chart")
+    )
+    unkeyed_chart.scroll_into_view_if_needed()
+    _click(app, unkeyed_chart, _MousePosition(150, 180))
+    expect_prefixed_markdown(
+        app,
+        "Unkeyed selection:",
+        re.compile(
+            r"\{'selection': \{'unkeyed_selection': \[\{'category': '[A-E]'.+\}\]\}\}"
+        ),
+    )
+
+    # Tag the drawn marks: a rebuilt view would replace this element.
+    chart.locator("svg.marks").evaluate("el => el.setAttribute('data-test-tag', '')")
+
     # Click the button to update data (changes the chart data)
     # Use the key-based locator for precise selection
     update_button = get_element_by_key(app, "update_chart_data_btn").locator("button")
@@ -530,6 +599,16 @@ def test_selection_persists_after_data_update(app: Page):
     # Verify selection persisted after data change
     # The selection should still show the same category even though values changed
     expect_prefixed_markdown(app, "Persistent selection:", expected_selection)
+
+    # The new values are drawn into the same view.
+    expect(chart.locator("[aria-label='category: A; value: 15']")).to_have_count(1)
+    expect(chart.locator("svg.marks[data-test-tag]")).to_have_count(1)
+
+    expect_prefixed_markdown(
+        app,
+        "Unkeyed selection:",
+        re.compile(r"\{'selection': \{'unkeyed_selection': \{\}\}\}"),
+    )
 
 
 def _assert_single_region_bind(
@@ -564,6 +643,159 @@ def test_binding_widgets_not_duplicated_with_on_select(app: Page):
 
     select_chart.get_by_role("combobox").select_option("Europe")
     _assert_single_region_bind(select_chart, role="combobox", count=1)
+
+
+@pytest.mark.skip_browser("firefox")
+def test_interval_overlay_remains_after_unmounting_snapshot(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = _get_selection_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+
+    expected_prefix = "Scatter chart with selection_interval:"
+    expected_selection = re.compile(
+        r"\{'selection': \{'param_1': \{'Horsepower': \[.+, .+\], 'Miles_per_Gallon': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    selection_text = _selection_markdown_text(app, expected_selection)
+
+    _click_unmount_button(app)
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
+    chart.scroll_into_view_if_needed()
+    # Use a distinct name from the pre-unmount selection snapshot. Remount
+    # can shift the chart enough to exceed the default image threshold.
+    assert_snapshot(
+        chart,
+        name="st_altair_chart-scatter_interval_selection_after_unmount",
+    )
+
+
+@pytest.mark.skip_browser("firefox")
+def test_x_interval_overlay_remains_after_unmounting(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    chart = _get_x_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+
+    expected_prefix = "Scatter chart with x-interval:"
+    expected_selection = re.compile(
+        r"\{'selection': \{'x_interval': \{'Horsepower': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, expected_prefix, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    selection_text = _selection_markdown_text(app, expected_selection)
+    brush_extent = _x_interval_brush_extent(chart)
+    assert brush_extent is not None
+    app.mouse.move(0, 0)
+    app.wait_for_timeout(250)
+    assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_selection")
+
+    _click_unmount_button(app)
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
+    chart.scroll_into_view_if_needed()
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
+    # Use a distinct name from the pre-unmount selection snapshot. Remount
+    # can shift the chart enough to exceed the default image threshold.
+    assert_snapshot(
+        chart,
+        name="st_altair_chart-scatter_x_interval_selection_after_unmount",
+    )
+
+    chart.dblclick(position={"x": 130, "y": 100})
+    wait_for_app_run(app)
+    cleared_selection = app.get_by_test_id("stMarkdownContainer").filter(
+        has_text=expected_selection
+    )
+    expect(cleared_selection).to_have_count(0)
+    chart.scroll_into_view_if_needed()
+    app.mouse.move(0, 0)
+    app.wait_for_timeout(250)
+    assert_snapshot(chart, name="st_altair_chart-scatter_x_interval_cleared")
+
+
+def test_x_interval_overlay_keeps_its_data_range_in_fullscreen(app: Page):
+    element = get_element_by_key(app, "scatter_interval_x")
+    chart = _get_x_interval_scatter_chart(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+
+    _create_selection_rectangle(
+        app, chart, _MousePosition(260, 110), _MousePosition(433, 220)
+    )
+    expected_selection = re.compile(
+        r"\{'selection': \{'x_interval': \{'Horsepower': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(app, "Scatter chart with x-interval:", expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    inline_box = chart.bounding_box()
+    brush_extent = _x_interval_brush_extent(chart)
+    assert inline_box is not None
+    assert brush_extent is not None
+
+    # Fullscreen recreates the view at a larger size, so the restored brush must
+    # be redrawn from its data range rather than its old pixel position. Run
+    # counts are not asserted: when an active brush is resized, Vega-Lite
+    # re-derives its data range from pixels, and the rounding can rerun the app.
+    element.hover()
+    element.get_by_role("button", name="Fullscreen").click()
+    expect(element.get_by_role("button", name="Close fullscreen")).to_be_visible()
+    wait_until(
+        app,
+        lambda: (
+            (box := chart.bounding_box()) is not None
+            and box["width"] > inline_box["width"] * 1.2
+        ),
+    )
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
+
+    element.get_by_role("button", name="Close fullscreen").click()
+    expect(element.get_by_role("button", name="Fullscreen")).to_be_visible()
+    _wait_for_x_interval_brush_extent(app, chart, brush_extent)
+    expect_prefixed_markdown(app, "Scatter chart with x-interval:", expected_selection)
+
+
+def test_bar_interval_selection_remains_after_unmounting(app: Page):
+    chart = _get_selection_interval_bar_chart(app)
+    expect(chart).to_be_visible()
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    bounding_box = chart.bounding_box()
+    assert bounding_box is not None
+    app.mouse.move(bounding_box["x"] + 90, bounding_box["y"] + 150)
+    app.mouse.down()
+    app.mouse.move(bounding_box["x"] + 140, bounding_box["y"] + 153, steps=5)
+    app.mouse.up()
+    wait_for_app_run(app)
+
+    expected_selection = re.compile(
+        r"\{'selection': \{'param_1': \{'a': \['A', 'B'\], 'b': \[.+, .+\]\}\}\}"
+    )
+    expect_prefixed_markdown(
+        app, "Bar chart with selection_interval:", expected_selection
+    )
+    selection_text = _selection_markdown_text(app, expected_selection)
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+
+    _click_unmount_button(app)
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(has_text=selection_text)
+    ).to_be_visible()
+    _assert_restore_did_not_rerun(app, "Runs: 3")
 
 
 def test_legend_bound_selection_reaches_python(app: Page):

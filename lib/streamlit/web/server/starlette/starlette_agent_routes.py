@@ -49,6 +49,7 @@ from streamlit.runtime.agent import (
     mcp,
     protocol,
     snapshot,
+    usage,
 )
 from streamlit.web.server import server_util
 from streamlit.web.server.starlette import starlette_websocket
@@ -216,11 +217,13 @@ def _page_request_without_json(request: Request) -> bool:
     return content_type.split(";", 1)[0].strip().lower() != "application/json"
 
 
-def _refused_caller(request: Request) -> tuple[errors.AgentErrorCode, str] | None:
-    """The code and message refusing the request's caller, or None.
+def _refusal_before_body(request: Request) -> tuple[errors.AgentErrorCode, str] | None:
+    """The code and message to refuse ``request`` with before reading its body.
 
-    The checks after enablement, in the order both routes apply them: Host,
-    then `Origin`, then a web page's content type.
+    ``None`` when the request passes the Host, Origin, and content-type checks,
+    which both routes apply in that order. They run it whether or not the API
+    is on, so with the API off they count only a request they would accept
+    with the API on.
     """
     if _refused_host(request):
         return "host_not_allowed", _HOST_MESSAGE
@@ -466,10 +469,13 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         request: Request,
         session_registry: interaction.AgentSessionRegistry,
         payload: dict[str, Any],
+        *,
+        transport: usage.Transport,
     ) -> tuple[int, bytes]:
         """Run one interaction for either route: the interact route's status
         and response body, which the MCP route's `interact` tool returns as
-        its text.
+        its text. ``transport`` names the route, whose usage counter the call
+        counts on.
         """
         try:
             body = await _unless_disconnected(
@@ -477,6 +483,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 interaction.interact(
                     session_registry,
                     payload,
+                    transport=transport,
                     user_info=_user_info(request),
                     headers=request.headers.items(),
                     encode=_encode_snapshot,
@@ -518,7 +525,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
 
         if call.name == "interact":
             status, body = await run_interaction(
-                request, session_registry, call.arguments
+                request, session_registry, call.arguments, transport="mcp"
             )
             # Rendered off the event loop: a snapshot can be hundreds of KB.
             # A 202 `wait_timed_out` is not an error; its text says how to
@@ -576,9 +583,14 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # with the app's HTML and a 200, anything else with a 405 that
             # names GET as allowed.
             return Response(status_code=405, headers={"Allow": "POST"})
+        refusal = _refusal_before_body(request)
         if registry is None:
+            # Count only a request that passes the checks: a web page or a
+            # refused Host is not an agent. The answer is `not_available`
+            # either way, and the body is never read.
+            if refusal is None:
+                usage.record_interaction("http")
             return error_response("not_available", _DISABLED_MESSAGE)
-        refusal = _refused_caller(request)
         if refusal is not None:
             return error_response(*refusal)
 
@@ -606,7 +618,9 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         if not isinstance(payload, dict):
             return error_response("invalid_request", "The body must be a JSON object.")
 
-        status, content = await run_interaction(request, registry, payload)
+        status, content = await run_interaction(
+            request, registry, payload, transport="http"
+        )
         return Response(content, status_code=status, media_type="application/json")
 
     async def answer_mcp(request: Request) -> Response:
@@ -619,14 +633,20 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # A GET would open a stream for messages the server sends on its
             # own, and this server sends none.
             return Response(status_code=405, headers={"Allow": "POST"})
+        refusal = _refusal_before_body(request)
         if registry is None:
+            # Counted as the interact route counts it: only a request that
+            # passes the checks, whatever its message, since the body is never
+            # read. A client stops after its refused `initialize`, so this is
+            # about one count per attempt.
+            if refusal is None:
+                usage.record_interaction("mcp")
             # 400 rather than the interact route's 403: MCP clients read a 403
             # as an authorization failure, and neither fall back to
             # `initialize` nor show the message.
             return _jsonrpc_pre_parse_refusal(
                 "not_available", _DISABLED_MESSAGE, status=400
             )
-        refusal = _refused_caller(request)
         if refusal is not None:
             return _jsonrpc_pre_parse_refusal(*refusal)
 

@@ -18,6 +18,7 @@ import type {
   ArrowData,
   BidiComponent as BidiComponentProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { assertNever } from "~lib/util/assertNever"
 
@@ -49,13 +50,13 @@ export const parseBidiComponentData = ({
 }: ParseBidiComponentDataArgs): ParsedComponentData => {
   switch (data) {
     case "json":
-      return json ? JSON.parse(json) : null
+      return isNullOrEmptyString(json) ? null : JSON.parse(json)
     case "arrowData":
       return arrowData ?? null
     case "bytes":
       return bytes ?? null
     case "mixed": {
-      if (mixedJson && arrowBlobs) {
+      if (!isNullOrEmptyString(mixedJson) && arrowBlobs) {
         const jsonData: unknown = JSON.parse(mixedJson)
 
         const arrowBlobsMap: Record<string, Uint8Array> = {}

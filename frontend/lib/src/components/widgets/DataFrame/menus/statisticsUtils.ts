@@ -17,6 +17,8 @@
 import { TimeUnit } from "apache-arrow"
 import { getLogger } from "loglevel"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   toSafeBoolean,
   toSafeDate,
@@ -732,9 +734,9 @@ export function formatDatetime(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  // Use provided timezone, or default to UTC for consistency
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank timezone is invalid for Intl
-  const tz = timezone || "UTC"
+  // Use the provided timezone, or UTC when it is missing or empty (Intl
+  // rejects an empty timeZone).
+  const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (isDateOnly) {
     return date.toLocaleDateString(undefined, {
       year: "numeric",
@@ -837,8 +839,9 @@ export function formatTooltipDate(
   timezone?: string
 ): string {
   const date = new Date(timestamp)
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank timezone is invalid for Intl
-  const tz = timezone || "UTC"
+  // Use the provided timezone, or UTC when it is missing or empty (Intl
+  // rejects an empty timeZone).
+  const tz = isNullOrEmptyString(timezone) ? "UTC" : timezone
   if (includeTime) {
     return date.toLocaleString(undefined, {
       month: "short",

@@ -14,15 +14,19 @@
 
 from __future__ import annotations
 
+import datetime as dt
+import decimal
 import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pyarrow as pa
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit import dataframe_util
 from streamlit.elements import echarts_chart as echarts_chart_module
 from streamlit.elements.echarts_chart import (
     EChartsChartSelectionSerde,
@@ -36,6 +40,7 @@ from streamlit.elements.echarts_chart import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitDataframeConversionError,
     StreamlitDuplicateElementKey,
     StreamlitInvalidHeightError,
     StreamlitInvalidParameterTypeError,
@@ -43,6 +48,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
+from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 _ECHARTS_LOGGER = echarts_chart_module._LOGGER.name
@@ -51,6 +57,12 @@ _BASIC_SPEC: dict[str, Any] = {
     "xAxis": {"type": "category", "data": ["A", "B", "C"]},
     "yAxis": {"type": "value"},
     "series": [{"type": "bar", "data": [5, 20, 36]}],
+}
+
+# A ``dataset.source`` that is already JSON (an ECharts 2D array).
+_INLINE_DATASET_SPEC: dict[str, Any] = {
+    "dataset": {"source": [["x", "y"], ["a", 1]]},
+    "series": [{"type": "bar"}],
 }
 
 
@@ -97,20 +109,26 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert json.loads(el.spec) == {"series": [{"type": "pie", "data": [1, 2, 3]}]}
 
     def test_dataset_source_dataframe(self):
-        """A dataframe ``dataset.source`` is converted to records + dimensions."""
+        """A dataframe ``dataset.source`` ships as a named Arrow dataset."""
         df = pd.DataFrame({"product": ["a", "b"], "2015": [43.3, 85.8]})
         st.echarts_chart({"dataset": {"source": df}, "series": [{"type": "bar"}]})
 
         el = self.get_delta_from_queue().new_element.echarts_chart
-        spec = json.loads(el.spec)
-        assert spec["dataset"]["source"] == [
-            {"product": "a", "2015": 43.3},
-            {"product": "b", "2015": 85.8},
-        ]
-        assert spec["dataset"]["dimensions"] == ["product", "2015"]
+        assert len(el.datasets) == 1
+        dataset = el.datasets[0]
+        assert dataset.has_name
+        assert dataset.name == calc_hash(dataset.data.data)
+        assert not dataset.data.HasField("styler")
+        # The browser sets the default ``dimensions`` from the Arrow fields.
+        assert json.loads(el.spec)["dataset"] == {"source": {"name": dataset.name}}
+        pd.testing.assert_frame_equal(
+            dataframe_util.convert_arrow_bytes_to_pandas_df(dataset.data.data), df
+        )
+        # The rows travel only as Arrow, not as inline JSON records.
+        assert "43.3" not in el.spec
 
     def test_dataset_source_dataframe_preserves_user_dimensions(self):
-        """A user-provided ``dimensions`` is not overwritten by column order."""
+        """A user-provided ``dimensions`` is sent unchanged."""
         df = pd.DataFrame({"product": ["a"], "2015": [43.3]})
         st.echarts_chart(
             {
@@ -123,158 +141,147 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         spec = json.loads(el.spec)
         assert spec["dataset"]["dimensions"] == ["product"]
 
-    def test_dataset_source_duplicate_stringified_columns_raises(self):
-        """Column labels that collide after ``str()`` are rejected."""
-        df = pd.DataFrame([[1, 2]], columns=[1, "1"])
-        with pytest.raises(StreamlitAPIException) as exc:
-            st.echarts_chart({"dataset": {"source": df}, "series": [{"type": "bar"}]})
-
-        assert exc.value.error_id == "echarts-dataset-duplicate-columns"
-
-    def test_dataset_source_list_of_datasets(self):
-        """A list of datasets converts each dataframe ``source``."""
-        df = pd.DataFrame({"x": [1], "y": [2]})
-        st.echarts_chart({"dataset": [{"source": df}], "series": [{"type": "bar"}]})
-
-        el = self.get_delta_from_queue().new_element.echarts_chart
-        spec = json.loads(el.spec)
-        assert spec["dataset"][0]["source"] == [{"x": 1, "y": 2}]
-        assert spec["dataset"][0]["dimensions"] == ["x", "y"]
-
-    def test_dataset_source_dataframe_inside_timeline_base_option(self):
-        """A dataframe ``dataset.source`` nested under ``baseOption`` is converted."""
-        df = pd.DataFrame({"product": ["a"], "2015": [43.3]})
+    def test_dataset_sources_in_every_option_variant(self):
+        """Frames in every option variant ship in the order they are walked."""
+        frames = [pd.DataFrame({"v": [i]}) for i in range(6)]
         st.echarts_chart(
             {
-                "baseOption": {
-                    "timeline": {"data": ["2015"]},
-                    "dataset": {"source": df},
-                    "series": [{"type": "bar"}],
-                },
-                "options": [{"title": {"text": "2015"}}],
-            }
-        )
-
-        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
-        assert spec["baseOption"]["dataset"]["source"] == [
-            {"product": "a", "2015": 43.3}
-        ]
-        assert spec["baseOption"]["dataset"]["dimensions"] == ["product", "2015"]
-
-    def test_dataset_source_dataframe_inside_timeline_options(self):
-        """A dataframe ``dataset.source`` in a timeline tick is converted."""
-        df = pd.DataFrame({"x": [1], "y": [2]})
-        st.echarts_chart(
-            {
-                "baseOption": {
-                    "timeline": {"data": ["2015"]},
-                    "series": [{"type": "bar"}],
-                },
-                "options": [{"dataset": {"source": df}}],
-            }
-        )
-
-        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
-        assert spec["options"][0]["dataset"]["source"] == [{"x": 1, "y": 2}]
-        assert spec["options"][0]["dataset"]["dimensions"] == ["x", "y"]
-
-    def test_dataset_source_dataframe_inside_media_option(self):
-        """A dataframe ``dataset.source`` in a media override is converted."""
-        df = pd.DataFrame({"x": [1], "y": [2]})
-        st.echarts_chart(
-            {
-                "series": [{"type": "bar"}],
+                "dataset": {"source": frames[0]},
                 "media": [
                     {
                         "query": {"maxWidth": 500},
-                        "option": {"dataset": {"source": df}},
+                        "option": {"dataset": {"source": frames[1]}},
+                    }
+                ],
+                "baseOption": {
+                    "timeline": {"data": ["2015"]},
+                    "dataset": [{"source": frames[2]}],
+                    "media": [{"option": {"dataset": {"source": frames[3]}}}],
+                },
+                "options": [
+                    {
+                        "dataset": {"source": frames[4]},
+                        "media": [{"option": {"dataset": {"source": frames[5]}}}],
                     }
                 ],
             }
         )
 
-        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
-        assert spec["media"][0]["option"]["dataset"]["source"] == [{"x": 1, "y": 2}]
-        assert spec["media"][0]["option"]["dataset"]["dimensions"] == ["x", "y"]
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        spec = json.loads(el.spec)
+        placeholders = [
+            spec["dataset"]["source"],
+            spec["media"][0]["option"]["dataset"]["source"],
+            spec["baseOption"]["dataset"][0]["source"],
+            spec["baseOption"]["media"][0]["option"]["dataset"]["source"],
+            spec["options"][0]["dataset"]["source"],
+            spec["options"][0]["media"][0]["option"]["dataset"]["source"],
+        ]
+        assert placeholders == [{"name": dataset.name} for dataset in el.datasets]
+        assert [
+            dataframe_util.convert_arrow_bytes_to_pandas_df(dataset.data.data)[
+                "v"
+            ].tolist()
+            for dataset in el.datasets
+        ] == [[i] for i in range(6)]
 
-    def test_dataset_source_datetime_and_nan_normalized(self):
-        """Datetimes become ISO strings and missing values become ``null``."""
-        df = pd.DataFrame(
-            {"t": [pd.Timestamp("2020-01-01")], "v": [None]}, dtype="object"
+    def test_identical_dataset_sources_share_one_entry(self):
+        """Equal frames are content-addressed into a single proto dataset."""
+        df = pd.DataFrame({"x": [1, 2]})
+        other = pd.DataFrame({"x": [3, 4]})
+        st.echarts_chart(
+            {"dataset": [{"source": df}, {"source": df.copy()}, {"source": other}]}
         )
-        df["t"] = pd.to_datetime(df["t"])
-        st.echarts_chart({"dataset": {"source": df}})
 
         el = self.get_delta_from_queue().new_element.echarts_chart
-        record = json.loads(el.spec)["dataset"]["source"][0]
-        assert record["t"].startswith("2020-01-01")
-        assert record["v"] is None
+        sources = [entry["source"] for entry in json.loads(el.spec)["dataset"]]
+        assert sources[0] == sources[1]
+        assert sources[2] != sources[0]
+        assert [{"name": dataset.name} for dataset in el.datasets] == [
+            sources[0],
+            sources[2],
+        ]
 
-    def test_dataset_source_infinities_become_null(self):
-        """Infinities in a dataframe source become ``null``, like NaN/NaT."""
-        df = pd.DataFrame({"x": [1.0, float("inf"), float("-inf")]})
-        st.echarts_chart({"dataset": {"source": df}})
-
-        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
-            "dataset"
-        ]["source"]
-        assert source[0]["x"] == 1.0
-        assert source[1]["x"] is None
-        assert source[2]["x"] is None
-
-    def test_dataset_source_nullable_numeric_dtypes(self):
-        """Nullable and mixed numeric dtypes convert without crashing the inf check."""
-        df = pd.DataFrame(
-            {
-                "i": pd.Series([1, None], dtype="Int64"),
-                "f": pd.Series([2.5, 3.5], dtype="Float64"),
-            }
+    def test_dataset_source_styler_ships_data_only(self):
+        """A Styler ``dataset.source`` ships its data without any styling."""
+        df = pd.DataFrame({"x": [1, 2]})
+        st.echarts_chart(
+            {"dataset": [{"source": df.style.highlight_max()}, {"source": df}]}
         )
-        st.echarts_chart({"dataset": {"source": df}})
 
-        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
-            "dataset"
-        ]["source"]
-        assert source == [{"i": 1, "f": 2.5}, {"i": None, "f": 3.5}]
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        # The Styler serializes to the same bytes as its plain dataframe.
+        assert len(el.datasets) == 1
+        assert not el.datasets[0].data.HasField("styler")
 
-    def test_dataset_source_nullable_float_infinities_become_null(self):
-        """Infinities in a nullable float column become ``null``."""
-        df = pd.DataFrame({"x": pd.Series([1.0, float("inf"), None], dtype="Float64")})
-        st.echarts_chart({"dataset": {"source": df}})
+    @parameterized.expand(
+        [
+            ("records", {"dataset": {"source": [{"x": "a", "y": 1}]}}),
+            ("array_2d", _INLINE_DATASET_SPEC),
+            ("keyed_columns", {"dataset": {"source": {"x": ["a"], "y": [1]}}}),
+        ]
+    )
+    def test_inline_dataset_sources_add_no_arrow_datasets(self, _name, spec):
+        """Sources that are already JSON stay inline, with no Arrow datasets."""
+        st.echarts_chart(spec)
 
-        source = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
-            "dataset"
-        ]["source"]
-        assert source[0]["x"] == 1.0
-        assert source[1]["x"] is None
-        assert source[2]["x"] is None
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert json.loads(el.spec) == spec
+        assert len(el.datasets) == 0
 
-    def test_dataset_source_preserves_high_precision_floats(self):
-        """Dataframe floats keep more than pandas' default 10 significant digits."""
-        value = 1.23456789012345
-        df = pd.DataFrame({"x": [value]})
-        st.echarts_chart({"dataset": {"source": df}})
+    @parameterized.expand(
+        [
+            ("json_string", json.dumps(_INLINE_DATASET_SPEC)),
+            ("pyecharts", _FakeEChart(_INLINE_DATASET_SPEC)),
+        ]
+    )
+    def test_json_inputs_add_no_arrow_datasets(self, _name, spec):
+        """JSON string and pyecharts inputs cannot hold frames, so stay as is."""
+        st.echarts_chart(spec)
 
-        record = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)[
-            "dataset"
-        ]["source"][0]
-        assert record["x"] == pytest.approx(value, rel=1e-15)
+        el = self.get_delta_from_queue().new_element.echarts_chart
+        assert json.loads(el.spec) == _INLINE_DATASET_SPEC
+        assert len(el.datasets) == 0
 
-    def test_dataset_source_to_json_failure_is_targeted(self):
-        """A ``to_json`` TypeError is re-raised with the dataset error_id.
-
-        Pandas serialization of unusual dtypes varies by version, so this
-        patches ``to_json`` rather than relying on a specific dtype to fail.
-        """
+    @parameterized.expand(
+        [
+            (
+                "dataframe_conversion",
+                "convert_pandas_df_to_arrow_table",
+                StreamlitDataframeConversionError("boom"),
+            ),
+            (
+                "arrow_serialization",
+                "convert_arrow_table_to_arrow_bytes",
+                pa.ArrowInvalid("boom"),
+            ),
+        ]
+    )
+    def test_dataset_source_conversion_failure_is_targeted(self, _name, target, error):
+        """A failed conversion names ``dataset.source`` and has its own error_id."""
         df = pd.DataFrame({"x": [1]})
         with (
-            patch.object(pd.DataFrame, "to_json", side_effect=TypeError("boom")),
-            pytest.raises(StreamlitAPIException) as exc,
+            patch.object(
+                echarts_chart_module.dataframe_util, target, side_effect=error
+            ),
+            pytest.raises(StreamlitDataframeConversionError) as exc,
         ):
             st.echarts_chart({"dataset": {"source": df}})
 
+        assert exc.value.error_id == "echarts-dataset-not-arrow-serializable"
         assert "dataset.source" in str(exc.value)
-        assert exc.value.error_id == "echarts-dataset-not-json-serializable"
+        assert "boom" in str(exc.value)
+
+    def test_dataset_source_real_arrow_failure_is_targeted(self) -> None:
+        """An integer too large for Arrow raises the dataset conversion error."""
+        df = pd.DataFrame({"x": [2**70]})
+
+        with pytest.raises(StreamlitDataframeConversionError) as exc:
+            st.echarts_chart({"dataset": {"source": df}})
+
+        assert exc.value.error_id == "echarts-dataset-not-arrow-serializable"
+        assert "dataset.source" in str(exc.value)
+        assert self.get_all_deltas_from_queue() == []
 
     @parameterized.expand(
         [
@@ -518,12 +525,15 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         assert "3D or WebGL charts" in str(exc.value)
         assert exc.value.error_id == "echarts-gl-series-not-supported"
 
-    @parameterized.expand([("grid3D",), ("geo3D",), ("globe",)])
+    @parameterized.expand(
+        [("grid3D",), ("geo3D",), ("globe",), ("mapbox3D",), ("maptalks3D",)]
+    )
     def test_gl_components_raise(self, component):
         """ECharts GL components are rejected like their series counterparts."""
         with pytest.raises(StreamlitAPIException) as exc:
             st.echarts_chart({component: {}, "series": [{"type": "bar"}]})
 
+        assert f"`{component}`" in str(exc.value)
         assert "3D or WebGL charts" in str(exc.value)
         assert exc.value.error_id == "echarts-gl-series-not-supported"
 
@@ -926,6 +936,82 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    @parameterized.expand(
+        [
+            ("named_format", {"valueFormatter": "dollar"}),
+            ("printf_format", {"valueFormatter": "%,d sessions"}),
+            ("printf_with_escaped_percent", {"valueFormatter": "%.1f%%"}),
+            ("null", {"valueFormatter": None}),
+            ("dimension_template", {"formatter": "{b}: {@[2]} sessions"}),
+        ]
+    )
+    def test_no_warning_for_supported_tooltip_formatters(
+        self, _name: str, tooltip: dict[str, Any]
+    ) -> None:
+        """Number formats and dimension templates are supported, so nothing logs."""
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart({**_BASIC_SPEC, "tooltip": tooltip})
+
+        mock_warning.assert_not_called()
+
+    @parameterized.expand(
+        [
+            ("top_level", {"tooltip": {"valueFormatter": "{value} €"}}),
+            ("tooltip_list", {"tooltip": [{"valueFormatter": "{value} €"}]}),
+            (
+                "series",
+                {
+                    "series": [
+                        {"type": "bar", "tooltip": {"valueFormatter": "{value} €"}}
+                    ]
+                },
+            ),
+            ("timeline", {"baseOption": {"tooltip": {"valueFormatter": "{value} €"}}}),
+            (
+                "timeline_option",
+                {"options": [{"tooltip": {"valueFormatter": "{value} €"}}]},
+            ),
+            (
+                "media",
+                {"media": [{"option": {"tooltip": {"valueFormatter": "{value} €"}}}]},
+            ),
+            ("non_string", {"tooltip": {"valueFormatter": 42}}),
+            ("printf_trailing_percent", {"tooltip": {"valueFormatter": "100%"}}),
+            ("printf_unknown_type", {"tooltip": {"valueFormatter": "%q"}}),
+            ("printf_escaped_only", {"tooltip": {"valueFormatter": "100%%"}}),
+            ("empty_string", {"tooltip": {"valueFormatter": ""}}),
+        ]
+    )
+    def test_warns_on_unsupported_tooltip_value_formatter(
+        self, _name: str, spec: dict[str, Any]
+    ) -> None:
+        """A valueFormatter that is not a number format is logged, not raised."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 1
+        assert "is not a number format" in logs.output[0]
+        # The chart still renders, and the spec reaches the frontend unchanged.
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec == spec
+
+    def test_does_not_warn_for_per_item_tooltips(self) -> None:
+        """Per-data-item tooltips are not walked, matching the frontend."""
+        spec = {
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [{"value": 1, "tooltip": {"valueFormatter": "{value} €"}}],
+                }
+            ]
+        }
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec)
+
+        mock_warning.assert_not_called()
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""
@@ -939,28 +1025,209 @@ class EChartsChartTest(DeltaGeneratorTestCase):
             st.echarts_chart(_BASIC_SPEC, height=invalid_value)
 
 
-@pytest.mark.require_integration
-def test_dataset_source_pyarrow_table() -> None:
-    """A PyArrow table ``dataset.source`` is converted to records + dimensions."""
-    import pyarrow as pa
+def _convert_source(source: Any) -> tuple[dict[str, Any], pa.Table]:
+    """Normalize a spec with one ``dataset.source`` and read back its Arrow table."""
+    option, arrow_datasets = _normalize_spec({"dataset": {"source": source}})
+    (data_bytes,) = arrow_datasets.values()
+    return option["dataset"], pa.ipc.open_stream(data_bytes).read_all()
 
-    option = _normalize_spec(
-        {"dataset": {"source": pa.table({"a": [1, 2], "b": [3, 4]})}}
+
+def test_dataset_source_dtypes_round_trip_through_arrow() -> None:
+    """Typed columns travel as Arrow values instead of JSON-normalized strings."""
+    precise = 1.23456789012345
+    df = pd.DataFrame(
+        {
+            "naive": pd.to_datetime(["2020-01-01", None]),
+            "aware": pd.to_datetime(["2020-01-01", None]).tz_localize("UTC"),
+            "date": [dt.date(2020, 1, 1), None],
+            "duration": pd.to_timedelta(["1.5ms", None]),
+            "int": pd.Series([1, None], dtype="Int64"),
+            "float": pd.Series([2.5, None], dtype="Float64"),
+            "bool": [True, False],
+            "category": pd.Categorical(["a", "b"]),
+            "decimal": [decimal.Decimal("1.5"), None],
+            "non_finite": [float("inf"), float("nan")],
+            "precise": [precise, -precise],
+        }
     )
-    assert option["dataset"]["source"] == [{"a": 1, "b": 3}, {"a": 2, "b": 4}]
-    assert option["dataset"]["dimensions"] == ["a", "b"]
+
+    dataset, table = _convert_source(df)
+
+    assert table.column_names == list(df.columns)
+    # No value is pre-formatted into the spec JSON.
+    assert "2020" not in json.dumps(dataset)
+    types = {field.name: field.type for field in table.schema}
+    assert pa.types.is_timestamp(types["naive"])
+    assert types["naive"].tz is None
+    assert types["aware"].tz == "UTC"
+    assert pa.types.is_date32(types["date"])
+    assert pa.types.is_duration(types["duration"])
+    assert pa.types.is_dictionary(types["category"])
+    assert pa.types.is_decimal(types["decimal"])
+    assert table.column("int").to_pylist() == [1, None]
+    assert table.column("float").to_pylist() == [2.5, None]
+    assert table.column("bool").to_pylist() == [True, False]
+    # Infinity is kept for the browser; NaN becomes a null.
+    assert table.column("non_finite").to_pylist() == [float("inf"), None]
+    assert table.column("precise").to_pylist() == [precise, -precise]
+
+
+_INDEXED_DF = pd.DataFrame({"v": [1, 2]}, index=pd.Index(["r1", "r2"], name="row"))
+_MULTI_INDEXED_DF = pd.DataFrame(
+    {"v": [1, 2]},
+    index=pd.MultiIndex.from_tuples([("a", 1), ("a", 2)], names=["g", "n"]),
+)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        _INDEXED_DF,
+        pd.DataFrame({"v": [1, 2]}, index=[10, 20]),
+        _MULTI_INDEXED_DF,
+    ],
+    ids=["named_index", "unnamed_int_index", "multi_index"],
+)
+def test_dataset_source_sends_pandas_index_named_in_metadata(
+    source: pd.DataFrame,
+) -> None:
+    """A pandas index is sent like in ``st.dataframe``; the browser skips it.
+
+    The browser recognizes index fields by the pandas metadata's
+    ``index_columns``, so every index field must be listed there.
+    """
+    _, table = _convert_source(source)
+
+    index_columns = table.schema.pandas_metadata["index_columns"]
+    assert table.column_names == ["v", *index_columns]
+
+
+@pytest.mark.parametrize(
+    "table",
+    [
+        pa.table({"a": [1, 2], "b": [3, 4]}),
+        pa.Table.from_pandas(_INDEXED_DF),
+        pa.Table.from_pandas(_MULTI_INDEXED_DF),
+        # ``select`` keeps the pandas metadata naming the dropped index field.
+        pa.Table.from_pandas(_INDEXED_DF).select(["v"]),
+    ],
+    ids=["plain", "pandas_index", "pandas_multi_index", "pandas_stale_index"],
+)
+def test_pyarrow_table_source_is_sent_as_is(table: pa.Table) -> None:
+    """A PyArrow table is serialized unchanged; the browser skips its index."""
+    option, arrow_datasets = _normalize_spec({"dataset": {"source": table}})
+
+    assert list(arrow_datasets.values()) == [
+        dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+    ]
+    assert "dimensions" not in option["dataset"]
+
+
+def test_dataset_source_exact_duplicate_pandas_columns_raise() -> None:
+    """PyArrow rejects exact duplicate pandas column names."""
+    with pytest.raises(StreamlitDataframeConversionError, match="Duplicate column"):
+        _normalize_spec(
+            {"dataset": {"source": pd.DataFrame([[1, 2]], columns=["a", "a"])}}
+        )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        pd.DataFrame([[1, 2]], columns=[1, "1"]),
+        pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
+    ],
+    ids=["stringified_collision", "pyarrow_table"],
+)
+def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
+    """Labels that only collide as Arrow field names are left to the browser.
+
+    The browser rejects a dataset whose data columns share a name.
+    """
+    _, table = _convert_source(source)
+
+    assert len(set(table.column_names)) < len(table.column_names)
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        pytest.param(
+            pd.MultiIndex.from_tuples([(1, 2), (1, 3)]),
+            ["('1', '2')", "('1', '3')"],
+            id="multiindex",
+        ),
+        pytest.param(pd.Index([b"a", b"b"]), ["a", "b"], id="bytes"),
+    ],
+)
+def test_dataset_source_tuple_and_bytes_columns_use_pyarrow_names(
+    columns: pd.Index, expected: list[str]
+) -> None:
+    """Tuple and bytes labels get PyArrow's field names, as in ``st.dataframe``."""
+    _, table = _convert_source(pd.DataFrame([[1, 2]], columns=columns))
+
+    assert table.column_names == expected
+
+
+def test_dataset_source_mixed_object_column_is_stringified() -> None:
+    """A mixed-type object column is converted to strings, like ``st.dataframe``."""
+    _, table = _convert_source(pd.DataFrame({"mixed": [1, "a"]}))
+
+    assert table.column("mixed").to_pylist() == ["1", "a"]
+
+
+def test_dataset_source_polars_arrow_failure_falls_back_to_pandas() -> None:
+    """A Polars frame whose ``to_arrow`` fails is converted through pandas."""
+
+    class _FailingPolarsFrame:
+        def to_arrow(self) -> pa.Table:
+            raise RuntimeError("arrow conversion failed")
+
+        def to_pandas(self) -> pd.DataFrame:
+            return pd.DataFrame({"a": [1, 2]})
+
+    with patch.object(
+        echarts_chart_module.dataframe_util, "is_polars_dataframe", return_value=True
+    ):
+        _, table = _convert_source(_FailingPolarsFrame())
+
+    assert table.to_pydict() == {"a": [1, 2]}
 
 
 @pytest.mark.require_integration
 def test_dataset_source_polars_dataframe() -> None:
-    """A Polars dataframe ``dataset.source`` is converted to records + dimensions."""
+    """A Polars dataframe ``dataset.source`` is sent through its own Arrow table."""
     import polars as pl
 
-    option = _normalize_spec(
-        {"dataset": {"source": pl.DataFrame({"a": [1, 2], "b": [3, 4]})}}
-    )
-    assert option["dataset"]["source"] == [{"a": 1, "b": 3}, {"a": 2, "b": 4}]
-    assert option["dataset"]["dimensions"] == ["a", "b"]
+    df = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+    _, table = _convert_source(df)
+
+    assert table.to_pydict() == {"a": [1, 2], "b": [3, 4]}
+
+
+@pytest.mark.require_integration
+def test_dataset_source_polars_series() -> None:
+    """A Polars Series ``dataset.source`` becomes a single named column."""
+    import polars as pl
+
+    _, table = _convert_source(pl.Series("sales", [1, 2]))
+
+    assert table.to_pydict() == {"sales": [1, 2]}
+
+
+@pytest.mark.require_integration
+def test_dataset_source_polars_lazyframe_is_truncated() -> None:
+    """A Polars LazyFrame is collected up to the row limit with a caption."""
+    import polars as pl
+
+    with patch.object(
+        echarts_chart_module.dataframe_util, "_show_data_information"
+    ) as mock_info:
+        _, table = _convert_source(pl.LazyFrame({"x": range(10_001)}))
+
+    assert table.num_rows == 10_000
+    mock_info.assert_called_once()
 
 
 def test_normalize_spec_does_not_mutate_user_mapping() -> None:
@@ -970,7 +1237,7 @@ def test_normalize_spec_does_not_mutate_user_mapping() -> None:
         "dataset": {"source": df},
         "series": [{"data": [1, 2, 3]}],
     }
-    option = _normalize_spec(original)
+    option, _ = _normalize_spec(original)
 
     assert original["dataset"]["source"] is df
     assert original["series"][0]["data"] == [1, 2, 3]
@@ -984,12 +1251,11 @@ def test_normalize_spec_does_not_mutate_dataset_list_with_leading_non_dict() -> 
     dataset_entry = {"source": df}
     original = {"dataset": [None, dataset_entry]}
 
-    option = _normalize_spec(original)
+    option, arrow_datasets = _normalize_spec(original)
 
     assert original["dataset"][1] is dataset_entry
     assert original["dataset"][1]["source"] is df
-    assert option["dataset"][1]["source"] == [{"a": 1}]
-    assert option["dataset"][1]["dimensions"] == ["a"]
+    assert option["dataset"][1]["source"] == {"name": next(iter(arrow_datasets))}
 
 
 def test_normalize_spec_converts_tuple_dataset() -> None:
@@ -997,11 +1263,10 @@ def test_normalize_spec_converts_tuple_dataset() -> None:
     df = pd.DataFrame({"a": [1]})
     original = {"dataset": ({"source": df},)}
 
-    option = _normalize_spec(original)
+    option, arrow_datasets = _normalize_spec(original)
 
     assert original["dataset"][0]["source"] is df
-    assert option["dataset"][0]["source"] == [{"a": 1}]
-    assert option["dataset"][0]["dimensions"] == ["a"]
+    assert option["dataset"][0]["source"] == {"name": next(iter(arrow_datasets))}
 
 
 def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
@@ -1024,13 +1289,14 @@ def test_normalize_spec_accepts_source_that_cannot_be_deepcopied() -> None:
         patch.object(
             echarts_chart_module.dataframe_util,
             "convert_anything_to_pandas_df",
-            lambda _value: df,
+            lambda *_args: df,
         ),
     ):
-        option = _normalize_spec(original)
+        option, arrow_datasets = _normalize_spec(original)
 
     assert original["dataset"]["source"] is source
-    assert option["dataset"]["source"] == [{"a": 1}]
+    assert option["dataset"]["source"] == {"name": next(iter(arrow_datasets))}
+    assert len(arrow_datasets) == 1
 
 
 def test_normalize_spec_invalid_type_raises() -> None:

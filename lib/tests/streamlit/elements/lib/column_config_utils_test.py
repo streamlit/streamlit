@@ -135,6 +135,9 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
         ]
     )
+    # Pandas 3.1 warns when appending None upcasts the bool and
+    # interval[int64] columns.
+    @pytest.mark.filterwarnings("ignore:Setting an item of incompatible dtype")
     def test_determine_data_kind(
         self, column: pd.Series, expected_data_kind: ColumnDataKind
     ):

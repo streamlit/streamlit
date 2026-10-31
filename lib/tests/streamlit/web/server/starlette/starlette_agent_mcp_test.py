@@ -43,7 +43,7 @@ from streamlit.runtime.agent.errors import (
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.web.server.starlette import starlette_agent_routes
-from tests.streamlit.runtime.agent import run_gate
+from tests.streamlit.runtime.agent import run_gate, usage_counts
 from tests.streamlit.web.server.starlette import agent_served_app
 from tests.testutil import patch_config_options
 
@@ -180,6 +180,72 @@ def test_off_refuses_every_message_with_400(
     assert "serverInfo" not in response.text
     interact.assert_not_awaited()
     runtime.connect_session.assert_not_called()
+
+
+def test_off_counts_a_post_the_checks_pass_on_the_mcp_counter(
+    runtime: MagicMock,
+) -> None:
+    """With the API off, a POST that passes the Host, Origin, and content-type
+    checks counts once as an MCP attempt, whatever its body, since the body is
+    never read. A POST the checks refuse is not an agent, so it counts nothing.
+    """
+    allowed = {"Host": "app.example"}
+    overrides = {"server.allowedHosts": ["app.example"], **_LISTED_ORIGIN}
+    with (
+        usage_counts.fresh(),
+        _client(
+            runtime, enabled=False, **usage_counts.USAGE_STATS_ON, **overrides
+        ) as client,
+    ):
+        responses = [
+            client.post(_MCP_PATH, json=_message("initialize"), headers=allowed),
+            client.post(_MCP_PATH, content=b"{", headers=allowed),
+            client.post(
+                _MCP_PATH,
+                json=_message("initialize"),
+                headers={"Host": "evil.example"},
+            ),
+            client.post(
+                _MCP_PATH,
+                json=_message("initialize"),
+                headers={**allowed, "Origin": "https://evil.example"},
+            ),
+            client.post(
+                _MCP_PATH,
+                content=b"{}",
+                headers={
+                    **allowed,
+                    "Origin": "https://app.example",
+                    "Content-Type": "text/plain",
+                },
+            ),
+        ]
+        counts = usage_counts.reported()
+
+    for response in responses:
+        text = _jsonrpc_error(response, 400, mcp.INVALID_REQUEST, None)
+        assert text.startswith("not_available: ")
+    assert counts == {**usage_counts.ZERO_COUNTS, "mcp_interactions": 2}
+
+
+def test_route_with_api_on_counts_nothing_itself(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """With the API on, the route counts nothing itself: `interact` counts the
+    tool's calls on the MCP counter, and no other message is an interaction.
+    """
+    with (
+        usage_counts.fresh(),
+        _client(runtime, **usage_counts.USAGE_STATS_ON) as client,
+    ):
+        client.post(_MCP_PATH, json=_message("initialize"))
+        client.post(_MCP_PATH, json=_message("tools/list"))
+        _call(client, "interact")
+        counts = usage_counts.reported()
+
+    assert counts == {}
+    assert interact.await_args is not None
+    assert interact.await_args.kwargs["transport"] == "mcp"
 
 
 def test_disallowed_hosts_and_origins_are_refused(

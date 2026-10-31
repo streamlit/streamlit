@@ -472,6 +472,7 @@ right now. Naming follows the public API, for the reason above:
               "label_visibility": "visible",
               "accept_new_options": false,
               "filter_mode": "fuzzy",
+              "required": false,
               "on_change": "rerun"
             },
             "value_schema": { "type": "string" },
@@ -984,7 +985,10 @@ Charts and maps:
 
 - **A chart given a specification rather than a dataframe is `complete`.**
   `st.plotly_chart` and `st.echarts_chart` carry their values inside the specification,
-  so there is no table to serve and a client should stop looking for one.
+  so there is no table to serve and a client should stop looking for one. An ECharts
+  `dataset.source` dataframe is the exception: it travels as Arrow, so the chart reports
+  that table as a Vega-Lite chart over one dataframe does, and several such tables as
+  `unavailable: "multiple_datasets"`.
 - **Data a Vega-Lite specification loads from a URL is not served.** The browser fetches
   it and this interface does not, so the chart reports `complete: false` with
   `unavailable: "external_url"`, even beside a dataframe, and the URL stays in `spec`.
@@ -996,8 +1000,7 @@ Charts and maps:
   must not remove meaning. Title text a template sets for the figure, an axis, or the
   legend is dropped with it in v1; keeping that text is a follow-up. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
-  the figure's data. Serving a large specification behind `data.url`, and an ECharts
-  `dataset.source` as Arrow, is follow-up #9.
+  the figure's data. Serving a large specification behind `data.url` is follow-up #9.
 - **A map reports the specification its browser renders.** `st.map` compiles the columns
   it plots into a Deck.gl layer, and v1 reports that layer's specification as `spec`, as
   `st.pydeck_chart` does. It carries every plotted point and nothing else from the
@@ -1362,9 +1365,8 @@ than ranked, and say where one builds on another.
    already use, instead of staying inline: an oversized figure specification, option
    list, or text body — a long Markdown document, or its raw copy in a collapsed
    expander — is served behind a URL, readable through `get_data`, with the start of
-   it, `truncated: true`, and its full length or option count in the snapshot. An
-   ECharts `dataset.source` and `st.map`'s plotted columns are served as Arrow, as a
-   dataframe's table is. Table
+   it, `truncated: true`, and its full length or option count in the snapshot.
+   `st.map`'s plotted columns are served as Arrow, as a dataframe's table is. Table
    previews get a byte budget beside the row cap, since a few long strings or nested
    values can make 100 rows enormous, and a request can ask for fewer preview rows; the
    preview then says `complete: false`, as it does past the row cap. Nothing that holds
@@ -1434,8 +1436,9 @@ Smaller potential follow-ups and alternatives considered:
   fidelity harness covering every command.
 - **Testing:** layout facts such as `st.columns` weights, for a coding agent checking its
   own layout, which an e2e testing API would likely serve better than the snapshot.
-- **Operations:** usage metrics, which need a channel of their own because Streamlit's
-  usage stats are reported by the browser and an agent session has none; and an audit
+- **Operations:** usage metrics beyond the request and session counts that the
+  [agent API usage metrics tech spec](https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/17792/tech-spec.md)
+  adds, such as outcomes and latency, and counts from an app no browser opens; and an audit
   log of interactions without content: a digest of the session handle, the request
   fields used, the outcome, and the latency, never the handle, labels, values, or data.
 
@@ -1530,7 +1533,7 @@ v1 ships when:
 | Works on SiS, Cloud, etc?  | ⚠️ Opt-in, and served wherever the app is once on, behind the platform's own authentication. An app that reads the platform's request headers, such as a SiS caller's-rights token, gets each request's. An app behind `st.login` is anonymous to agents until agent sign-in lands (follow-up #10). Multi-worker deployments need session affinity, since an agent session lives in one process. Serving behind a hosting prefix that the proxy strips, as Community Cloud does, needs nothing from the platform, because every URL the API hands out is relative to the request. Discovery does: the public URL serves the platform's page rather than the app's, so the platform has to carry the hint. |
 | No breaking API changes    | ✅ Additive: `server.enableAgentApi`, off in v1, its budget options, new routes under `/_stcore/agent/`, and the discovery hint in `index.html`. No `st.*` signature changes. One behavior is sharper: an `st.context` field the client never sent reads as `None` rather than an empty default. Browser apps never see it, because the frontend always sends every field, and an explicitly sent `0` or `False` is kept, since the fields track presence. Flipping the default later is itself a reviewed change, not a silent one. |
 | No new dependencies        | ✅ Existing Starlette and JSON. The follow-up MCP endpoint needs none either, since it is written by hand rather than on the MCP SDK.                                                                                                                                                                                                                                                                                                                                                                                          |
-| Metrics collected          | Not in v1. Streamlit's usage stats are reported by the browser, which an agent session does not have, so agent usage needs a channel of its own; see the operations item in the smaller follow-ups.                                                                                                                                                                                                                                                                                                         |
+| Metrics collected          | Counts only, while `browser.gatherUsageStats` is on: agent requests, including those to an app with the API off, and sessions created, cumulative per server process under a random id. Streamlit's usage stats are reported by the browser, which an agent session does not have, so the counts ride on the page profiles of the app's browser sessions. No labels, keys, values, queries, URLs, or data. The content-free audit log is still a follow-up; see the operations item in the smaller follow-ups. |
 | Any security/legal impact? | ⚠️ Significant, and the main review risk. New execution surface: off by default in v1 with on-by-default as the goal, open to any program that can reach the app once on but refusing unlisted web origins, every interaction validated server-side, no session-state or secret exposure. The interface is an alternate encoding of what the browser protocol already exposes, so the review question is bulk-access practicality, request volume, and identity mapping — the gates on making it opt-out. App content is untrusted input to the calling agent, so no action may be annotated safe. |
 | Any docs changes needed?   | Protocol reference and coverage matrix, an authoring guide ("write `key=`, explain the app in the app"), verification guidance next to `AppTest` and Playwright, and a security/deployment page.                                                                                                                                                                                                                                                                                                              |
 | Any other risks?           | The snapshot is a compatibility surface for scripts that hard-code it; it carries `schema_version` and changes additively within it, while clients that read the served description pick up changes with each Streamlit release. Adoption risk: if it stays experimental too long, the ecosystem standardizes on browser automation instead.                                                                                                                                                                                                                                                               |

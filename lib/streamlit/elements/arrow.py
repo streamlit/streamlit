@@ -1090,7 +1090,7 @@ class ArrowMixin:
         ...             "Total": np.random.randint(1000, 5000, size=3),
         ...         }
         ...     )
-        >>>     df.set_index("Date", inplace=True)
+        >>>     df = df.set_index("Date")
         >>>     return df
         >>>
         >>> df = load_data()

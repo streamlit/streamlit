@@ -166,7 +166,6 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, live search, interactive charts that don't affect global state.
 
-
 ### Keyed reruns — target a fragment from a callback
 
 Use this when a widget *outside* a fragment should trigger only that fragment's rerun — not a full-app rerun. Give the fragment a stable name with `@st.fragment(key=...)` and call `st.rerun("<key>")` from the widget's callback.
@@ -329,10 +328,10 @@ Prefer caching, fragments, and forms first, and only use this where the user doe
 Use client-side validation and limits whenever the widget already supports them. They catch bad input in the browser, which avoids a rerun and gives the user immediate feedback.
 
 - `st.text_input`: `validate`, `required`, `max_chars`, and `type` (`type="email"` and `type="url"` check the format by default).
-- `st.text_area`: `required` and `max_chars`. `st.chat_input`: `max_chars`.
+- `st.text_area`: `required` and `max_chars`. `st.selectbox`: `required`. `st.chat_input`: `max_chars`.
 - `st.number_input`: `min_value`, `max_value`, `step`, and `required`.
 - `st.date_input`: `min_value`, `max_value`, and `required`. `st.time_input`: `required`. `st.datetime_input`: `min_value`, `max_value`, `step`, and `required`.
-- `required=True` does not change the default: `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
+- `required=True` does not change the default: `st.selectbox` still starts on its first option, `st.date_input` still starts at today, and `st.time_input` and `st.datetime_input` still start at the current time. For an empty required field, pass `value=None` (`index=None` for `st.selectbox`) together with `required=True`. For an empty required date range, pass `value=[]` together with `required=True`.
 - `st.data_editor`: the same kinds of limits via `st.column_config`.
 - `st.file_uploader`: `type` rejects a disallowed file before upload.
 
@@ -345,9 +344,7 @@ These checks are a UX guardrail, not a security boundary. See [Widget input cons
 
 ## Conditional rendering
 
-**This is critical and often missed.**
-
-By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
+**This is critical and often missed.** By default, the app script enters every tab, expander, and popover body on each rerun, even when hidden, collapsed, or closed. When a body contains expensive work, use `on_change="rerun"` with an `.open` guard, as shown below.
 
 ### Tabs with expensive content
 
@@ -421,6 +418,10 @@ Move expensive work outside the main flow:
 - Compute aggregations in SQL/dbt, not Python
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
+
+## Charts with large data
+
+Charts process every row in the browser, which outweighs the Python side from about 10,000 points. Aggregate first and pick the chart command by size; see [charts.md](charts.md#large-datasets).
 
 ## Render stable UI before slow work
 
