@@ -1318,9 +1318,10 @@ than ranked, and say where one builds on another.
    most such requests want one. The read matters most for model clients: their context
    management drops or moves older tool results, and without it the only way back to
    the current state is a rerun, which can repeat side effects. Exposed through MCP
-   too, it lets `get_data` serve that result's files again. v1 already makes the common
-   timeout case safe — a retry after `wait_timed_out` collects the run instead of
-   repeating it — so what remains is general: optional `request_id` for retry
+   too, it gives a model that lost a result from its context that result's file URLs
+   again, for `get_data` to read while media storage keeps them. v1 already makes the
+   common timeout case safe — a retry after `wait_timed_out` collects the run instead
+   of repeating it — so what remains is general: optional `request_id` for retry
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
@@ -1336,15 +1337,19 @@ than ranked, and say where one builds on another.
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. A
-   second, read-only `get_data` tool serves the files a result references, tables as
-   pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
-   call takes the same path as an `interact` request, so its HTTP request's headers
-   supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies. It speaks the
-   `initialize`-handshake revisions the common clients support, and adds `2026-07-28`,
-   whose stateless model `session_id` already follows, once they default to it. MCP is
-   how most AI applications connect to tools, so this belongs in the same release cycle
-   as v1 if possible, together with #9.
+   second, read-only `get_data` tool serves any media file the app still stores, such
+   as the files a result references, tables as pages of rows, because chat clients
+   cannot resolve or parse a `data.url`. Each tool call takes the same path as an
+   `interact` request, so its HTTP request's headers supply `st.user` and
+   `st.context.headers` in the same way. It is written by hand rather than on the MCP
+   SDK, which keeps it free of new dependencies. It speaks the `initialize`-handshake
+   revisions the common clients support, and adds `2026-07-28`, whose stateless model
+   `session_id` already follows, once they default to it. MCP is how most AI
+   applications connect to tools, so this belongs in the same release cycle as v1 if
+   possible. It does not wait for #9: local coding agents and most apps are unaffected
+   by the largest results. The
+   [MCP endpoint spec](../2026-10-15-agent-app-mcp-endpoint/product-spec.md) details
+   both tools.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1412,8 +1417,9 @@ Smaller potential follow-ups and alternatives considered:
   URL, instead of `unavailable: multiple_datasets`; dropping an unnamed pandas index
   under `hide_index`, so `__index_level_0__` is not a meaningless extra column;
   reporting a media element's URL as `data.url`, as a table's is; describing `st.pdf`
-  as media rather than as the custom component it renders through; letting `get_data`
-  read the files of the last few results rather than only the latest; an HTTP route for
+  as media rather than as the custom component it renders through; keeping the last
+  few results' files in media storage for `get_data` after a later run replaces them;
+  an HTTP route for
   `get_data`, for HTTP clients without an Arrow reader that need rows beyond the
   preview; keeping only summaries in the session's message buffer; and lazily loading
   unevaluated sources in `st.dataframe` instead of collecting their first 10,000 rows

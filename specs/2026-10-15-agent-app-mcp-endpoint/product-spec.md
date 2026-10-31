@@ -803,9 +803,9 @@ rather than ranked, and name the parent spec's follow-up where one builds on it.
    file comes back at the size the snapshot avoided.
 6. **More from `get_data`:** CSV output, choosing columns, and `structuredContent` with
    an `outputSchema` (see [Other decisions](#other-decisions)). Queries over a table on
-   the server and an HTTP route for `get_data` are already among the parent spec's
-   smaller follow-ups. Its item on reading the last few results' files is covered while
-   media storage keeps them.
+   the server, keeping the last few results' files after a later run replaces them,
+   and an HTTP route for `get_data` are already among the parent spec's smaller
+   follow-ups.
 7. **The `2026-07-28` revision**, once ChatGPT or the Claude apps default to it.
 8. **A machine-readable MCP server descriptor**, such as a `.well-known` document, once
    MCP settles on one.
