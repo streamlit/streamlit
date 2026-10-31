@@ -464,8 +464,12 @@ describe("PlotlyChart utils", () => {
       ["undefined event", undefined],
       ["event with empty points array", { points: [] }],
       [
-        "non-hierarchical chart click (no id/parent)",
-        { points: [{ x: 100, y: 200, pointIndex: 1 }] },
+        "scatter click that already uses plotly_selected",
+        {
+          points: [
+            { x: 100, y: 200, pointIndex: 1, data: { type: "scatter" } },
+          ],
+        },
       ],
     ])("should return early for %s", (_desc, event) => {
       const widgetMgr = getWidgetMgr()
@@ -528,6 +532,106 @@ describe("PlotlyChart utils", () => {
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
         proto.id,
         expect.stringContaining('"point_indices":[]'),
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process heatmap clicks with a 2d point_number", () => {
+      const event = {
+        points: [
+          {
+            x: 10,
+            y: 4,
+            z: -0.40317694697317963,
+            pointNumber: [4, 10],
+            curveNumber: 0,
+            data: { type: "heatmap" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"x":10,"y":4,"z":-0.40317694697317963,"point_number":[4,10],"curve_number":0}],"point_indices":[],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process image clicks including color and colormodel", () => {
+      const event = {
+        points: [
+          {
+            x: 80,
+            y: 50,
+            color: [180, 18, 101],
+            colormodel: "rgb",
+            pointNumber: [50, 80],
+            curveNumber: 0,
+            data: { type: "image" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"x":80,"y":50,"color":[180,18,101],"colormodel":"rgb","point_number":[50,80],"curve_number":0}],"point_indices":[],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process Sankey node clicks", () => {
+      const event = {
+        points: [
+          {
+            label: "A1",
+            value: 10,
+            pointNumber: 0,
+            curveNumber: 0,
+            data: { type: "sankey" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"label":"A1","value":10,"point_number":0,"curve_number":0}],"point_indices":[0],"box":[],"lasso":[]}}',
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
+      )
+    })
+
+    it("should process Sankey link clicks with source and target", () => {
+      const event = {
+        points: [
+          {
+            value: 8,
+            pointNumber: 0,
+            curveNumber: 0,
+            source: { label: "A1", pointNumber: 0 },
+            target: { label: "B1", pointNumber: 2 },
+            data: { type: "sankey" },
+          },
+        ],
+      } as unknown as Plotly.PlotMouseEvent
+      const widgetMgr = getWidgetMgr()
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleClickEvent(event, widgetMgr, proto, mockFragmentId)
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        '{"selection":{"points":[{"value":8,"point_number":0,"curve_number":0,"source":{"label":"A1","point_number":0},"target":{"label":"B1","point_number":2}}],"point_indices":[0],"box":[],"lasso":[]}}',
         { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
       )
     })
