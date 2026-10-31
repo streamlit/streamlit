@@ -77,7 +77,7 @@ function getLegendGroup(data: unknown): string | undefined {
     return undefined
   }
   const { legendgroup } = data as { legendgroup?: string }
-  // An empty legend group is omitted.
+  // Omit an empty legend group.
   return isNullOrEmptyString(legendgroup) ? undefined : legendgroup
 }
 

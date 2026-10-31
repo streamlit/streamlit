@@ -29,7 +29,7 @@ import LinkButton, { type Props } from "./LinkButton"
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
   formatShortcutForDisplay: vi.fn((shortcut: string | null | undefined) =>
-    // An empty shortcut is omitted.
+    // The mock omits an empty shortcut.
     shortcut === null || shortcut === undefined || shortcut === ""
       ? undefined
       : shortcut.replaceAll("+", " + ")

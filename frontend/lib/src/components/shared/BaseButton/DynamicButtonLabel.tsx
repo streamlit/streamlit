@@ -76,11 +76,13 @@ export const DynamicButtonLabel = ({
     label
   )
 
+  const hasIcon = !isNullOrEmptyString(icon)
+
   // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
   // name. Use hidden text rather than aria-label here: this component does not own
   // the button, and content-based naming lets a parent aria-label take precedence.
   const iconOnlyAccessibleName =
-    !isNullOrEmptyString(icon) && isNullOrEmptyString(label?.trim())
+    hasIcon && isNullOrEmptyString(label?.trim())
       ? getIconAccessibleName(icon)
       : undefined
 
@@ -93,7 +95,7 @@ export const DynamicButtonLabel = ({
         {!isNullOrEmptyString(iconOnlyAccessibleName) && (
           <StyledVisuallyHidden>{iconOnlyAccessibleName}</StyledVisuallyHidden>
         )}
-        {!isNullOrEmptyString(icon) && iconPosition === "left" && (
+        {hasIcon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {!isNullOrEmptyString(label) && (
@@ -111,7 +113,7 @@ export const DynamicButtonLabel = ({
             />
           </span>
         )}
-        {!isNullOrEmptyString(icon) && iconPosition === "right" && (
+        {hasIcon && iconPosition === "right" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {!isNullOrEmptyString(displayShortcut) && (
