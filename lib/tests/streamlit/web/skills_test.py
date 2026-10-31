@@ -2925,10 +2925,11 @@ class TestInstallOutputCannotFailInstall:
 
     def test_unencodable_glyph_is_replaced_and_encodable_text_is_kept(self) -> None:
         """A glyph the stream cannot encode is replaced; text it can encode is kept."""
+        # € is in cp1252 but not in Latin-1, the "charmap" codec the error reports.
         with _cp1252_stdout() as stdout:
-            skills._safe_echo("✓ C:\\Users\\José", fg="green")
+            skills._safe_echo("✓ C:\\Users\\José\\€ budget", fg="green")
 
-        assert stdout.getvalue().decode("cp1252") == "? C:\\Users\\José\n"
+        assert stdout.getvalue().decode("cp1252") == "? C:\\Users\\José\\€ budget\n"
 
     def test_project_install_completes_on_a_cp1252_stdout(
         self, tmp_path: Path, mock_source_skills_dir: Path
