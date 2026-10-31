@@ -542,9 +542,9 @@ def test_None_session_state_value_retained():
 
 
 def test_text_area_required_is_exposed_in_app_test() -> None:
-    """Test that AppTest exposes required and still allows an empty value.
+    """AppTest exposes required, and an empty value is refused once filled.
 
-    The required check runs in the browser, so AppTest can still set "".
+    AppTest sends values through the same check a browser value passes.
     """
 
     def script():
@@ -562,4 +562,6 @@ def test_text_area_required_is_exposed_in_app_test() -> None:
     assert text_area.value == "Foo"
 
     at = text_area.set_value("").run()
-    assert at.text_area[0].value == ""
+    assert at.text_area[0].value == "Foo"
+    at = at.text_area[0].set_value(" \n ").run()
+    assert at.text_area[0].value == "Foo"

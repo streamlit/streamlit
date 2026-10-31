@@ -74,25 +74,39 @@ Notes:
 - `bind="query-params"` requires `key=`. The only valid value is the exact string `"query-params"` (hyphen, not `"query_params"`); anything else is invalid. Not supported with `st.text_input(type="password")`.
 - Browser back/forward restores the bound value from the URL (or the widget default if the param is missing). That restore does not fire `on_change`. A missing param on history navigation also overrides a value assigned in `st.session_state` before the widget call; initial load leaves that assignment in place.
 - When the value equals the default, the param is dropped from the URL to keep it clean.
+- A `disabled=True` widget ignores its param: it keeps its default or previous value, and the param is removed or rewritten to that value. To preset a locked widget from a link, read `st.query_params` yourself and pass the value in.
 - A bound param can't be set or deleted through `st.query_params` — change it programmatically by assigning to `st.session_state[key]` *before* the widget renders, or from an `on_change` callback. Assigning after the widget has already rendered on the same run raises `StreamlitWidgetAlreadyInstantiatedError` (see [Modifying state after widget creation](#modifying-state-after-widget-creation)). Do not mix `bind=` with manual `st.query_params` reads/writes.
 - Still render the value (e.g. `st.write(f"Sorting by: {sort}")`) if the app needs to show the current selection.
 - Works on input widgets generally. It's **not** supported on trigger/button widgets (`st.button`, `st.download_button`, `st.form_submit_button`, `st.menu_button`), file and media inputs (`st.file_uploader`, `st.camera_input`, `st.audio_input`), `st.chat_input`, or `st.data_editor`, nor on selections from `st.dataframe`/charts — assume any other input widget supports it. (Listing the exceptions rather than every supported widget keeps this from going stale as new widgets ship.)
 - Multi-page apps: query params belong to the app URL, not an individual page, so a bound value persists in the URL across `st.navigation` page switches and is shared app-wide. If two pages bind widgets to the same `key=`, they share that value — use distinct keys per page when you don't want it to carry over.
 - To keep a value across reruns or page switches *without* exposing it in the URL, use `persist_state` instead (see [Persisting widget values](#persisting-widget-values-persist_state)); when both are set, `bind` takes precedence.
 
-## Widget input constraints are mostly client-side
+## Widget input constraints
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.selectbox`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+The server checks every value a client sends against the widget as the app rendered it, and drops a value that breaks a constraint before any callback runs, so the widget keeps its previous value. A bound URL parameter that breaks one is repaired where it can be (a reversed range is sorted, text past `max_chars` is cut) and cleared otherwise. This holds for a modified client too, so app code doesn't need to re-check these:
 
-For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
+- `options` (`st.selectbox`, `st.radio`, `st.multiselect`, `st.pills`, `st.select_slider`, …), unless `accept_new_options=True` lets the user type any non-empty text, and `max_selections`
+- `min_value`/`max_value`, `max_chars`, and the shape of a date, time, color, or range
+- `required`: a client can't empty a required widget
+- `disabled`: a disabled widget accepts nothing
+- Rendering: a widget the latest run didn't render, such as a button behind `if is_admin:`, after `st.stop()`, or in a closed dialog, accepts no click or change
+
+Still not enforced on the server, so check these yourself when they matter:
+
+- `validate` on `st.text_input`, including the email or URL check `type` implies. It runs only in the browser.
+- `step`: any value within the bounds is accepted.
+- `st.data_editor` edits and column constraints, and dataframe or chart selections.
+- Custom component values: a component declares no constraints, so any value it can send is accepted.
+- Uploads to `st.file_uploader`, `st.camera_input`, `st.audio_input`, and `st.chat_input`: a file's contents, the MIME type the client reports, and a widget's own `max_upload_size`. The server checks only the file name's extension against `type`, and the size against `server.maxUploadSize`.
+- An untouched required widget: it returns its empty default (`None`, `""`, or `[]`) until the user fills it. Only the browser blocks a form submit while a required field is empty, and a required `st.pills` or `st.segmented_control` without a default can return to empty inside a form.
+- Authorization, file contents, and business rules, such as whether *this* user may pick an option:
 
 ```python
-ALLOWED_ROLES = ["viewer", "editor"]
-role = st.selectbox("Role", ALLOWED_ROLES, key="role")
+role = st.selectbox("Role", ["viewer", "editor"], key="role")
 
-# Don't rely on the widget's options as a security check.
-if role not in ALLOWED_ROLES:
-    st.error("Invalid role.")
+# The options are enforced. Whether this user may grant "editor" is not.
+if role == "editor" and not user_is_admin():
+    st.error("Only admins can grant editor access.")
     st.stop()
 grant_access(role)
 ```

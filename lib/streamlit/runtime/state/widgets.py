@@ -36,6 +36,7 @@ from streamlit.runtime.state.common import (
     WidgetKwargs,
     WidgetMetadata,
     WidgetSerializer,
+    WidgetValidator,
     WidgetValuePresenter,
     user_key_from_element_id,
 )
@@ -65,6 +66,8 @@ def register_widget(
     max_array_length: int | None = None,
     allow_url_duplicates: bool = False,
     disabled: bool = False,
+    validator: WidgetValidator | None = None,
+    accepted_value_fields: frozenset[ValueFieldName] | None = None,
 ) -> RegisterWidgetResult[T]:
     """Register a widget with Streamlit, and return its current value.
     NOTE: This function should be called after the proto has been filled.
@@ -89,13 +92,9 @@ def register_widget(
     kwargs : WidgetKwargs or None
         Keyword arguments to pass to the `on_change_handler` or `callbacks`.
     value_type: ValueFieldName
-        The value_type the widget is going to use.
-        We use this information to start with a best-effort guess for the value_type
-        of each widget. Once we actually receive a proto for a widget from the
-        frontend, the guess is updated to be the correct type. Unfortunately, we're
-        not able to always rely on the proto as the type may be needed earlier.
-        Thankfully, in these cases (when value_type == "trigger_value"), the static
-        table here being slightly inaccurate should never pose a problem.
+        The ``WidgetState`` field that holds the widget's value. The serializer's
+        result is written to it, and a client value arriving in any other field
+        is refused, apart from the fields in ``accepted_value_fields``.
     presenter : WidgetValuePresenter or None
         An optional hook that allows a widget to customize how its value should be
         presented.
@@ -126,10 +125,22 @@ def register_widget(
         **Required when bind='query-params'**, otherwise defaults to False.
     disabled : bool
         Whether the widget is disabled. A disabled widget cannot be interacted
-        with in the browser, so Streamlit enforces this server-side: any incoming
-        value from the frontend is discarded (the widget keeps its default/previous
-        value) and its on-change callback is not invoked. This guards against
-        forged widget values from a manipulated BackMsg. Defaults to False.
+        with in the browser, so Streamlit enforces this server-side, against the
+        run the client was shown: a client value sent while the widget was
+        disabled is dropped (the widget keeps its default or previous value) and
+        its callback is not invoked, and a bound widget ignores its URL
+        parameter. This guards against forged widget values from a manipulated
+        BackMsg. Defaults to False.
+    validator : WidgetValidator or None
+        What a client may send, usually the serde's ``validate`` method. It is
+        called with the unpacked wire value of a changed client value before
+        any callback runs, and a violation it returns drops the value. If None,
+        any value the deserializer reads is accepted.
+    accepted_value_fields : frozenset of ValueFieldName or None
+        The ``WidgetState`` fields a client may send the value in, for a widget
+        whose frontend uses more than one. If None, it is only ``value_type``.
+        A listed numeric field other than ``value_type`` is accepted within
+        ±2**53, where a double holds every integer exactly.
 
     Returns
     -------
@@ -214,6 +225,8 @@ def register_widget(
         max_array_length=max_array_length,
         allow_url_duplicates=allow_url_duplicates,
         disabled=disabled,
+        validator=validator,
+        accepted_value_fields=accepted_value_fields,
     )
     return register_widget_from_metadata(metadata, ctx)
 

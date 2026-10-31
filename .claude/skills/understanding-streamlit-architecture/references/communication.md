@@ -196,10 +196,11 @@ sequenceDiagram
     Conn->>WS: BackMsg with ClientState
     WS->>RT: handle_backmsg()
     RT->>Session: handle_backmsg()
-    Session->>State: update widget states
-    Session->>Runner: request_rerun()
+    Session->>Runner: request_rerun(widget_states)
     Runner->>Runner: raise RerunException
-    State->>State: run on_change callbacks
+    Runner->>State: on_script_will_rerun(widget_states)
+    State->>State: check values, drop refused ones
+    State->>State: run callbacks of accepted changes
     Runner->>Runner: Execute script
     Note over Runner: st.button() returns True
     Runner->>Runner: After run: reset trigger_value

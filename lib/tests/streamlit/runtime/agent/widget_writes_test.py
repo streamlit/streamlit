@@ -19,7 +19,8 @@ from __future__ import annotations
 import datetime as dt
 import math
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, get_args
+from unittest.mock import MagicMock
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -31,6 +32,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.session_state import WStates
+from streamlit.runtime.state.widget_checks import Violation, ViolationKind
 from tests.streamlit.runtime.agent.snapshot_test_case import (
     SnapshotCase,
     _one,
@@ -39,12 +41,14 @@ from tests.streamlit.runtime.agent.snapshot_test_case import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
     from streamlit.runtime.agent.snapshot import Snapshot
 
 _BERLIN: Final = ZoneInfo("Europe/Berlin")
+# "a" and "A" both show as "A" with `format_func=str.upper`.
+_SHARED_OPTIONS: Final = ["a", "A", "b"]
 
 
 class _Refused(NamedTuple):
@@ -75,7 +79,13 @@ def _render_option_widgets() -> None:
         accept_new_options=True,
         key="same_open",
     )
-    st.selectbox("Shared", ["a", "A"], format_func=str.upper, key="shared")
+    st.selectbox("Shared", ["x", "a", "A"], format_func=str.upper, key="shared")
+    st.selectbox(
+        "Shared default", ["a", "A"], format_func=str.upper, key="shared_default"
+    )
+    st.multiselect(
+        "Shared tags", ["x", "a", "A"], format_func=str.upper, key="shared_tags"
+    )
     st.selectbox("Rate", ["0.10", "0.25"], key="rate")
     st.selectbox("Count", [1, 12], key="count")
     st.multiselect("Repeated", ["a", "b"], default=["a", "a"], key="repeated")
@@ -85,6 +95,27 @@ def _render_option_widgets() -> None:
         format_func=lambda plan: plan.name,
         key="plan",
     )
+
+
+def _render_required_widgets() -> None:
+    """Required widgets, each empty or filled."""
+    st.text_input("Empty name", key="empty_name", required=True)
+    st.session_state.filled_name = "Ada"
+    st.text_input("Filled name", key="filled_name", required=True)
+    st.number_input("Empty age", value=None, key="empty_age", required=True)
+    st.session_state.filled_age = 30.0
+    st.number_input("Filled age", value=None, key="filled_age", required=True)
+    st.pills("Empty mood", ["calm", "busy"], key="empty_mood", required=True)
+    st.session_state.filled_mood = "calm"
+    st.pills("Filled mood", ["calm", "busy"], key="filled_mood", required=True)
+    st.date_input("Empty day", value=None, key="empty_day", required=True)
+    st.date_input("Trip", value=[], key="trip", required=True)
+    options = ["x", "y"]
+    st.selectbox("Empty pick", options, index=None, key="empty_pick", required=True)
+    st.session_state.filled_pick = "y"
+    st.selectbox("Filled pick", options, index=None, key="filled_pick", required=True)
+    st.session_state.first_pick = "y"
+    st.selectbox("First pick", options, key="first_pick", required=True)
 
 
 def _render_two_forms() -> None:
@@ -147,14 +178,27 @@ class WidgetWritesTest(SnapshotCase):
         *,
         trigger: Mapping[str, Any] | None = None,
     ) -> None:
-        """Send a one-widget request and compare what the app reads, or the refusal."""
+        """Send a one-widget request and compare what the app reads, or the refusal.
+
+        An unchanged value is left out of the request's states, so the app
+        reads what the widget holds.
+        """
         if isinstance(expected, _Refused):
             error = self._refusal(widget_state, trigger=trigger)
             assert error.code == expected.code, error.message
             assert expected.message in error.message
             return
-        (encoded,) = self._write(widget_state, trigger=trigger).widgets
+        widgets = self._write(widget_state, trigger=trigger).widgets
+        if not widgets and widget_state is not None:
+            (key,) = widget_state
+            assert self._held(key) == expected
+            return
+        (encoded,) = widgets
         assert self._read_back(encoded) == expected
+
+    def _held(self, key: str) -> Any:
+        """The value the widget with ``key`` holds."""
+        return self._session_state().get_widget_value(self._element_id(key))
 
     def _element_id(self, key: str) -> str:
         element_id = self._session_state().get_widget_id_from_key(key)
@@ -168,8 +212,12 @@ class WidgetWritesTest(SnapshotCase):
         assert metadata is not None
         state._set_widget_metadata(replace(metadata, **changes))
 
-    def test_every_reported_value_is_accepted_and_reads_back_unchanged(self) -> None:
-        """Each reported value, sent alone or all at once, is what the widget holds."""
+    def test_every_reported_value_is_accepted_and_changes_nothing(self) -> None:
+        """Each reported value, sent alone or all at once, is what the widget holds.
+
+        It equals the stored value on the wire, so it is left out of the
+        states: the runtime has nothing to resolve, not even a shared label.
+        """
         render_value_widgets()
         snapshot = self._build()
         nodes = {
@@ -186,16 +234,42 @@ class WidgetWritesTest(SnapshotCase):
             reported
         )
 
-        session_state = self._session_state()
         for key, value in reported.items():
-            (encoded,) = self._write({key: value}, snapshot=snapshot).widgets
-            stored = session_state.get_widget_value(encoded.id)
-            assert self._read_back(encoded) == stored, key
+            assert not self._write({key: value}, snapshot=snapshot).widgets, key
 
-        batch = self._write(reported, snapshot=snapshot)
-        assert [encoded.id for encoded in batch.widgets] == [
-            self._element_id(key) for key in reported
+        assert not self._write(reported, snapshot=snapshot).widgets
+
+    @parameterized.expand(
+        [
+            ("selectbox", lambda held: {"index": _SHARED_OPTIONS.index(held)}, False),
+            ("radio", lambda held: {"index": _SHARED_OPTIONS.index(held)}, False),
+            ("pills", lambda held: {"default": held}, False),
+            ("select_slider", lambda held: {"value": held}, False),
+            ("multiselect", lambda held: {"default": [held]}, True),
         ]
+    )
+    def test_a_shared_label_names_only_the_held_option(
+        self, command: str, holding: Callable[[str], dict[str, Any]], as_list: bool
+    ) -> None:
+        """Sending back the label of the held option changes nothing.
+
+        "a" and "A" both show as "A". Sent, the label would resolve to the last
+        option that shows it, so the echo is left out rather than flipping the
+        widget to "A". Sent to a widget holding another option, the label does
+        not say which option it means, so it is refused.
+        """
+        widget = getattr(st, command)
+        for key, held in (("held", "a"), ("other", "b")):
+            widget(
+                key, _SHARED_OPTIONS, format_func=str.upper, key=key, **holding(held)
+            )
+        label: Any = ["A"] if as_list else "A"
+
+        assert not self._write({"held": label}).widgets
+        assert self._held("held") == (["a"] if as_list else "a")
+        error = self._refusal({"other": label})
+        assert error.code == "invalid_value"
+        assert "Several options for 'other' display as 'A'" in error.message
 
     def test_keys_resolve_like_session_state(self) -> None:
         """An authored key maps to its widget; IDs and non-widget keys stay as sent."""
@@ -408,7 +482,12 @@ class WidgetWritesTest(SnapshotCase):
             ("null_inside_a_list", "many", ["a", None], _Refused("null inside")),
             ("one_item_list_for_one_value", "select", ["b"], "b"),
             ("longer_list_for_one_value", "select", ["a", "b"], _Refused("one value")),
-            ("fraction_to_a_whole_number_truncates", "whole", 2.5, 2),
+            (
+                "fraction_to_a_whole_number_is_refused",
+                "whole",
+                2.5,
+                _Refused("'whole' takes a whole number."),
+            ),
             ("number_to_a_datetime_input", "when", 5, _Refused("must be a string")),
             (
                 "number_in_a_date_range",
@@ -445,7 +524,12 @@ class WidgetWritesTest(SnapshotCase):
                 7,
                 _Refused("7 is not one of the options for 'stars': 0, 1, 2, 3, 4."),
             ),
-            ("over_max_selections", "limited", ["a", "b", "c"], _Refused("at most 2")),
+            (
+                "over_max_selections",
+                "limited",
+                ["a", "b", "c"],
+                _Refused("'limited' takes at most 2 items, as its `max_selections`"),
+            ),
             ("within_max_selections", "limited", ["a", "c"], ["a", "c"]),
             (
                 "over_a_range",
@@ -462,10 +546,28 @@ class WidgetWritesTest(SnapshotCase):
                 1,
                 _Refused("must be a string"),
             ),
-            # Read as text, a shared label resolves the way the widget resolves
-            # it for a browser, which sends the same label.
-            ("accept_new_shared_label", "same_open", "Same", "y"),
-            ("shared_label", "shared", "A", _Refused("Several options")),
+            # The label of the held option, so it changes nothing, and the
+            # widget keeps the option it holds rather than the last with it.
+            ("accept_new_shared_label", "same_open", "Same", "x"),
+            (
+                "shared_label",
+                "shared",
+                "A",
+                _Refused("Several options for 'shared' display as 'A'"),
+            ),
+            ("unchanged_shared_label", "shared_default", "A", "a"),
+            (
+                "shared_label_in_a_list",
+                "shared_tags",
+                ["X", "A"],
+                _Refused("Several options for 'shared_tags' display as 'A'"),
+            ),
+            (
+                "duplicate_selection",
+                "many",
+                ["a", "b", "a"],
+                _Refused("'many' lists 'a' more than once"),
+            ),
             ("number_naming_an_option", "numbered", 2, "2"),
             ("tab_label", "tabs", "B", "B"),
             ("not_a_tab", "tabs", "C", _Refused("not one of the options")),
@@ -485,6 +587,208 @@ class WidgetWritesTest(SnapshotCase):
         _render_option_widgets()
         self._check({key: sent}, expected)
 
+    @parameterized.expand(
+        [
+            (
+                "number_above_max",
+                "bounded",
+                11,
+                _Refused("'bounded' takes values from 0 to 10, inclusive."),
+            ),
+            ("number_at_max", "bounded", 10, 10),
+            # Only the bound the author set is named, not the browser's
+            # safe-integer limit that stands in for the other.
+            (
+                "number_below_its_only_bound",
+                "at_least_zero",
+                -1,
+                _Refused("'at_least_zero' takes values of at least 0, inclusive."),
+            ),
+            (
+                "float_below_min",
+                "ratio",
+                -0.5,
+                _Refused("'ratio' takes values from 0.0 to 1.0, inclusive."),
+            ),
+            (
+                "slider_above_max",
+                "amount",
+                101,
+                _Refused("'amount' takes values from 0 to 100, inclusive."),
+            ),
+            (
+                "reversed_slider_range",
+                "range",
+                [80, 20],
+                _Refused("'range' takes the lower end of its range first."),
+            ),
+            ("one_end_of_a_slider_range", "range", [20], _Refused("takes 2 items.")),
+            (
+                "fraction_to_an_integer_slider",
+                "amount",
+                2.5,
+                _Refused("'amount' takes a whole number."),
+            ),
+            (
+                "reversed_select_slider_range",
+                "span",
+                ["c", "a"],
+                _Refused("'span' takes the lower end of its range first."),
+            ),
+            (
+                "date_past_its_default_bounds",
+                "day",
+                "2040-01-01",
+                _Refused("'day' takes values from 2016-01-02 to 2036-01-02"),
+            ),
+            (
+                "date_in_the_legacy_layout",
+                "day",
+                "2026/01/05",
+                _Refused("'day' takes a date as YYYY-MM-DD."),
+            ),
+            # Text the widget cannot read as a date gets the generic message.
+            ("impossible_date", "day", "2026-13-45", _Refused("not one it accepts")),
+            (
+                "reversed_date_range",
+                "days",
+                ["2026-01-09", "2026-01-05"],
+                _Refused("'days' takes the lower end of its range first."),
+            ),
+            (
+                "malformed_color",
+                "color",
+                "red",
+                _Refused("'color' takes a hex color as #rgb or #rrggbb."),
+            ),
+            # Only a missing field reads as the default.
+            (
+                "empty_color",
+                "color",
+                "",
+                _Refused("'color' takes a hex color as #rgb or #rrggbb."),
+            ),
+            (
+                "page_past_the_last",
+                "page",
+                11,
+                _Refused("'page' takes values from 1 to 10, inclusive."),
+            ),
+            (
+                "text_past_max_chars",
+                "short",
+                "abcd",
+                _Refused("'short' takes at most 3 characters"),
+            ),
+            # An emoji is two UTF-16 code units, as the browser counts it.
+            ("emoji_past_max_chars", "short", "ab😀", _Refused("at most 3 characters")),
+            ("emoji_at_max_chars", "short", "a😀", "a😀"),
+            # A browser may commit 0.12 for this bound, which the slider reads
+            # as 0.123. A request is held to the bound as written instead.
+            (
+                "slider_below_a_rounded_bound",
+                "rounded",
+                0.12,
+                _Refused("'rounded' takes values from 0.123 to 1.0, inclusive."),
+            ),
+            ("slider_at_a_rounded_bound", "rounded", 0.123, 0.123),
+            # Bounds are written in the layout the widget takes, to the minute.
+            (
+                "datetime_before_min",
+                "window",
+                "2025-12-31T23:00",
+                _Refused(
+                    "'window' takes values from 2026-01-01T00:00 to "
+                    "2026-12-31T18:30, inclusive."
+                ),
+            ),
+        ]
+    )
+    def test_bounds_shapes_and_lengths(
+        self, _name: str, key: str, sent: Any, expected: Any
+    ) -> None:
+        """A value the widget would reset, sort, or cut is refused, naming the bound.
+
+        These are the refusals the OpenAPI document's `widget_state`
+        description lists for bounds, ranges, layouts, and `max_chars`.
+        """
+        render_value_widgets()
+        st.number_input("Bounded", 0, 10, 5, key="bounded")
+        st.number_input("At least zero", min_value=0, key="at_least_zero")
+        st.number_input("Ratio", 0.0, 1.0, 0.5, key="ratio")
+        st.text_input("Short", max_chars=3, key="short")
+        st.slider("Rounded", 0.123, 1.0, 0.5, step=0.1, key="rounded")
+        st.datetime_input(
+            "Window",
+            dt.datetime(2026, 6, 1, 9, 30),
+            min_value=dt.datetime(2026, 1, 1),
+            max_value=dt.datetime(2026, 12, 31, 18, 30),
+            key="window",
+        )
+        self._check({key: sent}, expected)
+
+    @parameterized.expand(
+        [
+            # `null` to a widget that is already empty changes nothing.
+            ("null_to_an_empty_text_input", "empty_name", None, ""),
+            ("null_to_an_empty_number", "empty_age", None, None),
+            ("null_to_empty_pills", "empty_mood", None, None),
+            ("null_to_an_empty_date", "empty_day", None, None),
+            ("null_to_an_empty_selectbox", "empty_pick", None, None),
+            ("text_to_an_empty_input", "empty_name", "Bob", "Bob"),
+            (
+                "empty_text",
+                "filled_name",
+                "",
+                _Refused("'filled_name' is required and cannot be emptied."),
+            ),
+            ("whitespace", "filled_name", " \t", _Refused("cannot be emptied")),
+            # `null` resets to the default, which is empty.
+            ("null_to_a_filled_text_input", "filled_name", None, _Refused("required")),
+            ("null_to_a_filled_number", "filled_age", None, _Refused("required")),
+            ("null_to_filled_pills", "filled_mood", None, _Refused("required")),
+            ("null_to_a_filled_selectbox", "filled_pick", None, _Refused("required")),
+            # A default option is not empty, so `null` resets to it.
+            ("null_to_a_selectbox_with_a_default", "first_pick", None, "x"),
+            (
+                "start_of_a_range",
+                "trip",
+                ["2026-01-05"],
+                _Refused("A date range without both ends is empty."),
+            ),
+        ]
+    )
+    def test_required(self, _name: str, key: str, sent: Any, expected: Any) -> None:
+        """A required widget can stay empty, but no request can empty it."""
+        _render_required_widgets()
+        self._check({key: sent}, expected)
+
+    @parameterized.expand(
+        [
+            ("empty_text", "filled_name", "", ""),
+            ("whitespace", "filled_name", " \t", " Text of only whitespace is empty."),
+            ("null_to_a_number", "filled_age", None, ""),
+            ("null_to_pills", "filled_mood", None, ""),
+            ("null_to_a_selectbox", "filled_pick", None, ""),
+            (
+                "start_of_a_range",
+                "trip",
+                ["2026-01-05"],
+                " A date range without both ends is empty.",
+            ),
+        ]
+    )
+    def test_a_required_refusal_explains_only_what_is_not_plainly_empty(
+        self, _name: str, key: str, sent: Any, why: str
+    ) -> None:
+        """Whitespace and a partial range get a reason; other empty values need none."""
+        _render_required_widgets()
+
+        error = self._refusal({key: sent})
+
+        assert error.code == "invalid_value"
+        assert error.message == f"{key!r} is required and cannot be emptied.{why}"
+
     def test_a_value_the_widget_cannot_read_is_refused(self) -> None:
         """A value the deserializer raises on would raise in every later run."""
         st.text_input("Code", key="code")
@@ -497,6 +801,77 @@ class WidgetWritesTest(SnapshotCase):
         error = self._refusal({"code": "abc"})
         assert error.code == "invalid_value"
         assert "not one it accepts" in error.message
+
+    def test_a_trigger_the_widget_cannot_read_is_refused(self) -> None:
+        """A fired trigger passes the same checks as a value."""
+        st.button("Go", key="go")
+
+        def _unreadable(_value: Any) -> bool:
+            raise ValueError("cannot read")
+
+        self._patch_metadata("go", deserializer=_unreadable)
+
+        error = self._refusal(trigger={"key": "go"})
+        assert error.code == "invalid_value"
+        assert "not one it accepts" in error.message
+
+    def test_the_widget_validator_sees_only_changed_wire_values(self) -> None:
+        """A write equal to the stored value on the wire never reaches the validator."""
+        st.text_input("Name", value="Ada", key="name")
+        validator = MagicMock(return_value=None)
+        self._patch_metadata("name", validator=validator)
+
+        assert not self._write({"name": "Ada"}).widgets
+        validator.assert_not_called()
+        (changed,) = self._write({"name": "Bob"}).widgets
+
+        validator.assert_called_once()
+        assert changed.string_value == "Bob"
+
+    def test_a_value_the_widget_validator_refuses_is_refused(self) -> None:
+        """A violation from the widget's own validator refuses the request."""
+        st.text_input("Name", key="name")
+        self._patch_metadata(
+            "name", validator=lambda _ui, **_kwargs: Violation("wrong_type")
+        )
+
+        error = self._refusal({"name": "Bob"})
+        assert error.code == "invalid_value"
+        assert "not one it accepts" in error.message
+        assert "Bob" not in error.message
+
+    def test_every_violation_kind_maps_to_an_agent_error(self) -> None:
+        """Each kind the shared check reports has an agent error, so none escapes."""
+        assert set(widget_writes._VIOLATION_ERRORS) == set(get_args(ViolationKind))
+
+    def test_a_widget_registered_as_disabled_is_refused(self) -> None:
+        """The shared check refuses a disabled widget the snapshot missed."""
+        st.checkbox("Agree", key="agree")
+        snapshot = self._build()
+        self._patch_metadata("agree", disabled=True)
+
+        error = self._refusal({"agree": True}, snapshot=snapshot)
+        assert error.code == "disabled_widget"
+
+    def test_a_widget_the_latest_run_did_not_render_is_not_on_the_page(self) -> None:
+        """The shared check refuses a widget the snapshot shows but no run rendered.
+
+        The snapshot check answers first for an element it does not show, so
+        this only covers an element the session no longer counts as rendered.
+        """
+        st.checkbox("Agree", key="agree")
+        st.button("Go", key="go")
+        snapshot = self._build()
+        rendered_ids = self._session_state()._new_widget_state.rendered_ids
+        rendered_ids.discard(self._element_id("agree"))
+        rendered_ids.discard(self._element_id("go"))
+
+        for request in ({"widget_state": {"agree": True}}, {"trigger": {"key": "go"}}):
+            error = self._refusal(**request, snapshot=snapshot)
+            assert error.code == "not_on_page"
+            assert "the latest run did not render it" in error.message
+        # A value that reads as the stored one changes nothing, so it passes.
+        assert not self._write({"agree": False}, snapshot=snapshot).widgets
 
     @parameterized.expand(
         [
@@ -526,7 +901,14 @@ class WidgetWritesTest(SnapshotCase):
         st.session_state.emptied = None
         st.datetime_input("Emptied", dt.datetime(2026, 1, 1, 12, 0), key="emptied")
 
-        (encoded,) = self._write({key: sent}).widgets
+        widgets = self._write({key: sent}).widgets
+        if field is None:
+            # The unset form reads as the default, which the widget already
+            # holds, so nothing is sent.
+            assert not widgets
+            assert self._held(key) == expected
+            return
+        (encoded,) = widgets
         assert encoded.WhichOneof("value") == field
         assert self._read_back(encoded) == expected
 
@@ -683,8 +1065,17 @@ class WidgetWritesTest(SnapshotCase):
             ("decimal_label", "rate", "0.10", "0.10"),
             ("decimal_label_as_a_number", "rate", 0.1, _Refused("0.1 is not one")),
             ("largest_safe_integer", "whole", 2**53 - 1, 2**53 - 1),
-            # Past 2**53 it rounds to a double, and the widget's bounds reset it.
-            ("integer_past_int64_resets", "whole", 2**63, 3),
+            # Past 2**53 it rounds to a double, which is past what a browser
+            # holds exactly. The widget sets no bound, so none is named.
+            (
+                "integer_past_int64_is_refused",
+                "whole",
+                2**63,
+                _Refused(
+                    "'whole' takes a whole number up to 9007199254740991, the "
+                    "largest a browser holds exactly."
+                ),
+            ),
             (
                 "integer_past_int64_on_pagination",
                 "page",
@@ -716,33 +1107,6 @@ class WidgetWritesTest(SnapshotCase):
 
     @parameterized.expand(
         [
-            ("out_of_range_slider_value_resets", "amount", 500, 0),
-            ("fraction_to_an_integer_slider_truncates", "amount", 2.5, 2),
-            ("short_slider_range_resets", "range", [30], (20, 80)),
-            ("reversed_slider_range_is_kept", "range", [80, 20], (80, 20)),
-            ("malformed_date_resets", "day", "2026-13-45", dt.date(2026, 1, 2)),
-            ("malformed_color_resets", "color", "red", "#000000"),
-        ]
-    )
-    def test_values_the_widget_adjusts_are_applied_as_the_app_applies_them(
-        self, _name: str, key: str, sent: Any, expected: Any
-    ) -> None:
-        """A value of the right type that the widget's own rules adjust is
-        accepted, and the app reads what the widget makes of it, as the
-        OpenAPI document's `widget_state` description says.
-        """
-        render_value_widgets()
-        self._check({key: sent}, expected)
-
-    def test_an_out_of_range_number_input_value_resets(self) -> None:
-        """A number outside a bounded `st.number_input` is accepted and reset
-        to the widget's default, as the OpenAPI document says.
-        """
-        st.number_input("Bounded", min_value=0, max_value=10, value=5, key="bounded")
-        self._check({"bounded": 50}, 5)
-
-    @parameterized.expand(
-        [
             ("button", {"key": "go"}, True),
             (
                 "button_with_a_value",
@@ -753,8 +1117,12 @@ class WidgetWritesTest(SnapshotCase):
             ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
-            # The widget cuts text past `max_chars`, as a text input does.
-            ("chat_past_max_chars", {"key": "prompt", "value": "x" * 9}, "x" * 8),
+            (
+                "chat_past_max_chars",
+                {"key": "prompt", "value": "x" * 9},
+                _Refused("'prompt' takes at most 8 characters"),
+            ),
+            ("chat_at_max_chars", {"key": "prompt", "value": "x" * 8}, "x" * 8),
             ("menu_option", {"key": "menu", "value": "December"}, "December"),
             (
                 "menu_unknown_option",

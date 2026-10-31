@@ -27,6 +27,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
     ButtonGroupMixin,
+    _browser_label,
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
@@ -38,18 +39,27 @@ from streamlit.errors import (
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
 
 def _failing_format_func(_: object) -> str:
     """Always raise; used to exercise serde ``format_func`` error paths."""
     raise RuntimeError("format failed")
+
+
+def _wire(*labels: str) -> Sequence[str]:
+    """Labels as a validator receives them: a protobuf array, not a list."""
+    return WidgetState(
+        string_array_value={"data": list(labels)}
+    ).string_array_value.data
 
 
 class TestButtonGroupSerde:
@@ -144,12 +154,11 @@ class TestButtonGroupSerde:
         assert res is None
 
     def test_single_select_deserialize_unknown_value(self):
-        """Test single-select deserialization of an unrecognised value returns None.
+        """An unrecognised label passes through, also over a configured default.
 
-        When the options mapping doesn't contain the received wire value (e.g.
-        a stale formatted string left over from a previous format_func), the
-        deserializer must not pass that raw string to session_state or callbacks.
-        Without a configured default, the correct fallback is None.
+        Without a session-state fallback, the deserializer keeps the label, so
+        it never reads as the stored value, and validate refuses it before it
+        reaches session_state or callbacks.
         """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
@@ -160,10 +169,57 @@ class TestButtonGroupSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=0,
             format_func=lambda x: x.capitalize(),
         )
-        res = serde.deserialize(["Unknown"])
-        assert res is None
+        assert serde.deserialize(["Unknown"]) == "Unknown"
+        assert serde.validate(_wire("Unknown")) == Violation(
+            "not_an_option",
+            {"options": ("Apple", "Banana", "Cherry"), "positions": (0,)},
+        )
+
+    @pytest.mark.parametrize(
+        ("default_option_index", "in_form", "ui_value", "empty"),
+        [
+            # `[]` is a deselection, whatever the default.
+            (None, False, [], True),
+            (0, False, [], True),
+            # An unset value reads as the default.
+            (None, False, None, True),
+            (0, False, None, False),
+            (None, False, ["Banana"], False),
+            # A form that clears on submit restores an empty default.
+            (None, True, [], False),
+            (None, True, None, False),
+            # It restores a default with a selection, never `[]`.
+            (0, True, [], True),
+        ],
+    )
+    def test_single_select_validate_refuses_clearing_a_required_widget(
+        self,
+        default_option_index: int | None,
+        in_form: bool,
+        ui_value: list[str] | None,
+        empty: bool,
+    ) -> None:
+        """A required single selection cannot be cleared, except to its default in a form."""
+        formatted_options = ["Apple", "Banana"]
+
+        def _serde(*, required: bool) -> _SingleSelectButtonGroupSerde[str]:
+            return _SingleSelectButtonGroupSerde[str](
+                ["apple", "banana"],
+                formatted_options=formatted_options,
+                formatted_option_to_option_index={"Apple": 0, "Banana": 1},
+                default_option_index=default_option_index,
+                required=required,
+                in_form=in_form,
+            )
+
+        wire = None if ui_value is None else _wire(*ui_value)
+        assert _serde(required=True).validate(wire) == (
+            Violation("empty_required") if empty else None
+        )
+        assert _serde(required=False).validate(wire) is None
 
     def test_multi_select_serialize(self):
         """Test multi-select serialization returns list of formatted strings."""
@@ -231,12 +287,11 @@ class TestButtonGroupSerde:
         assert res == ["apple", "cherry"]
 
     def test_multi_select_deserialize_unknown_value(self):
-        """Test multi-select deserialization with unknown value silently drops it.
+        """Without a session-state fallback, an unknown label passes through.
 
-        Stale wire values that don't exist in the current options mapping (e.g.
-        formatted strings from a previous format_func) must be dropped rather
-        than passed through to session_state or callbacks. Known valid values in
-        the same list are still resolved correctly.
+        Known labels in the same list are still resolved, and validate refuses
+        the unknown one before it reaches session_state or callbacks. An
+        all-unknown list passes through too, never reading as the default.
         """
         options = ["apple", "banana", "cherry"]
         formatted_options = ["Apple", "Banana", "Cherry"]
@@ -247,10 +302,15 @@ class TestButtonGroupSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_indices=[1],
             format_func=lambda x: x.capitalize(),
         )
-        res = serde.deserialize(["Apple", "Unknown"])
-        assert res == ["apple"]
+        assert serde.deserialize(["Apple", "Unknown"]) == ["apple", "Unknown"]
+        assert serde.deserialize(["Unknown"]) == ["Unknown"]
+        assert serde.validate(_wire("Apple", "Unknown")) == Violation(
+            "not_an_option",
+            {"options": ("Apple", "Banana", "Cherry"), "positions": (1,)},
+        )
 
     def test_single_select_deserialize_stale_value_session_fallback_beats_default(self):
         """Session-state fallback takes priority over configured default for stale values.
@@ -258,7 +318,7 @@ class TestButtonGroupSerde:
         When the user has selected a non-default option (e.g. "B" while default="A")
         and format_func changes, the serde must return the user's live selection ("B"),
         not the configured default ("A"). Returning the default would cause
-        _widget_changed("B", "A") to fire the spurious on_change callback.
+        the boundary check ("B" against "A") to fire the spurious on_change callback.
         """
         options = ["A", "B"]
         formatted_options = ["manzana", "naranja"]
@@ -279,12 +339,13 @@ class TestButtonGroupSerde:
             "Expected session_state_fallback ('B') to take priority over default ('A')"
         )
 
-    def test_multi_select_deserialize_stale_values_are_dropped(self):
-        """Stale multi-select wire values are dropped; valid values are resolved.
+    def test_multi_select_deserialize_stale_values_are_kept_as_labels(self) -> None:
+        """Without a session-state fallback, stale labels pass through as labels.
 
         When format_func changes dynamically, the frontend may send a mix of
         stale formatted strings from the old mapping and strings that happen to
-        match the new mapping. Only the valid ones should survive.
+        match the new mapping. The valid ones resolve, and validate refuses the
+        stale ones.
         """
         options = ["A", "B", "C"]
         formatted_options = ["manzana", "naranja", "cereza"]
@@ -299,7 +360,7 @@ class TestButtonGroupSerde:
         )
         # "apple" is a stale EN string; "naranja" is valid in the ES mapping
         res = serde.deserialize(["apple", "naranja"])
-        assert res == ["B"]  # Only the valid ES option is returned
+        assert res == ["apple", "B"]
 
     def test_multi_select_deserialize_partial_stale_restores_full_fallback(self):
         """Partial-stale labels restore the full selection instead of truncating.
@@ -452,7 +513,8 @@ class TestButtonGroupSerde:
         When the user has ["A","B"] selected (default is only ["A"]) and format_func
         changes so all wire values go stale, the serde must return ["A","B"] (the live
         selection), not ["A"] (the configured default). Returning the default would
-        cause _widget_changed(["A","B"], ["A"]) to fire a spurious on_change callback.
+        cause the boundary check (["A","B"] against ["A"]) to fire a spurious
+        on_change callback.
         """
         options = ["A", "B", "C"]
         formatted_options = ["manzana", "naranja", "cereza"]
@@ -479,7 +541,7 @@ class TestButtonGroupSerde:
         """Single-select with a stale value, no default, but an active session-state value.
 
         When format_func changes and no default is configured, the serde falls back
-        to the session_state_fallback value so _widget_changed sees no difference
+        to the session_state_fallback value so the boundary check sees no difference
         and suppresses the spurious on_change callback.
         """
         options = ["A", "B"]
@@ -503,7 +565,8 @@ class TestButtonGroupSerde:
 
         When format_func changes, all selections go stale, and no default is
         configured, the serde falls back to the last known session-state value so
-        that _widget_changed sees no difference and suppresses the spurious callback.
+        that the boundary check sees no difference and suppresses the spurious
+        callback.
         """
         options = ["A", "B", "C"]
         formatted_options = ["manzana", "naranja", "cereza"]
@@ -1709,7 +1772,7 @@ class TestDynamicFormatFuncCallback:
         Regression test for gh-15493: when the user has selected a non-default
         option (e.g. "B" while default="A") and format_func changes dynamically,
         the deserialized value must remain "B" (via session_state_fallback) so
-        that _widget_changed("B", "B") suppresses the spurious callback.
+        that the boundary check ("B" against "B") suppresses the spurious callback.
         """
 
         def script():
@@ -1771,7 +1834,8 @@ class TestDynamicFormatFuncCallback:
 
         When the user has selected ["A","B"] (while default is only ["A"]) and
         format_func changes, session_state_fallback must return ["A","B"] so that
-        _widget_changed(["A","B"], ["A","B"]) suppresses the spurious callback.
+        the boundary check (["A","B"] against ["A","B"]) suppresses the spurious
+        callback.
         """
 
         def script():
@@ -2215,6 +2279,31 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.required is False
+
+
+@pytest.mark.parametrize(
+    ("label", "expected"),
+    [
+        ("Fire", "Fire"),
+        # Without an icon, the browser sends the label as it is.
+        (" Ice ", " Ice "),
+        ("Fire\u00a0", "Fire\u00a0"),
+        # With one, it sends `${icon} ${rest}`.trim().
+        ("🔥 Fire", "🔥 Fire"),
+        ("🔥 Fire ", "🔥 Fire"),
+        ("🔥 Fire\n", "🔥 Fire"),
+        ("🔥  Fire", "🔥  Fire"),
+        ("🔥", "🔥"),
+        ("🔥 ", "🔥"),
+        ("\t🔥 Fire", "🔥 Fire"),
+        (":material/home: Home\u3000", ":material/home: Home"),
+        # A label that is not an icon followed by a space keeps its icon inline.
+        ("🔥Fire ", "🔥Fire "),
+    ],
+)
+def test_browser_label_is_what_the_frontend_sends(label: str, expected: str) -> None:
+    """The label matches `getOptionBaseContent` in `ButtonGroup.tsx`."""
+    assert _browser_label(label) == expected
 
 
 def test_single_serde_serialize_empty_options_with_value() -> None:

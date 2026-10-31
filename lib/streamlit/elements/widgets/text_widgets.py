@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, cast, overload
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -56,25 +56,60 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
     from streamlit.type_util import SupportsStr
+
+
+def _validate_text(
+    ui_value: str | None,
+    *,
+    value: str | None,
+    max_chars: int | None,
+    required: bool,
+) -> Violation | None:
+    """Refuse text that empties a required widget, or is past ``max_chars``.
+
+    Text of only whitespace is empty, and ``max_chars`` counts UTF-16 code
+    units, both as the browser does. The author's ``value`` is accepted as
+    written, even past ``max_chars``: the browser shows it and sends it back,
+    for example when a form clears to it.
+    """
+    # An unset value reads as the default. Emptiness is checked before the
+    # author's value, because an empty default is still empty.
+    violation = widget_checks.filled(
+        value if ui_value is None else ui_value, required=required
+    )
+    if violation is not None or ui_value is None or ui_value == value:
+        return violation
+    return widget_checks.text_length(ui_value, max_chars)
 
 
 @dataclass
 class TextInputSerde:
     value: str | None
     max_chars: int | None = None
+    required: bool = False
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        return _validate_text(
+            ui_value,
+            value=self.value,
+            max_chars=self.max_chars,
+            required=self.required,
+        )
 
     def deserialize(self, ui_value: str | None) -> str | None:
-        result = ui_value if ui_value is not None else self.value
-        if result is not None and self.max_chars is not None:
-            result = result[: self.max_chars]
-        return result
+        # Never cuts text to max_chars: validate refuses longer text from a
+        # client, URL seeding truncates a link's text, and the author's value
+        # and session state values stay as written, as the browser shows them.
+        return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -84,12 +119,19 @@ class TextInputSerde:
 class TextAreaSerde:
     value: str | None
     max_chars: int | None = None
+    required: bool = False
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        return _validate_text(
+            ui_value,
+            value=self.value,
+            max_chars=self.max_chars,
+            required=self.required,
+        )
 
     def deserialize(self, ui_value: str | None) -> str | None:
-        result = ui_value if ui_value is not None else self.value
-        if result is not None and self.max_chars is not None:
-            result = result[: self.max_chars]
-        return result
+        # Never cuts text to max_chars, as TextInputSerde.deserialize explains.
+        return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
         return v
@@ -513,9 +555,12 @@ class TextWidgetsMixin:
             skip validation.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -906,7 +951,7 @@ class TextWidgetsMixin:
         if live_debounce_ms is not None:
             text_input_proto.live_debounce_ms = live_debounce_ms
 
-        serde = TextInputSerde(value, max_chars)
+        serde = TextInputSerde(value, max_chars, required=required)
 
         widget_state = register_widget(
             text_input_proto.id,
@@ -915,6 +960,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
@@ -948,11 +994,11 @@ class TextWidgetsMixin:
                 placeholder=placeholder,
                 icon=icon,
                 disabled=disabled,
-                # `required` and `validate` are checked by the browser, not by
-                # this interface, so a client has to send values that pass
-                # them. `validate` is the effective rule, including the one
-                # `type` implies. `live` is left out: it only times the
-                # browser's commits, and every value a client sets reruns.
+                # `validate` is checked by the browser, not by this
+                # interface, so a client has to send values that pass it.
+                # It is the effective rule, including the one `type`
+                # implies. `live` is left out: it only times the browser's
+                # commits, and every value a client sets reruns.
                 required=required,
                 validate=(
                     [validate_regex, validate_message]
@@ -1166,9 +1212,12 @@ class TextWidgetsMixin:
             its default value until the user provides input.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1362,7 +1411,7 @@ class TextWidgetsMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             text_area_proto.ignore_rerun = True
 
-        serde = TextAreaSerde(value, max_chars)
+        serde = TextAreaSerde(value, max_chars, required=required)
         widget_state = register_widget(
             text_area_proto.id,
             on_change_handler=on_change_callback,
@@ -1370,6 +1419,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
@@ -1410,8 +1460,6 @@ class TextWidgetsMixin:
                 help=text_area_proto.help or None,
                 placeholder=placeholder,
                 disabled=disabled,
-                # `required` is checked by the browser, not by this interface,
-                # so a client has to send values that pass it.
                 required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

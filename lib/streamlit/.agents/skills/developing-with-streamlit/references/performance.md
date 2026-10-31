@@ -341,7 +341,7 @@ email = st.text_input("Email", type="email", required=True)
 qty = st.number_input("Quantity", min_value=1, max_value=99, step=1)
 ```
 
-These checks are a UX guardrail, not a security boundary. See [Widget input constraints are mostly client-side](session-state.md#widget-input-constraints-are-mostly-client-side).
+The server also refuses values that break most of these limits, but not `validate`, the `type` format checks, `step`, or `st.data_editor` column limits. See [Widget input constraints](session-state.md#widget-input-constraints).
 
 ## Conditional rendering
 

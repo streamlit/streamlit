@@ -78,6 +78,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -85,6 +86,7 @@ from streamlit.string_util import is_emoji, validate_material_icon
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 # Audio file validation constants
@@ -389,14 +391,27 @@ class ChatInputSerde:
     # The browser stops input at this length, and 0 or None means no limit.
     max_chars: int | None = None
 
+    def validate(
+        self, ui_value: ChatInputValueProto | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse text past ``max_chars``, in UTF-16 code units as a browser counts."""
+        if ui_value is None or not ui_value.HasField("data"):
+            return None
+        return widget_checks.text_length(ui_value.data, self.max_chars)
+
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
-        text = ui_value.data[: self.max_chars] if self.max_chars else ui_value.data
+        # Never cut to max_chars: validate refuses longer text.
+        text = ui_value.data
         if not self.accept_files and not self.accept_audio:
             return text
+        # Popping consumes the upload records, also for a submit the boundary
+        # check then refuses, such as text past max_chars. Nothing could read
+        # them later: the browser never resends a submit, so keeping them would
+        # only hold the files until the session ends.
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
         for file in uploaded_files:
             if self.allowed_types and not isinstance(file, DeletedFile):
@@ -1131,6 +1146,7 @@ class ChatMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="chat_input_value",
             disabled=disabled,
@@ -1158,7 +1174,15 @@ class ChatMixin:
             # the actual widget state here, but only inserting the provided value
             # into the chat input field. The user needs to submit the value in
             # order for the chat input to reflect the value in the backend state.
-            chat_input_proto.value = widget_state.value
+            # The browser writes this text into the field without its max_chars
+            # check, and a submit sends it as a new message, which validate
+            # refuses past max_chars. So the text is cut to the limit here,
+            # in UTF-16 code units as the browser counts them.
+            chat_input_proto.value = (
+                widget_checks.truncate_utf16(widget_state.value, max_chars)
+                if max_chars
+                else widget_state.value
+            )
             chat_input_proto.set_value = True
 
             session_state = get_session_state()

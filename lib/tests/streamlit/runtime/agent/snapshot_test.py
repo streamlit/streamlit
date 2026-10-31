@@ -329,17 +329,15 @@ class SnapshotBuilderTest(SnapshotCase):
         st.segmented_control("Mode", ["a", "b"], key="mode")
         st.selectbox("City", ["Paris"], accept_new_options=True, key="open_city")
         st.selectbox("Closed", ["Paris"], key="closed_city")
-        st.multiselect("Pick", ["a", "b", "c"], max_selections=2, key="limited")
-        st.multiselect("Any", ["a", "b", "c"], key="any")
         with st.form("edit"):
             st.text_input("Name", key="name")
 
         snapshot = self._build()
         days = _state(snapshot, "date_input", "days")
-        assert days.max_items == 2
+        # Only the JSON type is recorded: a range's item count and a
+        # multiselect's `max_selections` are the widgets' own validators' to check.
         assert days.schema_type == "array"
-        assert _state(snapshot, "multiselect", "limited").max_items == 2
-        assert _state(snapshot, "multiselect", "any").max_items is None
+        assert not hasattr(days, "max_items")
         assert _state(snapshot, "pills", "mood").clearable is True
         assert _state(snapshot, "pills", "required").clearable is False
         assert _state(snapshot, "pills", "several").clearable is False

@@ -166,3 +166,22 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+
+
+def test_link_cannot_set_a_disabled_bound_widget(app: Page, app_base_url: str) -> None:
+    """A link naming a widget the app shows as disabled is ignored.
+
+    The widget keeps its default and the parameter leaves the URL, while an
+    enabled bound widget in the same link still takes its value.
+    """
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url, path="/query-params", query={"locked": "b", "number": "3"}
+        ),
+    )
+
+    expect_prefixed_markdown(app, "Locked:", "a", exact_match=True)
+    expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
+    expect(app).not_to_have_url(re.compile(r"[?&]locked="))
+    expect(app).to_have_url(re.compile(r"[?&]number=3(?:&|$)"))

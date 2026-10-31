@@ -83,9 +83,11 @@ class ElementState(NamedTuple):
     # The owning st.form, for elements inside one. Form membership exists only
     # on the emitted element, not in the runtime's widget registry.
     form_id: str | None
-    # The closed list a later request must belong to. ``None`` when the widget
+    # The widget's closed list of options, which decides how a JSON number is
+    # encoded and which options an error lists. ``None`` when the widget
     # accepts values outside its options, or when it has no fixed list. The
-    # description still carries those options for the client.
+    # description still carries those options for the client. Whether a value
+    # is one of them is the widget's own validator's decision.
     options: list[Any] | None
     # The fragment this element lives in, if any. A request that targets it is
     # scoped to that fragment, the way the browser scopes a widget change.
@@ -97,9 +99,6 @@ class ElementState(NamedTuple):
     # The command that emitted it, for checks that only apply to some, such as
     # reading ISO text for a date-time input.
     command: str = ""
-    # The most items a request may send: `value_schema.maxItems` for a range,
-    # or `props.max_selections` for a multiselect. A longer list is refused.
-    max_items: int | None = None
     # The JSON type its `value_schema` names, so a number is not accepted as
     # text where the wire form happens to be a string, as for `st.feedback`.
     schema_type: str | None = None
@@ -375,10 +374,11 @@ class _SnapshotBuilder:
         action = description.get("action")
         support = description.get("support") or inherited_support
         disabled = bool(props.get("disabled"))
-        # Membership list for the next request. A widget that accepts new
-        # text has no such list: any value of the right schema is legal, and
-        # its options stay on the description. Otherwise a command publishes
-        # `choices` when the list is not its `options` parameter.
+        # The closed list of options, for encoding and error messages. A
+        # widget that accepts new text has no such list: any value of the
+        # right schema is legal, and its options stay on the description.
+        # Otherwise a command publishes `choices` when the list is not its
+        # `options` parameter.
         options: list[Any] | None
         if props.get("accept_new_options") is True:
             options = None
@@ -406,7 +406,6 @@ class _SnapshotBuilder:
             fragment_id=fragment_id,
             in_dialog=self._in_dialog,
             command=command,
-            max_items=_max_items(description, props),
             schema_type=(description.get("value_schema") or {}).get("type"),
             # Whether a browser user can empty it, so null clears it rather
             # than resetting it to a non-empty default.
@@ -466,20 +465,6 @@ def _attach_value(
         value_schema is not None and value is not None and value is not False
     ):
         result["value"] = value
-
-
-def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None:
-    """The longest list a later request may send for this element.
-
-    ``value_schema.maxItems`` covers a range. ``st.multiselect`` publishes its
-    limit as ``props.max_selections`` instead, and a longer selection is refused.
-    """
-    limit = (description.get("value_schema") or {}).get("maxItems")
-    if isinstance(limit, bool) or not isinstance(limit, int):
-        limit = props.get("max_selections")
-    if isinstance(limit, bool) or not isinstance(limit, int):
-        return None
-    return limit
 
 
 def _public_key(element_id: str) -> str:

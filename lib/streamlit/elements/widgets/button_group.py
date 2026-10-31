@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable, Sequence
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,7 +30,7 @@ from typing import (
 
 from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib import agent_spec
-from streamlit.elements.lib.form_utils import current_form_id
+from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
     Width,
     create_layout_config,
@@ -69,6 +71,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import extract_leading_icon, to_help_str
 
@@ -84,12 +87,45 @@ if TYPE_CHECKING:
         RegisterWidgetResult,
         WidgetDeserializer,
         WidgetSerializer,
+        WidgetValidator,
     )
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 V = TypeVar("V")
 
 SelectionMode: TypeAlias = Literal["single", "multi"]
+
+
+def _split_leading_icon(label: str) -> tuple[str, str]:
+    """Split an option's label into the icon the frontend shows apart, and the rest.
+
+    The icon is extracted only if it's followed by a space or is the entire
+    label (icon-only). Without one, the icon is empty and the rest is the label.
+    """
+    parts = label.split(" ", 1)
+    icon, remaining = extract_leading_icon(parts[0].strip())
+    if icon and not remaining:
+        return icon, parts[1] if len(parts) > 1 else ""
+    return "", label
+
+
+def _browser_label(label: str) -> str:
+    """The label the browser sends for an option whose ``format_func`` returns ``label``.
+
+    The frontend joins an extracted icon and the rest with a space and trims
+    the result, so ``"🔥 Fire "`` arrives as ``"🔥 Fire"``. A label without an
+    icon arrives as it is.
+    """
+    first = label.split(" ", 1)[0]
+    if first == first.strip() and widget_checks.browser_trim(label) == label:
+        # Rebuilding the label around its first space changes nothing, so the
+        # icon lookup, which is slow for emoji, is skipped.
+        return label
+    icon, rest = _split_leading_icon(label)
+    if not icon:
+        return label
+    return widget_checks.browser_trim(f"{icon} {rest}")
 
 
 class _SingleSelectButtonGroupSerde(Generic[T]):
@@ -105,6 +141,8 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
     default_option_index: int | None
     format_func: Callable[[Any], str]
     session_state_fallback: T | None
+    required: bool
+    in_form: bool
 
     def __init__(
         self,
@@ -115,6 +153,8 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         default_option_index: int | None = None,
         format_func: Callable[[Any], str] = str,
         session_state_fallback: T | None = None,
+        required: bool = False,
+        in_form: bool = False,
     ) -> None:
         self.options = options
         self.formatted_options = formatted_options
@@ -122,6 +162,34 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         self.default_option_index = default_option_index
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+        self.required = required
+        self.in_form = in_form
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse a label a client was not shown, more than one, or none.
+
+        A required widget is never cleared, except back to an empty default
+        inside a form.
+        """
+        if ui_value:
+            return widget_checks.items_of(self._label_counts, ui_value, max_items=1)
+        # No selection. An unset value reads as the default, and `[]` is a
+        # deselection, whatever the default.
+        if ui_value is None and self.default_option_index is not None:
+            return None
+        if self.in_form and self.default_option_index is None:
+            # A form that clears on submit restores the empty default, and the
+            # browser submits the form while this widget is empty.
+            return None
+        return widget_checks.filled(None, required=self.required)
 
     def serialize(self, v: T | str | None) -> list[str]:
         """Serialize single-select value to a list of strings for wire format."""
@@ -143,7 +211,7 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
 
         return [formatted_value]
 
-    def deserialize(self, ui_value: list[str] | None) -> T | None:
+    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
         """Deserialize from a list of strings to a single value."""
         if len(self.options) == 0:
             return None
@@ -169,15 +237,15 @@ class _SingleSelectButtonGroupSerde(Generic[T]):
         # or format_func changes dynamically (e.g. a language switch): the frontend
         # sends a stale wire value from the previous mapping that can't be resolved.
         # Prefer the last known session-state value (the user's live selection) over
-        # the configured default so _widget_changed does not detect a spurious
+        # the configured default so the boundary check does not detect a spurious
         # difference and fire an on_change callback. The session-state value is
         # always more accurate than the default because it reflects what the user
         # actually had selected (e.g. user clicked "B" while default was "A").
         if self.session_state_fallback is not None:
             return self.session_state_fallback
-        if self.default_option_index is not None:
-            return self.options[self.default_option_index]
-        return None
+        # Any other unknown label passes through as the label, so it never reads
+        # as the stored value: validate refuses it.
+        return string_value
 
 
 class _MultiSelectButtonGroupSerde(Generic[T]):
@@ -210,6 +278,20 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         self.default_option_indices = default_option_indices or []
         self.format_func = format_func
         self.session_state_fallback = session_state_fallback
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse labels a client was not shown, or a repeated one."""
+        if ui_value is None:
+            return None
+        return widget_checks.items_of(self._label_counts, ui_value)
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""
@@ -244,19 +326,22 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         if ui_value is None:
             return [self.options[i] for i in self.default_option_indices]
 
-        values: list[T | str] = []
+        # The resolved options, and the value with each unknown label kept as
+        # the label. An unknown label can be a stale wire value from a previous
+        # format_func mapping (e.g. a language switch).
+        values: list[T] = []
+        with_unknown: list[T | str] = []
         for v in ui_value:
             option_index = self.formatted_option_to_option_index.get(v)
             if option_index is not None:
                 values.append(self.options[option_index])
-            # Silently drop values not found in the current options mapping.
-            # These are stale wire values from a previous format_func mapping
-            # (e.g. a language switch). validate_and_sync_multiselect_value_with_options
-            # applies the same filter for invalid canonical values.
+                with_unknown.append(self.options[option_index])
+            else:
+                with_unknown.append(v)
 
         # A label change never changes the selection, so recover stale wire entries
-        # from the last known session-state selection: that keeps _widget_changed
-        # from firing a spurious on_change and stops a relabeled selection from
+        # from the last known session-state selection: that keeps the boundary
+        # check from firing a spurious on_change and stops a relabeled selection from
         # being truncated. Each unresolvable wire entry is a stale label for one
         # previously selected option that is not already resolved (a "candidate"),
         # so comparing counts tells us whether a deselect also happened this rerun:
@@ -266,8 +351,8 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         #     Stale labels are opaque, so keep only the resolved survivors rather
         #     than risk restoring the option the user just removed (a still-selected
         #     option relabeled in the same rerun is dropped; this is rare).
-        # With no session-state fallback, use the configured default only if every
-        # entry was stale, mirroring _SingleSelectButtonGroupSerde.deserialize.
+        # With no session-state fallback, an unknown label passes through as the
+        # label, so it never reads as the stored value: validate refuses it.
         dropped_stale = len(values) < len(ui_value)
         if dropped_stale and self.session_state_fallback is not None:
             candidates = [o for o in self.session_state_fallback if o not in values]
@@ -276,9 +361,7 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
                 additions = [o for o in values if o not in self.session_state_fallback]
                 return list(self.session_state_fallback) + additions
             return values
-        if not values and ui_value and self.default_option_indices:
-            return [self.options[i] for i in self.default_option_indices]
-        return values
+        return with_unknown
 
 
 def _build_proto(
@@ -536,6 +619,14 @@ class ButtonGroupMixin:
 
             If ``required=True`` is used with ``selection_mode="multi"``, an
             exception is raised.
+
+            .. note::
+               Outside a form, Streamlit refuses a change that clears a
+               required selection, even from a modified client. Inside a
+               form, a widget without a default can return to no selection,
+               as when a form with ``clear_on_submit=True`` clears it. A
+               widget that starts without a selection returns ``None`` until
+               the user picks an option.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -964,6 +1055,14 @@ class ButtonGroupMixin:
             If ``required=True`` is used with ``selection_mode="multi"``, an
             exception is raised.
 
+            .. note::
+               Outside a form, Streamlit refuses a change that clears a
+               required selection, even from a modified client. Inside a
+               form, a widget without a default can return to no selection,
+               as when a form with ``clear_on_submit=True`` clears it. A
+               widget that starts without a selection returns ``None`` until
+               the user picks an option.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -1239,24 +1338,13 @@ class ButtonGroupMixin:
             Note: The icon is only extracted if it's followed by a space or is the
             entire content (icon-only).
             """
-            transformed = actual_format_func(option)
+            icon, content = _split_leading_icon(actual_format_func(option))
+            return ButtonGroupProto.Option(content=content, content_icon=icon or None)
 
-            # Split by space to check if first token is an icon
-            parts = transformed.split(" ", 1)
-            first_part = parts[0].strip()
-
-            icon, remaining = extract_leading_icon(first_part)
-            if icon and not remaining:
-                # First token is a pure icon (emoji or material icon)
-                # Use remaining parts as content, or empty string if icon-only
-                transformed = parts[1] if len(parts) > 1 else ""
-            else:
-                icon = ""
-
-            return ButtonGroupProto.Option(
-                content=transformed,
-                content_icon=icon or None,
-            )
+        def wire_format_func(option: Any) -> str:
+            # The label the browser shows and sends back, which can differ from
+            # format_func's by edge whitespace, so the serde reads and writes it.
+            return _browser_label(actual_format_func(option))
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
@@ -1265,17 +1353,17 @@ class ButtonGroupMixin:
         formatted_options: list[str] = []
         formatted_option_to_option_index: dict[str, int] = {}
         for index, option in enumerate(indexable_options):
-            formatted = actual_format_func(option)
+            formatted = wire_format_func(option)
             formatted_options.append(formatted)
             # If formatted labels are duplicated, the last one wins. We keep this
             # behavior to mirror radio/selectbox/multiselect.
             formatted_option_to_option_index[formatted] = index
 
         # Look up the currently-stored session-state value to use as a stale-wire
-        # fallback in the serde. When format_func changes dynamically and no default
-        # is configured, deserialize would otherwise return None/[] for stale wire
-        # values, causing _widget_changed to fire a spurious on_change callback.
-        # Using the last known valid value as a fallback keeps the comparison equal.
+        # fallback in the serde. When format_func changes dynamically, deserialize
+        # would otherwise pass a stale wire label through, so the boundary check
+        # would refuse a correct browser's echo of the selection it holds. Using the
+        # last known valid value as a fallback keeps the comparison equal.
         # Value resolution (this fallback, keeping on_change quiet) and label resync
         # (the wire-vs-fresh-serialization check in _button_group that decides whether
         # to resend set_value) are independent paths; both are required so on_change
@@ -1303,28 +1391,33 @@ class ButtonGroupMixin:
         # Create appropriate serde based on selection mode.
         serializer: WidgetSerializer[Any]
         deserializer: WidgetDeserializer[Any]
+        validator: WidgetValidator
         if selection_mode == "multi":
             multi_serde = _MultiSelectButtonGroupSerde[V](
                 indexable_options,
                 formatted_options=formatted_options,
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_indices=default_values,
-                format_func=actual_format_func,
+                format_func=wire_format_func,
                 session_state_fallback=_ss_fallback_multi,
             )
             serializer = multi_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", multi_serde.deserialize)
+            validator = multi_serde.validate
         else:
             single_serde = _SingleSelectButtonGroupSerde[V](
                 indexable_options,
                 formatted_options=formatted_options,
                 formatted_option_to_option_index=formatted_option_to_option_index,
                 default_option_index=default_values[0] if default_values else None,
-                format_func=actual_format_func,
+                format_func=wire_format_func,
                 session_state_fallback=_ss_fallback_single,
+                required=required,
+                in_form=is_in_form(self.dg),
             )
             serializer = single_serde.serialize
             deserializer = cast("WidgetDeserializer[Any]", single_serde.deserialize)
+            validator = single_serde.validate
 
         # Single call to _button_group with the appropriate serde
         result: RegisterWidgetResult[Any] = self._button_group(
@@ -1339,6 +1432,7 @@ class ButtonGroupMixin:
             style=style,
             serializer=serializer,
             deserializer=deserializer,
+            validator=validator,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
@@ -1346,7 +1440,7 @@ class ButtonGroupMixin:
             label_visibility=label_visibility,
             width=width,
             wrap=wrap,
-            options_format_func=actual_format_func,
+            options_format_func=wire_format_func,
             bind=bind,
             persist_state=persist_state,
             string_formatted_options=formatted_options,
@@ -1377,6 +1471,7 @@ class ButtonGroupMixin:
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
+        validator: WidgetValidator,
         on_change: WidgetCallback | OnChangeMode | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
@@ -1482,6 +1577,7 @@ class ButtonGroupMixin:
             kwargs=kwargs,
             deserializer=deserializer,
             serializer=serializer,
+            validator=validator,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,

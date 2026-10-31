@@ -18,7 +18,10 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta, tzinfo
+from decimal import Decimal
+from functools import cached_property
 from numbers import Integral, Real
+from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -66,6 +69,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 
@@ -73,6 +77,7 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import DateTimeFormat, NumberFormat
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
+    from streamlit.runtime.state.widget_checks import Violation
 
 SliderNumericT = TypeVar("SliderNumericT", int, float)
 SliderDatelikeT = TypeVar("SliderDatelikeT", date, time, datetime)
@@ -225,6 +230,77 @@ def _micros_to_datetime(micros: int, orig_tz: tzinfo | None) -> datetime:
     return utc_dt.replace(tzinfo=orig_tz)
 
 
+# Past this many decimal places, 10**places is not exact in a double, so the
+# frontend's rounding cannot be mirrored. Only a step below 1e-21 gets there.
+_MAX_MIRRORED_PRECISION: Final = 22
+
+
+def _step_precision(step: float) -> int:
+    """The decimal places the frontend's slider rounds a value to for ``step``.
+
+    React Aria (``roundToStepPrecision``) counts the characters after the
+    decimal point of ``step.toString()``, the point included, so a step of
+    ``0.1`` rounds to 2 places, and a whole step does not round. JavaScript
+    writes a step below 1e-6 as ``1e-7`` or ``1.5e-7``, and then the count is
+    the exponent plus the mantissa's length.
+    """
+    # Python and JavaScript write a double with the same shortest digits.
+    digits = Decimal(repr(abs(step))).normalize().as_tuple()
+    exponent = int(digits.exponent)
+    if exponent >= 0:
+        return 0
+    # The decimal point's position in the digits, as JavaScript places it.
+    point = len(digits.digits) + exponent
+    if point > -6:
+        return 1 - exponent
+    mantissa_length = 1 if len(digits.digits) == 1 else len(digits.digits) + 1
+    return -math.floor(math.log10(abs(step))) + mantissa_length
+
+
+def _round_to_precision(value: float, precision: int) -> float:
+    """Round as React Aria does: ``Math.round(value * 10**p) / 10**p``.
+
+    A value whose scaled form is not finite stays that way, as in JavaScript.
+    """
+    scale = float(10**precision)
+    scaled = value * scale
+    if not math.isfinite(scaled):
+        return scaled
+    rounded = math.floor(scaled)
+    # Math.round rounds a half up, toward positive infinity.
+    if scaled - rounded >= 0.5:
+        rounded += 1
+    return rounded / scale
+
+
+def _browser_bounds(
+    min_value: float, max_value: float, step: float
+) -> tuple[float, float]:
+    """The lowest and highest values the frontend's slider commits.
+
+    React Aria clamps a thumb to the bounds and then rounds it to the step's
+    precision (``snapValueToStep``). A bound with more decimal places is
+    therefore committed rounded, which can fall just outside it:
+    ``min_value=0.123`` with ``step=0.1`` commits ``0.12``. At the top it
+    clamps to ``min_value + n * step``, with ``n`` from a rounded quotient,
+    which can pass ``max_value`` too: ``max_value=0.9996`` commits ``1.0``.
+    This mirrors that arithmetic, which is the same in Python.
+    """
+    precision = _step_precision(step)
+    if precision == 0 or precision > _MAX_MIRRORED_PRECISION:
+        return min_value, max_value
+    low = _round_to_precision(min_value, precision)
+    steps = _round_to_precision((max_value - min_value) / step, precision)
+    if not math.isfinite(steps):
+        # Bounds this far apart pass the largest double once scaled, where
+        # the browser's rounding has no meaning, so the bounds stay exact.
+        return min_value, max_value
+    high = _round_to_precision(min_value + math.floor(steps) * step, precision)
+    if not (math.isfinite(low) and math.isfinite(high)):
+        return min_value, max_value
+    return min(min_value, low), max(max_value, high)
+
+
 class SliderDefaultValues(TypedDict):
     min_value: SliderScalar
     max_value: SliderScalar
@@ -240,8 +316,26 @@ class SliderSerde:
     orig_tz: tzinfo | None
     min_value: float
     max_value: float
+    # The step the browser rounds to, as the proto sends it.
+    step: float = 1.0
+
+    @cached_property
+    def _browser_range(self) -> tuple[float, float]:
+        return _browser_bounds(self.min_value, self.max_value, self.step)
 
     def deserialize_single_value(self, value: float) -> SliderScalar:
+        # NaN and infinity pass through for validate to refuse. A value that
+        # is not a number, such as text from a URL, raises a TypeError here.
+        if not math.isfinite(value):
+            return value
+        if self.data_type == SliderProto.FLOAT:
+            # The browser commits a bound rounded to the step's precision,
+            # which can fall just past it. The user chose that bound.
+            low, high = self._browser_range
+            if low <= value < self.min_value:
+                return self.min_value
+            if self.max_value < value <= high:
+                return self.max_value
         if self.data_type == SliderProto.INT:
             return int(value)
         if self.data_type == SliderProto.DATETIME:
@@ -256,35 +350,64 @@ class SliderSerde:
             )
         return value
 
-    def deserialize(self, ui_value: list[float] | None) -> Any:
-        if ui_value is not None:
-            val = ui_value
-            expected_len = 1 if self.single_value else 2
-            if len(val) != expected_len:
-                # Wrong number of values (e.g. single URL param for a range
-                # slider); fall back to default so the URL param is cleared.
-                val = self.value
-            else:
-                # Reset to default if any value is outside [min_value, max_value].
-                # This rejects out-of-range values seeded from URL query params;
-                # a no-op for frontend values since the UI enforces bounds.
-                # TODO(query-params): URL values that pass bounds checking but
-                # don't align to the step (e.g., ?val=0.15 with step=0.1) are
-                # accepted as-is. Consider snapping to the nearest valid step
-                # for consistency with the UI.
-                for v in val:
-                    if not math.isfinite(v) or v < self.min_value or v > self.max_value:
-                        val = self.value
-                        break
-        else:
-            # Widget has not been used; fallback to the original value,
-            val = self.value
+    def validate(
+        self,
+        ui_value: Sequence[float] | None,
+        *,
+        exact: bool = False,
+        **_kwargs: Any,
+    ) -> Violation | None:
+        """Refuse values the browser would not send.
 
-        # The widget always returns a float array, so fix the return type if necessary
-        deserialized_values = [self.deserialize_single_value(v) for v in val]
-        return (
-            deserialized_values[0] if self.single_value else tuple(deserialized_values)
+        The browser sends one value, or a range's two ends lowest first, each
+        a finite number within the bounds. A bound may arrive rounded to the
+        step's precision, just past it, which the deserializer reads as the
+        bound, unless ``exact`` holds the value to the bounds as written.
+        ``step`` is not checked otherwise.
+        """
+        if ui_value is None:
+            return None
+        violation = widget_checks.item_count(
+            ui_value, allowed=(1,) if self.single_value else (2,)
         )
+        if violation is not None:
+            return violation
+        low, high = (self.min_value, self.max_value) if exact else self._browser_range
+        for item in ui_value:
+            violation = widget_checks.finite(item)
+            if violation is None and self.data_type == SliderProto.INT:
+                violation = widget_checks.whole_number(item)
+            if violation is not None:
+                return violation
+            if widget_checks.within(item, low, high) is not None:
+                # Dates and times are microseconds on the wire, so the bounds
+                # are reported in the slider's own type.
+                return widget_checks.Violation(
+                    "out_of_range",
+                    MappingProxyType(
+                        {
+                            "min_value": self.deserialize_single_value(self.min_value),
+                            "max_value": self.deserialize_single_value(self.max_value),
+                        }
+                    ),
+                )
+        return widget_checks.ordered(ui_value)
+
+    def deserialize(self, ui_value: list[float] | None) -> Any:
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. URL seeding validates
+        # the result.
+        # TODO(query-params): URL values that don't align to the step (e.g.,
+        # ?val=0.15 with step=0.1) are accepted as-is. Consider snapping to the
+        # nearest valid step for consistency with the UI.
+        val = ui_value if ui_value is not None else self.value
+        deserialized_values = [self.deserialize_single_value(v) for v in val]
+        # A wrong number of values passes through as a tuple, which validate
+        # refuses, so it never reads as a single value.
+        if self.single_value and len(deserialized_values) == 1:
+            return deserialized_values[0]
+        return tuple(deserialized_values)
 
     def serialize(self, v: Any) -> list[Any]:
         range_value = isinstance(v, (list, tuple))
@@ -1239,6 +1362,7 @@ class SliderMixin:
             # Proto min/max are doubles (dates/times become microsecond floats).
             min_value=slider_proto.min,
             max_value=slider_proto.max,
+            step=slider_proto.step,
         )
 
         widget_state = register_widget(
@@ -1248,6 +1372,7 @@ class SliderMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="double_array_value",
             disabled=disabled,

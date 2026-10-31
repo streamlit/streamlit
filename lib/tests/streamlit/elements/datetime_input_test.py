@@ -36,6 +36,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -447,9 +448,9 @@ def test_datetime_input_interaction():
 
 
 def test_datetime_input_required_is_exposed_in_app_test() -> None:
-    """Test that AppTest exposes required and still allows an empty value.
+    """AppTest exposes required, and an empty value is refused once filled.
 
-    The required check runs in the browser, so AppTest can still set None.
+    AppTest sends values through the same check a browser value passes.
     """
 
     def script():
@@ -468,7 +469,7 @@ def test_datetime_input_required_is_exposed_in_app_test() -> None:
     assert widget.value == new_value
 
     at = widget.set_value(None).run()
-    assert at.datetime_input[0].value is None
+    assert at.datetime_input[0].value == new_value
 
 
 def test_datetime_input_min_max_validation():
@@ -511,6 +512,12 @@ def test_datetime_input_min_max_validation():
     at = widget.set_value(valid_value).run()
     widget = at.datetime_input[0]
     assert widget.value == valid_value
+
+    # A refused value keeps the previous value, not the default.
+    at = widget.set_value(above_max_value).run()
+    widget = at.datetime_input[0]
+    assert widget.value == valid_value
+    assert widget.proto.set_value is True
 
 
 def test_datetime_input_callback():
@@ -821,15 +828,16 @@ class TestDateTimeInputSerdeISO:
         result = serde.deserialize(["2025-06-20T14:30"])
         assert result == datetime(2025, 6, 20, 14, 30)
 
-    def test_deserialize_invalid_format_reverts_to_default(self):
-        """Test that unparseable strings revert to the default value."""
+    def test_deserialize_invalid_format_raises(self) -> None:
+        """Unparseable text raises, which URL seeding catches and clears."""
         serde = DateTimeInputSerde(
             value=datetime(2025, 1, 15, 10, 0),
             min=datetime(2020, 1, 1, 0, 0),
             max=datetime(2030, 12, 31, 23, 59),
         )
-        result = serde.deserialize(["not-a-datetime"])
-        assert result == datetime(2025, 1, 15, 10, 0)
+        with pytest.raises(ValueError, match="Unable to parse") as raised:
+            serde.deserialize(["not-a-datetime"])
+        assert "not-a-datetime" not in str(raised.value)
 
     def test_deserialize_none_returns_default(self):
         """Test that None ui_value returns the default value."""
@@ -851,25 +859,76 @@ class TestDateTimeInputSerdeISO:
         result = serde.deserialize([])
         assert result == datetime(2025, 1, 15, 10, 0)
 
-    def test_deserialize_out_of_bounds_reverts_to_default(self):
-        """Test that out-of-bounds values revert to the default."""
+    def test_deserialize_passes_out_of_bounds_values_through(self) -> None:
+        """Out-of-bounds values are validate's to refuse."""
         serde = DateTimeInputSerde(
             value=datetime(2025, 6, 15, 12, 0),
             min=datetime(2025, 1, 1, 0, 0),
             max=datetime(2025, 12, 31, 23, 59),
         )
-        result = serde.deserialize(["2024-06-15T12:00"])
-        assert result == datetime(2025, 6, 15, 12, 0)
+        assert serde.deserialize(["2024-06-15T12:00"]) == datetime(2024, 6, 15, 12, 0)
+        assert serde.deserialize(["2026-01-01T00:00"]) == datetime(2026, 1, 1, 0, 0)
 
-    def test_deserialize_above_max_reverts_to_default(self):
-        """Test that values above max revert to the default."""
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
+        [
+            (None, None),
+            ([], None),
+            (["2025-06-15T12:00"], None),
+            # The bounds are inclusive, to the minute.
+            (["2025-01-01T00:00"], None),
+            (["2025-12-31T23:59"], None),
+            (["2024-12-31T23:59"], "out_of_range"),
+            (["2026-01-01T00:00"], "out_of_range"),
+            # The browser sends no seconds, and the legacy layout only in links.
+            (["2025-06-15T12:00:00"], "malformed"),
+            (["2025/06/15, 12:00"], "malformed"),
+            (["2025-06-15 12:00"], "malformed"),
+            (["2025-06-15T12:00", "2025-06-16T12:00"], "bad_shape"),
+        ],
+    )
+    def test_validate(self, ui_value: list[str] | None, expected: str | None) -> None:
+        """One YYYY-MM-DDTHH:MM within the bounds, or nothing."""
         serde = DateTimeInputSerde(
-            value=datetime(2025, 6, 15, 12, 0),
+            value=None,
             min=datetime(2025, 1, 1, 0, 0),
             max=datetime(2025, 12, 31, 23, 59),
         )
-        result = serde.deserialize(["2026-01-01T00:00"])
-        assert result == datetime(2025, 6, 15, 12, 0)
+        violation = serde.validate(
+            None
+            if ui_value is None
+            else WidgetState(
+                string_array_value={"data": ui_value}
+            ).string_array_value.data
+        )
+        assert (None if violation is None else violation.kind) == expected
+
+    @pytest.mark.parametrize(
+        ("default", "ui_value", "expected"),
+        [
+            # An unset value and `[]` both read as the default.
+            (None, None, "empty_required"),
+            (None, [], "empty_required"),
+            (datetime(2025, 6, 15, 12, 0), [], None),
+            (datetime(2025, 6, 15, 12, 0), None, None),
+            (None, ["2025-06-15T12:00"], None),
+        ],
+    )
+    def test_validate_refuses_emptying_a_required_input(
+        self,
+        default: datetime | None,
+        ui_value: list[str] | None,
+        expected: str | None,
+    ) -> None:
+        """A required datetime input is empty only when it reads as no default."""
+        serde = DateTimeInputSerde(
+            value=default,
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+            required=True,
+        )
+        violation = serde.validate(ui_value)
+        assert (None if violation is None else violation.kind) == expected
 
 
 class DateTimeInputOnChangeModeTest(DeltaGeneratorTestCase):

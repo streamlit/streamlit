@@ -36,7 +36,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-TOTAL_BUTTONS = 43
+TOTAL_BUTTONS = 44
 
 WRAP_LABEL = "Regenerate the complete quarterly report now"
 
@@ -145,6 +145,16 @@ def test_click_calls_callback(app: Page):
     expect_markdown(app, "times clicked: 1")
     expect_markdown(app, "arg value: 1")
     expect_markdown(app, "kwarg value: 2")
+
+
+def test_self_disabling_button_returns_true(app: Page):
+    """A button that disables itself in on_click still reports its click."""
+    expect_markdown(app, "self-disabling returned: False")
+
+    click_button(app, "Self-disabling button")
+
+    expect_markdown(app, "self-disabling returned: True")
+    expect(get_button(app, "Self-disabling button")).to_be_disabled()
 
 
 def test_click_increment_count(app: Page):

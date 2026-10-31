@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from functools import cached_property
 from numbers import Integral
 from typing import (
     TYPE_CHECKING,
@@ -71,6 +73,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.type_util import is_iterable
@@ -79,6 +82,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 
@@ -96,6 +100,8 @@ class MultiSelectSerde(Generic[T]):
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
     format_func: Callable[[Any], str]
+    max_selections: int | None
+    accept_new_options: bool
 
     def __init__(
         self,
@@ -105,6 +111,8 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
         format_func: Callable[[Any], str] = str,
+        max_selections: int | None = None,
+        accept_new_options: bool = False,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -130,6 +138,10 @@ class MultiSelectSerde(Generic[T]):
             string representation instead of using == directly. This is necessary because
             widget values are deepcopied, and for custom classes without __eq__, the
             deepcopied instances would fail identity comparison.
+        max_selections : int or None, optional
+            The most options a client may select, or None for no limit.
+        accept_new_options : bool, optional
+            Whether a client may send text that is not one of the options.
         """
 
         self.options = options
@@ -137,6 +149,44 @@ class MultiSelectSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
         self.format_func = format_func
+        self.max_selections = max_selections
+        self.accept_new_options = accept_new_options
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(
+        self, ui_value: Sequence[str] | None, *, previous: Any = None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse labels a client was not shown, too many, or a repeated one.
+
+        A label may repeat as often as the held value repeats it. The browser
+        keeps every item it holds when the user adds options, so an author's
+        ``default=["a", "a"]`` followed by "Select all" sends ``"a"`` twice.
+        """
+        if ui_value is None:
+            return None
+        return widget_checks.items_of(
+            self._label_counts,
+            ui_value,
+            max_items=self.max_selections,
+            accept_new=self.accept_new_options,
+            held=self._held_label_counts(previous),
+        )
+
+    def _held_label_counts(self, previous: Any) -> Counter[str] | None:
+        """How often the held value lists each label, if it repeats one."""
+        if previous is None:
+            return None
+        try:
+            held = Counter(self.serialize(previous))
+        except Exception:  # pragma: no cover - defensive, serialize falls back to str
+            # A value the serializer cannot read allows no repeats.
+            return None
+        return held if len(held) < held.total() else None
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
@@ -834,6 +884,8 @@ class MultiSelectMixin:
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
             format_func=format_func,
+            max_selections=max_selections,
+            accept_new_options=accept_new_options,
         )
 
         widget_state = register_widget(
@@ -843,6 +895,7 @@ class MultiSelectMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,
@@ -860,6 +913,8 @@ class MultiSelectMixin:
             max_array_length=max_selections,
         )
 
+        # A client value over the limit was refused before this run, so only
+        # the author's `default` or a session-state value can raise here.
         _check_max_selections(widget_state.value, max_selections)
 
         widget_state = maybe_coerce_enum_sequence(

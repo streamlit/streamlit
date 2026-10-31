@@ -52,7 +52,7 @@ Represents a single browser tab or agent API session.
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
-An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` checks first: what a request may address and each value's JSON type come from the session's last snapshot, and each encoded value then passes the boundary check a browser value passes (see SessionState below). When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
 
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
@@ -161,10 +161,30 @@ register_widget(
 ```
 
 **Lifecycle hooks**:
-- `on_script_will_rerun()`: Process widget states from browser, run callbacks
+- `on_script_will_rerun()`: Store the widget states a client sent, check them (see the boundary check below), and run the callbacks of the accepted changes
 - `on_script_finished()`: Reset trigger widgets. Drop stale widgets not seen this run, except on `SCRIPT_STOPPED_FOR_RERUN`: `st.rerun()` can interrupt before later widgets register, so stale cleanup is deferred until the next completed run.
+- `WStates.rendered_ids`: the widgets registered by the latest run that covered them (a fragment run covers only its fragment). Registration adds an ID; `prune_rendered_widgets()` removes the ones a run covered but did not register, where stale cleanup runs and when the body ends in `st.stop()` or an uncaught exception (which keeps the values). It never adds one, so the client IDs a page change prunes against cannot forge an entry. A stop the session requested (`runner.fastReruns` replacing a running runner) is an interruption and prunes nothing.
 
-**Disabled widget enforcement**: `WidgetMetadata` carries a `disabled` flag (set via `register_widget(..., disabled=...)`). Because a disabled widget cannot be interacted with in the browser, this is enforced server-side to guard against a stale UI or a forged `BackMsg`: `SessionState.register_widget()` discards any incoming frontend value for a disabled widget (falling back to its previous value, or its default on first registration), and `_call_callbacks()` suppresses its `on_change`/`on_click` callback. Programmatic `st.session_state` assignments are still honored.
+**Client value boundary check** (`runtime/state/widget_checks.py`): `on_script_will_rerun()` checks every `WidgetState` a client sent before any callback runs, against the metadata of the run that rendered the widget. A refused value is dropped and logged without the value.
+
+- **Check order.** `check_client_value` applies these in order and reports the first violation without acting on it:
+  1. The wire field is one the widget accepts (`wrong_type`). `st.number_input` also accepts `int_value` within ±2^53, as its frontend sends an integer input's value, and Components v1 also accepts bytes and Arrow.
+  2. The deserializer can read it (`unreadable`).
+  3. An unchanged value passes.
+  4. The widget is in `rendered_ids` (`not_rendered`). A trigger for a button behind a condition that is now false, in a closed dialog, after `st.stop()`, or on another page runs nothing. A widget removed later in the run it registered in still counts.
+  5. The widget is not `disabled` (`disabled`).
+  6. The widget's own `WidgetMetadata.validator`, the serde's `validate` method.
+- **What validators check.**
+  - Option widgets check membership, `max_selections`, and repeats with `widget_checks.one_of` / `items_of`. A label several options share (`ambiguous_option`) is accepted for a browser and refused by the agent API.
+  - Numbers, dates, ranges, colors, and text check bounds, whole numbers, item counts and order, the exact layout the browser sends, and `max_chars` in UTF-16 code units, with `within`, `item_count`, `ordered`, `iso_date`, `hex_color`, and `text_length`.
+  - A widget with `required` refuses a change to empty with `filled`. An unset value reads as the default, and whitespace is what the browser's `trim()` removes, so an untouched empty default passes. Inside a form, a required `st.pills` or `st.segmented_control` may return to an empty default, which a `clear_on_submit` form restores.
+  - A deserializer converts, as `int()` does, but never replaces a refused value with the default.
+  - A float `st.slider` mirrors React Aria's rounding to the step's precision, which can commit a bound just past it (`min_value=0.123`, `step=0.1` commits `0.12`). It accepts the browser's extremes and reads them as the bounds, except for the agent API, whose wire mode passes `exact=True` to the validator.
+- **Refusals.** The widget keeps its previous value and no callback runs. For a rendered widget, its next registration sets `value_changed`, so the browser shows the server's value. `_call_callbacks()` takes the changed IDs from the check, in the order each ID first appears in the message.
+- **Logging and the parity gate.** Protocol errors are logged at warning level once per widget, and race kinds such as `not_rendered` and `disabled` at debug level. Under `global.e2eTest` every refusal is logged at warning level, and the e2e conftest fails the test (the browser parity gate).
+- **Reconnects.** A value or trigger for a widget this session never registered (a browser's map resent to a new session, with the trigger of its first interaction) skips the boundary. It is checked when the widget registers, against that run's metadata, as rendered. An accepted trigger is returned without its callback, and an entry whose widget never registers is dropped at the end of the run without a log line.
+- **URL seeding.** A disabled bound widget ignores its URL parameter, and the server removes or rewrites the parameter. An enabled one checks a seeded URL value with its validator, which can repair it (an unknown `st.select_slider` label falls back to that end's default, a reversed range is sorted, and text past `max_chars` is truncated) or clears the parameter.
+- **Other sources.** Programmatic `st.session_state` assignments are trusted and still honored. The agent API runs the same check on its encoded writes (`runtime/agent/widget_writes.py`), comparing wire values.
 
 ## Caching (`lib/streamlit/runtime/caching/`)
 

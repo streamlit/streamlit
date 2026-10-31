@@ -2666,8 +2666,9 @@ class Pagination(Widget):
         #   it into 0 or 1.
         # - Leave ints outside protobuf sint64 unset. Assigning them raises
         #   ValueError.
-        # - Still send other out-of-range ints. PaginationSerde maps them to that
-        #   same default.
+        # - Still send other out-of-range ints. The session drops them as a
+        #   browser value, and st.pagination resets a session-state value out
+        #   of range to that same default.
         try:
             value = self.value
         except KeyError:
@@ -2855,6 +2856,7 @@ class SelectSlider(Widget, Generic[T]):
 
         serde = SelectSliderSerde(
             self.options,
+            formatted_options=self.options,
             formatted_option_to_index=formatted_option_to_index,
             default_indices=[0] if not is_range else [0, len(self.options) - 1],
             format_func=format_func,

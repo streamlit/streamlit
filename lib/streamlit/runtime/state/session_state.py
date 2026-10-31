@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import functools
-import json
 import pickle  # noqa: S403
 from collections.abc import (
     Callable,
@@ -60,6 +59,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
+from streamlit.runtime.state import widget_checks
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -67,9 +67,9 @@ from streamlit.runtime.state.common import (
     WidgetArgs,
     WidgetCallback,
     WidgetMetadata,
-    is_array_value_field_name,
     is_element_id,
     is_keyed_element_id,
+    pack_widget_state_value,
     unpack_widget_state_value,
 )
 from streamlit.runtime.state.presentation import apply_presenter
@@ -88,8 +88,10 @@ from streamlit.runtime.stats import (
 _LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner import RerunData
     from streamlit.runtime.session_manager import SessionManager
+    from streamlit.runtime.state.widget_checks import Violation
 
 
 STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
@@ -137,6 +139,65 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
+def _validate_url_value(metadata: WidgetMetadata[T], value: T) -> tuple[T, bool]:
+    """Check a value seeded from the URL against the widget's validator.
+
+    A label several options share is valid, as at the boundary. A value that
+    ``_repair_url_wire`` can repair, such as a reversed range, is repaired and
+    checked again.
+
+    Returns
+    -------
+    tuple[T, bool]
+        The value, repaired where it could be, and whether it is valid.
+    """
+    validator = metadata.validator
+    if validator is None:
+        return value, True
+    wire = metadata.serializer(value)
+    violation = validator(wire, value=value)
+    repaired = _repair_url_wire(metadata, wire, violation)
+    if repaired is not None:
+        value = metadata.deserializer(repaired)
+        violation = validator(metadata.serializer(value), value=value)
+    return value, not widget_checks.browser_refuses(violation)
+
+
+def _repair_url_wire(
+    metadata: WidgetMetadata[Any], wire: Any, violation: Violation | None
+) -> Any:
+    """Return the wire form of a URL value with ``violation`` repaired, or None.
+
+    - A widget that is never empty, such as ``st.select_slider``, holds a value
+      of its default's shape, so an item that names no option is replaced by
+      the default's item at that position.
+    - A range whose ends are reversed is sorted, as the browser sends it.
+    - Text past ``max_chars`` is truncated in UTF-16 code units, as the
+      browser counts them, without splitting a character.
+    """
+    if violation is None:
+        return None
+    positions = violation.detail.get("positions")
+    if (
+        violation.kind == "not_an_option"
+        and positions is not None
+        and metadata.value_type == "string_array_value"
+        and not metadata.clearable
+    ):
+        default_wire = metadata.serializer(metadata.deserializer(None))
+        if len(default_wire) != len(wire):
+            return None
+        return [
+            default_wire[position] if position in positions else item
+            for position, item in enumerate(wire)
+        ]
+    if violation.kind == "bad_shape" and violation.detail.get("order"):
+        return sorted(wire)
+    if violation.kind == "too_long" and isinstance(wire, str):
+        return widget_checks.truncate_utf16(wire, violation.detail["max_chars"])
+    return None
+
+
 @dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
@@ -149,6 +210,10 @@ class Value:
     """A widget value that's not serialized. Immutable."""
 
     value: Any
+    # The WidgetState field a client value arrived in, which serializing it
+    # again writes to. None means the widget's registered `value_type`, as for
+    # a value the server set or one that arrived with no field set.
+    wire_field: ValueFieldName | None = None
 
 
 WState: TypeAlias = Value | Serialized
@@ -163,6 +228,12 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    # The widgets registered by the latest run that covered them. A full run
+    # covers every widget, and a fragment run only its fragment's widgets and
+    # those of the nested fragments it removed. Only registration adds an ID;
+    # SessionState.prune_rendered_widgets removes the ones a run covered but
+    # did not register. Like the metadata, it survives `clear`.
+    rendered_ids: set[str] = field(default_factory=set)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -189,21 +260,8 @@ class WStates(MutableMapping[str, Any]):
             # gotten from a reconnecting browser and the script is
             # trying to access it. Pretend it doesn't exist.
             raise KeyError(k)
-        value_field_name = cast(
-            "ValueFieldName",
-            wstate.value.WhichOneof("value"),
-        )
         deserialized = metadata.deserializer(unpack_widget_state_value(wstate.value))
-
-        # Update metadata to reflect information from WidgetState proto
-        self.set_widget_metadata(
-            replace(
-                metadata,
-                value_type=value_field_name,
-            )
-        )
-
-        self.states[k] = Value(deserialized)
+        self.cache_value(k, deserialized, wstate.value.WhichOneof("value"))
         return deserialized
 
     def __setitem__(self, k: str, v: WState) -> None:
@@ -231,11 +289,21 @@ class WStates(MutableMapping[str, Any]):
         return {self[wid] for wid in self}
 
     def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[invalid-method-override]
-        """Copy all widget values and metadata from 'other' into this mapping,
-        overwriting any data in this mapping that's also present in 'other'.
+        """Copy all widget values, metadata, and rendered IDs from 'other' into
+        this mapping, overwriting any data in this mapping that's also present
+        in 'other'.
         """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
+        self.rendered_ids.update(other.rendered_ids)
+
+    def clear(self) -> None:
+        """Forget every widget value, keeping the metadata.
+
+        ``MutableMapping.clear`` reads each value before deleting it, and stops
+        at the first one that has no metadata, so it would keep the rest.
+        """
+        self.states.clear()
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
@@ -244,6 +312,20 @@ class WStates(MutableMapping[str, Any]):
     def set_from_value(self, k: str, v: Any) -> None:
         """Set a widget's deserialized value, overwriting any existing value it has."""
         self[k] = Value(v)
+
+    def cache_value(
+        self, widget_id: str, value: Any, wire_field: ValueFieldName | None
+    ) -> None:
+        """Replace a client value with its deserialized form.
+
+        ``wire_field`` is the field it arrived in, which serializing it again
+        writes to.
+        """
+        self.states[widget_id] = Value(value, wire_field)
+
+    def drop(self, widget_id: str) -> None:
+        """Forget a widget's value in this mapping, if it has one."""
+        self.states.pop(widget_id, None)
 
     def set_widget_metadata(self, widget_meta: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata, overwriting any existing metadata it has."""
@@ -287,31 +369,11 @@ class WStates(MutableMapping[str, Any]):
             # We're missing the widget's metadata. (Can this happen?)
             return None
 
-        widget = WidgetStateProto()
-        widget.id = k
-
-        field = metadata.value_type
-        serialized = metadata.serializer(item.value)
-
-        if is_array_value_field_name(field):
-            arr = getattr(widget, field)
-            arr.data.extend(serialized)
-        elif field in {"json_value", "json_trigger_value"}:
-            setattr(widget, field, json.dumps(serialized))
-        elif field == "file_uploader_state_value":
-            widget.file_uploader_state_value.CopyFrom(serialized)
-        elif field == "string_trigger_value":
-            widget.string_trigger_value.CopyFrom(serialized)
-        elif field == "chat_input_value":
-            widget.chat_input_value.CopyFrom(serialized)
-        elif field is not None and serialized is not None:
-            # If the field is None, the widget value was cleared
-            # by the user and therefore is None. But we cannot
-            # set it to None here, since the proto properties are
-            # not nullable. So we just don't set it.
-            setattr(widget, field, serialized)
-
-        return widget
+        # A Components v1 value goes back to the field it arrived in, such as
+        # bytes_value, which the registered json_value could not hold.
+        return pack_widget_state_value(
+            k, item.wire_field or metadata.value_type, metadata.serializer(item.value)
+        )
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
@@ -677,6 +739,23 @@ class SessionState:
         default=None, repr=False
     )
 
+    # Client values the boundary check refused in the current interaction. Replay
+    # capture skips them, so a refused trigger never comes back unchecked.
+    _rejected_client_values: frozenset[str] = frozenset()
+
+    # Widgets whose client value was refused and whose browser still shows it.
+    # The widget's next registration tells the browser the server's value.
+    _pending_resync: set[str] = field(default_factory=set)
+
+    # Client values and triggers for widgets this session never registered,
+    # such as the widget map a browser resends to a new session. Each is
+    # checked when its widget registers in this run.
+    _unregistered_client_ids: set[str] = field(default_factory=set)
+
+    # Widgets whose refused value was already logged at warning level, so each
+    # one is logged once per session. It only holds IDs with metadata.
+    _warned_widget_ids: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -704,6 +783,10 @@ class SessionState:
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
         self._persist_tracker.clear()
+        self._rejected_client_values = frozenset()
+        self._pending_resync.clear()
+        self._unregistered_client_ids.clear()
+        self._warned_widget_ids.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -909,15 +992,24 @@ class SessionState:
         """
         self._reset_triggers()
         self._compact_state()
+        self._rejected_client_values = frozenset()
+        self._unregistered_client_ids.clear()
         if fresh_widget_states is not None:
             if is_history_navigation:
                 fresh_widget_states = self._omit_query_bound_widget_states(
                     fresh_widget_states
                 )
             self.set_widgets_from_proto(fresh_widget_states)
+            # Check every browser value before a callback can read it. Replayed
+            # triggers were checked when they first arrived, and are overlaid
+            # after the callbacks.
+            changed_widget_ids, self._rejected_client_values = (
+                self._check_incoming_widget_states()
+            )
             self._current_interaction_widget_states = fresh_widget_states
             try:
                 self._call_callbacks(
+                    changed_widget_ids,
                     incoming_replay_trigger_states=replay_trigger_states,
                     incoming_replay_trigger_values=replay_trigger_values,
                 )
@@ -930,34 +1022,92 @@ class SessionState:
                 fresh_widget_states,
             )
 
+    def _check_incoming_widget_states(self) -> tuple[tuple[str, ...], frozenset[str]]:
+        """Check the client values ``set_widgets_from_proto`` just stored.
+
+        Each value is checked against the metadata of the run that rendered its
+        widget, and a change is refused for a widget the latest run that
+        covered it did not render. An accepted value is cached deserialized, so
+        it is not deserialized again. A refused one is dropped, so the widget
+        keeps its previous value, and is logged without the value.
+
+        A value or trigger for a widget this session never registered, as a
+        browser sends to a new session after a reconnect, is left for
+        ``register_widget`` to check against this run's metadata. It fires no
+        callback, and it is dropped at the end of a run that does not register
+        its widget.
+
+        Returns
+        -------
+        tuple[tuple[str, ...], frozenset[str]]
+            The IDs of accepted values that changed, in the order each ID first
+            appears in the message, judged on its last entry, and the IDs of
+            refused values.
+        """
+        widget_state = self._new_widget_state
+        metadata_by_id = widget_state.widget_metadata
+        rendered_ids = widget_state.rendered_ids
+        changed: list[str] = []
+        rejected: set[str] = set()
+        # The states hold this message only, with the last entry of a repeated
+        # ID at the position of its first, so each ID is judged on its last
+        # entry. Copied because refused entries are dropped while iterating.
+        for widget_id, wstate in list(widget_state.states.items()):
+            if not isinstance(wstate, Serialized):  # pragma: no cover - defensive
+                continue
+            state = wstate.value
+            metadata = metadata_by_id.get(widget_id)
+            if metadata is None:
+                self._unregistered_client_ids.add(widget_id)
+                continue
+
+            is_rendered = widget_id in rendered_ids
+            result = widget_checks.check_client_value(
+                state,
+                metadata=metadata,
+                previous=self._old_state.get(widget_id),
+                is_rendered=is_rendered,
+            )
+            violation = result.violation
+            # A shared label is accepted here; only the agent API refuses it.
+            if widget_checks.browser_refuses(violation):
+                widget_state.drop(widget_id)
+                rejected.add(widget_id)
+                widget_checks.log_violation(
+                    widget_id, violation, warned=self._warned_widget_ids
+                )
+                # Only a rendered widget shows the browser a value to correct,
+                # and a trigger resets anyway.
+                if is_rendered and metadata.value_type not in _TRIGGER_PROTO_FIELDS:
+                    self._pending_resync.add(widget_id)
+                continue
+            widget_state.cache_value(widget_id, result.value, state.WhichOneof("value"))
+            if result.changed:
+                changed.append(widget_id)
+        return tuple(changed), frozenset(rejected)
+
     def _call_callbacks(
         self,
+        changed_widget_ids: Sequence[str],
         *,
         incoming_replay_trigger_states: WidgetStatesProto | None = None,
         incoming_replay_trigger_values: Mapping[str, Any] | None = None,
     ) -> None:
-        """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically."""
+        """Run changed-widget callbacks, collect rerun votes, and submit reruns atomically.
+
+        ``changed_widget_ids`` are the accepted client values that changed, in
+        the order each ID first appears in the message, which is the order
+        callbacks run in.
+        """
         votes = _CallbackRerunVotes()
 
-        # Skip callbacks for disabled widgets: a reported change can only come
-        # from a stale UI or a forged message. Callbacks run before widgets
-        # re-register, so the metadata read here is from the previous run. That
-        # is safe regardless of whether `disabled` is part of the widget id:
-        # for most widgets the id excludes `disabled` (so the id is stable and
-        # only the enabled<->disabled edges are ambiguous, an intentional
-        # trade-off), while for widgets that encode `disabled` in the id (e.g.
-        # st.popover) each id has a fixed `disabled` and is thus stable by
-        # construction. Either way, a disabled widget's forged change is
-        # suppressed.
-
         # Changed widgets, split by which dispatch path (if any) will handle them.
+        # A disabled widget's value never gets here: the boundary check refused it.
         changed_widget_ids_for_single_callback: list[str] = []
 
-        for wid in self._new_widget_state:
-            if not self._widget_changed(wid):
-                continue
+        for wid in changed_widget_ids:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if metadata is None or metadata.disabled:
+            if metadata is None:
                 continue
             if metadata.callback is not None:
                 changed_widget_ids_for_single_callback.append(wid)
@@ -973,12 +1123,12 @@ class SessionState:
                 functools.partial(self._new_widget_state.call_callback, wid),
             )
 
-        # Path 2: multiple callbacks.
-        widget_ids_to_process = list(self._new_widget_state.states.keys())
-
-        for wid in widget_ids_to_process:
+        # Path 2: multiple callbacks. Only changed values reach it: a refused
+        # Components v2 value is dropped, so diffing what is left against the
+        # old map would fire every key's callback.
+        for wid in changed_widget_ids:
             metadata = self._new_widget_state.widget_metadata.get(wid)
-            if metadata is None or metadata.callbacks is None or metadata.disabled:
+            if metadata is None or metadata.callbacks is None:
                 continue
 
             args = metadata.callback_args or ()
@@ -1040,9 +1190,15 @@ class SessionState:
             # Attach replay only to the first batch item; _request_rerun_locked unions
             # it while folding the batch.
             if votes.requested_targeted:
+                # A refused trigger is left out, or it would come back unchecked
+                # in the next run. So is a trigger for a widget this session never
+                # registered: it is checked when its widget registers, and a
+                # replay skips that check.
                 current_replay_trigger_states = (
                     self._filter_active_trigger_widget_states(
-                        self._current_interaction_widget_states
+                        self._current_interaction_widget_states,
+                        exclude=self._rejected_client_values
+                        | self._unregistered_client_ids,
                     )
                 )
                 current_replay_trigger_values = self._capture_replay_trigger_values(
@@ -1157,19 +1313,26 @@ class SessionState:
         return filtered
 
     def _filter_active_trigger_widget_states(
-        self, widget_states: WidgetStatesProto | None
+        self,
+        widget_states: WidgetStatesProto | None,
+        *,
+        exclude: frozenset[str] = frozenset(),
     ) -> WidgetStatesProto | None:
         """Return only active trigger entries from ``widget_states``.
 
         Inactive triggers need not be replayed, and non-trigger values already persist
         in session state; replaying either could overwrite callback mutations.
+
+        A repeated ID is judged on its last entry, as session state stores it, and
+        IDs in ``exclude`` are left out.
         """
         if widget_states is None:
             return None
 
+        latest = {widget.id: widget for widget in widget_states.widgets}
         filtered = WidgetStatesProto()
-        for widget in widget_states.widgets:
-            if _has_active_trigger_value(widget):
+        for widget_id, widget in latest.items():
+            if widget_id not in exclude and _has_active_trigger_value(widget):
                 filtered.widgets.append(widget)
         return filtered if filtered.widgets else None
 
@@ -1179,9 +1342,13 @@ class SessionState:
         replay_trigger_values: Mapping[str, Any] | None,
         fresh_widget_states: WidgetStatesProto | None,
     ) -> None:
-        """Apply replay triggers without replacing an active fresh trigger."""
+        """Apply replay triggers without replacing an active fresh trigger.
+
+        A fresh trigger the boundary check refused does not count, so it cannot
+        block a replay that was checked when it first arrived.
+        """
         active_fresh_states = self._filter_active_trigger_widget_states(
-            fresh_widget_states
+            fresh_widget_states, exclude=self._rejected_client_values
         )
         active_fresh_ids = (
             {widget.id for widget in active_fresh_states.widgets}
@@ -1342,15 +1509,6 @@ class SessionState:
                 if cb is not None:
                     self._execute_widget_callback(votes, cb, metadata, args, kwargs)
 
-    def _widget_changed(self, widget_id: str) -> bool:
-        """True if the given widget's value changed between the previous
-        script run and the current script run.
-        """
-        new_value = self._new_widget_state.get(widget_id)
-        old_value = self._old_state.get(widget_id)
-        changed: bool = new_value != old_value
-        return changed
-
     def on_script_finished(
         self,
         widget_ids_this_run: frozenset[str],
@@ -1463,6 +1621,7 @@ class SessionState:
             active_widget_ids,
             ctx.fragment_ids_this_run,
         )
+        self.prune_rendered_widgets(active_widget_ids)
 
         # Remove entries from _old_state corresponding to stale widgets.
         self._old_state = {
@@ -1510,9 +1669,62 @@ class SessionState:
         self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
         self._persist_tracker.prune(wid_key_map.keys(), self._old_state)
 
+    def prune_rendered_widgets(self, widget_ids_this_run: frozenset[str]) -> None:
+        """Forget the rendered widgets that a run covered but did not register.
+
+        A full run covers every widget, and a fragment run only its fragment's
+        widgets, as ``_is_stale_widget`` decides for stale widget states. A
+        fragment run also covers the widgets of the nested fragments it
+        removed, whose states stay. This never adds an ID, so a client's list of
+        widget IDs can only shrink the rendered set. A forgotten widget also
+        stops waiting for a re-sync, because the browser removed it.
+
+        Stale widget removal calls this, and so does the script runner when
+        ``st.stop()`` or an uncaught exception ends a run, which keeps the
+        widget states.
+
+        Parameters
+        ----------
+        widget_ids_this_run : frozenset[str]
+            The IDs of the widgets the run registered. On a page change, the
+            IDs in the client's message.
+        """
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        widget_state = self._new_widget_state
+        fragment_ids_this_run = ctx.fragment_ids_this_run
+        if fragment_ids_this_run:
+            metadata_by_id = widget_state.widget_metadata
+            fragment_storage = ctx.fragment_storage
+            widget_state.rendered_ids = {
+                widget_id
+                for widget_id in widget_state.rendered_ids
+                if (metadata := metadata_by_id.get(widget_id)) is not None
+                and not _is_stale_widget(
+                    metadata, widget_ids_this_run, fragment_ids_this_run
+                )
+                and not _is_in_removed_fragment(
+                    metadata, widget_ids_this_run, fragment_storage
+                )
+            }
+        else:
+            # A full run covers every widget, and every rendered widget has
+            # metadata, so the stale ones are those it did not register.
+            widget_state.rendered_ids.intersection_update(widget_ids_this_run)
+        # Only a rendered widget waits for a re-sync.
+        self._pending_resync.intersection_update(widget_state.rendered_ids)
+
     def get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
+
+    def is_widget_rendered(self, widget_id: str) -> bool:
+        """Whether the latest run that covered a widget registered it.
+
+        Metadata outlives the widget, so it cannot answer this.
+        """
+        return widget_id in self._new_widget_state.rendered_ids
 
     def get_widget_id_from_key(self, user_key: str) -> str | None:
         """Return the element ID the widget with ``user_key`` last registered under.
@@ -1624,17 +1836,45 @@ class SessionState:
             ):
                 incoming_serialized_values = list(stored_proto.string_array_value.data)
 
+        # Whether a client value for this widget was refused, so the browser
+        # must be told the server's value. A value for a widget this session
+        # never registered is checked now, against this run's metadata. The
+        # check runs before URL binding, so after a refused value the URL can
+        # still seed the widget on initial load.
+        client_value_refused = False
+        if widget_id in self._unregistered_client_ids:
+            self._unregistered_client_ids.discard(widget_id)
+            if self._check_unregistered_client_value(metadata):
+                # A trigger resets anyway, so only a value is re-synced.
+                client_value_refused = metadata.value_type not in _TRIGGER_PROTO_FIELDS
+                # The captured wire labels belong to the refused value, so
+                # option reconciliation must not fall back to them.
+                incoming_serialized_value = None
+                incoming_serialized_values = None
+        if widget_id in self._pending_resync:
+            self._pending_resync.discard(widget_id)
+            client_value_refused = True
+
         self._set_widget_metadata(metadata)
+        # Registering is rendering: the run sends the widget to the browser,
+        # even if it later replaces it or is interrupted.
+        self._new_widget_state.rendered_ids.add(widget_id)
         if user_key is not None:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
         # Handle query param binding
         url_binding_resolved = False
+        # A disabled widget ignores its parameter where the URL would have seeded
+        # it, so the parameter must be corrected to what the widget holds.
+        correct_disabled_param = False
         if metadata.bind == "query-params" and user_key is not None:
             self._query_param_bound_widget_ids.add(widget_id)
             url_binding_resolved = self._handle_query_param_binding(
                 metadata, user_key, widget_id
+            )
+            correct_disabled_param = metadata.disabled and self._url_would_seed(
+                widget_id, user_key
             )
             # Whenever the URL (or its absence) decided this widget's value, the
             # wire labels captured above belong to a discarded frontend value.
@@ -1666,34 +1906,6 @@ class SessionState:
         elif metadata.persist_state is None and user_key is not None:
             # Widget stopped persisting — drop any stale tracking.
             self._persist_tracker.untrack(widget_id, user_key)
-
-        # Enforce `disabled` server-side. A disabled widget cannot be interacted
-        # with in the browser, so any value in widget state is a stale/forged
-        # frontend value and must be dropped, so resolution falls back to the
-        # widget's previous value (or its default on first registration).
-        # URL-seeded values are exempt: they populate widget state legitimately
-        # for bound widgets (url_binding_resolved). A programmatic st.session_state
-        # assignment lives in _new_session_state and still wins during
-        # resolution, so dropping the forged widget-state entry never affects it
-        # while preventing the forged value from lingering there until compaction.
-        disabled_value_discarded = False
-        if (
-            metadata.disabled
-            and widget_id in self._new_widget_state
-            and not url_binding_resolved
-        ):
-            del self._new_widget_state[widget_id]
-            # The captured wire labels belong to the dropped frontend value, so
-            # they must not leak to callers. Otherwise a caller like st.selectbox
-            # or st.multiselect could reconcile options against this attacker-
-            # controlled label (see resolve_value_against_options) and hand back
-            # an option that differs from the value we resolve below.
-            incoming_serialized_value = None
-            incoming_serialized_values = None
-            if user_key is None or user_key not in self._new_session_state:
-                # No programmatic value is taking over resolution, so the discard
-                # itself changes the resolved value; flag the frontend to re-sync.
-                disabled_value_discarded = True
 
         if (
             widget_id not in self
@@ -1733,7 +1945,21 @@ class SessionState:
         restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if widget_value != default_value:
+            if correct_disabled_param:
+                # The address bar must not claim a value the widget ignored. The
+                # frontend still shows the parameter, so unlike the sync below,
+                # both corrections send a forward message.
+                if widget_value == default_value:
+                    self.query_params.remove_param(user_key)
+                else:
+                    serialized = metadata.serializer(widget_value)
+                    if not self.query_params.stored_param_matches_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    ):
+                        self.query_params.set_corrected_value(
+                            user_key, serialized, metadata.value_type
+                        )
+            elif widget_value != default_value:
                 if (
                     user_key in self._old_state
                     and not self.query_params.has_param(user_key)
@@ -1810,13 +2036,15 @@ class SessionState:
         # - a previous-run user-key or persist_state value was restored from
         #   session state on (re)mount, for the same reason;
         # - a "page"-scoped value was dropped on a page switch, so the frontend
-        #   must fall back to the default for the reused widget id.
+        #   must fall back to the default for the reused widget id;
+        # - a client value was refused, so the browser still shows it. A
+        #   programmatic value covers this already, through the first case.
         widget_value_changed = (
             (user_key is not None and self.is_new_state_value(user_key))
             or restored_bound_value
             or restored_session_state_value
             or dropped_page_scoped_value
-            or disabled_value_discarded
+            or client_value_refused
         )
 
         return RegisterWidgetResult(
@@ -1824,6 +2052,81 @@ class SessionState:
             widget_value_changed,
             incoming_serialized_value=incoming_serialized_value,
             incoming_serialized_values=incoming_serialized_values,
+        )
+
+    def _check_unregistered_client_value(self, metadata: WidgetMetadata[Any]) -> bool:
+        """Check a client value for a widget registering for the first time.
+
+        The value is checked like one at the boundary, against this run's
+        metadata, and compared with the widget's default: no earlier run stored
+        a value. An accepted value is cached deserialized, and a refused one is
+        dropped as if never sent.
+
+        A trigger is checked the same way, so a click that is the first
+        interaction after a reconnect to a new session counts: the widget
+        returns it in this run. Its callback does not run, because callbacks run
+        before the script body, while the widget has no metadata yet.
+
+        Returns
+        -------
+        bool
+            Whether the value was refused.
+        """
+        widget_id = metadata.id
+        wstate = self._new_widget_state.states.get(widget_id)
+        if not isinstance(wstate, Serialized):
+            return False
+        state = wstate.value
+        # The widget is registering in this run, which renders it.
+        result = widget_checks.check_client_value(
+            state,
+            metadata=metadata,
+            previous=metadata.deserializer(None),
+            is_rendered=True,
+        )
+        violation = result.violation
+        if widget_checks.browser_refuses(violation):
+            self._new_widget_state.drop(widget_id)
+            widget_checks.log_violation(
+                widget_id, violation, warned=self._warned_widget_ids
+            )
+            return True
+        self._new_widget_state.cache_value(
+            widget_id, result.value, state.WhichOneof("value")
+        )
+        return False
+
+    def _url_has_priority(
+        self, widget_id: str, user_key: str, *, is_history_navigation: bool
+    ) -> bool:
+        """Whether binding's priority rules let the URL decide a widget's value.
+
+        On history navigation the URL always does. Otherwise a client value for
+        the widget wins, and after the widget's first run so does a value that
+        code set in ``st.session_state``.
+        """
+        if is_history_navigation:
+            return True
+        if widget_id in self._new_widget_state:
+            return False
+        return (
+            widget_id not in self._old_state or user_key not in self._new_session_state
+        )
+
+    def _url_would_seed(self, widget_id: str, user_key: str) -> bool:
+        """Whether the URL would seed a bound widget in this run if it were enabled.
+
+        That needs the parameter present and the URL to have priority. Without
+        priority, an earlier run already decided the widget's value and
+        corrected or removed its parameter, so nothing is left to correct.
+        """
+        if self.query_params.get_initial_value(user_key) is None:
+            return False
+        ctx = get_script_run_ctx()
+        return self._url_has_priority(
+            widget_id,
+            user_key,
+            is_history_navigation=ctx is not None and ctx.is_history_navigation,
         )
 
     def _handle_query_param_binding(
@@ -1847,6 +2150,10 @@ class SessionState:
           leaves that assignment in place; on history navigation the restored
           entry had no param, so the default is what the URL asks for.
 
+        A disabled widget accepts no client input, and the URL is client input,
+        so it is never seeded: it keeps its default or previous value, and
+        ``register_widget`` corrects the parameter.
+
         Returns True if the widget's value was resolved here (seeded from the URL,
         or reset to the default on history navigation), False otherwise.
         """
@@ -1860,26 +2167,20 @@ class SessionState:
             value_type=metadata.value_type,
             script_hash=script_hash,
         )
+        if metadata.disabled:
+            return False
 
         # Check priority rules - skip seeding if user/code has already set a value.
-        # A disabled widget is exempt: it cannot be interacted with, so any value in
-        # _new_widget_state is a stale/forged frontend value. Let URL seeding proceed;
-        # disabled enforcement in register_widget then discards the forged value.
-        if widget_id in self._new_widget_state and not metadata.disabled:
-            if not is_history_navigation:
-                return False
+        if not self._url_has_priority(
+            widget_id, user_key, is_history_navigation=is_history_navigation
+        ):
+            return False
+        if widget_id in self._new_widget_state:
             # History navigation must discard preserved widget state so the URL
             # can seed. Omit only strips the incoming proto; this also drops
             # values copied into _new_widget_state on MPA page change and
             # first-time binds.
             del self._new_widget_state[widget_id]
-        is_initial_load = widget_id not in self._old_state
-        if (
-            not is_initial_load
-            and user_key in self._new_session_state
-            and not is_history_navigation
-        ):
-            return False  # Code set value after first run
 
         url_value = self.query_params.get_initial_value(user_key)
         if url_value is not None and self._seed_widget_from_url(
@@ -1910,7 +2211,8 @@ class SessionState:
         1. Checks if the URL value is empty and handles based on clearable
         2. Parses the raw URL string using the widget's value_type
         3. Deserializes to the widget's native value format
-        4. Handles invalid values (clears URL param, returns False)
+        4. Handles invalid values (clears URL param, returns False), checking
+           the value with the widget's validator and repairing what it can
         5. Stores valid values in both widget state and session state
         6. Auto-corrects the URL if the value was clamped/filtered
 
@@ -1983,6 +2285,16 @@ class SessionState:
                         self._clear_url_param(user_key)
                         return False
 
+            # The widget's own rules, after the array repairs above. A value
+            # they cannot repair clears the param, and so does a repaired value
+            # that equals the default.
+            deserialized_value, is_valid = _validate_url_value(
+                metadata, deserialized_value
+            )
+            if not is_valid or deserialized_value == default_value:
+                self._clear_url_param(user_key)
+                return False
+
             # Store the value in widget and session state
             self._new_widget_state.set_from_value(widget_id, deserialized_value)
             self._new_session_state[user_key] = deserialized_value
@@ -1993,11 +2305,14 @@ class SessionState:
             )
             return True
 
-        except (ValueError, TypeError, IndexError) as e:
+        except Exception as e:
+            # Any widget code may raise for a hand-edited URL: the parser, the
+            # deserializer, the serializer, or the validator. The message is
+            # left out because it may quote the value.
             _LOGGER.debug(
-                "Invalid URL value for bound widget '%s', clearing param: %s",
+                "Invalid URL value for bound widget '%s', clearing param (%s).",
                 user_key,
-                e,
+                type(e).__name__,
             )
             self._clear_url_param(user_key)
             return False
@@ -2096,6 +2411,28 @@ def _is_stale_widget(
     return not (
         metadata.id in active_widget_ids
         or (fragment_ids_this_run and metadata.fragment_id not in fragment_ids_this_run)
+    )
+
+
+def _is_in_removed_fragment(
+    metadata: WidgetMetadata[Any],
+    widget_ids_this_run: frozenset[str],
+    fragment_storage: FragmentStorage,
+) -> bool:
+    """Whether a widget the run did not register belongs to a fragment that is gone.
+
+    A fragment run removes the nested fragments its fragments ran without
+    calling again (``FragmentStorage.clear_stale_descendants``), and the browser
+    removes their elements with them. ``fragment_ids_this_run`` names only the
+    fragments the client asked for, so ``_is_stale_widget`` keeps those widgets.
+    A rerun request from a removed fragment is already dropped
+    (``AppSession.request_rerun``).
+    """
+    fragment_id = metadata.fragment_id
+    return (
+        fragment_id is not None
+        and metadata.id not in widget_ids_this_run
+        and not fragment_storage.contains(fragment_id)
     )
 
 

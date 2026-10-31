@@ -32,6 +32,7 @@ from streamlit.errors import (
 )
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.runtime.state.widgets import register_widget_from_metadata
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -97,20 +98,34 @@ class TestFeedbackSerde:
         assert serde.deserialize("") != 2  # Explicitly verify it's not the default
 
     @pytest.mark.parametrize(
-        ("ui_value", "default", "expected"),
+        ("ui_value", "default"), [("2", None), ("-1", None), ("2", 1)]
+    )
+    def test_out_of_range_index_is_returned_and_refused(
+        self, ui_value: str, default: int | None
+    ) -> None:
+        """An index outside the options is kept as read, and validate refuses it."""
+        serde = FeedbackSerde(num_options=2, default_value=default)
+
+        assert serde.deserialize(ui_value) == int(ui_value)
+        assert serde.validate(ui_value) == Violation(
+            "not_an_option", {"options": ("0", "1")}
+        )
+
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
         [
-            ("1", None, 1),
-            ("2", None, None),
-            ("-1", None, None),
-            ("2", 1, 1),
+            (None, None),
+            # The browser sends "" when the user clears the selection.
+            ("", None),
+            ("1", None),
+            # Text that int() reads but the browser never sends.
+            ("+1", Violation("not_an_option", {"options": ("0", "1")})),
+            (" 1", Violation("not_an_option", {"options": ("0", "1")})),
         ],
     )
-    def test_deserialize_out_of_range_index_returns_default(
-        self, ui_value: str, default: int | None, expected: int | None
-    ) -> None:
-        """Test that an index outside the options deserializes to the default."""
-        serde = FeedbackSerde(num_options=2, default_value=default)
-        assert serde.deserialize(ui_value) == expected
+    def test_validate(self, ui_value: str | None, expected: Violation | None) -> None:
+        """validate accepts the indexes the browser sends and the clear value."""
+        assert FeedbackSerde(num_options=2).validate(ui_value) == expected
 
 
 class TestFeedbackCommand(DeltaGeneratorTestCase):
