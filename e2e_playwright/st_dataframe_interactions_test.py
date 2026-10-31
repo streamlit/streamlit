@@ -216,13 +216,12 @@ def test_fixed_height_dataframe_expands_in_fullscreen(app: Page):
 
     # Must expand beyond the configured height; must not stay stuck at 458px.
     expect(dataframe_element).not_to_have_css("height", f"{configured_height}px")
-    wait_until(
-        app,
-        lambda: (
-            (dataframe_element.bounding_box() or {}).get("height", 0)
-            > configured_height + 100
-        ),
-    )
+
+    def _is_expanded() -> bool:
+        box = dataframe_element.bounding_box()
+        return box is not None and box["height"] > configured_height + 100
+
+    wait_until(app, _is_expanded)
 
     dataframe_toolbar.get_by_test_id("stElementToolbarButton").last.click()
     expect(dataframe_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
