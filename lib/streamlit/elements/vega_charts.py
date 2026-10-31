@@ -660,9 +660,8 @@ def _parse_selection_mode(
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
     """Altair names unnamed parameters and views with a global counter
-    (Altair 5) or a hash (Altair 6). We need to reset these names on a
-    spec-level to make the spec stable across reruns and avoid changes to the
-    element ID.
+    (Altair 5) or a hash (Altair 6). ``_stabilize_vega_json_spec`` rewrites
+    those names so the spec and its element ID stay stable across reruns.
     """
 
     # Match counter names (``view_1``), hex hash names (``view_79c4``), and

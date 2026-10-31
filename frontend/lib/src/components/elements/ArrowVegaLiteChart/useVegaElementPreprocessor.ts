@@ -401,8 +401,8 @@ export const useVegaElementPreprocessor = (
     [rowCountsKey]
   )
 
-  // Map each dataset name to its alias, recomputing only when the names
-  // change. Every rerun delivers new dataset objects.
+  // Map each dataset name to its alias. Memoize on the serialized names,
+  // because every rerun delivers new dataset objects.
   const datasetNamesKey = JSON.stringify(
     datasets.map(({ hasName, name }) => (hasName ? name : null))
   )

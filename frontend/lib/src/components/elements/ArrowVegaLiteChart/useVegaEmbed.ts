@@ -51,10 +51,11 @@ const LOG = getLogger("useVegaEmbed")
 const CHILD_VIEW_KEYS = ["layer", "concat", "hconcat", "vconcat", "spec"]
 
 /**
- * Names of the selection stores that hold the spec's zoom and pan: the
- * `{param}_store` of each interval param bound to the scales, such as the
- * one Altair's `.interactive()` adds. Params in `selectionMode` are left out,
- * because those stores are selections that Streamlit reports and restores.
+ * Returns the selection stores that hold the spec's zoom and pan, so a data
+ * swap can reset them: the `{param}_store` of each interval param bound to
+ * the scales, such as the one Altair's `.interactive()` adds. Params in
+ * `selectionMode` are skipped, because Streamlit reports and restores those
+ * as selections.
  */
 function getZoomStores(
   spec: unknown,
@@ -215,8 +216,10 @@ export function useVegaEmbed(
 
   /**
    * Applies `inputData`/`inputDatasets` to an existing Vega view by diffing them
-   * against `prevDataRef`/`prevDatasetsRef`. Callers must advance those refs
-   * after the resulting `runAsync()` resolves.
+   * against `prevDataRef`/`prevDatasetsRef`. When any rows change, it also
+   * clears the zoom and pan stores (see getZoomStores), as a double-click
+   * would. Callers must advance those refs after the resulting `runAsync()`
+   * resolves.
    */
   const syncViewData = useCallback(
     (
