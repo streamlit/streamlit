@@ -152,6 +152,8 @@ class _Result:
     version: str = ""
     # The interpreter's "major.minor" version, when it ran.
     python: str = ""
+    # Streamlit was read from site-packages because the interpreter could not run.
+    from_disk: bool = False
 
 
 def _locate_streamlit() -> dict[str, str]:
@@ -322,7 +324,7 @@ def _check(candidate: _Candidate, project_dir: Path, deadline: float) -> _Result
         package_dir = _site_packages_streamlit(candidate.env_root)
         if package_dir is not None:
             detail = f"{result.detail}; read Streamlit from its site-packages instead"
-            return _Result("found", detail, package_dir=package_dir)
+            return _Result("found", detail, package_dir=package_dir, from_disk=True)
     return result
 
 
@@ -394,7 +396,13 @@ def _canonical_path(path: str | Path) -> str:
 
 
 def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Candidate]:
-    """Yield environments inside the project directory and its parents."""
+    """Yield uv's selected environment, then those in the project and its parents."""
+    # uv uses this instead of `.venv`, which may be stale or belong to another
+    # OS (a dev container sees the host's `.venv`).
+    uv_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
+    if uv_environment:
+        env_root = project_dir / os.path.expanduser(uv_environment)
+        yield _env_candidate("$UV_PROJECT_ENVIRONMENT", env_root)
     for directory in dirs:
         for name, marker in _ENV_DIRS:
             env_root = directory / name
@@ -406,10 +414,6 @@ def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Cand
         pdm_python = _first_line(directory / ".pdm-python")
         if pdm_python:
             yield _python_candidate(".pdm-python", Path(pdm_python))
-    uv_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
-    if uv_environment:
-        env_root = project_dir / os.path.expanduser(uv_environment)
-        yield _env_candidate("$UV_PROJECT_ENVIRONMENT", env_root)
 
 
 def _conda_env_name(directory: Path) -> str:
@@ -503,7 +507,8 @@ def _active_and_path_interpreters() -> Iterator[_Candidate]:
 def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
     """Yield interpreters to check, most project-specific first.
 
-    1. Environments in the project directory and its parents, up to the git root.
+    1. ``$UV_PROJECT_ENVIRONMENT``, then environments in the project directory
+       and its parents, up to the git root.
     2. Environments that conda, pyenv, Pipenv, and Poetry record for the project.
     3. ``$VIRTUAL_ENV`` and ``$CONDA_PREFIX``. They come late because agent
        shells often have the agent's own environment activated.
@@ -629,10 +634,8 @@ def _install_step(
     requirement = (
         f'"streamlit>={_FIRST_VERSION_WITH_SKILLS}"' if upgrade else "streamlit"
     )
-    # Streamlit was read from disk because the environment's Python could not
-    # run. Installing with another Python would not fix that environment.
-    broken = result.status == "found" and bool(result.detail)
-    if broken and _manager_install_command(project_dir, requirement) is None:
+    # Installing with another Python would not fix an environment that cannot run.
+    if result.from_disk and _manager_install_command(project_dir, requirement) is None:
         return (
             "This environment's Python could not be run (see below), so nothing "
             "can be installed into it. Only if the user agrees, repair or recreate "
@@ -653,7 +656,7 @@ def _report_found(
     location = [f"Environment: {_describe(candidate)}", f"Streamlit: {package_dir}"]
     if os.path.isfile(skill):
         print(skill)
-        if result.detail:
+        if result.from_disk:
             print(
                 f"NOTE: {_describe(candidate)} {result.detail}. The skill is usable, "
                 "but the environment may need repair before the app can run.",
@@ -833,7 +836,9 @@ def _discover(argv: list[str]) -> int:
             return _report_invalid_arguments(
                 f"--python {args.python!r} is not a file or a command on PATH."
             )
-        candidates = iter([_python_candidate("--python", Path(found))])
+        candidate = _python_candidate("--python", Path(found))
+        candidate.skip_reason = _macos_install_dialog_reason(os.path.abspath(found))
+        candidates = iter([candidate])
     else:
         candidates = _candidates(project_dir, deadline)
 

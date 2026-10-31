@@ -13,16 +13,16 @@ Streamlit (>=1.57) ships detailed reference documentation for building Streamlit
 macOS and Linux:
 
 ```
-python3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT_DIR}"
+python3 "<skill-dir>/scripts/discover.py" --project-dir "<project-dir>"
 ```
 
 Windows (if `py` is missing, use `python` instead of `py -3`):
 
 ```
-py -3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" --project-dir "${CLAUDE_PROJECT_DIR}"
+py -3 "<skill-dir>/scripts/discover.py" --project-dir "<project-dir>"
 ```
 
-- `${CLAUDE_SKILL_DIR}` is the directory containing this file, and `${CLAUDE_PROJECT_DIR}` is the user's project directory. If they appear unexpanded, replace them with absolute paths. Keep the quotes; forward slashes work on every OS.
+- Replace `<skill-dir>` with the absolute path of the directory containing this file, and `<project-dir>` with the absolute path of the user's project (usually the current working directory). Keep the quotes. In Claude Code, `<skill-dir>` is `${CLAUDE_SKILL_DIR}` and `<project-dir>` is `${CLAUDE_PROJECT_DIR}`.
 - If the Streamlit app lives in a subdirectory with its own virtual environment, pass that subdirectory as `--project-dir`.
 - If no launcher works (on macOS without developer tools, `python3` offers to install them instead), or the script fails with a `SyntaxError` (a very old Python), run it with the project's own interpreter, such as `.venv/bin/python` or `.venv/Scripts/python.exe`.
 

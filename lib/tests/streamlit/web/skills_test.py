@@ -4435,7 +4435,7 @@ class TestVendoredMetaSkillDiscovery:
         env = {
             key: value
             for key, value in os.environ.items()
-            if key not in {"VIRTUAL_ENV", "CONDA_PREFIX"}
+            if key not in {"VIRTUAL_ENV", "CONDA_PREFIX", "UV_PROJECT_ENVIRONMENT"}
         }
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],

@@ -268,7 +268,7 @@ def test_broken_interpreter_with_old_streamlit_is_not_given_pip_advice(
 def test_site_packages_with_the_skill_is_preferred(
     discover: ModuleType, tmp_path: Path
 ) -> None:
-    """A venv upgraded in place keeps the old Python's packages; the newer one wins."""
+    """In a venv upgraded in place, the site-packages that has the skill wins."""
     old = tmp_path / "lib" / "python3.9" / "site-packages" / "streamlit"
     new = tmp_path / "lib" / "python3.12" / "site-packages" / "streamlit"
     old.mkdir(parents=True)
@@ -365,7 +365,7 @@ def test_invalid_arguments_are_explained(
 def test_candidates_are_ordered_from_project_to_path(
     discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Project environments come first, then activated ones, then this interpreter."""
+    """uv's selected and project environments come first, then activated ones."""
     outer = tmp_path / "outer"
     repo = outer / "repo"
     app = repo / "app"
@@ -380,12 +380,14 @@ def test_candidates_are_ordered_from_project_to_path(
     _isolate_lookups(monkeypatch, tmp_path / "home")
     monkeypatch.setenv("VIRTUAL_ENV", str(tmp_path / "virtual-env"))
     monkeypatch.setenv("CONDA_PREFIX", str(tmp_path / "conda"))
+    monkeypatch.setenv("UV_PROJECT_ENVIRONMENT", "uv-env")
     monkeypatch.setattr(discover.shutil, "which", lambda _name: None)
 
     candidates = list(discover._candidates(app, deadline=float("inf")))
 
     this_python = discover._python_candidate("", Path(sys.executable))
     assert [(c.label, c.env_root) for c in candidates] == [
+        ("$UV_PROJECT_ENVIRONMENT", app / "uv-env"),
         (".venv", app / ".venv"),
         ("venv", app / "venv"),
         (".pdm-python", None),
@@ -554,6 +556,22 @@ def test_macos_python_stub_is_never_run(
     (developer_dir / "usr" / "bin").mkdir(parents=True)
     (developer_dir / "usr" / "bin" / "python3").write_text("", "utf-8")
     assert discover._macos_install_dialog_reason("/usr/bin/python3") == ""
+
+
+def test_python_flag_has_the_macos_stub_guard(
+    discover: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """--python gets the same guard against opening the macOS installer dialog."""
+    python = tmp_path / "python3"
+    python.write_text("", encoding="utf-8")
+    monkeypatch.setattr(discover, "_macos_install_dialog_reason", lambda _: "dialog")
+    monkeypatch.setattr(discover, "_run", lambda *_: pytest.fail("must not run"))
+
+    assert discover.main(["--project-dir", str(tmp_path), "--python", str(python)]) == 3
+    assert "not run: dialog" in capsys.readouterr().err
 
 
 def test_windows_ignores_commands_in_the_current_directory(
