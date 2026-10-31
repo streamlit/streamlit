@@ -127,10 +127,10 @@ export function calculateModalSize(
   padding?: string,
   largeWidth?: string
 ): string | undefined {
-  if (size === "large" && largeWidth) {
+  if (size === "large" && largeWidth !== undefined) {
     return largeWidth
   }
-  if (size === "medium" && width && padding) {
+  if (size === "medium" && width !== undefined && padding !== undefined) {
     // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
     // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
     // Note: the panel's maxWidth (calc(100% - lg - lg)) keeps this responsive on

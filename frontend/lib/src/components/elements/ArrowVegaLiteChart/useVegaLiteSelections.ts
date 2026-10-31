@@ -21,6 +21,8 @@ import { getLogger } from "loglevel"
 import type { SignalValue, View as VegaView } from "vega"
 import { varName } from "vega-lite"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { isValidFormId, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -417,9 +419,10 @@ export const useVegaLiteSelections = (
         }
 
         const widgetInfo: WidgetInfo = { id: chartId, formId }
+        const widgetStateStr = widgetMgr.getStringValue(widgetInfo)
+        // Parse missing or empty widget state as an empty object.
         const currentWidgetState = JSON.parse(
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank widget state parses as an empty object
-          widgetMgr.getStringValue(widgetInfo) || "{}"
+          isNullOrEmptyString(widgetStateStr) ? "{}" : widgetStateStr
         )
         const selection = {
           ...currentWidgetState?.selection,
@@ -700,7 +703,7 @@ export const useVegaLiteSelections = (
     })
     const widgetInfo = { id: chartId, formId }
     const currentWidgetStateStr = widgetMgr.getStringValue(widgetInfo)
-    const currentWidgetState = currentWidgetStateStr
+    const currentWidgetState = !isNullOrEmptyString(currentWidgetStateStr)
       ? JSON.parse(currentWidgetStateStr)
       : // If there wasn't any selection yet, the selection state
         // is assumed to be empty.

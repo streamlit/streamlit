@@ -204,8 +204,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           // Set display value to be the regex extracted portion of the href.
           displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
         } else {
-          // Use user provided display_text unless it's null, undefined, or an empty string.
-          // Otherwise, use the href.
+          // Use the configured display_text, or the href when it is unset or empty.
           displayText = isNullOrEmptyString(configuredDisplayText)
             ? href
             : configuredDisplayText

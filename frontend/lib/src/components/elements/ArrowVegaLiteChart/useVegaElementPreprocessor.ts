@@ -147,7 +147,7 @@ function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
   }
 
   const renderer = sanitizeRenderer(embedOptions?.renderer)
-  if (renderer) {
+  if (renderer !== undefined) {
     sanitizedEmbedOptions.renderer = renderer
   }
 

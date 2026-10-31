@@ -26,6 +26,7 @@ import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -223,9 +224,9 @@ function getStateFromWidgetMgr(
   }
 
   const stringValue = widgetMgr.getStringValue(element)
-  const currState: DeckGlElementState | null = stringValue
-    ? JSON5.parse(stringValue)
-    : null
+  const currState = isNullOrEmptyString(stringValue)
+    ? null
+    : JSON5.parse<DeckGlElementState>(stringValue)
 
   return currState ?? EMPTY_STATE
 }
@@ -482,7 +483,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       jsonCopy.mapProvider === "carto" ||
       jsonCopy.mapStyle?.includes("cartocdn") === true
 
-    if (isUsingCarto && !jsonCopy.cartoKey) {
+    if (isUsingCarto && isNullOrEmptyString(jsonCopy.cartoKey)) {
       jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
@@ -637,7 +638,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (
-      !cartoKey &&
+      isNullOrEmptyString(cartoKey) &&
       typeof mapStyle === "string" &&
       mapStyle.includes("cartocdn")
     ) {
@@ -703,9 +704,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         tooltip
       )
 
-      if (parsedTooltip.html) {
+      if (!isNullOrEmptyString(parsedTooltip.html)) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
-      } else if (parsedTooltip.text) {
+      } else if (!isNullOrEmptyString(parsedTooltip.text)) {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       } else {
         // A tooltip with neither html nor text has nothing to render; returning

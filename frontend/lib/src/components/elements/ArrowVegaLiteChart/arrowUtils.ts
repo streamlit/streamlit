@@ -16,6 +16,8 @@
 
 import { isPlainObject } from "lodash-es"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   DataFrameCellType,
   type DataType,
@@ -234,7 +236,7 @@ export function getDataArray(quiverData: Quiver): VegaLiteDataRow[] {
         (isDatetimeType(dataType) || isDateType(dataType)) &&
         // Only convert dates without timezone information
         // to utc timezone
-        !getTimezone(dataType)
+        isNullOrEmptyString(getTimezone(dataType))
       ) {
         // For dates that do not contain timezone information.
         // Vega JS assumes dates in the local timezone, so we need to convert

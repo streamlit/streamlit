@@ -155,8 +155,8 @@ function ButtonActionMenu({
                   // Labels are user-provided and can be long, so allow wrapping
                   // instead of forcing a single line (which would overflow).
                   allowWrap
-                  // Provide aria-label for icon-only menu items (where text is empty).
-                  // Empty label text falls through to the icon, then the raw label.
+                  // Icon-only items (empty text) use the icon as their
+                  // accessible name, or the raw label when there is no icon.
                   aria-label={text || (icon ?? label)}
                 >
                   {icon !== null && (
