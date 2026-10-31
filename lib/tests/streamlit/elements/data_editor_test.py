@@ -55,6 +55,7 @@ from streamlit.elements.widgets.data_editor import (
 )
 from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversionError
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import (
@@ -439,6 +440,8 @@ class DataEditorUtilTest(unittest.TestCase):
         # cleared or truncated one.
         assert df.iat[0, 0] in {pd.Timedelta(seconds=90), pd.Timedelta(seconds=90.5)}
 
+    # The 90.5s row widens the timedelta64[s] column, which pandas 3.1 deprecates.
+    @pytest.mark.filterwarnings("ignore:Setting an item of incompatible dtype")
     def test_apply_row_additions_incompatible_timedelta_does_not_raise(self):
         """A finer-than-dtype duration row add must not crash the app."""
         df = pd.DataFrame(
@@ -514,6 +517,19 @@ class DataEditorUtilTest(unittest.TestCase):
         # Other edits in the same row still apply.
         assert df.iat[0, 0] == 10
 
+    def test_apply_cell_edits_index_edit_changes_only_edited_row(self):
+        """An index edit relabels only the edited row, even if labels repeat."""
+        df = pd.DataFrame(
+            {"col": [1, 2, 3]}, index=pd.Index(["a", "b", "a"], name="key")
+        )
+        dataframe_schema = determine_dataframe_schema(df, _get_arrow_schema(df))
+
+        _apply_cell_edits(df, {2: {INDEX_IDENTIFIER: "c"}}, dataframe_schema)
+
+        assert df.index.tolist() == ["a", "b", "c"]
+        assert df.index.name == "key"
+        assert df["col"].tolist() == [1, 2, 3]
+
     def test_apply_row_additions_out_of_range_timedelta_skips_row(self):
         """An added row with an out-of-range duration is skipped, later rows are kept."""
         df = pd.DataFrame({"duration": [pd.Timedelta(seconds=5)]})
@@ -579,7 +595,7 @@ class DataEditorUtilTest(unittest.TestCase):
 
         deleted_rows: list[int] = [0, 2]
 
-        _apply_row_deletions(df, deleted_rows)
+        df = _apply_row_deletions(df, deleted_rows)
 
         assert len(df) == 1, f"Only one row should be left, but has {len(df)}."
         assert df.iloc[0].to_list() == [2, "b", False]
@@ -606,7 +622,7 @@ class DataEditorUtilTest(unittest.TestCase):
             }
         }
 
-        _apply_dataframe_edits(
+        df = _apply_dataframe_edits(
             df,
             DataEditorState(
                 {
@@ -640,7 +656,7 @@ class DataEditorUtilTest(unittest.TestCase):
         added_rows: list[dict[str, Any]] = [{"_index": 5, "B": 123}]
         edited_rows: dict[int, Any] = {}
 
-        _apply_dataframe_edits(
+        df = _apply_dataframe_edits(
             df,
             DataEditorState(
                 {
@@ -819,7 +835,7 @@ class DataEditorUtilTest(unittest.TestCase):
         # Delete the first row and re-add a row reusing its index value in the
         # same batch. Deletions run before additions, so the re-added label is
         # no longer present and the addition must not be rejected as a duplicate.
-        _apply_dataframe_edits(
+        df = _apply_dataframe_edits(
             df,
             DataEditorState(
                 {
@@ -883,7 +899,7 @@ class DataEditorUtilTest(unittest.TestCase):
             {"col1": [1, 3, 4, 10]}, index=pd.Index([0, 2, 3, 4], dtype="int64")
         )
 
-        _apply_dataframe_edits(
+        df = _apply_dataframe_edits(
             df,
             DataEditorState(
                 {
@@ -920,7 +936,7 @@ class DataEditorUtilTest(unittest.TestCase):
         # No row additions for this test
         added_rows: list[dict[str, Any]] = []
 
-        _apply_dataframe_edits(
+        df = _apply_dataframe_edits(
             df,
             DataEditorState(
                 {
@@ -1670,7 +1686,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
                 "col3": [True, False, True],
             }
         )
-        df.set_index(index, inplace=True)
+        df = df.set_index(index)
 
         with pytest.raises(StreamlitAPIException):
             st.data_editor(df)
@@ -1695,7 +1711,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
                 "col3": [True, False, True],
             }
         )
-        df.set_index(index, inplace=True)
+        df = df.set_index(index)
         # This should run without an issue and return a valid dataframe
         return_df = st.data_editor(df)
         assert isinstance(return_df, pd.DataFrame)
@@ -1763,7 +1779,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
                     "col3": [True, False, True],
                 }
             )
-            df.set_index(index, inplace=True)
+            df = df.set_index(index)
             # This should run without an issue and return a valid dataframe
             return_df = st.data_editor(df)
             assert isinstance(return_df, pd.DataFrame)
@@ -1822,7 +1838,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         """Test that duplicate column names raise an exception."""
         # create a dataframe with duplicate columns
         df = pd.DataFrame({"duplicated": [1, 2, 3], "col2": [4, 5, 6]})
-        df.rename(columns={"col2": "duplicated"}, inplace=True)
+        df.columns = ["duplicated", "duplicated"]
 
         # StreamlitAPIException should be raised
         with pytest.raises(StreamlitAPIException):
@@ -1831,10 +1847,33 @@ class DataEditorTest(DeltaGeneratorTestCase):
     def test_non_string_column_names_are_converted_to_string(self):
         """Test that non-string column names are converted to string."""
         # create a dataframe with non-string columns
-        df = pd.DataFrame(0, ["John", "Sarah", "Jane"], list(range(1, 4)))
+        df = pd.DataFrame(
+            0, ["John", "Sarah", "Jane"], pd.Index(range(1, 4), name="year")
+        )
         assert pd.api.types.infer_dtype(df.columns) != "string"
         return_df = st.data_editor(df)
         assert pd.api.types.infer_dtype(return_df.columns) == "string"
+        # The column axis name (for example, from a pivot) is kept.
+        assert return_df.columns.name == "year"
+
+    @patch(
+        "streamlit.elements.widgets.data_editor.register_widget",
+        MagicMock(
+            return_value=RegisterWidgetResult(
+                {"edited_rows": {}, "added_rows": [], "deleted_rows": [0, 2]},
+                False,
+            )
+        ),
+    )
+    def test_returns_dataframe_without_deleted_rows(self):
+        """Test that the returned dataframe excludes rows deleted in the editor."""
+        df = pd.DataFrame({"col": [1, 2, 3]})
+
+        return_df = st.data_editor(df, num_rows="dynamic")
+
+        assert return_df["col"].tolist() == [2]
+        # The input dataframe is not modified.
+        assert df["col"].tolist() == [1, 2, 3]
 
     def test_index_column_name_raises_exception(self):
         """Test that an index column name raises an exception."""

@@ -2879,7 +2879,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
@@ -2916,7 +2916,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 "d": [300, 301, 302],
             }
         )
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         # There used to be a bug where this line would throw an exception.
         # (Because some color-handling code was dependent on the DF index starting at 0)
