@@ -904,7 +904,7 @@ async def test_interact_counts_a_refused_call_on_its_own_transport(
 
     assert raised.value.code == "invalid_request"
     registry.create.assert_not_called()
-    assert counts == {**usage_counts.NOTHING_COUNTED, f"{transport}_interactions": 1}
+    assert counts == {**usage_counts.ZERO_COUNTS, f"{transport}_interactions": 1}
 
 
 @pytest.mark.parametrize(

@@ -616,8 +616,7 @@ async def interact(
         For every refusal the error catalog lists. A creating call that fails
         after its session exists carries that session's handle.
     """
-    # Counted first, so a request refused below still counts: it is still an
-    # agent using the API.
+    # Count before validating, so a refused request still counts as agent usage.
     usage.record_interaction(transport)
     # Off the event loop, since it walks every string in a body that can be as
     # large as a message from the browser.

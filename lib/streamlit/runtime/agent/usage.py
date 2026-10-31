@@ -17,8 +17,8 @@
 Browsers are the only telemetry sender, so the counts ride on the page profile
 each browser session reports after a run. They are cumulative, so every later
 report repeats them, and they carry a random id of the process. Analysis takes
-each process's largest count and adds those up across restarts and replicas,
-which counts nothing twice.
+each process's largest count and adds those up across restarts, replicas, and
+forked workers, so nothing is counted twice.
 """
 
 from __future__ import annotations

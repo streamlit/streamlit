@@ -78,4 +78,4 @@ def test_record_interaction_counts_its_transport(transport: usage.Transport) -> 
         usage.record_interaction(transport)
         counts = usage_counts.reported()
 
-    assert counts == {**usage_counts.NOTHING_COUNTED, f"{transport}_interactions": 1}
+    assert counts == {**usage_counts.ZERO_COUNTS, f"{transport}_interactions": 1}

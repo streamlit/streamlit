@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 USAGE_STATS_ON: Final[dict[str, Any]] = {"browser.gatherUsageStats": True}
-NOTHING_COUNTED: Final[dict[str, int]] = dict.fromkeys(get_args(usage.UsageCounter), 0)
+ZERO_COUNTS: Final[dict[str, int]] = dict.fromkeys(get_args(usage.UsageCounter), 0)
 
 
 @contextmanager

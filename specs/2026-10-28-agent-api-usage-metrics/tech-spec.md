@@ -11,9 +11,9 @@ Count agent API activity in each server process, across the HTTP route and the M
 endpoint, and attach the counts to the `PageProfile` message that browser sessions
 already report. Browsers remain the only telemetry sender, and the server still sends
 nothing. The counts are cumulative and come with a random per-process id. Any
-later page profile therefore carries activity that happened while no browser was
-connected, and the counts from different processes can be added up without
-double-counting.
+later page profile therefore repeats the totals so far, including activity from
+while no browser was connected. Analysis takes each process's largest count and
+adds those up across processes, so nothing is counted twice.
 
 ## Problem
 
@@ -82,8 +82,9 @@ One module, `streamlit/runtime/agent/usage.py`, holds each process's counters.
   the first count rather than at import, so a server that forks its workers after
   importing Streamlit, such as `gunicorn --preload`, gives each worker its own. Counts
   are cumulative and never reset, so one page profile can report a number that an
-  earlier one already included. The id groups reports by process, which makes them
-  additive across restarts and replicas. See [Analysis](#analysis).
+  earlier one already included. The id groups reports by process, so each process's
+  largest count can be added up across restarts, replicas, and forked workers. See
+  [Analysis](#analysis).
 
 Nothing is counted while `browser.gatherUsageStats` is off. `config.toml` is reloaded
 while the server runs, so counts kept during an opt-out would otherwise be reported
