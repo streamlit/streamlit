@@ -16,6 +16,8 @@
 
 import type { ReactElement } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
 import AlertContainer, {
   Kind,
@@ -41,7 +43,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
 
   // Remove first line from stack (because it's just the error message) and
   // trim indentation.
-  const stackArray = stack ? stack.split("\n") : []
+  const stackArray = isNullOrEmptyString(stack) ? [] : stack.split("\n")
   stackArray.shift()
   const cleanedStack = stackArray.map(s => s.trim()).join("\n")
 
@@ -49,7 +51,7 @@ function ErrorElement(props: ErrorElementProps): ReactElement {
     <AlertContainer kind={Kind.ERROR} width={width}>
       <StyledErrorName>{name}: </StyledErrorName>
       {message}
-      {stack ? (
+      {!isNullOrEmptyString(stack) ? (
         <StyledStackTrace data-testid="stErrorElementStack">
           <StyledCode wrapLines={false}>{cleanedStack}</StyledCode>
         </StyledStackTrace>

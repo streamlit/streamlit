@@ -31,6 +31,7 @@ import {
   PlotlyChart as PlotlyChartProto,
   type streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   FlexContext,
@@ -549,8 +550,10 @@ export function PlotlyChart({
   // accessible name, which is worse than none. role="figure" (not "img")
   // is required to legally expose aria-label on this otherwise-generic div
   // without making Plotly's focusable modebar presentational.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledPlotlyChartContainer
@@ -559,7 +562,7 @@ export function PlotlyChart({
       fallbackHeight={hasFallbackHeight ? fallbackHeight : undefined}
       className="stPlotlyChart"
       data-testid="stPlotlyChart"
-      role={accessibleName ? "figure" : undefined}
+      role={accessibleName !== undefined ? "figure" : undefined}
       aria-label={accessibleName}
     >
       <Plot

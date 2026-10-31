@@ -17,6 +17,7 @@
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { EmotionTheme } from "~lib/theme/types"
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
@@ -75,8 +76,9 @@ function getLegendGroup(data: unknown): string | undefined {
   if (typeof data !== "object" || data === null) {
     return undefined
   }
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank legend group is omitted
-  return (data as { legendgroup?: string }).legendgroup || undefined
+  const { legendgroup } = data as { legendgroup?: string }
+  // Omit an empty legend group.
+  return isNullOrEmptyString(legendgroup) ? undefined : legendgroup
 }
 
 /**
@@ -289,7 +291,7 @@ export function handleSelection(
         selectedBoxes.push(returnSelection)
       }
       // lasso selection
-      if (selection.type === "path" && selection.path) {
+      if (selection.type === "path" && !isNullOrEmptyString(selection.path)) {
         const xAndy = parseLassoPath(selection.path)
         const returnSelection: PlotlySelection = {
           xref: selection.xref,

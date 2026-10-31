@@ -31,6 +31,7 @@ import type {
   Image as ImageProto,
   streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
@@ -117,13 +118,14 @@ const Image = ({
   const [captionHasText, setCaptionHasText] = useState(false)
   // Do not wrap a dangerous URI in an anchor. A neutralized href="#" is
   // still a nameless focusable control (WCAG SC 4.1.2).
-  const safeLink = link && !isDangerousLinkUri(link) ? link : undefined
+  const safeLink =
+    !isNullOrEmptyString(link) && !isDangerousLinkUri(link) ? link : undefined
   // Unset means omit alt (detectable missing name). Empty string is decorative.
   const imgAlt: string | undefined = isNullOrUndefined(image.alt)
     ? undefined
     : image.alt
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt uses the link
-  const linkAccessibleName = imgAlt || safeLink
+  // With an unset or empty (decorative) alt, the URL names the link.
+  const linkAccessibleName = isNullOrEmptyString(imgAlt) ? safeLink : imgAlt
 
   // Watch the caption for text that arrives late: async Markdown plugins
   // (KaTeX, emoji) swap a loading skeleton for real content after the first
@@ -133,7 +135,11 @@ const Image = ({
   // unlinked gallery members).
   useLayoutEffect(() => {
     const node = captionRef.current
-    if ((!safeLink && !onCaptionPlainTextChange) || !image.caption || !node) {
+    if (
+      (safeLink === undefined && !onCaptionPlainTextChange) ||
+      isNullOrEmptyString(image.caption) ||
+      !node
+    ) {
       setCaptionHasText(false)
       onCaptionPlainTextChange?.(undefined)
       return
@@ -172,7 +178,7 @@ const Image = ({
       data-testid="stImageContainer"
       shouldStretch={shouldStretch}
     >
-      {safeLink ? (
+      {safeLink !== undefined ? (
         <StyledImageLink
           href={safeLink}
           target="_blank"
@@ -274,12 +280,12 @@ function ImageList({
   // an arbitrary member. Prefer alt, else the caption's rendered plain text.
   // Gated on singleImage so a 1→N rerun cannot leak a stale caption.
   const singleImage = element.imgs.length === 1 ? element.imgs[0] : undefined
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const altContext = singleImage?.alt?.trim() || undefined
+  const trimmedAlt = singleImage?.alt?.trim()
+  const altContext = isNullOrEmptyString(trimmedAlt) ? undefined : trimmedAlt
   const labelContext =
     altContext ?? (singleImage ? captionPlainText : undefined)
   const reportCaptionPlainText =
-    singleImage && !altContext ? setCaptionPlainText : undefined
+    singleImage && altContext === undefined ? setCaptionPlainText : undefined
 
   return (
     <StyledToolbarElementContainer

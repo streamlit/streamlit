@@ -222,7 +222,8 @@ export const getNoRestrictedProperties = ({
 }
 
 // Base options for @typescript-eslint/strict-boolean-expressions. Scoped
-// blocks below tighten individual options for directories that are clean.
+// blocks below tighten individual options for directories with no remaining
+// violations.
 const strictBooleanExpressionsOptions = {
   allowString: true,
   allowNumber: true,
@@ -706,9 +707,15 @@ export default defineConfig([
   // A nullable string in a condition treats `""` like a missing value. Use
   // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
   // compare with `null` / `undefined` when the value is never empty. Other
-  // directories stay on the base options until they are cleaned up.
+  // directories stay on the base options until they are cleaned up. Globs
+  // resolve from the directory of the config ESLint loads. Linting `lib`
+  // loads this file, so these globs need the `lib/` prefix.
   {
-    files: ["lib/src/components/widgets/**/*.{ts,tsx}"],
+    files: [
+      "lib/src/components/elements/**/*.{ts,tsx}",
+      "lib/src/components/shared/**/*.{ts,tsx}",
+      "lib/src/components/widgets/**/*.{ts,tsx}",
+    ],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",

@@ -37,7 +37,7 @@ export function isNullOrUndefined<T>(
 /**
  * A type predicate that is true if the given string is undefined, null, or
  * empty. Negate it to check for a non-empty string; `value` then narrows to
- * `string`.
+ * `string`. Whitespace-only strings are not empty.
  */
 export function isNullOrEmptyString(
   value: string | null | undefined

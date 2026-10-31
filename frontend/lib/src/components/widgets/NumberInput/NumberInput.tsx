@@ -460,11 +460,10 @@ const NumberInput: React.FC<Props> = ({
               skipRequired: inForm,
             })
           }
-          // Also gate on `validationError === null`: a step on an
-          // out-of-range value can set a validation error while `dirty`
-          // stays false, and in that
-          // case `commitValue` above is not called — so block submission while
-          // an error is visible to keep the UI consistent.
+          // Also gate on `validationError === null`: a step on an out-of-range
+          // value can set a validation error while `dirty` stays false, and in that
+          // case `commitValue` above is not called — so block submission while an
+          // error is visible to keep the UI consistent.
           if (
             shouldSubmitForm &&
             validationError === null &&
