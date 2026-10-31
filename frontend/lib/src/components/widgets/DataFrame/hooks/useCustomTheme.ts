@@ -138,7 +138,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       cellHorizontalPadding: Math.round(convertRemToPx(theme.spacing.sm)),
       cellVerticalPadding: Math.round(convertRemToPx("0.1875rem")),
       // Special cells:
-      textBubble: theme.colors.fadedText60,
+      textBubble: theme.colors.fadedText70,
       bgBubble: theme.colors.secondaryBg,
       bgBubbleSelected: lighten(theme.colors.secondaryBg, 0.1),
       bubbleHeight: Math.round(convertRemToPx("1.25rem")),

@@ -76,7 +76,7 @@ export const StyledWaveformTimeCode = styled.span<{
     ? theme.colors.fadedText40
     : isPlayingOrRecording
       ? theme.colors.bodyText
-      : theme.colors.fadedText60,
+      : theme.colors.fadedText70,
   backgroundColor: theme.colors.secondaryBg,
   fontSize: theme.fontSizes.sm,
 }))

@@ -154,11 +154,11 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
     fontWeight: theme.fontWeights.normal,
     whiteSpace: "pre",
     "&[data-type=literal]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       padding: 0,
     },
     "&[data-placeholder]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
     },
     // Must come after placeholder so focused contrast always wins.
     "&[data-focused]": {
@@ -176,7 +176,7 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
 })
 
 export const StyledRangeSeparator = styled.span(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   paddingLeft: theme.spacing.twoXS,
   paddingRight: theme.spacing.twoXS,
   flexShrink: 0,
@@ -360,7 +360,7 @@ export const StyledQuickSelectTrigger = styled(Button, {
   border: "none",
   borderRadius: theme.radii.sm,
   backgroundColor: "transparent",
-  color: $isPlaceholder ? theme.colors.fadedText60 : theme.colors.bodyText,
+  color: $isPlaceholder ? theme.colors.fadedText70 : theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   cursor: "pointer",
