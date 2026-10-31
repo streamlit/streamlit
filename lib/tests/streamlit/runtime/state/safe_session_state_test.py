@@ -20,6 +20,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from streamlit.proto.WidgetStates_pb2 import WidgetStates
+from streamlit.runtime.scriptrunner_utils.exceptions import StopException
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.session_rerun_coordinator import (
+    RunGenerationLease,
+    SessionRerunCoordinator,
+)
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 
@@ -103,3 +110,70 @@ def test_yield_callback_invoked_on_every_user_facing_access() -> None:
     del safe_state["foo"]
 
     assert yield_cb.call_count == 3
+
+
+def _leased_safe_state(
+    *, require_commit_lease: bool = False
+) -> tuple[SafeSessionState, RunGenerationLease]:
+    lease = RunGenerationLease(1)
+    safe_state = SafeSessionState(
+        SessionState(),
+        lambda: None,
+        run_generation=lease,
+        require_commit_lease=require_commit_lease,
+    )
+    return safe_state, lease
+
+
+def test_live_generation_accepts_writes() -> None:
+    safe_state, _ = _leased_safe_state()
+
+    safe_state["foo"] = 1
+
+    assert safe_state["foo"] == 1
+
+
+def test_expired_generation_drops_writes() -> None:
+    """A superseded runner's writes must not reach the shared SessionState."""
+    safe_state, lease = _leased_safe_state()
+    safe_state["foo"] = 1
+
+    lease.expire()
+    safe_state["foo"] = 2
+    safe_state["bar"] = 3
+    del safe_state["foo"]
+    safe_state.on_script_finished(frozenset())
+
+    assert safe_state._state["foo"] == 1
+    assert "bar" not in safe_state._state
+
+
+def test_expired_generation_unwinds_widget_registration() -> None:
+    safe_state, lease = _leased_safe_state()
+    lease.expire()
+
+    with pytest.raises(StopException):
+        safe_state.register_widget(MagicMock(), None)
+
+
+def test_fresh_widget_state_requires_active_commit_lease() -> None:
+    safe_state, _ = _leased_safe_state(require_commit_lease=True)
+
+    with pytest.raises(RuntimeError, match="interaction commit lease"):
+        safe_state.on_script_will_rerun(WidgetStates())
+
+
+def test_fresh_widget_state_installs_with_active_commit_lease() -> None:
+    safe_state, lease = _leased_safe_state(require_commit_lease=True)
+    coordinator = SessionRerunCoordinator()
+    generation = coordinator.accept(RerunData(), fast_reruns=False).run_generation
+    assert generation is not None
+    claim = coordinator.claim(generation)
+    assert claim is not None
+
+    safe_state.on_script_will_rerun(WidgetStates(), commit_lease=claim)
+
+    coordinator.release(claim, committed=True)
+    with pytest.raises(RuntimeError, match="interaction commit lease"):
+        safe_state.on_script_will_rerun(WidgetStates(), commit_lease=claim)
+    assert lease.is_live()
