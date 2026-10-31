@@ -55,7 +55,7 @@ from streamlit.errors import (
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
-from streamlit.util import ReadOnlyAttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -745,6 +745,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # The name is the content hash of the Arrow bytes.
+        assert proto.datasets[0].name == calc_hash(proto.datasets[0].data.data)
         # Decode it to confirm the payload really is Arrow bytes for this df, so
         # this cannot pass on a merge that left raw JSON values in place.
         pd.testing.assert_frame_equal(
@@ -2877,7 +2879,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
@@ -2914,7 +2916,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 "d": [300, 301, 302],
             }
         )
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         # There used to be a bug where this line would throw an exception.
         # (Because some color-handling code was dependent on the DF index starting at 0)
@@ -2955,6 +2957,29 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         highlighted_layer = chart_spec["layer"][2]
         assert "transform" in highlighted_layer
         assert any("filter" in t for t in highlighted_layer["transform"])
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_spec_only_renames_datasets_when_data_changes(self) -> None:
+        """Test that new data changes only the dataset names in a line chart spec.
+
+        The frontend then swaps the new rows into the existing view instead
+        of rebuilding it.
+        """
+        specs: list[str] = []
+        for values in ([4, 5, 6], [7, 8, 9]):
+            st.line_chart(pd.DataFrame({"a": [1, 2, 3], "b": values}), x="a", y="b")
+            proto = self.get_delta_from_queue().new_element.vega_lite_chart
+            spec = proto.spec
+            for index, dataset in enumerate(proto.datasets):
+                spec = spec.replace(dataset.name, f"dataset_{index}")
+            specs.append(spec)
+
+        assert specs[0] == specs[1]
+        # The hover layers are named, so their names must not depend on the data.
+        assert '"view_1"' in specs[0]
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -4050,6 +4075,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
                 '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
             ),  # Hash-based suffixes with duplicates
+            (
+                "view_",
+                '{"layer": ["view_79c4_0", "view_8532_1"], "a": "view_my_chart"}',
+                '{"layer": ["view_1", "view_2"], "a": "view_my_chart"}',
+            ),  # Hashes with a position suffix, but not other underscored names
+            (
+                "param_",
+                '{"params": ["param_x_1", "param_custom", "param_e4f9_2"]}',
+                '{"params": ["param_x_1", "param_custom", "param_1"]}',
+            ),  # User-chosen names that aren't hex hashes stay unchanged
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):

@@ -32,6 +32,7 @@ import streamlit as st
 from streamlit import dataframe_util
 from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Table_pb2 import Table as TableProto
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
@@ -249,11 +250,18 @@ def test_a_replay_reads_tables_and_single_buffer_charts_from_their_payload() -> 
     layered = VegaLiteChartProto()
     layered.data.data = _ARROW
     layered.datasets.add().data.data = _ARROW
+    echarts = EChartsChartProto()
+    echarts.datasets.add().data.data = _ARROW
+    echarts_over_two = EChartsChartProto()
+    echarts_over_two.datasets.add().data.data = _ARROW
+    echarts_over_two.datasets.add().data.data = _LONG_ARROW
 
     assert agent_data._arrow_in_payload(dataframe) == _ARROW
     assert agent_data._arrow_in_payload(table) == _ARROW
     assert agent_data._arrow_in_payload(chart) == _ARROW
     assert agent_data._arrow_in_payload(layered) == b""
+    assert agent_data._arrow_in_payload(echarts) == _ARROW
+    assert agent_data._arrow_in_payload(echarts_over_two) == b""
     assert agent_data._arrow_in_payload(MarkdownProto(body="no data")) == b""
 
 

@@ -42,7 +42,7 @@ import {
   type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -229,7 +229,7 @@ const Multiselect: FC<Props> = props => {
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,

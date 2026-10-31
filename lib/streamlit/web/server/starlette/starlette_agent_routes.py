@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Final, TypeVar
 from streamlit import config
 from streamlit.logger import get_logger
 from streamlit.runtime import runtime_util
-from streamlit.runtime.agent import errors, interaction, protocol, snapshot
+from streamlit.runtime.agent import errors, interaction, protocol, snapshot, usage
 from streamlit.web.server import server_util
 from streamlit.web.server.starlette import starlette_websocket
 from streamlit.web.server.starlette.starlette_routes import (
@@ -209,6 +209,22 @@ def _page_request_without_json(request: Request) -> bool:
         return False
     content_type = request.headers.get("Content-Type", "")
     return content_type.split(";", 1)[0].strip().lower() != "application/json"
+
+
+def _refusal_before_body(request: Request) -> tuple[errors.AgentErrorCode, str] | None:
+    """The code and message to refuse ``request`` with before reading its body.
+
+    ``None`` when the request passes the Host, Origin, and content-type checks.
+    The route runs it whether or not the API is on, so with the API off it
+    counts only a request it would accept with the API on.
+    """
+    if _refused_host(request):
+        return "host_not_allowed", _HOST_MESSAGE
+    if _refused_origin(request):
+        return "origin_not_allowed", _ORIGIN_MESSAGE
+    if _page_request_without_json(request):
+        return "invalid_request", _PAGE_CONTENT_TYPE_MESSAGE
+    return None
 
 
 async def _read_body(request: Request, limit: int) -> bytes:
@@ -391,6 +407,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 interaction.interact(
                     session_registry,
                     payload,
+                    transport="http",
                     user_info=user_info,
                     headers=request.headers.items(),
                     encode=_encode_snapshot,
@@ -447,14 +464,16 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             # with the app's HTML and a 200, anything else with a 405 that
             # names GET as allowed.
             return Response(status_code=405, headers={"Allow": "POST"})
+        refusal = _refusal_before_body(request)
         if registry is None:
+            # Count only a request that passes the checks: a web page or a
+            # refused Host is not an agent. The answer is `not_available`
+            # either way, and the body is never read.
+            if refusal is None:
+                usage.record_interaction("http")
             return error_response("not_available", _DISABLED_MESSAGE)
-        if _refused_host(request):
-            return error_response("host_not_allowed", _HOST_MESSAGE)
-        if _refused_origin(request):
-            return error_response("origin_not_allowed", _ORIGIN_MESSAGE)
-        if _page_request_without_json(request):
-            return error_response("invalid_request", _PAGE_CONTENT_TYPE_MESSAGE)
+        if refusal is not None:
+            return error_response(*refusal)
 
         # The bound the WebSocket handler applies to an inbound frame, so the
         # agent path is no more permissive than the browser path.

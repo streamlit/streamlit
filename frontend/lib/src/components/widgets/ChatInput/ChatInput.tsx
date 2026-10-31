@@ -48,6 +48,7 @@ import {
   type streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
 import type { StopResult } from "~lib/components/audio/core/types"
@@ -352,7 +353,10 @@ function ChatInput({
       }
 
       // Delete file from server if it was successfully uploaded
-      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      if (
+        file.status.type === "uploaded" &&
+        !isNullOrEmptyString(file.status.fileUrls.deleteUrl)
+      ) {
         // Fire-and-forget deletion - errors are not critical to user flow
         uploadClient
           .deleteFile(file.status.fileUrls.deleteUrl)
@@ -709,11 +713,10 @@ function ChatInput({
         // left over from a previous (never-started) run.
         pendingStopRef.current = false
         // `fragmentId` is an empty string for top-level (non-fragment) widgets
-        // because it comes from a protobuf string field. Normalize falsy values
+        // because it comes from a protobuf string field. Normalize empty values
         // to null so the run-scope matcher treats them as full-script runs.
         setSubmittedRunScope({
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- protobuf "" means a full-script run
-          fragmentId: fragmentId || null,
+          fragmentId: isNullOrEmptyString(fragmentId) ? null : fragmentId,
           scriptRunIdAtSubmit: scriptRunId,
           scriptRunFinishedSequence,
         })
@@ -864,7 +867,7 @@ function ChatInput({
     updateScrollHeight()
 
     // Clear recording error when user starts typing
-    if (recordingError) {
+    if (recordingError !== null) {
       setRecordingError(null)
     }
   }
@@ -1197,7 +1200,7 @@ function ChatInput({
                   </StyledInputInstructions>
                 )}
                 {acceptAudio &&
-                  (recordingError ? (
+                  (recordingError !== null ? (
                     <Tooltip
                       content={recordingError}
                       placement={Placement.TOP}
@@ -1298,7 +1301,7 @@ function ChatInput({
                       </StyledInputInstructions>
                     )}
                     {acceptAudio &&
-                      (recordingError ? (
+                      (recordingError !== null ? (
                         <Tooltip
                           content={recordingError}
                           placement={Placement.TOP}

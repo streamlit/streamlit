@@ -16,6 +16,8 @@
 
 import { useMemo } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   DynamicIcon,
   getIconAccessibleName,
@@ -74,11 +76,15 @@ export const DynamicButtonLabel = ({
     label
   )
 
+  const hasIcon = !isNullOrEmptyString(icon)
+
   // Icon glyphs are aria-hidden, so an icon-only control would have no accessible
   // name. Use hidden text rather than aria-label here: this component does not own
   // the button, and content-based naming lets a parent aria-label take precedence.
   const iconOnlyAccessibleName =
-    icon && !label?.trim() ? getIconAccessibleName(icon) : undefined
+    hasIcon && isNullOrEmptyString(label?.trim())
+      ? getIconAccessibleName(icon)
+      : undefined
 
   return (
     <StyledButtonLabel ref={titleRef} $truncate={truncate}>
@@ -86,13 +92,13 @@ export const DynamicButtonLabel = ({
         data-has-shortcut={Boolean(displayShortcut)}
         $truncate={truncate}
       >
-        {iconOnlyAccessibleName && (
+        {!isNullOrEmptyString(iconOnlyAccessibleName) && (
           <StyledVisuallyHidden>{iconOnlyAccessibleName}</StyledVisuallyHidden>
         )}
-        {icon && iconPosition === "left" && (
+        {hasIcon && iconPosition === "left" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
-        {label && (
+        {!isNullOrEmptyString(label) && (
           // Wrap only the rendered Markdown label so we can read its plain text
           // for the native title without picking up the icon or shortcut.
           // `display: contents` adds no box and leaves the layout unchanged.
@@ -107,10 +113,10 @@ export const DynamicButtonLabel = ({
             />
           </span>
         )}
-        {icon && iconPosition === "right" && (
+        {hasIcon && iconPosition === "right" && (
           <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
-        {displayShortcut && (
+        {!isNullOrEmptyString(displayShortcut) && (
           <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>
             {displayShortcut}
           </StyledButtonShortcut>

@@ -28,7 +28,7 @@ import {
 import { FloatingPortal, type Middleware, size } from "@floating-ui/react"
 
 import type { Block as BlockProto } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
@@ -139,7 +139,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
   useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.open)) {
+    if (isNullOrEmptyString(widgetId) || !notNullOrUndefined(element.open)) {
       return
     }
     setOpen(element.open)
@@ -180,7 +180,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
     setOpen(newOpen)
 
-    if (widgetId) {
+    if (!isNullOrEmptyString(widgetId)) {
       widgetMgr.setBoolValue(widgetId, newOpen, {
         formId: undefined,
         fragmentId,
@@ -194,7 +194,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const handleClose = useCallback((): void => {
     setOpen(false)
 
-    if (widgetId) {
+    if (!isNullOrEmptyString(widgetId)) {
       widgetMgr.setBoolValue(widgetId, false, {
         formId: undefined,
         fragmentId,
@@ -441,7 +441,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             data-testid="stPopoverButton"
             kind={kind}
             size={BaseButtonSize.SMALL}
-            disabled={(empty && !widgetId) || element.disabled}
+            disabled={
+              (empty && isNullOrEmptyString(widgetId)) || element.disabled
+            }
             containerWidth={true}
             onClick={handleToggle}
             aria-expanded={open}

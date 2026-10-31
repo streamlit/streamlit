@@ -20,6 +20,8 @@ import {
   type UriCell,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   isMaterialIcon,
   parseIconPackEntry,
@@ -74,7 +76,7 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
 
   let validateRegex: RegExp | string | undefined = undefined
 
-  if (parameters.validate) {
+  if (!isNullOrEmptyString(parameters.validate)) {
     // Prepare the validation regex:
     try {
       // u flag allows unicode characters
@@ -202,10 +204,10 @@ function LinkColumn(props: BaseColumnProps): BaseColumn {
           // Set display value to be the regex extracted portion of the href.
           displayText = getLinkDisplayValueFromRegex(displayTextRegex, href)
         } else {
-          // Use user provided display_text unless it's null, undefined, or an empty string.
-          // If it's any of those falsy values, use the href.
-          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank display text falls back to the href
-          displayText = configuredDisplayText || href
+          // Use the configured display_text, or the href when it is unset or empty.
+          displayText = isNullOrEmptyString(configuredDisplayText)
+            ? href
+            : configuredDisplayText
         }
       }
 

@@ -784,7 +784,7 @@ function SingleDateInput({
         aria-keyshortcuts="Alt+ArrowDown"
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
+        data-has-error={error !== null ? "" : undefined}
         aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -800,8 +800,8 @@ function SingleDateInput({
                 // segment text when the controlled value has not changed.
                 key={`${formResetKey}-${fieldGeneration}`}
                 aria-label={label}
-                aria-describedby={error ? errorId : undefined}
-                isInvalid={!!error}
+                aria-describedby={error !== null ? errorId : undefined}
+                isInvalid={error !== null}
                 // Keep invalid state tied to Streamlit's error, not native
                 // constraint validation. Required is exposed on the field
                 // group that contains the focused segments, not via RAC
@@ -820,7 +820,7 @@ function SingleDateInput({
           </I18nProvider>
         </StyledDateFieldsScroller>
         <StyledTrailingIcons>
-          {error && (
+          {error !== null && (
             <StyledErrorIconContainer data-testid="stDateInputError">
               <Tooltip
                 content={
@@ -861,7 +861,7 @@ function SingleDateInput({
             <Icon content={CalendarToday} size="base" />
           </StyledCalendarButton>
         </StyledTrailingIcons>
-        {error && (
+        {error !== null && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replaceAll("**", "")}
           </StyledVisuallyHidden>

@@ -28,6 +28,7 @@ import {
 import type { CalendarDate } from "@internationalized/date"
 
 import type { DateInput as DateInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -109,7 +110,7 @@ function DateInput({
    *
    * Canonical state is the ISO 8601 wire format directly (`string[]`).
    */
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,

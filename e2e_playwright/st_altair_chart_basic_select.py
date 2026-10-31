@@ -391,7 +391,7 @@ bind_radio_origin = alt.selection_point(
     value="USA",
     toggle=False,
 )
-st.altair_chart(
+bind_radio_selection = st.altair_chart(
     alt.Chart(cars)
     .mark_point()
     .encode(
@@ -403,10 +403,11 @@ st.altair_chart(
     .transform_filter(bind_radio_origin)
     .add_params(bind_radio_click, bind_radio_origin),
     on_select="rerun",
-    selection_mode="bind_radio_click",
+    selection_mode=["bind_radio_click", "bind_radio_origin"],
     key="bind_radio_rerun",
     width="stretch",
 )
+st.write("Radio-bound selection:", str(bind_radio_selection))
 
 bind_select_click = alt.selection_point(name="bind_select_click", toggle=False)
 bind_select_origin = alt.selection_point(
@@ -432,3 +433,73 @@ st.altair_chart(
     key="bind_select_rerun",
     width="stretch",
 )
+
+legend_selection = alt.selection_point(
+    name="legend_pick", fields=["Origin"], bind="legend"
+)
+legend_selection_state = st.altair_chart(
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Miles_per_Gallon:Q",
+        y="Horsepower:Q",
+        color=alt.condition(legend_selection, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .add_params(legend_selection),
+    on_select="rerun",
+    selection_mode="legend_pick",
+    key="legend_bound_selection",
+    width="stretch",
+)
+st.write("Legend-bound selection:", str(legend_selection_state))
+
+# Keep the remaining charts last so existing .nth() locators stay valid.
+st.subheader("Scatter chart with x-only interval")
+x_interval = alt.selection_interval(encodings=["x"], name="x_interval")
+x_interval_chart = (
+    alt.Chart(cars)
+    .mark_point()
+    .encode(
+        x="Horsepower:Q",
+        y="Miles_per_Gallon:Q",
+        color=alt.condition(x_interval, "Origin:N", alt.value("lightgray")),
+        tooltip=alt.value(None),
+    )
+    .add_params(x_interval)
+)
+st.altair_chart(
+    x_interval_chart,
+    on_select="rerun",
+    key="scatter_interval_x",
+    width="stretch",
+)
+if (
+    "scatter_interval_x" in st.session_state
+    and len(st.session_state.scatter_interval_x.selection) > 0
+):
+    st.write(
+        "Scatter chart with x-interval:",
+        str(st.session_state.scatter_interval_x),
+    )
+
+# Without a key, the chart data is part of the chart's identity, so the
+# "Update chart data" button above resets this selection.
+st.subheader("Unkeyed bar chart whose data changes")
+point_unkeyed = alt.selection_point(name="unkeyed_selection")
+unkeyed_chart = (
+    alt.Chart(persistent_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("category:N"),
+        y=alt.Y("value:Q"),
+        fillOpacity=alt.condition(point_unkeyed, alt.value(1), alt.value(0.3)),
+        tooltip=alt.value(None),
+    )
+    .add_params(point_unkeyed)
+)
+with st.container(key="unkeyed_selection_chart"):
+    unkeyed_selection = st.altair_chart(
+        unkeyed_chart, on_select="rerun", width="content"
+    )
+st.write("Unkeyed selection:", str(unkeyed_selection))

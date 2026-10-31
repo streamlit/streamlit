@@ -17,6 +17,8 @@
 import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { EmotionTheme } from "~lib/theme/types"
 
 interface StyledCopyButtonProps {
@@ -27,7 +29,7 @@ const getCopyButtonBaseStyles = (
   theme: EmotionTheme,
   { buttonSize, focusRing }: { buttonSize?: string; focusRing?: string } = {}
 ): CSSObject => ({
-  ...(buttonSize && {
+  ...(!isNullOrEmptyString(buttonSize) && {
     height: buttonSize,
     width: buttonSize,
   }),

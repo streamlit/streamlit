@@ -34,7 +34,7 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.elements.lib import agent_spec
-from streamlit.runtime import Runtime, RuntimeConfig
+from streamlit.runtime import Runtime, RuntimeConfig, metrics_util
 from streamlit.runtime.agent import interaction, snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -45,7 +45,7 @@ from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
-from tests.streamlit.runtime.agent import run_gate
+from tests.streamlit.runtime.agent import run_gate, usage_counts
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -248,6 +248,7 @@ class _App:
         body = await interaction.interact(
             self.registry,
             {} if request is None else request,
+            transport="http",
             user_info={} if user_info is None else user_info,
             headers=headers,
             encode=self._encode,
@@ -1017,6 +1018,35 @@ async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
     assert stranger.code == "unknown_session"
     assert reclaimed.code == "unknown_session"
     assert owned["session_id"] == replacement
+
+
+@pytest.mark.anyio
+async def test_usage_counts_every_interaction_and_each_session_created(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Every call counts as an interaction, refused ones included, and only a
+    session that was created counts as one.
+    """
+    options["browser.gatherUsageStats"] = True
+    options["server.agentMaxSessions"] = 1
+    # With usage stats on, a new session reads the machine id, which would be
+    # written under the test config's read-only home folder. A fresh
+    # installation with a fixed id keeps the test independent of test order.
+    with (
+        usage_counts.fresh(),
+        patch.object(metrics_util.Installation, "_instance", None),
+        patch.object(metrics_util, "_get_machine_id_v4", return_value="test-v4"),
+    ):
+        async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
+            created = await app.call()
+            await app.call({"session_id": created["session_id"]})
+            full = await app.refused()
+            unknown = await app.refused({"session_id": "s_" + "0" * 32})
+        counts = usage_counts.reported()
+
+    assert full.code == "too_many_sessions"
+    assert unknown.code == "unknown_session"
+    assert counts == {"http_interactions": 4, "mcp_interactions": 0, "sessions": 1}
 
 
 @pytest.mark.anyio

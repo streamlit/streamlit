@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import { isPlainObject } from "lodash-es"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   DataFrameCellType,
   type DataType,
@@ -132,6 +136,54 @@ export function getDataSets(
   return datasetMapping
 }
 
+/** A chart dataset, as listed by {@link getAliasedDataSets}. */
+interface AliasedDataset {
+  /** The dataset's name in the spec (`"null"` for an unnamed dataset). */
+  name: string
+  /** The dataset's rows. */
+  data: Quiver
+}
+
+/**
+ * Gives each chart dataset a positional alias (`__st_dataset_0`,
+ * `__st_dataset_1`, ...) so a renamed dataset can be matched to the one it
+ * replaces. Altair names datasets by a hash of their contents, so new data
+ * renames them. The aliases stay the same as long as the chart sends its
+ * datasets in the same order.
+ */
+export function getAliasedDataSets(
+  datasets: WrappedNamedDataset[]
+): Map<string, AliasedDataset> {
+  return new Map(
+    Object.entries(getDataSets(datasets) ?? {}).map(([name, data], index) => [
+      `__st_dataset_${index}`,
+      { name, data },
+    ])
+  )
+}
+
+/**
+ * Returns a `JSON.stringify` replacer that writes each dataset reference
+ * (`{"data": {"name": ...}}` in any view, layer, or lookup) with its alias
+ * instead of its name, so the serialized spec ignores dataset renames.
+ * References to names missing from `aliases`, such as GeoJSON datasets kept
+ * inside the spec, are left unchanged.
+ *
+ * @param aliases The alias of each dataset name (see {@link getAliasedDataSets}).
+ */
+export function aliasDatasetReferences(
+  aliases: ReadonlyMap<string, string>
+): (key: string, value: unknown) => unknown {
+  return (key, value) => {
+    if (key !== "data" || !isPlainObject(value)) {
+      return value
+    }
+    const { name } = value as { name?: unknown }
+    const alias = typeof name === "string" ? aliases.get(name) : undefined
+    return alias === undefined ? value : { ...(value as object), name: alias }
+  }
+}
+
 /**
  * Retrieves an array of data from Quiver.
  * Converts data values to a format compatible with VegaLite visualization.
@@ -184,7 +236,7 @@ export function getDataArray(quiverData: Quiver): VegaLiteDataRow[] {
         (isDatetimeType(dataType) || isDateType(dataType)) &&
         // Only convert dates without timezone information
         // to utc timezone
-        !getTimezone(dataType)
+        isNullOrEmptyString(getTimezone(dataType))
       ) {
         // For dates that do not contain timezone information.
         // Vega JS assumes dates in the local timezone, so we need to convert

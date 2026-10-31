@@ -773,6 +773,9 @@ def test_audio_input_on_change_ignore(app: Page):
     ).to_be_visible()
 
     ignore_audio.hover()
+    # The hover toolbar slides into place after a delay. Clicking mid-slide can
+    # miss the button, so wait until it is fully shown.
+    expect(ignore_audio.get_by_test_id("stElementToolbar")).to_have_css("opacity", "1")
     ignore_audio.get_by_role("button", name="Clear recording").click()
     # Clearing does not rerun either. Wait so a spurious rerun would appear.
     wait_for_app_run(app)

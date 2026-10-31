@@ -16,6 +16,8 @@
 
 import { forwardRef, type ReactElement, type Ref } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   BaseButtonKind,
   type BaseButtonProps as BaseButtonPropsT,
@@ -100,8 +102,11 @@ const BaseButton = forwardRef(function BaseButton(
       autoFocus={autoFocus ?? false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
       // Omit an empty aria-label so visible button text remains the accessible name.
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank aria-label is omitted
-      aria-label={props["aria-label"] || undefined}
+      aria-label={
+        isNullOrEmptyString(props["aria-label"])
+          ? undefined
+          : props["aria-label"]
+      }
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}
       aria-controls={props["aria-controls"]}

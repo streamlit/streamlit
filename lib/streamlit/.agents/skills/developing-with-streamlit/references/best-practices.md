@@ -68,7 +68,7 @@ query = st.text_input(
 )
 ```
 
-Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md) and [data-display.md](data-display.md).
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md), [charts.md](charts.md#accessible-names-alt), and [data-display.md](data-display.md).
 
 ```python
 # BAD: Meaningful image with no alt
@@ -304,7 +304,7 @@ For as-you-type search, use `st.text_input(..., type="search", live=True)` insid
 
 If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form. This is an advanced pattern; see "Skip reruns on individual widgets" in `performance.md` for an example and caveats.
 
-Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
+Do not put expensive work unguarded inside tabs, expanders, or popovers. By default, the app script still enters hidden, collapsed, or closed bodies on every rerun. Set `on_change="rerun"` so `.open` reports each container's current state, then run that body only when `.open` is `True`. Alternatively, use `st.segmented_control` or `st.toggle` with an `if`.
 
 ```python
 # BAD: Heavy content runs even when the tab is hidden
@@ -329,7 +329,7 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For JavaScript callbacks, GeoJSON map registration, or ECharts GL / 3D charts, see [third-party-components.md](third-party-components.md).
+Prefer Vega-based charts and `st.echarts_chart` over Plotly and `st.pyplot`, and prefer one charting library per page. Use `st.echarts_chart` for chart types Vega-Lite lacks, or an existing ECharts option or `pyecharts` chart, rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
 
 ```python
 # GOOD: Native charts for common cases
