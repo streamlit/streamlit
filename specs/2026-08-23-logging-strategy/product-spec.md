@@ -1,0 +1,399 @@
+---
+author: lukasmasuch
+created: 2026-08-23
+---
+
+# Standard, launch-aware logging
+
+## Summary
+
+Make all `streamlit.*` logs controllable through the standard
+`logging.getLogger("streamlit")` hierarchy while preserving Streamlit's automatic console
+logging when it runs an app. Add `logger.handlerMode` (`"streamlit"`, `"auto"`, or
+`"host"`) for applications that run `st.App` through an external ASGI server or embed it in
+another framework, with a cooperative fallback when the host has not configured logging.
+
+## Problem
+
+[#4742](https://github.com/streamlit/streamlit/issues/4742) describes a long-standing
+limitation in Streamlit's logging strategy. Each internal module logger gets its own level,
+formatter, `StreamHandler`, and `propagate=False`. Consequently, the standard customization
+point does not work:
+
+```python
+import logging
+
+streamlit_logger = logging.getLogger("streamlit")
+streamlit_logger.setLevel(logging.DEBUG)
+streamlit_logger.addHandler(my_handler)
+```
+
+The parent logger neither controls the effective level of `streamlit.*` children nor
+receives their records. Users that need structured logging, test capture, filtering, or
+centralized observability must find and rewrite every existing child logger or monkeypatch
+private `streamlit.logger` functions. The issue includes such a workaround.
+
+[#3978](https://github.com/streamlit/streamlit/issues/3978) stopped Streamlit's special
+`"root"` logger from configuring Python's global root logger, but did not change the
+per-child handler topology.
+
+Streamlit is also no longer started through one path. It can run as:
+
+- a traditional app through `streamlit run`;
+- an `st.App` discovered by `streamlit run` and served by Streamlit's Uvicorn runner;
+- an `st.App` launched through `App.run()`;
+- a standalone ASGI app launched by external Uvicorn, Gunicorn, or Hypercorn; or
+- an app mounted in FastAPI, Starlette, or another ASGI framework.
+
+The first three modes are applications whose server lifecycle is owned by Streamlit. They
+must keep useful, formatted logs without requiring Python logging setup. The latter two
+modes run inside a host application that may need to own formatting and delivery. Treating
+all imports as a passive library would break Streamlit's app-first experience, while always
+installing isolated child handlers interferes with embedded hosts.
+
+The current strategy also configures `uvicorn.*` and `websockets` through Streamlit's
+generic logger helper. Uvicorn subsequently applies its own logging configuration, which
+can overwrite levels, remove handlers while leaving propagation disabled, or create
+duplicates after Streamlit reloads its config.
+
+Related requests such as per-message filtering
+([#11645](https://github.com/streamlit/streamlit/issues/11645)), logging to a file
+([#4539](https://github.com/streamlit/streamlit/issues/4539)), and rendering logs inside a
+Streamlit app ([#13610](https://github.com/streamlit/streamlit/issues/13610)) demonstrate
+broader logging interest but are not required to fix the hierarchy and ownership problem.
+
+## Proposal
+
+### Default behavior
+
+All Streamlit-owned log records use the standard `streamlit` namespace hierarchy:
+
+```text
+streamlit
+├── streamlit.config
+├── streamlit.runtime
+│   ├── streamlit.runtime.app_session
+│   └── streamlit.runtime.scriptrunner
+└── streamlit.web
+```
+
+Streamlit installs at most one default console handler on the `streamlit` namespace. Child
+loggers do not install handlers and propagate records to the namespace logger. Existing
+configuration continues to control the built-in handler:
+
+```toml
+[logger]
+level = "info"
+messageFormat = "%(asctime)s %(message)s"
+```
+
+For existing apps, the following remain unchanged:
+
+- which Streamlit records are visible at the default level;
+- the default format, timestamp behavior, and stderr destination;
+- development-mode `DEBUG` logging;
+- runtime config reloads;
+- uncaught app exception presentation (including the existing Rich traceback behavior);
+- direct-execution warnings from using `st.*` outside a Streamlit runtime; and
+- isolation from unrelated Python root logs.
+
+The user-visible change is that `logging.getLogger("streamlit")` now receives and can
+control `streamlit.*` child records. Adding a handler there is additive under the default
+policy; use `handlerMode="host"` for host-owned output. Code that inspects private child
+`.handlers` is not a supported API.
+
+Handlers attached directly to the namespace receive child records under every policy.
+
+- Handlers attached only to Python's root logger, including pytest's `caplog`, require
+  `handlerMode="host"` in ordinary tests. Host-selected `"auto"` also reaches root, but only
+  after an external or embedded ASGI launch activates that policy.
+- In `"streamlit"` and fallback `"auto"`, `logger.level` sets the initial namespace level.
+  A later programmatic `Logger.setLevel` override survives unrelated config reloads. An
+  explicit change to `logger.level`, or reacquiring Streamlit ownership, reapplies the
+  configured level.
+
+### Handler policy configuration
+
+Add a config option with a compatibility-first default:
+
+```toml
+[logger]
+handlerMode = "streamlit"
+```
+
+The option is public and non-scriptable. It appears in `streamlit config show` and can be
+set through deployment configuration, but `st.set_option` cannot change process-wide
+logging ownership during a rerun.
+
+| Value | Behavior |
+|---|---|
+| `"streamlit"` | Install Streamlit's default namespace handler. This is the initial default and preserves existing output in every launch mode. |
+| `"auto"` | Use Streamlit's handler in Streamlit-managed launches. In externally hosted launches, use host logging when configured and otherwise install Streamlit's handler as a fallback. |
+| `"host"` | Do not install a Streamlit output handler. Propagate `streamlit.*` records to host logging. |
+
+`"host"` is an explicit ownership transfer. If the host has no usable handler, records may
+be discarded below `WARNING`; `WARNING` and higher may use Python's minimally formatted
+`lastResort` output. Streamlit does not install that handler. `logger.level` and
+`logger.messageFormat` configure only Streamlit's default output path; the host owns levels,
+filters, formatting, and destinations in host mode.
+
+Prefer an enum over `enableDefaultHandler = true/false` because it distinguishes an
+explicit host-owned policy from the cooperative fallback needed by external ASGI servers
+that have not configured Python's root logger.
+
+### Launch-mode behavior
+
+| Launch mode | `handlerMode="streamlit"` | `handlerMode="auto"` | `handlerMode="host"` |
+|---|---|---|---|
+| `streamlit run app.py` | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| `streamlit run` with `st.App`/ASGI discovery | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| `App.run()` | Streamlit handler | Streamlit handler | No Streamlit handler; propagate to host |
+| External `uvicorn module:app` | Streamlit handler | Host handler if present; otherwise Streamlit fallback | No Streamlit handler; propagate to host |
+| `st.App` mounted in FastAPI/Starlette | Streamlit handler | Host handler if present; otherwise Streamlit fallback | No Streamlit handler; propagate to host |
+
+The initial default remains `"streamlit"` so upgrades do not change console output for
+existing self-hosted or embedded deployments. Making `"auto"` the default can be evaluated
+in a future major release once external modes have sufficient integration coverage and the
+change has been announced in release notes.
+
+External Uvicorn's default configuration normally installs handlers only on `uvicorn.*`,
+not on Python's root logger. In that common case, `"auto"` deliberately keeps Streamlit's
+fallback and behaves like `"streamlit"`. The value is useful when one deployment artifact
+can either call `App.run()` or be embedded in a host that configures a root or `streamlit`
+handler. Applications that always want external ownership should use `"host"`.
+This spec proposes shipping all three values in the first release. `"auto"` is included for
+hybrid launchers, while its compatibility fallback and the deterministic `"host"` option
+keep the initial default and embedded behavior explicit.
+
+A concrete hybrid is a packaged app that developers start locally with `App.run()` and no
+Python logging setup, while production mounts the same app in FastAPI with a root JSON
+handler. `"host"` would lose the automatic local diagnostics, while `"streamlit"` would add
+a second production destination. `"auto"` serves both from one deployment configuration.
+
+### Examples
+
+Add a custom destination through the standard namespace:
+
+```python
+import logging
+
+import streamlit as st
+
+file_handler = logging.FileHandler("streamlit.log")
+streamlit_logger = logging.getLogger("streamlit")
+streamlit_logger.setLevel(logging.DEBUG)
+streamlit_logger.addHandler(file_handler)
+```
+
+With the default `handlerMode="streamlit"`, this intentionally produces two destinations:
+Streamlit's existing console output and `streamlit.log`. Select `"host"` when the custom
+handler should replace Streamlit's destination. The `setLevel` call survives unrelated
+config reloads. An explicit change to `logger.level`, or a transition that reacquires
+Streamlit ownership, reapplies the configured level. If both a namespace handler and a root
+handler exist, the host must set `streamlit_logger.propagate=False` to avoid emitting to
+both. Streamlit never removes or rewrites either host handler.
+
+The config option can be supplied through `config.toml`,
+`STREAMLIT_LOGGER_HANDLER_MODE`, or `--logger.handlerMode`; no new Python configuration API
+is introduced. As with other Streamlit config, removing the owned handler directly in
+Python is not durable across a config reload.
+
+Making output ownership a deployment setting is intentional. Python launchers can select
+exclusive host output before importing Streamlit:
+
+```python
+import os
+
+os.environ["STREAMLIT_LOGGER_HANDLER_MODE"] = "host"
+
+import streamlit as st
+```
+
+The implementation must read this specific non-sensitive environment variable directly in
+the config loader so it works under `python`, external Uvicorn, and mounted ASGI launches,
+not only through Click's `streamlit` command.
+
+`App.run(config={"logger.handlerMode": "host"})` provides the corresponding existing
+programmatic config channel. Import-time diagnostics still use the isolated bootstrap
+handler until Streamlit validates and applies config. Isolation prevents delivery to a
+root-only host during that window; a handler attached directly to the namespace receives
+the records alongside the bootstrap handler.
+
+Use the host application's JSON logging exclusively for an embedded app:
+
+```toml
+[logger]
+handlerMode = "host"
+enableRich = false
+```
+
+```python
+import json
+import logging
+import logging.config
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+        )
+
+
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "json": {
+                "class": "logging.StreamHandler",
+                "formatter": "json",
+            }
+        },
+        "formatters": {
+            "json": {"()": JsonFormatter},
+        },
+        "root": {"level": "INFO", "handlers": ["json"]},
+    }
+)
+
+import streamlit as st
+from fastapi import FastAPI
+
+streamlit_app = st.App("dashboard.py")
+app = FastAPI(lifespan=streamlit_app.lifespan())
+app.mount("/dashboard", streamlit_app)
+```
+
+Configure host logging before importing Streamlit when possible. Import installs an
+isolated bootstrap handler so early diagnostics remain visible until Streamlit parses
+`handlerMode`; those early records use Streamlit's format and do not also propagate to the
+host. Keep `disable_existing_loggers=False` when reconfiguring after import. Python's
+`dictConfig` default can disable loggers that already exist, and Streamlit does not
+re-enable them. Because `Logger.disabled` applies to an individual logger rather than its
+descendants, it should not be used as a namespace ownership mechanism.
+
+Use cooperative detection for an app that may run standalone or embedded:
+
+```toml
+[logger]
+handlerMode = "auto"
+```
+
+The same launcher keeps Streamlit's normal console logs with `App.run()` and integrates
+with host logging under FastAPI when the host configures a root or `streamlit` handler.
+Under external Uvicorn's default logging configuration, no such host path normally exists,
+so Streamlit retains its fallback.
+
+### Rich exception output
+
+`handlerMode` governs records emitted through Python's `logging` package. The existing
+Rich traceback path for uncaught app exceptions writes directly to its own console and
+remains independently controlled by the hidden `logger.enableRich` option. It stays
+Streamlit-owned in every handler mode to preserve existing exception presentation. A host
+that requires uncaught exceptions to use only its structured logging path must set
+`logger.enableRich=false`; the fallback `streamlit.error_util` log record then follows the
+selected handler policy.
+
+### Managed server logs
+
+`handlerMode` governs `streamlit.*` records, not server records. In `streamlit run` and
+`App.run()`, Streamlit's managed Uvicorn runner still installs Uvicorn's native console
+handlers and applies `logger.level`; selecting `"host"` does not remove them. Applications
+that require one host-owned format for both Streamlit and server records should use an
+external ASGI server with host logging configuration, or explicitly configure its
+`uvicorn.*` namespaces. Rich output must also be disabled for standard logging to be the
+sole exception destination.
+
+### Behavior guarantees
+
+- In `"streamlit"` and fallback `"auto"`, Streamlit warnings and errors emitted by enabled
+  loggers reach Streamlit's handler. In host-selected `"auto"`, records reach the host path,
+  where the host owns levels and filters. A host can suppress a specific logger with
+  `Logger.disabled`.
+- Streamlit never removes, reformats, or replaces handlers it does not own.
+- Repeated config parsing does not increase handler counts.
+- Streamlit-owned configuration does not create duplicate delivery paths. Adding a custom
+  handler with the default `"streamlit"` policy intentionally adds another destination; a
+  host can also create duplicates by attaching handlers at multiple hierarchy levels.
+- Python's global root logger is never configured by Streamlit.
+- Loggers created by the user's app and unrelated libraries are not configured by
+  Streamlit.
+- Externally owned Uvicorn, Gunicorn, Hypercorn, and WebSockets loggers are not configured
+  by Streamlit.
+- Streamlit-managed Uvicorn continues to emit server logs and respects `logger.level`.
+
+### Why this shape
+
+- A namespace handler fixes the underlying interoperability issue rather than adding more
+  Streamlit-specific logging APIs. Standard `logging`, `dictConfig`, and observability
+  tooling can target `streamlit`; host mode also supports root-based test capture.
+- Keeping `"streamlit"` as the default reflects the way Streamlit is normally used: users
+  start an app and expect diagnostics without first configuring a host process.
+- Separating launch context from handler policy avoids guessing from import context. An
+  `st.App` object can be run directly, served by Uvicorn, or mounted after it is created.
+- `"auto"` needs a fallback because an ASGI server can configure only its own logger
+  namespaces and leave the Python root logger without an output handler.
+- `"host"` gives embedded applications deterministic control when fallback output would be
+  undesirable, such as JSON logging or centralized filtering.
+- Leaving externally owned server loggers alone avoids ordering conflicts with Uvicorn,
+  Gunicorn, Hypercorn, and their reload behavior.
+
+### Options considered
+
+**Option A: Configure only a `NullHandler` when Streamlit is imported**
+
+- Pros: Strictest interpretation of Python library guidance.
+- Cons: Breaks the default app experience, misses `App.run()`, and can make logs disappear
+  under external Uvicorn when the host has not configured the global root logger.
+
+**Option B: One Streamlit namespace handler in every mode**
+
+- Pros: Small, preserves output, and fixes parent logger control.
+- Cons: Does not provide a clean ownership model for embedded applications.
+
+**Option C: Namespace handler plus an enum policy** ✅ PREFERRED
+
+- Pros: Preserves app defaults, supports external and embedded hosts, provides a fallback,
+  and can evolve without another boolean option.
+- Cons: Adds one config option and requires launch-mode-aware initialization.
+
+**Option D: Suppress Streamlit output whenever a custom namespace handler exists**
+
+- Pros: A handler added in Python could become the only destination without selecting a
+  handler policy.
+- Cons: Merely attaching an observability or test handler would silently remove the console
+  output that existing apps expect. Handler attachment is commonly additive, so ownership
+  remains an explicit deployment setting.
+
+## Out of Scope (Future Work)
+
+- Logging Streamlit records to a file; applications can use standard `FileHandler` once
+  the hierarchy works.
+- A Streamlit-specific public API for filters, handlers, or structured logging.
+- Rendering Python logs as elements in the Streamlit UI.
+- Changing individual log messages or their severity.
+- Adding request/access logging, correlation IDs, session IDs, or user identity to records.
+- Making `handlerMode="auto"` the default.
+- Reconfiguring logging libraries owned by external ASGI servers.
+- Configuring logs emitted by the user's app or unrelated libraries.
+
+## Checklist
+
+| Item | ✅ or comment |
+|---|---|
+| Works on SiS, Cloud, etc? | ✅ Default remains Streamlit-owned logging. Before implementation, confirm SiS/SPCS and Community Cloud do not depend on per-child handlers or `streamlit_console_handler`. |
+| No breaking API changes | ✅ Additive config option; existing level, format, and default output remain. Private child-handler topology changes. |
+| No new dependencies | ✅ Uses Python's standard `logging` package and existing Uvicorn integration. |
+| Metrics collected | No new telemetry in the first implementation. The resolved handler policy may be useful diagnostic context but must not include log content. |
+| Any security/legal impact? | ✅ No log content, retention, or transport changes. Host mode may route existing records to host-configured destinations. |
+| Any docs changes needed? | ✅ Document `logger.handlerMode`, standard namespace customization, managed-Uvicorn scope, and examples for `App.run()`, external Uvicorn, mounted FastAPI, and pytest `caplog`. |
+
+The pytest documentation should show two valid capture patterns: select `"host"` through
+session configuration before importing Streamlit so root-based `caplog` works, or attach a
+capture handler directly to `logging.getLogger("streamlit")` when retaining the default
+console destination is acceptable.
