@@ -586,7 +586,17 @@ def test_columns_past_the_size_cap_are_refused_as_the_whole_file(
 
 @pytest.mark.parametrize(
     ("offset", "limit"),
-    [(-1, 10), (True, 10), (1.5, 10), ("1", 10), (0, 0), (0, False)],
+    # Infinity is what `json.loads` makes of a number too large for a float,
+    # such as `1e999`.
+    [
+        (-1, 10),
+        (True, 10),
+        (1.5, 10),
+        (float("inf"), 10),
+        ("1", 10),
+        (0, 0),
+        (0, False),
+    ],
 )
 def test_table_bounds_must_be_integers(
     storage: MemoryMediaFileStorage, media: MediaFileManager, offset: Any, limit: Any
