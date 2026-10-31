@@ -782,8 +782,8 @@ def _safe_echo(
 ) -> None:
     """Print a line of install output without ever raising.
 
-    Characters stdout cannot encode print as ``?``; any other write error drops
-    the line. Unstyled lines get no reset code, unlike with ``click.secho``.
+    Prints characters stdout cannot encode as ``?`` and drops the line on any
+    other write error.
     """
     # Never let printing fail the install: the output only describes it. The
     # one-click install prints to the server's stdout, which can refuse text:
@@ -792,6 +792,8 @@ def _safe_echo(
     # - a launcher that exited leaves a broken pipe
     # - an app that redirects stdout into an element raises NoSessionContext,
     #   since the install runs outside the script thread
+    # Plain lines skip click.style so they get no trailing reset code, as with
+    # click.echo.
     styled = fg is not None or bold is not None
     text = click.style(message, fg=fg, bold=bold) if styled else message
     try:
@@ -799,8 +801,9 @@ def _safe_echo(
             click.echo(text, nl=nl)
         except UnicodeEncodeError:
             # Click writes through sys.stdout (except on a Windows console), so
-            # re-encode in its codec. Not the error's own encoding: for cp1252
-            # that is the generic "charmap" codec.
+            # re-encode in its codec. Not the error's own encoding: cp1252
+            # reports the generic "charmap" codec (Latin-1), which would also
+            # replace cp1252-only characters such as € or —.
             encoding = getattr(sys.stdout, "encoding", None) or "ascii"
             click.echo(text.encode(encoding, "replace").decode(encoding), nl=nl)
     except Exception as ex:

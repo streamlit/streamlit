@@ -169,7 +169,7 @@ def _cp1252_stdout() -> Generator[io.BytesIO, None, None]:
     its own ``sys.stdout`` between a fixture's setup and the test body.
     """
     raw = io.BytesIO()
-    stdout = io.TextIOWrapper(raw, encoding="cp1252", write_through=True)
+    stdout = io.TextIOWrapper(raw, encoding="cp1252", newline="\n", write_through=True)
     try:
         with patch.object(sys, "stdout", stdout):
             yield raw
@@ -2923,7 +2923,7 @@ class TestInstallSkillsReturnsResult:
 class TestInstallOutputCannotFailInstall:
     """Printing install output never fails the install it describes."""
 
-    def test_unencodable_glyph_degrades_to_the_stream_encoding(self) -> None:
+    def test_unencodable_glyph_is_replaced_and_encodable_text_is_kept(self) -> None:
         """A glyph the stream cannot encode is replaced; text it can encode is kept."""
         with _cp1252_stdout() as stdout:
             skills._safe_echo("✓ C:\\Users\\José", fg="green")
