@@ -37,7 +37,7 @@ _STARTUP_TOAST_COUNT = 2
 def _prepare_toast_snapshots(page: Page) -> None:
     """Wait for fonts used by toast icons/text before screenshot assertions."""
     expect_font(page, "Material Symbols Rounded")
-    expect_font(page, "Source Sans")
+    expect_font(page, "Figtree")
     page.wait_for_timeout(250)
 
 

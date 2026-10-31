@@ -34,11 +34,20 @@ export const StyledResizableContainer =
       display: disableResize ? "flex" : "inline-block",
       height: "100%",
 
+      // Figtree (and other proportional fonts) need tabular figures so
+      // numeric columns align. Apply on the editor and its canvas — glide
+      // paints via canvas, and Chromium/WebKit inherit font-variant from
+      // the canvas element's computed style.
+      fontVariantNumeric: "tabular-nums",
       "& .stDataFrameGlideDataEditor": {
         height: "100%",
         minWidth: "100%",
         minHeight: minHeight,
         borderRadius: theme.radii.default,
+        fontVariantNumeric: "tabular-nums",
+        "& canvas": {
+          fontVariantNumeric: "tabular-nums",
+        },
       },
 
       "& .dvn-scroller": {
