@@ -777,6 +777,63 @@ describe("TextArea required", () => {
     expect(props.widgetMgr.getStringValue(props.element)).toBe("hello")
   })
 
+  it("does not snap a blocked field back to the last accepted value on remount", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, default: "hello" })
+    const { unmount } = render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    await user.clear(textArea)
+    await user.tab()
+    expectRequiredError(textArea)
+    expect(textArea).toHaveValue("")
+
+    // Simulate the remount a sibling rerun causes when it inserts an element
+    // above the field.
+    unmount()
+    render(<TextArea {...props} />)
+
+    const remounted = screen.getByRole("textbox")
+    expect(remounted).toHaveValue("")
+    expectRequiredError(remounted)
+    expect(props.widgetMgr.getStringValue(props.element)).toBe("hello")
+
+    // Restored dirty must still allow a later commit after the remount.
+    await user.type(remounted, "abc")
+    await user.tab()
+    await waitFor(() => {
+      expect(props.widgetMgr.getStringValue(props.element)).toBe("abc")
+    })
+    expect(remounted).toHaveValue("abc")
+    expectNoRequiredError(remounted)
+  })
+
+  it("does not restore a blocked empty value after a later successful commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, default: "hello" })
+    const { unmount } = render(<TextArea {...props} />)
+
+    const textArea = screen.getByRole("textbox")
+    await user.clear(textArea)
+    await user.tab()
+    expectRequiredError(textArea)
+
+    await user.type(textArea, "abc")
+    await user.tab()
+    await waitFor(() => {
+      expect(props.widgetMgr.getStringValue(props.element)).toBe("abc")
+    })
+    expect(textArea).toHaveValue("abc")
+    expectNoRequiredError(textArea)
+
+    unmount()
+    render(<TextArea {...props} />)
+
+    const remounted = screen.getByRole("textbox")
+    expect(remounted).toHaveValue("abc")
+    expectNoRequiredError(remounted)
+  })
+
   it.each([
     ["the last accepted value", "hello"],
     ["a different value", "Ada"],
