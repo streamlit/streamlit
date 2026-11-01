@@ -214,11 +214,13 @@ def test_fixed_height_dataframe_expands_in_fullscreen(app: Page):
         dataframe_toolbar.get_by_role("button", name="Close fullscreen")
     ).to_be_visible()
 
-    # Must expand beyond the configured height; must not stay stuck at 458px.
-    expect(dataframe_element).not_to_have_css("height", f"{configured_height}px")
+    # Assert on stDataFrameResizable: stDataFrame is height 100% of the
+    # fullscreen frame, so it fills the viewport even when the grid is stuck.
+    grid = dataframe_element.get_by_test_id("stDataFrameResizable")
+    expect(grid).not_to_have_css("height", f"{configured_height}px")
 
     def _is_expanded() -> bool:
-        box = dataframe_element.bounding_box()
+        box = grid.bounding_box()
         return box is not None and box["height"] > configured_height + 100
 
     wait_until(app, _is_expanded)
