@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useEffect, useId, useRef } from "react"
+import {
+  memo,
+  type ReactElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react"
 
 import { Global } from "@emotion/react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -29,8 +36,12 @@ import {
   type EmotionTheme,
   useEmotionTheme,
 } from "@streamlit/lib"
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  getIsContentSized,
+} from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -39,11 +50,14 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { MARKDOWN_ELLIPSIS_CLASS } from "~lib/hooks/useLabelTitleTooltip"
 import { formatNumber, isNumericString } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_AVAILABLE_WIDTH_VAR,
+  METRIC_TEXT_WIDTH_VAR,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
@@ -59,6 +73,93 @@ import {
 const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
+
+/**
+ * Records the value's unclipped width at its unscaled font size, so print CSS
+ * can shrink the figure to a narrower printed card.
+ *
+ * - Screen styles ellipsize the markdown, so its own box is clipped. Measure
+ *   an unconstrained clone instead, which keeps bold and inline code widths.
+ * - The clone stays inside the value to inherit its font. Firefox returns an
+ *   empty `font` shorthand when the theme sets font longhands.
+ */
+function recordMetricValueWidth(value: HTMLElement): void {
+  // Clear any previously recorded width so print CSS does not scale the probe.
+  value.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+  const source = value.querySelector(`.${MARKDOWN_ELLIPSIS_CLASS}`)
+  if (!(source instanceof HTMLElement) || source.textContent === "") {
+    return
+  }
+
+  const probe = source.cloneNode(true)
+  if (!(probe instanceof HTMLElement)) {
+    return
+  }
+  // The class keeps max-width and overflow from the card. Clear them so the
+  // measurement is the unwrapped figure, including bold and inline code.
+  probe.style.position = "absolute"
+  probe.style.visibility = "hidden"
+  probe.style.width = "max-content"
+  probe.style.maxWidth = "none"
+  probe.style.minWidth = "max-content"
+  probe.style.overflow = "visible"
+  probe.style.whiteSpace = "nowrap"
+  probe.style.textOverflow = "clip"
+  value.appendChild(probe)
+  let width: number
+  try {
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+    width = probe.getBoundingClientRect().width
+  } finally {
+    probe.remove()
+  }
+
+  if (width > 0) {
+    value.style.setProperty(METRIC_TEXT_WIDTH_VAR, `${width}px`)
+  }
+}
+
+/**
+ * Record the width a content-width metric can use in print
+ * (`--st-metric-available-width`).
+ *
+ * - Measures the element container, which is capped at its column width.
+ *   The value itself is not a size container. `beforeprint` reads the
+ *   screen slot, and the print-media change reads the printed one.
+ * - Clears `--st-metric-available-width` first, so the slot is read around the
+ *   unscaled figure.
+ * - Subtracts the card's border and padding between the slot and the value.
+ *   The value can overflow a narrow slot, so its own width is not a
+ *   reliable measure of that inset.
+ */
+function recordMetricAvailableWidth(value: HTMLElement): void {
+  const elementContainer = value.closest(".stElementContainer")
+  const box =
+    elementContainer instanceof HTMLElement
+      ? elementContainer
+      : value.parentElement
+  if (!(box instanceof HTMLElement)) {
+    return
+  }
+  value.style.removeProperty(METRIC_AVAILABLE_WIDTH_VAR)
+  // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- The print snapshot cannot wait for a resize observer
+  let available = box.clientWidth
+  for (
+    let element: HTMLElement | null = value.parentElement;
+    element && element !== box && box.contains(element);
+    element = element.parentElement
+  ) {
+    const style = getComputedStyle(element)
+    available -=
+      (Number.parseFloat(style.paddingLeft) || 0) +
+      (Number.parseFloat(style.paddingRight) || 0) +
+      (Number.parseFloat(style.borderLeftWidth) || 0) +
+      (Number.parseFloat(style.borderRightWidth) || 0)
+  }
+  if (available > 0) {
+    value.style.setProperty(METRIC_AVAILABLE_WIDTH_VAR, `${available}px`)
+  }
+}
 
 /**
  * Returns the baseline value (`y2`) to anchor an area chart's shaded region.
@@ -305,11 +406,75 @@ export function getMetricChartSpec(
 
 export interface MetricProps {
   element: MetricProto
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 }
 
-function Metric({ element }: Readonly<MetricProps>): ReactElement {
+function Metric({
+  element,
+  widthConfig,
+}: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
+  const valueRef = useRef<HTMLDivElement>(null)
+  const flexContext = useContext(FlexContext)
+
+  // A metric without a fixed width inside a content-width container is also
+  // sized by its value.
+  const isContentWidth = getIsContentSized({
+    hasContentWidth: Boolean(widthConfig?.useContent),
+    hasFixedWidth:
+      (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0,
+    parentContext: flexContext,
+  })
+
+  useEffect(() => {
+    const handleBeforePrint = (): void => {
+      if (!valueRef.current) {
+        return
+      }
+      recordMetricValueWidth(valueRef.current)
+      if (isContentWidth) {
+        recordMetricAvailableWidth(valueRef.current)
+      }
+    }
+
+    // Clear the recorded widths so a later print measures the current layout.
+    const handleAfterPrint = (): void => {
+      valueRef.current?.style.removeProperty(METRIC_TEXT_WIDTH_VAR)
+      valueRef.current?.style.removeProperty(METRIC_AVAILABLE_WIDTH_VAR)
+    }
+
+    window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
+    const removePrintListeners = (): void => {
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
+    }
+    if (!isContentWidth) {
+      return removePrintListeners
+    }
+
+    // `beforeprint` fires while screen layout is still active, so a
+    // content-width metric re-reads its slot once print media applies. Skip it
+    // when no text width was recorded (print emulated without `beforeprint`):
+    // the font rule would otherwise scale the figure against the whole page.
+    const printMedia = window.matchMedia("print")
+    const handlePrintMedia = (): void => {
+      const value = valueRef.current
+      if (
+        printMedia.matches &&
+        value &&
+        value.style.getPropertyValue(METRIC_TEXT_WIDTH_VAR) !== ""
+      ) {
+        recordMetricAvailableWidth(value)
+      }
+    }
+    printMedia.addEventListener("change", handlePrintMedia)
+    return () => {
+      removePrintListeners()
+      printMedia.removeEventListener("change", handlePrintMedia)
+    }
+  }, [isContentWidth])
 
   const { MetricDirection } = MetricProto
   const {
@@ -424,6 +589,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
       className="stMetric"
       data-testid="stMetric"
       showBorder={showBorder}
+      isContentWidth={isContentWidth}
     >
       <StyledMetricContent showBorder={showBorder}>
         <StyledMetricLabelText
@@ -455,7 +621,11 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           )}
         </StyledMetricLabelText>
-        <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricValueText
+          className="stMetricValue"
+          data-testid="stMetricValue"
+          ref={valueRef}
+        >
           <StreamlitMarkdown
             source={formattedMetricValue}
             allowHTML={false}

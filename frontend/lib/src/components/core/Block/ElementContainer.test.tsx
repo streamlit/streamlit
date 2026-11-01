@@ -91,7 +91,27 @@ describe("ElementContainer", () => {
     const container = screen.getByTestId("stElementContainer")
     expect(container).toHaveClass("stElementContainer")
     expect(container).toHaveClass("element-container")
+    expect(container).not.toHaveClass("stPrintHidden")
   })
+
+  it.each(["empty", "balloons", "snow"])(
+    "marks a %s container as hidden in print",
+    elementType => {
+      render(
+        <ElementContainer
+          node={createMockElementNode(elementType)}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveClass(
+        "stPrintHidden"
+      )
+    }
+  )
 
   describe("user key handling", () => {
     it("applies user-provided key as CSS class for custom styling", () => {

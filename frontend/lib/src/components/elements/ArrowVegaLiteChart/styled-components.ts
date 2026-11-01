@@ -18,6 +18,11 @@ import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapRules,
+} from "~lib/components/shared/printWidthCap"
+import { PRINT_UPSCALED_WIDTH } from "~lib/components/shared/usePrintScreenWidth"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -413,6 +418,36 @@ export const StyledVegaLiteChartContainer =
           },
         },
         "& form.vega-bindings": getVegaBindingStyles(theme),
+        "@media print": {
+          // Vega locks the SVG to the on-screen pixel width. Cap that width
+          // when the printed page is narrower, without shrinking the height.
+          ...printWidthCapRules,
+          // Print can release the parent's height, for example when a
+          // fixed-height horizontal container stacks its children. Contain
+          // only the width, so the chart takes the height it rendered at
+          // instead of collapsing.
+          ...(isSizeContained && { contain: "inline-size" }),
+        },
+        // Canvas and hybrid renderers paint a canvas.marks node. It keeps
+        // the on-screen pixel width unless the same fit rule covers it.
+        "& svg.marks, & canvas.marks": printGraphicFitStyles,
+        // A stretch-width chart keeps the width it measured on screen. Print
+        // can give it a wider container, for example when its column row
+        // stacks, and Vega cannot re-measure before the page is printed.
+        // Scale the graphic toward the container, keeping its proportions.
+        // The scale is limited so the chart's text stays close to the
+        // surrounding text; a narrower chart stays left-aligned. A chart
+        // whose height comes from its container keeps that box.
+        ...(useContainerWidth &&
+          !useContainerHeight &&
+          !isSizeContained && {
+            "&.vega-embed svg.marks, &.vega-embed canvas.marks": {
+              "@media print": {
+                width: `${PRINT_UPSCALED_WIDTH} !important`,
+                height: "auto !important",
+              },
+            },
+          }),
       }
     }
   )

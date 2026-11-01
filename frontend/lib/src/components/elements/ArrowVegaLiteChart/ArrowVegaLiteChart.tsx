@@ -55,6 +55,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { usePrintScreenWidth } from "~lib/components/shared/usePrintScreenWidth"
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
@@ -331,6 +332,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
       isSizeContained ||
       !hasFallbackHeight ||
       Boolean(heightConfig?.pixelHeight))
+
+  // Limits how far print scales a stretch-width chart past its screen width.
+  usePrintScreenWidth(
+    containerRef,
+    useStretchWidth && !passesContainerHeight && !isSizeContained
+  )
 
   // Height of Vega's parameter-binding controls, which it renders inside the
   // chart container below the chart. The measurement is tied to the spec that
