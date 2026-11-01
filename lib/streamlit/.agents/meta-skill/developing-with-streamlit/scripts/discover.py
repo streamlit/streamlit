@@ -468,7 +468,8 @@ def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
 
 
 def _display_command(command: list[str]) -> str:
-    # Forward slashes and quotes work in Git Bash, PowerShell, and POSIX shells.
+    # Forward slashes work in every shell; PowerShell also needs `& ` before a
+    # quoted path.
     executable = command[0].replace("\\", "/") if _IS_WINDOWS else command[0]
     if " " in executable:
         executable = f'"{executable}"'
