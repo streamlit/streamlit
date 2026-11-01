@@ -63,11 +63,14 @@ const NON_RETAINABLE_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   "audioInput",
 ])
 
-/** The element ID of a node that may be retained, or undefined. */
+/**
+ * The element ID of a node that may be retained, or undefined. A widget whose
+ * value the app set (`hasOneShotEffect`) is retainable too: the mounted widget
+ * already consumed that event, and the reclaiming element carries any new one.
+ */
 function getRetainableId(node: AppNode | undefined): string | undefined {
   if (
     !(node instanceof ElementNode) ||
-    node.element.hasOneShotEffect === true ||
     NON_RETAINABLE_ELEMENT_TYPES.has(node.element.type ?? "") ||
     node.element.chatInput?.acceptAudio === true
   ) {
@@ -77,8 +80,9 @@ function getRetainableId(node: AppNode | undefined): string | undefined {
 }
 
 /**
- * Returns the node React keys at this slot. A spinner is a TransientNode and
- * renders its anchor under the anchor's key, so retention compares anchors.
+ * Returns the node whose React key this slot renders under. A spinner
+ * (TransientNode) renders its anchor under the anchor's key, so retention
+ * compares anchors.
  */
 function unwrapTransient(node: AppNode | undefined): AppNode | undefined {
   return node instanceof TransientNode ? node.anchor : node

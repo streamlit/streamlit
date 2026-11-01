@@ -213,7 +213,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   /**
    * Render a retained element under its element ID, unless an element with
    * that ID already rendered. It does not advance the positional index, so
-   * unkeyed canonical siblings keep their keys.
+   * the index-based keys of unkeyed siblings stay the same.
    */
   private visitRetainedElement({ node, id }: RetainedElement): void {
     if (this.renderedKeySet.has(id)) {

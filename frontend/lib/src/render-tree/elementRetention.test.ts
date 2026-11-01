@@ -171,7 +171,7 @@ describe("getRetainedAfterWrite", () => {
     }
   )
 
-  it("drops a displaced element with a one-shot effect", () => {
+  it("retains a displaced widget whose value the app set", () => {
     const prev = textInput("w", "w", PREV_RUN)
     prev.element.hasOneShotEffect = true
 
@@ -183,7 +183,7 @@ describe("getRetainedAfterWrite", () => {
       scriptRunId: CURRENT_RUN,
     })
 
-    expect(retained).toEqual([])
+    expect(summarize(retained)).toEqual(["w@1"])
   })
 
   it("reclaims the entry when the same element ID is written", () => {

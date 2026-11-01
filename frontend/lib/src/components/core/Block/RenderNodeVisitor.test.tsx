@@ -16,11 +16,7 @@
 
 import { isValidElement } from "react"
 
-import {
-  type BlockNode,
-  BlockNode as BlockNodeClass,
-  TransientNode,
-} from "~lib/AppNode"
+import { BlockNode, TransientNode } from "~lib/AppNode"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
@@ -240,7 +236,7 @@ describe("RenderNodeVisitor", () => {
       const retainedId = "$$ID-retained_id-key"
 
       const blockWithRetained = (before: number): BlockNode =>
-        new BlockNodeClass(
+        new BlockNode(
           "fake_script_hash",
           [text("a"), text("b")],
           undefined,
@@ -280,7 +276,7 @@ describe("RenderNodeVisitor", () => {
 
       it("skips a retained element whose id was already rendered", () => {
         const current = textInput("current", "retained_id", "current_run")
-        const node = new BlockNodeClass(
+        const node = new BlockNode(
           "fake_script_hash",
           [current],
           undefined,

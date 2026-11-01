@@ -90,7 +90,7 @@ Common causes:
 
 1. **Delta path changes**
    A delta-path change can cause a remount, but not always. If the element has a stable `element.id` and React still sees it as the same keyed child under the same rendered parent list, it can be preserved. If there is no stable `id`, or an ancestor block changes/replaces, it remounts.
-   When a rerun inserts output above a keyed element, the insertion overwrites the element's delta path before the element is re-emitted one slot later. The parent `BlockNode` then keeps the displaced prior-run element in `retained` (see `render-tree/elementRetention.ts`). It stays mounted, hidden unless it holds focus, until the same ID reclaims it or stale cleanup removes it. This works only within the same parent. Leaves inside a displaced block still remount, and media, capture inputs (including audio-enabled chat inputs), toasts, and one-shot elements are never retained.
+   When a rerun inserts output above a keyed element, the insertion overwrites the element's delta path before the element is re-emitted one slot later. The parent `BlockNode` then keeps the displaced prior-run element in `retained` (see `render-tree/elementRetention.ts`). It stays mounted, hidden unless it holds focus, until the same ID reclaims it or stale cleanup removes it. This works only within the same parent. Leaves inside a displaced block still remount, and media, capture inputs (including audio-enabled chat inputs), and toasts are never retained.
 2. **Element ID changes**
    If identity inputs change, Streamlit treats the result as a new logical element.
 3. **Element not rendered in a rerun**
