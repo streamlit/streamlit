@@ -424,7 +424,7 @@ export function PlotlyChart({
   )
 
   /**
-   * Callback to handle click events on hierarchical charts (treemap, sunburst).
+   * Callback to handle click events on traces that don't emit plotly_selected.
    */
   const handleClickCallback = useCallback(
     (event: Readonly<Plotly.PlotMouseEvent>): void => {
@@ -581,8 +581,8 @@ export function PlotlyChart({
           overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
-        // Handle click events for hierarchical charts (treemap, sunburst)
-        // that don't emit plotly_selected but do emit plotly_click
+        // Clicks on traces that don't emit plotly_selected (treemap, sunburst,
+        // heatmap, image, Sankey) are mapped into selection state.
         onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
