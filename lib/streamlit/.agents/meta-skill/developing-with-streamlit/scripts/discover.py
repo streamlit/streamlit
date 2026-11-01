@@ -119,12 +119,14 @@ _CONDA_INSTALL_DIRS = (
     "mambaforge",
     "micromamba",
 )
+# (manifest, command that adds a package, command that installs a lockfile
+# that already lists Streamlit). uv comes first: it is the recommended setup.
 _INSTALL_COMMANDS = (
-    ("uv.lock", "uv add"),
-    ("poetry.lock", "poetry add"),
-    ("Pipfile", "pipenv install"),
-    ("pdm.lock", "pdm add"),
-    ("pixi.toml", "pixi add"),
+    ("uv.lock", "uv add", "uv sync"),
+    ("poetry.lock", "poetry add", "poetry install"),
+    ("Pipfile", "pipenv install", ""),
+    ("pdm.lock", "pdm add", "pdm sync"),
+    ("pixi.toml", "pixi add", ""),
 )
 
 
@@ -553,9 +555,17 @@ def _describe(candidate: _Candidate) -> str:
 def _manager_install_command(project_dir: Path, requirement: str) -> str | None:
     """Return the project's package-manager command that adds ``requirement``."""
     for directory in _search_dirs(project_dir):
-        for manifest, command in _INSTALL_COMMANDS:
+        for manifest, add, sync in _INSTALL_COMMANDS:
             if os.path.isfile(directory / manifest):
-                return f"{command} {requirement}"
+                # A cloned project that already locks Streamlit only needs its
+                # environment created or updated.
+                lines = _read_lines(directory / manifest) if sync else []
+                locked = 'name = "streamlit"' in (line.strip() for line in lines)
+                return (
+                    sync
+                    if locked and requirement == "streamlit"
+                    else f"{add} {requirement}"
+                )
     return None
 
 
@@ -574,7 +584,7 @@ def _install_command(candidate: _Candidate, project_dir: Path, requirement: str)
         command = f"{python} -m pip install {requirement}"
         notes.append(
             "this is not a virtual environment; creating one for the project "
-            "first is better"
+            "first is better, for example with `uv venv`"
         )
     elif any(line.startswith("uv =") for line in _read_lines(pyvenv_cfg)):
         # Environments created by `uv venv` have no pip.

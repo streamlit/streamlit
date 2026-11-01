@@ -740,6 +740,8 @@ def test_git_bash_drive_paths_become_windows_paths(
     ("manifest", "pyvenv_cfg", "expected"),
     [
         pytest.param("poetry.lock", "", "poetry add streamlit", id="poetry"),
+        # A cloned uv project that already locks Streamlit only needs a sync.
+        pytest.param("uv.lock:locked", "", "uv sync", id="uv-project-not-synced"),
         pytest.param("Pipfile", "", "pipenv install streamlit", id="pipenv"),
         pytest.param(
             None, "uv = 0.9.0\n", "uv pip install --python {python} streamlit", id="uv"
@@ -756,7 +758,9 @@ def test_install_command_matches_project_tooling(
 ) -> None:
     """Install advice uses the project's package manager."""
     if manifest is not None:
-        (tmp_path / manifest).write_text("", encoding="utf-8")
+        name, _, locked = manifest.partition(":")
+        text = '[[package]]\nname = "streamlit"\n' if locked else ""
+        (tmp_path / name).write_text(text, encoding="utf-8")
     env_root = tmp_path / ".venv"
     env_root.mkdir()
     (env_root / "pyvenv.cfg").write_text(f"home = /x\n{pyvenv_cfg}", "utf-8")
