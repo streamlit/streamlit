@@ -135,6 +135,42 @@ describe("getRetainedAfterWrite", () => {
     }
   )
 
+  it.each([
+    [true, []],
+    [false, ["chat@1"]],
+  ])(
+    "retains a displaced chat input only without audio (acceptAudio=%s)",
+    (acceptAudio, expected) => {
+      const element = makeProto(Element, {
+        chatInput: {
+          id: `${GENERATED_ELEMENT_ID_PREFIX}-chat-key`,
+          placeholder: "chat",
+          acceptAudio,
+        },
+      })
+      const prev = new ElementNode(
+        element,
+        ForwardMsgMetadata.create(),
+        PREV_RUN,
+        FAKE_SCRIPT_HASH
+      )
+
+      const retained = getRetainedAfterWrite({
+        retained: [],
+        index: 0,
+        prev,
+        next: text("notice", CURRENT_RUN),
+        scriptRunId: CURRENT_RUN,
+      })
+
+      expect(
+        retained.map(
+          e => `${e.node.element.chatInput?.placeholder}@${e.before}`
+        )
+      ).toEqual(expected)
+    }
+  )
+
   it("drops a displaced element with a one-shot effect", () => {
     const prev = textInput("w", "w", PREV_RUN)
     prev.element.hasOneShotEffect = true
@@ -227,30 +263,67 @@ describe("getRetainedAfterWrite", () => {
     expect(summarize(retained)).toEqual(["w@4"])
   })
 
-  it("ignores writes that involve a transient node", () => {
+  it("leaves entries unchanged when a spinner is shown or cleared", () => {
     const before = [entry("w", 1)]
-    const transient = new TransientNode(CURRENT_RUN, undefined, [
-      text("spinner", CURRENT_RUN),
-    ])
+    const z = textInput("z", "z", PREV_RUN)
+    const spinner = [text("spinner", CURRENT_RUN)]
+    const shownOverZ = new TransientNode(CURRENT_RUN, z, spinner)
+    const writes: [AppNode | undefined, AppNode][] = [
+      // Shown in an empty slot.
+      [undefined, new TransientNode(CURRENT_RUN, undefined, spinner)],
+      // Shown over the occupant, which becomes its anchor.
+      [z, shownOverZ],
+      // Cleared again, which keeps the anchor.
+      [shownOverZ, new TransientNode(CURRENT_RUN, z, [])],
+    ]
 
-    expect(
-      getRetainedAfterWrite({
-        retained: before,
-        index: 1,
-        prev: textInput("z", "z", PREV_RUN),
-        next: transient,
+    for (const [prev, next] of writes) {
+      expect(
+        getRetainedAfterWrite({
+          retained: before,
+          index: 1,
+          prev,
+          next,
+          scriptRunId: CURRENT_RUN,
+        })
+      ).toBe(before)
+    }
+  })
+
+  it.each([
+    ["the element itself", textInput("w", "w", CURRENT_RUN)],
+    [
+      "a transient anchored on it",
+      new TransientNode(CURRENT_RUN, textInput("w", "w", CURRENT_RUN), [
+        text("spinner", CURRENT_RUN),
+      ]),
+    ],
+  ])(
+    "reclaims through a transient slot when the write is %s",
+    (_name, next) => {
+      const retained = getRetainedAfterWrite({
+        retained: [entry("w", 2), entry("z", 2)],
+        index: 2,
+        prev: new TransientNode(CURRENT_RUN),
+        next,
         scriptRunId: CURRENT_RUN,
       })
-    ).toBe(before)
-    expect(
-      getRetainedAfterWrite({
-        retained: before,
-        index: 1,
-        prev: transient,
-        next: text("new", CURRENT_RUN),
-        scriptRunId: CURRENT_RUN,
-      })
-    ).toBe(before)
+
+      // "z" rendered after "w", so it stays behind the reclaimed element.
+      expect(summarize(retained)).toEqual(["z@3"])
+    }
+  )
+
+  it("retains a spinner's prior-run anchor that a new element replaces", () => {
+    const retained = getRetainedAfterWrite({
+      retained: [],
+      index: 1,
+      prev: new TransientNode(CURRENT_RUN, textInput("w", "w", PREV_RUN), []),
+      next: text("notice", CURRENT_RUN),
+      scriptRunId: CURRENT_RUN,
+    })
+
+    expect(summarize(retained)).toEqual(["w@2"])
   })
 })
 
@@ -336,6 +409,20 @@ describe("element retention in AppRoot", () => {
     )
   }
 
+  /** Show (or, with no elements, clear) a spinner-like transient at `path`. */
+  function writeTransient(
+    root: AppRoot,
+    scriptRunId: string,
+    path: number[],
+    elements: ElementProps[]
+  ): AppRoot {
+    return root.applyDelta(
+      scriptRunId,
+      makeProto(DeltaProto, { newTransient: { elements } }),
+      forwardMsgMetadata([0, ...path])
+    )
+  }
+
   /** Run a full script run writing `elements` into main, in order. */
   function run(
     root: AppRoot,
@@ -350,6 +437,9 @@ describe("element retention in AppRoot", () => {
   }
 
   function labelOf(node: AppNode): string {
+    if (node instanceof TransientNode) {
+      return node.anchor ? labelOf(node.anchor) : "transient"
+    }
     if (!(node instanceof ElementNode)) {
       return "block"
     }
@@ -387,6 +477,28 @@ describe("element retention in AppRoot", () => {
     expect(labels(root.main)).toEqual(["a", "x1", "x2", "w", "z"])
     expect(root.main.retained).toEqual([])
   })
+
+  it.each([
+    ["after the spinner clears", true],
+    ["while the spinner shows", false],
+  ])(
+    "reclaims elements re-emitted where a spinner was shown %s",
+    (_name, clearSpinner) => {
+      let root = initialRoot().clearStaleNodes("run0")
+      root = run(root, "run1", [unkeyed("a"), unkeyed("x1"), unkeyed("x2")])
+      expect(retainedOf(root.main)).toEqual(["w@3", "z@3"])
+
+      root = writeTransient(root, "run1", [3], [unkeyed("spinner")])
+      if (clearSpinner) {
+        root = writeTransient(root, "run1", [3], [])
+      }
+      root = write(root, "run1", [3], keyed("w"))
+      expect(retainedOf(root.main)).toEqual(["z@4"])
+
+      root = write(root, "run1", [4], keyed("z"))
+      expect(root.main.retained).toEqual([])
+    }
+  )
 
   it("excludes retained elements from the active ids", () => {
     let root = initialRoot().clearStaleNodes("run0")
@@ -533,6 +645,14 @@ describe("element retention in AppRoot", () => {
             frontier >= 0 && random() < 0.2
               ? Math.floor(random() * (frontier + 1))
               : frontier + 1
+          // st.spinner shows at the cursor's next slot, and the next element is
+          // written over it, either after it clears or while it still shows.
+          const spinner =
+            index > frontier && random() < 0.3
+              ? random() < 0.5
+                ? "clears before"
+                : "clears after"
+              : undefined
           frontier = Math.max(frontier, index)
           const name = `k${Math.floor(random() * 5)}`
           const useKey = random() < 0.7 && !usedIds.has(name)
@@ -540,12 +660,21 @@ describe("element retention in AppRoot", () => {
             usedIds.add(name)
           }
           const label = useKey ? name : `u${trial}-${runIndex}-${w}`
+          if (spinner !== undefined) {
+            root = writeTransient(root, runId, [index], [unkeyed("spinner")])
+          }
+          if (spinner === "clears before") {
+            root = writeTransient(root, runId, [index], [])
+          }
           root = write(
             root,
             runId,
             [index],
             useKey ? keyed(name) : unkeyed(label)
           )
+          if (spinner === "clears after") {
+            root = writeTransient(root, runId, [index], [])
+          }
           model[index] = { label, run: runId }
 
           expect(root.main.children.map(labelOf)).toEqual(
@@ -557,12 +686,14 @@ describe("element retention in AppRoot", () => {
             expect(e.node.scriptRunId).not.toBe(runId)
             // A retained copy of an element the run already wrote renders
             // behind it, so render dedup keeps the current copy.
-            const currentIndex = root.main.children.findIndex(
-              c =>
-                c.scriptRunId === runId &&
+            const currentIndex = root.main.children.findIndex(child => {
+              const c = child instanceof TransientNode ? child.anchor : child
+              return (
                 c instanceof ElementNode &&
+                c.scriptRunId === runId &&
                 getElementId(c.element) === e.id
-            )
+              )
+            })
             expect(currentIndex === -1 || currentIndex < e.before).toBe(true)
           }
           const anchors = root.main.retained.map(e => e.before)

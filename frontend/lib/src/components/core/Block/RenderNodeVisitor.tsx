@@ -168,6 +168,8 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    *
    * This is the primary entry point for rendering - it creates a visitor,
    * traverses all children, and returns the accumulated React elements.
+   * Retained elements of the block are interleaved in front of
+   * `children[before]`.
    *
    * @param props - Block props containing the node to render
    * @param disableFullscreenMode - Whether to disable fullscreen mode for elements
@@ -191,14 +193,14 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     // Each retained element renders right in front of children[before], or
     // after the last child, which keeps it where it rendered before the
     // rerun displaced it.
-    let next = 0
+    let retainedIndex = 0
     for (let index = 0; index <= children.length; index++) {
       while (
-        next < retained.length &&
-        Math.min(retained[next].before, children.length) === index
+        retainedIndex < retained.length &&
+        Math.min(retained[retainedIndex].before, children.length) === index
       ) {
-        visitor.visitRetainedElement(retained[next])
-        next++
+        visitor.visitRetainedElement(retained[retainedIndex])
+        retainedIndex++
       }
       if (index < children.length) {
         children[index].accept(visitor)
@@ -209,8 +211,9 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   }
 
   /**
-   * Render a retained element under its element ID. It does not advance the
-   * positional index, so unkeyed canonical siblings keep their keys.
+   * Render a retained element under its element ID, unless an element with
+   * that ID already rendered. It does not advance the positional index, so
+   * unkeyed canonical siblings keep their keys.
    */
   private visitRetainedElement({ node, id }: RetainedElement): void {
     if (this.renderedKeySet.has(id)) {

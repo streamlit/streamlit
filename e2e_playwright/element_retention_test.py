@@ -93,3 +93,21 @@ def test_replaced_widget_is_hidden_then_removed(app: Page):
     wait_for_app_run(app)
 
     expect(label).not_to_be_attached()
+
+
+def test_input_after_spinner_is_visible_during_run(app: Page):
+    """An input re-emitted over a spinner's delta path shows before the run ends."""
+    after_spinner = get_element_by_key(app, "after_spinner")
+    _mark(after_spinner)
+
+    get_toggle(app, "Add notice before spinner").locator("label").click()
+
+    expect(app.get_by_text("Notice above spinner", exact=True)).to_be_visible()
+    expect(after_spinner).to_be_visible()
+    # The run still sleeps, so the input didn't wait for stale cleanup to show.
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
+    wait_for_app_run(app)
+
+    expect(after_spinner).to_have_attribute(_MARKER, "original")

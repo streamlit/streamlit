@@ -77,6 +77,8 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       node.scriptRunId,
       node.fragmentId,
       node.deltaMsgReceivedAt,
+      // Removing a transient child shifts later indexes, so keep every
+      // retained entry and re-anchor it to the children that remain.
       getRetainedAfterRemoval(node.retained, keptChildren, () => true)
     )
   }

@@ -71,8 +71,8 @@ export class FilterMainScriptElementsVisitor implements AppNodeVisitor<
       return node
     }
 
-    // Retained elements are dropped: elements are not kept mounted across a
-    // page change, and the page change also removes their widget state.
+    // Drop retained elements on a page change: elements don't stay mounted
+    // across pages, and the page change already clears their widget state.
     return new BlockNode(
       node.activeScriptHash,
       newChildren,

@@ -16,7 +16,7 @@
 
 /**
  * Element retention keeps a displaced prior-run element mounted until the
- * current run re-emits it or finishes.
+ * current run re-emits it or a successful run's stale cleanup removes it.
  *
  * A rerun that inserts output above a keyed element overwrites the element's
  * delta path before the element arrives one slot later. Instead of dropping the
@@ -51,7 +51,8 @@ export interface RetainedElement {
 /**
  * Element types that must not stay mounted while hidden: toasts are owned by
  * the toast queue and never swept as stale, media would keep playing, and
- * capture inputs would keep their device active.
+ * capture inputs would keep their device active. Audio-enabled chat inputs are
+ * excluded separately for the same capture reason.
  */
 const NON_RETAINABLE_ELEMENT_TYPES: ReadonlySet<string> = new Set([
   "toast",
@@ -66,11 +67,20 @@ function getRetainableId(node: AppNode | undefined): string | undefined {
   if (
     !(node instanceof ElementNode) ||
     node.element.hasOneShotEffect === true ||
-    NON_RETAINABLE_ELEMENT_TYPES.has(node.element.type ?? "")
+    NON_RETAINABLE_ELEMENT_TYPES.has(node.element.type ?? "") ||
+    node.element.chatInput?.acceptAudio === true
   ) {
     return undefined
   }
   return getElementId(node.element)
+}
+
+/**
+ * The node that renders under its own key at a slot. A TransientNode (a
+ * spinner) renders its anchor that way, so retention compares anchors.
+ */
+function unwrapTransient(node: AppNode | undefined): AppNode | undefined {
+  return node instanceof TransientNode ? node.anchor : node
 }
 
 /**
@@ -117,7 +127,9 @@ function insertInOrder(
  *    front of this slot move behind it, and `prev` joins them if it is a
  *    retainable element from a previous run.
  *
- * Writes that involve a TransientNode leave retention unchanged.
+ * A TransientNode on either side counts as its anchor. A spinner wraps the
+ * node at its slot, and the element written next replaces the spinner, so an
+ * element re-emitted after a spinner still reclaims its entry.
  */
 export function getRetainedAfterWrite({
   retained,
@@ -132,41 +144,46 @@ export function getRetainedAfterWrite({
   next: AppNode
   scriptRunId: string
 }): readonly RetainedElement[] {
-  if (prev instanceof TransientNode || next instanceof TransientNode) {
+  const occupant = unwrapTransient(prev)
+  const incoming = unwrapTransient(next)
+  // A spinner shown in an empty slot, or shown over or cleared from the same
+  // node, leaves what renders at this slot unchanged.
+  if (incoming === undefined || incoming === occupant) {
     return retained
   }
   // Fast path for most writes: nothing is retained yet and the occupant can't
   // become retained.
   if (
     retained.length === 0 &&
-    !(prev instanceof ElementNode && prev.scriptRunId !== scriptRunId)
+    !(occupant instanceof ElementNode && occupant.scriptRunId !== scriptRunId)
   ) {
     return retained
   }
 
   const nextId =
-    next instanceof ElementNode ? getElementId(next.element) : undefined
+    incoming instanceof ElementNode
+      ? getElementId(incoming.element)
+      : undefined
   let entries = retained
   if (nextId !== undefined && retained.some(entry => entry.id === nextId)) {
     entries = retained.filter(entry => entry.id !== nextId)
   }
 
-  if (prev !== undefined && keepsReactInstance(prev, next)) {
+  if (occupant !== undefined && keepsReactInstance(occupant, incoming)) {
     return entries
   }
 
-  // An element that moved earlier leaves a stale copy further down. If that copy
-  // is displaced it can be retained too; it renders behind the current copy,
-  // so render dedup ignores it. Skip copies whose ID is already retained to
-  // keep one entry per ID.
-  const prevId = getRetainableId(prev)
+  // Keep at most one retained entry per ID. A stale copy of an element that
+  // already moved earlier in this run can be displaced too; it renders behind
+  // the current copy, so first-wins render dedup ignores it.
+  const prevId = getRetainableId(occupant)
   const displaced =
-    prev instanceof ElementNode &&
+    occupant instanceof ElementNode &&
     prevId !== undefined &&
     prevId !== nextId &&
-    prev.scriptRunId !== scriptRunId &&
+    occupant.scriptRunId !== scriptRunId &&
     !entries.some(entry => entry.id === prevId)
-      ? [{ node: prev, id: prevId, before: index + 1 }]
+      ? [{ node: occupant, id: prevId, before: index + 1 }]
       : []
 
   const moved = entries
@@ -197,9 +214,9 @@ export function shiftRetainedAfter(
 
 /**
  * Returns the retained entries of a block after some of its children were
- * removed. `keptChildren[i]` tells whether old child `i` survived. Entries
- * rejected by `keepEntry` are dropped, and the rest are re-anchored to the
- * surviving children. Returns `retained` itself when nothing changed.
+ * removed. `keptChildren[i]` tells whether old child `i` survived. Drops the
+ * entries that `keepEntry` rejects and re-anchors the rest to the surviving
+ * children. Returns `retained` itself when nothing changed.
  */
 export function getRetainedAfterRemoval(
   retained: readonly RetainedElement[],

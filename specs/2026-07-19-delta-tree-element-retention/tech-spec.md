@@ -139,7 +139,9 @@ An element is **retainable** if it is an `ElementNode` with a generated element 
 - `toast`, because its lifetime is owned by the toast queue and `ClearStaleNodeVisitor`
   never removes it.
 - `audio` and `video`, because playback would keep going while the element is hidden.
-- `cameraInput` and `audioInput`, because capture devices would stay active.
+- `cameraInput` and `audioInput`, because capture devices would stay active. For the
+  same reason, a `chatInput` with `accept_audio` enabled isn't retained either, since it
+  can be recording when it gets displaced.
 
 Retention applies only when the occupant comes from a **prior run**
 (`occupant.scriptRunId !== currentRunId`). That keeps same-run locked-cursor replacement
@@ -163,9 +165,15 @@ occupant `O` (which may be `undefined` for an append):
    `j + 1`, after the moved entries and before any entries already anchored at `j + 1`.
    Otherwise `O` is dropped exactly as today.
 
-Writes whose target or occupant is a `TransientNode` skip these rules. The rare transient
-*insertion* path shifts later children by one, so entries anchored after `j` shift by one
-too.
+A `TransientNode` on either side counts as its anchor, because the anchor is what
+renders under its own key at the slot. A spinner shown at the cursor's next path wraps
+the occupant as its anchor, and the element written next replaces the spinner, so the
+rules compare `O` with the spinner's anchor (or treat the write as an append if it has
+none). Showing a spinner over a node, or clearing it again, leaves the anchor unchanged
+and therefore changes nothing. Without this, an element re-emitted after a spinner would
+miss its reclaim, and the stale entry would win render dedup and hide the current copy
+until cleanup. The rare transient *insertion* path shifts later children by one, so
+entries anchored after `j` shift by one too.
 
 Anchors use canonical indices, which never shift during a run (positional overwrite only
 replaces or appends). Run boundaries therefore need no bookkeeping: an interrupted run
@@ -258,6 +266,9 @@ zero work, and rendering adds O(retained) to the existing O(children) pass.
   unkeyed element, so it's left out.
 - **Reorders.** Keyed siblings that change order still cause React DOM moves, as they do
   today.
+- **Peak memory during a run.** A displaced heavy element (a chart, a WebGL map, an
+  iframe) stays mounted while hidden until it is reclaimed or the run's cleanup removes
+  it, so peak memory and WebGL context use during that run can be higher than today.
 
 ## Validation
 
@@ -302,9 +313,10 @@ positional keys (see [Known limitations](#known-limitations)).
 ## Testing plan
 
 - **Canonical equivalence (unit).** Apply seeded random delta sequences (successful and
-  interrupted runs, locked-cursor rewrites, keyed and unkeyed elements) and compare
-  `children` with a plain positional-overwrite model after every delta and cleanup.
-  Assert the retention invariants: at most one entry per ID, never a current-run node,
+  interrupted runs, locked-cursor rewrites, spinners shown before an element, keyed and
+  unkeyed elements) and compare `children` with a plain positional-overwrite model after
+  every delta and cleanup. Assert the retention invariants: at most one entry per ID,
+  never a current-run node, no entry rendered in front of the current copy of its ID,
   anchors sorted. Fragment cleanup, block inheritance, page filtering, and transient
   writes get targeted cases.
 - **Render (unit).** Retained entries don't change the keys of canonical siblings. A

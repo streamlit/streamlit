@@ -48,3 +48,18 @@ with st.container(key="swap_section"):
         time.sleep(1.5)
     else:
         st.text_input("Label", key="label")
+
+with st.container(key="spinner_section"):
+    notice_above_spinner = st.toggle(
+        "Add notice before spinner", key="notice_above_spinner"
+    )
+    if notice_above_spinner:
+        st.info("Notice above spinner")
+    # A spinner sends a transient delta to the next delta path even when it
+    # ends before it shows, so the input below is written over that delta.
+    with st.spinner("Loading"):
+        pass
+    st.text_input("After spinner", key="after_spinner")
+    if notice_above_spinner:
+        # Keep the run going so the test can check the input before cleanup.
+        time.sleep(1.5)

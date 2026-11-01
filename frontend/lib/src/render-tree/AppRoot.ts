@@ -482,8 +482,8 @@ export class AppRoot {
         block.id !== existingNode.deltaBlock.id
 
       if (!isDialogWithDifferentIdentity) {
-        // Retained elements render among the inherited children, so they are
-        // inherited with them.
+        // Inherit retained elements alongside `children` because they render
+        // among them.
         children = existingNode.children
         retained = existingNode.retained
       }
