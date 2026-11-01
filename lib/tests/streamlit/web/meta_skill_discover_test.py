@@ -317,6 +317,20 @@ def test_unusable_project_dir_falls_back_to_cwd(
     assert f"WARNING: --project-dir {shown}" in result.stderr
 
 
+def test_valid_project_dir_works_without_a_cwd(
+    discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A valid --project-dir is used even when the agent's cwd was deleted."""
+    expected = tmp_path.resolve()
+
+    def deleted_cwd() -> Path:
+        raise FileNotFoundError("the cwd was deleted")
+
+    monkeypatch.setattr(discover.Path, "cwd", deleted_cwd)
+
+    assert discover._resolve_project_dir(str(tmp_path)) == expected
+
+
 @pytest.mark.parametrize(
     ("local_path", "pythonpath"),
     [
@@ -594,10 +608,14 @@ def test_python_flag_has_the_macos_stub_guard(
 
 
 @pytest.mark.parametrize(
-    ("python", "advice"),
+    ("python", "manifest", "advice"),
     [
-        pytest.param("3.12", "-m pip install streamlit", id="supported-python"),
-        pytest.param("3.9", "uses Python 3.9, and Streamlit releases", id="old-python"),
+        pytest.param("3.12", None, "-m pip install streamlit", id="supported-python"),
+        pytest.param(
+            "3.9", None, "uses Python 3.9, and Streamlit releases", id="old-python"
+        ),
+        # uv creates the project's environment with a Python it picks itself.
+        pytest.param("3.9", "uv.lock", "uv add streamlit", id="old-launcher-uv"),
     ],
 )
 def test_not_installed_report_explains_every_way_forward(
@@ -605,9 +623,12 @@ def test_not_installed_report_explains_every_way_forward(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     python: str,
+    manifest: str | None,
     advice: str,
 ) -> None:
     """Advice fits the interpreter's Python and names environments that failed."""
+    if manifest is not None:
+        (tmp_path / manifest).write_text("", encoding="utf-8")
     attempts = [
         (
             discover._Candidate(".venv", None, tmp_path / ".venv"),

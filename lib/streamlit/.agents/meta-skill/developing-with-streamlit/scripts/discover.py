@@ -74,9 +74,9 @@ _PROBE_MARKER = "STREAMLIT_DISCOVER_PROBE="
 # default is 10 seconds). A typical search takes well under a second.
 _PROBE_TIMEOUT_S = 5
 _TOTAL_TIMEOUT_S = 7
-# Folders checked in the project and its parents, with a marker they must
-# contain: `venv` and `env` are also common source-folder names, and `~/.conda`
-# is conda's settings folder.
+# Folders checked in the project and its parents, each with a marker it must
+# contain ("" for none): `venv` and `env` are also common source-folder names,
+# and `~/.conda` is conda's settings folder.
 _ENV_DIRS = (
     (".venv", ""),
     ("venv", "pyvenv.cfg"),
@@ -132,7 +132,8 @@ class _Candidate:
 class _Result:
     """What checking one candidate found."""
 
-    # "missing": ran without Streamlit. "skipped": not run on purpose.
+    # "found": has Streamlit. "missing": ran without it. "failed": could not be
+    # run or did not answer. "skipped": not run on purpose.
     status: Literal["found", "missing", "failed", "skipped"]
     detail: str = ""
     package_dir: Path | None = None
@@ -477,13 +478,14 @@ def _display_command(command: list[str]) -> str:
 
 
 def _describe(candidate: _Candidate) -> str:
+    """Return the candidate's label and interpreter, as shown in error output."""
     command = candidate.command
     where = _display_command(command) if command else str(candidate.env_root)
     return f"{candidate.label} ({where})"
 
 
 def _manager_install_command(project_dir: Path, requirement: str) -> str | None:
-    """Return the project's package-manager command that adds ``requirement``."""
+    """Return the project's package-manager command that installs ``requirement``."""
     for directory in _search_dirs(project_dir):
         for manifest, add, sync in _INSTALL_COMMANDS:
             if os.path.isfile(directory / manifest):
@@ -543,20 +545,24 @@ def _install_step(
     result: _Result, candidate: _Candidate, project_dir: Path, *, upgrade: bool
 ) -> str:
     """Return the step that gets a Streamlit release with the bundled skill."""
+    requirement = (
+        f'"streamlit>={_FIRST_VERSION_WITH_SKILLS}"' if upgrade else "streamlit"
+    )
+    manager_command = _manager_install_command(project_dir, requirement)
+    # A package manager picks the Python for the environment it creates, so an
+    # old Python outside any environment (such as the launcher's) is no obstacle.
+    manager_picks_python = manager_command is not None and candidate.env_root is None
     with contextlib.suppress(ValueError):
         python = tuple(int(part) for part in result.python.split("."))
-        if python < _MIN_PYTHON_WITH_SKILLS:
+        if python < _MIN_PYTHON_WITH_SKILLS and not manager_picks_python:
             return (
                 f"This environment uses Python {result.python}, and Streamlit "
                 "releases with the bundled skill need Python 3.10 or newer. Only "
                 "if the user agrees, recreate the project's environment with a "
                 "newer Python and install Streamlit in it, then re-run this script."
             )
-    requirement = (
-        f'"streamlit>={_FIRST_VERSION_WITH_SKILLS}"' if upgrade else "streamlit"
-    )
     # Installing with another Python would not fix an environment that cannot run.
-    if result.from_disk and _manager_install_command(project_dir, requirement) is None:
+    if result.from_disk and manager_command is None:
         return (
             "This environment's Python could not be run (see below), so nothing "
             "can be installed into it. Only if the user agrees, repair or recreate "
@@ -681,16 +687,16 @@ def _resolve_project_dir(raw: str | None) -> Path:
     Agents sometimes pass a placeholder their harness did not expand (such as
     ``${CLAUDE_PROJECT_DIR}``), which should not end the search.
     """
-    cwd = Path.cwd()
-    if raw is None:
-        return cwd
-    if raw.strip() and os.path.isdir(_expand(raw)):
+    # Checked before the cwd, which may have been deleted.
+    if raw is not None and raw.strip() and os.path.isdir(_expand(raw)):
         return _expand(raw).resolve()
-    print(
-        f"WARNING: --project-dir {raw!r} is not a directory, so the current "
-        f"directory is searched instead: {cwd}",
-        file=sys.stderr,
-    )
+    cwd = Path.cwd()
+    if raw is not None:
+        print(
+            f"WARNING: --project-dir {raw!r} is not a directory, so the current "
+            f"directory is searched instead: {cwd}",
+            file=sys.stderr,
+        )
     return cwd
 
 
