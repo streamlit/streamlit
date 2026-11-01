@@ -19,24 +19,19 @@
 Usage:
     python scripts/discover.py [--project-dir PATH] [--python PATH]
 
-Agents run this script on the user's machine to find the skill that ships
-inside the user's installed Streamlit. It must never cause trouble there, so it:
+Agents run this script on the user's machine, so it must never cause trouble
+there. It never imports or installs Streamlit and never creates or changes an
+environment: each candidate interpreter re-runs this file with ``--probe``,
+which only asks ``importlib.util.find_spec`` where ``streamlit`` would be
+imported from, and the first interpreter that has Streamlit decides. Probes
+write no bytecode, cannot trigger a launcher's auto-install, and are time
+limited. A broken environment's ``site-packages`` is read from disk instead.
+Every failure is explained on stderr, with next steps for the agent.
 
-- Never imports or installs Streamlit, and never creates, syncs, or changes an
-  environment. Each candidate interpreter re-runs this file with ``--probe``,
-  which only asks ``importlib.util.find_spec`` where ``streamlit`` would be
-  imported from. The first interpreter that has Streamlit decides.
-- Writes nothing (not even bytecode caches), uses no network, shows no dialogs,
-  and turns off the auto-install behavior of Python launchers (Windows install
-  manager, mise). The only other tool it runs is Poetry, read-only.
-- Keeps searching when an interpreter is missing, broken, or slow, and reads a
-  broken environment's ``site-packages`` from disk instead, within a time limit.
-- Explains every failure on stderr, with next steps for the agent.
-
-Keep this file compatible with Python 3.8, below Streamlit's own minimum. Agents
-may launch it with an old system Python (macOS's built-in python3 is 3.9), and
-it re-runs itself under each project interpreter, so newer syntax would make it
-crash or misreport old environments as broken.
+The search covers common setups (uv, venv, conda, Poetry, Pipenv, the Python
+on PATH); ``--python`` covers the rest. Keep this file compatible with Python
+3.8: agents may launch it with an old system Python (macOS ships 3.9), and it
+re-runs itself under each project interpreter.
 
 Exit codes:
     0 - success; prints the absolute path to the bundled SKILL.md on stdout.
@@ -44,12 +39,10 @@ Exit codes:
     2 - Streamlit is installed but predates bundled skills (no .agents/skills/).
     3 - no Python interpreter could be checked.
     4 - .agents/skills/ exists but the expected developing-with-streamlit/SKILL.md
-        is missing from the documented sub-path (likely upstream restructured).
-        The agent should read the listed available skills directly.
+        is missing (likely upstream restructured); the agent should read one of
+        the listed skills directly.
     5 - invalid script argument.
     6 - unexpected internal error.
-
-On non-zero exit, a human-readable "ERROR:" block is printed on stderr.
 """
 
 from __future__ import annotations
@@ -77,15 +70,13 @@ _MIN_PYTHON_WITH_SKILLS = (3, 10)
 _DOCS_URL = "https://docs.streamlit.io/llms-full.txt"
 _PROBE_FLAG = "--probe"
 _PROBE_MARKER = "STREAMLIT_DISCOVER_PROBE="
-# The whole search, including a killed probe's cleanup, must end before common
-# agent shell timeouts (Codex's default is 10 seconds). A typical search takes
-# well under a second, and a slow environment's site-packages is still read
-# from disk.
+# The whole search must end before common agent shell timeouts (Codex's
+# default is 10 seconds). A typical search takes well under a second.
 _PROBE_TIMEOUT_S = 5
 _TOTAL_TIMEOUT_S = 7
-# `venv`, `env`, and `.conda` count only when they contain their marker: the
-# first two are also common source-folder names, and `~/.conda` is conda's
-# settings folder.
+# Folders checked in the project and its parents, with a marker they must
+# contain: `venv` and `env` are also common source-folder names, and `~/.conda`
+# is conda's settings folder.
 _ENV_DIRS = (
     (".venv", ""),
     ("venv", "pyvenv.cfg"),
@@ -97,27 +88,21 @@ _CHILD_ENV_OVERRIDES = {
     # Startup `.pth` files import site-packages modules; never write their caches.
     "PYTHONDONTWRITEBYTECODE": "1",
     "PYTHONIOENCODING": "utf-8",
-    "NO_COLOR": "1",
-    # With no runtime installed, the Windows install manager's `py` and
-    # `python` download and install one.
+    # With no runtime installed, the Windows install manager's `py` and `python`
+    # download one, and mise shims install missing versions.
     "PYTHON_MANAGER_AUTOMATIC_INSTALL": "false",
-    # mise shims install missing tool versions on first use.
     "MISE_AUTO_INSTALL": "false",
-    "MISE_EXEC_AUTO_INSTALL": "false",
-    "MISE_NOT_FOUND_AUTO_INSTALL": "false",
 }
 _PATH_LAUNCHERS = (
     (("py", "-3"), ("python",), ("python3",))
     if _IS_WINDOWS
     else (("python3",), ("python",))
 )
-_COMMAND_LINE_TOOLS_DIR = "/Library/Developer/CommandLineTools"
-_CONDA_INSTALL_DIRS = (
-    "miniforge3",
-    "miniconda3",
-    "anaconda3",
-    "mambaforge",
-    "micromamba",
+# Without either of these, macOS's /usr/bin/python3 is a stub that opens a
+# dialog asking the user to install the Command Line Tools.
+_MACOS_DEVELOPER_TOOLS = (
+    "/Library/Developer/CommandLineTools",
+    "/var/db/xcode_select_link",
 )
 # (manifest, command that adds a package, command that installs a lockfile
 # that already lists Streamlit). uv comes first: it is the recommended setup.
@@ -202,8 +187,7 @@ def _run(
             stderr=subprocess.PIPE,
             encoding="utf-8",
             errors="replace",
-            # Keeps Windows from opening a console window for each probe when
-            # the agent has none.
+            # No console window per probe when the agent runs without one.
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except (OSError, ValueError) as exc:
@@ -225,11 +209,6 @@ def _read_lines(path: Path) -> list[str]:
         if os.path.isfile(path):
             return path.read_text(encoding="utf-8", errors="replace").splitlines()
     return []
-
-
-def _first_line(path: Path) -> str:
-    """Return the first non-empty line of a small text file, or ``""``."""
-    return next((line.strip() for line in _read_lines(path) if line.strip()), "")
 
 
 def _last_line(text: str) -> str:
@@ -271,14 +250,9 @@ def _probe(command: list[str], project_dir: Path, deadline: float) -> _Result:
             return completed
         parsed = _parse_probe_output(completed.stdout)
         if parsed is None:
-            output = (
-                _last_line(completed.stderr)
-                or _last_line(completed.stdout)
-                or "no output"
-            )
-            return _Result(
-                "failed", f"exited with code {completed.returncode}: {output}"
-            )
+            output = _last_line(completed.stderr) or _last_line(completed.stdout)
+            detail = f"exited with code {completed.returncode}: {output or 'no output'}"
+            return _Result("failed", detail)
         info = parsed
     python_version = info.get("python", "")
     if not info.get("package_dir"):
@@ -333,7 +307,7 @@ def _check(candidate: _Candidate, project_dir: Path, deadline: float) -> _Result
 
 
 def _env_candidate(label: str, env_root: Path) -> _Candidate:
-    """Return a candidate for a venv, conda, pixi, or pyenv environment folder."""
+    """Return a candidate for a venv, conda, or pixi environment folder."""
     names = (
         ("Scripts/python.exe", "python.exe")
         if _IS_WINDOWS
@@ -349,40 +323,20 @@ def _python_candidate(label: str, python: Path) -> _Candidate:
     in_bin = python.parent.name in {"bin", "Scripts"}
     root = python.parent.parent if in_bin else python.parent
     is_env = os.path.isfile(root / "pyvenv.cfg") or os.path.isdir(root / "conda-meta")
-    return _Candidate(label, [str(python)], root if is_env else None)
-
-
-def _which(name: str) -> str | None:
-    """Find a command on PATH only, unlike ``shutil.which`` on Windows.
-
-    For a bare name, Windows also searches the current directory first, which
-    would run a project's own `python.bat` or `poetry.cmd` as if it were
-    installed. A path the caller gives is used as given.
-    """
-    found = shutil.which(name)
-    if found and _IS_WINDOWS and not os.path.dirname(name):
-        folder = os.path.normcase(os.path.dirname(os.path.abspath(found)))
-        path_dirs = os.environ.get("PATH", "").split(os.pathsep)
-        on_path = {os.path.normcase(os.path.abspath(d)) for d in path_dirs if d}
-        if folder not in on_path:
-            return None
-    return found
+    return _Candidate(
+        label,
+        [str(python)],
+        root if is_env else None,
+        skip_reason=_macos_install_dialog_reason(str(python)),
+    )
 
 
 def _macos_install_dialog_reason(executable: str) -> str:
-    """Return why running ``executable`` would open a macOS installer dialog.
-
-    Without the Command Line Tools, ``/usr/bin/python3`` is a stub that asks
-    the user to install them instead of running. ``""`` means it is safe to run.
-    """
+    """Return why running ``executable`` would open a macOS dialog, or ``""``."""
     if sys.platform != "darwin" or not executable.startswith("/usr/bin/"):
         return ""
-    developer_dir = os.environ.get("DEVELOPER_DIR") or os.path.realpath(
-        "/var/db/xcode_select_link"
-    )
-    for tools_dir in (developer_dir, _COMMAND_LINE_TOOLS_DIR):
-        if os.path.exists(os.path.join(tools_dir, "usr", "bin", "python3")):
-            return ""
+    if any(os.path.exists(path) for path in _MACOS_DEVELOPER_TOOLS):
+        return ""
     return "macOS would ask the user to install the Command Line Tools"
 
 
@@ -406,9 +360,7 @@ def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Cand
     # OS (a dev container sees the host's `.venv`).
     uv_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
     if uv_environment:
-        # A relative path is relative to the workspace root, where `uv.lock` is.
-        root = next((d for d in dirs if os.path.isfile(d / "uv.lock")), project_dir)
-        env_root = root / os.path.expanduser(uv_environment)
+        env_root = project_dir / os.path.expanduser(uv_environment)
         yield _env_candidate("$UV_PROJECT_ENVIRONMENT", env_root)
     for directory in dirs:
         for name, marker in _ENV_DIRS:
@@ -417,68 +369,46 @@ def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Cand
                 not marker or os.path.exists(env_root / marker)
             ):
                 yield _env_candidate(name, env_root)
-        # PDM records the interpreter it uses, which may live outside the project.
-        pdm_python = _first_line(directory / ".pdm-python")
-        if pdm_python:
-            yield _python_candidate(".pdm-python", Path(pdm_python))
-
-
-def _conda_env_name(directory: Path) -> str:
-    """Return the environment name from a conda ``environment.yml``, or ``""``."""
-    for filename in ("environment.yml", "environment.yaml"):
-        for line in _read_lines(directory / filename):
-            if line.startswith("name:"):
-                return line[len("name:") :].split("#")[0].strip().strip("\"'")
-    return ""
 
 
 def _recorded_environments(dirs: list[Path]) -> Iterator[_Candidate]:
-    """Yield environments that tools keep outside the project, by reading files only.
+    """Yield conda and Pipenv environments kept outside the project.
 
-    Agent shells rarely activate these. Conda, pyenv, and Pipenv are never run,
-    because some of them write to the user's home directory even to report a path.
+    Agent shells rarely activate these. They are found by reading files, because
+    some of these tools write to the user's home directory even to report a path.
     """
     home = Path(os.path.expanduser("~"))
+    # Conda: `environment.yml` names an environment in an `envs` folder.
     conda_exe = os.environ.get("CONDA_EXE")
-    conda_bases = [Path(conda_exe).parent.parent] if conda_exe else []
-    conda_bases.append(Path(os.environ.get("MAMBA_ROOT_PREFIX") or home / "micromamba"))
-    conda_bases += [home / name for name in _CONDA_INSTALL_DIRS]
-    envs_dirs = [base / "envs" for base in conda_bases] + [home / ".conda" / "envs"]
-    pyenv_root = Path(os.environ.get("PYENV_ROOT") or home / ".pyenv")
-    pyenv_roots = [pyenv_root, home / ".pyenv" / "pyenv-win"]
-
+    envs_dirs = [Path(conda_exe).parent.parent / "envs"] if conda_exe else []
+    envs_dirs.append(home / ".conda" / "envs")
     for directory in dirs:
-        # Conda and mamba: `environment.yml` names an environment in an envs folder.
-        name = _conda_env_name(directory)
-        if name:
-            for envs_dir in envs_dirs:
-                if os.path.isdir(envs_dir / name):
-                    yield _env_candidate(f"conda environment {name!r}", envs_dir / name)
-        # pyenv and pyenv-win: `.python-version` names a version or virtualenv.
-        version = _first_line(directory / ".python-version")
-        if version:
-            for root in pyenv_roots:
-                if os.path.isdir(root / "versions" / version):
-                    label = f"pyenv {version!r}"
-                    yield _env_candidate(label, root / "versions" / version)
+        lines = [
+            *_read_lines(directory / "environment.yml"),
+            *_read_lines(directory / "environment.yaml"),
+        ]
+        names = [line[len("name:") :] for line in lines if line.startswith("name:")]
+        name = names[0].split("#")[0].strip().strip("\"'") if names else ""
+        for envs_dir in envs_dirs:
+            if name and os.path.isdir(envs_dir / name):
+                yield _env_candidate(f"conda environment {name!r}", envs_dir / name)
 
-    # Pipenv and virtualenvwrapper record each environment's project in `.project`.
+    # Pipenv records each environment's project folder in a `.project` file.
     project_dirs = {_canonical_path(directory) for directory in dirs}
-    data_home = os.environ.get("XDG_DATA_HOME") or str(home / ".local" / "share")
-    workon_homes = [os.environ.get("WORKON_HOME") or ""]
-    workon_homes += [os.path.join(data_home, "virtualenvs"), str(home / ".virtualenvs")]
-    for workon_home in dict.fromkeys(filter(None, workon_homes)):
-        projects = Path(os.path.expanduser(workon_home)).glob("*/.project")
-        for project_file in sorted(projects):
-            recorded = _first_line(project_file)
-            if recorded and _canonical_path(recorded) in project_dirs:
+    workon_home = os.environ.get("WORKON_HOME")
+    workon_homes = [workon_home] if workon_home else []
+    workon_homes += [str(home / ".local/share/virtualenvs"), str(home / ".virtualenvs")]
+    for folder in workon_homes:
+        for project_file in sorted(Path(os.path.expanduser(folder)).glob("*/.project")):
+            lines = _read_lines(project_file)
+            if lines and _canonical_path(lines[0].strip()) in project_dirs:
                 yield _env_candidate("Pipenv environment", project_file.parent)
 
 
 def _poetry_environment(dirs: list[Path], deadline: float) -> Iterator[_Candidate]:
     """Yield the Poetry environment, which lives in a cache folder under a hashed name."""
     poetry_dir = next((d for d in dirs if os.path.isfile(d / "poetry.lock")), None)
-    poetry = _which("poetry")
+    poetry = shutil.which("poetry")
     if poetry_dir is None or poetry is None:
         return
     # `env info --path` only reads, unlike `poetry run`, which can create an
@@ -502,13 +432,11 @@ def _active_and_path_interpreters() -> Iterator[_Candidate]:
         yield _python_candidate("Python running this script", Path(sys.executable))
     for launcher in _PATH_LAUNCHERS:
         # Full paths let Windows run `.bat`/`.cmd` shims (for example, pyenv-win).
-        executable = _which(launcher[0])
+        executable = shutil.which(launcher[0])
         if executable is not None:
-            yield _Candidate(
-                f"{launcher[0]} on PATH",
-                [executable, *launcher[1:]],
-                skip_reason=_macos_install_dialog_reason(executable),
-            )
+            candidate = _python_candidate(f"{launcher[0]} on PATH", Path(executable))
+            candidate.command = [executable, *launcher[1:]]
+            yield candidate
 
 
 def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
@@ -517,7 +445,7 @@ def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
     1. ``$UV_PROJECT_ENVIRONMENT``, then environments in the project directory,
        its parent (for a shared environment, even above the git root), and any
        further parents up to the git root.
-    2. Environments that conda, pyenv, Pipenv, and Poetry record for the project.
+    2. Environments that conda, Pipenv, and Poetry keep for the project.
     3. ``$VIRTUAL_ENV`` and ``$CONDA_PREFIX``. They come late because agent
        shells often have the agent's own environment activated.
     4. This script's interpreter, then the Pythons on ``PATH``.
@@ -540,8 +468,7 @@ def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
 
 
 def _display_command(command: list[str]) -> str:
-    # Forward slashes work in every shell; PowerShell needs `& ` before a quoted
-    # executable, which _install_command points out.
+    # Forward slashes and quotes work in Git Bash, PowerShell, and POSIX shells.
     executable = command[0].replace("\\", "/") if _IS_WINDOWS else command[0]
     if " " in executable:
         executable = f'"{executable}"'
@@ -563,11 +490,9 @@ def _manager_install_command(project_dir: Path, requirement: str) -> str | None:
                 # environment created or updated.
                 lines = _read_lines(directory / manifest) if sync else []
                 locked = 'name = "streamlit"' in (line.strip() for line in lines)
-                return (
-                    sync
-                    if locked and requirement == "streamlit"
-                    else f"{add} {requirement}"
-                )
+                if locked and requirement == "streamlit":
+                    return sync
+                return f"{add} {requirement}"
     return None
 
 
@@ -576,26 +501,13 @@ def _install_command(candidate: _Candidate, project_dir: Path, requirement: str)
     manager_command = _manager_install_command(project_dir, requirement)
     if manager_command is not None:
         return manager_command
-    env_root = candidate.env_root
-    if env_root is not None and os.path.isdir(env_root / "conda-meta"):
-        return f'conda install --prefix "{env_root}" -c conda-forge {requirement}'
     python = _display_command(candidate.command or ["python"])
-    pyvenv_cfg = env_root / "pyvenv.cfg" if env_root is not None else None
-    notes = []
-    if pyvenv_cfg is None or not os.path.isfile(pyvenv_cfg):
-        command = f"{python} -m pip install {requirement}"
-        notes.append(
-            "this is not a virtual environment; creating one for the project "
-            "first is better, for example with `uv venv`"
-        )
-    elif any(line.startswith("uv =") for line in _read_lines(pyvenv_cfg)):
-        # Environments created by `uv venv` have no pip.
-        command = f"uv pip install --python {python} {requirement}"
-    else:
-        command = f"{python} -m pip install {requirement}"
-    if _IS_WINDOWS and command.startswith('"'):
-        notes.append("in PowerShell, put `& ` before the quoted path")
-    return "\n".join([command, *(f"     ({note})" for note in notes)])
+    env_root = candidate.env_root
+    pyvenv_lines = _read_lines(env_root / "pyvenv.cfg") if env_root else []
+    # Environments created by `uv venv` have no pip.
+    if any(line.startswith("uv =") for line in pyvenv_lines):
+        return f"uv pip install --python {python} {requirement}"
+    return f"{python} -m pip install {requirement}"
 
 
 def _print_error(
@@ -626,14 +538,6 @@ def _print_error(
     print("\n".join(lines), file=sys.stderr)
 
 
-def _ask_first(action: str, command: str) -> str:
-    """Return a next step the agent may take only with the user's consent."""
-    return (
-        f"Only if the user asked for it or agrees, {action}, then re-run this "
-        f"script:\n     {command}"
-    )
-
-
 def _install_step(
     result: _Result, candidate: _Candidate, project_dir: Path, *, upgrade: bool
 ) -> str:
@@ -659,7 +563,11 @@ def _install_step(
             "this script."
         )
     action = "upgrade Streamlit" if upgrade else "install Streamlit"
-    return _ask_first(action, _install_command(candidate, project_dir, requirement))
+    command = _install_command(candidate, project_dir, requirement)
+    return (
+        f"Only if the user asked for it or agrees, {action}, then re-run this "
+        f"script:\n     {command}"
+    )
 
 
 def _report_found(
@@ -669,7 +577,6 @@ def _report_found(
     candidate, result = attempts[-1]
     package_dir = Path(os.path.realpath(package_dir))
     skill = package_dir.joinpath(*_SKILL_PARTS)
-    location = [f"Environment: {_describe(candidate)}", f"Streamlit: {package_dir}"]
     if os.path.isfile(skill):
         print(skill)
         if result.from_disk:
@@ -680,9 +587,10 @@ def _report_found(
             )
         return 0
 
+    location = [f"Environment: {_describe(candidate)}", f"Streamlit: {package_dir}"]
     skills_dir = package_dir / ".agents" / "skills"
     if os.path.isdir(skills_dir):
-        available = sorted(skills_dir.glob("*/SKILL.md"))
+        available = [f"  {path}" for path in sorted(skills_dir.glob("*/SKILL.md"))]
         _print_error(
             "Streamlit's bundled skills folder has no "
             "developing-with-streamlit/SKILL.md.",
@@ -697,7 +605,7 @@ def _report_found(
                 ),
             ],
             attempts,
-            [*location, "Bundled skills:", *(f"  {path}" for path in available)],
+            [*location, "Bundled skills:", *available],
         )
         return 4
 
@@ -714,23 +622,51 @@ def _report_found(
     return 2
 
 
-def _from_msys_path(raw: str) -> str:
-    """Turn a Git Bash path such as ``/c/Users/me`` into ``C:/Users/me`` on Windows."""
-    if (
-        _IS_WINDOWS
-        and len(raw) >= 2
-        and raw[0] == "/"
-        and raw[1].isalpha()
-        and (len(raw) == 2 or raw[2] == "/")
-    ):
-        return f"{raw[1].upper()}:/{raw[3:]}"
-    return raw
+def _report_not_found(
+    attempts: list[tuple[_Candidate, _Result]], project_dir: Path
+) -> int:
+    """Explain why no interpreter had Streamlit, and return the exit code."""
+    failed = [c.label for c, r in attempts if r.status in {"failed", "skipped"}]
+    fix_failed_step = (
+        f"Some environments could not be checked ({', '.join(failed)}). If one of "
+        "them runs the app, fixing it may resolve this, but only with the user's "
+        "agreement."
+    )
+    retry_step = (
+        "If Streamlit is installed in an environment that is not listed, re-run "
+        "this script with --python <path to that environment's Python>."
+    )
+    missing = next(((c, r) for c, r in attempts if r.status == "missing"), None)
+    if missing is not None:
+        candidate, result = missing
+        steps = [_install_step(result, candidate, project_dir, upgrade=False)]
+        steps += [fix_failed_step] if failed else []
+        _print_error(
+            "Streamlit is not installed in any Python environment found for this "
+            "project.",
+            "The interpreters that ran cannot import `streamlit`, so there is no "
+            "bundled skill to read. Re-running this script will give the same "
+            "result until Streamlit is installed.",
+            [*steps, retry_step],
+            attempts,
+        )
+        return 1
+
+    _print_error(
+        "Could not run any Python interpreter found for this project.",
+        "Each interpreter listed below failed to start or to answer, or was not "
+        "run on purpose, so it is unknown whether Streamlit is installed. This is "
+        "a problem with those environments, not a missing package. Re-running "
+        "this script only helps if the failure was temporary, such as a timeout.",
+        [retry_step, fix_failed_step] if failed else [retry_step],
+        attempts,
+    )
+    return 3
 
 
 def _expand(raw: str) -> Path:
     """Turn a path argument as agents pass it (quoted, ``~``, variables) into a Path."""
-    raw = raw.strip().strip("\"'")
-    return Path(_from_msys_path(os.path.expandvars(os.path.expanduser(raw))))
+    return Path(os.path.expandvars(os.path.expanduser(raw.strip().strip("\"'"))))
 
 
 def _resolve_project_dir(raw: str | None) -> Path:
@@ -767,62 +703,6 @@ def _report_invalid_arguments(problem: str) -> int:
     return 5
 
 
-def _report_not_found(
-    attempts: list[tuple[_Candidate, _Result]], project_dir: Path
-) -> int:
-    """Explain why no interpreter had Streamlit, and return the exit code."""
-    failed = [c.label for c, r in attempts if r.status in {"failed", "skipped"}]
-    fix_failed_step = (
-        f"Some environments could not be checked ({', '.join(failed)}). If one of "
-        "them runs the app, fixing it may resolve this, but only with the user's "
-        "agreement."
-    )
-    missing = next(((c, r) for c, r in attempts if r.status == "missing"), None)
-    if missing is not None:
-        candidate, result = missing
-        steps = [_install_step(result, candidate, project_dir, upgrade=False)]
-        steps += [fix_failed_step] if failed else []
-        steps.append(
-            "If Streamlit is installed in an environment that is not listed, "
-            "re-run this script with --python <path to that environment's Python>."
-        )
-        _print_error(
-            "Streamlit is not installed in any Python environment found for this "
-            "project.",
-            "The interpreters that ran cannot import `streamlit`, so there is no "
-            "bundled skill to read. Re-running this script will give the same "
-            "result until Streamlit is installed.",
-            steps,
-            attempts,
-        )
-        return 1
-
-    if not attempts:  # pragma: no cover - only when sys.executable is empty.
-        _print_error(
-            "No Python interpreter was found.",
-            "There is no project environment and no Python on PATH.",
-            ["Only if the user agrees, install Python 3.11+ and Streamlit."],
-            [],
-        )
-        return 3
-    _print_error(
-        "Could not run any Python interpreter found for this project.",
-        "Each interpreter listed below failed to start or to answer, or was not "
-        "run on purpose, so it is unknown whether Streamlit is installed. This is "
-        "a problem with those environments, not a missing package. Re-running "
-        "this script only helps if the failure was temporary, such as a timeout.",
-        [
-            (
-                "If you know which Python runs the app, re-run this script with "
-                "--python <path to it>."
-            ),
-            fix_failed_step,
-        ],
-        attempts,
-    )
-    return 3
-
-
 def _discover(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
         description="Discover the bundled developing-with-streamlit SKILL.md.",
@@ -847,14 +727,12 @@ def _discover(argv: list[str]) -> int:
     project_dir = _resolve_project_dir(args.project_dir)
     if args.python is not None:
         python = _expand(args.python)
-        found = str(python) if os.path.isfile(python) else _which(str(python))
+        found = str(python) if os.path.isfile(python) else shutil.which(str(python))
         if found is None:
             return _report_invalid_arguments(
                 f"--python {args.python!r} is not a file or a command on PATH."
             )
-        candidate = _python_candidate("--python", Path(found))
-        candidate.skip_reason = _macos_install_dialog_reason(os.path.abspath(found))
-        candidates = iter([candidate])
+        candidates = iter([_python_candidate("--python", Path(found))])
     else:
         candidates = _candidates(project_dir, deadline)
 
@@ -876,26 +754,6 @@ def _discover(argv: list[str]) -> int:
     return _report_not_found(attempts, project_dir)
 
 
-def _prepare_process() -> None:
-    """Print UTF-8 everywhere, and keep Windows from showing error dialogs."""
-    # Agent harnesses decode output as UTF-8.
-    for stream in (sys.stdout, sys.stderr):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is not None:
-            with contextlib.suppress(OSError, ValueError):
-                reconfigure(encoding="utf-8")
-    if _IS_WINDOWS:
-        # Child processes inherit this, so a broken interpreter (for example,
-        # one missing a DLL) fails instead of opening a modal dialog.
-        with contextlib.suppress(Exception):
-            import ctypes
-
-            fail_critical_errors, no_gp_fault_box, no_open_file_box = 0x1, 0x2, 0x8000
-            ctypes.windll.kernel32.SetErrorMode(  # type: ignore[attr-defined]
-                fail_critical_errors | no_gp_fault_box | no_open_file_box
-            )
-
-
 def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else argv
     if arguments == [_PROBE_FLAG]:
@@ -903,7 +761,12 @@ def main(argv: list[str] | None = None) -> int:
         # whatever this interpreter's output encoding is.
         print(_PROBE_MARKER + json.dumps(_locate_streamlit()))
         return 0
-    _prepare_process()
+    # Agent harnesses decode output as UTF-8, also on Windows.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            with contextlib.suppress(OSError, ValueError):
+                reconfigure(encoding="utf-8")
     try:
         return _discover(arguments)
     except Exception as exc:
@@ -914,10 +777,9 @@ def main(argv: list[str] | None = None) -> int:
             [
                 (
                     "Read the bundled skill directly from the project's virtual "
-                    "environment: .venv/Lib/site-packages/streamlit/.agents/skills/"
-                    "developing-with-streamlit/SKILL.md (Windows) or "
-                    ".venv/lib/python3.*/site-packages/streamlit/.agents/skills/"
-                    "developing-with-streamlit/SKILL.md (macOS and Linux)."
+                    "environment, under `.venv/Lib/site-packages` (Windows) or "
+                    "`.venv/lib/python3.*/site-packages` (macOS and Linux): "
+                    "`streamlit/.agents/skills/developing-with-streamlit/SKILL.md`."
                 )
             ],
             [],

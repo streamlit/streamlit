@@ -56,10 +56,7 @@ _LOOKUP_ENV_VARS = (
     "VIRTUAL_ENV",
     "CONDA_PREFIX",
     "CONDA_EXE",
-    "MAMBA_ROOT_PREFIX",
-    "PYENV_ROOT",
     "WORKON_HOME",
-    "XDG_DATA_HOME",
     "UV_PROJECT_ENVIRONMENT",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONPYCACHEPREFIX",
@@ -387,14 +384,12 @@ def test_candidates_are_ordered_from_project_to_path(
     repo = outer / "repo"
     app = repo / "app"
     (repo / ".git").mkdir(parents=True)
-    (repo / "uv.lock").write_text("", "utf-8")  # uv's relative paths start here.
     _env_without_interpreter(outer / ".venv")  # Above the git root: never checked.
     _env_without_interpreter(repo / ".venv")
     _env_without_interpreter(app / ".venv")
     _env_without_interpreter(app / "venv")
     (app / "env").mkdir()  # No pyvenv.cfg: a source folder.
     (app / ".conda").mkdir()  # No conda-meta: conda's settings folder.
-    (app / ".pdm-python").write_text(str(tmp_path / "pdm" / "python"), "utf-8")
     _isolate_lookups(monkeypatch, tmp_path / "home")
     monkeypatch.setenv("VIRTUAL_ENV", str(tmp_path / "virtual-env"))
     monkeypatch.setenv("CONDA_PREFIX", str(tmp_path / "conda"))
@@ -405,10 +400,9 @@ def test_candidates_are_ordered_from_project_to_path(
 
     this_python = discover._python_candidate("", Path(sys.executable))
     assert [(c.label, c.env_root) for c in candidates] == [
-        ("$UV_PROJECT_ENVIRONMENT", repo / "uv-env"),
+        ("$UV_PROJECT_ENVIRONMENT", app / "uv-env"),
         (".venv", app / ".venv"),
         ("venv", app / "venv"),
-        (".pdm-python", None),
         (".venv", repo / ".venv"),
         ("$VIRTUAL_ENV", tmp_path / "virtual-env"),
         ("$CONDA_PREFIX", tmp_path / "conda"),
@@ -446,28 +440,26 @@ def test_failing_lookup_skips_only_its_own_section(
 def test_environments_recorded_outside_the_project_are_found(
     discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Conda, pyenv, and Pipenv environments are found by reading files only."""
+    """Conda and Pipenv environments are found by reading files only."""
     home = tmp_path / "home"
     project = tmp_path / "project"
     project.mkdir()
     (project / "environment.yml").write_text("name: dash  # app env\n", "utf-8")
-    (project / ".python-version").write_text("app-venv\n", "utf-8")
-    conda_env = home / "miniforge3" / "envs" / "dash"
-    pyenv_env = home / ".pyenv" / "versions" / "app-venv"
+    conda_env = tmp_path / "miniforge3" / "envs" / "dash"
     pipenv_env = home / ".local" / "share" / "virtualenvs" / "project-Ab12Cd34"
     unrelated_env = home / ".local" / "share" / "virtualenvs" / "other-Ef56Gh78"
-    for env_root in (conda_env, pyenv_env, pipenv_env, unrelated_env):
+    for env_root in (conda_env, pipenv_env, unrelated_env):
         env_root.mkdir(parents=True)
     (pipenv_env / ".project").write_text(str(project), "utf-8")
     (unrelated_env / ".project").write_text(str(tmp_path / "other"), "utf-8")
     _isolate_lookups(monkeypatch, home)
+    monkeypatch.setenv("CONDA_EXE", str(tmp_path / "miniforge3" / "bin" / "conda"))
     monkeypatch.setattr(discover, "_run", lambda *_: pytest.fail("must not run"))
 
     candidates = list(discover._recorded_environments([project]))
 
     assert [(c.label, c.env_root) for c in candidates] == [
         ("conda environment 'dash'", conda_env),
-        ("pyenv 'app-venv'", pyenv_env),
         ("Pipenv environment", pipenv_env),
     ]
 
@@ -487,7 +479,7 @@ def test_poetry_is_queried_only_in_a_poetry_project(
         return subprocess.CompletedProcess(command, 0, f"{poetry_env}\n", "")
 
     monkeypatch.setattr(discover, "_run", fake_run)
-    monkeypatch.setattr(discover, "_which", lambda name: name)
+    monkeypatch.setattr(discover.shutil, "which", lambda name: name)
     project = tmp_path / "project"
     project.mkdir()
 
@@ -567,10 +559,9 @@ def test_macos_python_stub_is_never_run(
     discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Without the Command Line Tools, /usr/bin/python3 would open an install dialog."""
-    developer_dir = tmp_path / "Developer"
+    tools = tmp_path / "CommandLineTools"
     monkeypatch.setattr(discover.sys, "platform", "darwin")
-    monkeypatch.setattr(discover, "_COMMAND_LINE_TOOLS_DIR", str(tmp_path / "CLT"))
-    monkeypatch.setenv("DEVELOPER_DIR", str(developer_dir))
+    monkeypatch.setattr(discover, "_MACOS_DEVELOPER_TOOLS", (str(tools),))
     monkeypatch.setattr(discover, "_run", lambda *_: pytest.fail("must not run"))
 
     reason = discover._macos_install_dialog_reason("/usr/bin/python3")
@@ -580,8 +571,7 @@ def test_macos_python_stub_is_never_run(
     assert "Command Line Tools" in reason
     assert (result.status, result.detail) == ("skipped", f"not run: {reason}")
     assert discover._macos_install_dialog_reason("/opt/homebrew/bin/python3") == ""
-    (developer_dir / "usr" / "bin").mkdir(parents=True)
-    (developer_dir / "usr" / "bin" / "python3").write_text("", "utf-8")
+    tools.mkdir()
     assert discover._macos_install_dialog_reason("/usr/bin/python3") == ""
 
 
@@ -599,22 +589,6 @@ def test_python_flag_has_the_macos_stub_guard(
 
     assert discover.main(["--project-dir", str(tmp_path), "--python", str(python)]) == 3
     assert "not run: dialog" in capsys.readouterr().err
-
-
-def test_windows_ignores_commands_in_the_current_directory(
-    discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A project's own `python.bat` is not mistaken for an installed Python."""
-    shim = tmp_path / "python.bat"
-    monkeypatch.setattr(discover, "_IS_WINDOWS", True)
-    monkeypatch.setattr(discover.shutil, "which", lambda _name: str(shim))
-
-    monkeypatch.setenv("PATH", str(tmp_path / "bin"))
-    assert discover._which("python") is None
-    # A path the caller gives, such as `--python .venv/Scripts/python`, is kept.
-    assert discover._which(str(tmp_path / "python")) == str(shim)
-    monkeypatch.setenv("PATH", os.pathsep.join([str(tmp_path / "bin"), str(tmp_path)]))
-    assert discover._which("python") == str(shim)
 
 
 @pytest.mark.parametrize(
@@ -717,23 +691,6 @@ def test_env_candidate_finds_the_interpreter_for_each_layout(
     candidate = discover._env_candidate(".venv", tmp_path)
 
     assert candidate.command == ([str(tmp_path / layout)] if found else None)
-
-
-@pytest.mark.parametrize(
-    ("raw", "expected"),
-    [
-        ("/c/Users/me/app", "C:/Users/me/app"),
-        ("/d", "D:/"),
-        ("/home/me", "/home/me"),
-        ("C:/Users/me", "C:/Users/me"),
-    ],
-)
-def test_git_bash_drive_paths_become_windows_paths(
-    discover: ModuleType, monkeypatch: pytest.MonkeyPatch, raw: str, expected: str
-) -> None:
-    """Git Bash drive paths become Windows paths."""
-    monkeypatch.setattr(discover, "_IS_WINDOWS", True)
-    assert discover._from_msys_path(raw) == expected
 
 
 @pytest.mark.parametrize(
