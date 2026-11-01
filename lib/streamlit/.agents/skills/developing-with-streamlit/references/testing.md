@@ -208,6 +208,16 @@ at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
 
+`at.button`, `at.form_submit_button`, and `at.text_input` also accept `label=`. `at.markdown` accepts `text=`, which matches the Markdown source, including syntax such as `**`. Other element collections raise `AppTestError` for these filters (`AppTestLookupError` when the collection is empty), and block collections such as `at.container` raise `TypeError`. These lookups are strict: zero or several matches raise `AppTestLookupError`. Matching collapses whitespace. `exact=False` is a case-insensitive substring. A compiled regex is searched against the collapsed text:
+
+```python
+import re
+
+at.button(label="Save").click().run()
+at.text_input(label="Name").set_value("Ada").run()
+at.markdown(text=re.compile(r"Revenue: \$12M"))
+```
+
 `st.tabs(..., key=)` stores that key on the tab container, not on the panels in `at.tabs`. Use `at.get_by_key("sections")`. `at.tabs("sections")` raises `KeyError`.
 
 `at.get()` accepts public command names (`datetime_input`, `help`, `pills`, `segmented_control`, `columns`) as well as stored node types (`date_time_input`, `help_info`).

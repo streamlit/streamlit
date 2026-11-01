@@ -951,9 +951,12 @@ class AppTest:
         WidgetList of Button
             Sequence of all ``st.button`` and ``st.form_submit_button``
             widgets. Individual widgets can be accessed from a WidgetList by
-            index (order on the page) or key. For example, ``at.button[0]`` for
-            the first widget or ``at.button(key="my_key")`` for a widget with a
-            given key.
+            index (order on the page), key, or label. For example,
+            ``at.button[0]`` for the first widget,
+            ``at.button(key="my_key")`` for a widget with a given key, or
+            ``at.button(label="Save")`` for the only widget with a given label.
+            A label lookup that matches zero or several widgets raises
+            ``AppTestLookupError``.
         """
         return self._tree.button
 
@@ -1311,9 +1314,12 @@ class AppTest:
         WidgetList of Button
             Sequence of all ``st.form_submit_button`` widgets. Individual
             widgets can be accessed from a WidgetList by index (order on the
-            page) or key. For example, ``at.form_submit_button[0]`` for the
-            first widget or ``at.form_submit_button(key="save")`` for a
-            widget with a given key.
+            page), key, or label. For example, ``at.form_submit_button[0]``
+            for the first widget, ``at.form_submit_button(key="save")`` for a
+            widget with a given key, or
+            ``at.form_submit_button(label="Submit")`` for the only widget with
+            a given label. A label lookup that matches zero or several widgets
+            raises ``AppTestLookupError``.
         """
         return self._tree.form_submit_button
 
@@ -1451,9 +1457,12 @@ class AppTest:
         -------
         ElementList of Markdown
             Sequence of all ``st.markdown`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.markdown[0]`` for the first element. Markdown is an
-            extension of the Element class.
+            accessed from an ElementList by index (order on the page) or text.
+            For example, ``at.markdown[0]`` for the first element or
+            ``at.markdown(text="Done")`` for the only element whose Markdown
+            source is ``"Done"``. A text lookup that matches zero or several
+            elements raises ``AppTestLookupError``. Markdown is an extension
+            of the Element class.
         """
         return self._tree.markdown
 
@@ -1737,9 +1746,12 @@ class AppTest:
         -------
         WidgetList of TextInput
             Sequence of all ``st.text_input`` widgets. Individual widgets can
-            be accessed from a WidgetList by index (order on the page) or key.
-            For example, ``at.text_input[0]`` for the first widget or
-            ``at.text_input(key="my_key")`` for a widget with a given key.
+            be accessed from a WidgetList by index (order on the page), key, or
+            label. For example, ``at.text_input[0]`` for the first widget,
+            ``at.text_input(key="my_key")`` for a widget with a given key, or
+            ``at.text_input(label="Name")`` for the only widget with a given
+            label. A label lookup that matches zero or several widgets raises
+            ``AppTestLookupError``.
         """
         return self._tree.text_input
 
