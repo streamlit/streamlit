@@ -10,6 +10,7 @@ Use `st.segmented_control` or `st.pills` when you want all options visible at on
 | Widget | Best For |
 |--------|----------|
 | `st.segmented_control` | 2-5 options, single select, all visible |
+| `st.radio(type="cards")` | 2-5 options that each need a description, single select, all visible |
 | `st.pills` | 2-5 options, multi-select, all visible |
 | `st.selectbox` | Many options, single select, dropdown |
 | `st.multiselect` | Many options, multi-select, dropdown |
@@ -30,6 +31,23 @@ status = st.segmented_control("Status", ["Draft", "Published"])
 For vertical layouts, `st.radio(..., horizontal=False)` is still a great choice.
 
 Cleaner, more modern look than horizontal radio buttons.
+
+## Radio cards (options with descriptions, single select)
+
+When each option needs a short description, such as plans, modes, or layouts, show the options as selectable cards. The whole card is clickable, and `captions` become the description inside each card:
+
+```python
+plan = st.radio(
+    "Plan",
+    ["Starter", "Pro", "Enterprise"],
+    captions=["For individuals.", "For growing teams.", "Advanced controls."],
+    type="cards",
+    horizontal=True,
+    width="stretch",
+)
+```
+
+With `horizontal=True`, cards wrap into more rows when they don't fit. Add `width="stretch"` to give the cards in a row equal widths that fill it. Links in card labels and captions render as plain text, because the whole card is clickable. Prefer `st.segmented_control` or `st.pills` for short labels without descriptions.
 
 ## Pills (options visible, multi-select)
 

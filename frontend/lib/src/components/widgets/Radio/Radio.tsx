@@ -16,10 +16,11 @@
 
 import { memo, type ReactElement, useCallback, useMemo } from "react"
 
-import type { Radio as RadioProto } from "@streamlit/protobuf"
+import { Radio as RadioProto, type streamlit } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
-import UIRadio from "~lib/components/shared/Radio/Radio"
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
+import UIRadio, { type RadioType } from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
   type ValueWithSource,
@@ -35,6 +36,13 @@ export interface Props {
   element: RadioProto
   widgetMgr: WidgetStateManager
   fragmentId?: string
+  widthConfig?: streamlit.WidthConfig.$Properties | null
+}
+
+/** Maps each `RadioProto.Type` enum value to the style the UI component renders. */
+const RADIO_TYPE_BY_PROTO: Partial<Record<number, RadioType>> = {
+  [RadioProto.Type.DEFAULT]: "default",
+  [RadioProto.Type.CARDS]: "cards",
 }
 
 /**
@@ -49,6 +57,7 @@ function Radio({
   element,
   widgetMgr,
   fragmentId,
+  widthConfig,
 }: Readonly<Props>): ReactElement {
   const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
@@ -106,6 +115,8 @@ function Radio({
       labelVisibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
       value={selectedIndex}
       help={help}
+      type={RADIO_TYPE_BY_PROTO[element.type] ?? "default"}
+      containerWidth={shouldWidthStretch(widthConfig)}
     />
   )
 }

@@ -32,6 +32,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -348,6 +349,7 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="visible",
                 horizontal=False,
                 captions=["c1", "c2"],
+                type="default",
                 options=["a", "b"],
                 format_func=lambda x: x.capitalize(),
             )
@@ -368,6 +370,7 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="hidden",
                 horizontal=True,
                 captions=["c1x", "c2x"],
+                type="cards",
                 options=["a", "b", "c"],
                 format_func=lambda x: x.upper(),
             )
@@ -392,6 +395,19 @@ class RadioTest(DeltaGeneratorTestCase):
             st.radio(label="Label 1", options=["a", "b", "c"], format_func=str)
             c2 = self.get_delta_from_queue().new_element.radio
             id2 = c2.id
+            assert id1 != id2
+
+    def test_unstable_id_without_key_when_type_changes(self) -> None:
+        """Test that changing `type` changes the ID of an unkeyed radio."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.radio(label="Label 1", options=["a", "b"])
+            id1 = self.get_delta_from_queue().new_element.radio.id
+
+            st.radio(label="Label 1", options=["a", "b"], type="cards")
+            id2 = self.get_delta_from_queue().new_element.radio.id
             assert id1 != id2
 
 
@@ -838,6 +854,97 @@ class RadioOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.radio
         assert c.ignore_rerun is True
+
+
+class RadioTypeTest(DeltaGeneratorTestCase):
+    """Test the `type` parameter."""
+
+    def test_omitted_type_sends_default_style(self) -> None:
+        """Test that omitting `type` sends the default style."""
+        st.radio("the label", ("a", "b"))
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.type == RadioProto.Type.DEFAULT
+
+    @parameterized.expand(
+        [
+            ("default", RadioProto.Type.DEFAULT),
+            ("cards", RadioProto.Type.CARDS),
+        ]
+    )
+    def test_type_sets_proto_field(
+        self, radio_type: Any, expected: RadioProto.Type.ValueType
+    ) -> None:
+        """Test that each `type` value maps to its proto enum value."""
+        st.radio("the label", ("a", "b"), type=radio_type)
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.type == expected
+
+    @parameterized.expand(
+        [
+            ("unknown_string", "pills"),
+            ("wrong_case", "Cards"),
+            # Non-strings that a dict lookup or a tuple membership check
+            # would mishandle: unhashable, or compared element-wise.
+            ("unhashable", ["cards"]),
+            ("numpy_array", np.array(["cards"])),
+            ("numpy_array_multiple", np.array(["default", "cards"])),
+        ]
+    )
+    def test_invalid_type_raises_exception(self, _name: str, radio_type: Any) -> None:
+        """Test that an unsupported `type` raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.radio("the label", ("a", "b"), type=radio_type)
+
+        assert str(exc_info.value) == (
+            "Invalid `type` value. Supported values: 'default', 'cards'."
+        )
+        assert self.forward_msg_queue.is_empty()
+
+    @parameterized.expand(
+        [
+            ("index", {"index": "1"}, "Provided type: str."),
+            ("captions", {"captions": ["ok", 1]}, "Provided type: int."),
+        ]
+    )
+    def test_other_parameter_type_errors_still_name_provided_type(
+        self, _name: str, invalid_kwargs: dict[str, Any], expected_message: str
+    ) -> None:
+        """Test that the `type` parameter doesn't shadow the builtin `type()`.
+
+        Error messages for other parameters use it to name the provided type.
+        """
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc_info:
+            st.radio("the label", ("a", "b"), type="cards", **invalid_kwargs)
+
+        assert expected_message in str(exc_info.value)
+
+
+def test_radio_cards_interaction() -> None:
+    """Test that a radio with `type="cards"` reads and sets values like default."""
+
+    def script():
+        import streamlit as st
+
+        plan = st.radio(
+            "Plan",
+            ["Starter", "Pro", "Enterprise"],
+            captions=["For individuals.", "For teams.", "For companies."],
+            type="cards",
+            horizontal=True,
+        )
+        st.text(f"Selected: {plan}")
+
+    at = AppTest.from_function(script).run()
+    radio = at.radio[0]
+    assert radio.proto.type == RadioProto.Type.CARDS
+    assert radio.value == "Starter"
+
+    at = radio.set_value("Pro").run()
+    assert at.radio[0].value == "Pro"
+    assert at.text[0].value == "Selected: Pro"
+    assert at.radio[0].index == 1
 
 
 def _radio_format_func_raises(_: Any) -> str:
