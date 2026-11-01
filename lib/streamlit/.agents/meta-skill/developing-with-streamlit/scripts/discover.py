@@ -300,6 +300,8 @@ def _site_packages_streamlit(env_root: Path) -> Path | None:
     packages = [
         path
         for path in (
+            # Windows layout, then POSIX `lib/pythonX.Y/site-packages`. Both are
+            # checked on every OS, for example for a Windows venv read from WSL.
             env_root / "Lib" / "site-packages" / "streamlit",
             *sorted(env_root.glob("lib/*/site-packages/streamlit")),
         )
