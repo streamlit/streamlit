@@ -370,6 +370,7 @@ def test_candidates_are_ordered_from_project_to_path(
     repo = outer / "repo"
     app = repo / "app"
     (repo / ".git").mkdir(parents=True)
+    (repo / "uv.lock").write_text("", "utf-8")  # uv's relative paths start here.
     _env_without_interpreter(outer / ".venv")  # Above the git root: never checked.
     _env_without_interpreter(repo / ".venv")
     _env_without_interpreter(app / ".venv")
@@ -387,7 +388,7 @@ def test_candidates_are_ordered_from_project_to_path(
 
     this_python = discover._python_candidate("", Path(sys.executable))
     assert [(c.label, c.env_root) for c in candidates] == [
-        ("$UV_PROJECT_ENVIRONMENT", app / "uv-env"),
+        ("$UV_PROJECT_ENVIRONMENT", repo / "uv-env"),
         (".venv", app / ".venv"),
         ("venv", app / "venv"),
         (".pdm-python", None),

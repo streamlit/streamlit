@@ -401,7 +401,9 @@ def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Cand
     # OS (a dev container sees the host's `.venv`).
     uv_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
     if uv_environment:
-        env_root = project_dir / os.path.expanduser(uv_environment)
+        # A relative path is relative to the workspace root, where `uv.lock` is.
+        root = next((d for d in dirs if os.path.isfile(d / "uv.lock")), project_dir)
+        env_root = root / os.path.expanduser(uv_environment)
         yield _env_candidate("$UV_PROJECT_ENVIRONMENT", env_root)
     for directory in dirs:
         for name, marker in _ENV_DIRS:
