@@ -25,7 +25,8 @@
  * React keeps the instance until the same element ID reclaims it. Stale cleanup
  * removes entries that are never reclaimed.
  *
- * See specs/2026-07-19-delta-tree-element-retention/tech-spec.md.
+ * Design and trade-offs:
+ * https://issues.streamlit.app/agent_wiki_explorer?file=pull-requests/17804/tech-spec.md
  */
 
 import { getElementId } from "~lib/util/utils"
