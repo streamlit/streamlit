@@ -797,9 +797,18 @@ describe("TextArea required", () => {
     expect(remounted).toHaveValue("")
     expectRequiredError(remounted)
     expect(props.widgetMgr.getStringValue(props.element)).toBe("hello")
+
+    // Restored dirty must still allow a later commit after the remount.
+    await user.type(remounted, "abc")
+    await user.tab()
+    await waitFor(() => {
+      expect(props.widgetMgr.getStringValue(props.element)).toBe("abc")
+    })
+    expect(remounted).toHaveValue("abc")
+    expectNoRequiredError(remounted)
   })
 
-  it("does not restore a stale blocked entry after a successful commit", async () => {
+  it("does not restore a blocked empty value after a later successful commit", async () => {
     const user = userEvent.setup()
     const props = getProps({ required: true, default: "hello" })
     const { unmount } = render(<TextArea {...props} />)
