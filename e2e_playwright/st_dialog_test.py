@@ -912,7 +912,9 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     column_menu = app.get_by_test_id("stDataFrameColumnMenu")
     expect(column_menu).to_be_visible()
     expect(column_menu).to_be_in_viewport()
-    assert is_child_bounding_box_inside_parent(column_menu, df_element)
+    # Contain within the dialog: wider default-theme metrics can push the menu a few
+    # pixels past the dataframe box on WebKit/Firefox while still fully in the dialog.
+    assert is_child_bounding_box_inside_parent(column_menu, dialog)
     column_menu.get_by_text("Sort ascending").click()
     expect(column_menu).not_to_be_visible()
     expect(dialog).to_be_visible()
