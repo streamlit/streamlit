@@ -168,6 +168,38 @@ class SnapshotBuilderTest(SnapshotCase):
             "second",
         ]
 
+    def test_grid_keeps_cells_in_source_order(self) -> None:
+        """Direct children and grouped cells nest under the grid, unflattened."""
+        grid = st.grid(3, key="kpis", row_height=120, dense=True)
+        grid.markdown("direct")
+        with grid.cell(column_span="all"):
+            st.markdown("title")
+            st.caption("subtitle")
+
+        @st.fragment
+        def write_into_grid() -> None:
+            grid.markdown("from fragment")
+
+        write_into_grid()
+
+        document = self._build().document
+        assert "undescribed_types" not in document
+        grid_node = _one(document, "grid")
+        assert grid_node["key"] == "kpis"
+        assert "props" not in grid_node
+        assert [child["type"] for child in grid_node["children"]] == [
+            "markdown",
+            "cell",
+            "markdown",
+        ]
+        cell = _one(document, "cell")
+        assert "props" not in cell
+        assert [child["props"]["body"] for child in cell["children"]] == [
+            "title",
+            "subtitle",
+        ]
+        assert grid_node["children"][2]["props"]["body"] == "from fragment"
+
     def test_undescribed_elements_are_named_after_their_proto_field(self) -> None:
         """A gap stays visible, and a widget's value does not leak through it."""
         element = ForwardMsg()
