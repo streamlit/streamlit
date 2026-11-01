@@ -54,19 +54,32 @@ st.Page(
 
 - `help` accepts the same Markdown as other `help` parameters, because the nav tooltip renders it.
 - The value is dedented, so a triple-quoted string can be indented with the script.
-- `None`, `""`, and whitespace-only set nothing. `Page.help` returns `""` when unset. Unlike `icon`, nothing is inferred, so `None` and `""` match. `icon=""` forces no icon, and omitting `icon` can still take a filename emoji.
+- `None`, `""`, and a value that is empty after dedenting and stripping set nothing. `Page.help` returns `""` when unset. Unlike `icon`, nothing is inferred, so `None` and `""` match. `icon=""` forces no icon, and omitting `icon` can still take a filename emoji.
 
 ### Behavior
 
-**Nav tooltip.** The built-in nav item (sidebar, top nav, and the overflow menu) shows `Page.help` as a tooltip, including on the open page. Pages that are not running show it as soon as `st.navigation` declares them, without executing those pages. An external-URL `st.Page` can set `help`; the tooltip is on its nav item. A `pages/` app has no `st.Page`, so its nav items get no tooltip from this feature.
+**Nav tooltip.** The built-in nav item (sidebar, top nav, and the overflow menu) shows `Page.help` as a tooltip, including on the open page. Pages that are not running show it as soon as `st.navigation` declares them, without executing those pages. An external-URL `st.Page` can set `help`; the tooltip is on its nav item. A page with `visibility="hidden"` has no nav item and so no tooltip, but the snapshot and inheriting `st.page_link` calls still use its `help`. A `pages/` app has no `st.Page`, so its nav items get no tooltip from this feature.
 
-Like `st.page_link`, the tooltip opens on hover over the item itself, has no question-mark icon, and opens immediately on keyboard focus. The hover delay is 1000ms, longer than the 500ms `st.page_link` and button help keep, because the pointer crosses the nav on the way to most clicks. Once one tooltip has opened, the shared tooltip warm-up opens the next item's tooltip right away, so scanning the list waits only once. On touch there is no popup. The nav link's accessible description is the text of the rendered tooltip, taken from that render on the frontend, including below the small breakpoint, and that sentence is announced once. The visual tooltip stays for pointer users. The popup is hidden from assistive tech, because the link already exposes the description and keyboard focus would otherwise announce it twice. There is no backend pass that strips Markdown.
+Like `st.page_link`, the tooltip opens on hover over the item itself and has no question-mark icon:
 
-That permanent description is only on the built-in nav item. `st.page_link` keeps today's `BaseButtonTooltip`: below the small breakpoint it renders the trigger with no tooltip, and it points `aria-describedby` at the tooltip only while that tooltip is open. Inheriting `Page.help` changes the tooltip text, not that behavior. Changing `BaseButtonTooltip` would change every button, popover, and badge.
+- Hover waits 1000ms, because the pointer crosses the nav on the way to most clicks. `st.page_link` and button help keep 500ms.
+- Once one tooltip has opened, the shared tooltip warm-up opens the next item's tooltip right away, so scanning the list waits only once.
+- Keyboard focus opens it immediately. Touch shows no popup.
+- The nav link always exposes the sentence as its accessible description, at every breakpoint and while the popup is closed. The nav item renders `help` with the help Markdown renderer into a hidden element that the link's `aria-describedby` references, so links in it add no tab stops. That render is reused until `help` changes, so an app with many pages does not re-render every sentence on each nav update. There is no backend pass that strips Markdown.
+- The popup is hidden from assistive tech, so keyboard focus announces the sentence once.
 
-**`st.page_link`.** The link's `help` is the tooltip for that link and nothing else. Omitted `help` uses the target page's `Page.help` when the argument is a `Page` or a path to a registered page. That path case is wider than icon inheritance. `st.page_link` copies `icon` only from a `Page` object, not from a script path, so the page registry has to store `Page.help` for the path lookup. Several `st.Page` objects can share one script when their `url_path` values differ. `st.page_link("revenue.py")` already selects the first registered page with that `script_path`, and inherited `help` comes from that same page, so the label and the tooltip stay together. Icon inheritance from a script path stays a separate difference. An external URL string infers nothing. `help=""` shows no tooltip even when the page has one, same as `icon=""`. An instructional string passed to `st.page_link` stays on that link.
+The always-present accessible description applies only to the built-in nav item. `st.page_link` keeps its current tooltip behavior: below the small breakpoint it shows no tooltip, and it references the tooltip as its description only while the tooltip is open. Inheriting `Page.help` changes the tooltip text, not that behavior. Buttons, popovers, and badges share that tooltip code, so changing it would change all of them.
 
-**Agent snapshot** ([#16843](https://github.com/streamlit/streamlit/pull/16843)). The snapshot stores `Page.help` under `help`, next to `title` and `icon`, as the dedented Markdown. Page entries use the `st.Page` parameter names, and widget `help` is already reported as `help`. The current page and each `pages` entry use that page's `Page.help`. Omit `help` when it is unset. An agent can choose a page without running it. The snapshot already lists pages ([#17527](https://github.com/streamlit/streamlit/pull/17527)), so this adds one optional field to each page entry and to the page schema the protocol publishes.
+**`st.page_link`.** The link's `help` is the tooltip for that link and nothing else.
+
+- Omitted `help` inherits the target page's `Page.help` when the argument is a `Page` or a path to a registered page.
+- `help=""` shows no tooltip even when the page has one, same as `icon=""`.
+- An external URL string inherits nothing.
+- An instructional string passed to `st.page_link` stays on that link.
+
+Inheriting from a path goes further than icon inheritance: `st.page_link` copies `icon` only from a `Page` object, so the page registry has to store `Page.help` for the path lookup. Several `st.Page` objects can share one script when their `url_path` values differ. `st.page_link("revenue.py")` already selects the first registered page with that `script_path`, and inherited `help` comes from that same page, so the label and the tooltip stay together.
+
+**Agent snapshot** ([#16843](https://github.com/streamlit/streamlit/pull/16843)). The snapshot stores `Page.help` under `help`, next to `title` and `icon`, as the dedented Markdown. Page entries use the `st.Page` parameter names, and widget `help` is already reported as `help`. The current page and each `pages` entry use that page's `Page.help`. A page without `help` has no `help` key. An agent can choose a page without running it. The snapshot already lists pages ([#17527](https://github.com/streamlit/streamlit/pull/17527)), so this adds one optional field to each page entry and to the page schema the protocol publishes.
 
 `Page.help` is not written into the document and is not shown as body text. It does not fill `<meta name="description">`, `menu_items["About"]`, the browser-tab title, or the nav label. A visible subtitle remains `st.markdown` or `st.caption`.
 
@@ -122,17 +135,17 @@ Adopt **Option 1**.
 - **A page meta description** (`<meta name="description">`, `og:description`), for example `page_description` on `st.set_page_config` ([#16634](https://github.com/streamlit/streamlit/issues/16634), [#2469](https://github.com/streamlit/streamlit/issues/2469), [#6567](https://github.com/streamlit/streamlit/issues/6567)). A value set while the script runs can only be written into the live app document by JavaScript. Link-preview crawlers read the initial HTML, and Community Cloud and SiS show crawlers the top-level document, so neither would see it; only a crawler that runs JavaScript against a self-hosted app would. It belongs with static metadata declared before the script runs, together with initial-HTML tags ([#9058](https://github.com/streamlit/streamlit/issues/9058)) and the rest of a social card (`og:title`, `og:image`, canonical URL). If a run-time value lands anyway, it should not go into the agent snapshot: it describes only the page the agent is already reading, and set in the entrypoint it is app-wide, the same ambiguity that keeps `page_title` out of the snapshot.
 - **`title` and `description` on `st.App`.** Static app identity, and a description available before the script runs. The agent spec's static app descriptor depends on this ([#16843](https://github.com/streamlit/streamlit/pull/16843)). Tracked on [#16878](https://github.com/streamlit/streamlit/issues/16878). Page-level `help` in the snapshot does not wait on it.
 - **Copying `Page.help` into meta tags.** That needs a Markdown-to-text pass kept in sync with the tooltip renderer.
-- **A host message for embedded apps.** Whether `SET_APP_PAGES` carries each page's `help` for a host-rendered nav.
-- **A document-level accessible description.** v1 exposes `Page.help` on the built-in nav link only. `st.page_link` keeps today's tooltip.
+- **A host-rendered nav that shows `help`.** `SET_APP_PAGES` already sends each page's `help` to the host (see the checklist), but no host nav shows it yet.
+- **A document-level accessible description.** This version exposes `Page.help` on the built-in nav link only. `st.page_link` keeps today's tooltip.
 - **Visible subtitle** under the page heading, and copying the sentence into the About dialog.
 
 ## Checklist
 
 | Item | ✅ or comment |
 |------|---------------|
-| Works on SiS, Cloud, etc? | ✅ The tooltip and the accessible description use the existing nav inside the app iframe. The agent snapshot is served by the Streamlit server. The host does not receive `help` in v1. |
+| Works on SiS, Cloud, etc? | ✅ The tooltip and the accessible description use the existing nav inside the app iframe. The agent snapshot is served by the Streamlit server. `help` is an optional field on each page in the page list, and `SET_APP_PAGES` forwards that list to the host unchanged, so Community Cloud and SiS receive it. A host that does not read the field is unaffected. |
 | No breaking API changes | ✅ One keyword-only parameter. Existing `st.Page` calls are unchanged. |
-| No new dependencies | ✅ `to_help_str` dedents the stored string. The tooltip reuses the help Markdown renderer. The accessible description is the text of that render. No Markdown-to-text package. |
+| No new dependencies | ✅ The stored string is dedented like every other `help` value. The tooltip and the accessible description reuse the help Markdown renderer. No Markdown-to-text package. |
 | Metrics collected | ✅ `st.Page` is already wrapped with `@gather_metrics`. String arguments record length, not content, so the help text is not sent. |
 | Any security/legal impact? | Author-controlled Markdown in the tooltip uses the existing help renderer. In the snapshot it is app text like page titles and widget help, which the agent protocol already tells clients to treat as data, not instructions. The snapshot reports nothing the browser does not receive, since the nav gets the same string. No new execution path. |
-| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, and a short mention in the multipage-apps guide. `help` is the nav tooltip and the agent hint. It does not set a meta description. |
+| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, a short mention in the multipage-apps guide, and the `st.Page` examples in the bundled `developing-with-streamlit` agent skill (`references/multipage-apps.md`), so coding agents write one sentence per page. `help` is the nav tooltip and the agent hint. It does not set a meta description. |
