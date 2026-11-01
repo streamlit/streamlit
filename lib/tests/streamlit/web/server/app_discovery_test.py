@@ -190,6 +190,17 @@ app = App("main.py")
         result = _find_asgi_app_assignments(source)
         assert result == {"app": 3}
 
+    def test_finds_callable_app_assignment(self) -> None:
+        """The argument shape does not affect st.App discovery."""
+        source = """
+import streamlit as st
+def main():
+    pass
+app = st.App(main)
+"""
+        result = _find_asgi_app_assignments(source)
+        assert result == {"app": 5}
+
     def test_finds_annotated_assignment_with_import(self) -> None:
         """Test finding annotated assignment with proper import."""
         source = """

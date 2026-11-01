@@ -88,7 +88,7 @@ The `st.App` signature follows the [Starlette Application](https://www.starlette
 
 ```python
 st.App(
-    script_path: str | Path,
+    script_path: str | Path | Callable[[], None],
     *,
     lifespan: Callable[[App], AsyncContextManager[dict[str, Any] | None]] | None = None,
     routes: Sequence[BaseRoute] | None = None,
@@ -105,7 +105,7 @@ st.App(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `script_path` | `str \| Path` | required | Path to the main Streamlit script |
+| `script_path` | `str \| Path \| Callable[[], None]` | required | Path to the main Streamlit script, or a zero-argument synchronous callable that is the app body |
 | `lifespan` | `AsyncContextManager` | `None` | Async context manager for startup/shutdown |
 | `routes` | `Sequence[BaseRoute]` | `None` | Additional Starlette routes |
 | `middleware` | `Sequence[Middleware]` | `None` | Middleware stack for all requests |
@@ -125,6 +125,55 @@ An ASGI-compatible application object that can be:
 
 When `streamlit run app.py` is invoked, Streamlit checks if the script contains an
 `st.App` instance (similar to [FastAPI CLI discovery](https://github.com/fastapi/fastapi-cli/blob/main/src/fastapi_cli/discover.py)) by checking for a `st.App` instance named `app`. If no `st.App` instance is found, Streamlit will run the script in traditional mode.
+
+**Callable entrypoints:**
+
+`script_path` may also be a zero-argument synchronous callable (`st.App(main)`), matching
+`st.Page`. This is the supported same-file pattern: the app body and the launcher live in
+one module.
+
+```python
+import streamlit as st
+
+
+def main() -> None:
+    st.title("Dashboard")
+
+
+app = st.App(main)
+```
+
+- Invoked once per full rerun, and again by the script health check when that check
+  is enabled. Locals are fresh each run. Closures, module globals, and
+  callable-instance attributes are shared across reruns, sessions, and health checks,
+  so those updates can race. Use `st.session_state` for per-session values and
+  synchronize any other shared mutation.
+- Streamlit retains the callable object for the lifetime of the `App`. Restart the
+  process after changing its definition. A save-triggered rerun still executes that
+  retained object until the process restarts.
+- The callable must be defined in a filesystem-backed Python source file. That file
+  is used for `static/` serving and source watching. Streamlit prefers the outermost
+  source file outside an installed package, including a nested wrapper the app defines
+  around another module. A nested decorator is skipped when the wrapped function's
+  module imports that decorator. The skip follows `__wrapped__`, which `functools.wraps`
+  sets. A decorator that does not set `__wrapped__` keeps the decorator's file.
+  When every source file is inside an installed package,
+  the outermost of those files is used. The callable's directory is prepended to
+  `sys.path` during runs, so a callable inside a package can also be imported as a
+  top-level module.
+- Script-level `config.toml` and `secrets.toml` follow the launched file under
+  `streamlit run` and `App.run()`. They follow the callable source only when no
+  launched file is set, such as under uvicorn.
+- Async functions, generator functions, and callables that require arguments are
+  rejected.
+- Callable execution takes precedence over a legacy `pages/` directory. Use
+  `st.navigation` for multipage callable apps. Create `st.Page` objects inside
+  the entrypoint. `st.navigation`, `st.switch_page`, `st.page_link`, and
+  `Page.run()` reject a page created at import time.
+
+Direct launch with `python app.py` is specified in
+[`App.run()`](../2026-06-14-app-run-method/product-spec.md). `st.App(__file__)` is not
+supported: file-based scripts execute in a fake `__main__` module.
 
 **Lifespan execution order:**
 
@@ -431,7 +480,7 @@ app = st.App(
 | Item | ✅ or comment |
 |------|---------------|
 | Works on SiS, Cloud, etc? | ⚠️ Likely, but will need testing. |
-| No breaking API changes | ✅ |
+| No breaking API changes | ✅ Additive class; callable entrypoint is an additive overload of `script_path`. |
 | No new dependencies | ✅ will already added in Starlette migration |
 | Metrics collected | We need to track the st.App usage via a flag in the metrics. |
 | Any security/legal impact? | ✅ no new implications besides whats relevant for Starlette migration |

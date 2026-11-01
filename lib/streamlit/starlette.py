@@ -19,14 +19,37 @@ applications with any ASGI server (uvicorn, hypercorn, etc.).
 
 Example
 -------
+Path-based launcher in ``myapp.py``:
+
 >>> import streamlit as st
 >>> app = st.App("main.py")
+>>> if __name__ == "__main__":
+...     app.run()
 
-Run with uvicorn:
+Same-file callable launcher in ``myapp.py``:
+
+>>> import streamlit as st
+>>> def main():
+...     st.title("My app")
+>>> app = st.App(main)
+>>> if __name__ == "__main__":
+...     app.run()
+
+Run the same file with Streamlit or Python (using ``uv`` here):
+
+.. code-block:: bash
+
+    streamlit run myapp.py
+    uv run myapp.py
+
+Or serve the ASGI app with uvicorn:
 
 .. code-block:: bash
 
     uvicorn myapp:app --host 0.0.0.0 --port 8501
+
+When using a callable entrypoint, the callable object is retained for the
+lifetime of the app. Restart the process after changing its definition.
 """
 
 from streamlit.web.server.starlette.starlette_app import App
