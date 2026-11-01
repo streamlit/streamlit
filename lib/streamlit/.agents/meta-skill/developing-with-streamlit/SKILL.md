@@ -22,7 +22,7 @@ Windows (if `py` is missing, use `python` instead of `py -3`):
 py -3 "<skill-dir>/scripts/discover.py" --project-dir "<project-dir>"
 ```
 
-- Replace `<skill-dir>` with the absolute path of the directory containing this file, and `<project-dir>` with the absolute path of the user's project (usually the current working directory). Keep the quotes. In Claude Code, `<skill-dir>` is `${CLAUDE_SKILL_DIR}` and `<project-dir>` is `${CLAUDE_PROJECT_DIR}`.
+- Replace `<skill-dir>` with the absolute path of the directory containing this file, and `<project-dir>` with the absolute path of the user's project (usually the current working directory). Keep the quotes. In Claude Code, `<skill-dir>` is `${CLAUDE_SKILL_DIR}` and `<project-dir>` is `${CLAUDE_PROJECT_DIR}`. In Codex, `<skill-dir>` is the folder of the `SKILL.md` path shown for this skill in the skills list, and `<project-dir>` is the workspace's working directory.
 - If the Streamlit app lives in a subdirectory with its own virtual environment, pass that subdirectory as `--project-dir`.
 - If no launcher works (on macOS without developer tools, `python3` offers to install them instead), or the script fails with a `SyntaxError` (a very old Python), run it with the project's own interpreter, such as `.venv/bin/python` or `.venv/Scripts/python.exe`.
 
