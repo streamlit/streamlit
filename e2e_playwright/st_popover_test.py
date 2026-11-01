@@ -29,6 +29,7 @@ from e2e_playwright.shared.app_utils import (
     expect_label_truncated,
     expect_markdown,
     get_element_by_key,
+    get_expander,
     get_popover,
     open_popover,
     reset_hovering,
@@ -40,7 +41,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(30)
+    expect(popover_elements).to_have_count(34)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -730,3 +731,103 @@ def test_wrap_false_truncates_sets_title_and_keeps_chevron(app: Page):
         )
     ).to_be_visible()
     expect(container.get_by_test_id("stPopoverButton")).to_contain_text("expand_more")
+
+
+def test_popover_closes_when_its_trigger_is_hidden(app: Page):
+    """An open popover closes when its trigger is hidden, and stays closed
+    when that trigger is shown again.
+
+    Covers an inactive tab and a collapsed expander. Both hide the trigger
+    without unmounting the portaled popover body.
+    """
+    # Inactive tab panel (display: none).
+    popover_body = open_popover(app, "Popover in tab")
+    expect(popover_body).to_be_visible()
+    expect_markdown(popover_body, "Popover in tab content")
+
+    app.get_by_role("tab", name="Tab without popover").click()
+
+    expect(app.get_by_test_id("stPopoverBody")).to_have_count(0)
+    expect(app.get_by_text("Tab without popover content")).to_be_visible()
+
+    # Returning to the tab leaves the popover closed.
+    app.get_by_role("tab", name="Tab with popover").click()
+    expect(app.get_by_text("Popover in tab content")).not_to_be_visible()
+    expect(get_popover(app, "Popover in tab").get_by_role("button")).to_have_attribute(
+        "aria-expanded", "false"
+    )
+
+    # Collapsed expander (inert). The body is portaled outside the expander,
+    # so it has to be looked up from the page.
+    expander = get_expander(app, "Expander with popover")
+    popover_body = open_popover(app, "Popover in expander")
+    expect(popover_body).to_be_visible()
+    expect_markdown(popover_body, "Popover in expander content")
+
+    expander.get_by_text("Expander with popover").click()
+
+    expect(app.get_by_test_id("stPopoverBody")).to_have_count(0)
+    # Reopening the expander leaves the popover closed.
+    expander.get_by_text("Expander with popover").click()
+    expect(app.get_by_text("Popover in expander content")).not_to_be_visible()
+    expect(
+        get_popover(app, "Popover in expander").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "false")
+
+
+def test_popover_commits_text_input_when_its_tab_is_hidden(app: Page):
+    """A text input inside a popover keeps its value when the tab changes.
+
+    The tab selects on pointerdown, before focus leaves the input. The popover
+    blurs the input first so its typed value is committed.
+    """
+    popover_body = open_popover(app, "Popover in tab")
+    popover_body.get_by_label("Popover tab input").fill("kept value")
+
+    app.get_by_role("tab", name="Tab without popover").click()
+
+    wait_for_app_run(app)
+    expect(app.get_by_text("Popover tab input value: kept value")).to_be_visible()
+
+
+def test_popover_opened_while_hidden_does_not_run_on_change(app: Page):
+    """A popover that mounts open on an inactive tab stays open.
+
+    Recording a close would deliver false on the next unrelated rerun and run
+    on_change, even though the user never saw the popover. Selecting the tab
+    shows it.
+    """
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Hidden open popover content")).not_to_be_visible()
+
+    app.get_by_role("button", name="Unrelated rerun").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Hidden open popover content")).not_to_be_visible()
+
+    app.get_by_role("tab", name="Hidden open tab").click()
+    expect(app.get_by_text("Hidden open popover content")).to_be_visible()
+    expect(
+        get_popover(app, "Popover open while hidden").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_test_id("stPopoverBody")).to_be_visible()
+    expect(app.get_by_text("Hidden popover callback count: 0")).to_be_visible()
+
+
+def test_popover_opened_in_collapsed_expander_stays_open(app: Page):
+    """A popover that mounts open in a collapsed expander stays open.
+
+    The summary click reveals the trigger. That same click must not dismiss
+    the body that was withheld until the expander opened.
+    """
+    expect(app.get_by_text("Hidden expander callback count: 0")).to_be_visible()
+    expect(app.get_by_text("Collapsed expander popover content")).not_to_be_visible()
+
+    get_expander(app, "Collapsed expander").locator("summary").click()
+
+    expect(app.get_by_text("Collapsed expander popover content")).to_be_visible()
+    expect(
+        get_popover(app, "Popover open in collapsed expander").get_by_role("button")
+    ).to_have_attribute("aria-expanded", "true")
+    expect(app.get_by_text("Hidden expander callback count: 0")).to_be_visible()
