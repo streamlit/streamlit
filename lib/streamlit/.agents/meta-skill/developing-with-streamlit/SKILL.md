@@ -22,7 +22,8 @@ Windows (if `py` is missing, use `python` instead of `py -3`):
 py -3 "<skill-dir>/scripts/discover.py" --project-dir "<project-dir>"
 ```
 
-- Replace `<skill-dir>` with the absolute path of the directory containing this file, and `<project-dir>` with the absolute path of the user's project (usually the current working directory). Keep the quotes. In Claude Code, `<skill-dir>` is `${CLAUDE_SKILL_DIR}` and `<project-dir>` is `${CLAUDE_PROJECT_DIR}`.- If the Streamlit app lives in a subdirectory with its own virtual environment, pass that subdirectory as `--project-dir`.
+- Replace `<skill-dir>` with the absolute path of the directory containing this file, and `<project-dir>` with the absolute path of the user's project (usually the current working directory). Keep the quotes. In Claude Code, `<skill-dir>` is `${CLAUDE_SKILL_DIR}` and `<project-dir>` is `${CLAUDE_PROJECT_DIR}`.
+- If the Streamlit app lives in a subdirectory with its own virtual environment, pass that subdirectory as `--project-dir`.
 - If no launcher works (on macOS without developer tools, `python3` offers to install them instead), or the script fails with a `SyntaxError` (a very old Python), run it with the project's own interpreter, such as `.venv/bin/python` or `.venv/Scripts/python.exe`.
 
 The script is safe to run without asking. It reads files and asks each interpreter it finds where it would import Streamlit from, so it runs the project's own Python, as running the app would; the only other tool it runs is `poetry env info --path`, read-only. It never imports Streamlit or installs packages, never creates or changes environments, and writes no files of its own.
