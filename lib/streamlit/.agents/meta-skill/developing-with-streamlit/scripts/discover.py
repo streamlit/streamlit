@@ -64,7 +64,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -77,10 +77,10 @@ _MIN_PYTHON_WITH_SKILLS = (3, 10)
 _DOCS_URL = "https://docs.streamlit.io/llms-full.txt"
 _PROBE_FLAG = "--probe"
 _PROBE_MARKER = "STREAMLIT_DISCOVER_PROBE="
-# Short enough that the whole search, including a killed probe's cleanup,
-# ends before the 10-second default timeout of Codex's shell tool. A typical
-# search takes well under a second, and a slow interpreter's site-packages is
-# still read from disk.
+# The whole search, including a killed probe's cleanup, must end before common
+# agent shell timeouts (Codex's default is 10 seconds). A typical search takes
+# well under a second, and a slow environment's site-packages is still read
+# from disk.
 _PROBE_TIMEOUT_S = 5
 _TOTAL_TIMEOUT_S = 7
 # `venv`, `env`, and `.conda` count only when they contain their marker: the
@@ -145,8 +145,8 @@ class _Candidate:
 class _Result:
     """What checking one candidate found."""
 
-    # "found", "missing" (ran without Streamlit), "failed", or "skipped" (not run).
-    status: str
+    # "missing": ran without Streamlit. "skipped": not run on purpose.
+    status: Literal["found", "missing", "failed", "skipped"]
     detail: str = ""
     package_dir: Path | None = None
     version: str = ""
@@ -257,14 +257,14 @@ def _command_key(command: list[str]) -> tuple[str, ...]:
     return (os.path.normcase(os.path.abspath(command[0])), *command[1:])
 
 
-def _probe(python: list[str], project_dir: Path, deadline: float) -> _Result:
+def _probe(command: list[str], project_dir: Path, deadline: float) -> _Result:
     """Ask an interpreter where Streamlit is installed."""
-    if _command_key(python) == _command_key([sys.executable]):
+    if _command_key(command) == _command_key([sys.executable]):
         # The running interpreter answers in-process, without a child process.
         info = _locate_streamlit()
     else:
-        command = [*python, os.path.abspath(__file__), _PROBE_FLAG]
-        completed = _run(command, project_dir, deadline)
+        probe_command = [*command, os.path.abspath(__file__), _PROBE_FLAG]
+        completed = _run(probe_command, project_dir, deadline)
         if isinstance(completed, _Result):
             return completed
         parsed = _parse_probe_output(completed.stdout)
@@ -366,10 +366,10 @@ def _which(name: str) -> str | None:
 
 
 def _macos_install_dialog_reason(executable: str) -> str:
-    """Explain why running ``executable`` would open a macOS installer dialog, if it would.
+    """Return why running ``executable`` would open a macOS installer dialog.
 
     Without the Command Line Tools, ``/usr/bin/python3`` is a stub that asks
-    the user to install them instead of running.
+    the user to install them instead of running. ``""`` means it is safe to run.
     """
     if sys.platform != "darwin" or not executable.startswith("/usr/bin/"):
         return ""
@@ -392,6 +392,7 @@ def _search_dirs(project_dir: Path) -> list[Path]:
 
 
 def _canonical_path(path: str | Path) -> str:
+    """Return a form of ``path`` that compares equal across ``~``, links, and case."""
     return os.path.normcase(os.path.realpath(os.path.expanduser(str(path))))
 
 
@@ -430,7 +431,7 @@ def _conda_env_name(directory: Path) -> str:
 def _recorded_environments(dirs: list[Path]) -> Iterator[_Candidate]:
     """Yield environments that tools keep outside the project, by reading files only.
 
-    Agent shells rarely activate these. It never runs conda, pyenv, or Pipenv,
+    Agent shells rarely activate these. Conda, pyenv, and Pipenv are never run,
     because some of them write to the user's home directory even to report a path.
     """
     home = Path(os.path.expanduser("~"))
@@ -509,8 +510,9 @@ def _active_and_path_interpreters() -> Iterator[_Candidate]:
 def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
     """Yield interpreters to check, most project-specific first.
 
-    1. ``$UV_PROJECT_ENVIRONMENT``, then environments in the project directory
-       and its parents, up to the git root.
+    1. ``$UV_PROJECT_ENVIRONMENT``, then environments in the project directory,
+       its parent (for a shared environment, even above the git root), and any
+       further parents up to the git root.
     2. Environments that conda, pyenv, Pipenv, and Poetry record for the project.
     3. ``$VIRTUAL_ENV`` and ``$CONDA_PREFIX``. They come late because agent
        shells often have the agent's own environment activated.
@@ -589,17 +591,17 @@ def _print_error(
     why: str,
     steps: list[str],
     attempts: list[tuple[_Candidate, _Result]],
-    details: list[str] | None = None,
+    context_lines: list[str] | None = None,
 ) -> None:
-    """Print what went wrong, why, and what the agent can do next."""
+    """Print what went wrong, why, what to do next, and every environment checked."""
     docs = (
         "Otherwise, continue without the bundled skill and use the complete "
         "Streamlit documentation, formatted for LLMs (latest release, not matched "
         f"to the installed version): {_DOCS_URL}"
     )
     lines = [f"ERROR: {headline}", "", f"Why: {why}"]
-    if details:
-        lines += ["", *details]
+    if context_lines:
+        lines += ["", *context_lines]
     lines += ["", "Next steps:"]
     lines += [f"  {i}. {step}" for i, step in enumerate([*steps, docs], 1)]
     if attempts:
@@ -758,7 +760,7 @@ def _report_not_found(
 ) -> int:
     """Explain why no interpreter had Streamlit, and return the exit code."""
     failed = [c.label for c, r in attempts if r.status in {"failed", "skipped"}]
-    fix_failed = (
+    fix_failed_step = (
         f"Some environments could not be checked ({', '.join(failed)}). If one of "
         "them runs the app, fixing it may resolve this, but only with the user's "
         "agreement."
@@ -767,7 +769,7 @@ def _report_not_found(
     if missing is not None:
         candidate, result = missing
         steps = [_install_step(result, candidate, project_dir, upgrade=False)]
-        steps += [fix_failed] if failed else []
+        steps += [fix_failed_step] if failed else []
         steps.append(
             "If Streamlit is installed in an environment that is not listed, "
             "re-run this script with --python <path to that environment's Python>."
@@ -802,7 +804,7 @@ def _report_not_found(
                 "If you know which Python runs the app, re-run this script with "
                 "--python <path to it>."
             ),
-            fix_failed,
+            fix_failed_step,
         ],
         attempts,
     )

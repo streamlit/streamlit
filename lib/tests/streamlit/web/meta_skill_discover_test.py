@@ -265,6 +265,23 @@ def test_broken_interpreter_with_old_streamlit_is_not_given_pip_advice(
     assert "pip install" not in result.stderr
 
 
+def test_restructured_skills_folder_lists_the_bundled_skills(tmp_path: Path) -> None:
+    """Without the expected sub-path, exit 4 lists the skills that do exist."""
+    project = tmp_path / "project"
+    env_root = _env_without_interpreter(project / ".venv")
+    _plant_streamlit(env_root, skill=False)
+    skills = _site_packages(env_root) / "streamlit" / ".agents" / "skills"
+    (skills / "other").mkdir(parents=True)
+    (skills / "other" / "SKILL.md").write_text("# other skill\n", encoding="utf-8")
+
+    result = _run_discover("--project-dir", str(project), cwd=tmp_path)
+
+    assert result.returncode == 4
+    assert result.stdout == ""
+    assert "has no developing-with-streamlit/SKILL.md" in result.stderr
+    assert os.path.join("other", "SKILL.md") in result.stderr
+
+
 def test_site_packages_with_the_skill_is_preferred(
     discover: ModuleType, tmp_path: Path
 ) -> None:
@@ -314,7 +331,7 @@ def test_unusable_project_dir_falls_back_to_cwd(
 def test_local_streamlit_is_not_mistaken_for_the_package(
     tmp_path: Path, local_path: str, pythonpath: bool
 ) -> None:
-    """Only --python is checked, and the project's own `streamlit` files do not count."""
+    """A project's own `streamlit` module or folder is not the installed package."""
     project = tmp_path / "project"
     python = _make_venv(project / ".venv")
     (project / local_path).parent.mkdir(parents=True, exist_ok=True)
@@ -397,6 +414,15 @@ def test_candidates_are_ordered_from_project_to_path(
         ("$CONDA_PREFIX", tmp_path / "conda"),
         ("Python running this script", this_python.env_root),
     ]
+
+
+def test_project_at_the_git_root_also_searches_its_parent(
+    discover: ModuleType, tmp_path: Path
+) -> None:
+    """A shared environment next to the repository is still found."""
+    (tmp_path / "repo" / ".git").mkdir(parents=True)
+
+    assert discover._search_dirs(tmp_path / "repo") == [tmp_path / "repo", tmp_path]
 
 
 def test_failing_lookup_skips_only_its_own_section(

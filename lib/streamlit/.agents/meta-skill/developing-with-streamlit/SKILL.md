@@ -26,7 +26,9 @@ py -3 "<skill-dir>/scripts/discover.py" --project-dir "<project-dir>"
 - If the Streamlit app lives in a subdirectory with its own virtual environment, pass that subdirectory as `--project-dir`.
 - If no launcher works (on macOS without developer tools, `python3` offers to install them instead), or the script fails with a `SyntaxError` (a very old Python), run it with the project's own interpreter, such as `.venv/bin/python` or `.venv/Scripts/python.exe`.
 
-The script is safe to run without asking. It reads files and asks each interpreter where it would import Streamlit from; the only other tool it runs is `poetry env info --path`, read-only. It never imports Streamlit or installs packages, never creates or changes environments, and writes no files of its own. It usually finishes in under a second and always within about 10 seconds. It checks the project's environments (`.venv`, `venv`, uv, conda, pixi, Poetry, Pipenv, PDM, pyenv) before the active environment and the Pythons on `PATH`, then prints either:
+The script is safe to run without asking. It reads files and asks each interpreter it finds where it would import Streamlit from, so it runs the project's own Python, as running the app would; the only other tool it runs is `poetry env info --path`, read-only. It never imports Streamlit or installs packages, never creates or changes environments, and writes no files of its own.
+
+It checks the project's environments (`.venv`, `venv`, uv, conda, pixi, Poetry, Pipenv, PDM, pyenv) before the active environment and the Pythons on `PATH`, and usually finishes in under a second (always within about 10 seconds). It prints either:
 
 - **A path on stdout** (exit 0) — the bundled `SKILL.md`. Read it; it points into `references/`.
 - **An `ERROR:` block on stderr** (non-zero exit) — what happened, why, the next steps, and every environment it checked. Do not install or upgrade packages unless the user asked for it or agrees.
