@@ -22,7 +22,7 @@ from typing import TypeVar
 from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
-from streamlit.runtime.caching.ttl_cache import TTLCache
+from streamlit.runtime.caching.ttl_cache import OnEvict, TTLCache
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -42,6 +42,7 @@ class TTLCleanupCache(TTLCache[K, V]):
         ttl: float,
         timer: Callable[[], float],
         on_release: OnRelease,
+        on_evict: OnEvict | None = None,
     ) -> None:
         """Create a cache with the given size, TTL, and release hook.
 
@@ -56,8 +57,11 @@ class TTLCleanupCache(TTLCache[K, V]):
         on_release : OnRelease
             The function to call with cache entries when they are removed from the
             cache.
+        on_evict : OnEvict | None
+            The function to call with a reason and an entry count when the cache
+            evicts entries on its own. See ``TTLCache``.
         """
-        super().__init__(maxsize=maxsize, ttl=ttl, timer=timer)
+        super().__init__(maxsize=maxsize, ttl=ttl, timer=timer, on_evict=on_evict)
         self._on_release = on_release
 
     @override

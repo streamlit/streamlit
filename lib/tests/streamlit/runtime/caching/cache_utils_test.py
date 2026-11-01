@@ -22,6 +22,7 @@ import pytest
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     BoundCachedFunc,
     Cache,
@@ -242,7 +243,8 @@ def test_abstract_members_raise_not_implemented(call: Callable[[], Any]) -> None
 def _build_cached_func() -> CachedFunc[..., Any]:
     info = MagicMock(spec=CachedFuncInfo)
     info.func = _placeholder_func
-    info.cache_type = MagicMock(name="cache_type")
+    info.cache_type = CacheType.DATA
+    info.display_name = "tests._placeholder_func"
     return CachedFunc(info)
 
 
