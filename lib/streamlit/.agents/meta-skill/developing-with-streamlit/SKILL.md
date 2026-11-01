@@ -52,4 +52,4 @@ Read the bundled skill directly from the environment that runs the app, then con
 
 ## 4. Fallback
 
-If no bundled skill is available, use the complete Streamlit documentation, formatted for LLMs (latest release, not matched to the installed version): https://docs.streamlit.io/llms-full.txt
+If no bundled skill is available, use the online Streamlit documentation (latest release, not matched to the installed version). Find the pages for the task in the index at https://docs.streamlit.io/llms.txt and fetch those. https://docs.streamlit.io/llms-full.txt has every page in one file, but at about 2 MB it is too large for most fetch tools.

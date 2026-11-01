@@ -67,7 +67,9 @@ _SKILL_PARTS = (".agents", "skills", "developing-with-streamlit", "SKILL.md")
 _FIRST_VERSION_WITH_SKILLS = "1.57"
 # Streamlit releases with the bundled skill need at least this Python.
 _MIN_PYTHON_WITH_SKILLS = (3, 10)
-_DOCS_URL = "https://docs.streamlit.io/llms-full.txt"
+# An index of the docs pages. llms-full.txt has every page in one ~2 MB file,
+# more than agents' fetch tools return.
+_DOCS_INDEX_URL = "https://docs.streamlit.io/llms.txt"
 _PROBE_FLAG = "--probe"
 _PROBE_MARKER = "STREAMLIT_DISCOVER_PROBE="
 # The whole search must end before common agent shell timeouts (Codex's
@@ -127,6 +129,9 @@ class _Candidate:
     env_root: Path | None = None
     # Why running this interpreter could cause trouble; such a candidate never runs.
     skip_reason: str = ""
+    # Not tied to the project (this script's or a PATH Python), so its Streamlit
+    # may not be the one the app runs with.
+    outside_project: bool = False
 
 
 @dataclass
@@ -365,7 +370,9 @@ def _project_environments(dirs: list[Path], project_dir: Path) -> Iterator[_Cand
     # OS (a dev container sees the host's `.venv`).
     uv_environment = os.environ.get("UV_PROJECT_ENVIRONMENT")
     if uv_environment:
-        env_root = project_dir / os.path.expanduser(uv_environment)
+        # Like uv, resolve a relative path against the workspace root (uv.lock).
+        root = next((d for d in dirs if os.path.isfile(d / "uv.lock")), project_dir)
+        env_root = root / os.path.expanduser(uv_environment)
         yield _env_candidate("$UV_PROJECT_ENVIRONMENT", env_root)
     for directory in dirs:
         for name, marker in _ENV_DIRS:
@@ -434,13 +441,18 @@ def _active_and_path_interpreters() -> Iterator[_Candidate]:
         if value:
             yield _env_candidate(f"${variable}", Path(value))
     if sys.executable:
-        yield _python_candidate("Python running this script", Path(sys.executable))
+        candidate = _python_candidate(
+            "Python running this script", Path(sys.executable)
+        )
+        candidate.outside_project = True
+        yield candidate
     for launcher in _PATH_LAUNCHERS:
         # Full paths let Windows run `.bat`/`.cmd` shims (for example, pyenv-win).
         executable = shutil.which(launcher[0])
         if executable is not None:
             candidate = _python_candidate(f"{launcher[0]} on PATH", Path(executable))
             candidate.command = [executable, *launcher[1:]]
+            candidate.outside_project = True
             yield candidate
 
 
@@ -526,9 +538,9 @@ def _print_error(
 ) -> None:
     """Print what went wrong, why, what to do next, and every environment checked."""
     docs = (
-        "Otherwise, continue without the bundled skill and use the complete "
-        "Streamlit documentation, formatted for LLMs (latest release, not matched "
-        f"to the installed version): {_DOCS_URL}"
+        "Otherwise, continue without the bundled skill and use the online "
+        "Streamlit documentation (latest release, not matched to the installed "
+        f"version): find the pages for the task in {_DOCS_INDEX_URL} and fetch those."
     )
     lines = [f"ERROR: {headline}", "", f"Why: {why}"]
     if context_lines:
@@ -594,6 +606,13 @@ def _report_found(
             print(
                 f"NOTE: {_describe(candidate)} {result.detail}. The skill is usable, "
                 "but the environment may need repair before the app can run.",
+                file=sys.stderr,
+            )
+        elif candidate.outside_project:
+            print(
+                f"NOTE: found in {_describe(candidate)}, not in a project "
+                "environment. If the app runs with another Python, re-run this "
+                "script with --python <that Python> so the docs match its Streamlit.",
                 file=sys.stderr,
             )
         return 0

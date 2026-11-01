@@ -234,7 +234,7 @@ def test_old_streamlit_in_project_is_reported_with_project_advice(
     assert "Why: The skill ships inside the Streamlit package" in result.stderr
     assert 'uv add "streamlit>=1.57"' in result.stderr
     assert "Only if the user asked for it or agrees" in result.stderr
-    assert "https://docs.streamlit.io/llms-full.txt" in result.stderr
+    assert "https://docs.streamlit.io/llms.txt" in result.stderr
 
 
 def test_broken_interpreter_falls_back_to_site_packages(tmp_path: Path) -> None:
@@ -248,6 +248,24 @@ def test_broken_interpreter_falls_back_to_site_packages(tmp_path: Path) -> None:
     assert os.path.samefile(result.stdout.strip(), skill)
     assert result.stderr.startswith("NOTE: .venv")
     assert "has no Python executable" in result.stderr
+
+
+def test_skill_found_outside_the_project_suggests_python_flag(
+    discover: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Docs from a Python not tied to the project may not match the app's Streamlit."""
+    skill = _plant_streamlit(_env_without_interpreter(tmp_path / "global"))
+    candidate = discover._Candidate("python3 on PATH", ["python3"])
+    candidate.outside_project = True
+    result = discover._Result("found", package_dir=skill.parents[3])
+
+    assert (
+        discover._report_found(skill.parents[3], [(candidate, result)], tmp_path) == 0
+    )
+    captured = capsys.readouterr()
+    assert os.path.samefile(captured.out.strip(), skill)
+    assert "not in a project environment" in captured.err
+    assert "--python" in captured.err
 
 
 def test_broken_interpreter_with_old_streamlit_is_not_given_pip_advice(
@@ -402,6 +420,7 @@ def test_candidates_are_ordered_from_project_to_path(
     repo = outer / "repo"
     app = repo / "app"
     (repo / ".git").mkdir(parents=True)
+    (repo / "uv.lock").write_text("", "utf-8")  # uv's relative paths start here.
     _env_without_interpreter(outer / ".venv")  # Above the git root: never checked.
     _env_without_interpreter(repo / ".venv")
     _env_without_interpreter(app / ".venv")
@@ -418,7 +437,7 @@ def test_candidates_are_ordered_from_project_to_path(
 
     this_python = discover._python_candidate("", Path(sys.executable))
     assert [(c.label, c.env_root) for c in candidates] == [
-        ("$UV_PROJECT_ENVIRONMENT", app / "uv-env"),
+        ("$UV_PROJECT_ENVIRONMENT", repo / "uv-env"),
         (".venv", app / ".venv"),
         ("venv", app / "venv"),
         (".venv", repo / ".venv"),
