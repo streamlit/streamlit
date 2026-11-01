@@ -186,6 +186,8 @@ _ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_UPLOAD_FILE}/{{session_id}}/{{file_id}
 # Component routes
 _ROUTE_COMPONENTS_V1: Final = f"{BASE_ROUTE_COMPONENT}/{{path:path}}"
 _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
+# Content-addressed inline JS is `/_stcore/bidi-components/__inline__/<sha256>.js`.
+_INLINE_JS_FILENAME_RE: Final = re.compile(r"^[0-9a-f]{64}\.js$")
 
 # Mapping of the (lowercase) server.xsrfCookieSameSite config values to their
 # canonical Set-Cookie "SameSite" attribute values.
@@ -1093,6 +1095,8 @@ def create_bidi_component_routes(
     from starlette.responses import PlainTextResponse, Response
     from starlette.routing import Route
 
+    from streamlit.components.v2.inline_asset_store import INLINE_ASSET_URL_PREFIX
+
     async def _bidi_component_endpoint(request: Request) -> Response:
         async def _text_response(body: str, status_code: int) -> PlainTextResponse:
             response = PlainTextResponse(body, status_code=status_code)
@@ -1100,6 +1104,23 @@ def create_bidi_component_routes(
             return response
 
         path = request.path_params["path"]
+        if path.startswith(INLINE_ASSET_URL_PREFIX):
+            filename = path[len(INLINE_ASSET_URL_PREFIX) :]
+            if _INLINE_JS_FILENAME_RE.fullmatch(filename) is None:
+                return await _text_response("not found", 404)
+            inline_content = bidi_component_manager.get_inline_asset(path)
+            if inline_content is None:
+                return await _text_response("not found", 404)
+            response = Response(
+                content=inline_content, media_type=guess_content_type(filename)
+            )
+            await _set_cors_headers(request, response)
+            # The path is the SHA-256 of the body, so the representation never
+            # changes. `public` is safe: the hash is unguessable without the
+            # source, which the browser already received as this URL.
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return response
+
         parts = path.split("/")
         component_name = parts[0] if parts else ""
         if not component_name:

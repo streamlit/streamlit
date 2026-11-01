@@ -40,8 +40,9 @@ import type { WidgetStateManager } from "~lib/WidgetStateManager"
  * This hook executes JavaScript authored by users or third parties as part of a
  * Custom Component v2 instance. Streamlit does not sanitize or validate this
  * content and makes no guarantees about what is executed. Inline JS is loaded
- * via a Blob URL and external files via a module script; both run with normal
- * DOM privileges.
+ * from a content-addressed same-origin URL, and file-backed JS via a module
+ * script; both run with normal DOM privileges. Inline `js_content` in the
+ * protobuf, when present, is loaded via a Blob URL as a compatibility path.
  *
  * If you need to handle untrusted input, do not use this function without your
  * own sanitization/defense-in-depth strategy.
@@ -140,7 +141,8 @@ const loadAndRunModule = async <T extends FrontendState>({
  *
  * Purpose
  * -------
- * Loads either inline JS (via Blob URL) or an external JS module URL and
+ * Loads either inline JS (from a content-addressed same-origin URL, or a Blob
+ * URL when `js_content` is present) or a file-backed JS module URL and
  * executes its default export to bootstrap a Custom Component v2 instance.
  * Provides helpers for state updates and trigger events and wires errors into
  * the component error surface.
@@ -148,9 +150,10 @@ const loadAndRunModule = async <T extends FrontendState>({
  * Security model
  * --------------
  * - Executes author-provided JavaScript with normal DOM privileges. Streamlit
- *   does not sanitize or validate this code. Inline sources are loaded via a
- *   Blob URL; external sources use a `<script type="module">` element and
- *   dynamic `import()`.
+ *   does not sanitize or validate this code. Inline sources are loaded from a
+ *   content-addressed URL, or via a Blob URL when `js_content` is present;
+ *   file-backed sources use a `<script type="module">` element and dynamic
+ *   `import()`.
  * - Treat this as trusted code execution. If you must handle untrusted input,
  *   sandbox or otherwise constrain execution yourself.
  *

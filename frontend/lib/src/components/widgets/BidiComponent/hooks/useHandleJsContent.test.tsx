@@ -124,6 +124,25 @@ describe("useHandleJsContent", () => {
     expect(setError).not.toHaveBeenCalled()
   })
 
+  it("loads content-addressed inline JS as an external module script", () => {
+    const context = buildContextValue({
+      jsContent: undefined,
+      jsSourcePath: "__inline__/deadbeef.js",
+    })
+    renderUseHandleJsContent({
+      context,
+      containerRef,
+      setError,
+    })
+
+    expect(context.componentRegistry.getBidiComponentURL).toHaveBeenCalledWith(
+      "test-component",
+      "__inline__/deadbeef.js"
+    )
+    expect(queryExternalScripts()).toHaveLength(1)
+    expect(setError).not.toHaveBeenCalled()
+  })
+
   it("reports a live script load error", async () => {
     renderUseHandleJsContent({
       context: buildContextValue(),
