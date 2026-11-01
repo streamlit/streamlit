@@ -342,6 +342,8 @@ def test_local_streamlit_is_not_mistaken_for_the_package(
     assert result.returncode == 1, result.stderr
     assert "ERROR: Streamlit is not installed" in result.stderr
     assert "-m pip install streamlit" in result.stderr
+    # A --python guess that misses points back to the automatic search.
+    assert "re-run this script without --python" in result.stderr
 
 
 def test_unrunnable_interpreter_is_not_reported_as_missing(tmp_path: Path) -> None:

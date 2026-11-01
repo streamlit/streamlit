@@ -636,6 +636,11 @@ def _report_not_found(
         "If Streamlit is installed in an environment that is not listed, re-run "
         "this script with --python <path to that environment's Python>."
     )
+    if [c.label for c, _ in attempts] == ["--python"]:
+        retry_step = (
+            "If that may not be the app's Python, re-run this script without "
+            "--python to search the project's environments automatically."
+        )
     missing = next(((c, r) for c, r in attempts if r.status == "missing"), None)
     if missing is not None:
         candidate, result = missing

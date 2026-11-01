@@ -33,11 +33,11 @@ It checks the project's environments (uv's `.venv` first, then `venv`, conda, pi
 - **A path on stdout** (exit 0) — the bundled `SKILL.md`. Read it; it points into `references/`.
 - **An `ERROR:` block on stderr** (non-zero exit) — what happened, why, the next steps, and every environment it checked. Do not install or upgrade packages unless the user asked for it or agrees.
 
-To check an environment the script does not find on its own, pass its interpreter with `--python <path>`.
+If you already know which Python runs the app (for example, from the command used to run it), pass it with `--python <path>`. Then only that interpreter is checked, so the docs match the app's environment exactly. The same flag reaches environments the script does not find on its own.
 
 ## 2. If the script cannot run
 
-Read the bundled skill directly from the project's virtual environment:
+Read the bundled skill directly from the environment that runs the app. It is `streamlit/.agents/skills/developing-with-streamlit/SKILL.md` inside that environment's `site-packages` folder; for the project's virtual environment:
 
 - Windows: `<project>/.venv/Lib/site-packages/streamlit/.agents/skills/developing-with-streamlit/SKILL.md`
 - macOS and Linux: `<project>/.venv/lib/python3.*/site-packages/streamlit/.agents/skills/developing-with-streamlit/SKILL.md` (glob for the `python3.*` part; search tools can skip ignored directories like `.venv` by default)
