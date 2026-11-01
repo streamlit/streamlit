@@ -1302,9 +1302,9 @@ _create_option(
     "server.enableAgentApi",
     description="""
         Enable the agent API, which lets a non-browser client drive the app
-        over HTTP at `/_stcore/agent/interact`.
-        `/_stcore/agent/openapi.json` describes the protocol, and reports
-        whether the API is on.
+        over HTTP at `/_stcore/agent/interact`, or as a remote MCP server at
+        `/_stcore/agent/mcp`. `/_stcore/agent/openapi.json` describes the
+        protocol, and reports whether the API is on.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets

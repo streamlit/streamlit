@@ -856,7 +856,7 @@ def test_duration_phrases_whole_minutes_and_singulars(
     seconds: float, expected: str
 ) -> None:
     """Error messages name a limit in whole minutes where it is one."""
-    assert interaction._duration(seconds) == expected
+    assert interaction.format_duration(seconds) == expected
 
 
 def test_a_session_the_runtime_closed_frees_its_slot() -> None:

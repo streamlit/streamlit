@@ -25,12 +25,13 @@ from jsonschema import Draft202012Validator
 
 from streamlit import config, version
 from streamlit.elements.lib import agent_data, agent_spec
-from streamlit.runtime.agent import errors, interaction, protocol, snapshot
+from streamlit.runtime.agent import errors, interaction, mcp, protocol, snapshot
 from streamlit.runtime.state import query_params as query_params_state
 from tests.streamlit.runtime.agent import openapi_validation
 
 _INTERACT_PATH: Final = "/base/_stcore/agent/interact"
 _SCHEMA_PATH: Final = "/base/_stcore/agent/openapi.json"
+_MCP_PATH: Final = "/base/_stcore/agent/mcp"
 _HTTP_METHODS: Final = {"get", "put", "post", "delete", "options", "head", "patch"}
 
 
@@ -38,6 +39,7 @@ def _document(*, enabled: bool = True) -> dict[str, Any]:
     return protocol.build_openapi_document(
         interact_path=_INTERACT_PATH,
         schema_path=_SCHEMA_PATH,
+        mcp_path=_MCP_PATH,
         server_url="../../..",
         enabled=enabled,
     )
@@ -75,13 +77,13 @@ def test_the_document_is_valid_openapi(enabled: bool) -> None:
     assert not re.match(r"^[a-z][a-z0-9+.-]*:", server["url"])
     assert not server["url"].startswith("/")
 
-    assert set(document["paths"]) == {_INTERACT_PATH, _SCHEMA_PATH}
+    assert set(document["paths"]) == {_INTERACT_PATH, _SCHEMA_PATH, _MCP_PATH}
     for path in document["paths"]:
         assert path.startswith("/")
         assert "{" not in path
     operations = _operations(document)
     operation_ids = [operation["operationId"] for operation in operations]
-    assert sorted(operation_ids) == ["getOpenApiDocument", "interact"]
+    assert sorted(operation_ids) == ["getOpenApiDocument", "interact", "mcp"]
     for operation in operations:
         assert operation["responses"]
         for status, response in operation["responses"].items():
@@ -253,6 +255,12 @@ def test_the_disabled_document_only_reports_that() -> None:
     interact = disabled["paths"][_INTERACT_PATH]["post"]
     assert set(interact["responses"]) == {str(errors.error_status("not_available"))}
     assert "requestBody" not in interact
+    # MCP clients do not fall back from a 403, so the MCP endpoint's refusal
+    # is a 400.
+    mcp_operation = disabled["paths"][_MCP_PATH]["post"]
+    assert set(mcp_operation["responses"]) == {"400"}
+    assert "requestBody" not in mcp_operation
+    assert "`not_available`" in mcp_operation["responses"]["400"]["description"]
     assert set(_schemas(disabled)) == {"Error", "Page"}
     assert disabled["servers"] == enabled["servers"]
 
@@ -263,10 +271,213 @@ def test_the_disabled_document_only_reports_that() -> None:
 
 @pytest.mark.parametrize("enabled", [True, False])
 def test_every_option_the_document_names_exists(enabled: bool) -> None:
-    """Every configuration option the prose names is a real option."""
-    rendered = json.dumps(_document(enabled=enabled))
+    """Every configuration option the prose names is a real option, the MCP
+    tools' prose included.
+    """
+    rendered = json.dumps([_document(enabled=enabled), _tools()])
 
     named_options = set(re.findall(r"`((?:server|client)\.\w+)`", rendered))
     assert "server.enableAgentApi" in named_options
     for option in named_options:
         assert option in config._config_options, option
+
+
+def _tools(session_ttl: float = 900) -> dict[str, dict[str, Any]]:
+    return {
+        tool["name"]: tool for tool in protocol.build_mcp_tools(session_ttl=session_ttl)
+    }
+
+
+def test_the_mcp_endpoint_is_documented_beside_the_others() -> None:
+    """The document's overview points at the MCP server beside it, and the
+    MCP operation lists the codes only `get_data` returns, which the `Error`
+    schema's enum, the HTTP routes' codes, leaves out.
+    """
+    document = _document()
+    operation = document["paths"][_MCP_PATH]["post"]
+    code = _schemas(document)["Error"]["properties"]["error"]["properties"]["code"]
+
+    assert "`mcp`, beside this document" in document["info"]["description"]
+    assert set(operation["responses"]) == {"200", "202", "400", "403", "413"}
+    for name in errors.MCP_ERROR_CATALOG:
+        assert f"- `{name}`: " in operation["description"]
+        assert name not in code["enum"]
+    for revision in mcp.PROTOCOL_VERSIONS:
+        assert revision in operation["description"]
+
+
+def test_the_instructions_are_the_documents_overview() -> None:
+    """`instructions` are the overview without the notice pointing at the MCP
+    server, which a client already connected to it does not need.
+    """
+    assert protocol.MCP_INSTRUCTIONS == protocol._API_DESCRIPTION
+    assert "MCP" not in protocol.MCP_INSTRUCTIONS
+    assert _document()["info"]["description"].startswith(protocol.MCP_INSTRUCTIONS)
+
+
+def test_the_interact_tool_takes_the_interact_request_inlined() -> None:
+    """The `interact` tool's input schema is the request schema with no
+    reference left, the same properties in the validator's order, and the
+    same verdict on every request.
+    """
+    document = _document()
+    request = _schemas(document)["InteractRequest"]
+    schema = _tools()["interact"]["inputSchema"]
+    inlined = Draft202012Validator(schema)
+    referenced = openapi_validation.schema_validator(document, "InteractRequest")
+    examples = document["paths"][_INTERACT_PATH]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["examples"]
+    requests = [
+        *(example["value"] for example in examples.values()),
+        {"session_id": None},
+        {"session_id": "s_1", "bogus": True},
+        {"session_id": "s_1", "trigger": {}},
+        {"session_id": "s_1", "trigger": {"key": "go", "extra": 1}},
+        {"session_id": "s_1", "trigger": None},
+        {"context": {"locale": "en_US.UTF-8"}},
+    ]
+
+    Draft202012Validator.check_schema(schema)
+    assert list(openapi_validation.iter_refs(schema)) == []
+    assert list(schema["properties"]) == list(interaction.REQUEST_FIELDS)
+    for name, field in request["properties"].items():
+        assert schema["properties"][name]["description"] == field["description"]
+    assert schema["properties"]["session_id"]["type"] == "string"
+    for body in requests:
+        assert inlined.is_valid(body) is referenced.is_valid(body), body
+
+
+def test_inlining_refuses_a_schema_that_refers_to_itself() -> None:
+    """A recursive component cannot be inlined, so building fails loudly."""
+    schemas = {"Node": {"properties": {"child": {"$ref": "#/components/schemas/Node"}}}}
+
+    with pytest.raises(ValueError, match="refers to itself"):
+        protocol._inline_refs({"$ref": "#/components/schemas/Node"}, schemas)
+
+
+def test_get_data_schema_requires_session_id_and_url_only() -> None:
+    """`get_data` requires `session_id` and `url`, takes nothing else, and
+    pages tables with `offset` and `limit` defaults the tool applies. `null`
+    in either bound is allowed, as omitting it is, but not in `session_id`.
+    """
+    schema = _tools()["get_data"]["inputSchema"]
+    validator = Draft202012Validator(schema)
+
+    Draft202012Validator.check_schema(schema)
+    assert list(schema["properties"]) == list(mcp.GET_DATA_FIELDS)
+    assert schema["required"] == ["session_id", "url"]
+    assert schema["properties"]["limit"]["default"] == mcp.PAGE_ROWS
+    assert validator.is_valid({"session_id": "s_1", "url": "../../media/x"})
+    assert validator.is_valid(
+        {"session_id": "s_1", "url": "x", "offset": None, "limit": None}
+    )
+    assert not validator.is_valid({"url": "../../media/x"})
+    assert not validator.is_valid({"session_id": None, "url": "../../media/x"})
+    assert not validator.is_valid({"session_id": "s_1", "url": "x", "format": "csv"})
+
+
+def test_interact_is_never_read_only_and_get_data_is() -> None:
+    """`interact` is never read-only, since any action can write; `get_data`
+    runs no app code.
+    """
+    tools = _tools()
+
+    assert list(tools) == list(mcp.TOOL_NAMES)
+    assert tools["interact"]["annotations"] == {
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    }
+    assert tools["get_data"]["annotations"] == {
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    }
+
+
+def test_the_tool_list_stays_small() -> None:
+    """The tool list is spent in every conversation the server is enabled in,
+    so it stays near its 9 KB estimate.
+    """
+    assert len(json.dumps(list(_tools().values()))) < 12_000
+
+
+@pytest.mark.parametrize(
+    ("session_ttl", "phrase"), [(900, "15 minutes"), (120, "2 minutes")]
+)
+def test_the_interact_description_states_the_session_ttl(
+    session_ttl: float, phrase: str
+) -> None:
+    """The idle-session limit is the server's, filled into fixed text."""
+    description = _tools(session_ttl)["interact"]["description"]
+
+    assert f"A session ends after {phrase} without a call" in description
+
+
+# What the tool descriptions may name in backticks besides the protocol's own
+# definitions: JSON literals, an MCP result field, and the command parameter
+# they cite as an example.
+_DESCRIPTION_WORDS: Final = {"null", "true", "false", "isError", "options"}
+
+
+def _property_names(node: Any) -> set[str]:
+    """Every property name defined anywhere in ``node``."""
+    names: set[str] = set()
+    pending = [node]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            properties = item.get("properties")
+            if isinstance(properties, dict):
+                names.update(properties)
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return names
+
+
+def test_tool_descriptions_name_only_what_exists() -> None:
+    """Every code, field, and value the hand-written tool descriptions name in
+    backticks is defined, as the element descriptions' coverage test holds
+    them to their commands. `interact` lists every `unavailable` reason, and
+    `get_data` every code only it returns.
+    """
+    tools = _tools()
+    defined = (
+        _property_names(_document())
+        | _property_names([tool["inputSchema"] for tool in tools.values()])
+        | set(errors.ERROR_CATALOG)
+        | set(errors.MCP_ERROR_CATALOG)
+        | set(get_args(agent_data.UnavailableReason))
+        | set(get_args(snapshot.SnapshotStatus))
+        | set(mcp.TOOL_NAMES)
+        | set(mcp.PAGE_FIELDS)
+        | _DESCRIPTION_WORDS
+    )
+    named_path = re.compile(
+        r"`([a-z][A-Za-z0-9_]*(?:\.[a-z][A-Za-z0-9_]*)*)(?::[^`]*)?`"
+    )
+
+    for name, tool in tools.items():
+        paths = named_path.findall(tool["description"])
+        assert paths, name
+        for path in paths:
+            for part in path.split("."):
+                assert part in defined, f"{name} names `{part}`"
+    for reason in get_args(agent_data.UnavailableReason):
+        assert f"`{reason}`" in tools["interact"]["description"]
+    for code in errors.MCP_ERROR_CATALOG:
+        assert f"- `{code}`: " in tools["get_data"]["description"]
+
+
+def test_both_tools_say_to_read_files_before_the_next_interact_call() -> None:
+    """A later run can replace a result's files, so both descriptions say to
+    read them first, and say that `url` needs no resolving.
+    """
+    for tool in _tools().values():
+        description = tool["description"]
+        assert "Read a result's files before your next `interact` call" in description
+        assert "needs no resolving" in description
