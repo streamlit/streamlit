@@ -88,6 +88,8 @@ The JSON is stored on `ForwardMsg.metadata.agent_props`. The builders return `No
 
 User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `developing-with-streamlit`). Keep them current as features land; follow `lib/streamlit/.agents/skills/AGENTS.md`.
 
+The global meta-skill in `lib/streamlit/.agents/meta-skill/` routes agents to these skills through `scripts/discover.py`, which runs on users' machines under whatever Python the agent finds. That script stays Python 3.8 compatible, uses only the standard library, and prints instead of logging; its module docstring lists the constraints.
+
 ## Unit Tests
 
 We use the unit tests to cover internal behavior that can work without the web / backend

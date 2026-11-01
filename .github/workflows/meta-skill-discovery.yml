@@ -1,0 +1,78 @@
+name: Meta-skill Discovery
+
+# The global meta-skill's discover.py runs on users' machines with whatever
+# Python the agent finds, so it is tested on Windows and macOS with only pytest
+# installed. Ubuntu runs the same tests in python-tests.yml.
+on:
+  push:
+    branches:
+      - "develop"
+    paths:
+      - "lib/streamlit/.agents/meta-skill/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - ".github/workflows/meta-skill-discovery.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "lib/streamlit/.agents/meta-skill/**"
+      - "lib/tests/streamlit/web/meta_skill_discover_test.py"
+      - ".github/workflows/meta-skill-discovery.yml"
+
+permissions:
+  contents: read
+
+# Avoid duplicate workflows on same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover-tests:
+    name: "discover.py tests (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up an old launcher Python
+        id: old-python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # macOS's built-in python3 is 3.9, and agents may launch the script with it.
+          python-version: "3.9"
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # Oldest Python that Streamlit supports.
+          python-version: "3.11"
+      - name: Install pytest
+        # Same cap as the dev dependencies in the root pyproject.toml.
+        run: python -m pip install "pytest<9.1.0"
+      # `-c pyproject.toml` points at the root file, which has no pytest settings,
+      # so lib/pyproject.toml's settings (which need the full dev environment) are
+      # skipped. `--noconftest` skips lib/tests/conftest.py, which this test file
+      # does not need.
+      - name: Run discover.py tests
+        run: >
+          python -m pytest -c pyproject.toml --rootdir . --noconftest
+          -p no:cacheprovider -v
+          lib/tests/streamlit/web/meta_skill_discover_test.py
+      - name: Run discover.py tests, launched by Python 3.9
+        env:
+          DISCOVER_TEST_PYTHON: ${{ steps.old-python.outputs.python-path }}
+        run: >
+          python -m pytest -c pyproject.toml --rootdir . --noconftest
+          -p no:cacheprovider -v
+          lib/tests/streamlit/web/meta_skill_discover_test.py
