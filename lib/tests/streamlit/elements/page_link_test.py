@@ -390,3 +390,129 @@ class PageLinkTest(DeltaGeneratorTestCase):
         st.navigation([st.Page("page1.py", url_path="foo")])
 
         st.page_link(st.Page("other.py", url_path="bar"))
+
+
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class PageLinkHelpInheritanceTest(DeltaGeneratorTestCase):
+    """st.page_link inherits the linked page's help unless help is passed."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        # The test context has no main script, so st.navigation resolves page
+        # files against the working directory. Resolve page_link paths there too.
+        patcher = patch(
+            "streamlit.elements.widgets.button.get_main_script_directory",
+            return_value=str(self.script_run_ctx.pages_manager.main_script_parent),
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_page_object_help_is_inherited(self) -> None:
+        """An omitted help takes the Page's help."""
+        page = st.Page("foo.py", title="Foo", help="Net revenue by **region**.")
+        st.page_link(page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.help == "Net revenue by **region**."
+
+    @parameterized.expand(
+        [
+            ("explicit", "Opens revenue with the current filters."),
+            ("empty", ""),
+        ]
+    )
+    def test_passed_help_wins_over_page_help(self, _name: str, help: str) -> None:
+        """A passed help replaces the Page's help; help="" shows no tooltip."""
+        page = st.Page("foo.py", title="Foo", help="Page help.")
+        st.page_link(page, help=help)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.help == help
+
+    def test_external_page_object_help_is_inherited(self) -> None:
+        """An external Page's help is the link's tooltip."""
+        page = st.Page("https://docs.streamlit.io", title="Docs", help="The docs.")
+        st.page_link(page)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.external
+        assert c.help == "The docs."
+
+    def test_external_url_string_inherits_nothing(self) -> None:
+        """An external URL string has no page to inherit help from, even when a
+        registered page links to the same URL."""
+        st.navigation(
+            [
+                st.Page("page1.py"),
+                st.Page("https://docs.streamlit.io", title="Docs", help="The docs."),
+            ]
+        )
+        st.page_link("https://docs.streamlit.io", label="Docs")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.external
+        assert c.help == ""
+
+    def test_registered_path_inherits_help(self) -> None:
+        """A path to a page passed to st.navigation takes that page's help,
+        including a hidden page's."""
+        st.navigation(
+            [
+                st.Page("page1.py", help="First page."),
+                st.Page("page2.py", visibility="hidden", help="Hidden page."),
+            ]
+        )
+        st.page_link("page2.py")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "page2"
+        assert c.help == "Hidden page."
+
+    def test_registered_path_with_passed_help(self) -> None:
+        """A passed help, including "", wins over the registered page's help."""
+        st.navigation([st.Page("page1.py", help="First page.")])
+        st.page_link("page1.py", help="")
+        st.page_link("page1.py", help="Local help.")
+
+        assert self.get_delta_from_queue(-2).new_element.page_link.help == ""
+        assert self.get_delta_from_queue(-1).new_element.page_link.help == "Local help."
+
+    def test_shared_script_inherits_from_the_first_registered_page(self) -> None:
+        """When pages share a script, label and help both come from the first
+        registered page with that script."""
+        st.navigation(
+            [
+                st.Page("shared.py", title="Revenue", url_path="a", help="Revenue."),
+                st.Page("shared.py", title="Costs", url_path="b", help="Costs."),
+            ]
+        )
+        st.page_link("shared.py")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Revenue"
+        assert c.help == "Revenue."
+
+    def test_registry_entry_without_help_inherits_nothing(self) -> None:
+        """The default single-page registry has no help key, so no tooltip."""
+        ctx = MagicMock()
+        ctx.main_script_path = "/app/main.py"
+        ctx.pages_manager.get_pages.return_value = {
+            "page1": {
+                "script_path": "/app/page1.py",
+                "page_name": "Page 1",
+                "page_script_hash": "hash123",
+            }
+        }
+
+        with (
+            patch(
+                "streamlit.elements.widgets.button.get_script_run_ctx",
+                return_value=ctx,
+            ),
+            patch("os.path.realpath", return_value="/app/page1.py"),
+        ):
+            st.page_link("page1.py")
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.page_script_hash == "hash123"
+        assert c.help == ""

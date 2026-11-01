@@ -629,6 +629,35 @@ class SnapshotBuilderTest(SnapshotCase):
         navigated["page"]["title"] = "changed"
         assert navigated["pages"][1]["title"] == "Reports"
 
+    def test_pages_report_their_help(self) -> None:
+        """Each page entry, and the current page, carries the page's help. A
+        page without help has no `help` key."""
+        navigation = ForwardMsg()
+        navigation.navigation.page_script_hash = "main"
+        home = navigation.navigation.app_pages.add()
+        home.page_script_hash = "main"
+        home.page_name = "Home"
+        home.url_pathname = ""
+        home.help = "Net revenue by **region**."
+        reports = navigation.navigation.app_pages.add()
+        reports.page_script_hash = "reports"
+        reports.page_name = "Reports"
+        reports.url_pathname = "reports"
+        archive = navigation.navigation.app_pages.add()
+        archive.page_script_hash = "archive"
+        archive.page_name = "Archive"
+        archive.url_pathname = "archive"
+        archive.is_hidden = True
+        archive.help = "Closed periods."
+
+        document = self._build(navigation).document
+        assert document["pages"] == [
+            {"url_path": "", "title": "Home", "help": "Net revenue by **region**."},
+            {"url_path": "reports", "title": "Reports"},
+            {"url_path": "archive", "title": "Archive", "help": "Closed periods."},
+        ]
+        assert document["page"] == document["pages"][0]
+
     def test_external_navigation_links_are_not_pages(self) -> None:
         """An external link is not a destination the app can switch to."""
         navigation = ForwardMsg()

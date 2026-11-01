@@ -31,7 +31,7 @@ from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import calc_hash
 
@@ -86,6 +86,14 @@ def _raise_if_nested_url_path(url_path: str) -> None:
             "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
             error_id="page-nested-url-path",
         )
+
+
+def _normalize_page_help(help: str | None) -> str:
+    """Dedent ``help``; blank text, including whitespace only, means no help."""
+    if help is None:
+        return ""
+    dedented = to_help_str(help)
+    return dedented if dedented.strip() else ""
 
 
 if TYPE_CHECKING:
@@ -219,8 +227,26 @@ class Page:
            ``st.navigation`` during the new session's initial script
            run. The page can be visible or hidden.
 
+    help : str or None
+        A short description of the page, such as one or two sentences. If
+        this is ``None`` (default), the page has no description. The
+        description is the tooltip on the page's item in the navigation menu
+        and the default tooltip of ``st.page_link`` for this page. Streamlit
+        shows the tooltip without running the page. The description is also
+        the page's ``help`` in the snapshot of Streamlit's agent API. It isn't
+        shown on the page and doesn't set the page's meta description.
+
+        The description can optionally contain GitHub-flavored Markdown,
+        including the Markdown directives described in the ``body``
+        parameter of ``st.markdown``.
+
     Attributes
     ----------
+    help : str
+        The help text of the page, as Markdown.
+
+        If no help was declared in ``st.Page``, this property returns ``""``.
+
     icon : str
         The icon of the page.
 
@@ -276,7 +302,12 @@ class Page:
             st.title("Second page")
 
         pg = st.navigation([
-            st.Page("page1.py", title="First page", icon="🔥"),
+            st.Page(
+                "page1.py",
+                title="First page",
+                icon="🔥",
+                help="Sales by region for the current quarter.",
+            ),
             st.Page(page2, title="Second page", icon=":material/favorite:"),
             st.Page(
                 "https://docs.streamlit.io",
@@ -297,6 +328,7 @@ class Page:
         url_path: str | None = None,
         default: bool = False,
         visibility: Literal["visible", "hidden"] = "visible",
+        help: str | None = None,
     ) -> None:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
@@ -307,6 +339,7 @@ class Page:
         if visibility not in {"visible", "hidden"}:
             raise StreamlitValueError("visibility", ["visible", "hidden"])
         self._visibility: Literal["visible", "hidden"] = visibility
+        self._help: str = _normalize_page_help(help)
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -435,6 +468,16 @@ class Page:
         If no icon was declared in ``st.Page``, this property returns ``""``.
         """
         return self._icon
+
+    @property
+    def help(self) -> str:
+        """The page's help text, as Markdown.
+
+        This is the tooltip on the page's item in the navigation menu and the
+        default tooltip of ``st.page_link`` for this page. If no help was
+        declared in ``st.Page``, this property returns ``""``.
+        """
+        return self._help
 
     @property
     def url_path(self) -> str:

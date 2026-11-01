@@ -1301,6 +1301,7 @@ def _resolve_page(
                     # requires `title`, as in the snapshot's `pages`.
                     "title": info.get("page_name", ""),
                     **({"icon": info["icon"]} if info.get("icon") else {}),
+                    **({"help": info["help"]} if info.get("help") else {}),
                 }
                 for info in pages.values()
             ]

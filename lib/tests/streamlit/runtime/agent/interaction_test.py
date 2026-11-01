@@ -639,7 +639,12 @@ def test_parse_context_accepts_only_language_tags(locale: str, accepted: bool) -
             interaction._parse_context({"locale": locale})
 
 
-def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
+def _page(
+    url_pathname: str | None,
+    name: str = "",
+    icon: str = "",
+    help: str | None = None,
+) -> PageInfo:
     info: PageInfo = {
         "script_path": f"{url_pathname or 'main'}.py",
         "page_script_hash": "h",
@@ -650,12 +655,15 @@ def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
         info["page_name"] = name
     if icon:
         info["icon"] = icon
+    if help is not None:
+        info["help"] = help
     return info
 
 
 _NAVIGATION_PAGES: Final[dict[str, PageInfo]] = {
-    "home_hash": _page("", "Home"),
-    "report_hash": _page("report", "Report", ":material/table:"),
+    # st.navigation registers help for every page, "" when the page has none.
+    "home_hash": _page("", "Home", help=""),
+    "report_hash": _page("report", "Report", ":material/table:", "Quarterly sales."),
 }
 
 
@@ -704,7 +712,12 @@ def test_resolve_page_refuses_an_unknown_page_once_pages_are_declared() -> None:
     assert raised.value.details == {
         "pages": [
             {"url_path": "", "title": "Home"},
-            {"url_path": "report", "title": "Report", "icon": ":material/table:"},
+            {
+                "url_path": "report",
+                "title": "Report",
+                "icon": ":material/table:",
+                "help": "Quarterly sales.",
+            },
         ]
     }
 

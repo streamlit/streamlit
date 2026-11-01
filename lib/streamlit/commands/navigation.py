@@ -478,6 +478,7 @@ def _navigation(
                 "icon": page.icon,
                 "script_path": script_path,
                 "url_pathname": page.url_path,
+                "help": page.help,
             }
 
     msg = ForwardMsg()
@@ -535,6 +536,7 @@ def _navigation(
             p.section_header = section_header
             p.url_pathname = page.url_path
             p.is_hidden = page._visibility == "hidden"
+            p.help = page.help
             _set_external_url(p, page)
 
     # Inform our page manager about the set of pages we have and resolve the page

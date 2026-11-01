@@ -19,6 +19,8 @@ app_pages/
 
 Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
 
+Give each `st.Page` a one-sentence `help` that says what the page is. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page description coding agents read. It is not shown on the page; use `st.caption` for a visible subtitle.
+
 ```python
 # streamlit_app.py
 import streamlit as st
@@ -30,11 +32,24 @@ if "selected_project" not in st.session_state:
 # Define navigation
 page = st.navigation(
     [
-        st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
         st.Page(
-            "app_pages/analytics.py", title="Analytics", icon=":material/bar_chart:"
+            "app_pages/home.py",
+            title="Home",
+            icon=":material/home:",
+            help="Project overview and recent activity.",
         ),
-        st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
+        st.Page(
+            "app_pages/analytics.py",
+            title="Analytics",
+            icon=":material/bar_chart:",
+            help="Usage trends by project and week.",
+        ),
+        st.Page(
+            "app_pages/settings.py",
+            title="Settings",
+            icon=":material/settings:",
+            help="Project members and notification preferences.",
+        ),
     ]
 )
 

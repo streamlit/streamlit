@@ -261,6 +261,24 @@ def test_the_disabled_document_only_reports_that() -> None:
     assert "Snapshot" in _schemas(enabled)
 
 
+def test_the_page_schema_documents_optional_help() -> None:
+    """A page may carry `help` as a string; only `url_path` and `title` are
+    required, so a page without help stays valid.
+    """
+    document = _document()
+    page_schema = _schemas(document)["Page"]
+    validator = openapi_validation.schema_validator(document, "Page")
+
+    assert page_schema["required"] == ["url_path", "title"]
+    assert page_schema["properties"]["help"]["type"] == "string"
+    assert "st.Page(help=...)" in page_schema["properties"]["help"]["description"]
+    assert validator.is_valid({"url_path": "", "title": "Home"})
+    assert validator.is_valid(
+        {"url_path": "", "title": "Home", "help": "Net revenue by **region**."}
+    )
+    assert not validator.is_valid({"url_path": "", "title": "Home", "help": 1})
+
+
 @pytest.mark.parametrize("enabled", [True, False])
 def test_every_option_the_document_names_exists(enabled: bool) -> None:
     """Every configuration option the prose names is a real option."""
