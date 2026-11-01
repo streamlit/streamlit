@@ -7,6 +7,8 @@ description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, deb
 
 This is a **routing skill** that directs you to specialized references for Streamlit development.
 
+**Read the matching references before writing code.** This file holds only cross-cutting defaults. For each Streamlit feature the change uses (for example columns and containers, metrics, charts or dataframes, images, caching or fragments, theme or colored text), read the reference the [routing table](#reference-routing-table) names, even for a small app.
+
 ## When to Use
 
 Invoke this skill when the user's request involves:
@@ -134,7 +136,7 @@ Step 5: Check if app is running and offer to run it
 
 ### Reference routing table
 
-Use this routing table to select reference(s). **Always read the reference file** before making changes.
+Use this routing table to select reference(s). List the features the change uses and **read the reference for each one** before making changes; most changes need more than one.
 
 > All file paths below are relative to this skill's directory (`streamlit/.agents/skills/developing-with-streamlit/`).
 
