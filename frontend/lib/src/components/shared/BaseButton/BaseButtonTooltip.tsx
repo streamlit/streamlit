@@ -16,6 +16,8 @@
 
 import type { ReactElement } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
@@ -45,7 +47,7 @@ export function BaseButtonTooltip({
   containerWidth,
   constrainWidth,
 }: Props): ReactElement {
-  if (!help) {
+  if (isNullOrEmptyString(help)) {
     return children
   }
   return (
@@ -53,7 +55,7 @@ export function BaseButtonTooltip({
       <StyledTooltipNormal>
         <TooltipIcon
           content={help}
-          placement={placement || Placement.TOP}
+          placement={placement ?? Placement.TOP}
           containerWidth={containerWidth}
           constrainWidth={constrainWidth}
           onMouseEnterDelay={HELP_TOOLTIP_HOVER_DELAY_MS}

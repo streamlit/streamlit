@@ -35,7 +35,7 @@ const getNavTextColor = (
   theme: EmotionTheme,
   isActive: boolean,
   disabled: boolean = false,
-  isTopNav?: boolean
+  isTopNav: boolean = false
 ): string => {
   if (disabled) {
     return theme.colors.fadedText40
@@ -55,7 +55,7 @@ const getNavTextColor = (
     : transparentize(theme.colors.bodyText, 0.25)
 }
 
-export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
+export const StyledSidebarNavContainer = styled.nav(({ theme }) => ({
   position: "relative",
   fontFamily: theme.genericFonts.bodyFont,
 }))
@@ -110,11 +110,12 @@ interface StyledSidebarNavLinkProps {
   isActive: boolean
   disabled: boolean
   isTopNav?: boolean
+  isInDropdown?: boolean
   label?: string
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ theme, isActive, disabled }) => {
+  ({ theme, isActive, disabled, isInDropdown = false }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? theme.fontWeights.bold : theme.fontWeights.normal,
@@ -155,6 +156,10 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
 
       "&:focus-visible": {
         backgroundColor: theme.colors.darkenedBgMix15,
+        // Use the main menu's focus ring for keyboard-focused top-nav dropdown items.
+        ...(isInDropdown && {
+          boxShadow: theme.shadows.focusRingMuted,
+        }),
       },
 
       [`@media print`]: {
@@ -261,19 +266,27 @@ export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
 }))
 
 export const StyledNavSectionContainer = styled.div(({ theme }) => ({
-  "&:not(:first-child)": {
+  // Matches any section with a preceding sibling. Emotion flags :first-child
+  // as unsafe for server-side rendering, and :first-of-type would miss a
+  // section that follows individual page links (`li`) in the same list.
+  "* + &": {
     marginTop: theme.spacing.lg,
   },
 }))
 
-// TopNav styled components
-export const StyledOverflowContainer = styled.div(({ theme }) => ({
+// TopNav styled components. StyledOverflowContainer is rc-overflow's root and
+// the "App pages" <nav> landmark (see TopNav).
+export const StyledOverflowContainer = styled.nav(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   width: "100%",
   flexShrink: 1,
   overflow: "hidden",
-  padding: `0 ${theme.spacing.lg}`,
+  paddingInline: theme.spacing.lg,
+  // overflow: hidden clips focus rings on section triggers and links.
+  // Block padding makes room; a matching negative margin keeps header height.
+  paddingBlock: theme.sizes.focusRingWidth,
+  marginBlock: `-${theme.sizes.focusRingWidth}`,
 }))
 
 interface StyledNavSectionProps {
@@ -295,6 +308,7 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     lineHeight: theme.lineHeights.menuItem,
     fontSize: theme.fontSizes.sm,
     padding: `0 ${theme.spacing.sm}`,
+    minHeight: theme.sizes.headerItemHeight,
     color: getNavTextColor(theme, false, false, true),
     borderRadius: theme.radii.default,
     marginRight: theme.spacing.twoXS,
@@ -305,8 +319,10 @@ export const StyledNavSection = styled.button<StyledNavSectionProps>(
     "&:hover": {
       backgroundColor: theme.colors.darkenedBgMix15,
     },
-    "&:focus-visible": {
+    "&:focus": {
       outline: "none",
+    },
+    "&:focus-visible": {
       boxShadow: theme.shadows.focusRingMuted,
     },
   })

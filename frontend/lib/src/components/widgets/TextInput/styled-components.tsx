@@ -91,7 +91,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
-  "::placeholder": { color: theme.colors.fadedText60 },
+  "::placeholder": { color: theme.colors.fadedText70 },
   // `type="search"` inputs otherwise render a browser-native clear (×) control
   // that clashes with Streamlit's styling. Hide it so we can show our own
   // consistent clear button (see StyledClearButton) instead.

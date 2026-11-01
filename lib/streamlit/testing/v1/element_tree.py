@@ -31,13 +31,12 @@ from typing import (
     Final,
     Generic,
     NoReturn,
+    Self,
     TypeAlias,
     TypeVar,
     cast,
     overload,
 )
-
-from typing_extensions import Self
 
 from streamlit import dataframe_util, util
 from streamlit.elements.heading import HeadingProtoTag
@@ -54,6 +53,7 @@ from streamlit.elements.widgets.time_widgets import (
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -64,12 +64,13 @@ from streamlit.testing.v1.errors import AppTestError
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
 
+    from streamlit.proto.AudioInput_pb2 import AudioInput as AudioInputProto
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
+    from streamlit.proto.CameraInput_pb2 import CameraInput as CameraInputProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
-    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
     from streamlit.proto.DateInput_pb2 import DateInput as DateInputProto
     from streamlit.proto.DateTimeInput_pb2 import DateTimeInput as DateTimeInputProto
     from streamlit.proto.DownloadButton_pb2 import (
@@ -104,10 +105,22 @@ if TYPE_CHECKING:
     from streamlit.proto.Toast_pb2 import Toast as ToastProto
     from streamlit.proto.WidthConfig_pb2 import WidthConfig
     from streamlit.runtime.state.safe_session_state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFile
     from streamlit.testing.v1.app_test import AppTest
     from streamlit.typing import ChatInputValue
 
 T = TypeVar("T")
+
+# Public ``Dataframe.editing_mode`` strings. ``ADD_ONLY`` and ``DELETE_ONLY``
+# match ``num_rows`` (``"add"`` and ``"delete"``), not the proto names.
+_DATAFRAME_EDITING_MODE_NAMES: Final[dict[int, str]] = {
+    DataframeProto.EditingMode.READ_ONLY: "read_only",
+    DataframeProto.EditingMode.FIXED: "fixed",
+    DataframeProto.EditingMode.DYNAMIC: "dynamic",
+    DataframeProto.EditingMode.ADD_ONLY: "add",
+    DataframeProto.EditingMode.DELETE_ONLY: "delete",
+}
+
 
 # Public ``get()`` names that are not the node ``type`` string.
 _GET_TYPE_ALIASES: dict[str, str] = {
@@ -412,6 +425,7 @@ class Element(ABC):
     type: str = field(repr=False)
     proto: Any = field(repr=False)
     root: ElementTree = field(repr=False)
+    # Writable. Subclasses must not narrow this type.
     key: str | None
 
     @abstractmethod
@@ -778,38 +792,215 @@ class DownloadButton(Widget):
         return self.set_value(True)
 
 
+def _chat_input_accepts_files(accept_file: int) -> bool:
+    """Return whether this ``accept_file`` proto value allows attachments."""
+    from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+
+    return accept_file != ChatInputProto.AcceptFile.NONE
+
+
+def _chat_input_accepts_multiple_files(accept_file: int) -> bool:
+    """Return whether uploads accumulate instead of replacing one file."""
+    from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
+
+    return accept_file in {
+        ChatInputProto.AcceptFile.MULTIPLE,
+        ChatInputProto.AcceptFile.DIRECTORY,
+    }
+
+
+def _assert_chat_input_filename(filename: str, allowed_types: Sequence[str]) -> None:
+    """Reject a filename the chat-input widget would not deserialize."""
+    if not allowed_types:
+        return
+
+    from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
+    from streamlit.errors import StreamlitAPIException
+
+    try:
+        enforce_filename_restriction(filename, allowed_types)
+    except StreamlitAPIException as exc:
+        raise AppTestError(str(exc)) from exc
+
+
 @dataclass(repr=False)
 class ChatInput(Widget):
-    """A representation of ``st.chat_input``."""
+    r"""A representation of ``st.chat_input``.
+
+    ``set_value`` sets the message text. ``upload`` attaches files when the
+    widget was created with ``accept_file``. Text and files are submitted
+    together on the next ``run()`` and are not kept afterwards, matching the
+    browser widget.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     prompt = st.chat_input("Say something", accept_file=True)
+    ...     if prompt and prompt.files:
+    ...         st.write(prompt.files[0].name)
+    ... ''')
+    >>> at.run()
+    >>> at.chat_input[0].upload("notes.txt", b"hello")
+    >>> at.run()
+    >>> at.markdown[0].value
+    'notes.txt'
+    """
 
     _value: str | None
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called upload/clear. None means staged files were cleared.
+    # Chat input is a trigger, so committed files are not read back from
+    # session state on later runs.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None = field(repr=False)
     proto: ChatInputProto = field(repr=False)
     placeholder: str
 
     def __init__(self, proto: ChatInputProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "chat_input"
+        self._files = InitialValue()
 
     def set_value(self, v: str | None) -> ChatInput:
-        """Set the value of the widget."""
+        """Set the message text, or ``None`` to clear pending text.
+
+        This does not attach or remove files. Use ``upload`` and ``clear``
+        for files.
+        """
         return super().set_value(v)
+
+    def _assert_accepts_files(self) -> None:
+        if _chat_input_accepts_files(self.proto.accept_file):
+            return
+        key_part = f" (key={self.key!r})" if self.key else ""
+        raise AppTestError(
+            f"st.chat_input{key_part} does not accept files. "
+            "Pass accept_file=True, 'multiple', or 'directory'."
+        )
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> ChatInput:
+        """Stage one file for the next submit.
+
+        ``accept_file=True`` replaces any file already staged. ``"multiple"``
+        and ``"directory"`` append. A later ``run()`` does not send the files
+        again.
+
+        Parameters
+        ----------
+        filename
+            File name. For ``accept_file="directory"``, this may be a
+            relative path such as ``"docs/notes.txt"``.
+        content
+            File content as bytes.
+        mime_type
+            MIME type. Defaults to ``"application/octet-stream"``.
+
+        Returns
+        -------
+        ChatInput
+            This widget, so calls can chain into ``set_value`` or ``run``.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        self._assert_accepts_files()
+        if not isinstance(filename, str) or filename == "":
+            raise AppTestError(
+                "st.chat_input file names must be a non-empty string. "
+                f"Got {filename!r}."
+            )
+        if not isinstance(content, bytes):
+            raise AppTestError(
+                "st.chat_input file content must be bytes. "
+                f"Got {type(content).__name__}."
+            )
+        if not isinstance(mime_type, str) or mime_type == "":
+            raise AppTestError(
+                "st.chat_input file MIME types must be a non-empty string. "
+                f"Got {mime_type!r}."
+            )
+        _assert_chat_input_filename(filename, list(self.proto.file_type))
+
+        record = (str(uuid4()), filename, content, mime_type)
+        if _chat_input_accepts_multiple_files(self.proto.accept_file):
+            staged = self._files if isinstance(self._files, list) else []
+            staged.append(record)
+            self._files = staged
+        else:
+            self._files = [record]
+        return self
+
+    def clear(self) -> ChatInput:
+        """Remove files staged for the next submit.
+
+        Does not clear text set with ``set_value`` and does not submit.
+
+        Returns
+        -------
+        ChatInput
+            This widget, so calls can chain.
+        """
+        self._assert_can_interact()
+        self._assert_accepts_files()
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return files staged for this submit.
+
+        Unlike ``FileUploader``, chat input does not replay files from
+        session state. Each submit is one-shot.
+        """
+        files = self._files
+        if not isinstance(files, list):
+            return []
+        return files
 
     @property
     def _widget_state(self) -> WidgetState:
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
         ws = WidgetState()
         ws.id = self.id
-        if self._value is not None:
-            ws.chat_input_value.data = self._value
+        files = self._get_files_to_register()
+        if self._value is None and not files:
+            return ws
+
+        # The frontend always sends `data` on submit, including "" when the
+        # user attached files without typing. Omitting the field makes
+        # ChatInputSerde treat the submit as no value.
+        ws.chat_input_value.data = "" if self._value is None else self._value
+        if not files:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.chat_input_value.file_uploader_state.CopyFrom(state_proto)
         return ws
 
     @property
     def value(self) -> str | ChatInputValue | None:
-        """The pending or last submitted chat input value.
+        """The pending text or the last submitted chat input value.
 
-        Before ``.run()``, a pending ``set_value`` is that string (including ``""``).
-        After ``.run()``, this is a plain ``str`` for a text-only chat input, a
-        ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is enabled, and
-        ``None`` when nothing was submitted.
+        Before ``.run()``, a pending ``set_value`` is that string (including
+        ``""``). Staged files are not included until after ``.run()``.
+        After ``.run()``, this is a plain ``str`` for a text-only chat input,
+        a ``ChatInputValue`` when ``accept_file`` or ``accept_audio`` is
+        enabled, and ``None`` when nothing was submitted.
         """
         if self._value is not None:
             return self._value
@@ -870,7 +1061,6 @@ class Code(Element):
 
     language: str
     show_line_numbers: bool
-    key: None
 
     def __init__(self, proto: CodeProto, root: ElementTree) -> None:
         self.proto = proto
@@ -932,6 +1122,14 @@ class ColorPicker(Widget):
 
 @dataclass(repr=False)
 class Dataframe(Element):
+    """A representation of ``st.dataframe`` and ``st.data_editor``.
+
+    ``.value`` is the input table as a pandas DataFrame, without cell edits.
+    ``set_value()`` raises ``AppTestError`` and leaves that table unchanged.
+    Tables whose ``editing_mode`` is not ``"read_only"`` are also listed on
+    ``AppTest.data_editor``.
+    """
+
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
@@ -940,6 +1138,48 @@ class Dataframe(Element):
         self.type = "dataframe"
         # Extract user key from the element id if present
         self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def editing_mode(self) -> str:
+        """Configured row-editing mode.
+
+        - ``"read_only"``: ``st.dataframe``.
+        - ``"fixed"``, ``"dynamic"``, ``"add"``, or ``"delete"``: ``st.data_editor``,
+          matching its ``num_rows`` value. Disabled editors keep their mode.
+        """
+        mode = self.proto.editing_mode
+        name = _DATAFRAME_EDITING_MODE_NAMES.get(mode)
+        if name is not None:
+            return name
+        # Unmapped values stay readable: a known enum uses its lowercase proto
+        # name, and any other number stays decimal text. The name branch is
+        # unreachable while the map lists every current enum value.
+        try:
+            return DataframeProto.EditingMode.Name(
+                mode
+            ).lower()  # pragma: no cover - defensive
+        except ValueError:
+            return str(mode)
+
+    def _raise_unsupported_interaction(self, method: str) -> NoReturn:
+        # Read-only dataframes keep the generic message, which points to session
+        # state (selection state accepts writes). Editors cannot use set_value();
+        # a keyed editor is seeded by assigning its edit state before run().
+        if self.editing_mode == "read_only":
+            super()._raise_unsupported_interaction(method)
+        key_part = f" (key={self.key!r})" if self.key else ""
+        if self.key:
+            session_state_note = (
+                " Assign the edit state (edited_rows, added_rows, deleted_rows)"
+                " on at.session_state before run()."
+            )
+        else:
+            session_state_note = " Use a Playwright e2e test."
+        raise AppTestError(
+            f"{method}() is not supported for data_editor{key_part}. "
+            "AppTest can read the table and editing_mode, but it does not "
+            f"apply cell edits through {method}().{session_state_note}"
+        )
 
     @property
     def value(self) -> PandasDataframe:
@@ -1029,7 +1269,6 @@ class HeadingBase(Element, ABC):
     tag: str
     anchor: str | None
     hide_anchor: bool
-    key: None
 
     def __init__(self, proto: HeadingProto, root: ElementTree, type_: str) -> None:
         self.proto = proto
@@ -1070,7 +1309,6 @@ class Image(Element):
     """A representation of ``st.image``."""
 
     proto: ImageListProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: ImageListProto, root: ElementTree) -> None:
         self.proto = proto
@@ -1094,7 +1332,6 @@ class Help(Element):
     """A representation of ``st.help``."""
 
     proto: HelpProto = field(repr=False)
-    key: None
     name: str
 
     def __init__(self, proto: HelpProto, root: ElementTree) -> None:
@@ -1133,7 +1370,6 @@ class Html(Element):
     """A representation of ``st.html``."""
 
     proto: HtmlProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: HtmlProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1151,7 +1387,6 @@ class Progress(Element):
     """A representation of ``st.progress``."""
 
     proto: ProgressProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: ProgressProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1213,7 +1448,6 @@ class PageLink(Element):
     """
 
     proto: PageLinkProto = field(repr=False)
-    key: None
 
     def __init__(self, proto: PageLinkProto, root: ElementTree) -> None:
         super().__init__(proto, root)
@@ -1258,7 +1492,6 @@ class Markdown(Element):
     proto: MarkdownProto = field(repr=False)
 
     allow_html: bool
-    key: None
 
     def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
         self.proto = proto
@@ -1302,7 +1535,6 @@ class Space(Element):
     """A representation of ``st.space``."""
 
     proto: SpaceProto = field(repr=False)
-    key: None
     size: SpaceSize | None
 
     def __init__(
@@ -1509,6 +1741,448 @@ class Feedback(Widget):
         return super().set_value(v)
 
 
+_AUDIO_INPUT_MIME: Final = "audio/wav"
+
+
+def _parse_audio_input_file(file: object) -> tuple[str, bytes, str]:
+    """Return one ``(filename, content, mime_type)`` WAV recording.
+
+    ``st.audio_input`` records a single ``audio/wav`` file. Sequences and
+    other types are rejected so a test cannot stage a payload the browser
+    widget cannot produce.
+    """
+    if (
+        isinstance(file, tuple)
+        and len(file) == 3
+        and isinstance(file[0], str)
+        and isinstance(file[1], (bytes, bytearray))
+        and isinstance(file[2], str)
+    ):
+        filename, content, mime_type = file
+        if not filename.lower().endswith(".wav"):
+            raise AppTestError(
+                f"st.audio_input only records .wav files. Got filename {filename!r}."
+            )
+        if mime_type.lower() != _AUDIO_INPUT_MIME:
+            raise AppTestError(
+                f"st.audio_input recordings use MIME type {_AUDIO_INPUT_MIME!r}. "
+                f"Got {mime_type!r}."
+            )
+        # Normalize case-variants such as "Audio/WAV" to the MIME type the
+        # browser widget reports.
+        return filename, bytes(content), _AUDIO_INPUT_MIME
+    if isinstance(file, list):
+        raise AppTestError(
+            "st.audio_input records one recording. A list is not accepted."
+        )
+    raise AppTestError(
+        "st.audio_input records one recording. "
+        "Pass one (filename, content, mime_type) tuple whose content is bytes, "
+        f"or None to clear. Got {type(file).__name__}."
+    )
+
+
+@dataclass(repr=False)
+class AudioInput(Widget):
+    r"""A representation of ``st.audio_input``.
+
+    The recording is one WAV file, ``(filename, content, mime_type)``, with
+    MIME type ``audio/wav``. ``.upload()`` replaces any staged recording.
+    Unlike ``FileUploader``, this widget does not accept a list or append
+    files.
+
+    ``sample_rate`` is the value passed to ``st.audio_input``.
+    The widget default is ``16000``. ``None`` means the script passed
+    ``sample_rate=None``, so the browser chooses the rate.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     audio = st.audio_input("Record")
+    ...     if audio:
+    ...         st.write(audio.name)
+    ... ''')
+    >>> at.run()
+    >>> at.audio_input[0].set_value(("clip.wav", b"RIFF", "audio/wav"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'clip.wav'
+    """
+
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called set_value/upload/clear. None means the recording was cleared.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: AudioInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    sample_rate: int | None
+
+    def __init__(self, proto: AudioInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "audio_input"
+        # None means the script passed sample_rate=None. An unset proto
+        # field reads as 0, which is not that signal.
+        self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        file: tuple[str, bytes, str] | None,
+    ) -> Self:
+        """Set the recording, or ``None`` to clear it.
+
+        Parameters
+        ----------
+        file
+            ``(filename, content, mime_type)`` for one WAV recording.
+            ``filename`` must end in ``.wav`` and ``mime_type`` must be
+            ``audio/wav``. ``None`` clears the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        if file is None:
+            self._files = None
+            return self
+        filename, content, mime_type = _parse_audio_input_file(file)
+        self._files = [(str(uuid4()), filename, content, mime_type)]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = _AUDIO_INPUT_MIME,
+    ) -> Self:
+        """Stage one recording, replacing any recording already staged.
+
+        Parameters
+        ----------
+        filename
+            The file name. Must end in ``.wav``.
+        content
+            The file content as bytes.
+        mime_type
+            MIME type of the recording. Defaults to ``audio/wav``. Any other
+            value raises ``AppTestError``.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        return self.set_value((filename, content, mime_type))
+
+    def clear(self) -> Self:
+        """Clear the recording.
+
+        Returns
+        -------
+        AudioInput
+            The AudioInput instance for method chaining.
+        """
+        return self.set_value(None)
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return the recording to register, if any.
+
+        When the test has not staged a change, reuse the ``UploadedFile``
+        already in session state so the recording survives later ``run()``
+        calls.
+        """
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+        if not isinstance(current_value, UploadedFile):
+            return []
+        return [
+            (
+                current_value.file_id,
+                current_value.name,
+                current_value.getvalue(),
+                current_value.type,
+            )
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+        files_to_use = self._get_files_to_register()
+        if not files_to_use:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        """The current recording.
+
+        Returns the ``UploadedFile`` or ``None`` committed by the last
+        ``run()``. A recording staged with ``set_value`` is not visible
+        here until ``run()``.
+        """
+        state = self.root.session_state
+        assert state
+        return cast("UploadedFile | None", state[self.id])
+
+
+_CAMERA_INPUT_MIME: Final = "image/jpeg"
+_CAMERA_RESOLUTION_BY_HEIGHT: Final[dict[int, str]] = {
+    480: "480p",
+    720: "720p",
+    1080: "1080p",
+}
+
+
+def _parse_camera_input_file(file: object) -> tuple[str, bytes, str]:
+    """Return one ``(filename, content, mime_type)`` JPEG photo.
+
+    ``st.camera_input`` captures one ``image/jpeg`` file whose name ends in
+    ``.jpg``. ``AppTest`` rejects any other shape, including a list, so a test
+    cannot stage a payload the browser widget cannot produce.
+    """
+    if (
+        isinstance(file, tuple)
+        and len(file) == 3
+        and isinstance(file[0], str)
+        and isinstance(file[1], (bytes, bytearray))
+        and isinstance(file[2], str)
+    ):
+        filename, content, mime_type = file
+        if not filename.lower().endswith(".jpg"):
+            raise AppTestError(
+                f"st.camera_input only captures .jpg files. Got filename {filename!r}."
+            )
+        if mime_type.lower() != _CAMERA_INPUT_MIME:
+            raise AppTestError(
+                f"st.camera_input photos use MIME type {_CAMERA_INPUT_MIME!r}. "
+                f"Got {mime_type!r}."
+            )
+        # Return the browser MIME type for case-variants such as "Image/JPEG".
+        return filename, bytes(content), _CAMERA_INPUT_MIME
+    if isinstance(file, list):
+        raise AppTestError(
+            "st.camera_input captures one photo. A list is not accepted."
+        )
+    raise AppTestError(
+        "st.camera_input captures one photo. "
+        "Pass one (filename, content, mime_type) tuple whose content is bytes, "
+        f"or None to clear. Got {type(file).__name__}."
+    )
+
+
+@dataclass(repr=False)
+class CameraInput(Widget):
+    r"""A representation of ``st.camera_input``.
+
+    The photo is one JPEG file, ``(filename, content, mime_type)``.
+    ``.upload()`` replaces any staged photo. Unlike ``FileUploader``, this
+    widget does not accept a list or append files.
+
+    ``AppTest`` accepts a photo only when:
+
+    - the filename ends in ``.jpg``
+    - the MIME type is ``image/jpeg``
+
+    ``resolution`` is the value passed to ``st.camera_input``:
+    ``"480p"``, ``"720p"``, ``"1080p"``, or ``None`` when the script omits it.
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     photo = st.camera_input("Take a picture")
+    ...     if photo:
+    ...         st.write(photo.name)
+    ... ''')
+    >>> at.run()
+    >>> at.camera_input[0].set_value(("shot.jpg", b"jpeg", "image/jpeg"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'shot.jpg'
+    """
+
+    # (file_id, filename, content, mime_type). InitialValue means the test
+    # has not called set_value/upload/clear. None means the photo was cleared.
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: CameraInputProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+    resolution: str | None
+
+    def __init__(self, proto: CameraInputProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "camera_input"
+        # An unset optional int reads as 0, which is not a mapped height, so
+        # an omitted resolution and any other unmapped height are both None.
+        self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        file: tuple[str, bytes, str] | None,
+    ) -> Self:
+        """Set the photo, or ``None`` to clear it.
+
+        Parameters
+        ----------
+        file
+            ``(filename, content, mime_type)`` for one JPEG photo.
+            ``filename`` must end in ``.jpg`` and ``mime_type`` must be
+            ``image/jpeg``. ``None`` clears the photo.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        from uuid import uuid4
+
+        self._assert_can_interact()
+        if file is None:
+            self._files = None
+            return self
+        filename, content, mime_type = _parse_camera_input_file(file)
+        self._files = [(str(uuid4()), filename, content, mime_type)]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = _CAMERA_INPUT_MIME,
+    ) -> Self:
+        """Stage one photo, replacing any photo already staged.
+
+        Parameters
+        ----------
+        filename
+            The file name. Must end in ``.jpg``.
+        content
+            The file content as bytes.
+        mime_type
+            MIME type of the photo. Defaults to ``image/jpeg``. Any other
+            value raises ``AppTestError``.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        return self.set_value((filename, content, mime_type))
+
+    def clear(self) -> Self:
+        """Clear the photo.
+
+        Returns
+        -------
+        CameraInput
+            The CameraInput instance for method chaining.
+        """
+        return self.set_value(None)
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return the photo to register, if any.
+
+        When the test has not staged a change, reuse the ``UploadedFile``
+        already in session state so the photo survives later ``run()`` calls.
+        """
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+        if not isinstance(current_value, UploadedFile):
+            return []
+        return [
+            (
+                current_value.file_id,
+                current_value.name,
+                current_value.getvalue(),
+                current_value.type,
+            )
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+        files_to_use = self._get_files_to_register()
+        if not files_to_use:
+            return ws
+
+        state_proto = FileUploaderStateProto()
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> UploadedFile | None:
+        """The photo committed by the last ``run()``.
+
+        ``set_value`` stages a photo without updating this property.
+        The value is an ``UploadedFile``, or ``None`` when no photo is
+        committed.
+        """
+        state = self.root.session_state
+        assert state
+        return cast("UploadedFile | None", state[self.id])
+
+
 @dataclass(repr=False)
 class FileUploader(Widget):
     r"""A representation of ``st.file_uploader``.
@@ -1584,10 +2258,7 @@ class FileUploader(Widget):
             self._files = None
         elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
             # Single file as tuple (filename, content, mime_type)
-            single_file = cast(  # type: ignore[redundant-cast]
-                "tuple[str, bytes, str]", files
-            )
-            filename, content, mime_type = single_file
+            filename, content, mime_type = files
             self._files = [(str(uuid4()), filename, content, mime_type)]
         else:
             # Multiple files
@@ -2300,7 +2971,7 @@ class Table(Element):
 class Text(Element):
     proto: TextProto = field(repr=False)
 
-    key: None = None
+    key: str | None = None
 
     def __init__(self, proto: TextProto, root: ElementTree) -> None:
         self.proto = proto
@@ -2665,6 +3336,10 @@ class Block:
     # We could implement these using __getattr__ but that would have
     # much worse type information.
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        return WidgetList(self.get("audio_input"))  # type: ignore
+
+    @property
     def button(self) -> WidgetList[Button]:
         return WidgetList(self.get("button"))  # type: ignore
 
@@ -2693,6 +3368,10 @@ class Block:
                 if button_group.proto.style == ButtonGroupProto.Style.SEGMENTED_CONTROL
             ]
         )
+
+    @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        return WidgetList(self.get("camera_input"))  # type: ignore
 
     @property
     def caption(self) -> ElementList[Caption]:
@@ -2750,6 +3429,21 @@ class Block:
     @property
     def dataframe(self) -> ElementList[Dataframe]:
         return ElementList(self.get("dataframe"))  # type: ignore
+
+    @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """``st.data_editor`` elements (dataframes that are not read-only).
+
+        ``dataframe`` includes these elements too. AppTest does not apply cell
+        edits.
+        """
+        return ElementList(
+            [
+                dataframe
+                for dataframe in self.dataframe
+                if dataframe.editing_mode != "read_only"
+            ]
+        )
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -2954,9 +3648,9 @@ class Block:
         ``datetime_input`` vs ``date_time_input``) are accepted. Node type
         names (usually the proto field name) keep working. ``pills`` /
         ``segmented_control`` / ``container`` / ``form`` /
-        ``form_submit_button`` / ``expander`` / ``tabs`` / ``columns`` /
-        ``status`` / ``chat_message`` use the same filtering as the matching
-        attributes.
+        ``form_submit_button`` / ``data_editor`` / ``expander`` / ``tabs`` /
+        ``columns`` / ``status`` / ``chat_message`` use the same filtering as
+        the matching attributes.
         """
         if element_type == "pills":
             return list(self.pills)
@@ -2968,6 +3662,8 @@ class Block:
             return list(self.form)
         if element_type == "form_submit_button":
             return list(self.form_submit_button)
+        if element_type == "data_editor":
+            return list(self.data_editor)
         if element_type == "chat_message":
             return list(self.chat_message)
         if element_type in {"columns", "column"}:
@@ -3217,7 +3913,7 @@ def _unset_value_marker(node: Widget) -> tuple[str, Any]:
     Each widget class uses a different "not staged" marker: ``InitialValue``,
     ``None``, or ``False`` for buttons.
     """
-    if isinstance(node, FileUploader):
+    if isinstance(node, (AudioInput, CameraInput, FileUploader)):
         return ("_files", InitialValue())
     if isinstance(node, (Button, DownloadButton)):
         return ("_value", False)
@@ -3488,6 +4184,10 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "audio_input":
+                new_node = AudioInput(elt.audio_input, root=root)
+            elif ty == "camera_input":
+                new_node = CameraInput(elt.camera_input, root=root)
             elif ty == "file_uploader":
                 new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":

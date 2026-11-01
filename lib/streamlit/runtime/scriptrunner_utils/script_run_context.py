@@ -112,6 +112,9 @@ class FragmentThreadState:
     # _check_not_parallel_worker() to gate APIs that are unsafe during
     # concurrent execution (e.g. st.dialog, st.switch_page).
     is_parallel_worker: bool = False
+    # True while a tracked st.* command runs in this context, so nested
+    # commands aren't recorded.
+    command_tracking_deactivated: bool = False
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -135,6 +138,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
+    command_tracking_deactivated: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
@@ -251,7 +255,6 @@ class ScriptRunContext:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     context_info: ContextInfo | None = None
     gather_usage_stats: bool = False
-    command_tracking_deactivated: bool = False
     _has_script_started: bool = False
     shared: SharedRunState = field(default_factory=SharedRunState)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
@@ -262,6 +265,9 @@ class ScriptRunContext:
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
+    # Raises StopException or RerunException when this run should end. Read by
+    # contended cache waits via get_run_yield_check().
+    yield_check: Callable[[], None] = lambda: None
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -293,7 +299,7 @@ class ScriptRunContext:
         cached_message_hashes: frozenset[str] | None = None,
         context_info: ContextInfo | None = None,
         is_history_navigation: bool = False,
-        # Checked by fragment workers to cease execution.
+        # Called by fragment workers and contended cache waits to cease execution.
         yield_check: Callable[[], None] = lambda: None,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
@@ -312,12 +318,12 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
+        self.yield_check = yield_check
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
         )
         self._has_script_started = False
-        self.command_tracking_deactivated: bool = False
         self.fragment_ids_this_run = fragment_ids_this_run
         self.is_history_navigation = is_history_navigation
         self.has_dialog_opened = False
@@ -391,6 +397,13 @@ def add_script_run_ctx(
     Repeat attaches on the same not-yet-started thread are last-wins for
     both ``ctx`` and the FragmentThreadState snapshot.
 
+    ``command_tracking_deactivated`` always starts as ``False`` on the child,
+    because the child runs its own command stack. The child receives a
+    one-time copy of the parent's state, so inheriting ``True`` would
+    suppress telemetry for every command on the child. Self-attach on a
+    thread that already has ``ThreadState`` (a copied context) also starts
+    tracking on, for the same reason.
+
     Self-attach fallback: when called from inside the thread it is
     attaching to (current thread, or ``thread`` omitted with explicit
     ``ctx``), ``ThreadState`` is seeded directly from ``ctx``. The
@@ -436,10 +449,13 @@ def add_script_run_ctx(
         # Store the parent snapshot on the thread; the run() wrapper below
         # reads it at start time. Repeat add_script_run_ctx() calls refresh
         # the snapshot — last attach wins, matching the ctx attachment above.
+        fields = dataclasses.asdict(parent_ts)
+        # The child runs its own command stack; see the docstring.
+        fields["command_tracking_deactivated"] = False
         setattr(
             thread,
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
-            dataclasses.asdict(parent_ts),
+            fields,
         )
         # Skip the wrap if the target is already running: run() has
         # already been called, and setting the sentinel here would
@@ -462,6 +478,8 @@ def add_script_run_ctx(
 
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
+        elif thread is threading.current_thread():
+            ThreadState.update(command_tracking_deactivated=False)
     elif ctx is not None and thread is threading.current_thread():
         # Caller is attaching ctx from inside the currently-running
         # thread, so the thread.run wrap above is moot. Seed ThreadState
@@ -508,6 +526,12 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
         )
 
     return ctx
+
+
+def get_run_yield_check() -> Callable[[], None] | None:
+    """Return this thread's stop/rerun callback, or None if it has no script run."""
+    ctx = get_script_run_ctx(suppress_warning=True)
+    return ctx.yield_check if ctx is not None else None
 
 
 def enqueue_message(msg: ForwardMsg) -> None:

@@ -30,13 +30,22 @@ import type { ElementContainerConfig } from "./ElementContainerConfig"
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
     Parameters<typeof StyledElementContainer>[0],
-    "width" | "height" | "overflow" | "minWidth" | "flex"
+    | "width"
+    | "height"
+    | "overflow"
+    | "minWidth"
+    | "flex"
+    | "alignSelf"
+    | "minHeight"
+    | "maxHeight"
+    | "contain"
   > & {
     node: ElementNode
     config: ElementContainerConfig
   }
 > = ({ node, config, ...rest }) => {
-  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
+  const { hasDefiniteHeight = false, isInHorizontalLayout } =
+    useRequiredContext(FlexContext)
 
   const styleOverrides = useMemo(
     () => config.computeStyleOverrides(),
@@ -63,6 +72,9 @@ export const StyledElementContainerLayoutWrapper: FC<
       styles = {
         ...styles,
         height: "auto",
+        alignSelf: undefined,
+        minHeight: undefined,
+        maxHeight: undefined,
       }
     } else {
       // In vertical layout (default): keep height, clear width
@@ -74,5 +86,23 @@ export const StyledElementContainerLayoutWrapper: FC<
     }
   }
 
-  return <StyledElementContainer {...rest} {...styles} />
+  // Stretch elements fill a definite-height parent with `height: 100%`. That
+  // percentage is cyclic while a stretch container's min-content size is
+  // calculated (`height: auto`), so an internally scrolling element such as
+  // `st.code` would grow the container to its full content. Size containment
+  // keeps the 100% box. Skip content width: containment would collapse it.
+  const width = styles.width
+  const widthIsSpecified =
+    width === "100%" ||
+    (typeof width === "string" &&
+      (width.endsWith("px") || width.endsWith("rem")))
+  const contain =
+    hasDefiniteHeight &&
+    !isInHorizontalLayout &&
+    styles.height === "100%" &&
+    widthIsSpecified
+      ? "size"
+      : undefined
+
+  return <StyledElementContainer {...rest} {...styles} contain={contain} />
 }

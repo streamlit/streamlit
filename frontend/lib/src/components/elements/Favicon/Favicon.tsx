@@ -136,7 +136,11 @@ async function convertShortcodeToEmoji(shortcode: string): Promise<string> {
   const emoji = nodeEmoji.get(normalizedShortcode)
 
   // Verify it's a valid emoji (not just the shortcode string returned)
-  if (emoji && emoji !== normalizedShortcode && nodeEmoji.has(emoji)) {
+  if (
+    emoji !== undefined &&
+    emoji !== normalizedShortcode &&
+    nodeEmoji.has(emoji)
+  ) {
     return emoji
   }
 

@@ -190,12 +190,15 @@ export function mockWindowLocation(hostname: string): void {
   const hasScheme = /^https?:\/\//.test(hostname)
   const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
 
-  // @ts-expect-error - partial Location is not assignable to string & Location
-  window.location = {
+  const mockLocation: Partial<Location> = {
     assign: vi.fn(),
     hostname: hasScheme ? new URL(hostname).hostname : hostname,
     origin,
+    // App reads location.search while building its initial query params.
+    search: "",
   }
+  // @ts-expect-error - partial Location is not assignable to string & Location
+  window.location = mockLocation
 }
 
 /**
@@ -534,7 +537,7 @@ export function createTestFile(
       js: "application/javascript",
       json: "application/json",
     }
-    mimeType = mimeTypes[ext || ""] || "application/octet-stream"
+    mimeType = mimeTypes[ext ?? ""] || "application/octet-stream"
   }
 
   return new File([content], fileName, { type: mimeType })
@@ -567,6 +570,7 @@ export function createDirectoryFiles(
   }>
 ): File[] {
   return files.map(({ content, path, mimeType = "text/plain" }) => {
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank file name uses file
     const fileName = path.split("/").pop() || "file"
     return createFileWithPath(content, fileName, path, mimeType)
   })

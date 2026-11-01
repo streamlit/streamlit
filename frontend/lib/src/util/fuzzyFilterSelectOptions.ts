@@ -78,6 +78,7 @@ export function filterSelectOptions<T extends LabeledOption>(
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- protobuf keeps unknown enum numbers, so modes from a newer backend can reach here
   if (filterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX) {
     return options.filter((opt: T) =>
       normalizeFilterValue(opt.label).startsWith(normalizedPattern)

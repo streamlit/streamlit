@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never, overload
 
 from streamlit.components.types.base_custom_component import BaseCustomComponent
 from streamlit.dataframe_util import is_dataframe_like
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.policies import check_cache_replay_rules
 from streamlit.elements.lib.utils import compute_and_register_element_id
@@ -48,24 +49,21 @@ class MarshallComponentException(StreamlitAPIException):
 class CustomComponent(BaseCustomComponent):
     """A Custom Component declaration."""
 
-    def __call__(
+    # Repeat the base overloads. Overriding ``create_instance`` would
+    # otherwise replace them with ``*args: Any``, which accepts positional calls.
+    @overload
+    def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def create_instance(
         self,
-        *args: Any,
-        default: Any = None,
-        key: str | None = None,
-        on_change: WidgetCallback | None = None,
-        tab_index: int | None = None,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
         **kwargs: Any,
-    ) -> Any:
-        """An alias for create_instance."""
-        return self.create_instance(
-            *args,
-            default=default,
-            key=key,
-            on_change=on_change,
-            tab_index=tab_index,
-            **kwargs,
-        )
+    ) -> Any: ...
 
     @gather_metrics("create_instance")
     def create_instance(
@@ -226,7 +224,43 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
         element = Element()
         return_value = marshall_component(dg, element)
 
-        dg._enqueue("component_instance", element.component_instance)
+        # Component JavaScript is never executed server-side. JSON arguments
+        # are visible here. Bytes arguments live in special_args and are
+        # reported as their length, without their contents. Dataframe
+        # arguments stay omitted until table payloads land. The arguments are
+        # nested because their names are the component's own, not Streamlit's.
+        # An empty argument set is omitted, the same way an unset parameter is.
+        # Built only while recording: a browser session would throw the work away.
+        agent_props = None
+        if agent_spec.is_recording():
+            component_args = {
+                name: value
+                for name, value in json_args.items()
+                if name not in {"key", "default"}
+            }
+            component_default = json_args.get("default")
+            for special in special_args:
+                if special.WhichOneof("value") != "bytes":
+                    continue
+                if special.key == "default":
+                    component_default = special.bytes
+                elif special.key != "key":
+                    component_args[special.key] = special.bytes
+            agent_props = agent_spec.element(
+                "components.v1.declare_component",
+                key=element.component_instance.id or None,
+                support="browser_required",
+                component_name=self.name,
+                args=agent_spec.Content(component_args) if component_args else None,
+                default=agent_spec.Content(component_default)
+                if component_default is not None
+                else None,
+            )
+        dg._enqueue(
+            "component_instance",
+            element.component_instance,
+            agent_props=agent_props,
+        )
         return return_value
 
     def __eq__(self, other: object) -> bool:

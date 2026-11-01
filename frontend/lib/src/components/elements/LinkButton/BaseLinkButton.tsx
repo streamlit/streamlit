@@ -46,15 +46,15 @@ const BaseLinkButton = forwardRef<
     <ComponentType
       ref={ref}
       kind={kind}
-      size={size || BaseButtonSize.MEDIUM}
+      size={size ?? BaseButtonSize.MEDIUM}
       containerWidth={true}
-      disabled={disabled || false}
-      autoFocus={autoFocus || false}
+      disabled={disabled ?? false}
+      autoFocus={autoFocus ?? false}
       href={href}
       target={target}
       rel={rel}
       onClick={onClick}
-      tabIndex={disabled ? -1 : 0}
+      tabIndex={disabled === true ? -1 : 0}
       data-testid={`stBaseLinkButton-${kind}`}
     >
       {children}

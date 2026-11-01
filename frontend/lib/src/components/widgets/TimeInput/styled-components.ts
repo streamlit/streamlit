@@ -91,11 +91,11 @@ export const StyledTimeSegment = styled(DateSegment)(({ theme }) => {
     outline: "none",
     fontWeight: theme.fontWeights.normal,
     "&[data-type=literal]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       padding: 0,
     },
     "&[data-placeholder]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
     },
     // focused must come after placeholder so contrast text always wins on the
     // primary-colored focused highlight, even when the segment is still a placeholder.

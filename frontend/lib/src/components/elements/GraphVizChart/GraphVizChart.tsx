@@ -23,6 +23,7 @@ import type {
   GraphVizChart as GraphVizChartProto,
   streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   shouldHeightStretch,
@@ -32,7 +33,6 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
-import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
@@ -92,12 +92,6 @@ function GraphVizChart({
   const chartId = `st-graphviz-chart-${element.elementId}`
 
   const {
-    width: containerWidth,
-    height: containerHeight,
-    elementRef,
-  } = useCalculatedDimensions()
-
-  const {
     expanded: isFullScreen,
     width,
     height: fullScreenHeight,
@@ -112,18 +106,11 @@ function GraphVizChart({
 
   useEffect(() => {
     try {
-      const graphvizInstance = graphviz(`#${chartId}`).zoom(false)
-
-      // Set the dimensions explicitly when height stretching is enabled.
-      // This is necessary for height stretch to work properly in webkit.
-      if (heightConfig?.useStretch) {
-        graphvizInstance
-          // We must also set width for the height stretch to work properly.
-          .width(containerWidth < 0 ? 0 : containerWidth)
-          .height(containerHeight < 0 ? 0 : containerHeight)
-      }
-
-      graphvizInstance
+      // Keep the SVG at its natural size and scale it only through CSS.
+      // Graphviz writes any dimensions it receives into the SVG, so measured
+      // container sizes would feed back into the layout.
+      graphviz(`#${chartId}`)
+        .zoom(false)
         .fit(true)
         .scale(1)
         .engine(element.engine as Engine)
@@ -140,21 +127,16 @@ function GraphVizChart({
     } catch (error) {
       LOG.error(error)
     }
-  }, [
-    chartId,
-    element.engine,
-    element.spec,
-    containerWidth,
-    containerHeight,
-    isFullScreen,
-    heightConfig?.useStretch,
-  ])
+  }, [chartId, element.engine, element.spec])
 
   // Name the container only when alt is non-blank. A whitespace aria-label
   // computes to an empty accessible name, which is worse than none.
   // Use role="figure" rather than "img" so GraphViz SVG links stay in the
   // accessibility tree.
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledToolbarElementContainer
@@ -181,8 +163,7 @@ function GraphVizChart({
         id={chartId}
         shouldUseFullWidth={isFullScreen || shouldUseContainerWidth}
         shouldUseFullHeight={isFullScreen || shouldUseContainerHeight}
-        ref={elementRef}
-        role={accessibleName ? "figure" : undefined}
+        role={accessibleName !== undefined ? "figure" : undefined}
         aria-label={accessibleName}
       />
     </StyledToolbarElementContainer>

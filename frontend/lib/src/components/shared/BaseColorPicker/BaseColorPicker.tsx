@@ -20,6 +20,8 @@ import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 import { ChromePicker, type ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -81,7 +83,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   const {
     disabled,
     value: propValue,
-    showValue,
+    showValue = false,
     label,
     labelVisibility,
     onChange,
@@ -158,8 +160,8 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
       if (Date.now() - openedAtRef.current < 50) return
       const target = e.target as Node
       if (
-        !triggerRef.current?.contains(target) &&
-        !popoverRef.current?.contains(target)
+        triggerRef.current?.contains(target) !== true &&
+        popoverRef.current?.contains(target) !== true
       ) {
         setIsOpen(false)
         onColorClose()
@@ -187,7 +189,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
     const handleFocusIn = (e: FocusEvent): void => {
       if (!tabbingRef.current) return
       tabbingRef.current = false
-      if (!popoverRef.current?.contains(e.target as Node)) {
+      if (popoverRef.current?.contains(e.target as Node) !== true) {
         setIsOpen(false)
         onColorClose()
       }
@@ -257,7 +259,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         disabled={disabled}
         labelVisibility={labelVisibility}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP_RIGHT}

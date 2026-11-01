@@ -86,15 +86,15 @@ def test_displays_individual_markdowns(app: Page):
     rainbow_background = markdown_elements.nth(9).locator("span").first
     green_background = markdown_elements.nth(10).locator("span").first
 
-    expect(blue_background).to_have_css("background-color", "rgba(28, 131, 255, 0.1)")
-    expect(red_background).to_have_css("background-color", "rgba(255, 43, 43, 0.1)")
+    expect(blue_background).to_have_css("background-color", "rgb(237, 245, 255)")
+    expect(red_background).to_have_css("background-color", "rgb(255, 241, 242)")
     expect(rainbow_background).to_have_css(
         "background-image",
-        "linear-gradient(to right, rgba(255, 43, 43, 0.1), rgba(255, 164, 33, 0.1), "
-        "rgba(255, 255, 18, 0.1), rgba(33, 195, 84, 0.1), rgba(28, 131, 255, 0.1), "
-        "rgba(154, 93, 255, 0.1), rgba(88, 63, 132, 0.1))",
+        "linear-gradient(to right, rgb(255, 241, 242), rgb(255, 246, 237), "
+        "rgb(255, 250, 229), rgb(241, 251, 246), rgb(237, 245, 255), "
+        "rgb(248, 242, 255), rgba(88, 63, 132, 0.1))",
     )
-    expect(green_background).to_have_css("background-color", "rgba(33, 195, 84, 0.1)")
+    expect(green_background).to_have_css("background-color", "rgb(241, 251, 246)")
 
     # Additional checks for specific elements like links
     expect(markdown_elements.nth(3).locator("a")).to_have_count(0)
@@ -316,6 +316,22 @@ def test_latex_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(latex_elements.nth(5), name="st_latex-width_pixels")
     assert_snapshot(latex_elements.nth(6), name="st_latex-width_stretch")
     assert_snapshot(latex_elements.nth(7), name="st_latex-width_content")
+
+
+def test_dollar_amounts_render_as_text(app: Page):
+    """Test that dollar amounts stay plain text unless the element has a formula."""
+    markdown_elements = get_element_by_key(app, "dollar_amounts").get_by_test_id(
+        "stMarkdown"
+    )
+    expect(markdown_elements).to_have_count(2)
+
+    amounts = markdown_elements.nth(0)
+    expect(amounts).to_have_text("Quota: $315K of $1.46M")
+    expect(amounts.locator("code, .katex")).to_have_count(0)
+
+    escaped_with_formula = markdown_elements.nth(1)
+    expect(escaped_with_formula.locator(".katex")).to_have_count(1)
+    expect(escaped_with_formula).to_contain_text("Costs $5, where")
 
 
 def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):

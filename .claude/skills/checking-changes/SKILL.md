@@ -25,4 +25,4 @@ This runs formatting, linting, type checking, Knip unused-export and unused-depe
 ## Notes
 
 - E2E tests are not included by default; use `E2E_CHECK=true make check` to also run changed e2e tests
-- E2E snapshot mismatches can be ignored (they require manual updates)
+- E2E snapshot mismatches can be ignored while iterating. On a pull request, add the `update-snapshots` label and merge the snapshot PR the workflow opens.

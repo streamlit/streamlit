@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -120,6 +118,27 @@ if TYPE_CHECKING:
         int | str,
     )
 
+    # Check required parameter; it does not narrow the return type.
+    assert_type(selectbox("foo", [1, 2, 3], required=True), int)
+    assert_type(selectbox("foo", [1, 2, 3], required=False), int)
+    assert_type(selectbox("foo", [1, 2, 3], index=None, required=True), int | None)
+    assert_type(
+        selectbox(
+            "foo", ["a", "b"], index=None, accept_new_options=True, required=True
+        ),
+        str | None,
+    )
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=True, on_change="ignore"),
+        int | None,
+    )
+    assert_type(selectbox("foo", [1, 2, 3], disabled=True, required=True), int)
+    dynamic_required: bool = True
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=dynamic_required),
+        int | None,
+    )
+
     def on_selectbox_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -135,6 +154,7 @@ if TYPE_CHECKING:
             kwargs={},
             placeholder="Select a number",
             disabled=False,
+            required=True,
             label_visibility="visible",
             width=320,
         ),

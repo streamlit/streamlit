@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
+import { toHex } from "color2k"
 
 import {
   getSecondaryIconButtonColorStyles,
@@ -22,7 +23,7 @@ import {
 
 export const StyledChatInputContainer = styled.div<{
   isStretchHeight?: boolean
-}>(({ isStretchHeight }) => ({
+}>(({ isStretchHeight = false }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
@@ -30,7 +31,7 @@ export const StyledChatInputContainer = styled.div<{
 }))
 
 export const StyledChatInput = styled.div<{ isStretchHeight?: boolean }>(
-  ({ theme, isStretchHeight }) => ({
+  ({ theme, isStretchHeight = false }) => ({
     backgroundColor: theme.colors.secondaryBg,
     border: `${theme.sizes.borderWidth} solid`,
     borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
@@ -67,7 +68,7 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
 export const StyledInputRow = styled.div<{
   isStacked?: boolean
   hasExpandedHeight?: boolean
-}>(({ theme, isStacked, hasExpandedHeight }) => ({
+}>(({ theme, isStacked = false, hasExpandedHeight = false }) => ({
   display: "flex",
   // Column layout when expanded, row layout otherwise
   flexDirection: hasExpandedHeight ? "column" : "row",
@@ -87,7 +88,7 @@ export const StyledInputRow = styled.div<{
 export const StyledTextareaWrapper = styled.div<{
   isStacked?: boolean
   hasExpandedHeight?: boolean
-}>(({ isStacked, hasExpandedHeight }) => ({
+}>(({ isStacked = false, hasExpandedHeight = false }) => ({
   flex: isStacked && !hasExpandedHeight ? "none" : 1,
   width: isStacked || hasExpandedHeight ? "100%" : "auto",
   // Use order only for stacked mode (non-expanded) to move textarea above buttons
@@ -98,16 +99,16 @@ export const StyledTextareaWrapper = styled.div<{
 }))
 
 // Left cluster - flex-shrink so it collapses when empty
-// In non-expanded row mode, use order: -1 to position before textarea (which is first in DOM)
+// In non-expanded row mode, use order: -1 to position before the textarea or
+// recording waveform (both earlier in the DOM)
 export const StyledLeftCluster = styled.div<{
   hasExpandedHeight?: boolean
-}>(({ theme, hasExpandedHeight }) => ({
+}>(({ theme, hasExpandedHeight = false }) => ({
   display: "flex",
   flexDirection: "row",
   flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
-  // In non-expanded mode, position before textarea via CSS order
   order: hasExpandedHeight ? 0 : -1,
 }))
 
@@ -132,7 +133,7 @@ export const StyledToolbarRow = styled.div(({ theme }) => ({
 
 // Character count indicator - displayed inline with buttons
 export const StyledInputInstructions = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
@@ -150,7 +151,7 @@ interface StyledSendIconButtonProps {
 }
 
 export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
-  ({ theme, disabled, hasError, primary }) => {
+  ({ theme, disabled, hasError = false, primary = false }) => {
     if (primary) {
       return {
         border: "none",
@@ -186,12 +187,19 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
+    const { redColor, redTextColor, bodyText } = theme.colors
+    // Prefer redColor on hover when it differs from rest. Compare normalized
+    // hex so casing/spelling differences (e.g. #f2919a vs #F2919A) still fall
+    // back to bodyText for a visible cue.
+    const errorHoverColor =
+      toHex(redColor) !== toHex(redTextColor) ? redColor : bodyText
+
     const secondaryColorStyles = getSecondaryIconButtonColorStyles(
       theme,
       hasError
         ? {
-            restColor: theme.colors.redTextColor,
-            hoverColor: theme.colors.redColor,
+            restColor: redTextColor,
+            hoverColor: errorHoverColor,
           }
         : undefined
     )
@@ -243,6 +251,11 @@ interface StyledWaveformContainerProps {
   isRecording: boolean
 }
 
+/**
+ * Recording waveform slot in the input row. Always mounted because WaveSurfer
+ * binds to its child once; `display: none` while idle so it takes no space or
+ * flex gap in any layout.
+ */
 export const StyledWaveformContainer =
   styled.div<StyledWaveformContainerProps>(({ isRecording }) => ({
     display: isRecording ? "flex" : "none",
@@ -285,7 +298,7 @@ export const StyledChatInputTextArea = styled.textarea<{
   boxSizing: "border-box",
   resize: "none",
   display: "block",
-  "&::placeholder": { color: theme.colors.fadedText60 },
+  "&::placeholder": { color: theme.colors.fadedText70 },
   "&:disabled": {
     color: theme.colors.fadedText40,
     WebkitTextFillColor: theme.colors.fadedText40,

@@ -16,26 +16,39 @@
 
 import { useMemo } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
 
-const vegaEmbedMock = vi.hoisted(() => ({
-  exportToPng: vi.fn(),
-  isViewReady: false,
-}))
+const vegaEmbedMock = vi.hoisted(() => {
+  const createdHeights: Array<number | undefined> = []
+  return {
+    exportToPng: vi.fn(),
+    isViewReady: false,
+    lastSpec: undefined as { height?: number } | undefined,
+    createdHeights,
+    // Keep these callbacks stable, like the real hook's, so the chart's
+    // effects don't rerun and createdHeights counts only real view rebuilds.
+    createView: (_container: unknown, spec: { height?: number }) => {
+      createdHeights.push(spec?.height)
+      return Promise.resolve(null)
+    },
+    finalizeView: () => {},
+  }
+})
 const mockWriteText = vi.fn()
 
 // Avoid real Vega embedding side-effects in tests
 vi.mock("./useVegaEmbed", () => ({
-  useVegaEmbed: () => {
+  useVegaEmbed: (element: { spec: { height?: number } }) => {
+    vegaEmbedMock.lastSpec = element.spec
     // Satisfy hooks rule by calling a React hook in this mock
     const _memo = useMemo(() => null, [])
     return {
-      createView: () => Promise.resolve(null),
+      createView: vegaEmbedMock.createView,
       updateView: () => Promise.resolve(null),
-      finalizeView: () => {},
+      finalizeView: vegaEmbedMock.finalizeView,
       resizeView: () => Promise.resolve(false),
       exportToPng: vegaEmbedMock.exportToPng,
       isViewReady: vegaEmbedMock.isViewReady,
@@ -43,14 +56,21 @@ vi.mock("./useVegaEmbed", () => ({
   },
 }))
 
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { mockWindowLocation, render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ArrowVegaLiteChart, {
+  getSpecWidth,
   hasNestedComposition,
   isFacetChart,
+  isSingleViewChart,
   type Props,
 } from "./ArrowVegaLiteChart"
 
@@ -102,6 +122,7 @@ describe("ArrowVegaLiteChart", () => {
     mockWindowLocation("localhost")
     vegaEmbedMock.exportToPng.mockResolvedValue("data:image/png;base64,mock")
     vegaEmbedMock.isViewReady = false
+    vegaEmbedMock.createdHeights.length = 0
     mockWriteText.mockReset()
     mockWriteText.mockResolvedValue(undefined)
     Object.defineProperty(navigator, "clipboard", {
@@ -188,6 +209,401 @@ describe("ArrowVegaLiteChart", () => {
     expect(
       screen.queryByRole("button", { name: "Show data" })
     ).toBeInTheDocument()
+  })
+
+  it("keeps the view when new data only renames the datasets", () => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: document.createElement("div") },
+      values: [250],
+    })
+    // Altair names each dataset by a hash of its contents.
+    const altairProps = (name: string, mark = "bar"): Props =>
+      getProps({
+        spec: JSON.stringify({
+          data: { name },
+          mark,
+          encoding: { x: { field: "c1" } },
+        }),
+        datasets: [{ name, hasName: true, data: { data: UNICODE } }],
+      })
+
+    const { rerender } = render(
+      <ArrowVegaLiteChart {...altairProps("3f2a")} />
+    )
+    expect(vegaEmbedMock.createdHeights).toHaveLength(1)
+
+    rerender(<ArrowVegaLiteChart {...altairProps("7d4e")} />)
+    expect(vegaEmbedMock.createdHeights).toHaveLength(1)
+
+    // A spec change along with the data still rebuilds the view.
+    rerender(<ArrowVegaLiteChart {...altairProps("9c1b", "point")} />)
+    expect(vegaEmbedMock.createdHeights).toHaveLength(2)
+  })
+
+  describe("stretch height sizing", () => {
+    const stretchConfigs = {
+      widthConfig: { useStretch: true },
+      heightConfig: { useStretch: true },
+    }
+    const definiteHeightContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+      hasDefiniteHeight: true,
+    }
+
+    it("size-contains a stretch chart and falls back to the default chart height", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: none;")
+      // vega-embed adds this class. As an inline-block, the chart's baseline
+      // would still grow its parent.
+      chart.classList.add("vega-embed")
+      expect(chart).toHaveStyle("display: block;")
+    })
+
+    it("claims no fallback height inside a container with a definite height", () => {
+      render(
+        <FlexContext.Provider value={definiteHeightContext}>
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        </FlexContext.Provider>
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: none;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: 21.875rem;")
+    })
+
+    const contentWidthConfigs = {
+      widthConfig: { useContent: true },
+      heightConfig: { useStretch: true },
+    }
+
+    it("size-contains a content-width chart with the default chart width", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, contentWidthConfigs)} />)
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
+    })
+
+    it("uses the spec width as the intrinsic width of a content-width chart", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            { spec: JSON.stringify({ mark: "bar", width: 250 }) },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 250px;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-width: 25rem;")
+    })
+
+    it("uses the default chart width for a content-width chart with a step width", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            { spec: JSON.stringify({ mark: "bar", width: { step: 20 } }) },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-width: 20px;")
+    })
+
+    it("gives a facet chart with a pixel height a full-height toolbar wrapper", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {
+              spec: JSON.stringify({
+                facet: { row: { field: "group" } },
+                spec: { mark: "bar" },
+              }),
+            },
+            { heightConfig: { pixelHeight: 300 } }
+          )}
+        />
+      )
+
+      // The facet chart isn't size-contained, but it still needs a definite
+      // height to measure. A fit-content wrapper would leave it at 0px.
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      expect(chart.parentElement).toHaveStyle("height: 100%;")
+      expect(chart.parentElement).not.toHaveStyle("height: fit-content;")
+    })
+
+    it("size-contains a content-width chart with a pixel height", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {},
+            {
+              widthConfig: { useContent: true },
+              heightConfig: { pixelHeight: 200 },
+            }
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
+      expect(chart).toHaveStyle("height: 100%;")
+    })
+
+    it("does not size-contain a content-width composition", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {
+              spec: JSON.stringify({
+                hconcat: [{ mark: "bar" }, { mark: "line" }],
+              }),
+            },
+            contentWidthConfigs
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      // A fit-content wrapper keeps a sibling's height from being applied to
+      // every concat child.
+      expect(chart).toHaveStyle("height: auto;")
+      expect(chart.parentElement).toHaveStyle("height: fit-content;")
+      expect(chart.parentElement).not.toHaveStyle("height: 100%;")
+      chart.classList.add("vega-embed")
+      expect(chart).toHaveStyle("display: inline-block;")
+    })
+
+    it("still passes a container height to a composition in a definite-height container", () => {
+      render(
+        <FlexContext.Provider value={definiteHeightContext}>
+          <ArrowVegaLiteChart
+            {...getProps(
+              {
+                spec: JSON.stringify({
+                  hconcat: [{ mark: "bar" }, { mark: "line" }],
+                }),
+              },
+              contentWidthConfigs
+            )}
+          />
+        </FlexContext.Provider>
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("height: 100%;")
+      expect(chart.parentElement).toHaveStyle("height: 100%;")
+      expect(chart.parentElement).not.toHaveStyle("height: fit-content;")
+    })
+
+    it("does not set an intrinsic width on a stretch-width chart", () => {
+      render(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+      expect(screen.getByTestId("stVegaLiteChart")).not.toHaveStyle(
+        "contain-intrinsic-width: 25rem;"
+      )
+    })
+
+    describe("with parameter bindings", () => {
+      const OriginalResizeObserver = globalThis.ResizeObserver
+      const observedCallbacks = new Map<Element, ResizeObserverCallback>()
+
+      beforeEach(() => {
+        observedCallbacks.clear()
+        globalThis.ResizeObserver = class {
+          private readonly callback: ResizeObserverCallback
+
+          constructor(callback: ResizeObserverCallback) {
+            this.callback = callback
+          }
+
+          observe(target: Element): void {
+            observedCallbacks.set(target, this.callback)
+          }
+
+          unobserve = vi.fn()
+          disconnect = vi.fn()
+        }
+        vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+          elementRef: { current: null },
+          values: [250, 400],
+        })
+      })
+
+      afterEach(() => {
+        globalThis.ResizeObserver = OriginalResizeObserver
+      })
+
+      /** Vega appends the bindings form to the chart container with the view. */
+      const appendBindingsForm = (withControl: boolean): HTMLFormElement => {
+        const bindingsForm = document.createElement("form")
+        bindingsForm.className = "vega-bindings"
+        if (withControl) {
+          const binding = document.createElement("div")
+          binding.className = "vega-bind"
+          bindingsForm.appendChild(binding)
+        }
+        screen.getByTestId("stVegaLiteChart").appendChild(bindingsForm)
+        return bindingsForm
+      }
+
+      it("leaves room for the binding controls in a container-driven height", () => {
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        )
+        expect(vegaEmbedMock.lastSpec?.height).toBe(400)
+
+        const bindingsForm = appendBindingsForm(true)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+        const resizeBindings = observedCallbacks.get(bindingsForm)
+        expect(resizeBindings).toBeDefined()
+        act(() => {
+          resizeBindings?.(
+            [
+              { borderBoxSize: [{ blockSize: 68, inlineSize: 250 }] },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+
+        expect(vegaEmbedMock.lastSpec?.height).toBe(332)
+
+        // Entries without borderBoxSize fall back to the content rect.
+        act(() => {
+          resizeBindings?.(
+            [
+              { contentRect: { height: 50 } },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+
+        expect(vegaEmbedMock.lastSpec?.height).toBe(350)
+      })
+
+      it("keeps the spec height of a content-height chart with binding controls", () => {
+        const getContentHeightProps = (): Props =>
+          getProps(
+            { spec: JSON.stringify({ mark: "bar", height: 200 }) },
+            { widthConfig: { useStretch: true }, heightConfig: null }
+          )
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getContentHeightProps()} />
+        )
+
+        const bindingsForm = appendBindingsForm(true)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getContentHeightProps()} />)
+
+        expect(observedCallbacks.has(bindingsForm)).toBe(false)
+        expect(vegaEmbedMock.lastSpec?.height).toBe(200)
+      })
+
+      it("does not keep a previous binding height when the spec changes", () => {
+        const container = document.createElement("div")
+        vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+          elementRef: { current: container },
+          values: [250, 400],
+        })
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        )
+        expect(vegaEmbedMock.createdHeights.at(-1)).toBe(400)
+
+        const bindingsForm = appendBindingsForm(true)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+        const resizeBindings = observedCallbacks.get(bindingsForm)
+        act(() => {
+          resizeBindings?.(
+            [
+              { borderBoxSize: [{ blockSize: 68, inlineSize: 250 }] },
+            ] as unknown as ResizeObserverEntry[],
+            {} as ResizeObserver
+          )
+        })
+        expect(vegaEmbedMock.lastSpec?.height).toBe(332)
+
+        bindingsForm.remove()
+        const createdBefore = vegaEmbedMock.createdHeights.length
+        rerender(
+          <ArrowVegaLiteChart
+            {...getProps(
+              { spec: JSON.stringify({ mark: "line" }) },
+              stretchConfigs
+            )}
+          />
+        )
+
+        const created = vegaEmbedMock.createdHeights.slice(createdBefore)
+        expect(created.length).toBeGreaterThan(0)
+        expect(created.every(height => height === 400)).toBe(true)
+      })
+
+      it("ignores a bindings form without binding controls", () => {
+        const { rerender } = render(
+          <ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />
+        )
+
+        const bindingsForm = appendBindingsForm(false)
+        vegaEmbedMock.isViewReady = true
+        rerender(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
+
+        expect(observedCallbacks.has(bindingsForm)).toBe(false)
+        expect(vegaEmbedMock.lastSpec?.height).toBe(400)
+      })
+    })
+  })
+
+  describe("isSingleViewChart", () => {
+    it.each([
+      [{ mark: "bar" }, true],
+      [{ layer: [{ mark: "bar" }] }, true],
+      [{ facet: { row: { field: "a" } }, spec: { mark: "bar" } }, false],
+      [{ mark: "bar", encoding: { column: { field: "a" } } }, false],
+      [{ hconcat: [{ mark: "bar" }] }, false],
+      [{ vconcat: [{ mark: "bar" }] }, false],
+      [{ concat: [{ mark: "bar" }] }, false],
+      [{ repeat: ["a"], spec: { mark: "bar" } }, false],
+    ])("returns the expected result for %j", (spec, expected) => {
+      expect(isSingleViewChart(JSON.stringify(spec))).toBe(expected)
+    })
+
+    it("returns false for an invalid spec", () => {
+      expect(isSingleViewChart("not json")).toBe(false)
+    })
+  })
+
+  describe("getSpecWidth", () => {
+    it.each([
+      [{ width: 250 }, 250],
+      [{ width: 0 }, undefined],
+      [{ width: "container" }, undefined],
+      [{ width: { step: 20 } }, undefined],
+      [{ mark: "bar" }, undefined],
+    ])("returns the numeric width for %j", (spec, expected) => {
+      expect(getSpecWidth(JSON.stringify(spec))).toBe(expected)
+    })
   })
 
   it("does not show 'Show data' when neither data nor datasets are provided", () => {

@@ -17,6 +17,7 @@
 import { type FC, memo, useCallback } from "react"
 
 import type { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
@@ -49,17 +50,13 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  // Default to a sensible color if proto default is not set
-  // Defensive as backend always sets default
-  return element.default ?? "#000000"
+  return element.default
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  // Return the current value, falling back to default if not set
-  // Defensive as backend always sets default
-  return element.value ?? element.default ?? "#000000"
+  return element.value
 }
 
 const updateWidgetMgrState = (
@@ -85,7 +82,7 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,

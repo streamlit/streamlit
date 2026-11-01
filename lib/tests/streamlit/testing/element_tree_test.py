@@ -22,30 +22,42 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from streamlit import dataframe_util
 from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
 from streamlit.dataframe import lazy_df_source as dataframe_source
 from streamlit.elements.lib.layout_utils import SIZE_TO_REM_MAPPING
 from streamlit.elements.markdown import MARKDOWN_HORIZONTAL_RULE_EXPRESSION
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.Block_pb2 import Block as BlockProto
+from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import (
+    _DATAFRAME_EDITING_MODE_NAMES,
     AppTestError,
+    AudioInput,
     BlockList,
+    CameraInput,
+    DateTimeInput,
+    ElementList,
+    ElementTree,
+    FileUploader,
     Help,
     Html,
     LinkButton,
     PageLink,
     Progress,
     Space,
+    SpecialBlock,
     UnknownElement,
     _form_clear_flags,
     _format_value_for_widget,
     _has_pending_value,
     _submitted_form_ids,
     _use_form_clear_defaults,
+    get_widget_state,
     parse_tree_from_messages,
 )
 from streamlit.typing import ChatInputValue
@@ -499,8 +511,8 @@ def test_help_value_keeps_readable_reprs() -> None:
     """
 
     def script() -> None:
-        import datetime
         from dataclasses import dataclass
+        from datetime import date, datetime
         from decimal import Decimal
 
         import numpy as np
@@ -557,8 +569,8 @@ def test_help_value_keeps_readable_reprs() -> None:
         coord = Coordinate(1, 2)
         retry = RetryBox()
         named = NamedPoint(1, 2)
-        moment = datetime.datetime(2020, 1, 2, 3, 4)
-        day = datetime.date(2024, 1, 1)
+        moment = datetime(2020, 1, 2, 3, 4)
+        day = date(2024, 1, 1)
         pair = (1, 2)
         span = range(10)
         arr = np.arange(1)
@@ -727,15 +739,13 @@ def test_dataframe_value_keeps_explicit_lazy_data_complete():
 
 def test_date_input():
     def script():
-        import datetime
+        from datetime import date, datetime
 
         import streamlit as st
 
-        st.date_input("date", value=datetime.date(2023, 4, 17))
-        st.date_input("datetime", value=datetime.datetime(2023, 4, 17, 11))
-        st.date_input(
-            "range", value=(datetime.date(2020, 1, 1), datetime.date(2030, 1, 1))
-        )
+        st.date_input("date", value=date(2023, 4, 17))
+        st.date_input("datetime", value=datetime(2023, 4, 17, 11))
+        st.date_input("range", value=(date(2020, 1, 1), date(2030, 1, 1)))
 
     at = AppTest.from_function(script).run()
     assert not at.exception
@@ -1612,11 +1622,11 @@ def test_time_input():
     script = AppTest.from_string(
         """
         import streamlit as st
-        import datetime
+        from datetime import datetime, time, timedelta
 
-        st.time_input("time", value=datetime.time(8, 30))
-        st.time_input("datetime", value=datetime.datetime(2000,1,1, hour=17), step=3600)
-        st.time_input("timedelta step", value=datetime.time(2), step=datetime.timedelta(minutes=1))
+        st.time_input("time", value=time(8, 30))
+        st.time_input("datetime", value=datetime(2000,1,1, hour=17), step=3600)
+        st.time_input("timedelta step", value=time(2), step=timedelta(minutes=1))
         """,
     )
     sr = script.run()
@@ -1784,20 +1794,24 @@ def test_parse_tree_unknown_proto_subtypes_become_unknown_element() -> None:
 def test_inspectable_elements_reject_unsupported_interactions() -> None:
     """Inspectable-only nodes reject set_value and click with AppTestError.
 
-    ``st.audio_input`` is an untyped element. Typed ``Markdown`` is covered
+    ``st.plotly_chart`` is an untyped element. Typed ``Markdown`` is covered
     too.
     """
 
     def script():
         import streamlit as st
 
-        st.audio_input("Mic", key="mic")
+        st.plotly_chart(
+            {"data": [{"x": [1], "y": [2], "type": "scatter"}]},
+            key="chart",
+            on_select="rerun",
+        )
         st.markdown("hi")
 
     at = AppTest.from_function(script).run()
-    node = at.get("audio_input")[0]
+    node = at.get("plotly_chart")[0]
     assert isinstance(node, UnknownElement)
-    assert node.key == "mic"
+    assert node.key == "chart"
 
     inspectable_guidance = (
         "AppTest can inspect this element but does not implement "
@@ -1805,21 +1819,321 @@ def test_inspectable_elements_reject_unsupported_interactions() -> None:
         "has a key, or use a Playwright e2e test."
     )
     with pytest.raises(AppTestError) as set_value_info:
-        node.set_value(b"wav")
+        node.set_value({"selection": {}})
     assert str(set_value_info.value) == (
-        "set_value() is not supported for audio_input (key='mic'). "
+        "set_value() is not supported for plotly_chart (key='chart'). "
         f"{inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as click_info:
         node.click()
     assert str(click_info.value) == (
-        f"click() is not supported for audio_input (key='mic'). {inspectable_guidance}"
+        f"click() is not supported for plotly_chart (key='chart'). {inspectable_guidance}"
     )
     with pytest.raises(AppTestError) as markdown_info:
         at.markdown[0].set_value("nope")
     assert str(markdown_info.value) == (
         f"set_value() is not supported for markdown. {inspectable_guidance}"
     )
+
+
+def test_audio_input_records_one_wav() -> None:
+    """``st.audio_input`` accepts one WAV and keeps it across reruns."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        audio = st.audio_input("Mic", key="mic", sample_rate=48000, on_change=on_change)
+        st.sidebar.audio_input("Side", key="side", sample_rate=None)
+        if audio is None:
+            st.text("empty")
+        else:
+            st.text(f"name={audio.name}")
+            st.text(f"type={audio.type}")
+            st.text(f"bytes={audio.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    mic = at.audio_input(key="mic")
+    assert mic.value is None
+    assert mic.label == "Mic"
+    assert mic.sample_rate == 48000
+    assert at.sidebar.audio_input(key="side").sample_rate is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("audio_input")[0] is mic
+
+    at = mic.set_value(("clip.wav", b"RIFF", "audio/wav")).run()
+    recorded = at.audio_input(key="mic").value
+    assert recorded is not None
+    assert recorded.name == "clip.wav"
+    assert recorded.type == "audio/wav"
+    assert recorded.getvalue() == b"RIFF"
+    assert at.session_state["mic"].getvalue() == b"RIFF"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=clip.wav"
+    assert at.text[2].value == "bytes=b'RIFF'"
+
+    recorder = at.audio_input(key="mic")
+    committed = recorder.value
+    assert committed is not None
+    assert committed.getvalue() == b"RIFF"
+    recorder.upload("first.wav", b"one")
+    recorder.upload("other.WAV", b"more", mime_type="Audio/WAV")
+    assert recorder.value is committed
+    recorder.run()
+    assert at.audio_input(key="mic").value.name == "other.WAV"
+    assert at.audio_input(key="mic").value.type == "audio/wav"
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.audio_input(key="mic").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    recorder = at.audio_input(key="mic")
+    recorder_repr = repr(recorder)
+    assert recorder_repr.startswith("AudioInput(")
+    assert "sample_rate=48000" in recorder_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for audio_input \(key='mic'\)"
+    ):
+        recorder.click()
+
+    at.audio_input(key="mic").clear().run()
+    assert at.audio_input(key="mic").value is None
+    assert at.session_state["mic"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("notes.txt", b"hi", "audio/wav"), r"\.wav"),
+        (("clip.wav", b"hi", "text/plain"), "audio/wav"),
+        (
+            [("a.wav", b"a", "audio/wav"), ("b.wav", b"b", "audio/wav")],
+            "list is not accepted",
+        ),
+        (("clip.wav", "RIFF", "audio/wav"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=["wrong_extension", "wrong_mime", "multiple_files", "str_content", "raw_bytes"],
+)
+def test_audio_input_rejects_invalid_recordings(value: Any, match: str) -> None:
+    """Invalid recordings raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.audio_input("Mic", key="mic")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.audio_input(key="mic").set_value(value)
+    assert at.audio_input(key="mic").value is None
+
+
+def test_audio_input_disabled_rejects_update() -> None:
+    """A disabled audio_input widget cannot accept a recording or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.audio_input('Mic', disabled=True, key='mic')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").upload("clip.wav", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.audio_input(key="mic").clear()
+
+
+def test_audio_input_form_applies_only_on_submit() -> None:
+    """A form recording stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("rec-form", clear_on_submit=True):
+            audio = st.audio_input("Mic")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if audio is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav")).run()
+    assert at.text[0].value == "no"
+
+    at.audio_input[0].set_value(("a.wav", b"hi", "audio/wav"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.audio_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
+
+
+def test_camera_input_captures_one_jpeg() -> None:
+    """One JPEG is committed on run, replaced by upload, kept across reruns, and cleared."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("changes", 0)
+
+        def on_change() -> None:
+            st.session_state.changes += 1
+
+        photo = st.camera_input(
+            "Cam", key="cam", resolution="720p", on_change=on_change
+        )
+        st.sidebar.camera_input("Side", key="side")
+        if photo is None:
+            st.text("empty")
+        else:
+            st.text(f"name={photo.name}")
+            st.text(f"type={photo.type}")
+            st.text(f"bytes={photo.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    cam = at.camera_input(key="cam")
+    assert cam.value is None
+    assert cam.label == "Cam"
+    assert cam.resolution == "720p"
+    assert at.sidebar.camera_input(key="side").resolution is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.get("camera_input")[0] is cam
+
+    at = cam.set_value(("shot.jpg", b"jpeg", "image/jpeg")).run()
+    captured = at.camera_input(key="cam").value
+    assert captured is not None
+    assert captured.name == "shot.jpg"
+    assert captured.type == "image/jpeg"
+    assert captured.getvalue() == b"jpeg"
+    assert at.session_state["cam"].getvalue() == b"jpeg"
+    assert at.session_state["changes"] == 1
+    assert at.text[0].value == "name=shot.jpg"
+    assert at.text[2].value == "bytes=b'jpeg'"
+
+    camera = at.camera_input(key="cam")
+    committed = camera.value
+    assert committed is not None
+    assert committed.getvalue() == b"jpeg"
+    camera.upload("first.jpg", b"one")
+    camera.upload("other.JPG", b"more", mime_type="Image/JPEG")
+    assert camera.value is committed
+    camera.run()
+    replaced = at.camera_input(key="cam").value
+    assert replaced is not None
+    assert replaced.name == "other.JPG"
+    assert replaced.type == "image/jpeg"
+    assert replaced.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    at.run()
+    assert at.camera_input(key="cam").value.getvalue() == b"more"
+    assert at.session_state["changes"] == 2
+
+    camera = at.camera_input(key="cam")
+    camera_repr = repr(camera)
+    assert camera_repr.startswith("CameraInput(")
+    assert "resolution='720p'" in camera_repr
+    with pytest.raises(
+        AppTestError, match=r"click\(\) is not supported for camera_input \(key='cam'\)"
+    ):
+        camera.click()
+
+    at.camera_input(key="cam").clear().run()
+    assert at.camera_input(key="cam").value is None
+    assert at.session_state["cam"] is None
+    assert at.text[0].value == "empty"
+    assert at.session_state["changes"] == 3
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        (("shot.jpeg", b"hi", "image/jpeg"), r"\.jpg"),
+        (("shot.jpg", b"hi", "image/png"), "image/jpeg"),
+        (
+            [("a.jpg", b"a", "image/jpeg"), ("b.jpg", b"b", "image/jpeg")],
+            "list is not accepted",
+        ),
+        (("shot.jpg", "jpeg", "image/jpeg"), "Got tuple"),
+        (b"raw-bytes", "Got bytes"),
+    ],
+    ids=[
+        "jpeg_extension",
+        "wrong_mime",
+        "multiple_files",
+        "str_content",
+        "raw_bytes",
+    ],
+)
+def test_camera_input_rejects_invalid_photos(value: Any, match: str) -> None:
+    """Invalid photos raise AppTestError and leave the widget empty."""
+
+    def script():
+        import streamlit as st
+
+        st.camera_input("Cam", key="cam")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.camera_input(key="cam").set_value(value)
+    assert at.camera_input(key="cam").value is None
+
+
+def test_camera_input_disabled_rejects_update() -> None:
+    """A disabled camera_input widget cannot accept a photo or be cleared."""
+
+    at = AppTest.from_string(
+        "import streamlit as st\nst.camera_input('Cam', disabled=True, key='cam')\n"
+    ).run()
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").upload("shot.jpg", b"hi")
+    with pytest.raises(AppTestError, match="disabled"):
+        at.camera_input(key="cam").clear()
+
+
+def test_camera_input_form_applies_only_on_submit() -> None:
+    """A form photo stays uncommitted until submit.
+
+    ``clear_on_submit`` clears it on the next submit.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.form("cam-form", clear_on_submit=True):
+            photo = st.camera_input("Cam")
+            st.form_submit_button("Submit")
+        st.button("Outside")
+        st.text("yes" if photo is not None else "no")
+
+    at = AppTest.from_function(script).run()
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg")).run()
+    assert at.text[0].value == "no"
+
+    at.camera_input[0].set_value(("a.jpg", b"hi", "image/jpeg"))
+    at.button[0].click().run()
+    assert at.text[0].value == "yes"
+    assert at.camera_input[0].value.getvalue() == b"hi"
+
+    at.button[1].click().run()
+    assert at.text[0].value == "yes"
+
+    at.button[0].click().run()
+    assert at.text[0].value == "no"
 
 
 def test_pagination_set_value_selects_page() -> None:
@@ -2427,6 +2741,209 @@ def test_dataframe_non_interactive_has_no_key():
     assert at.dataframe[0].key is None
 
 
+def test_data_editor_filters_read_only_dataframes() -> None:
+    """``at.data_editor`` lists dataframes whose editing mode is not ``"read_only"``.
+
+    Selection dataframes stay on ``at.dataframe`` only. Disabled editors stay
+    in this collection because ``editing_mode``, not ``disabled``, selects them.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1, 2]})
+        st.dataframe(df)
+        st.dataframe(df, key="selectable", on_select="rerun")
+        st.data_editor(df, key="fixed-editor")
+        st.data_editor(df, key="dynamic-editor", num_rows="dynamic")
+        st.data_editor(df, key="add-editor", num_rows="add")
+        st.data_editor(df, key="delete-editor", num_rows="delete")
+        st.data_editor(df, key="disabled-editor", disabled=True)
+
+    at = AppTest.from_function(script).run()
+    assert [(frame.key, frame.editing_mode) for frame in at.dataframe] == [
+        (None, "read_only"),
+        ("selectable", "read_only"),
+        ("fixed-editor", "fixed"),
+        ("dynamic-editor", "dynamic"),
+        ("add-editor", "add"),
+        ("delete-editor", "delete"),
+        ("disabled-editor", "fixed"),
+    ]
+    assert [(editor.key, editor.editing_mode) for editor in at.data_editor] == [
+        ("fixed-editor", "fixed"),
+        ("dynamic-editor", "dynamic"),
+        ("add-editor", "add"),
+        ("delete-editor", "delete"),
+        ("disabled-editor", "fixed"),
+    ]
+    assert at.data_editor("dynamic-editor").value["a"].tolist() == [1, 2]
+    assert list(at.get("data_editor")) == list(at.data_editor)
+
+
+def test_data_editor_set_value_is_unsupported() -> None:
+    """Cell edits are not an AppTest interaction and do not change the table."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.data_editor(pd.DataFrame({"a": [3]}))
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match="edited_rows") as exc_info:
+        at.data_editor[0].set_value(pd.DataFrame({"a": [9]}))
+    message = str(exc_info.value)
+    assert "set_value() is not supported for data_editor" in message
+    assert "at.session_state" in message
+    assert at.data_editor[0].value["a"].tolist() == [1, 2]
+
+    with pytest.raises(AppTestError, match="Playwright") as keyless_info:
+        at.data_editor[1].set_value(pd.DataFrame({"a": [9]}))
+    assert "session state key" not in str(keyless_info.value)
+    assert at.data_editor[1].value["a"].tolist() == [3]
+
+
+def test_selectable_dataframe_set_value_points_at_session_state() -> None:
+    """A selection dataframe keeps the generic interaction error.
+
+    That message points at ``at.session_state``. Editors point at the
+    edit-state payload instead of ``set_value()``.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}), key="selectable", on_select="rerun")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"at\.session_state") as exc_info:
+        at.dataframe[0].set_value({"rows": [0]})
+    message = str(exc_info.value)
+    assert "set_value() is not supported for dataframe" in message
+    assert at.dataframe[0].editing_mode == "read_only"
+
+
+def test_data_editor_session_state_is_edit_state() -> None:
+    """A keyed editor's session state is the edit payload, not ``.value``.
+
+    Assigning that payload before ``.run()`` changes the table the script
+    receives. ``.value`` stays the input table.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        edited = st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.text(str(edited["a"].tolist()))
+
+    at = AppTest.from_function(script).run()
+    state = at.session_state["editor"]
+    assert state["edited_rows"] == {}
+    assert state["added_rows"] == []
+    assert state["deleted_rows"] == []
+    assert at.text[0].value == "[1, 2]"
+
+    at.session_state["editor"] = {
+        "edited_rows": {0: {"a": 9}},
+        "added_rows": [],
+        "deleted_rows": [],
+    }
+    at = at.run()
+    assert not at.exception
+    assert at.text[0].value == "[9, 2]"
+    assert at.data_editor[0].value["a"].tolist() == [1, 2]
+
+
+def test_data_editor_rejects_session_state_write_in_script() -> None:
+    """``st.data_editor`` rejects a session-state write made earlier in the run."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        if st.session_state.get("armed"):
+            st.session_state["editor"] = {
+                "edited_rows": {0: {"a": 9}},
+                "added_rows": [],
+                "deleted_rows": [],
+            }
+        st.data_editor(pd.DataFrame({"a": [1, 2]}), key="editor")
+        st.session_state["armed"] = True
+
+    at = AppTest.from_function(script).run().run()
+    assert "StreamlitValueAssignmentNotAllowedError" in at.exception[0].proto.type
+    assert "read-only" in at.exception[0].value
+
+
+def test_dataframe_editing_mode_names_match_proto_enum() -> None:
+    """Every proto editing mode has a public AppTest name."""
+    assert set(_DATAFRAME_EDITING_MODE_NAMES) == set(
+        DataframeProto.EditingMode.values()
+    )
+
+
+def test_data_editor_is_scoped_to_container() -> None:
+    """A container's ``data_editor`` collection only includes editors inside it."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1]})
+        with st.container(key="box"):
+            st.data_editor(df, key="inside")
+        st.data_editor(df, key="outside")
+
+    at = AppTest.from_function(script).run()
+    assert [editor.key for editor in at.data_editor] == ["inside", "outside"]
+    scoped = at.container("box").data_editor
+    assert [editor.key for editor in scoped] == ["inside"]
+
+
+def test_data_editor_empty_without_editors() -> None:
+    """Read-only dataframes do not populate ``at.data_editor``."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}))
+
+    at = AppTest.from_function(script).run()
+    assert len(at.dataframe) == 1
+    assert at.dataframe[0].editing_mode == "read_only"
+    assert len(at.data_editor) == 0
+    assert at.get("data_editor") == []
+
+
+def test_dataframe_unknown_editing_mode_stays_inspectable() -> None:
+    """AppTest returns an unrecognized editing mode as text and lists that dataframe on ``at.data_editor``."""
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        st.dataframe(pd.DataFrame({"a": [1]}))
+
+    at = AppTest.from_function(script).run()
+    at.dataframe[0].proto.editing_mode = 99
+    assert at.dataframe[0].editing_mode == "99"
+    assert list(at.data_editor) == [at.dataframe[0]]
+
+
 def test_element_list_slice_repr_and_equality():
     """ElementList supports slicing, repr, and equality against plain lists."""
 
@@ -2542,6 +3059,233 @@ def test_chat_input_value_repr_when_accept_file() -> None:
     value = at.chat_input[0].value
     assert isinstance(value, ChatInputValue)
     assert repr(value) == "ChatInputValue(text='hello', files=[])"
+
+
+def test_chat_input_uploads_files_with_text() -> None:
+    """Files staged with upload() arrive once, together with the message text."""
+
+    def script():
+        import streamlit as st
+
+        st.session_state.setdefault("submits", 0)
+
+        def on_submit() -> None:
+            st.session_state.submits += 1
+
+        prompt = st.chat_input(
+            "Say something",
+            key="chat",
+            accept_file=True,
+            file_type=["txt"],
+            on_submit=on_submit,
+        )
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text}")
+            st.text(f"nfiles={len(prompt.files)}")
+            uploaded = prompt.files[0]
+            st.text(f"file={uploaded.name}:{uploaded.type}:{uploaded.getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "empty"
+    chat = at.chat_input(key="chat")
+    assert chat.value is None
+
+    # Pending text stays a string. The file is not visible until run().
+    chat.set_value("hello").upload("notes.txt", b"hello", "text/plain")
+    assert chat.value == "hello"
+
+    at = chat.run()
+    value = at.chat_input(key="chat").value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == "hello"
+    assert len(value.files) == 1
+    assert value.files[0].name == "notes.txt"
+    assert value.files[0].type == "text/plain"
+    assert value.files[0].getvalue() == b"hello"
+    assert "audio=" not in repr(value)
+    assert at.session_state["submits"] == 1
+    assert at.text[0].value == "text=hello"
+    assert at.text[2].value == "file=notes.txt:text/plain:b'hello'"
+
+    # A trigger submit is not replayed on the next run.
+    at = at.run()
+    assert at.chat_input(key="chat").value is None
+    assert at.session_state["submits"] == 1
+    assert at.text[0].value == "empty"
+
+
+def test_chat_input_file_only_submit_uses_empty_text() -> None:
+    """A file without text still submits, with data set to an empty string."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text!r}")
+            st.text(f"name={prompt.files[0].name}")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].upload("pic.bin", b"\x00\x01").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == ""
+    assert value.files[0].name == "pic.bin"
+    assert value.files[0].type == "application/octet-stream"
+    assert value.files[0].getvalue() == b"\x00\x01"
+    assert at.text[0].value == "text=''"
+    assert at.text[1].value == "name=pic.bin"
+
+
+def test_chat_input_single_file_upload_replaces() -> None:
+    """accept_file=True keeps only the latest staged file."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt and prompt.files:
+            st.text(prompt.files[0].name)
+
+    at = AppTest.from_function(script).run()
+    at.chat_input[0].upload("first.txt", b"a").upload("second.txt", b"b").run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert [f.name for f in value.files] == ["second.txt"]
+    assert value.files[0].getvalue() == b"b"
+    assert at.text[0].value == "second.txt"
+
+
+def test_chat_input_multiple_and_directory_uploads_accumulate() -> None:
+    """multiple and directory chat inputs keep every staged file."""
+
+    def script():
+        import streamlit as st
+
+        many = st.chat_input("Many", accept_file="multiple", key="many")
+        folder = st.chat_input("Folder", accept_file="directory", key="folder")
+        if many and many.files:
+            st.text("many=" + ",".join(f.name for f in many.files))
+        if folder and folder.files:
+            st.text("folder=" + folder.files[0].name)
+            st.text(f"folder_bytes={folder.files[0].getvalue()!r}")
+
+    at = AppTest.from_function(script).run()
+    at.chat_input(key="many").upload("a.txt", b"a").upload("b.txt", b"b")
+    at.chat_input(key="folder").upload("docs/notes.txt", b"nested", "text/plain")
+    at.run()
+
+    many = at.chat_input(key="many").value
+    folder = at.chat_input(key="folder").value
+    assert isinstance(many, ChatInputValue)
+    assert isinstance(folder, ChatInputValue)
+    assert [f.name for f in many.files] == ["a.txt", "b.txt"]
+    assert folder.files[0].name == "docs/notes.txt"
+    assert folder.files[0].getvalue() == b"nested"
+    assert at.text[0].value == "many=a.txt,b.txt"
+    assert at.text[1].value == "folder=docs/notes.txt"
+
+
+def test_chat_input_clear_drops_staged_files_only() -> None:
+    """clear() removes staged files and leaves pending text in place."""
+
+    def script():
+        import streamlit as st
+
+        prompt = st.chat_input("Say something", accept_file=True)
+        if prompt is None:
+            st.text("empty")
+        else:
+            st.text(f"text={prompt.text}")
+            st.text(f"nfiles={len(prompt.files)}")
+
+    at = AppTest.from_function(script).run()
+    chat = at.chat_input[0]
+    chat.set_value("keep me").upload("gone.txt", b"x").clear()
+    assert chat.value == "keep me"
+    at = chat.run()
+    value = at.chat_input[0].value
+    assert isinstance(value, ChatInputValue)
+    assert value.text == "keep me"
+    assert value.files == []
+    assert at.text[0].value == "text=keep me"
+    assert at.text[1].value == "nfiles=0"
+
+    # Clearing the only staged file, with no text, does not submit.
+    at.chat_input[0].upload("gone.txt", b"x").clear().run()
+    assert at.chat_input[0].value is None
+    assert at.text[0].value == "empty"
+
+
+@pytest.mark.parametrize(
+    ("script_kwargs", "upload_args", "match"),
+    [
+        (
+            {},
+            ("notes.txt", b"hi"),
+            r"does not accept files",
+        ),
+        (
+            {"accept_file": True, "file_type": ["png"]},
+            ("notes.txt", b"hi"),
+            r"Invalid file extension",
+        ),
+        (
+            {"accept_file": True, "disabled": True},
+            ("notes.txt", b"hi"),
+            r"Cannot update a disabled chat_input",
+        ),
+        (
+            {"accept_file": True},
+            ("", b"hi"),
+            r"file names must be a non-empty string",
+        ),
+        (
+            {"accept_file": True},
+            ("notes.txt", "hi"),
+            r"file content must be bytes",
+        ),
+        (
+            {"accept_file": True},
+            ("notes.txt", b"hi", ""),
+            r"file MIME types must be a non-empty string",
+        ),
+    ],
+)
+def test_chat_input_upload_rejects_invalid_files(
+    script_kwargs: dict[str, Any],
+    upload_args: tuple[Any, ...],
+    match: str,
+) -> None:
+    """upload() fails before run() when the widget cannot accept that file."""
+    # from_function rewrites the script into a new module, so bake kwargs
+    # into the source instead of closing over the test parameter.
+    kwargs_src = ", ".join(f"{key}={value!r}" for key, value in script_kwargs.items())
+    call = "st.chat_input('Say something', key='chat'"
+    if kwargs_src:
+        call += f", {kwargs_src}"
+    script = f"import streamlit as st\n{call})\n"
+    at = AppTest.from_string(script).run()
+    with pytest.raises(AppTestError, match=match):
+        at.chat_input(key="chat").upload(*upload_args)
+    assert at.chat_input(key="chat").value is None
+
+
+def test_chat_input_disabled_clear_rejects_update() -> None:
+    """A disabled chat input cannot clear staged files."""
+
+    def script():
+        import streamlit as st
+
+        st.chat_input("Say something", accept_file=True, disabled=True, key="chat")
+
+    at = AppTest.from_function(script).run()
+    with pytest.raises(AppTestError, match=r"Cannot update a disabled chat_input"):
+        at.chat_input(key="chat").clear()
 
 
 def test_color_picker_pick_adds_hash_prefix():
@@ -3457,3 +4201,265 @@ def test_disabled_widget_specialized_interactions_reject_updates(
     widget = getattr(at, widget_type)[0]
     with pytest.raises(AppTestError, match="disabled"):
         getattr(widget, method_name)(*args)
+
+
+def _element_msg(index: int) -> ForwardMsg:
+    """Return a ``new_element`` ForwardMsg addressed to ``main[index]``."""
+    msg = ForwardMsg()
+    msg.metadata.delta_path.extend([0, index])
+    return msg
+
+
+@pytest.mark.parametrize(
+    ("stored", "proto_type", "expected"),
+    [
+        # The ``(...)`` fallback signature is replaced by the captured name.
+        pytest.param("mod.fn(...)", "function", "fn", id="fallback_signature"),
+        # Unbalanced, suffixed, or non-dotted-name prefixes are reprs, not
+        # signatures, so the stored text stays the value.
+        pytest.param("Point(1, 2", "Point", "Point(1, 2", id="unbalanced"),
+        pytest.param("Box(a, b) extra", "Box", "Box(a, b) extra", id="suffixed"),
+        pytest.param("a-b(x, y)", "function", "a-b(x, y)", id="non_dotted_name"),
+    ],
+)
+def test_help_value_signature_detection_edge_cases(
+    stored: str, proto_type: str, expected: str
+) -> None:
+    """``Help.value`` swaps in the name only for well-formed signatures."""
+    msg = _element_msg(0)
+    msg.delta.new_element.help_info.name = "fn"
+    msg.delta.new_element.help_info.value = stored
+    msg.delta.new_element.help_info.type = proto_type
+
+    node = parse_tree_from_messages([msg]).main[0]
+
+    assert isinstance(node, Help)
+    assert node.value == expected
+
+
+def test_unknown_element_without_content_fields_has_none_value() -> None:
+    """An unimplemented element with no value-like proto field reads as None."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.empty()
+
+    at = AppTest.from_function(script).run()
+    empty = at.get("empty")[0]
+
+    assert isinstance(empty, UnknownElement)
+    assert empty.value is None
+
+
+def test_unknown_element_value_falls_back_when_id_not_in_session_state() -> None:
+    """An unknown element whose id is not in session state reads its proto."""
+    at = AppTest.from_string("import streamlit as st").run()
+    msg = _element_msg(0)
+    slider = msg.delta.new_element.slider
+    slider.id = "$$ID-not-registered-None"
+    slider.type = SliderProto.Type.UNSPECIFIED
+    slider.value[:] = [3.0]
+    tree = parse_tree_from_messages([msg])
+    tree._runner = at
+
+    node = tree.main[0]
+
+    assert isinstance(node, UnknownElement)
+    assert slider.id not in at.session_state
+    assert list(node.value) == [3.0]
+
+
+def test_element_and_block_list_hash_is_consistent_with_equality() -> None:
+    """Equal element and block collections hash equally, including empty ones."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.container(key="one"):
+            st.text("a")
+        with st.container(key="two"):
+            st.text("b")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.container[0:1] == at.container[0:1]
+    assert at.container[0:1] != at.container[1:2]
+    empty_blocks = BlockList([])
+    assert empty_blocks == BlockList([])
+    assert hash(empty_blocks) == hash(BlockList([]))
+    empty_elements = ElementList([])
+    assert empty_elements == at.button
+    assert hash(empty_elements) == hash(at.button)
+
+
+def test_dataframe_value_reads_lazy_initial_chunk() -> None:
+    """Without eager Arrow data, ``Dataframe.value`` uses the lazy initial chunk."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    msg = _element_msg(0)
+    msg.delta.new_element.dataframe.lazy_data.initial_chunk.data = (
+        dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+    )
+
+    dataframe = parse_tree_from_messages([msg]).main[0]
+
+    assert not dataframe.proto.arrow_data.data
+    assert dataframe.value["a"].tolist() == [1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    ("field_name", "widget_cls"),
+    [
+        ("audio_input", AudioInput),
+        ("camera_input", CameraInput),
+        ("file_uploader", FileUploader),
+    ],
+)
+def test_file_widgets_without_session_state_entry_register_no_files(
+    field_name: str, widget_cls: type[AudioInput | CameraInput | FileUploader]
+) -> None:
+    """File widgets with no stored value register nothing and send empty state."""
+    at = AppTest.from_string("import streamlit as st").run()
+    msg = _element_msg(0)
+    widget_id = f"$$ID-{field_name}-None"
+    getattr(msg.delta.new_element, field_name).id = widget_id
+    tree = parse_tree_from_messages([msg])
+    tree._runner = at
+
+    widget = tree.main[0]
+
+    assert isinstance(widget, widget_cls)
+    assert widget._get_files_to_register() == []
+    widget_state = widget._widget_state
+    assert widget_state.id == widget_id
+    assert widget_state.WhichOneof("value") is None
+
+
+def test_menu_button_click_accepts_label_when_format_func_rejects_it() -> None:
+    """Clicking a formatted label works even if ``format_func`` rejects labels."""
+
+    def script() -> None:
+        import streamlit as st
+
+        labels = {"a": "Apple", "b": "Banana"}
+        choice = st.menu_button("Fruit", ["a", "b"], format_func=lambda o: labels[o])
+        st.text(f"choice={choice}")
+
+    at = AppTest.from_function(script).run()
+    at = at.menu_button[0].click("Banana").run()
+
+    assert not at.exception
+    assert at.text[0].value == "choice=b"
+
+
+def test_select_slider_rejects_unserializable_value() -> None:
+    """A value ``format_func`` cannot format fails before the script reruns."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.select_slider("Pick", options=[1, 2, 3], format_func=lambda n: f"{n:03d}")
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 1
+
+    with pytest.raises(ValueError, match="Could not serialize value x"):
+        at.select_slider[0].set_value("x").run()
+
+
+def _datetime_input_with_bounds(min_value: str, max_value: str) -> DateTimeInput:
+    """Return a parsed ``DateTimeInput`` with the given proto ``min`` and ``max``."""
+    msg = _element_msg(0)
+    proto = msg.delta.new_element.date_time_input
+    proto.id = "$$ID-when-None"
+    proto.min = min_value
+    proto.max = max_value
+    widget = parse_tree_from_messages([msg]).main[0]
+    assert isinstance(widget, DateTimeInput)
+    widget.set_value(datetime(2024, 6, 1, 12, 30))
+    return widget
+
+
+def test_datetime_input_widget_state_accepts_legacy_min_max_format() -> None:
+    """``min`` and ``max`` in the legacy ``%Y/%m/%d, %H:%M`` format still parse."""
+    widget = _datetime_input_with_bounds("2024/01/01, 00:00", "2024/12/31, 23:59")
+
+    assert list(widget._widget_state.string_array_value.data) == ["2024-06-01T12:30"]
+
+
+def test_datetime_input_widget_state_rejects_unknown_min_format() -> None:
+    """A ``min`` in neither supported format raises when serializing."""
+    widget = _datetime_input_with_bounds("June 1st", "2024/12/31, 23:59")
+
+    with pytest.raises(ValueError, match="does not match format"):
+        _ = widget._widget_state
+
+
+def test_parse_tree_untyped_block_and_delta() -> None:
+    """An untyped block is a container, and an untyped delta is skipped."""
+    block_msg = _element_msg(0)
+    block_msg.delta.add_block.SetInParent()
+    untyped_msg = _element_msg(1)
+    untyped_msg.delta.fragment_id = "fragment"
+    text_msg = _element_msg(2)
+    text_msg.delta.new_element.text.body = "after"
+
+    tree = parse_tree_from_messages([block_msg, untyped_msg, text_msg])
+
+    assert tree.main[0].type == "container"
+    assert 1 not in tree.main.children
+    assert tree.main[2].value == "after"
+
+
+def test_get_by_key_missing_key_raises_key_error() -> None:
+    """``get_by_key`` raises ``KeyError`` when no node has the key."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.text_input("Name", key="name")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.get_by_key("name").key == "name"
+    with pytest.raises(KeyError, match="missing"):
+        at.get_by_key("missing")
+
+
+@pytest.mark.parametrize(
+    ("proto", "expected_type"),
+    [
+        (BlockProto(vertical=BlockProto.Vertical()), "vertical"),
+        (BlockProto(), "unknown"),
+        (None, "unknown"),
+    ],
+)
+def test_special_block_type_without_explicit_type(
+    proto: BlockProto | None, expected_type: str
+) -> None:
+    """``SpecialBlock`` falls back to the proto's block type, then ``unknown``."""
+    block = SpecialBlock(proto=proto, root=ElementTree())
+
+    assert block.type == expected_type
+    assert block.children == {}
+
+
+def test_checkbox_reports_pending_value_and_display_element_has_no_widget_state() -> (
+    None
+):
+    """A checked checkbox reports a staged value; display elements have no state."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.checkbox("Agree", key="agree")
+        st.text("plain")
+
+    at = AppTest.from_function(script).run()
+    checkbox = at.checkbox(key="agree")
+
+    assert not _has_pending_value(checkbox)
+    checkbox.check()
+    assert _has_pending_value(checkbox)
+    assert get_widget_state(checkbox).bool_value is True
+    assert get_widget_state(at.text[0]) is None

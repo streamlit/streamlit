@@ -62,7 +62,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
-| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for ECharts-native visualizations. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for chart types and in-chart controls that Vega-based charts lack, or for an existing ECharts option. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -74,10 +74,10 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.form_submit_button` | Display a form submit button. It must be used inside `st.form` and triggers the form's batched submission. A form needs at least one submit button to be functional. |
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
-| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for directed graphs, diagrams, and node-edge visualizations. |
+| `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for diagrams that need Graphviz layout engines or clusters; prefer `st.mermaid_chart` for other diagrams. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
-| `st.html` | Insert HTML into your app. JavaScript is ignored by default (opt in with `unsafe_allow_javascript=True`); for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
+| `st.html` | Insert HTML into your app. JavaScript is ignored by default; for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
 | `st.iframe` | Embed content in an iframe. Use it to show an external page or embedded resource in a bounded frame. |
 | `st.image` | Display an image or list of images. Accepts paths, URLs, bytes, arrays, and image-like objects. |
 | `st.info` | Display an informational message. Use it for neutral guidance, context, or non-blocking status. |
@@ -90,17 +90,17 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.logout` | Logout the current user. Use it with Streamlit's authentication support. |
 | `st.map` | Display a map with a scatterplot overlaid onto it. Use it for latitude/longitude data when a simple geographic visualization is enough. |
 | `st.markdown` | Display string formatted as Markdown. It supports Streamlit-specific extensions such as colored text, badges, icons, and limited HTML when enabled. |
-| `st.menu_button` | Display a dropdown menu button widget. Use it when a compact button should expose a small set of actions or options. |
+| `st.menu_button` | Display a button that opens a short menu of one-shot actions. Like `st.button`, it returns the chosen option only on the rerun the click triggers. |
 | `st.mermaid_chart` | Display a Mermaid diagram. Use it for text-based diagram definitions such as flowcharts, sequence diagrams, class diagrams, and state diagrams. |
-| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines (`chart_data`), and dashboard summaries. |
+| `st.metric` | Display a metric in big bold font, with an optional indicator of how the metric changed. Use it for KPIs, headline numbers, optional inline sparklines, and dashboard summaries. |
 | `st.multiselect` | Display a multiselect widget. Use it when users can choose multiple items from a list, optionally including new options they enter. |
-| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears (`sidebar`, `top`, or `hidden`). It returns the currently selected page object, which the app should run. |
+| `st.navigation` | Configure the available pages in a multipage app and where the navigation menu appears. It returns the currently selected page object, which the app should run. |
 | `st.number_input` | Display a numeric input widget. It supports integer and floating-point values, bounds, steps, and formatting. |
 | `st.page_link` | Display a link to another page in a multipage app or to an external page. Use it for explicit navigation elements. |
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
 | `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
-| `st.plotly_chart` | Display an interactive Plotly chart. Use it when Plotly is already available or chart interactions/customization require Plotly. |
+| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that Vega-based charts and ECharts cannot draw, or for an existing Plotly figure. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
@@ -140,7 +140,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | **Top-level objects** | |
 | `st.bottom` | Bottom-pinned container for the main app area. Use it as a container object, not as a function. |
 | `st.context` | Read-only access to user session context. Exposes `headers`, `cookies`, `theme` (`theme.type`), `timezone`, `timezone_offset`, `locale`, `url`, `ip_address`, and `is_embedded`. Attribute and bracket access are equivalent (`st.context.timezone` and `st.context["timezone"]`), but it is not a dict: no `.get()`, `.keys()`, or iteration. |
-| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state, but to sync a widget's value to the URL set `bind="query-params"` on the widget instead. |
+| `st.query_params` | Mutable mapping for the browser URL query parameters. Use it to read or update URL state; to sync a widget's value to the URL, bind the widget to query params instead. |
 | `st.secrets` | Dict-like access to secrets loaded from `secrets.toml`. Use it for credentials and configuration that should not be hard-coded. |
 | `st.session_state` | Per-session mutable mapping for app state. Use it to persist values across reruns and share state between widgets and app logic. |
 | `st.sidebar` | Sidebar container that exposes most element methods as `st.sidebar.<command>()` and supports `with st.sidebar:` blocks. |
@@ -161,7 +161,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.column_config.ListColumn` | Configure a list column in `st.dataframe` or `st.data_editor`. Use it for arrays or repeated values that should render as structured list content. |
 | `st.column_config.MarkdownColumn` | Configure a markdown column in `st.dataframe` or `st.data_editor`. Cells show plain text, and clicking a cell opens an overlay that renders the Markdown. |
 | `st.column_config.MultiselectColumn` | Configure a multiselect column in `st.dataframe` or `st.data_editor`. Use it when each row can contain multiple choices from a known set. |
-| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, min/max bounds, step sizes, and numeric formatting. |
+| `st.column_config.NumberColumn` | Configure a number column in `st.dataframe` or `st.data_editor`. Use it for integers, floats, currencies, percentages, timedelta/duration values, min/max bounds, step sizes, and numeric formatting. |
 | `st.column_config.ProgressColumn` | Configure a progress column in `st.dataframe` or `st.data_editor`. Use it for percentages, completion values, scores, or bounded progress-like quantities. |
 | `st.column_config.SelectboxColumn` | Configure a selectbox column in `st.dataframe` or `st.data_editor`. Use it when each row should choose exactly one option from a known set. |
 | `st.column_config.TextColumn` | Configure a text column in `st.dataframe` or `st.data_editor`. Use it for strings with optional validation, length bounds, and text-specific display or editing behavior. |
@@ -188,6 +188,7 @@ from streamlit.typing import DataframeState, UploadedFile
 | `PlotlyState` | `st.plotly_chart` when selection events are enabled |
 | `VegaLiteState` | `st.altair_chart` and `st.vega_lite_chart` when selection events are enabled |
 | `PydeckState` | `st.pydeck_chart` when selection events are enabled |
+| `EChartsState` | `st.echarts_chart` when selection events are enabled |
 | `DataEditorState` | Session State for a keyed `st.data_editor` |
 | `ButtonColumnClickState` | Session State for a keyed `st.column_config.ButtonColumn` click |
 

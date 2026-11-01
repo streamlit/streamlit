@@ -75,6 +75,7 @@ from streamlit.runtime.state.session_state import (
     SessionStateStatProvider,
     Value,
     WStates,
+    _CallbackRerunVotes,
     _is_stale_widget,
     _sanitize_url_array,
 )
@@ -1686,6 +1687,61 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
     assert ss["chat"] == "new"
 
 
+def test_session_state_value_precedes_serialized_chat_proto() -> None:
+    """A session-state value wins over a still-serialized chat proto.
+
+    The read returns the proto's text without running its deserializer. A
+    value written through session state is returned instead, and the proto
+    stays serialized.
+    """
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    proto = WidgetStateProto(id="chat")
+    proto.chat_input_value.data = "from-proto"
+    ss._new_widget_state.states["chat"] = Serialized(proto)
+
+    assert ss.get_widget_value("chat") == "from-proto"
+
+    ss._new_session_state["prompt"] = "from-session"
+
+    assert ss.get_widget_value("chat") == "from-session"
+    assert isinstance(ss._new_widget_state.states["chat"], Serialized)
+
+
+def test_get_widget_value_reads_unfired_chat_proto_as_none() -> None:
+    """A chat proto without data reads as None, not ``""``, and stays serialized."""
+    ss = SessionState()
+    proto = WidgetStateProto(id="chat")
+    proto.chat_input_value.SetInParent()
+    ss._new_widget_state.states["chat"] = Serialized(proto)
+
+    assert ss.get_widget_value("chat") is None
+    assert isinstance(ss._new_widget_state.states["chat"], Serialized)
+
+
+def test_get_widget_value_falls_back_to_previous_run() -> None:
+    """The previous run's value is returned when this run has not stored one."""
+    ss = SessionState()
+    ss._key_id_mapper["prompt"] = "chat"
+    ss._old_state["chat"] = "previous"
+
+    assert ss.get_widget_value("chat") == "previous"
+
+    with pytest.raises(KeyError):
+        ss.get_widget_value("missing")
+
+
+def test_get_widget_id_from_key_returns_the_registered_id() -> None:
+    """A user key maps to the element ID it last registered under, else None."""
+    ss = SessionState()
+    ss._set_key_widget_mapping("$$ID-old-prompt", "prompt")
+    ss._set_key_widget_mapping("$$ID-new-prompt", "prompt")
+
+    assert ss.get_widget_id_from_key("prompt") == "$$ID-new-prompt"
+    assert ss.get_widget_id_from_key("$$ID-new-prompt") is None
+    assert ss.get_widget_id_from_key("missing") is None
+
+
 def test_callback_mutation_survives_replay_overlay() -> None:
     """A replay overlay does not overwrite mutations made by fresh callbacks."""
     ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
@@ -3284,6 +3340,41 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
     assert calls == ["b"]
 
 
+@pytest.mark.parametrize(
+    ("old_value", "new_value", "expected_calls"),
+    [
+        pytest.param(None, {"value": {"a": 1}}, ["a"], id="no_previous_value"),
+        pytest.param({"a": 1, "b": 2}, "not-a-mapping", ["a", "b"], id="non_dict_new"),
+    ],
+)
+def test_json_change_callbacks_treat_non_dict_values_as_empty(
+    old_value: Any, new_value: Any, expected_calls: list[str]
+) -> None:
+    """A non-dict JSON value counts as empty, so every key on the other side fires."""
+    calls: list[str] = []
+    ss = SessionState()
+    wid = "w-json"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=lambda v: v,
+            serializer=lambda v: v,
+            value_type="json_value",
+            callbacks={
+                "a": lambda: calls.append("a"),
+                "b": lambda: calls.append("b"),
+                "c": lambda: calls.append("c"),
+            },
+        )
+    )
+    ss._old_state[wid] = old_value
+    ss._new_widget_state.set_from_value(wid, new_value)
+
+    ss._call_callbacks()
+
+    assert sorted(calls) == expected_calls
+
+
 def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     """Test that JSON trigger values are routed to the correct named callback.
 
@@ -3319,6 +3410,82 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
 
     ss._call_callbacks()
     assert called == ["submit"]
+
+
+def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
+    """A list payload runs each named callback in order and skips other entries."""
+    called: list[str] = []
+    ss = SessionState()
+    wid = "w-trig"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=lambda s: json.loads(s) if s else None,
+            serializer=lambda v: v,
+            value_type="json_trigger_value",
+            callbacks={
+                "click": lambda: called.append("click"),
+                "submit": lambda: called.append("submit"),
+            },
+        )
+    )
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps(
+        [{"event": "submit"}, "not-an-event", {"event": "unknown"}, {"event": "click"}]
+    )
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+
+    assert called == ["submit", "click"]
+
+
+def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> None:
+    """A trigger payload that fails to deserialize with KeyError runs no callback."""
+    called: list[str] = []
+
+    def failing_deserializer(value: str | None) -> Any:
+        if value is None:
+            return None
+        raise KeyError("event")
+
+    ss = SessionState()
+    wid = "w-trig"
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id=wid,
+            deserializer=failing_deserializer,
+            serializer=lambda v: v,
+            value_type="json_trigger_value",
+            callbacks={"submit": lambda: called.append("submit")},
+        )
+    )
+    ws = WidgetStateProto(id=wid)
+    ws.json_trigger_value = json.dumps({"event": "submit"})
+    ss._new_widget_state.set_widget_from_proto(ws)
+
+    ss._call_callbacks()
+
+    assert called == []
+
+
+def test_trigger_dispatch_ignores_widget_without_state() -> None:
+    """Trigger dispatch runs no callback for a widget that has no stored state."""
+    called: list[str] = []
+    ss = SessionState()
+    metadata = WidgetMetadata(
+        id="w-trig",
+        deserializer=lambda s: json.loads(s) if s else None,
+        serializer=lambda v: v,
+        value_type="json_trigger_value",
+        callbacks={"submit": lambda: called.append("submit")},
+    )
+
+    # _call_callbacks only dispatches widgets that have state, so this guards
+    # against inconsistent internal state.
+    ss._dispatch_trigger_callbacks(_CallbackRerunVotes(), "w-trig", metadata, (), {})
+
+    assert called == []
 
 
 def _dummy_serializer(x):
@@ -3561,6 +3728,17 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         filtered = self.session_state._omit_query_bound_widget_states(widget_states)
 
         assert [widget.id for widget in filtered.widgets] == ["plain_widget"]
+
+    def test_omit_query_bound_widget_states_without_bindings_keeps_input(
+        self,
+    ) -> None:
+        """Without bound widgets, the incoming proto state is returned unchanged."""
+        widget_states = WidgetStatesProto()
+        widget_states.widgets.add().id = "plain_widget"
+
+        filtered = self.session_state._omit_query_bound_widget_states(widget_states)
+
+        assert filtered is widget_states
 
     def test_on_script_will_rerun_omits_bound_widgets_on_history_navigation(
         self,
@@ -5268,6 +5446,33 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_clears_all_filtered_options_with_non_empty_default(
+        self,
+    ) -> None:
+        """All-invalid URL options clear the param instead of seeding an empty list."""
+        self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]
+
+        def filter_deserializer(values: list[str] | None) -> list[str]:
+            if values is None:
+                return ["Apple"]
+            return [v for v in values if v in {"Apple", "Banana"}]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=filter_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["InvalidA", "InvalidB"]
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "tags" not in self.session_state._new_session_state
 
     def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
         """Test that empty URL values matching the default are cleared, even for clearable widgets."""

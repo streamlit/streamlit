@@ -19,7 +19,7 @@ from __future__ import annotations
 import collections
 import threading
 import uuid
-from typing import TYPE_CHECKING, BinaryIO, Final, TextIO, TypedDict, cast
+from typing import TYPE_CHECKING, BinaryIO, Final, TextIO, TypedDict
 
 from streamlit.logger import get_logger
 from streamlit.runtime.download_data_util import convert_data_to_bytes_and_infer_mime
@@ -337,17 +337,15 @@ class MediaFileManager:
             file_id = uuid.uuid4().hex
 
             # Store the callable with its metadata
-            self._deferred_callables[file_id] = cast(
-                "DeferredCallableEntry",
-                {
-                    "callable": data_callable,
-                    "mimetype": mimetype,
-                    "filename": file_name,
-                    "coordinates": coordinates,
-                    "session_id": session_id,
-                    "element_id": element_id,
-                },
-            )
+            deferred_entry: DeferredCallableEntry = {
+                "callable": data_callable,
+                "mimetype": mimetype,
+                "filename": file_name,
+                "coordinates": coordinates,
+                "session_id": session_id,
+                "element_id": element_id,
+            }
+            self._deferred_callables[file_id] = deferred_entry
             self._deferred_ids_by_session[session_id].add(file_id)
 
             # Track this deferred file by session and coordinate

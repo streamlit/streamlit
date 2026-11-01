@@ -30,5 +30,5 @@ export const showDevelopmentOptions = (
   ) {
     return false
   }
-  return hostIsOwner || isLocalhost()
+  return hostIsOwner === true || isLocalhost()
 }

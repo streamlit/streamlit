@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import errno
+import io
 import os
 import subprocess
 import sys
@@ -30,6 +31,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from streamlit.errors import NoSessionContext
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
@@ -155,6 +157,25 @@ def mock_meta_skill_dir(tmp_path: Path) -> Path:
         "print('discover')\n", encoding="utf-8"
     )
     return meta_dir
+
+
+@contextmanager
+def _cp1252_stdout() -> Generator[io.BytesIO, None, None]:
+    """Replace stdout with one like a Windows pipe's, yielding its bytes.
+
+    A pipe on Windows encodes in the ANSI code page (cp1252 for Western locales)
+    with strict errors, so it cannot encode the install output's ✓/⚠/→ glyphs.
+    A context manager rather than a fixture: pytest's output capture reinstalls
+    its own ``sys.stdout`` between a fixture's setup and the test body.
+    """
+    raw = io.BytesIO()
+    stdout = io.TextIOWrapper(raw, encoding="cp1252", newline="\n", write_through=True)
+    try:
+        with patch.object(sys, "stdout", stdout):
+            yield raw
+    finally:
+        # Detach so the wrapper's finalizer leaves ``raw`` open for the caller.
+        stdout.detach()
 
 
 class TestGetSourceSkillsDir:
@@ -2899,6 +2920,97 @@ class TestInstallSkillsReturnsResult:
         assert result.skipped == []
 
 
+class TestInstallOutputCannotFailInstall:
+    """Printing install output never fails the install it describes."""
+
+    def test_unencodable_glyph_is_replaced_and_encodable_text_is_kept(self) -> None:
+        """A glyph the stream cannot encode is replaced; text it can encode is kept."""
+        # € is in cp1252 but not in Latin-1, the "charmap" codec the error reports.
+        with _cp1252_stdout() as stdout:
+            skills._safe_echo("✓ C:\\Users\\José\\€ budget", fg="green")
+
+        assert stdout.getvalue().decode("cp1252") == "? C:\\Users\\José\\€ budget\n"
+
+    def test_project_install_completes_on_a_cp1252_stdout(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """The install lays the symlinks and reports them as installed."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            _cp1252_stdout() as stdout,
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert result.installed
+        assert (
+            project_dir / ".agents" / "skills" / "developing-with-streamlit"
+        ).is_symlink()
+        assert "? Installed:" in stdout.getvalue().decode("cp1252")
+
+    def test_global_fallback_completes_on_a_cp1252_stdout(
+        self, tmp_path: Path, mock_source_skills_dir: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """The "symlinks not supported" warning does not stop the fallback copy."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        home = tmp_path / "home"
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills, "_symlink_blocker", return_value="symlinks_no_privilege"
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=home),
+            _cp1252_stdout() as stdout,
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert result.fallback_reason == "symlinks_no_privilege"
+        assert (
+            home / ".agents" / "skills" / "developing-with-streamlit" / "SKILL.md"
+        ).is_file()
+        assert "? Symlinks not supported" in stdout.getvalue().decode("cp1252")
+
+    @pytest.mark.parametrize(
+        "error",
+        [BrokenPipeError(errno.EPIPE, "Broken pipe"), NoSessionContext()],
+        ids=["launcher_exited", "stdout_redirected_into_an_element"],
+    )
+    def test_install_completes_when_stdout_raises(
+        self, tmp_path: Path, mock_meta_skill_dir: Path, error: Exception
+    ) -> None:
+        """The install succeeds even when every write to stdout raises."""
+        home = tmp_path / "home"
+
+        with (
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch("pathlib.Path.home", return_value=home),
+            patch("click.echo", side_effect=error),
+        ):
+            result = skills.install_skills(global_mode=True, yes=True)
+
+        assert result.installed
+        assert (
+            home / ".agents" / "skills" / "developing-with-streamlit" / "SKILL.md"
+        ).is_file()
+
+
 class TestInstallDetectRoundtrip:
     """A successful one-click install must land where the nudge's skill
     detection scans, so ``should_show_skills_nudge`` returns ``False``
@@ -4250,14 +4362,16 @@ class TestMetaSkillPackaging:
         not match files outside the published skill trees.
         """
         import glob as globmod
-
-        import toml
+        import tomllib
 
         pyproject = Path(__file__).resolve().parents[3] / "pyproject.toml"
         if not pyproject.is_file():  # pragma: no cover - unusual layout
             pytest.skip("lib/pyproject.toml not found in this layout")
 
-        globs = toml.load(pyproject)["tool"]["setuptools"]["package-data"]["streamlit"]
+        with pyproject.open("rb") as pyproject_file:
+            globs = tomllib.load(pyproject_file)["tool"]["setuptools"]["package-data"][
+                "streamlit"
+            ]
         # <streamlit pkg>/.agents/skills -> <streamlit pkg>
         pkg_dir = skills._get_source_skills_dir().parents[1]
 
@@ -4297,6 +4411,10 @@ class TestMetaSkillPackaging:
         install deterministically — the exact failure this change removes — so
         build the wheel and assert both files are inside it, and that
         repo-only files under ``.agents`` are not.
+
+        Also assert dashboard-metrics/.streamlit/config.toml is in the wheel.
+        Python's default glob skips hidden directories, so a package-data pattern
+        alone can omit that sample theme.
         """
         import shutil
         import zipfile
@@ -4339,6 +4457,9 @@ class TestMetaSkillPackaging:
         assert f"{meta}/SKILL.md" in names
         assert f"{meta}/scripts/discover.py" in names
         assert f"{content}/SKILL.md" in names
+        assert (
+            f"{content}/assets/templates/apps/dashboard-metrics/.streamlit/config.toml"
+        ) in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [
@@ -4349,6 +4470,49 @@ class TestMetaSkillPackaging:
             and not name.startswith(allowed_prefixes)
         ]
         assert unexpected == []
+
+    def test_dashboard_metrics_theme_matches_dense_dashboard(self) -> None:
+        """dashboard-metrics config.toml must stay a copy of dense-dashboard.toml.
+
+        The sample adds a provenance comment; compare bodies after stripping
+        leading comments so the two theme files cannot drift silently.
+        """
+        skill_root = (
+            Path(__file__).resolve().parents[3]
+            / "streamlit"
+            / ".agents"
+            / "skills"
+            / "developing-with-streamlit"
+        )
+        sample = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "apps"
+            / "dashboard-metrics"
+            / ".streamlit"
+            / "config.toml"
+        )
+        source = (
+            skill_root
+            / "assets"
+            / "templates"
+            / "themes"
+            / "configs"
+            / "dense-dashboard.toml"
+        )
+        assert sample.is_file()
+        assert source.is_file()
+
+        def strip_leading_comments(text: str) -> str:
+            lines = text.splitlines()
+            while lines and (not lines[0].strip() or lines[0].lstrip().startswith("#")):
+                lines.pop(0)
+            return "\n".join(lines)
+
+        assert strip_leading_comments(sample.read_text(encoding="utf-8")) == (
+            strip_leading_comments(source.read_text(encoding="utf-8"))
+        )
 
 
 class TestVendoredMetaSkillDiscovery:

@@ -16,6 +16,8 @@
 
 import type { ReactElement } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { IconSizeProp } from "~lib/theme/types"
 
 import {
@@ -39,10 +41,10 @@ const getDefaultProps = ({
   padding,
   color,
 }: Partial<StyledMaterialIconProps>): StyledMaterialIconProps => ({
-  size: size || "md",
-  margin: margin || "",
-  padding: padding || "",
-  color: color || "inherit",
+  size: size ?? "md",
+  margin: margin ?? "",
+  padding: padding ?? "",
+  color: isNullOrEmptyString(color) ? "inherit" : color,
 })
 
 const MaterialFontIcon = ({
@@ -52,7 +54,7 @@ const MaterialFontIcon = ({
   return (
     <StyledMaterialIcon
       {...getDefaultProps(props)}
-      data-testid={props.testid || "stIconMaterial"}
+      data-testid={props.testid ?? "stIconMaterial"}
       // Decorative by default; icon-only controls must name the control
       // (aria-label / visually-hidden text), not this ligature span.
       aria-hidden="true"

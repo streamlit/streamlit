@@ -50,7 +50,7 @@ export const StyledDateFieldContainer = styled.div({
 
 export const StyledDateField = styled("div", {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+})<{ $isRange?: boolean }>(({ theme, $isRange = false }) => ({
   flex: $isRange ? "0 0 auto" : "1 0 auto",
   minWidth: 0,
   ...($isRange && {
@@ -125,7 +125,7 @@ export const StyledDateFieldsScroller = styled.div({
 /** Uses RAC `Group` instead of `DateInput` to allow custom segment ordering. */
 export const StyledDateFieldInput = styled(Group, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isRange?: boolean }>(({ theme, $isRange }) => ({
+})<{ $isRange?: boolean }>(({ theme, $isRange = false }) => ({
   display: "flex",
   alignItems: "center",
   flex: "1 0 auto",
@@ -154,11 +154,11 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
     fontWeight: theme.fontWeights.normal,
     whiteSpace: "pre",
     "&[data-type=literal]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       padding: 0,
     },
     "&[data-placeholder]": {
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
     },
     // Must come after placeholder so focused contrast always wins.
     "&[data-focused]": {
@@ -176,7 +176,7 @@ export const StyledDateSegment = styled(DateSegment)(({ theme }) => {
 })
 
 export const StyledRangeSeparator = styled.span(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   paddingLeft: theme.spacing.twoXS,
   paddingRight: theme.spacing.twoXS,
   flexShrink: 0,
@@ -247,9 +247,8 @@ export const StyledVisuallyHidden = styled.span(visuallyHiddenStyle)
 // ---------------------------------------------------------------------------
 
 export const StyledCalendarPopover = styled.div(({ theme }) => {
-  // In the sidebar, bgColor and secondaryBg are swapped (bgColor = sidebar
-  // background, secondaryBg = main panel white). Overlays should always use the
-  // "main panel" white regardless of which container triggered them.
+  // In the sidebar, secondaryBg is the widget/surface color. Overlays opened
+  // from the sidebar should use that surface rather than the sidebar page bg.
   const overlayBg = theme.inSidebar
     ? theme.colors.secondaryBg
     : theme.colors.bgColor
@@ -353,7 +352,7 @@ export const StyledQuickSelectLabel = styled.div(({ theme }) => ({
 
 export const StyledQuickSelectTrigger = styled(Button, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $isPlaceholder?: boolean }>(({ theme, $isPlaceholder }) => ({
+})<{ $isPlaceholder?: boolean }>(({ theme, $isPlaceholder = false }) => ({
   appearance: "none",
   display: "flex",
   alignItems: "center",
@@ -361,7 +360,7 @@ export const StyledQuickSelectTrigger = styled(Button, {
   border: "none",
   borderRadius: theme.radii.sm,
   backgroundColor: "transparent",
-  color: $isPlaceholder ? theme.colors.fadedText60 : theme.colors.bodyText,
+  color: $isPlaceholder ? theme.colors.fadedText70 : theme.colors.bodyText,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   cursor: "pointer",
@@ -385,7 +384,7 @@ export const StyledQuickSelectTrigger = styled(Button, {
 /** Popover shell shared by quick-select and calendar header pickers. */
 export const StyledDropdownPopover = styled(Popover)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
-  // Same sidebar swap as StyledCalendarPopover — use "main panel" white.
+  // Same as StyledCalendarPopover: sidebar overlays use the widget surface.
   backgroundColor: theme.inSidebar
     ? theme.colors.secondaryBg
     : theme.colors.bgColor,

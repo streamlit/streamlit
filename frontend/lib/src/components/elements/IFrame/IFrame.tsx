@@ -16,6 +16,7 @@
 import { memo, type ReactElement, useEffect, useRef, useState } from "react"
 
 import type { IFrame as IFrameProto, streamlit } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
@@ -162,12 +163,12 @@ function IFrame({
           type?: string
           width?: number
           height?: number
-        }
+        } | null
         // Validate dimensions: must be finite numbers >= 0 to prevent invalid CSS values
         if (
           data?.type === IFRAME_SIZE_MESSAGE_TYPE &&
-          typeof data?.width === "number" &&
-          typeof data?.height === "number" &&
+          typeof data.width === "number" &&
+          typeof data.height === "number" &&
           Number.isFinite(data.width) &&
           Number.isFinite(data.height) &&
           data.width >= 0 &&
@@ -210,6 +211,8 @@ function IFrame({
     }
   }
 
+  const trimmedAlt = element.alt?.trim()
+
   return (
     <StyledIframe
       ref={iframeRef}
@@ -228,7 +231,7 @@ function IFrame({
       // An iframe always needs an accessible name (WCAG H64), so fall back to
       // "st.iframe" whenever `alt` is unset or blank, including deprecated
       // `components.v1` embeds, which never send `alt`.
-      title={element.alt?.trim() || "st.iframe"}
+      title={isNullOrEmptyString(trimmedAlt) ? "st.iframe" : trimmedAlt}
       tabIndex={element.tabIndex ?? undefined}
       width={contentWidth}
       height={contentHeight}

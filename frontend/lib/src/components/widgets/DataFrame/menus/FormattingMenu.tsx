@@ -31,7 +31,7 @@ import {
 export const FORMATTING_MENU_CLASS = "stDataFrameColumnFormattingMenu"
 
 /**
- * A list of formats available for number columns (number & progress).
+ * Formats available for number columns.
  * Each format has a label, icon, and format ID.
  */
 const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
@@ -85,7 +85,18 @@ const NUMBER_FORMATS: { format: string; label: string; icon: string }[] = [
     label: "Accounting",
     icon: ":material/finance_chip:",
   },
+  {
+    format: "duration",
+    label: "Duration",
+    icon: ":material/timelapse:",
+  },
 ]
+
+// ProgressColumn does not support the duration format, so progress columns
+// offer the number formats without it.
+const PROGRESS_FORMATS = NUMBER_FORMATS.filter(
+  option => option.format !== "duration"
+)
 
 /**
  * A mapping of column kinds to their available formats.
@@ -98,7 +109,7 @@ const COLUMN_KIND_FORMAT_MAPPING: Record<
   { format: string; label: string; icon: string }[]
 > = {
   number: NUMBER_FORMATS,
-  progress: NUMBER_FORMATS,
+  progress: PROGRESS_FORMATS,
   datetime: [
     {
       format: "",
@@ -186,7 +197,9 @@ function FormattingMenu({
   onCloseMenu,
   children,
 }: FormattingMenuProps): ReactElement | null {
-  const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
+  const formats = Object.hasOwn(COLUMN_KIND_FORMAT_MAPPING, columnKind)
+    ? COLUMN_KIND_FORMAT_MAPPING[columnKind]
+    : []
 
   const { floatingStyles, setAnchorRef, setFloatingRef } = useHoverSubmenu({
     isOpen,

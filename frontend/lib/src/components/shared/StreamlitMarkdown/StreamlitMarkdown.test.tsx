@@ -16,8 +16,7 @@
 
 import type { ReactElement } from "react"
 
-import { cleanup, screen, within } from "@testing-library/react"
-import { transparentize } from "color2k"
+import { cleanup, screen, waitFor, within } from "@testing-library/react"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
@@ -26,7 +25,6 @@ import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
 import { getThemeBackgroundColors } from "~lib/theme/getColors"
-import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
   containsEmojiShortcodes,
@@ -130,8 +128,124 @@ describe("containsMathSyntax", () => {
       expected: true,
       description: "inline math with Greek letters",
     },
+    {
+      input: "the $n$-th term",
+      expected: true,
+      description: "inline math attached to a word",
+    },
+    {
+      input: "1.5$\\times$10$^6$",
+      expected: true,
+      description: "formulas around a number",
+    },
+    {
+      input: "costs $5 where $x$ is the rate",
+      expected: true,
+      description: "a formula next to an unescaped dollar amount",
+    },
+    {
+      input: "$$\n\n$$",
+      expected: true,
+      description: "empty display math from st.latex",
+    },
+    {
+      input: "Type ``` to open a fence. $x^2$",
+      expected: true,
+      description: "a formula after backticks in the middle of a line",
+    },
+    {
+      input: "Price: \\$$p$",
+      expected: true,
+      description: "a formula right after an escaped dollar sign",
+    },
+    {
+      input: "\\\\$x$",
+      expected: true,
+      description: "a formula after an escaped backslash",
+    },
+    {
+      input: "$x \\\\$",
+      expected: true,
+      description: "inline math ending in a LaTeX line break",
+    },
+    {
+      input: "$$a \\\\$$",
+      expected: true,
+      description: "display math ending in a LaTeX line break",
+    },
+    {
+      input: "$$$\nx\n$$$",
+      expected: true,
+      description: "display math with a longer fence",
+    },
+    {
+      input: "\\`$x$\\`",
+      expected: true,
+      description: "a formula between escaped backticks",
+    },
+    {
+      input: "    ```\n$x$",
+      expected: true,
+      description: "a formula after an indented code block",
+    },
 
     // Invalid math syntax - should return false (avoid false positives)
+    {
+      input: "$315K of $1.46M quota",
+      expected: false,
+      description: "dollar amounts with suffixes",
+    },
+    {
+      input: "$5-$10",
+      expected: false,
+      description: "dollar range with a hyphen",
+    },
+    {
+      input: "$5/$10",
+      expected: false,
+      description: "dollar amounts separated by a slash",
+    },
+    {
+      input: "US$5 and US$10",
+      expected: false,
+      description: "prefixed dollar amounts",
+    },
+    {
+      input: "$x$1",
+      expected: false,
+      description: "closing $ followed by a digit",
+    },
+    {
+      input: "\\$x\\$",
+      expected: false,
+      description: "escaped dollar signs",
+    },
+    {
+      input: "`$x$` and $5 and $10",
+      expected: false,
+      description: "dollar signs in inline code",
+    },
+    {
+      input: "```bash\necho $HOME/$USER\n```\n$5 and $10",
+      expected: false,
+      description: "dollar signs in a fenced code block",
+    },
+    {
+      input: "```\n$x$",
+      expected: false,
+      description: "dollar signs in an unclosed fenced code block",
+    },
+    {
+      input: "``$x$`` and $5 and $10",
+      expected: false,
+      description: "dollar signs in double-backtick inline code",
+    },
+    {
+      input: "`C:\\` costs $5 and `$x$`",
+      expected: false,
+      description: "a backslash at the end of inline code",
+    },
+    { input: "$$$$", expected: false, description: "price tier symbols" },
     {
       input: "the price is between $5 and $10",
       expected: false,
@@ -167,6 +281,46 @@ describe("containsMathSyntax", () => {
     "detects $description correctly",
     ({ input, expected }: { input: string; expected: boolean }) => {
       expect(containsMathSyntax(input)).toBe(expected)
+    }
+  )
+
+  it.each([
+    { input: "$5-$", description: "a dollar range cut off" },
+    { input: "US$5 and US$", description: "prefixed amounts cut off" },
+    {
+      input: "**Price: $5-$**",
+      description: "a dollar range in bold that remend closed",
+    },
+    {
+      input: "[Price $5-$](streamdown:incomplete-link)",
+      description: "a dollar range in a link that remend closed",
+    },
+    { input: "Range $5-$▌", description: "a dollar range before a cursor" },
+    {
+      input: "Plans: $10/mo, $15-$",
+      description: "a dollar range after another amount",
+    },
+  ])(
+    "holds back a possible dollar amount while streaming: $description",
+    ({ input }: { input: string }) => {
+      expect(containsMathSyntax(input, { isStreaming: true })).toBe(false)
+      expect(containsMathSyntax(input)).toBe(true)
+    }
+  )
+
+  it.each([
+    { input: "Energy: $E=mc^2$", description: "a formula at the end" },
+    { input: "**Area: $x^2$**", description: "a formula in bold" },
+    {
+      input: "Result: **$2^n$**",
+      description: "a formula in bold that starts with a digit",
+    },
+    { input: "$10^6$▌", description: "a formula before a cursor" },
+    { input: "$5-$\nnext", description: "a span on a finished line" },
+  ])(
+    "detects math while streaming: $description",
+    ({ input }: { input: string }) => {
+      expect(containsMathSyntax(input, { isStreaming: true })).toBe(true)
     }
   )
 })
@@ -381,6 +535,18 @@ describe("linkReference", () => {
       "https://streamlit.io/"
     )
     expect(screen.getByText("Streamlit")).toHaveAttribute("target", "_blank")
+  })
+
+  it("treats a blank target and rel as unset", () => {
+    render(
+      <LinkWithTargetBlank href="https://example.com" target="" rel="">
+        Example
+      </LinkWithTargetBlank>
+    )
+
+    const link = screen.getByRole("link", { name: "Example" })
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noopener noreferrer")
   })
 
   it("renders a link without title", () => {
@@ -621,6 +787,40 @@ describe("StreamlitMarkdown", () => {
     expect(heading).not.toHaveAttribute("aria-labelledby")
   })
 
+  it("treats a blank anchor as unset and generates one from the heading text", () => {
+    render(
+      <IsSidebarContext.Provider value={false}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements tag="h2" anchor="">
+            Hello World
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(screen.getByRole("heading")).toHaveAttribute("id", "hello-world")
+  })
+
+  it("hides the anchor in the sidebar when hideAnchor is false", () => {
+    render(
+      <IsSidebarContext.Provider value={true}>
+        <IsDialogContext.Provider value={false}>
+          <HeadingWithActionElements
+            tag="h2"
+            anchor="my-anchor"
+            hideAnchor={false}
+          >
+            Hello
+          </HeadingWithActionElements>
+        </IsDialogContext.Provider>
+      </IsSidebarContext.Provider>
+    )
+
+    expect(
+      screen.queryByRole("link", { name: "Link to heading" })
+    ).not.toBeInTheDocument()
+  })
+
   it("updates heading anchor when text changes across reruns (no explicit anchor)", () => {
     const { rerender } = render(
       <IsSidebarContext.Provider value={false}>
@@ -752,6 +952,20 @@ describe("StreamlitMarkdown", () => {
     expect(image).toHaveStyle("user-select: none")
   })
 
+  it("keeps adjacent text when rendering a streamlit logo", () => {
+    render(
+      <StreamlitMarkdown
+        source={":streamlit: Rocks"}
+        allowHTML={false}
+        isLabel
+      />
+    )
+    const image = screen.getByRole("img", { name: "Streamlit logo" })
+    expect(image.tagName.toLowerCase()).toBe("img")
+    expect(image).not.toHaveTextContent("Rocks")
+    expect(image.parentElement).toHaveTextContent("Rocks")
+  })
+
   it("renders material icons with allowHTML=true", async () => {
     const source = `:material/search: Icon`
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
@@ -759,6 +973,8 @@ describe("StreamlitMarkdown", () => {
     const tagName = markdown.nodeName.toLowerCase()
     expect(tagName).toBe("span")
     expect(markdown).toHaveStyle("font-family: Material Symbols Rounded")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
 
   // Typographical symbol replacements
@@ -1084,17 +1300,20 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("colours text properly", () => {
-    const grayTextColor = transparentize(colors.gray85, 0.4)
+    const textColors = mockTheme.emotion.colors
+
+    // Assert a literal value so the test doesn't only compare the theme against itself.
+    expect(textColors.redTextColor).toBe("#9E303B")
 
     const colorMapping = new Map([
-      ["red", colors.red90],
-      ["orange", colors.orange95],
-      ["yellow", colors.yellow115],
-      ["blue", colors.blue90],
-      ["green", colors.green90],
-      ["violet", colors.purple90],
-      ["gray", grayTextColor],
-      ["grey", grayTextColor],
+      ["red", textColors.redTextColor],
+      ["orange", textColors.orangeTextColor],
+      ["yellow", textColors.yellowTextColor],
+      ["blue", textColors.blueTextColor],
+      ["green", textColors.greenTextColor],
+      ["violet", textColors.violetTextColor],
+      ["gray", textColors.grayTextColor],
+      ["grey", textColors.grayTextColor],
       ["rainbow", "rgba(0, 0, 0, 0)"],
     ])
 
@@ -1122,7 +1341,36 @@ describe("StreamlitMarkdown", () => {
     expect(markdown).toHaveStyle(`user-select: none`)
     expect(markdown).toHaveStyle(`vertical-align: bottom`)
     expect(markdown).toHaveAttribute("translate", "no")
+    expect(markdown).not.toHaveTextContent("Icon")
+    expect(markdown.parentElement).toHaveTextContent("Icon")
   })
+
+  it.each([
+    {
+      source: ":material/search: Icon",
+      adjacent: "Icon",
+      iconName: "search icon",
+    },
+    {
+      source: "Hello :material/search:",
+      adjacent: "Hello",
+      iconName: "search icon",
+    },
+    {
+      source: ":material/settings: Section",
+      adjacent: "Section",
+      iconName: "settings icon",
+    },
+  ])(
+    "keeps adjacent copy next to a material icon ($source)",
+    ({ source, adjacent, iconName }) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const icon = screen.getByRole("img", { name: iconName })
+      expect(icon.tagName.toLowerCase()).toBe("span")
+      expect(icon).not.toHaveTextContent(adjacent)
+      expect(icon.parentElement).toHaveTextContent(adjacent)
+    }
+  )
 
   it("does not remove unknown directive", () => {
     const source = `test :foo test:test :`
@@ -1263,6 +1511,110 @@ describe("StreamlitMarkdown", () => {
     expect(screen.getByTestId("stMarkdownContainer")).not.toHaveStyle({
       width: "100%",
     })
+  })
+
+  it.each([
+    { source: "$315K of $1.46M quota", description: "dollar amounts" },
+    { source: "$ x + y $", description: "a padded formula" },
+  ])(
+    "renders $description as plain text when there is no formula",
+    ({ source }: { source: string }) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container).toHaveTextContent(source)
+      expect(container.querySelector("code")).toBeNull()
+    }
+  )
+
+  it("renders a formula right after an escaped dollar sign", async () => {
+    render(<StreamlitMarkdown source={"Price: \\$$p$"} allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).toHaveTextContent("Price: $")
+    expect(container.querySelectorAll(".katex")).toHaveLength(1)
+  })
+
+  it("renders math when the source contains a formula", async () => {
+    render(<StreamlitMarkdown source="Energy: $E=mc^2$" allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    // KaTeX is lazy-loaded, so the formula renders asynchronously.
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$")
+  })
+
+  it("renders escaped dollar signs next to a formula as text", async () => {
+    render(
+      <StreamlitMarkdown
+        source={"costs \\$5 where $r$ is the rate"}
+        allowHTML={false}
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).not.toBeNull()
+    })
+    expect(container).toHaveTextContent("costs $5 where")
+    expect(container.querySelectorAll(".katex")).toHaveLength(1)
+  })
+
+  it("renders dollar amounts in labels as plain text", () => {
+    render(
+      <StreamlitMarkdown
+        source="Buy for $5 or $10"
+        allowHTML={false}
+        isLabel
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveTextContent("Buy for $5 or $10")
+    expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders a bold dollar range cut off mid-stream as text", () => {
+    render(
+      <StreamlitMarkdown
+        source="**Price: $5-$"
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("strong")).toHaveTextContent("Price: $5-$")
+    expect(container.querySelector("code")).toBeNull()
+  })
+
+  it("renders a finished formula in bold mid-stream", async () => {
+    render(
+      <StreamlitMarkdown
+        source="Result: **$2^n$"
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector("strong .katex")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$")
+  })
+
+  it("renders an unfinished display math block while streaming", async () => {
+    render(
+      <StreamlitMarkdown
+        source={"Result:\n\n$$\nx^2"}
+        allowHTML={false}
+        unterminatedParsing
+      />
+    )
+    const container = screen.getByTestId("stMarkdownContainer")
+    await waitFor(() => {
+      expect(container.querySelector(".katex-display")).not.toBeNull()
+    })
+    expect(container).not.toHaveTextContent("$$")
   })
 
   // Custom color directive tests

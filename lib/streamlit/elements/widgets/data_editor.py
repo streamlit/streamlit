@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import (
@@ -35,6 +36,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
@@ -42,6 +44,8 @@ from streamlit.elements.lib.column_config_utils import (
     ColumnDataKind,
     DataframeSchema,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -71,6 +75,7 @@ from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -305,12 +310,30 @@ def _parse_value(
 
     Returns
     -------
-    The converted value.
+    The converted value, or ``None`` if the value cannot be parsed.
+
+    Raises
+    ------
+    ValueError, OverflowError
+        If a numeric timedelta value is non-finite or outside the pandas
+        Timedelta range (``OutOfBoundsTimedelta`` is a ``ValueError``).
+        Callers skip such an edit instead of storing ``NaT``.
     """
     if value is None:
         return None
 
     import pandas as pd
+
+    if column_data_kind == ColumnDataKind.TIMEDELTA and isinstance(value, (int, float)):
+        # NumberColumn sends durations as seconds. pd.Timedelta(int) reads ints
+        # as nanoseconds, and pd.Timedelta(seconds=float) truncates
+        # (1.005 -> 1.004999999 s), so pass unit="s" to round to the nearest
+        # nanosecond. Invalid values raise so callers skip the edit instead of
+        # storing NaT.
+        if not math.isfinite(value):
+            # pd.Timedelta(nan, unit="s") returns NaT instead of raising.
+            raise ValueError("Duration seconds must be finite.")
+        return pd.Timedelta(value, unit="s")
 
     try:
         if column_data_kind == ColumnDataKind.LIST:
@@ -370,7 +393,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError, TypeError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError, OverflowError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
@@ -404,20 +427,33 @@ def _apply_cell_edits(
     for row_id, row_changes in edited_rows.items():
         row_pos = int(row_id)
         for col_name, value in row_changes.items():
-            if col_name == INDEX_IDENTIFIER:
-                # The edited cell is part of the index
-                # TODO(lukasmasuch): To support multi-index in the future:
-                # use a tuple of values here instead of a single value
-                old_idx_value = df.index[row_pos]
-                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
-                df.rename(
-                    index={old_idx_value: new_idx_value},
-                    inplace=True,  # noqa: PD002
-                )
-            else:
-                col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
-                    value, dataframe_schema[col_name]
+            try:
+                if col_name == INDEX_IDENTIFIER:
+                    # The edited cell is part of the index
+                    # TODO(lukasmasuch): To support multi-index in the future:
+                    # use a tuple of values here instead of a single value
+                    new_idx_value = _parse_value(
+                        value, dataframe_schema[INDEX_IDENTIFIER]
+                    )
+                    # Relabel only the edited row, even if other rows share its label.
+                    # Assigning df.index edits df in place without copying column data.
+                    df.index = df.index.delete(row_pos).insert(row_pos, new_idx_value)
+                else:
+                    col_pos = df.columns.get_loc(col_name)
+                    df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
+                        value, dataframe_schema[col_name]
+                    )
+            except (TypeError, ValueError, OverflowError) as ex:
+                # Widget state comes from the client. Skip edits that pandas
+                # rejects (for example, a duration finer than the column unit
+                # or out of range) instead of crashing the run.
+                _LOGGER.warning(
+                    "Failed to apply edit %r to row %s, column %s (%s). Edit ignored.",
+                    value,
+                    row_pos,
+                    col_name,
+                    dataframe_schema.get(col_name),
+                    exc_info=ex,
                 )
 
 
@@ -445,11 +481,15 @@ def _assign_row_values(
     df: pd.DataFrame,
     row_label: Any,
     row_values: list[Any],
-) -> None:
-    """Assign values to a dataframe row via a mapping.
+) -> bool:
+    """Assign a row via a mapping. Return False if pandas rejects the values.
 
-    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
-    multi-dimensional arrays when a column legitimately stores list values.
+    Using a mapping keeps numpy from coercing nested sequences (for example,
+    lists) into multi-dimensional arrays. Widget state comes from the client,
+    so pandas can reject a value (for example, a duration finer than the
+    column unit). Log and skip the row when assignment raises. Some pandas
+    versions widen the timedelta dtype instead of raising; in that case the
+    widened column is kept.
     """
     import warnings
 
@@ -458,13 +498,21 @@ def _assign_row_values(
     # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
     # The warning is not actionable by users and was removed in pandas 3.x.
     # See: https://github.com/streamlit/streamlit/issues/14321
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
-            category=FutureWarning,
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+                category=FutureWarning,
+            )
+            df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    except (TypeError, ValueError, OverflowError) as ex:
+        _LOGGER.warning(
+            "Failed to add row. Row addition skipped.",
+            exc_info=ex,
         )
-        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+        return False
+    return True
 
 
 def _apply_row_additions(
@@ -512,7 +560,16 @@ def _apply_row_additions(
         index_step = 1
 
     for added_row in added_rows:
-        index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        try:
+            index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        except (TypeError, ValueError, OverflowError) as ex:
+            # Widget state comes from the client. Skip a row with a value
+            # that cannot be parsed (for example, an out-of-range duration).
+            _LOGGER.warning(
+                "Failed to parse added row. Row addition skipped.",
+                exc_info=ex,
+            )
+            continue
 
         if index_value is not None and index_type != "range":
             # Case 1: Non-range index with an explicitly provided index value
@@ -534,9 +591,8 @@ def _apply_row_additions(
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            _assign_row_values(df, index_stop, new_row)
-            # Increment to the next range index value
-            index_stop += index_step
+            if _assign_row_values(df, index_stop, new_row):
+                index_stop += index_step
             continue
 
         # Row cannot be added -> skip it and log a warning.
@@ -547,29 +603,37 @@ def _apply_row_additions(
         )
 
 
-def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
-    """Apply row deletions to the provided dataframe (inplace).
+def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> pd.DataFrame:
+    """Return the dataframe without the deleted rows.
 
     Parameters
     ----------
     df : pd.DataFrame
-        The dataframe to apply the row deletions to.
+        The source dataframe. This function does not modify it.
 
     deleted_rows : List[int]
         A list of row numbers to delete.
+
+    Returns
+    -------
+    pd.DataFrame
+        A new dataframe without the deleted rows. Rows that share a deleted
+        row's index label are deleted too.
     """
-    # Drop rows based in numeric row positions
-    df.drop(df.index[deleted_rows], inplace=True)  # noqa: PD002
+    # drop() takes labels, so map the row positions to their index labels.
+    return df.drop(df.index[deleted_rows])
 
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
     data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
-) -> None:
-    """Apply edits to the provided dataframe (inplace).
+) -> pd.DataFrame:
+    """Return ``df`` with cell edits, row deletions, and row additions applied.
 
-    This includes cell edits, row additions and row deletions.
+    Cell edits and row additions modify ``df`` in place, but row deletions
+    create a new dataframe. Always use the returned dataframe, since ``df``
+    may be left partially edited.
 
     Parameters
     ----------
@@ -581,17 +645,24 @@ def _apply_dataframe_edits(
 
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
+
+    Returns
+    -------
+    pd.DataFrame
+        The edited dataframe.
     """
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
     if data_editor_state.get("deleted_rows"):
-        _apply_row_deletions(df, data_editor_state["deleted_rows"])
+        df = _apply_row_deletions(df, data_editor_state["deleted_rows"])
 
     if data_editor_state.get("added_rows"):
         # The addition of new rows needs to happen after the deletion to not have
         # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
+
+    return df
 
 
 def _is_supported_index(df_index: pd.Index[Any]) -> bool:
@@ -643,9 +714,8 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
     elif pd.api.types.infer_dtype(data_df.columns) != "string":
         # If the column names are not all strings, we need to convert them to strings
         # to avoid issues with editing:
-        data_df.rename(
-            columns={column: str(column) for column in data_df.columns},
-            inplace=True,  # noqa: PD002
+        data_df.columns = pd.Index(
+            [str(column) for column in data_df.columns], name=data_df.columns.name
         )
 
 
@@ -793,7 +863,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -816,7 +886,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -839,7 +909,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -862,7 +932,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -885,7 +955,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -908,7 +978,7 @@ class DataEditorMixin:
         num_rows: Literal["fixed", "dynamic", "add", "delete"] = "fixed",
         disabled: bool | Iterable[str | int] = False,
         key: Key | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         row_height: int | None = None,
@@ -937,10 +1007,7 @@ class DataEditorMixin:
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
-                - To prevent overflow in JavaScript, columns containing
-                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
-                  default to uneditable, but this can be changed through column
-                  configuration.
+                - Timedelta values are edited as a number of seconds.
 
         width : "stretch", "content", or int
             The width of the data editor. This can be one of the following:
@@ -964,11 +1031,13 @@ class DataEditorMixin:
               performance issues with very large dataframes.
             - ``"stretch"``: The height of the editor expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The editor will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. In a fixed-height
+              container, or a stretch container that fills one, the editor
+              keeps a minimum height that displays up to three rows and shrinks
+              to the remaining space when that minimum fits. Otherwise, the
+              editor uses its default height (at most ten rows) and still
+              grows to match a taller sibling.
             - An integer specifying the height in pixels: The editor has a
               fixed height.
 
@@ -1091,8 +1160,30 @@ class DataEditorMixin:
                 specific rows when the data is reordered. Omit ``key`` to reset
                 all edits whenever the data changes.
 
-        on_change : callable
-            An optional callback invoked when this data_editor's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the data editor should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the data editor. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a cell edit (Enter, Tab, or leaving the cell),
+              pastes, adds a row, deletes a row, or clears cell contents.
+              Typing in an open cell editor does not rerun the app until the
+              edit is committed.
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits an edit. The data editor still updates in the UI. The
+              new value is available on the next rerun triggered by something
+              else, such as another widget interaction. Ignored commits are
+              held in the browser and are lost if the page is refreshed
+              before that rerun. Inside ``st.form``, this has no effect: the
+              form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1224,9 +1315,9 @@ class DataEditorMixin:
         import pyarrow as pa
 
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         validate_width(width, allow_content=True)
@@ -1240,7 +1331,7 @@ class DataEditorMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -1502,9 +1593,12 @@ class DataEditorMixin:
 
         serde = DataEditorSerde()
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1516,8 +1610,43 @@ class DataEditorMixin:
             disabled=disabled is True,
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
-        self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        data_df = _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
+        self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            # st.dataframe and st.data_editor share this proto. The schema and
+            # row preview are derived facts about the payload, not command
+            # parameters.
+            agent_props=agent_spec.element(
+                "data_editor",
+                key=proto.id or None,
+                data_builder=lambda: agent_data.arrow(
+                    proto.arrow_data.data,
+                    coordinates=self.dg._get_write_delta_path_str(),
+                ),
+                # A browser user can edit the table. This API only reports it.
+                # Kept even when the app locks the editor: unlike a chart
+                # without selections, it is still an editor, and a rejection
+                # should say this API does not accept the edit.
+                support="action_unsupported",
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                num_rows=num_rows,
+                # A bool locks or unlocks the whole editor. False is reported:
+                # omitting it would look like a column list, which is already
+                # applied to column_config and left out here.
+                disabled=disabled if isinstance(disabled, bool) else None,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
+            if agent_spec.is_recording()
+            else None,
+        )
         return dataframe_util.convert_pandas_df_to_data_format(data_df, data_format)
 
     @property

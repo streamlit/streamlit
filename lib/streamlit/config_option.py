@@ -16,9 +16,9 @@
 
 from __future__ import annotations
 
-import datetime
 import re
 import textwrap
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from streamlit.string_util import to_snake_case
@@ -314,7 +314,7 @@ class ConfigOption:
             return False
 
         expiration_date = _parse_yyyymmdd_str(self.expiration_date)
-        now = datetime.datetime.now()
+        now = datetime.now()
         return now > expiration_date
 
     @property
@@ -324,6 +324,6 @@ class ConfigOption:
         return f"STREAMLIT_{to_snake_case(name).upper()}"
 
 
-def _parse_yyyymmdd_str(date_str: str) -> datetime.datetime:
+def _parse_yyyymmdd_str(date_str: str) -> datetime:
     year, month, day = (int(token) for token in date_str.split("-", 2))
-    return datetime.datetime(year, month, day)
+    return datetime(year, month, day)

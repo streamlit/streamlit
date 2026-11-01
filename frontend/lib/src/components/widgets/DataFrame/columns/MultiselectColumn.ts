@@ -18,6 +18,8 @@ import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { transparentize } from "color2k"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   hasLightBackgroundColor,
   resolveNamedBackgroundColor,
@@ -46,7 +48,7 @@ type SelectOption = { value: string; label?: string; color?: string }
  * @returns The prepared options in the format required by the multi-select cell.
  */
 export const prepareOptions = (
-  options: readonly (string | SelectOption)[],
+  options: readonly (string | SelectOption | null)[],
   theme: EmotionTheme
 ): { value: string; label?: string; color?: string }[] => {
   if (isNullOrUndefined(options)) {
@@ -59,7 +61,7 @@ export const prepareOptions = (
   let autoColorIndex = 0
 
   return options
-    .filter(opt => opt !== null && opt !== "")
+    .filter((opt): opt is string | SelectOption => opt !== null && opt !== "")
     .map(option => {
       if (typeof option === "string") {
         return {
@@ -81,16 +83,17 @@ export const prepareOptions = (
         )
 
         autoColorIndex += 1
-      } else if (option.color) {
+      } else if (!isNullOrEmptyString(option.color)) {
         // Resolve built-in color names to theme background colors,
         // otherwise use the color value directly.
         resolvedColor = resolveNamedBackgroundColor(option.color, theme)
       }
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
-      const blendedColor = resolvedColor
-        ? blend(resolvedColor, theme.colors.bgColor)
-        : undefined
+      const blendedColor =
+        resolvedColor !== undefined
+          ? blend(resolvedColor, theme.colors.bgColor)
+          : undefined
 
       return {
         value: toSafeString(option.value).trim(),
@@ -147,7 +150,9 @@ function MultiselectColumn(
       kind: "multi-select-cell",
       values: [],
       options: preparedOptions,
-      allowCreation: parameters.accept_new_options ?? false,
+      // Column config is untyped JSON. Coerce it so the editor (truthiness)
+      // and paste (`!== true`) treat a non-boolean value the same way.
+      allowCreation: Boolean(parameters.accept_new_options),
       allowDuplicates: false,
     },
     copyData: "",
@@ -178,7 +183,7 @@ function MultiselectColumn(
       )
 
       if (
-        validate &&
+        validate === true &&
         cellData.length > 0 &&
         parameters.accept_new_options === false
       ) {
@@ -210,7 +215,7 @@ function MultiselectColumn(
       } satisfies MultiSelectCellType
     },
     getCellValue(cell: MultiSelectCellType): string[] | null {
-      if (isNullOrUndefined(cell.data?.values)) {
+      if (isNullOrUndefined(cell.data.values)) {
         return null
       }
 

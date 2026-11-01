@@ -39,9 +39,10 @@ export const StyledFileDropzoneSection = styled.section<StyledFileDropzone>(
     padding: theme.spacing.md,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
-    border: theme.colors.widgetBorderColor
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-      : undefined,
+    border:
+      theme.colors.widgetBorderColor !== undefined
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+        : undefined,
     height: "auto",
     minHeight: theme.sizes.largestElementHeight,
     ":focus": {
@@ -89,9 +90,9 @@ export const StyledFileDropzoneInstructions = styled.div({
 
 export const StyledFileDropzoneInstructionsSubtext = styled.span<{
   disabled?: boolean
-}>(({ theme, disabled }) => ({
+}>(({ theme, disabled = false }) => ({
   fontSize: theme.fontSizes.sm,
-  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText60,
+  color: disabled ? theme.colors.fadedText40 : theme.colors.fadedText70,
   display: "block",
   overflow: "hidden",
   textOverflow: "ellipsis",

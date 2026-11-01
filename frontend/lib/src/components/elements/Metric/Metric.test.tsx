@@ -16,7 +16,7 @@
 
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
-import type { TopLevelSpec } from "vega-lite"
+import { type TopLevelSpec, version as vegaLiteVersion } from "vega-lite"
 
 import {
   LabelVisibility as LabelVisibilityProto,
@@ -28,6 +28,14 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
 import Metric, { getMetricChartSpec, type MetricProps } from "./Metric"
+
+/**
+ * Schema URL matching the installed vega-lite major version. vega-embed warns
+ * when a spec declares a different major.
+ */
+const EXPECTED_VEGA_LITE_SCHEMA = `https://vega.github.io/schema/vega-lite/v${
+  vegaLiteVersion.split(".")[0]
+}.json`
 
 // Mock vega-embed
 vi.mock("vega-embed", () => ({
@@ -149,13 +157,11 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.NONE,
     })
     render(<Metric {...props} />)
-    // This is the gray metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgba(49, 51, 63, 0.6);"
+      `color: ${mockTheme.emotion.colors.grayTextColor}`
     )
-    // This is the gray metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(49, 51, 63, 0.1);"
+      `background-color: ${mockTheme.emotion.colors.grayBackgroundColor}`
     )
   })
 
@@ -165,26 +171,25 @@ describe("Metric element", () => {
       direction: MetricProto.MetricDirection.DOWN,
     })
     render(<Metric {...props} />)
-    // This is the green metric text color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(21, 130, 55);"
+      `color: ${mockTheme.emotion.colors.greenTextColor}`
     )
-    // This is the green metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(33, 195, 84, 0.1);"
+      `background-color: ${mockTheme.emotion.colors.greenBackgroundColor}`
     )
   })
 
   it("renders correct red based on props", () => {
     const props = getProps()
     render(<Metric {...props} />)
-    // This is the red metric text color
+    // Assert literal values so the test doesn't only compare the theme against itself.
+    expect(mockTheme.emotion.colors.redTextColor).toBe("#9E303B")
+    expect(mockTheme.emotion.colors.redBackgroundColor).toBe("#FFF1F2")
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "color: rgb(189, 64, 67);"
+      `color: ${mockTheme.emotion.colors.redTextColor}`
     )
-    // This is the red metric background color
     expect(screen.getByTestId("stMetricDelta")).toHaveStyle(
-      "background-color: rgba(255, 43, 43, 0.1);"
+      `background-color: ${mockTheme.emotion.colors.redBackgroundColor}`
     )
   })
 
@@ -627,7 +632,7 @@ describe("Metric element", () => {
       )
 
       expect(spec).toMatchObject({
-        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+        $schema: EXPECTED_VEGA_LITE_SCHEMA,
         width: 200,
         data: {
           values: chartData.map((value, index) => ({ x: index, y: value })),

@@ -33,9 +33,11 @@ import { FormSubmitButton, type Props } from "./FormSubmitButton"
 
 vi.mock("~lib/hooks/useRegisterShortcut", () => ({
   useRegisterShortcut: vi.fn(),
-  formatShortcutForDisplay: vi.fn(
-    (shortcut: string | null | undefined) =>
-      shortcut?.replaceAll("+", " + ") || undefined
+  formatShortcutForDisplay: vi.fn((shortcut: string | null | undefined) =>
+    // An empty shortcut displays as nothing.
+    shortcut === null || shortcut === undefined || shortcut === ""
+      ? undefined
+      : shortcut.replaceAll("+", " + ")
   ),
 }))
 

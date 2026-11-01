@@ -30,6 +30,7 @@ import {
   getPopoverContainerStyle,
   getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /**
@@ -45,7 +46,8 @@ function getRightInset(theme: EmotionTheme): string {
  * Outer row container for the ComboBox trigger: input + buttons.
  * Uses `[data-focus-within]` (set by React Aria when any descendant is
  * focused) to switch border colour to `primary`, mirroring the focus ring
- * on other Streamlit input widgets.
+ * on other Streamlit input widgets. `[data-invalid]` (set by React Aria from
+ * the ComboBox's `isInvalid`) shows the invalid-input chrome.
  */
 export const StyledGroup = styled(Group)(({ theme }) => ({
   display: "flex",
@@ -69,7 +71,24 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
   "&[data-focus-within]": {
     borderColor: getBorderColor(theme.colors, true),
   },
+  // Declared after focus-within so the error border also shows while focused,
+  // as in st.text_input.
+  "&[data-invalid]": {
+    borderColor: theme.colors.redTextColor,
+    backgroundColor: theme.colors.redBackgroundColor,
+  },
 }))
+
+/** Error icon between the input and the trailing clear and open buttons. */
+export const StyledErrorIcon = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  paddingLeft: theme.spacing.twoXS,
+  color: theme.colors.redTextColor,
+}))
+
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 /**
  * The text input inside the ComboBox. Grows to fill available space and
@@ -82,7 +101,7 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<{ $placeholderColor?: string; $typingDisabled?: boolean }>(
-  ({ theme, $placeholderColor, $typingDisabled }) => ({
+  ({ theme, $placeholderColor, $typingDisabled = false }) => ({
     flexGrow: 1,
     flexShrink: 1,
     minWidth: theme.spacing.threeXS,
@@ -100,7 +119,7 @@ export const StyledInput = styled(Input, {
     userSelect: $typingDisabled ? "none" : undefined,
     boxSizing: "border-box",
     "&::placeholder": {
-      color: $placeholderColor ?? theme.colors.fadedText60,
+      color: $placeholderColor ?? theme.colors.fadedText70,
     },
     "&[data-disabled]": {
       cursor: "not-allowed",
@@ -154,7 +173,7 @@ export const StyledClearButton = styled(Button)(({ theme }) => ({
  * RAC's imperative inline style writes so Floating UI's transform takes over.
  */
 export const StyledPopover = styled(Popover)<{ $isInSidebar?: boolean }>(
-  ({ theme, $isInSidebar }) => ({
+  ({ theme, $isInSidebar = false }) => ({
     ...getPopoverContainerStyle(theme),
     backgroundColor: $isInSidebar
       ? theme.colors.secondaryBg
@@ -208,7 +227,7 @@ export const StyledEmptyState = styled.span(({ theme }) => ({
   width: "100%",
   height: theme.sizes.emptyDropdownHeight,
   padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.base,
@@ -226,12 +245,12 @@ interface StyledListBoxItemProps {
  * `StyledItemHighlight` pill (via the `[data-item-hl]` attribute selector)
  * to match the rounded-pill style of the Multiselect dropdown.
  *
- * The `$isCreatable` variant adds a top separator line to visually separate
- * the "Add: …" option from the normal list.
+ * The `$isCreatable` variant adds a bottom separator under the leading
+ * "Add: …" row so it stays visually distinct from the matches below.
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<StyledListBoxItemProps>(({ theme, $isCreatable }) => ({
+})<StyledListBoxItemProps>(({ theme, $isCreatable = false }) => ({
   display: "flex",
   alignItems: "center",
   height: theme.sizes.dropdownItemHeight,
@@ -253,15 +272,15 @@ export const StyledListBoxItem = styled(ListBoxItem, {
     color: theme.colors.fadedText40,
   },
   ...($isCreatable && {
-    "&::before": {
+    "&::after": {
       content: '""',
       position: "absolute",
-      top: 0,
+      bottom: 0,
       left: theme.sizes.tagMarginInsideBorder,
       right: theme.sizes.tagMarginInsideBorder,
       height: theme.sizes.borderWidth,
       backgroundColor: theme.colors.fadedText10,
-      transform: "translateY(-50%)",
+      transform: "translateY(50%)",
     },
   }),
 }))

@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import logger
@@ -33,6 +34,7 @@ _LOGGER: Final = logger.get_logger(__name__)
 
 if TYPE_CHECKING:
     from datetime import timedelta
+    from types import FrameType
     from uuid import UUID
 
     from pandas import DataFrame
@@ -155,9 +157,12 @@ class BaseSnowflakeConnection(BaseConnection["InternalSnowflakeConnection"]):
             ttl
         ).replace(".", "_")
         _query.__qualname__ = f"{_query.__qualname__}_{self._connection_name}_{ttl_str}"
+        # Query results share the connection's scope so that results fetched with a
+        # session-scoped identity are never cached where other sessions can read them.
         cached_query = cache_data(
             show_spinner=show_spinner,
             ttl=ttl,
+            scope=self.scope(),
         )(_query)
 
         return cached_query(self._connection_instance_id, sql, params)
@@ -375,10 +380,13 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     case. Use ``secrets.toml`` and ``**kwargs`` to configure your connection
     for local development.
 
-    When an app is running in Snowpark Container Services and has caller's rights
-    enabled, ``st.connection("snowflake-callers-rights")`` connects automatically
+    When an app is running in Snowpark Container Services or on Snowflake serverless
+    compute (``compute_resource: SERVERLESS``) and has caller's rights enabled,
+    ``st.connection("snowflake-callers-rights")`` connects automatically
     using the current user's identity tokens. This is a session-scoped connection
-    to ensure that the identity stays tied to the active user. Unlike with
+    to ensure that the identity stays tied to the active user. A caller's rights
+    connection can only be used by the session that created it, and its
+    ``.query()`` results are cached per session. Unlike with
     ``"snowflake"`` connections, it will use the Snowpark Container Services
     connection settings even when other ``**kwargs`` are provided.
 
@@ -409,6 +417,19 @@ class SnowflakeConnection(BaseSnowflakeConnection):
           connects to a Streamlit app. These credentials are only valid for about
           two minutes. Therefore, caller's rights connections must be created at
           the top of an app or else the connection may fail.
+
+        - A caller's rights connection carries the identity of the user whose
+          session created it. Call ``st.connection("snowflake-callers-rights")``
+          inside your app script or inside the functions that use it. Python
+          imports a module once per process, so a connection created at the top
+          level of an imported module would make every user run queries as the
+          first user, and ``QUERY_HISTORY`` would attribute those queries to that
+          user. Streamlit raises an error when a caller's rights connection is
+          requested while a module is being imported, and when a session uses a
+          connection that another session created. Don't store the connection,
+          its ``.cursor()``, its ``.raw_connection``, or its ``.session()`` in a
+          global variable or a global ``st.cache_resource`` function; objects
+          taken from the connection aren't checked.
 
         - To develop locally with a caller's rights connection, use an
           environment variable to logically switch between a ``"snowflake"``
@@ -583,7 +604,8 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
     You can use ``"snowflake-callers-rights"`` type connections in any
     environment running on Snowpark Container Services, including Streamlit in
-    Snowflake on containers and any self-managed caller's rights Service.
+    Snowflake on containers and any self-managed caller's rights Service. They
+    also work on Snowflake serverless compute (``compute_resource: SERVERLESS``).
 
     This will use the Snowpark-provided account, host, database, and schema to connect.
     Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
@@ -688,14 +710,126 @@ class SnowflakeConnection(BaseSnowflakeConnection):
             raise
 
 
+# Module names of Python's import machinery, frozen or not.
+_IMPORT_MACHINERY_MODULES: Final = frozenset(
+    {
+        "_frozen_importlib",
+        "_frozen_importlib_external",
+        "importlib._bootstrap",
+        "importlib._bootstrap_external",
+    }
+)
+
+
+def _is_module_being_imported() -> bool:
+    """Returns whether the current call happens while a Python module is imported.
+
+    Streamlit runs app scripts and pages with ``exec``, so this is only ``True`` for
+    code that runs at the top level of an imported module, including a module that a
+    function imports lazily.
+    """
+    frame: FrameType | None = sys._getframe(1)
+    while frame is not None:
+        if frame.f_globals.get("__name__") in _IMPORT_MACHINERY_MODULES:
+            return True
+        frame = frame.f_back
+    return False
+
+
 class SnowflakeCallersRightsConnection(SnowflakeConnection):
     """A caller's rights connection to Snowflake using the Snowflake Connector for Python.
 
-    This will only work when running on Snowpark Container Services or another
-    compatible platform.
+    This will only work when running on Snowpark Container Services, Snowflake
+    serverless compute, or another compatible platform.
 
     See ``BaseSnowflakeConnection`` for complete docs.
     """
+
+    def __init__(self, connection_name: str, **kwargs: Any) -> None:
+        self._raise_if_module_being_imported()
+        # The owning session must be recorded before the base class opens the first
+        # connection with that session's user token.
+        self._owner_session_id = self._get_current_session_id()
+        super().__init__(connection_name, **kwargs)
+
+    @staticmethod
+    def _raise_if_module_being_imported() -> None:
+        """Raises if a caller's rights connection is requested during a module import.
+
+        Python imports a module once per process, so anything a module stores at
+        import time, such as this connection or a cursor taken from it, would be
+        shared by every later session with the identity of the first user.
+        ``st.connection`` calls this before its cache lookup, because a cached
+        connection returned during an import would be shared the same way.
+        """
+        if _is_module_being_imported():
+            raise StreamlitAPIException(
+                "Caller's rights connections can't be requested while a module is "
+                "being imported, because every user would then share the first "
+                'user\'s identity. Call `st.connection("snowflake-callers-rights")` '
+                "inside the functions that use it or in your app script.",
+                error_id="snowflake-callers-rights-during-import",
+            )
+
+    @staticmethod
+    def _get_current_session_id() -> str:
+        """Returns the ID of the session running on the current thread.
+
+        Raises
+        ------
+            StreamlitAPIException: if this is called outside of a session context.
+        """
+        # Local import needed to avoid cycles.
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            get_script_run_ctx,
+        )
+
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is None:
+            raise StreamlitAPIException(
+                "Caller's rights connections can only be created and used in an app "
+                "execution thread. To use one from a thread you started, attach the "
+                "session's context with "
+                "`streamlit.runtime.scriptrunner.add_script_run_ctx`.",
+                error_id="snowflake-callers-rights-outside-session",
+            )
+        return ctx.session_id
+
+    def _verify_owner_session(self) -> None:
+        """Raises if the current session is not the one that created this connection.
+
+        A caller's rights connection carries the identity of the user whose session
+        created it, so any other session using it would act as that user.
+        """
+        if self._get_current_session_id() != self._owner_session_id:
+            raise StreamlitAPIException(
+                "This caller's rights connection belongs to a different session and "
+                "can't be shared. Call `st.connection` inside the functions that use "
+                "it instead of storing the connection in a module-level variable "
+                "or a global `st.cache_resource` function.",
+                error_id="snowflake-callers-rights-shared-across-sessions",
+            )
+
+    @property
+    def _instance(self) -> InternalSnowflakeConnection:
+        self._verify_owner_session()
+        return super()._instance
+
+    def query(
+        self,
+        sql: str,
+        *,  # keyword-only arguments:
+        ttl: float | int | timedelta | None = None,
+        show_spinner: bool | str = "Running `snowflake.query(...)`.",
+        params: Any = None,
+        **kwargs: Any,
+    ) -> DataFrame:
+        # Cached results don't touch `_instance`, so verify ownership before the cache
+        # lookup.
+        self._verify_owner_session()
+        return super().query(
+            sql, ttl=ttl, show_spinner=show_spinner, params=params, **kwargs
+        )
 
     @classmethod
     def scope(cls) -> Literal["session"]:
@@ -770,10 +904,34 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
             )
         user_token = st_context.headers[SNOWPARK_USER_TOKEN_HEADER_NAME]
 
-        # Build the actual caller's rights token.
-        params["token"] = f"{login_token}.{user_token}"
+        params["token"] = cls._build_callers_rights_token(login_token, user_token)
 
         return params
+
+    @staticmethod
+    def _build_callers_rights_token(login_token: str, user_token: str) -> str:
+        """Returns the OAuth token that authenticates as the calling user.
+
+        The mounted service token selects the format:
+
+        - Contains ``.``: Snowpark Container Services expects
+          ``<service token>.<user token>``.
+        - No ``.``: Snowflake serverless compute mounts an opaque service token, and
+          its user token header is already a complete caller's rights token, so the
+          header is used alone.
+
+        Whitespace around the service token, such as a trailing newline in the token
+        file, is ignored.
+        """
+        # Snowflake documents neither token's format, and no environment variable
+        # distinguishes serverless compute from Snowpark Container Services, so the
+        # service token's shape is the only available signal. The opaque, dotless
+        # serverless token and its complete header token were observed on a live
+        # serverless deployment.
+        login_token = login_token.strip()
+        if "." in login_token:
+            return f"{login_token}.{user_token}"
+        return user_token
 
     def _connect(self, **kwargs: Any) -> InternalSnowflakeConnection:
         import snowflake.connector  # type:ignore[import]

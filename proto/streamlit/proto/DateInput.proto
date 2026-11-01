@@ -40,5 +40,7 @@ message DateInput {
   // committed. Inside a form, this flag has no effect because the form batches
   // values until submit.
   bool ignore_rerun = 15;
-  // Next: 16
+  // If true, empty values cannot be committed (client-side).
+  bool required = 16;
+  // Next: 17
 }

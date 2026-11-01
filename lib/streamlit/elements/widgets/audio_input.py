@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeAlias, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import enforce_filename_restriction
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import create_layout_config
@@ -39,6 +40,7 @@ from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -96,7 +98,7 @@ class AudioInputMixin:
         sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -164,9 +166,30 @@ class AudioInputMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this audio input's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the audio input should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the audio input. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (after a recording upload completes
+              or a recording is cleared).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The audio input still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. The WAV
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -271,7 +294,7 @@ class AudioInputMixin:
         sample_rate: int | None = 16000,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -281,15 +304,15 @@ class AudioInputMixin:
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
-        on_change = validate_on_change_mode(
+        on_change_callback = validate_on_change_mode(
             on_change,
-            supported_modes=(),
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -323,13 +346,16 @@ class AudioInputMixin:
         if label and help is not None:
             audio_input_proto.help = to_help_str(help)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            audio_input_proto.ignore_rerun = True
+
         layout_config = create_layout_config(width=width)
 
         serde = AudioInputSerde()
 
         audio_input_state = register_widget(
             audio_input_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -339,7 +365,22 @@ class AudioInputMixin:
             disabled=disabled,
         )
 
-        self.dg._enqueue("audio_input", audio_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "audio_input",
+            audio_input_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "audio_input",
+                key=element_id,
+                support="action_unsupported",
+                label=label,
+                sample_rate=sample_rate,
+                help=audio_input_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
+        )
 
         if isinstance(audio_input_state.value, DeletedFile):
             return None

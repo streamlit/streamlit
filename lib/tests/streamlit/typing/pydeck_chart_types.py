@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, cast
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, Any, Literal, assert_type, cast
 
 # Perform type checking tests for st.pydeck_chart.
 # Return type depends on on_select:

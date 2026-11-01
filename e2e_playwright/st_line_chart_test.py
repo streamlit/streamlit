@@ -12,17 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_loaded,
+    wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
-TOTAL_LINE_CHARTS = 17
+TOTAL_LINE_CHARTS = 18
 
 
 def test_line_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -231,3 +234,25 @@ def test_line_chart_alt_sets_accessible_name(app: Page):
 
     unlabeled = get_vega_graphics_document(get_element_by_key(app, "line_no_alt"))
     expect(unlabeled).to_have_accessible_name("Vega visualization")
+
+
+def test_line_chart_zoom_resets_when_data_changes(app: Page):
+    """New data resets a zoomed-in chart, so rows outside the window show."""
+    chart = get_vega_graphics_document(get_element_by_key(app, "line_zoom_reset"))
+    chart.scroll_into_view_if_needed()
+    x_axis = chart.locator("g.role-axis[aria-label^='X-axis']")
+    expect(x_axis).to_have_attribute("aria-label", re.compile(r"values from 0 to 100$"))
+
+    chart.hover()
+    for _ in range(5):
+        app.mouse.wheel(0, -200)
+    expect(x_axis).not_to_have_attribute(
+        "aria-label", re.compile(r"values from 0 to 100$")
+    )
+
+    app.get_by_role("button", name="Shift chart data").click()
+    wait_for_app_run(app)
+
+    expect(x_axis).to_have_attribute(
+        "aria-label", re.compile(r"values from 1,000 to 1,100$")
+    )

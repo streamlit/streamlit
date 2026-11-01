@@ -16,6 +16,8 @@
 
 import { forwardRef, type ReactElement, type Ref } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   BaseButtonKind,
   type BaseButtonProps as BaseButtonPropsT,
@@ -94,13 +96,17 @@ const BaseButton = forwardRef(function BaseButton(
       ref={ref}
       kind={kind}
       size={size ?? BaseButtonSize.MEDIUM}
-      containerWidth={containerWidth || false}
-      disabled={disabled || false}
-      onClick={onClick || (() => {})}
-      autoFocus={autoFocus || false}
+      containerWidth={containerWidth ?? false}
+      disabled={disabled ?? false}
+      onClick={onClick ?? (() => {})}
+      autoFocus={autoFocus ?? false}
       data-testid={props["data-testid"] ?? `stBaseButton-${kind}`}
       // Omit an empty aria-label so visible button text remains the accessible name.
-      aria-label={props["aria-label"] || undefined}
+      aria-label={
+        isNullOrEmptyString(props["aria-label"])
+          ? undefined
+          : props["aria-label"]
+      }
       aria-haspopup={props["aria-haspopup"]}
       aria-expanded={props["aria-expanded"]}
       aria-controls={props["aria-controls"]}

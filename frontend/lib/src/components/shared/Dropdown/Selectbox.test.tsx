@@ -63,6 +63,23 @@ function mockVirtualizerViewport(): void {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(300)
 }
 
+/** Wait until aria-activedescendant points at an option with the given text. */
+async function expectActiveOption(
+  input: HTMLElement,
+  text: string | RegExp
+): Promise<void> {
+  await waitFor(
+    () => {
+      const activeId = input.getAttribute("aria-activedescendant")
+      expect(activeId).toBeTruthy()
+      expect(document.getElementById(activeId as string)).toHaveTextContent(
+        text
+      )
+    },
+    { timeout: 3000 }
+  )
+}
+
 describe("Selectbox widget", () => {
   let props: Props
 
@@ -257,6 +274,148 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(screen.getByDisplayValue("b")).toBeVisible()
   })
+
+  it("commits an exact typed match on Enter after opening", async () => {
+    // Regression: Enter right after type must commit the filtered match even
+    // when activedescendant sync has not landed yet (e2e fill+Enter path).
+    const user = userEvent.setup()
+    props = getProps({
+      value: "components_iframe.py",
+      options: ["components_iframe.py", "st_warning.py", "st_expander.py"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.clear(input)
+    await user.type(input, "st_warning.py{Enter}")
+
+    expect(props.onChange).toHaveBeenCalledWith("st_warning.py")
+    expect(input).toHaveValue("st_warning.py")
+  })
+
+  it("syncs activedescendant while typing and keeps a later ArrowDown focus", async () => {
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "ap")
+    await expectActiveOption(input, "apple")
+    // A late Enter-target retry must not snap focus back after ArrowDown.
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledWith("apricot")
+  })
+
+  it("does not commit on Tab while the menu is open", async () => {
+    const user = userEvent.setup()
+    const options = ["apple", "apricot", "banana"]
+
+    props = getProps({ value: undefined, options })
+    const { unmount } = render(<Selectbox {...props} />)
+    let input = screen.getByRole("combobox")
+    await user.click(input)
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{Tab}")
+    expect(props.onChange).not.toHaveBeenCalled()
+    unmount()
+
+    props = getProps({ value: undefined, options })
+    const again = render(<Selectbox {...props} />)
+    input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "ap")
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    await user.keyboard("{Tab}")
+    expect(props.onChange).not.toHaveBeenCalled()
+    again.unmount()
+
+    props = getProps({
+      value: undefined,
+      options: ["apple"],
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "xyz")
+    await expectActiveOption(input, /Add: xyz/i)
+    await user.keyboard("{Tab}")
+    expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  it("lists Add first so matches stay visible, and ArrowDown selects the first match", async () => {
+    // Leading Add keeps best-ranked matches in view in a short dropdown.
+    // ArrowDown before sync (focusedKey still null) must also skip Add.
+    const user = userEvent.setup()
+    props = getProps({
+      value: undefined,
+      options: Array.from({ length: 50 }, (_, i) => `apple-${i}`),
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    await user.click(input)
+    await user.type(input, "a")
+    await waitFor(() => {
+      const options = screen.getAllByRole("option")
+      expect(options[0]).toHaveTextContent(/Add: a/i)
+      expect(screen.getByRole("option", { name: "apple-0" })).toBeVisible()
+    })
+    await expectActiveOption(input, /Add: a/i)
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apple-0")
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledWith("apple-0")
+  })
+
+  it("does not change value on Enter when the highlighted row is already selected", async () => {
+    // RAC commitSelection(true) re-fires onChange for the current key; the
+    // bubble handler must not fall through to creatable / enterTarget commits.
+    const user = userEvent.setup()
+    props = getProps({
+      value: "apple",
+      options: ["apple", "apricot"],
+      acceptNewOptions: true,
+    })
+    const { unmount } = render(<Selectbox {...props} />)
+    let input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{Control>}a{/Control}ap")
+    await expectActiveOption(input, /Add: ap/i)
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apple")
+    let callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledTimes(callsBeforeEnter)
+    expect(input).toHaveValue("apple")
+    unmount()
+
+    props = getProps({
+      value: "apricot",
+      options: ["apple", "apricot", "banana"],
+    })
+    render(<Selectbox {...props} />)
+    input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.type(input, "a")
+    await expectActiveOption(input, "apple")
+    await user.keyboard("{ArrowDown}")
+    await expectActiveOption(input, "apricot")
+    callsBeforeEnter = vi.mocked(props.onChange).mock.calls.length
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledTimes(callsBeforeEnter)
+    expect(input).toHaveValue("apricot")
+  }, 15000)
 
   it("doesn't filter options based on index", async () => {
     const user = userEvent.setup()
@@ -497,6 +656,8 @@ describe("Selectbox widget", () => {
     await waitFor(() => {
       expect(screen.queryAllByRole("option")).toHaveLength(3)
     })
+    // Enter-target sync must name the first option on open (no typing).
+    await expectActiveOption(selectboxInput, "yes")
 
     // Typing is blocked, so no visible text is entered and the list stays
     // unfiltered. Using keyboard() (not type()) avoids an implicit re-click,
@@ -506,9 +667,10 @@ describe("Selectbox widget", () => {
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
     // Arrow/Enter navigation works straight after the click with no manual
-    // focus() — this catches the click-then-keyboard focus regression. Landing
-    // on "no" (the second option) rules out an auto-select-first fallback.
-    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    // focus() — this catches the click-then-keyboard focus regression. The
+    // first option is already the aria Enter target, so one ArrowDown moves
+    // to "no" (the second option).
+    await user.keyboard("{ArrowDown}{Enter}")
     expect(currProps.onChange).toHaveBeenCalledWith("no")
   })
 
@@ -816,6 +978,14 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledTimes(1)
     expect(props.onChange).toHaveBeenCalledWith("hello world!")
     expect(screen.getByDisplayValue("hello world!")).toBeVisible()
+    // Custom values stay outside localSelectedKey; RAC does not auto-close.
+    await waitFor(() => {
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+    })
+    // A second Enter must not replace the created value with the first option.
+    await user.keyboard("{Enter}")
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(selectboxInput).toHaveValue("hello world!")
   })
 
   it("allows new options when acceptNewOptions is true via clicking Add option", async () => {
@@ -937,6 +1107,125 @@ describe("Selectbox widget with optional props", () => {
 
     // "AA" is case-sensitively distinct from "aa", "Aa", "aA" → Add option shown
     expect(screen.getByRole("option", { name: /Add: AA/i })).toBeVisible()
+  })
+})
+
+describe("Selectbox required and error props", () => {
+  const ERROR_MESSAGE = "This field is required."
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("renders no required or error chrome by default", () => {
+    render(<Selectbox {...getProps()} />)
+
+    const input = screen.getByRole("combobox")
+    expect(input).not.toHaveAttribute("aria-required")
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(input).not.toHaveAttribute("aria-describedby")
+    expect(screen.getByRole("group")).not.toHaveAttribute("data-invalid")
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSelectboxErrorIcon")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("shows the required marker and sets aria-required when required", () => {
+    render(<Selectbox {...getProps({ required: true })} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+      "(required)"
+    )
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveAttribute("aria-required", "true")
+    // Required alone is not an error.
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it.each([LabelVisibilityOptions.Hidden, LabelVisibilityOptions.Collapsed])(
+    "omits the required marker but keeps aria-required when the label is %s",
+    labelVisibility => {
+      render(<Selectbox {...getProps({ required: true, labelVisibility })} />)
+
+      expect(
+        screen.queryByTestId("stWidgetLabelRequired")
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole("combobox")).toHaveAttribute(
+        "aria-required",
+        "true"
+      )
+    }
+  )
+
+  it("shows the invalid chrome and announces the error", () => {
+    render(
+      <Selectbox
+        {...getProps({ value: null, required: true, error: ERROR_MESSAGE })}
+      />
+    )
+
+    expect(screen.getByTestId("stSelectboxErrorIcon")).toBeVisible()
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(ERROR_MESSAGE)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+      alert.getAttribute("id")
+    )
+    expect(screen.getByRole("group")).toHaveAttribute("data-invalid")
+  })
+
+  it("does not clear a committed value on Escape when not clearable", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+      clearable: false,
+      required: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(
+      screen.queryByRole("button", { name: "Clear value" })
+    ).not.toBeInTheDocument()
+
+    await user.click(input)
+    await user.keyboard("{Escape}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue("Banana")
+  })
+
+  it("never commits null for a custom value when not clearable", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["red", "green"],
+      value: "purple",
+      clearable: false,
+      required: true,
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("purple")
+
+    await user.click(input)
+    await user.keyboard("{Escape}")
+    expect(input).toHaveValue("purple")
+
+    await user.clear(input)
+    await user.click(document.body)
+
+    expect(props.onChange).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(input).toHaveValue("purple")
+    })
   })
 })
 

@@ -162,11 +162,6 @@ export function applyColumnConfig(
   columnProps: BaseColumnProps,
   columnConfigMapping: Map<string | number, ColumnConfigProps>
 ): BaseColumnProps {
-  if (!columnConfigMapping) {
-    // No column config configured
-    return columnProps
-  }
-
   let columnConfig: ColumnConfigProps = {}
 
   // Merge all possible ways to provide column config for a specific column:
@@ -395,7 +390,7 @@ function useColumnLoader(
 
         // Make sure that required columns are not hidden when editing mode is dynamic:
         if (
-          updatedColumn.isRequired &&
+          updatedColumn.isRequired === true &&
           element.editingMode === DataframeProto.EditingMode.DYNAMIC
         ) {
           updatedColumn = {
@@ -453,7 +448,7 @@ function useColumnLoader(
 
           // Make sure that required columns are not hidden when editing mode is dynamic:
           if (
-            updatedColumn.isRequired &&
+            updatedColumn.isRequired === true &&
             element.editingMode === DataframeProto.EditingMode.DYNAMIC
           ) {
             updatedColumn = {
@@ -473,7 +468,7 @@ function useColumnLoader(
     const pinnedColumns: BaseColumn[] = []
     const unpinnedColumns: BaseColumn[] = []
 
-    if (columnOrder?.length) {
+    if (columnOrder.length) {
       // The column order list can contain either column names - if configured by the user -
       // or column ids - if configured by the frontend component.
 

@@ -30,6 +30,7 @@ import {
   LabelVisibility,
   type streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
@@ -67,7 +68,7 @@ function getOptionBaseContent(
 ): string {
   const icon = option.contentIcon
   const content = option.content ?? ""
-  return icon ? `${icon} ${content}`.trim() : content
+  return isNullOrEmptyString(icon) ? content : `${icon} ${content}`.trim()
 }
 
 /**
@@ -142,17 +143,21 @@ function getInitialValue(
 function getDefaultStateFromProto(
   element: ButtonGroupProto
 ): ButtonGroupValue {
-  const defaultIndices = element.default ?? []
-  return defaultIndices
+  return element.default
     .map(index => {
-      const option = element.options[index]
+      // A negative or missing index must stay missing. `at` would wrap
+      // negatives to the last option.
+      const option =
+        index >= 0 && index < element.options.length
+          ? element.options[index]
+          : undefined
       return option ? getOptionBaseContent(option) : ""
     })
     .filter(s => s !== "")
 }
 
 function getCurrStateFromProto(element: ButtonGroupProto): ButtonGroupValue {
-  return element.rawValues ?? []
+  return element.rawValues
 }
 
 function syncWithWidgetManager(
@@ -177,7 +182,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { clickMode, options, style, label, labelVisibility, help, required } =
     element
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -360,7 +365,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
             LabelVisibility.LabelVisibilityOptions.COLLAPSED
         )}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP}

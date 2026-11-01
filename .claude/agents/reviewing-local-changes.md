@@ -110,6 +110,12 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
     product concerns.
 - Assess whether the implementation's complexity is proportionate to the value it provides.
   Call out unnecessary abstractions, indirection, state, dependencies, or maintenance burden.
+- Weigh edge-case findings by likelihood and impact before raising them. Name the concrete
+  trigger and how likely real apps are to hit it. Treat rare or theoretical cases without
+  security or data-loss impact as non-blocking. For those, recommend the simplest response that
+  covers the risk, such as leaving the code as is, raising a clear error, or documenting the
+  limitation, rather than new state, abstractions, or broad special-casing. Also call out
+  complexity the PR adds only to handle such cases.
 - Assess performance impact. For backend or frontend runtime changes, apply the
   `lib/streamlit/AGENTS.md` ("Streamlit Backend Performance Hot Paths") and
   `frontend/AGENTS.md` ("Streamlit Frontend Performance Hot Paths") guidance.
@@ -219,7 +225,7 @@ meaningful performance impact, say why briefly.]
 
 Verdict criteria:
 - **APPROVED**: If there are no critical/merge-blocking issues. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
-- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs, security vulnerabilities, material performance regressions, breaking changes, missing required tests, a new user-facing feature or significant public API change without a product spec already merged into the base branch or explicit PR-body approval to proceed without one, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED.
+- **CHANGES REQUESTED**: Only use this for merge-blocking issues such as: bugs that plausible usage can hit, security vulnerabilities, material performance regressions, breaking changes, missing required tests, a new user-facing feature or significant public API change without a product spec already merged into the base branch or explicit PR-body approval to proceed without one, or clear material violations of documented Streamlit product/API principles and patterns. Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES REQUESTED. Neither should rare or theoretical edge cases, unless they cause a security issue or data loss.
 
 ---
 *This is an automated AI review. Please verify the feedback and use your judgment.*
@@ -242,5 +248,9 @@ Verdict criteria:
   merged spec is expected; still request changes for material alignment issues. Product
   questions and optional refinements are non-blocking; request changes when a mismatch would
   create material user harm or lasting, unjustified complexity in the public surface.
+- If a PR exists, check its earlier review threads before raising an edge case. If the PR
+  author or a maintainer declined a finding as too rare to justify its fix, do not raise it
+  again unless you can show the case is more likely or more harmful than the reply assumed.
+  This never applies to security or data-loss findings.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.
 - Agent and skill instructions (`.claude/agents/`, `.claude/skills/`, and the generated copies under `.cursor/rules/` and `.github/instructions/`) stay high-level on purpose. Do not ask for shell scripts, command sequences, or step-by-step procedures in those files. Comment only when the goal or a real constraint is missing or wrong.

@@ -16,6 +16,8 @@
 
 import { Suspense } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
@@ -106,10 +108,10 @@ export function isMenuStyleIconLabel(
   icon: string | undefined,
   label: string | undefined
 ): boolean {
-  if (icon) {
+  if (!isNullOrEmptyString(icon)) {
     return false
   }
-  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
+  return !isNullOrEmptyString(label) && MENU_STYLE_ICONS.has(label.trim())
 }
 
 /**
@@ -157,7 +159,7 @@ const DynamicIconDispatcher = ({
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
           aria-hidden="true"
-          data-testid={props.testid || "stSpinnerIcon"}
+          data-testid={props.testid ?? "stSpinnerIcon"}
           {...props}
         />
       </StyledDynamicIcon>
@@ -174,7 +176,7 @@ const DynamicIconDispatcher = ({
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
                 alt=""
-                data-testid={props.testid || "stImageIcon"}
+                data-testid={props.testid ?? "stImageIcon"}
               />
             </StyledDynamicIcon>
           )

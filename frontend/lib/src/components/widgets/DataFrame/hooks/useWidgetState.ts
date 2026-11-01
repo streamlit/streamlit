@@ -28,6 +28,7 @@ import {
 } from "@glideapps/glide-data-grid"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -41,12 +42,22 @@ import EditingState, { getColumnName } from "./EditingState"
 export const DEBOUNCE_TIME_MS = 150
 
 /**
+ * Selection JSON persisted on the widget. The arrays are optional because a
+ * payload can omit them. {@link DataframeState} requires every array.
+ */
+interface ParsedSelectionState {
+  selection: {
+    rows?: number[]
+    columns?: string[]
+    cells?: ReadonlyArray<readonly [number, string]>
+  }
+}
+
+/**
  * Validate that a parsed JSON value has the minimum shape
  * required to represent dataframe selections.
  */
-function isSelectionState(
-  value: unknown
-): value is Pick<DataframeState, "selection"> {
+function isSelectionState(value: unknown): value is ParsedSelectionState {
   if (typeof value !== "object" || value === null) {
     return false
   }
@@ -89,7 +100,7 @@ function parseSelectionStateToGridSelection(
   let columnSelection = CompactSelection.empty()
   let cellSelection: [number, number] | undefined = undefined
 
-  selectionState.selection?.rows?.forEach(row => {
+  selectionState.selection.rows?.forEach(row => {
     const displayRow = originalToDisplayIndex
       ? originalToDisplayIndex(row)
       : row
@@ -98,7 +109,7 @@ function parseSelectionStateToGridSelection(
     }
   })
 
-  selectionState.selection?.columns?.forEach(column => {
+  selectionState.selection.columns?.forEach(column => {
     const idx = columnNames.indexOf(column)
     if (idx >= 0) {
       columnSelection = columnSelection.add(idx)
@@ -109,7 +120,7 @@ function parseSelectionStateToGridSelection(
   // Multi-cell ranges cannot be properly reconstructed from individual cell positions
   // because they require rectangular range information.
   if (isCellSelectionActivated && !isMultiCellSelectionActivated) {
-    const [rowIdx, columnName] = selectionState.selection?.cells?.[0] ?? []
+    const [rowIdx, columnName] = selectionState.selection.cells?.[0] ?? []
     if (rowIdx !== undefined && columnName !== undefined) {
       const displayRow = originalToDisplayIndex
         ? originalToDisplayIndex(rowIdx)
@@ -300,10 +311,10 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId ?? undefined,
+        formId: element.formId,
       })
 
-      if (!initialWidgetValue) {
+      if (isNullOrEmptyString(initialWidgetValue)) {
         // No initial widget value was saved in the widget manager.
         // No need to reconstruct something.
         return
@@ -321,8 +332,8 @@ function useWidgetState({
   )
 
   /**
-   * Inner function to sync editing state with widget manager.
-   * This is wrapped with debounce below.
+   * Inner sync of editing state to the widget manager.
+   * `syncEditState` debounces this, except when `on_change="ignore"`.
    */
   const innerSyncEditState = useCallback(() => {
     if (!widgetMgr) {
@@ -332,27 +343,70 @@ function useWidgetState({
     const currentEditingState = editingStateRef.current.toJson(originalColumns)
     let currentWidgetState = widgetMgr.getStringValue({
       id: element.id,
-      formId: element.formId ?? undefined,
+      formId: element.formId,
     })
 
-    if (currentWidgetState === undefined) {
-      // Create an empty widget state
-      currentWidgetState = new EditingState(0).toJson([])
-    }
+    // Create an empty widget state when the manager has no value yet.
+    currentWidgetState ??= new EditingState(0).toJson([])
 
     // Only update if there is actually a difference between editing and widget state
     if (currentEditingState !== currentWidgetState) {
       widgetMgr.setStringValue(element.id, currentEditingState, {
-        formId: element.formId ?? undefined,
+        formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
-  }, [originalColumns, element.id, element.formId, widgetMgr, fragmentId])
+  }, [
+    originalColumns,
+    element.id,
+    element.formId,
+    element.ignoreRerun,
+    widgetMgr,
+    fragmentId,
+  ])
 
-  // Debounced version of syncEditState to prevent rapid updates
-  const { debouncedCallback: syncEditState, flush: flushEditState } =
-    useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+  const {
+    debouncedCallback: debouncedSyncEditState,
+    flush: flushEditState,
+    cancel: cancelSyncEditState,
+  } = useDebouncedCallback(innerSyncEditState, DEBOUNCE_TIME_MS)
+
+  const innerSyncEditStateRef = useRef(innerSyncEditState)
+  // Assigned during render (not in an effect) so a microtask queued by
+  // render-time edit reconciliation uses this render's columns and id.
+  innerSyncEditStateRef.current = innerSyncEditState
+  const ignoreSyncScheduledRef = useRef(false)
+
+  /**
+   * Writes the editing state to the widget manager.
+   *
+   * - Default mode: debounced, to coalesce reruns.
+   * - `on_change="ignore"`: written in a microtask, so a button click right
+   *   after the commit still includes the edit. One microtask covers a
+   *   multi-row paste and also runs after render-time reconciliation.
+   */
+  const syncEditState = useCallback(() => {
+    if (element.ignoreRerun) {
+      cancelSyncEditState()
+      if (ignoreSyncScheduledRef.current) {
+        return
+      }
+      ignoreSyncScheduledRef.current = true
+      queueMicrotask(() => {
+        ignoreSyncScheduledRef.current = false
+        // Not cancelled on unmount. This microtask runs before passive-effect
+        // cleanup, and a same-turn remount hydrates the edit from this write.
+        innerSyncEditStateRef.current()
+      })
+      return
+    }
+    debouncedSyncEditState()
+  }, [element.ignoreRerun, cancelSyncEditState, debouncedSyncEditState])
 
   /**
    * Creates a function to sync selection state with the widget manager.
@@ -396,29 +450,18 @@ function useWidgetState({
           .toArray()
           .map(columnIdx => getColumnName(columns[columnIdx]))
 
-        // Parse cell selections into our widget state structure:
+        // Parse cell selections into our widget state structure.
+        // A single selected cell is a 1×1 range.
         if (syncCellSelections && newSelection.current) {
-          const { cell, range } = newSelection.current
-          if (range) {
-            // Multi-cell selection (rectangular structure)
-            for (let r = range.y; r < range.y + range.height; r++) {
-              for (let c = range.x; c < range.x + range.width; c++) {
-                if (!columns[c].isIndex) {
-                  selectionState.selection.cells.push([
-                    getOriginalIndex(r),
-                    getColumnName(columns[c]),
-                  ])
-                }
+          const { range } = newSelection.current
+          for (let r = range.y; r < range.y + range.height; r++) {
+            for (let c = range.x; c < range.x + range.width; c++) {
+              if (!columns[c].isIndex) {
+                selectionState.selection.cells.push([
+                  getOriginalIndex(r),
+                  getColumnName(columns[c]),
+                ])
               }
-            }
-          } else if (cell) {
-            // Single-cell selection
-            const [col, row] = cell
-            if (!columns[col].isIndex) {
-              selectionState.selection.cells.push([
-                getOriginalIndex(row),
-                getColumnName(columns[col]),
-              ])
             }
           }
         }
@@ -426,7 +469,7 @@ function useWidgetState({
         const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
-          formId: element.formId ?? undefined,
+          formId: element.formId,
         })
 
         // Only update if there is actually a difference to the previous selection state
@@ -435,7 +478,7 @@ function useWidgetState({
           currentWidgetState !== newWidgetState
         ) {
           widgetMgr.setStringValue(element.id, newWidgetState, {
-            formId: element.formId ?? undefined,
+            formId: element.formId,
             fragmentId,
             fromUser: true,
           })
@@ -466,7 +509,7 @@ function useWidgetState({
       isMultiCellSelectionActivated: boolean
     }): GridSelection | undefined => {
       // Skip if programmatic selection is set; the dedicated effect handles it
-      if (element.selectionState) {
+      if (!isNullOrEmptyString(element.selectionState)) {
         return undefined
       }
 
@@ -481,10 +524,10 @@ function useWidgetState({
 
       const initialWidgetValue = widgetMgr.getStringValue({
         id: element.id,
-        formId: element.formId ?? undefined,
+        formId: element.formId,
       })
 
-      if (initialWidgetValue) {
+      if (!isNullOrEmptyString(initialWidgetValue)) {
         return parseSelectionStateToGridSelection(
           initialWidgetValue,
           columns,
@@ -494,7 +537,7 @@ function useWidgetState({
         )
       }
 
-      if (element.selectionDefault) {
+      if (!isNullOrEmptyString(element.selectionDefault)) {
         const defaultSelection = parseSelectionStateToGridSelection(
           element.selectionDefault,
           columns,
@@ -505,7 +548,7 @@ function useWidgetState({
 
         if (defaultSelection !== undefined) {
           widgetMgr.setStringValue(element.id, element.selectionDefault, {
-            formId: element.formId ?? undefined,
+            formId: element.formId,
             fragmentId,
             fromUser: false,
           })
@@ -532,7 +575,7 @@ function useWidgetState({
           },
         })
         widgetMgr.setStringValue(element.id, selectionState, {
-          formId: element.formId ?? undefined,
+          formId: element.formId,
           fragmentId,
           fromUser: false,
         })
@@ -619,7 +662,7 @@ function useWidgetState({
       // malformed JSON.
       if (selection !== undefined) {
         widgetMgr.setStringValue(element.id, selectionState, {
-          formId: element.formId ?? undefined,
+          formId: element.formId,
           fragmentId,
           fromUser: false,
         })

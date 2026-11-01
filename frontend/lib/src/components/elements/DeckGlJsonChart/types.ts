@@ -32,7 +32,11 @@ type SerializedLayer = {
 } & Record<string, unknown>
 
 export type ParsedDeckGlConfig = {
-  layers: SerializedLayer[]
+  /**
+   * Absent when `st.pydeck_chart(None)` sends an empty map. Entries are
+   * `null` where pydeck serializes a `None` layer.
+   */
+  layers?: Array<SerializedLayer | null>
   initialViewState: Record<string, unknown>
   views?: unknown
   /** GPU parameters from pydeck (`{ cull: true }` in examples). */
@@ -69,8 +73,9 @@ export interface DeckObject {
  * @see PydeckState in the backend for the corresponding Python type.
  */
 export type DeckGlElementState = {
+  /** Keyed by layer ID. Layers without a selection have no entry. */
   selection: {
-    indices: { [layerId: string]: number[] }
-    objects: { [layerId: string]: unknown[] }
+    indices: { [layerId: string]: number[] | undefined }
+    objects: { [layerId: string]: unknown[] | undefined }
   }
 }

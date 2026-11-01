@@ -15,23 +15,26 @@
  */
 
 /**
- * TreeWalker filter that accepts tabbable elements: non-negative tabIndex,
- * not disabled, not hidden, visible (checkVisibility gate for display:none /
- * visibility:hidden ancestors), and not inside an inert subtree (FILTER_REJECT
- * prunes the entire inert subtree so descendants are never visited).
+ * TreeWalker filter that accepts elements reachable with Tab. Rejects:
+ * - negative tabIndex, `disabled`, or `hidden` elements
+ * - elements invisible via display:none / visibility:hidden ancestors
+ * - anything inside an `inert` or `aria-hidden="true"` subtree (pruned
+ *   entirely). rc-overflow hides overflowed items with opacity:0 plus
+ *   aria-hidden, which checkVisibility still reports as visible.
  *
- * Note: this uses document order, not tab order — positive tabIndex values
- * are not visited first. This is sufficient for MainMenu's focus routing
- * (header-bar neighbors use no positive tabIndex) but should not be reused
- * as a general-purpose tab-order utility without sorting by tabIndex.
+ * Uses document order, not tab order (positive tabIndex is not visited
+ * first). That is fine for header-bar routing, where no neighbor uses a
+ * positive tabIndex, but don't reuse this as a general tab-order utility.
  */
 function acceptTabbableNode(node: Node): number {
   if (!(node instanceof HTMLElement)) return NodeFilter.FILTER_SKIP
   if (node.tabIndex < 0) return NodeFilter.FILTER_SKIP
   if ("disabled" in node && (node as HTMLButtonElement).disabled)
     return NodeFilter.FILTER_SKIP
-  if (node.hidden) return NodeFilter.FILTER_SKIP
-  if (node.closest("[inert]")) return NodeFilter.FILTER_REJECT
+  // `hidden` is `true` or `"until-found"` when set; both hide the node.
+  if (node.hidden !== false) return NodeFilter.FILTER_SKIP
+  if (node.closest("[inert], [aria-hidden='true']"))
+    return NodeFilter.FILTER_REJECT
   if (
     "checkVisibility" in node &&
     !node.checkVisibility({ visibilityProperty: true })

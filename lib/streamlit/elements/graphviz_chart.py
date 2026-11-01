@@ -23,6 +23,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitInvalidParameterTypeError
@@ -54,10 +55,20 @@ class GraphvizMixin:
     ) -> DeltaGenerator:
         """Display a graph using the d3-graphviz library and Graphviz WASM.
 
+        .. note::
+            Prefer ``st.mermaid_chart`` for flowcharts, sequence diagrams, ER
+            diagrams, and other diagrams that Mermaid can express. Mermaid
+            diagrams follow the app's light and dark theme and show syntax
+            errors in the app. Use ``st.graphviz_chart`` when a diagram needs
+            a Graphviz layout engine, such as ``neato`` or ``fdp``, or
+            clusters. Graphviz charts don't use the app's theme colors, so set
+            node, edge, and font colors in the graph for dark themes.
+
         .. Important::
-            You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies as an extra with
-            Streamlit:
+            To pass ``graphviz.Graph``, ``graphviz.Digraph``, or
+            ``graphviz.Source`` objects, you must install
+            ``graphviz>=0.19.0``. A DOT string works without it. You can
+            install all charting dependencies as an extra with Streamlit:
 
             .. code-block:: shell
 
@@ -206,7 +217,18 @@ class GraphvizMixin:
         )
 
         return self.dg._enqueue(
-            "graphviz_chart", graphviz_chart_proto, layout_config=layout_config
+            "graphviz_chart",
+            graphviz_chart_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "graphviz_chart",
+                # As DOT source, whether the author passed DOT or a graph object.
+                figure_or_dot=(
+                    graphviz_chart_proto.spec if agent_spec.is_recording() else None
+                ),
+                engine=graphviz_chart_proto.engine or None,
+                alt=graphviz_chart_proto.alt or None,
+            ),
         )
 
     @property

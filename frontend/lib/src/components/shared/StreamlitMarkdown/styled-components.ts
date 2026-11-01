@@ -199,13 +199,13 @@ export const StyledStreamlitMarkdown =
       theme,
       isCaption,
       isInDialog,
-      isLabel,
+      isLabel = false,
       isInHorizontalLayout = false,
-      inheritFont,
-      inheritLineHeight,
-      boldLabel,
-      isToast,
-      truncate,
+      inheritFont = false,
+      inheritLineHeight = false,
+      boldLabel = false,
+      isToast = false,
+      truncate = false,
     }) => {
       // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
       // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
@@ -527,7 +527,7 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
 
 export const StyledHeadingWithActionElements = styled.div<{
   $truncate?: boolean
-}>(({ theme, $truncate }) => ({
+}>(({ theme, $truncate = false }) => ({
   "h1, h2, h3, h4, h5, h6, span": {
     scrollMarginTop: theme.sizes.headerHeight,
   },
@@ -562,7 +562,7 @@ export const StyledHeadingWithActionElements = styled.div<{
 }))
 
 export const StyledHeadingText = styled.span<{ $truncate?: boolean }>(
-  ({ $truncate }) => ({
+  ({ $truncate = false }) => ({
     ...($truncate && {
       overflow: "hidden",
       textOverflow: "ellipsis",

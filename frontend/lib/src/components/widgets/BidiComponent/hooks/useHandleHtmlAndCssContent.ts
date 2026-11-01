@@ -16,6 +16,8 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { BidiComponentContext } from "~lib/components/widgets/BidiComponent/BidiComponentContext"
 import { handleError } from "~lib/components/widgets/BidiComponent/utils/error"
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
@@ -106,7 +108,7 @@ export const useHandleHtmlAndCssContent = ({
    * Calculate this in a useMemo to reduce unnecessary re-runs of the useEffect
    */
   const cssLinkHref = useMemo(() => {
-    if (!cssSourcePath) {
+    if (isNullOrEmptyString(cssSourcePath)) {
       return undefined
     }
 
@@ -143,18 +145,18 @@ export const useHandleHtmlAndCssContent = ({
 
       contentRef.current = document.createElement("div")
 
-      if (html) {
+      if (!isNullOrEmptyString(html)) {
         const htmlDiv = document.createElement("div")
         // SECURITY NOTE: `html` is authored by users/third parties; we do not sanitize it.
         injectHtmlContent(html, htmlDiv)
         contentRef.current.appendChild(htmlDiv)
       }
 
-      if (cssContent) {
+      if (!isNullOrEmptyString(cssContent)) {
         const styleElement = document.createElement("style")
         styleElement.textContent = cssContent
         contentRef.current.appendChild(styleElement)
-      } else if (cssLinkHref) {
+      } else if (cssLinkHref !== undefined) {
         const linkElement = document.createElement("link")
         linkElement.href = cssLinkHref
         linkElement.rel = "stylesheet"

@@ -17,7 +17,7 @@
 import {
   DataType as ArrowDataType,
   type Dictionary,
-  type Field,
+  Field,
   type Struct,
   type StructRow,
   type Vector,
@@ -183,7 +183,7 @@ export function getPandasTypeName(type: ArrowType): string | undefined {
 export function getTimezone(type: ArrowType): string | undefined {
   // `Field.type` is `any` on untyped tables. Read `timezone` as `unknown`
   // before the nullish fallback below.
-  const dataType = type.arrowField?.type as { timezone?: unknown } | undefined
+  const dataType = type.arrowField.type as { timezone?: unknown } | undefined
   const arrowTimezone = dataType?.timezone
   const pandasTimezone = (
     type.pandasType?.metadata as Record<string, unknown> | null | undefined
@@ -281,9 +281,13 @@ export function isPeriodType(type?: ArrowType): boolean {
   if (isNullOrUndefined(type)) {
     return false
   }
+  // pandas tags its period extension "pandas.period". The tag is the only
+  // marker when no pandas column metadata applies (for example, a
+  // `pyarrow.Table` column or the values of a dictionary-encoded column).
+  const extensionName = type.arrowField.metadata.get("ARROW:extension:name")
   return (
     (ArrowDataType.isInt(type.arrowField.type) &&
-      type.arrowField.metadata.get("ARROW:extension:name") === "period") ||
+      (extensionName === "period" || extensionName === "pandas.period")) ||
     (getPandasTypeName(type)?.startsWith("period") ?? false)
   )
 }
@@ -330,6 +334,59 @@ export function isCategoricalType(type?: ArrowType): boolean {
     ArrowDataType.isDictionary(type.arrowField.type) ||
     getPandasTypeName(type) === "categorical"
   )
+}
+
+const formattableCategoryTypeCache = new WeakMap<
+  ArrowType,
+  ArrowType | undefined
+>()
+
+/**
+ * Returns the type of the categories of a dictionary-encoded column if the raw
+ * category values need formatting to be readable: periods, intervals, dates,
+ * datetimes, and times. Other categories, like strings or numbers, are shown
+ * as they are.
+ *
+ * The result is cached per column type, because `format` asks for every cell.
+ *
+ * @param type The arrow type of the categorical column.
+ * @returns The category type, or undefined if the categories need no formatting.
+ */
+export function getFormattableCategoryType(
+  type?: ArrowType
+): ArrowType | undefined {
+  if (
+    isNullOrUndefined(type) ||
+    !ArrowDataType.isDictionary(type.arrowField.type)
+  ) {
+    return undefined
+  }
+  if (formattableCategoryTypeCache.has(type)) {
+    return formattableCategoryTypeCache.get(type)
+  }
+  const { name, metadata } = type.arrowField
+  // The categories carry no pandas column metadata, so only the Arrow value
+  // type and the extension tag on the column field identify them.
+  const categoryType: ArrowType = {
+    type: type.type,
+    arrowField: new Field(
+      name,
+      type.arrowField.type.dictionary,
+      true,
+      metadata
+    ),
+    pandasType: undefined,
+  }
+  const isFormattable = [
+    isPeriodType,
+    isIntervalType,
+    isDateType,
+    isDatetimeType,
+    isTimeType,
+  ].some(isType => isType(categoryType))
+  const result = isFormattable ? categoryType : undefined
+  formattableCategoryTypeCache.set(type, result)
+  return result
 }
 
 /** True if the arrow type is a list type. */
@@ -398,11 +455,14 @@ export function isIntervalType(type?: ArrowType): boolean {
   if (isNullOrUndefined(type)) {
     return false
   }
-  // ArrowDataType.isInterval checks for a different (unsupported) type and not related
-  // to the pandas interval extension type.
+  // ArrowDataType.isInterval checks Arrow's own interval type, which is unrelated to
+  // the pandas interval extension. pandas tags that extension "pandas.interval"; the
+  // tag is the only marker when no pandas column metadata applies (for example, the
+  // categories of a `pd.cut` column).
+  const extensionName = type.arrowField.metadata.get("ARROW:extension:name")
   return (
     (ArrowDataType.isStruct(type.arrowField.type) &&
-      type.arrowField.metadata.get("ARROW:extension:name") === "interval") ||
+      (extensionName === "interval" || extensionName === "pandas.interval")) ||
     (getPandasTypeName(type)?.startsWith("interval") ?? false)
   )
 }

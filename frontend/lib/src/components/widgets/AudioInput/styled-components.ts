@@ -22,20 +22,20 @@ import { StyledBorderlessIconButton } from "~lib/components/shared/BaseButton/st
 export const StyledAudioInputContainerDiv = styled.div()
 
 export const StyledWaveformContainerDiv = styled.div<{ disabled?: boolean }>(
-  ({ theme, disabled }) => ({
+  ({ theme, disabled = false }) => ({
     height: theme.sizes.largestElementHeight,
     width: "100%",
     background: theme.colors.secondaryBg,
     borderRadius: theme.radii.default,
-    marginBottom: theme.spacing.twoXS,
     display: "flex",
     alignItems: "center",
     position: "relative",
     paddingLeft: theme.spacing.xs,
     paddingRight: theme.spacing.sm,
-    border: theme.colors.widgetBorderColor
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
-      : undefined,
+    border:
+      theme.colors.widgetBorderColor !== undefined
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`
+        : undefined,
     cursor: disabled ? "not-allowed" : "auto",
     overflow: "hidden",
   })
@@ -69,14 +69,14 @@ export const StyledWaveSurferDiv = styled.div<{ show: boolean }>(
 export const StyledWaveformTimeCode = styled.span<{
   isPlayingOrRecording: boolean
   disabled?: boolean
-}>(({ theme, isPlayingOrRecording, disabled }) => ({
+}>(({ theme, isPlayingOrRecording, disabled = false }) => ({
   margin: theme.spacing.sm,
   fontFamily: theme.fonts.monospace,
   color: disabled
     ? theme.colors.fadedText40
     : isPlayingOrRecording
       ? theme.colors.bodyText
-      : theme.colors.fadedText60,
+      : theme.colors.fadedText70,
   backgroundColor: theme.colors.secondaryBg,
   fontSize: theme.fontSizes.sm,
 }))

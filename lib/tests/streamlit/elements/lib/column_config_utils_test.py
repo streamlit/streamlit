@@ -13,8 +13,8 @@
 # limitations under the License.
 from __future__ import annotations
 
-import datetime
 import unittest
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -38,6 +38,7 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_inferred_type,
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
+    described_column_config,
     determine_dataframe_schema,
     extract_button_column_configs,
     is_type_compatible,
@@ -79,14 +80,14 @@ SHARED_DATA_KIND_TEST_CASES = [
         ColumnDataKind.DATETIME,
     ),
     (
-        pd.Series([datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]),
+        pd.Series([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
         ColumnDataKind.DATETIME,
     ),
     (
         pd.Series(
             [
-                pd.Timestamp("2000-01-01", tz="US/Central"),
-                pd.Timestamp("2000-01-02", tz="US/Central"),
+                pd.Timestamp("2000-01-01", tz="America/Chicago"),
+                pd.Timestamp("2000-01-02", tz="America/Chicago"),
             ]
         ),
         ColumnDataKind.DATETIME,
@@ -134,6 +135,9 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([TestObject(), TestObject()]), ColumnDataKind.UNKNOWN),
         ]
     )
+    # Pandas 3.1 warns when appending None upcasts the bool and
+    # interval[int64] columns.
+    @pytest.mark.filterwarnings("ignore:Setting an item of incompatible dtype")
     def test_determine_data_kind(
         self, column: pd.Series, expected_data_kind: ColumnDataKind
     ):
@@ -162,19 +166,17 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Index([1.1, 2.2, 3.3]), ColumnDataKind.FLOAT),
             (pd.Index([1, 2.2, 3]), ColumnDataKind.FLOAT),  # mixed-integer-float
             (
-                pd.Index([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Index([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Index([datetime.time(0, 0, 0), datetime.time(0, 0, 1)]),
+                pd.Index([time(0, 0, 0), time(0, 0, 1)]),
                 ColumnDataKind.TIME,
             ),
             (pd.RangeIndex(0, 3), ColumnDataKind.INTEGER),
             (pd.TimedeltaIndex(["1 day", "2 days"]), ColumnDataKind.TIMEDELTA),
             (
-                pd.DatetimeIndex(
-                    [datetime.datetime(2000, 1, 1), datetime.datetime(2000, 1, 2)]
-                ),
+                pd.DatetimeIndex([datetime(2000, 1, 1), datetime(2000, 1, 2)]),
                 ColumnDataKind.DATETIME,
             ),
             (
@@ -208,11 +210,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (
@@ -278,11 +280,11 @@ class ColumnConfigUtilsTest(unittest.TestCase):
             (pd.Series([b"a", b"b", b"c"]), ColumnDataKind.BYTES),
             (pd.Series(["a", "b", "c"]), ColumnDataKind.STRING),
             (
-                pd.Series([datetime.date(2000, 1, 1), datetime.date(2000, 1, 2)]),
+                pd.Series([date(2000, 1, 1), date(2000, 1, 2)]),
                 ColumnDataKind.DATE,
             ),
             (
-                pd.Series([datetime.time(12, 0), datetime.time(13, 0)]),
+                pd.Series([time(12, 0), time(13, 0)]),
                 ColumnDataKind.TIME,
             ),
             (pd.Series([Decimal("1.1"), Decimal("2.2")]), ColumnDataKind.DECIMAL),
@@ -613,3 +615,38 @@ class RegisterButtonColumnWidgetsTest(DeltaGeneratorTestCase):
         widget_id = proto.button_click_widgets["actions"]
         assert widget_id
         assert widget_id in self.script_run_ctx.shared.widget_ids_this_run
+
+
+def test_described_column_config_drops_presentation_and_keeps_index_meaning() -> None:
+    """The agent view keeps column meaning, including the index, and drops layout."""
+    described = described_column_config(
+        {
+            "notes": {
+                "label": "Notes",
+                "width": 100,
+                "alignment": "left",
+                "pinned": True,
+                "hidden": False,
+            },
+            INDEX_IDENTIFIER: {
+                "label": "Month",
+                "type": "date",
+                "format": "MMM YYYY",
+                "width": 20,
+                "hidden": False,
+            },
+            "secret": {"hidden": True},
+            "width_only": {"width": 40},
+        }
+    )
+
+    assert described == {
+        "notes": {"label": "Notes", "hidden": False},
+        INDEX_IDENTIFIER: {"label": "Month", "type": "date", "format": "MMM YYYY"},
+        "secret": {"hidden": True},
+    }
+    assert (
+        described_column_config({INDEX_IDENTIFIER: {"width": 1, "hidden": True}})
+        is None
+    )
+    assert described_column_config("unchanged") == "unchanged"

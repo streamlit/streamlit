@@ -38,7 +38,7 @@ import slugify from "@sindresorhus/slugify"
 import { parseToRgba } from "color2k"
 import type { Element, Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
-import type { Root as MdastRoot, Text } from "mdast"
+import type { Emphasis, Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -52,6 +52,8 @@ import remend, { type RemendHandler } from "remend"
 import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -122,18 +124,76 @@ export function containsEmojiShortcodes(source: string): boolean {
 }
 
 /**
- * Detects if the markdown source contains math syntax that requires KaTeX.
- * Checks for inline math ($...$) and display math ($$...$$) patterns.
- * For inline math, ensures no whitespace immediately after opening $ or before closing $
- * to avoid false positives like "$5 and $10".
+ * Approximates the Markdown that hides `$` signs from math parsing. One regex
+ * scans left to right like the parser, so an escaped backtick doesn't open
+ * code and a backslash inside code doesn't escape anything:
+ * - a fenced code block that starts a line (indented up to 3 spaces). An
+ *   unclosed fence, common while streaming, runs to the end of the source.
+ * - single-line inline code: a backtick run, content without backticks, and a
+ *   backtick run of the same length
+ * - a backslash that escapes a backslash, `$`, or backtick
+ *
+ * This isn't a full CommonMark code matcher: indented code blocks, fences
+ * inside blockquotes or nested lists, and inline code that contains backticks
+ * aren't matched. Their `$` signs stay in the check, which can only turn math
+ * parsing on (never hide a real formula).
+ */
+const CODE_OR_ESCAPE_PATTERN =
+  /(?<=^|\n) {0,3}(`{3,}|~{3,})[\s\S]*?(?:\n[ \t]*\1|$)|(?<!`)(`+)[^`\n]+\2(?!`)|\\[\\$`]/g
+
+/**
+ * Display math: a run of two or more `$`, then content, then another `$$`. A
+ * lone run like "$$$$" (price tiers) doesn't count.
+ */
+const DISPLAY_MATH_PATTERN = /(?<!\$)\$\$+(?!\$)[\s\S]*?\$\$/
+
+/**
+ * Inline math, following Pandoc's rule so dollar amounts like "$5 and $10" or
+ * "$5-$10" don't count as a formula:
+ * - the opening `$` is followed by a non-space
+ * - the closing `$` is preceded by a non-space and not followed by a digit
+ */
+const INLINE_MATH_PATTERN = /(?<!\$)\$(?![\s$])[^$\n]*?[^\s$]\$(?!\d)/
+
+/**
+ * While streaming, a possible dollar amount cut off at its closing `$`, as in
+ * "$5-$" before "10" arrives. It matches the last `$` pair when:
+ * - the span starts with a digit and has no LaTeX markers (`\`, `^`, `{`, `}`,
+ *   `=`), so a formula like "$2^n$" still counts
+ * - only non-space characters follow the closing `$`, such as closing `**`
+ *   from remend or a `st.write_stream` cursor
+ * Capture group 1 is the span without that closing `$`.
+ */
+const UNFINISHED_AMOUNT_PATTERN = /(\$\d[^$\n\\^{}=]*)\$(?=[^\s$]*$)/
+
+/**
+ * Detects whether the markdown source contains a math formula, ignoring `$` in
+ * code and escaped `\$`. RenderedMarkdown runs remark-math and KaTeX only when
+ * this returns true, so dollar signs in text without a formula stay plain.
  *
  * @param source - The markdown source string to check
+ * @param options - Detection options
+ * @param options.isStreaming - Whether more content may still be appended. If
+ *   so, a span that may still turn into a dollar amount doesn't count yet.
  * @returns true if math syntax is detected, false otherwise
  */
-export function containsMathSyntax(source: string): boolean {
-  // Detect display math: $$...$$ or inline math: $...$
-  // Inline math requires non-whitespace after opening $ and before closing $
-  return /\$\$[\s\S]+?\$\$|\$(?!\s)[^$\n]+?(?<!\s)\$/.test(source)
+export function containsMathSyntax(
+  source: string,
+  { isStreaming = false }: { isStreaming?: boolean } = {}
+): boolean {
+  if (!source.includes("$")) {
+    return false
+  }
+  // Replace code and escapes with a placeholder that is neither a space nor
+  // a `$`, so they count as plain text next to a delimiter.
+  const text = source.replaceAll(CODE_OR_ESCAPE_PATTERN, "_")
+  if (DISPLAY_MATH_PATTERN.test(text)) {
+    return true
+  }
+  const inlineText = isStreaming
+    ? text.replace(UNFINISHED_AMOUNT_PATTERN, "$1")
+    : text
+  return INLINE_MATH_PATTERN.test(inlineText)
 }
 
 export enum Tags {
@@ -211,13 +271,15 @@ export interface Props {
 }
 
 /**
- * Type for mdast text nodes that carry hast transformation data.
- * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * Inline mdast node that mdast-util-to-hast turns into a specific HTML element
+ * via `data.hName`. This must not be `type: "text"`: mdast-util-find-and-replace
+ * merges adjacent text nodes, which would drop these fields and neighboring copy.
+ * `emphasis` is a phrasing node whose hast handler applies the `data.h*` fields.
  * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
  */
-interface MdastTextWithHastData {
-  type: "text"
-  value: string
+interface MdastInlineHastNode {
+  type: "emphasis"
+  children: Emphasis["children"]
   data: {
     hName: string
     hProperties: Record<string, string>
@@ -261,7 +323,7 @@ function rehypeSetCodeInlineProperty() {
  * createAnchorFromText(null) // Returns ""
  */
 export function createAnchorFromText(text: string | null): string {
-  if (!text) {
+  if (isNullOrEmptyString(text)) {
     return ""
   }
 
@@ -312,17 +374,17 @@ interface HeadingActionElements {
 const HeaderActionElements: FC<HeadingActionElements> = ({
   elementId,
   help,
-  hideAnchor,
+  hideAnchor = false,
 }) => {
   const theme = useEmotionTheme()
-  if (!help && hideAnchor) {
+  if (isNullOrEmptyString(help) && hideAnchor) {
     return null
   }
 
   return (
     <StyledHeadingActionElements data-testid="stHeaderActionElements">
-      {help && <InlineTooltipIcon content={help} />}
-      {elementId && !hideAnchor && (
+      {!isNullOrEmptyString(help) && <InlineTooltipIcon content={help} />}
+      {!isNullOrEmptyString(elementId) && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`} aria-label="Link to heading">
           <LinkIcon
             // Convert size to px because using rem works but logs a console
@@ -356,7 +418,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   tag,
   anchor: propsAnchor,
   help,
-  hideAnchor,
+  hideAnchor = false,
   children,
   tagProps,
   icon,
@@ -379,8 +441,10 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
       const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
-      const anchor =
-        propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
+      // When the anchor is missing or empty, generate it from the heading text.
+      const anchor = isNullOrEmptyString(propsAnchor)
+        ? createAnchorFromText(textSource?.textContent ?? null)
+        : propsAnchor
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
@@ -411,7 +475,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // paint; otherwise a frame can render with the previous hash link.
   useLayoutEffect(() => {
     const node = nodeRef.current
-    if (!node || propsAnchor) {
+    if (!node || !isNullOrEmptyString(propsAnchor)) {
       return
     }
     applyAnchor(node)
@@ -452,14 +516,14 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // - anchor icon: only when we have an elementId and it's not hidden
   const rawHeadingTextId = useId()
   const headingTextId =
-    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
+    !isNullOrEmptyString(help) ||
+    (!isNullOrEmptyString(elementId) && !hideAnchor && !isInSidebarOrDialog)
       ? rawHeadingTextId
       : undefined
 
-  const idAttribute = elementId ? { id: elementId } : {}
-  const ariaLabelledbyAttribute = headingTextId
-    ? { "aria-labelledby": headingTextId }
-    : {}
+  const idAttribute = isNullOrEmptyString(elementId) ? {} : { id: elementId }
+  const ariaLabelledbyAttribute =
+    headingTextId !== undefined ? { "aria-labelledby": headingTextId } : {}
   const mergedAttributes = {
     ...(isInSidebarOrDialog ? {} : { ref, ...idAttribute }),
     ...ariaLabelledbyAttribute,
@@ -615,12 +679,12 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
  * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
-  inline,
+  inline = false,
   className,
   children,
   ...props
 }) => {
-  const match = /language-(\w+)/.exec(className || "")
+  const match = /language-(\w+)/.exec(className ?? "")
   const isStreaming = useContext(StreamingContext)
   const truncate = useContext(TruncateContext)
 
@@ -628,7 +692,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
     .replace(/^\n/, "")
     .replace(/\n$/, "")
 
-  const language = match?.[1] || ""
+  const language = match?.[1] ?? ""
 
   // Truncated text stays inline: fenced blocks must not grow into syntax
   // highlighters or mermaid diagrams. Non-truncated labels keep fenced-code
@@ -720,10 +784,13 @@ interface CustomHelpIconProps {
  *   which passes content via context and avoids directive label limitations.
  */
 const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Prefer context (from help parameter) over children (from directive label)
+  // Prefer the help parameter (context); fall back to the directive label
+  // when it is unset or empty.
   const contextHelpText = useContext(HelpTextContext)
-  const tooltipContent =
-    contextHelpText || (typeof children === "string" ? children : "")
+  const directiveLabel = typeof children === "string" ? children : ""
+  const tooltipContent = isNullOrEmptyString(contextHelpText)
+    ? directiveLabel
+    : contextHelpText
 
   return (
     <StyledHelpIconWrapper>
@@ -807,9 +874,9 @@ function createRemarkHelpIcon() {
 
       // Handle help icon directive (:help[tooltip content])
       if (nodeName === "help") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "streamlit-help-icon"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         // Pass the children through so CustomHelpIcon can extract the content
         return
       }
@@ -850,18 +917,18 @@ function createRemarkColoringAndSmall(
 
       // Handle shimmer text directive (:shimmer[])
       if (nodeName === "shimmer") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.className = ["stMarkdownShimmer"]
         return
       }
 
       // Handle small text directive (:small[])
       if (nodeName === "small") {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
         return
       }
@@ -869,12 +936,12 @@ function createRemarkColoringAndSmall(
       // Handle custom color directive (:color[text]{foreground="...", background="..."})
       if (nodeName === "color" && node.attributes) {
         const { foreground, background } = node.attributes
-        const validForeground = foreground && isValidCssColor(foreground)
-        const validBackground = background && isValidCssColor(background)
+        const validForeground = isValidCssColor(foreground ?? "")
+        const validBackground = isValidCssColor(background ?? "")
 
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
 
         if (validForeground || validBackground) {
           const styles: string[] = []
@@ -920,10 +987,10 @@ function createRemarkColoringAndSmall(
         const textColor = colorMapping.get(color)
         const bgColor = colorMapping.get(`${color}-background`)
 
-        if (textColor && bgColor) {
-          const data = node.data || (node.data = {})
+        if (textColor !== undefined && bgColor !== undefined) {
+          const data = (node.data ??= {})
           data.hName = "span"
-          data.hProperties = data.hProperties || {}
+          data.hProperties ??= {}
           data.hProperties.className = ["stMarkdownBadge"]
           data.hProperties.style = `${bgColor}; ${textColor}; font-size: ${theme.fontSizes.sm};`
           return
@@ -932,17 +999,17 @@ function createRemarkColoringAndSmall(
 
       // Handle color directives (:color[] or :color-background[])
       if (colorMapping.has(nodeName)) {
-        const data = node.data || (node.data = {})
+        const data = (node.data ??= {})
         const style = colorMapping.get(nodeName)
         data.hName = "span"
-        data.hProperties = data.hProperties || {}
+        data.hProperties ??= {}
         data.hProperties.style = style
         // Add class name specific to colored text used for button hover selector
         // to override text color
         data.hProperties.className = ["stMarkdownColoredText"]
         // Add class for background color for custom styling
         if (
-          style &&
+          style !== undefined &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
           data.hProperties.className = ["stMarkdownColoredBackground"]
@@ -968,7 +1035,11 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
-      if (!node.data?.hName && parent && index !== undefined) {
+      if (
+        isNullOrEmptyString(node.data?.hName) &&
+        parent &&
+        index !== undefined
+      ) {
         const textNode: Text = {
           type: "text",
           value: `:${node.name}`,
@@ -986,12 +1057,12 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
 function createRemarkMaterialIcons(theme: EmotionTheme) {
   return () => (tree: MdastRoot) => {
     function replace(
-      fullMatch: string,
+      _fullMatch: string,
       iconName: string
-    ): MdastTextWithHastData {
+    ): MdastInlineHastNode {
       return {
-        type: "text",
-        value: fullMatch,
+        type: "emphasis",
+        children: [],
         data: {
           hName: "span",
           hProperties: {
@@ -1025,7 +1096,7 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     findAndReplace(tree, [
       [
         /:material_(\w+):/g,
-        replace as (fullMatch: string, iconName: string) => Text,
+        replace as (fullMatch: string, iconName: string) => Emphasis,
       ],
     ])
     return tree
@@ -1037,10 +1108,10 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  */
 function createRemarkStreamlitLogo() {
   return () => (tree: MdastRoot) => {
-    function replaceStreamlit(): MdastTextWithHastData {
+    function replaceStreamlit(): MdastInlineHastNode {
       return {
-        type: "text",
-        value: "",
+        type: "emphasis",
+        children: [],
         data: {
           hName: "img",
           hProperties: {
@@ -1055,7 +1126,9 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
+    findAndReplace(tree, [
+      [/:streamlit:/g, replaceStreamlit as () => Emphasis],
+    ])
     return tree
   }
 }
@@ -1165,9 +1238,9 @@ const directiveCompletionHandler: RemendHandler = {
 const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
 
 // Standard remark plugins that don't depend on theme or props
-// Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
+// Note: RenderedMarkdown adds remarkMathPlugin and the lazy-loaded remarkEmoji
+// only when the source needs them
 const BASE_REMARK_PLUGINS = [
-  remarkMathPlugin,
   remarkGfm,
   remarkDirective,
   createRemarkHelpIcon(),
@@ -1225,7 +1298,7 @@ interface LinkProps {
 export function LinkWithTargetBlank(props: LinkProps): ReactElement {
   // if it's a #hash link, don't open in new tab
   const { href } = props
-  if (href?.startsWith("#")) {
+  if (href?.startsWith("#") === true) {
     const { children, ...rest } = props
     return <a {...omit(rest, "node")}>{children}</a>
   }
@@ -1235,8 +1308,8 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     <a
       href={href}
       title={title}
-      target={target || "_blank"}
-      rel={rel || "noopener noreferrer"}
+      target={isNullOrEmptyString(target) ? "_blank" : target}
+      rel={isNullOrEmptyString(rel) ? "noopener noreferrer" : rel}
       {...omit(rest, "node")}
     >
       {children}
@@ -1248,22 +1321,65 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   allowHTML,
   source,
   overrideComponents,
-  isLabel,
-  disableLinks,
+  isLabel = false,
+  disableLinks = false,
   helpText,
-  unterminatedParsing,
-  hideAnchors,
-  truncate,
+  unterminatedParsing = false,
+  hideAnchors = false,
+  truncate = false,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
-  const needsKatex = useMemo(() => containsMathSyntax(source), [source])
+  const processedSource = useMemo(() => {
+    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
+    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
+    let processed = source.replaceAll(":material/", ":material_")
+
+    if (isLabel) {
+      // Escape markdown syntax that would be stripped in labels, leaving empty content.
+      // See: https://github.com/streamlit/streamlit/issues/7359
+      //
+      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
+      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
+      //
+      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
+      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
+      processed = processed.replaceAll(
+        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
+        "$1\\$2"
+      )
+      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
+      processed = processed.replaceAll(
+        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
+        "$1$2\\$3"
+      )
+    }
+
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed, REMEND_OPTIONS)
+    }
+
+    return processed
+  }, [source, isLabel, allowHTML, unterminatedParsing])
+
+  // Check the source that gets parsed: while streaming, remend closes an
+  // unfinished `$$` block so it can render as math right away.
+  const needsMath = useMemo(
+    () =>
+      containsMathSyntax(processedSource, {
+        isStreaming: unterminatedParsing,
+      }),
+    [processedSource, unterminatedParsing]
+  )
   const needsEmoji = useMemo(() => containsEmojiShortcodes(source), [source])
 
   // Lazy load plugins only when needed
   const katexPlugin = useLazyPlugin<KatexPlugin>({
     key: "katex",
-    needed: needsKatex,
+    needed: needsMath,
     load: loadKatexPlugin,
     pluginName: "rehype-katex",
     onBeforeLoad: loadKatexStyles,
@@ -1313,6 +1429,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
 
   const remarkPlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
+      // Parse math only when the source contains a formula, so dollar amounts
+      // like "$5 and $10" stay plain text
+      ...(needsMath ? [remarkMathPlugin] : []),
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
@@ -1326,12 +1445,12 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(createRemarkUnsupportedDirectivesCleanup())
 
     return plugins
-  }, [theme, colorMapping, needsEmoji, wrappedEmojiPlugin])
+  }, [theme, colorMapping, needsMath, needsEmoji, wrappedEmojiPlugin])
 
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = []
 
-    if (needsKatex && wrappedKatexPlugin) {
+    if (needsMath && wrappedKatexPlugin) {
       plugins.push(wrappedKatexPlugin)
     }
 
@@ -1344,7 +1463,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     plugins.push(rehypeSetCodeInlineProperty)
 
     return plugins
-  }, [allowHTML, needsKatex, wrappedKatexPlugin, wrappedRawPlugin])
+  }, [allowHTML, needsMath, wrappedKatexPlugin, wrappedRawPlugin])
 
   const renderers = useMemo(
     () =>
@@ -1355,41 +1474,6 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       }) as Components,
     [overrideComponents]
   )
-
-  const processedSource = useMemo(() => {
-    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
-    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
-    let processed = source.replaceAll(":material/", ":material_")
-
-    if (isLabel) {
-      // Escape markdown syntax that would be stripped in labels, leaving empty content.
-      // See: https://github.com/streamlit/streamlit/issues/7359
-      //
-      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
-      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
-      //
-      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
-      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
-      processed = processed.replaceAll(
-        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
-        "$1\\$2"
-      )
-      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
-      processed = processed.replaceAll(
-        /^(\s*)(\d+)([.)])(?=\s|$)/gm,
-        "$1$2\\$3"
-      )
-    }
-
-    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
-    // Only apply when unterminatedParsing is enabled (during streaming).
-    // Skip for labels (short, complete strings) and HTML content (may interfere).
-    if (unterminatedParsing && !isLabel && !allowHTML) {
-      processed = remend(processed, REMEND_OPTIONS)
-    }
-
-    return processed
-  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1404,7 +1488,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
   const isLoadingPlugins =
-    (needsKatex && katexPlugin === null) ||
+    (needsMath && katexPlugin === null) ||
     (allowHTML && rawPlugin === null) ||
     (needsEmoji && emojiPlugin === null)
 
@@ -1431,9 +1515,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   )
 
   return (
-    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+    <StreamingContext.Provider value={unterminatedParsing}>
       <HelpTextContext.Provider value={helpText}>
-        <HideAnchorsContext.Provider value={Boolean(hideAnchors)}>
+        <HideAnchorsContext.Provider value={hideAnchors}>
           <ErrorBoundary>
             {truncate ? (
               <TruncateContext.Provider value={true}>
@@ -1457,7 +1541,7 @@ const StreamlitMarkdown: FC<Props> = ({
   source,
   allowHTML,
   style,
-  isCaption,
+  isCaption = false,
   isLabel,
   boldLabel,
   disableLinks,
@@ -1465,7 +1549,7 @@ const StreamlitMarkdown: FC<Props> = ({
   inheritFont,
   inheritLineHeight,
   helpText,
-  truncate,
+  truncate = false,
   unterminatedParsing,
   hideAnchors,
 }) => {
@@ -1473,7 +1557,7 @@ const StreamlitMarkdown: FC<Props> = ({
 
   return (
     <StyledStreamlitMarkdown
-      isCaption={Boolean(isCaption)}
+      isCaption={isCaption}
       isInDialog={isInDialog}
       isLabel={isLabel}
       inheritFont={inheritFont}

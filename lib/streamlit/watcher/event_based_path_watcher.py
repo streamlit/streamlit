@@ -56,9 +56,8 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Final, Self, cast
 
-from typing_extensions import Self
 from watchdog import events
 from watchdog.observers import Observer
 

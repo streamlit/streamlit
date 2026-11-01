@@ -19,6 +19,8 @@ import type { ReactElement } from "react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Fullscreen, FullscreenExit } from "@emotion-icons/material-outlined"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import Button, {
   BaseButtonKind,
 } from "~lib/components/shared/BaseButton/BaseButton"
@@ -41,7 +43,7 @@ import {
  */
 function toolbarActionAriaLabel(label: string, labelContext?: string): string {
   const context = labelContext?.trim()
-  return context ? `${label}: ${context}` : label
+  return isNullOrEmptyString(context) ? label : `${label}: ${context}`
 }
 
 export interface ToolbarActionProps {
@@ -55,7 +57,7 @@ export interface ToolbarActionProps {
 
 export function ToolbarAction({
   label,
-  show_label,
+  show_label = false,
   icon,
   onClick,
   labelContext,
@@ -84,9 +86,7 @@ export function ToolbarAction({
       >
         <Button
           onClick={event => {
-            if (onClick) {
-              onClick()
-            }
+            onClick()
             event.stopPropagation()
           }}
           kind={BaseButtonKind.ELEMENT_TOOLBAR}
@@ -123,17 +123,17 @@ export interface ToolbarProps {
 const Toolbar: React.FC<React.PropsWithChildren<ToolbarProps>> = ({
   onExpand,
   onCollapse,
-  isFullScreen,
-  locked,
+  isFullScreen = false,
+  locked = false,
   children,
   target,
-  disableFullscreenMode,
+  disableFullscreenMode = false,
   labelContext,
 }): ReactElement => {
   const showFullscreenButton =
-    onExpand && !disableFullscreenMode && !isFullScreen
+    onExpand !== undefined && !disableFullscreenMode && !isFullScreen
   const showCloseFullscreenButton =
-    onCollapse && !disableFullscreenMode && isFullScreen
+    onCollapse !== undefined && !disableFullscreenMode && isFullScreen
 
   return (
     <StyledToolbarWrapper

@@ -47,7 +47,7 @@ const ToggleItemRow = memo(function ToggleItemRow({
   itemIndex,
   setItemRef,
 }: ToggleItemRowProps): ReactElement {
-  const { key, label, checked, disabled, onToggle } = item
+  const { key, label, checked, disabled = false, onToggle } = item
 
   const handleRef = useCallback(
     (element: HTMLButtonElement | null): void => {

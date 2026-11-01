@@ -1147,7 +1147,7 @@ class DataframeUtilTest(unittest.TestCase):
             OPT1 = 1
             OPT2 = 2
 
-        class StrOpt(str, enum.Enum):
+        class StrOpt(str, enum.Enum):  # noqa: UP042
             OPT1 = "a"
             OPT2 = "b"
 
@@ -1329,6 +1329,33 @@ def test_convert_sequence_pydantic_path_attribute_error_falls_through() -> None:
     ):
         df = dataframe_util.convert_anything_to_pandas_df(data)
     assert len(df) == 2
+
+
+@pytest.mark.parametrize(
+    ("module_name", "expected"),
+    [
+        # DuckDB 2.0
+        ("duckdb._relation", True),
+        # DuckDB 1.x
+        ("_duckdb", True),
+        # Older DuckDB releases
+        ("duckdb.duckdb", True),
+        # A similarly named type from another module is not a relation.
+        ("duckdb", False),
+    ],
+)
+def test_is_duckdb_relation_accepts_known_type_paths(
+    module_name: str, expected: bool
+) -> None:
+    """Recognize DuckDB relations from the current and older module paths."""
+
+    class DuckDBPyRelation:
+        pass
+
+    DuckDBPyRelation.__module__ = module_name
+    DuckDBPyRelation.__qualname__ = "DuckDBPyRelation"
+
+    assert dataframe_util.is_duckdb_relation(DuckDBPyRelation()) is expected
 
 
 def test_convert_duckdb_relation_row_cap_triggers_caption() -> None:
@@ -1649,6 +1676,51 @@ def test_direct_polars_to_arrow_bytes_lazyframe_exact_row_count_no_warning() -> 
 
 
 @pytest.mark.require_integration
+@pytest.mark.parametrize(
+    ("num_rows", "expected_rows", "shows_caption"),
+    [(51, 50, True), (50, 50, False), (30, 30, False)],
+    ids=["over_limit", "at_limit", "under_limit"],
+)
+def test_collect_polars_lazyframe(
+    num_rows: int, expected_rows: int, shows_caption: bool
+) -> None:
+    """A LazyFrame is collected up to the limit, with a caption only if truncated."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(num_rows)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        collected = dataframe_util.collect_polars_lazyframe(lf, max_unevaluated_rows=50)
+
+    assert isinstance(collected, pl.DataFrame)
+    assert collected["x"].to_list() == list(range(expected_rows))
+    assert mock_info.called is shows_caption
+
+
+@pytest.mark.require_integration
+def test_direct_polars_lazyframe_fallback_does_not_collect_twice() -> None:
+    """The pandas fallback reuses the collected LazyFrame and its single caption."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(100)})
+
+    with (
+        patch.object(
+            dataframe_util,
+            "_convert_polars_to_arrow_bytes",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+
+    mock_info.assert_called_once()
+    assert pa.RecordBatchStreamReader(result).read_all().num_rows == 50
+
+
+@pytest.mark.require_integration
 def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
     """Polars fast path falls back to Pandas path when conversion fails."""
     import polars as pl
@@ -1719,6 +1791,35 @@ def test_downcast_large_list_schema_replaces_large_list() -> None:
     schema = pa.schema([pa.field("nums", pa.large_list(pa.int32()))])
     result = dataframe_util._downcast_large_list_schema(schema)
     assert result.field("nums").type == pa.list_(pa.int32())
+
+
+@pytest.mark.parametrize(
+    ("input_type", "expected", "values"),
+    [
+        (
+            pa.list_(pa.large_list(pa.int64())),
+            pa.list_(pa.list_(pa.int64())),
+            [[[1, 2], None], None, [[3]]],
+        ),
+        (
+            pa.large_list(pa.list_(pa.large_list(pa.int64()))),
+            pa.list_(pa.list_(pa.list_(pa.int64()))),
+            [[[[1, 2], None]], None, [[[3]]]],
+        ),
+    ],
+    ids=["list_of_large_list", "large_list_list_large_list"],
+)
+def test_convert_arrow_table_to_arrow_bytes_downcasts_nested_large_list(
+    input_type: pa.DataType, expected: pa.DataType, values: list[Any]
+) -> None:
+    """A large_list nested inside a regular list is downcast and keeps its values."""
+    table = pa.table({"nested": pa.array(values, type=input_type)})
+
+    result_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+    result_table = pa.ipc.open_stream(result_bytes).read_all()
+
+    assert result_table.schema.field("nested").type == expected
+    assert result_table.column("nested").to_pylist() == values
 
 
 def test_pandas_df_to_series_raises_on_multi_column() -> None:

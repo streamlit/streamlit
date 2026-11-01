@@ -19,6 +19,7 @@ import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 import { getLogger } from "loglevel"
 
 import { type SubtitleTrack, Video as VideoProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -52,6 +53,10 @@ function Video({
     muted,
     alt,
   } = element
+  const trimmedAlt = alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   let crossOrigin = useCrossOriginAttribute(url)
 
@@ -68,7 +73,7 @@ function Video({
       "preventAutoplay"
     )
 
-    if (!preventAutoplayState) {
+    if (preventAutoplayState !== true) {
       // Set the state to prevent autoplay in case there is an unmount + mount
       // for the same element.
       elementMgr.setElementState(element.id, "preventAutoplay", true)
@@ -78,10 +83,6 @@ function Video({
 
   // Create a stable dependency for checking subtitle source urls
   const subtitleSrcArrString = useMemo(() => {
-    if (!subtitles) {
-      return JSON.stringify([])
-    }
-
     return JSON.stringify(
       subtitles.map(subtitle => endpoints.buildMediaURL(`${subtitle.url}`))
     )
@@ -156,7 +157,7 @@ function Video({
     }
 
     return () => {
-      if (videoNode && endTime > 0) {
+      if (endTime > 0) {
         videoNode.removeEventListener("timeupdate", handleTimeUpdate)
       }
     }
@@ -181,9 +182,7 @@ function Video({
     videoNode.addEventListener("ended", handleVideoEnd)
 
     return () => {
-      if (videoNode) {
-        videoNode.removeEventListener("ended", handleVideoEnd)
-      }
+      videoNode.removeEventListener("ended", handleVideoEnd)
     }
   }, [loop, startTime])
 
@@ -203,7 +202,7 @@ function Video({
       // When using the loop parameter, YouTube requires the playlist parameter to be set to the same video ID
       const videoId = youtubeUrl.pathname.split("/").pop()
 
-      if (videoId) {
+      if (!isNullOrEmptyString(videoId)) {
         youtubeUrl.searchParams.append("playlist", videoId)
       }
     }
@@ -229,7 +228,7 @@ function Video({
         // An iframe always needs a title for its accessible name, so the URL
         // stays as the fallback when the author did not provide a description.
         // Blank input must fall back too, or the iframe ends up untitled.
-        title={alt?.trim() || url}
+        title={accessibleName ?? url}
         src={getYoutubeSrc(url)}
         allow="autoplay; encrypted-media"
         allowFullScreen
@@ -265,14 +264,14 @@ function Video({
       // Only set an accessible name when the author provided one. Blank input
       // is treated as absent: aria-label=" " computes to an empty accessible
       // name, which is worse than having no aria-label at all.
-      aria-label={alt?.trim() || undefined}
+      aria-label={accessibleName}
       muted={muted}
       autoPlay={autoplay && !preventAutoplay}
       src={endpoints.buildMediaURL(url)}
       crossOrigin={crossOrigin}
       onError={handleVideoError}
     >
-      {subtitles?.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
+      {subtitles.map((subtitle: SubtitleTrack.$Properties, idx: number) => (
         <track
           // TODO: Update to match React best practices
           // eslint-disable-next-line @eslint-react/no-array-index-key

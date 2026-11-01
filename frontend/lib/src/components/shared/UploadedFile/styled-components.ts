@@ -40,7 +40,7 @@ interface StyledFileChipProps {
 }
 
 export const StyledFileChip = styled.div<StyledFileChipProps>(
-  ({ theme, isError, isClickable }) => ({
+  ({ theme, isError = false, isClickable = false }) => ({
     display: "inline-flex",
     alignItems: "center",
     width: "fit-content",
@@ -109,13 +109,13 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
     fontSize: theme.fontSizes.sm,
     color:
       fileStatus.type === "uploading"
-        ? theme.colors.fadedText60
+        ? theme.colors.fadedText70
         : theme.colors.bodyText,
   })
 )
 
 export const StyledFileChipSize = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.twoSm,
 }))
 
@@ -143,14 +143,18 @@ export const StyledFileChipDeleteButton =
       maxWidth: "unset",
       borderRadius: "50%",
       backgroundColor: "transparent",
-      color: isError ? theme.colors.redTextColor : theme.colors.fadedText60,
+      color:
+        isError === true
+          ? theme.colors.redTextColor
+          : theme.colors.fadedText60,
       padding: 0,
       overflow: "hidden",
       boxSizing: "border-box",
       lineHeight: 0,
       "&:hover": {
         backgroundColor: "transparent",
-        color: isError ? theme.colors.redColor : theme.colors.bodyText,
+        color:
+          isError === true ? theme.colors.redColor : theme.colors.bodyText,
       },
     },
   }))

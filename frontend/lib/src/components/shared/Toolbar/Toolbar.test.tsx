@@ -82,13 +82,15 @@ describe("Toolbar element", () => {
     const toolbar = screen.getByTestId("stElementToolbar")
     // Check positioning of toolbar
     expect(toolbar).toHaveStyle(`top: ${TOP_DISTANCE}`)
+    // A locked toolbar is shown, so it is raised to the `priority` layer
+    expect(toolbar).toHaveStyle("z-index: 1")
 
     // Check styling of toolbar
     const toolbarButtonContainer = screen.getByTestId(
       "stElementToolbarButtonContainer"
     )
     expect(toolbarButtonContainer).toHaveStyle("padding: 0.25rem")
-    expect(toolbarButtonContainer).toHaveStyle("color: rgba(49, 51, 63, 0.6)")
+    expect(toolbarButtonContainer).toHaveStyle("color: rgba(47, 45, 43, 0.6)")
   })
 
   it("doesn't show toolbar if not locked", () => {
@@ -102,6 +104,8 @@ describe("Toolbar element", () => {
     expect(toolbar).toBeInTheDocument()
     // Should not be visible
     expect(toolbar).not.toBeVisible()
+    // The hidden toolbar stays at the base layer
+    expect(toolbar).toHaveStyle("z-index: 0")
   })
 
   it("allows expanding into fullscreen mode", async () => {

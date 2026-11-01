@@ -153,7 +153,7 @@ export const extractComponentsV2Theme = (
      *   transparent here)
      * - When showWidgetBorder=true: uses theme's borderColor
      */
-    widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
+    widgetBorderColor: theme.colors.widgetBorderColor ?? "transparent",
 
     redColor: theme.colors.redColor,
     orangeColor: theme.colors.orangeColor,

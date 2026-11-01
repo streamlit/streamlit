@@ -61,6 +61,7 @@ import {
 import { Navigation } from "@streamlit/protobuf"
 
 import ScrollToBottomContainer from "./ScrollToBottomContainer"
+import SkipToContentLink, { MAIN_ELEMENT_ID } from "./SkipToContentLink"
 import {
   StyledAppViewBlockContainer,
   StyledAppViewBlockSpacer,
@@ -377,7 +378,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Determine if the header should have transparent background
   // Only transparent when no content is shown at all
-  const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
+  const shouldShowLogo =
+    logoElement !== null && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
@@ -393,6 +395,7 @@ function AppView(props: AppViewProps): ReactElement {
       data-testid="stAppViewContainer"
       data-layout={layout}
     >
+      <SkipToContentLink />
       {showSidebar && (
         <Profiler id="Sidebar">
           <ThemedSidebar
@@ -427,6 +430,7 @@ function AppView(props: AppViewProps): ReactElement {
           showToolbar={showToolbar}
         />
         <Component
+          id={MAIN_ELEMENT_ID}
           tabIndex={0}
           isEmbedded={embedded}
           disableScrolling={disableScrolling}

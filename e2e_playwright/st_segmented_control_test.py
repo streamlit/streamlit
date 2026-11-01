@@ -14,7 +14,7 @@
 
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -213,6 +213,76 @@ def test_adjacent_selected_segmented_control_inner_border_regression_snapshot(
         button_group,
         name="st_segmented_control-adjacent_selected_inner_border",
     )
+
+
+def _is_top_most_at(locator: Locator, x: float, y: float) -> bool:
+    """Return whether the element hit at viewport point (x, y) is inside locator."""
+    return bool(
+        locator.evaluate(
+            "(el, [x, y]) => el.contains(document.elementFromPoint(x, y))", [x, y]
+        )
+    )
+
+
+def test_element_toolbar_renders_above_selected_segment(app: Page):
+    """Ensure an element toolbar paints above the selected segment it overlaps."""
+    container = get_element_by_key(app, "segmented_control_toolbar_overlap")
+    container.scroll_into_view_if_needed()
+    selected_segment = get_segment_button(
+        get_button_group(app, "segmented_control_toolbar_overlap_sc"), "Right"
+    )
+    expect(selected_segment).to_have_attribute("data-selected", "true")
+
+    toolbar = container.get_by_test_id("stElementToolbar")
+    dataframe = container.get_by_test_id("stDataFrame")
+    expect(toolbar).to_have_css("opacity", "0")
+
+    # Negative check: the hidden toolbar overlaps the top of the dataframe
+    # header but must not take clicks from it.
+    hidden_button_box = toolbar.get_by_role("button", name="Fullscreen").bounding_box()
+    dataframe_box = dataframe.bounding_box()
+    assert hidden_button_box is not None
+    assert dataframe_box is not None
+    hidden_x = hidden_button_box["x"] + hidden_button_box["width"] / 2
+    hidden_y = hidden_button_box["y"] + hidden_button_box["height"] / 2
+    assert hidden_y > dataframe_box["y"]
+    assert not _is_top_most_at(toolbar, hidden_x, hidden_y)
+
+    dataframe.hover()
+    expect(toolbar).to_have_css("opacity", "1")
+
+    toolbar_box = toolbar.get_by_test_id(
+        "stElementToolbarButtonContainer"
+    ).bounding_box()
+    segment_box = selected_segment.bounding_box()
+    assert toolbar_box is not None
+    assert segment_box is not None
+    left = max(toolbar_box["x"], segment_box["x"])
+    right = min(
+        toolbar_box["x"] + toolbar_box["width"],
+        segment_box["x"] + segment_box["width"],
+    )
+    top = max(toolbar_box["y"], segment_box["y"])
+    bottom = min(
+        toolbar_box["y"] + toolbar_box["height"],
+        segment_box["y"] + segment_box["height"],
+    )
+    # The scenario only covers the regression if the toolbar overlaps the segment.
+    assert left < right
+    assert top < bottom
+
+    # If the selected segment painted over the toolbar (the bug),
+    # elementFromPoint would return the segment instead of a toolbar node.
+    # Retry because the z-index switches in after the slide-in transition.
+    wait_until(
+        app,
+        lambda: _is_top_most_at(toolbar, (left + right) / 2, (top + bottom) / 2),
+    )
+
+    # Negative check: the raised toolbar must not take clicks on the top edge
+    # of its own dataframe.
+    toolbar_center_x = toolbar_box["x"] + toolbar_box["width"] / 2
+    assert not _is_top_most_at(toolbar, toolbar_center_x, dataframe_box["y"] + 2)
 
 
 def test_click_single_icon_segment_and_take_snapshot(
@@ -603,3 +673,110 @@ def test_segmented_control_wrap_behavior(
     click_toggle(app, "Enable SC wrap")
     wait_for_app_run(app)
     expect_text(app, "sc_wrap_preserve: Beta")
+
+
+def test_segmented_control_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc: None")
+    expect_text(app, "ignore_sc_multi: []")
+    # Empty selection equals the default, so the param is omitted.
+    expect(app).not_to_have_url(re.compile(r"ignore_sc="))
+    expect(app).not_to_have_url(re.compile(r"ignore_sc_multi="))
+
+    ignore_single = get_element_by_key(app, "ignore_sc")
+    ignore_multi = get_element_by_key(app, "ignore_sc_multi")
+
+    # Single select updates the URL without rerunning the app.
+    get_segment_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(get_segment_button(ignore_single, "beta")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect_text(app, "ignore_sc: None")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_sc=beta"))
+
+    # Single deselect (toggle off) clears the param without rerunning.
+    get_segment_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(get_segment_button(ignore_single, "beta")).not_to_have_attribute(
+        "data-selected"
+    )
+    expect_text(app, "ignore_sc: None")
+    expect(app).not_to_have_url(re.compile(r"ignore_sc="))
+
+    # Reselect so the buffered value is non-empty.
+    get_segment_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc: None")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_sc=beta"))
+
+    # Multi add. Assert each repeated param so order cannot flake.
+    get_segment_button(ignore_multi, "Red").click()
+    wait_for_app_run(app)
+    get_segment_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc_multi: []")
+    expect(app).to_have_url(re.compile(r"ignore_sc_multi=Red"))
+    expect(app).to_have_url(re.compile(r"ignore_sc_multi=Green"))
+    expect(get_segment_button(ignore_multi, "Red")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect(get_segment_button(ignore_multi, "Green")).to_have_attribute(
+        "data-selected", "true"
+    )
+
+    # Multi remove.
+    get_segment_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc_multi: []")
+    expect(app).to_have_url(re.compile(r"ignore_sc_multi=Red"))
+    expect(app).not_to_have_url(re.compile(r"ignore_sc_multi=Green"))
+    expect(get_segment_button(ignore_multi, "Green")).not_to_have_attribute(
+        "data-selected"
+    )
+
+    # Click Green again so the buffered list is Red and Green.
+    get_segment_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc_multi: []")
+
+    # A later rerun delivers both buffered values.
+    app.get_by_role("button", name="Apply ignore segmented control", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect_text(app, "ignore_sc: beta")
+    expect_text(app, "ignore_sc_multi: ['Red', 'Green']")
+    expect_text(app, "Applied ignore segmented control: beta")
+    expect_text(app, "Applied ignore multi segmented control: ['Red', 'Green']")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_segment_button(ignore_single, "beta")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect(get_segment_button(ignore_multi, "Red")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect(get_segment_button(ignore_multi, "Green")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect_text(app, "ignore_sc: beta")
+    expect_text(app, "ignore_sc_multi: ['Red', 'Green']")

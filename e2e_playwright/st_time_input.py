@@ -192,3 +192,30 @@ st.write("Ignore time value:", ignore_time)
 
 if st.button("Apply ignore time", key="apply_ignore_time"):
     st.write("Applied ignore time value:", ignore_time)
+
+st.markdown("Required time inputs:")
+
+with st.form("required_time_input_form", clear_on_submit=True):
+    st.time_input("Required start", value=None, key="required_start", required=True)
+    st.time_input("Required end", value=None, key="required_end", required=True)
+    required_form_submitted = st.form_submit_button("Submit required time input form")
+
+st.write("required form submitted:", required_form_submitted)
+st.write("required start:", st.session_state.get("required_start"))
+st.write("required end:", st.session_state.get("required_end"))
+
+required_standalone = st.time_input(
+    "Required standalone",
+    value=None,
+    key="required_standalone",
+    required=True,
+)
+st.write("required standalone:", required_standalone)
+
+st.time_input(
+    "Required hidden",
+    value=None,
+    key="required_hidden",
+    required=True,
+    label_visibility="hidden",
+)

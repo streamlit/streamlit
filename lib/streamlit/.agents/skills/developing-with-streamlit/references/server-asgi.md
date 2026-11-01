@@ -4,11 +4,27 @@ Use `st.App` when a normal Streamlit script needs ASGI-level composition: custom
 
 Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, keep the UI in a normal Streamlit script and launch the `st.App` wrapper with `streamlit run asgi_app.py` when possible.
 
+## Contents
+
+- [When to use it](#when-to-use-it)
+- [Basic ASGI wrapper](#basic-asgi-wrapper)
+- [Direct Python launchers with App.run()](#direct-python-launchers-with-apprun)
+- [Script paths](#script-paths)
+- [Custom routes](#custom-routes)
+- [Middleware](#middleware)
+- [Lifespan hooks](#lifespan-hooks)
+- [Mount another ASGI app inside Streamlit](#mount-another-asgi-app-inside-streamlit)
+- [Mount Streamlit inside FastAPI](#mount-streamlit-inside-fastapi)
+- [Programmatic secrets](#programmatic-secrets)
+- [Error handling](#error-handling)
+- [Limitations and cautions](#limitations-and-cautions)
+- [References](#references)
+
 ## When to use it
 
 Use `st.App` for:
 - Custom REST or webhook endpoints alongside a Streamlit app
-- HTTP middleware for security headers, request logging, authentication, or CORS
+- HTTP middleware for security headers, request logging, authentication, CORS, or setting cookies on the HTTP response
 - Startup/shutdown work through ASGI lifespan hooks
 - Mounting FastAPI, Starlette, or another ASGI app beside Streamlit
 - Mounting Streamlit inside a parent ASGI app
@@ -171,6 +187,12 @@ app = st.App(
 ```
 
 User middleware runs before Streamlit's internal middleware on requests and after it on responses.
+
+To set a cookie when the page loads, call `response.set_cookie(...)` in middleware. Pass `httponly=True` and an explicit `samesite`. Pass `secure=True` only when the app is served over HTTPS; it drops the cookie on local HTTP. Starlette leaves `httponly` and `secure` off. User middleware runs on every HTTP response, including static assets and `/_stcore/*`, so set the cookie on the app page response or only when it is missing.
+
+- Middleware runs on HTTP requests, not script reruns, so it cannot set a cookie after a widget interaction.
+- The script reads cookies with the read-only `st.context.cookies`, which reflects the initial request.
+- Use a cookie component only when the script must read or change cookies after the page loads. For sign-in, prefer `st.login`. See [third-party-components.md](third-party-components.md).
 
 ## Lifespan hooks
 

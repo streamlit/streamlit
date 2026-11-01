@@ -277,6 +277,7 @@ export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
 
 export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {
   return (
-    blockProto.flexContainer?.border || blockProto.vertical?.border || false
+    blockProto.flexContainer?.border === true ||
+    blockProto.vertical?.border === true
   )
 }

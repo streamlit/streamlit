@@ -32,6 +32,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
+    convert_anything_to_arrow_bytes,
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
@@ -43,15 +44,18 @@ from streamlit.elements.vega_charts import (
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
+    arrow_buffers,
+    loads_data_from_url,
 )
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
-from streamlit.util import ReadOnlyAttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -741,6 +745,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # The name is the content hash of the Arrow bytes.
+        assert proto.datasets[0].name == calc_hash(proto.datasets[0].data.data)
         # Decode it to confirm the payload really is Arrow bytes for this df, so
         # this cannot pass on a merge that left raw JSON values in place.
         pd.testing.assert_frame_equal(
@@ -2873,7 +2879,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
@@ -2910,7 +2916,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 "d": [300, 301, 302],
             }
         )
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         # There used to be a bug where this line would throw an exception.
         # (Because some color-handling code was dependent on the DF index starting at 0)
@@ -2951,6 +2957,29 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         highlighted_layer = chart_spec["layer"][2]
         assert "transform" in highlighted_layer
         assert any("filter" in t for t in highlighted_layer["transform"])
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_spec_only_renames_datasets_when_data_changes(self) -> None:
+        """Test that new data changes only the dataset names in a line chart spec.
+
+        The frontend then swaps the new rows into the existing view instead
+        of rebuilding it.
+        """
+        specs: list[str] = []
+        for values in ([4, 5, 6], [7, 8, 9]):
+            st.line_chart(pd.DataFrame({"a": [1, 2, 3], "b": values}), x="a", y="b")
+            proto = self.get_delta_from_queue().new_element.vega_lite_chart
+            spec = proto.spec
+            for index, dataset in enumerate(proto.datasets):
+                spec = spec.replace(dataset.name, f"dataset_{index}")
+            specs.append(spec)
+
+        assert specs[0] == specs[1]
+        # The hover layers are named, so their names must not depend on the data.
+        assert '"view_1"' in specs[0]
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -4046,6 +4075,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
                 '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
             ),  # Hash-based suffixes with duplicates
+            (
+                "view_",
+                '{"layer": ["view_79c4_0", "view_8532_1"], "a": "view_my_chart"}',
+                '{"layer": ["view_1", "view_2"], "a": "view_my_chart"}',
+            ),  # Hashes with a position suffix, but not other underscored names
+            (
+                "param_",
+                '{"params": ["param_x_1", "param_custom", "param_e4f9_2"]}',
+                '{"params": ["param_x_1", "param_custom", "param_1"]}',
+            ),  # User-chosen names that aren't hex hashes stay unchanged
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
@@ -5011,3 +5050,71 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
 
             # ID should change since no key is provided and data changed
             assert id1 != id2
+
+
+def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
+    """Inline data comes first, then every named dataset; no data is no buffer.
+
+    An empty named dataset, and the one empty row Altair gives a layer without
+    data, are skipped like empty inline data, so they do not turn a
+    single-table chart into `multiple_datasets`. Rows without columns are kept.
+    """
+    placeholder = convert_anything_to_arrow_bytes(pd.DataFrame([{}]))
+    rows_without_columns = convert_anything_to_arrow_bytes(pd.DataFrame(index=range(2)))
+    proto = VegaLiteChartProto()
+    proto.data.data = b"inline"
+    for name, data in (
+        ("first", b"one"),
+        ("empty", b""),
+        ("placeholder", placeholder),
+        ("rows", rows_without_columns),
+        ("second", b"two"),
+    ):
+        dataset = proto.datasets.add()
+        dataset.name = name
+        dataset.data.data = data
+
+    assert arrow_buffers(proto) == [b"inline", b"one", rows_without_columns, b"two"]
+    assert arrow_buffers(VegaLiteChartProto()) == []
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        pytest.param({"data": {"url": "https://example.com/a.csv"}}, True, id="top"),
+        pytest.param(
+            {"layer": [{"mark": "point"}, {"data": {"url": "b.json"}}]},
+            True,
+            id="layer",
+        ),
+        pytest.param(
+            {
+                "transform": [
+                    {
+                        "lookup": "id",
+                        "from": {"data": {"url": "c.csv"}, "key": "id"},
+                    }
+                ]
+            },
+            True,
+            id="lookup",
+        ),
+        pytest.param('{"data": {"url": "d.csv"}}', True, id="json-text"),
+        pytest.param({"data": {"name": "frame"}}, False, id="named-data"),
+        pytest.param({"data": {"values": [{"url": "e"}]}}, False, id="a-url-value"),
+        pytest.param(
+            {"data": {"values": [{"data": {"url": "f.csv"}}]}},
+            False,
+            id="a-row-shaped-like-a-source",
+        ),
+        pytest.param(
+            {"usermeta": {"data": {"url": "g.csv"}}, "mark": "point"},
+            False,
+            id="usermeta",
+        ),
+        pytest.param('{"data": {"url"', False, id="malformed-json"),
+    ],
+)
+def test_loads_data_from_url_at_any_depth(spec: Any, expected: bool) -> None:
+    """A URL anywhere a Vega-Lite spec takes data counts; a value named url does not."""
+    assert loads_data_from_url(spec) is expected

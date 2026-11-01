@@ -23,6 +23,7 @@ import streamlit as st
 import streamlit.typing
 from streamlit.elements.arrow import DataframeState
 from streamlit.elements.deck_gl_json_chart import PydeckState
+from streamlit.elements.echarts_chart import EChartsState
 from streamlit.elements.lib.column_config_utils import ButtonColumnClickState
 from streamlit.elements.plotly_chart import PlotlyState
 from streamlit.elements.vega_charts import VegaLiteState
@@ -36,6 +37,7 @@ _EXPECTED_EXPORTS = {
     "ChatInputValue",
     "DataEditorState",
     "DataframeState",
+    "EChartsState",
     "PlotlyState",
     "PydeckState",
     "UploadedFile",
@@ -66,6 +68,7 @@ def test_excluded_selection_schemas_are_not_exported() -> None:
     """Inner selection schemas are intentionally kept out of ``__all__``."""
     excluded = {
         "DataframeSelectionState",
+        "EChartsSelectionState",
         "PlotlySelectionState",
         "PydeckSelectionState",
     }
@@ -81,6 +84,7 @@ def test_exports_preserve_object_identity() -> None:
     assert streamlit.typing.PlotlyState is PlotlyState
     assert streamlit.typing.VegaLiteState is VegaLiteState
     assert streamlit.typing.PydeckState is PydeckState
+    assert streamlit.typing.EChartsState is EChartsState
     assert streamlit.typing.ButtonColumnClickState is ButtonColumnClickState
 
 
@@ -109,6 +113,7 @@ def test_state_classes_isinstance() -> None:
     assert isinstance(PlotlyState({"selection": {}}), streamlit.typing.PlotlyState)
     assert isinstance(VegaLiteState({"selection": {}}), streamlit.typing.VegaLiteState)
     assert isinstance(PydeckState({"selection": {}}), streamlit.typing.PydeckState)
+    assert isinstance(EChartsState({"selection": {}}), streamlit.typing.EChartsState)
     assert isinstance(
         ButtonColumnClickState({"row": 0, "label": "x"}),
         streamlit.typing.ButtonColumnClickState,

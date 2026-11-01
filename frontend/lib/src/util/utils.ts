@@ -375,7 +375,8 @@ export function isFromWindows(): boolean {
 }
 
 /**
- * Sets cookie value
+ * Sets a cookie value. Silently skips the write when the document cannot
+ * store cookies (for example, a sandboxed iframe without `allow-same-origin`).
  */
 export function setCookie(
   name: string,
@@ -386,7 +387,12 @@ export function setCookie(
   const expirationStr: string = expirationDate
     ? `expires=${expirationDate.toUTCString()};`
     : ""
-  document.cookie = `${name}=${value};${expirationStr}path=/`
+  try {
+    document.cookie = `${name}=${value};${expirationStr}path=/`
+  } catch {
+    // Cookie writes are best-effort; callers must not rely on the value
+    // persisting.
+  }
 }
 
 export function isValidElementId(
@@ -541,9 +547,9 @@ function findAnIFrameWithClassName(
 function canAccessIFrame(iframe: HTMLIFrameElement): boolean {
   try {
     if (iframe.contentWindow === null) return false
-    const doc = iframe.contentDocument || iframe.contentWindow.document
+    const doc = iframe.contentDocument ?? iframe.contentWindow.document
     const html = doc.body.innerHTML
-    return html !== null && html !== ""
+    return html !== ""
   } catch {
     return false
   }
@@ -571,9 +577,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
-  }
+  qs = window.parent.document.querySelectorAll(qsStreamlitAppStr)
   foundIFrame = findAnIFrameWithClassName(qs, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null
@@ -589,9 +593,7 @@ export function getIFrameEnclosingApp(
   if (foundIFrame) {
     return foundIFrame
   }
-  if (window.parent) {
-    htmlCollection = window.parent.document.getElementsByTagName("iframe")
-  }
+  htmlCollection = window.parent.document.getElementsByTagName("iframe")
   foundIFrame = findAnIFrameWithClassName(htmlCollection, embeddingIdClassName)
   if (foundIFrame && !canAccessIFrame(foundIFrame)) {
     return null

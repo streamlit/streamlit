@@ -49,6 +49,10 @@ import type {
   StreamlitEndpoints,
 } from "./types"
 import { buildWsUri } from "./utils"
+import {
+  formatWebsocketCloseLog,
+  isNormalWebsocketClosure,
+} from "./websocketCloseDiagnostics"
 
 export interface Args {
   /** The application's SessionInfo instance */
@@ -358,6 +362,7 @@ export class WebsocketConnection {
       // If we get a fatal error, we transition to DISCONNECTED_FOREVER
       // regardless of our current state.
       this.setFsmState(ConnectionState.DISCONNECTED_FOREVER, {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank error message uses the fallback
         message: errMsg || "Unknown error",
       })
       return
@@ -369,7 +374,7 @@ export class WebsocketConnection {
     switch (this.state) {
       case ConnectionState.INITIAL:
         if (event === "INITIALIZED") {
-          if (this.args.enableBypass) {
+          if (this.args.enableBypass === true) {
             // Bypass: Start connecting to the websocket immediately while
             // running health and host-config pings in parallel (rather than
             // sequentially). Both must succeed, but they don't gate the WS connection.
@@ -718,9 +723,14 @@ export class WebsocketConnection {
       }
     })
 
-    this.websocket.addEventListener("close", () => {
+    this.websocket.addEventListener("close", (event: CloseEvent) => {
       if (checkWebsocket()) {
-        LOG.warn("WebSocket onclose")
+        const closeLog = formatWebsocketCloseLog(event, this.state)
+        if (isNormalWebsocketClosure(event.code, event.wasClean)) {
+          LOG.info(closeLog)
+        } else {
+          LOG.warn(closeLog)
+        }
         this.closeConnection()
         this.stepFsm("CONNECTION_CLOSED")
       }

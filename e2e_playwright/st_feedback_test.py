@@ -18,7 +18,12 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -318,3 +323,54 @@ def test_feedback_on_change_ignore_clearing_default(app: Page):
     expect(
         app.get_by_text("Applied ignore default feedback value: None", exact=True)
     ).to_be_visible()
+
+
+def _bound_star(page: Page, index: int) -> Locator:
+    return get_feedback(page, "bound_rating").get_by_role(
+        "radio", name=f"{index + 1} out of 5 stars"
+    )
+
+
+def test_feedback_query_param_seeding(page: Page, app_base_url: str):
+    """Test that a bound feedback widget is seeded from the URL, and that an
+    invalid URL value falls back to the default and is removed.
+    """
+    page.goto(build_app_url(app_base_url, query={"bound_rating": "4"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound feedback value:", "4")
+    expect(_bound_star(page, 4)).to_have_attribute("aria-checked", "true")
+    expect(page).to_have_url(re.compile(r"bound_rating=4"))
+
+    page.goto(build_app_url(app_base_url, query={"bound_rating": "9"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound feedback value:", "2")
+    expect(_bound_star(page, 2)).to_have_attribute("aria-checked", "true")
+    expect(page).not_to_have_url(re.compile(r"bound_rating"))
+
+
+def test_feedback_query_param_updates_url(app: Page):
+    """Test that selecting, clearing, and reselecting the default rating of a
+    bound feedback widget updates the URL.
+    """
+    expect_prefixed_markdown(app, "Bound feedback value:", "2")
+    expect(app).not_to_have_url(re.compile(r"bound_rating"))
+
+    _bound_star(app, 0).click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Bound feedback value:", "0")
+    expect(app).to_have_url(re.compile(r"bound_rating=0"))
+
+    # Clicking the selected star clears the rating; the empty param keeps it
+    # cleared on reload instead of falling back to the default.
+    _bound_star(app, 0).click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Bound feedback value:", "None")
+    expect(app).to_have_url(re.compile(r"bound_rating=(&|$)"))
+
+    # Selecting the default removes the param.
+    _bound_star(app, 2).click()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Bound feedback value:", "2")
+    expect(app).not_to_have_url(re.compile(r"bound_rating"))

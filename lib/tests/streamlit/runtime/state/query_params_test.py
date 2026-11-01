@@ -14,15 +14,15 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 import pytest
 from parameterized import parameterized
 
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state.query_params import (
-    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
-    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
     QueryParams,
     _coerce_value_for_query_url,
     _set_item_in_dict,
@@ -700,8 +700,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
         """Test that 2024-06-15 produces the correct microsecond value."""
 
         result = _try_parse_iso_to_micros("2024-06-15")
-        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime.combine(date(2024, 6, 15), time(), tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 
@@ -710,8 +710,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
         result = _try_parse_iso_to_micros("14:30")
         assert result is not None
-        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime.combine(date(2000, 1, 1), time(14, 30), tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 
@@ -725,8 +725,8 @@ class TryParseIsoToMicrosTest(DeltaGeneratorTestCase):
 
         result = _try_parse_iso_to_micros("2024-06-15T14:30")
         assert result is not None
-        dt = datetime(2024, 6, 15, 14, 30, tzinfo=timezone.utc)
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        dt = datetime(2024, 6, 15, 14, 30, tzinfo=UTC)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
         expected = (dt - epoch).total_seconds() * 1_000_000
         assert result == expected
 
@@ -1419,10 +1419,10 @@ class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
                 "too_many_fields",
                 "&".join(
                     f"key_{idx}=value"
-                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                    for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
                 ),
             ),
-            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            ("too_long", "foo=" + ("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
         ]
     )
     def test_populate_ignores_unsafe_query_string(
@@ -1441,10 +1441,10 @@ class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
                 "too_many_fields",
                 "&".join(
                     f"key_{idx}=value"
-                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                    for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
                 ),
             ),
-            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            ("too_long", "foo=" + ("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
         ]
     )
     def test_set_initial_query_params_ignores_unsafe_query_string(
@@ -1650,10 +1650,10 @@ class RemoveStaleBindingsTest(DeltaGeneratorTestCase):
     [
         pytest.param("", id="empty"),
         pytest.param("foo=bar&baz=qux", id="normal"),
-        pytest.param("x" * _CLIENT_STATE_QUERY_STRING_MAX_LENGTH, id="length_at_limit"),
+        pytest.param("x" * CLIENT_STATE_QUERY_STRING_MAX_LENGTH, id="length_at_limit"),
         pytest.param(
             "&".join(
-                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS)
+                f"k{idx}=v" for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS)
             ),
             id="fields_at_limit",
         ),
@@ -1667,10 +1667,10 @@ def test_sanitize_query_string_keeps_safe_input(query_string: str) -> None:
 @pytest.mark.parametrize(
     "query_string",
     [
-        pytest.param("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1), id="too_long"),
+        pytest.param("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1), id="too_long"),
         pytest.param(
             "&".join(
-                f"k{idx}=v" for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                f"k{idx}=v" for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
             ),
             id="too_many_fields",
         ),

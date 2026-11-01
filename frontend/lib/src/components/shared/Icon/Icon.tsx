@@ -18,6 +18,8 @@ import { memo, type ReactElement, type ReactNode } from "react"
 
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { IconSizeProp } from "~lib/theme/types"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
@@ -42,10 +44,10 @@ const getDefaultProps = ({
   padding,
   color,
 }: GetDefaultPropsArgs): DefaultProps => ({
-  size: size || "md",
-  margin: margin || "",
-  padding: padding || "",
-  color: color || undefined,
+  size: size ?? "md",
+  margin: margin ?? "",
+  padding: padding ?? "",
+  color: isNullOrEmptyString(color) ? undefined : color,
 })
 
 interface IconProps {
@@ -99,7 +101,7 @@ export const EmojiIcon = memo(function EmojiIcon({
 
   return (
     <StyledEmojiIcon
-      data-testid={testid || "stIconEmoji"}
+      data-testid={testid ?? "stIconEmoji"}
       aria-hidden="true"
       {...getDefaultProps({ size, margin, padding, color })}
     >

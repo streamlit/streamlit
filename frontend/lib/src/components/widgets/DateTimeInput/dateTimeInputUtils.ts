@@ -17,6 +17,7 @@
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
 import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   parseFormatOrder,
@@ -35,7 +36,7 @@ function pad(value: number, length: number): string {
 export function isoToCalendarDateTime(
   value: string | null | undefined
 ): CalendarDateTime | null {
-  if (!value) return null
+  if (isNullOrEmptyString(value)) return null
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::[0-5]\d)?$/.exec(
     value.trim()
   )
@@ -336,13 +337,13 @@ export function getStateFromWidgetMgr(
 export function getDefaultStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.default?.length ? element.default[0] : null
+  return element.default.length ? element.default[0] : null
 }
 
 export function getCurrStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.value?.length ? element.value[0] : null
+  return element.value.length ? element.value[0] : null
 }
 
 export function updateWidgetMgrState(
@@ -355,18 +356,22 @@ export function updateWidgetMgrState(
   const maxDateTime = isoToCalendarDateTime(element.max)
 
   const setArrayValue = (val: string | null): void => {
-    widgetMgr.setStringArrayValue(element.id, val ? [val] : [], {
-      formId: element.formId,
-      fragmentId,
-      fromUser: vws.fromUser,
-      // on_change="ignore" buffers the value without scheduling a rerun.
-      // WidgetStateManager ignores triggerRerun inside forms (the form owns
-      // commit timing).
-      ...(element.ignoreRerun ? { triggerRerun: false } : {}),
-    })
+    widgetMgr.setStringArrayValue(
+      element.id,
+      isNullOrEmptyString(val) ? [] : [val],
+      {
+        formId: element.formId,
+        fragmentId,
+        fromUser: vws.fromUser,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+      }
+    )
   }
 
-  if (vws.value) {
+  if (!isNullOrEmptyString(vws.value)) {
     const dt = isoToCalendarDateTime(vws.value)
     if (dt) {
       const isOutOfBounds = !!validateDateTime(dt, minDateTime, maxDateTime)

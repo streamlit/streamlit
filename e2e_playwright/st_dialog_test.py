@@ -15,7 +15,7 @@
 import re
 
 import pytest
-from playwright.sync_api import Locator, Page, Position, expect
+from playwright.sync_api import FloatRect, Locator, Page, Position, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
@@ -29,14 +29,20 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_button,
     get_color_picker,
+    get_element_by_key,
     get_markdown,
+    get_selectbox,
     is_child_bounding_box_inside_parent,
     open_json_path_tooltip,
+    reset_focus,
+    reset_hovering,
     select_selectbox_option,
+    tab_until_focused,
 )
 from e2e_playwright.shared.dataframe_utils import (
     open_column_menu,
 )
+from e2e_playwright.shared.react18_utils import wait_for_react_stability
 from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 
 modal_test_id = "stDialog"
@@ -72,6 +78,27 @@ def open_large_width_dialog(app: Page):
 
 def open_medium_width_dialog(app: Page):
     click_button(app, "Open medium-width Dialog")
+
+
+def open_pixel_width_400_dialog(app: Page):
+    click_button(app, "Open 400px Dialog")
+
+
+def open_pixel_width_200_dialog(app: Page):
+    click_button(app, "Open 200px Dialog")
+
+
+def open_pixel_width_100_dialog(app: Page):
+    click_button(app, "Open 100px Dialog")
+
+
+def open_pixel_width_2000_dialog(app: Page):
+    click_button(app, "Open 2000px Dialog")
+
+
+def open_pixel_width_drawer_dialog(app: Page):
+    click_button(app, "Open 420px Left Drawer")
+    _wait_for_drawer_enter(app)
 
 
 def open_headings_dialogs(app: Page):
@@ -242,6 +269,51 @@ def test_dialog_reopens_properly_after_close(app: Page):
         expect(main_dialog).to_have_count(0)
 
 
+def test_help_tooltip_does_not_reopen_after_dialog_closes(app: Page, browser_name: str):
+    """Test that a trigger's help tooltip stays hidden after a mouse close (#17562).
+
+    Closing a dialog returns focus to the button that opened it. That focus must not
+    show the button's help tooltip, while keyboard focus still does.
+    """
+    # Buttons with help render a hidden copy for narrow screens; get_by_role only
+    # matches the visible one.
+    trigger = get_element_by_key(app, "help-button-dialog-btn").get_by_role(
+        "button", name="Open dialog from help button"
+    )
+    dialog = app.get_by_test_id(modal_test_id)
+    tooltip = app.get_by_test_id("stTooltipContent")
+
+    # Close with the dialog's close button.
+    trigger.click()
+    expect(dialog).to_be_visible()
+    dialog.get_by_label("Close").click()
+    expect(dialog).not_to_be_attached()
+    # WebKit may not focus buttons on click, so there may be no focus to restore.
+    if browser_name != "webkit":
+        expect(trigger).to_be_focused()
+    reset_hovering(app)
+    wait_for_react_stability(app)
+    expect(tooltip).not_to_be_attached()
+
+    # Close with an inner button that calls st.rerun(), opening the dialog again
+    # from the trigger. Whether focus returns to the trigger after this unmount
+    # depends on the browser and timing, so it isn't asserted here.
+    trigger.click()
+    expect(dialog).to_be_visible()
+    get_button(dialog, "Done").click()
+    expect(dialog).not_to_be_attached()
+    wait_for_app_run(app)
+    reset_hovering(app)
+    wait_for_react_stability(app)
+    expect(tooltip).not_to_be_attached()
+
+    # Keyboard focus on the same trigger still shows its tooltip.
+    reset_focus(app)
+    tab_until_focused(app, trigger, max_tabs=100)
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_have_text("Help for the dialog trigger")
+
+
 def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     """Test that nested widget overlays render above dialog overlays."""
     open_dialog_with_date_input(app)
@@ -267,6 +339,35 @@ def test_dialog_allows_interacting_with_date_input_calendar(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(dialog, "Tags Value: ['Utilities']")
+
+
+def test_dialog_keeps_tab_focus_with_open_select_menus(app: Page):
+    """Tab from an open selectbox or multiselect closes the menu and keeps focus inside the dialog."""
+    open_dialog_with_date_input(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+
+    selectbox_input = get_selectbox(dialog, "Status").locator("input").first
+    selectbox_input.click()
+    selectbox_input.press("ArrowDown")
+    selectbox_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selectbox_dropdown).to_be_visible()
+
+    selectbox_input.press("Tab")
+    expect(selectbox_dropdown).not_to_be_visible()
+    expect_markdown(dialog, "Status Value: Draft")
+    expect(dialog.get_by_role("combobox", name="Tags")).to_be_focused()
+
+    tags_input = dialog.get_by_role("combobox", name="Tags")
+    tags_input.press("ArrowDown")
+    multiselect_dropdown = app.get_by_test_id("stMultiSelectDropdown")
+    expect(multiselect_dropdown).to_be_visible()
+
+    tags_input.press("Tab")
+    expect(multiselect_dropdown).not_to_be_visible()
+    expect_markdown(dialog, "Tags Value: []")
+    expect(tags_input).not_to_be_focused()
+    expect(dialog.locator(":focus")).to_be_visible()
 
 
 def test_dialog_allows_interacting_with_widget_in_popover(app: Page):
@@ -562,6 +663,71 @@ def test_medium_width_dialog_keeps_narrow_viewport_gutter(app: Page):
     # The right edge must stay within the viewport (left gutter + width + right
     # gutter should not exceed the viewport width).
     assert narrow_box["x"] + narrow_box["width"] == pytest.approx(304, abs=1)
+
+
+@pytest.mark.only_browser("chromium")
+def test_pixel_width_dialog(app: Page):
+    """Test that an integer width paints in pixels.
+
+    The panel stays inside the viewport and does not shrink below the
+    side-drawer minimum.
+    """
+
+    def dialog_box() -> FloatRect:
+        dialog = app.get_by_role("dialog")
+        expect(dialog).to_be_visible()
+        box = dialog.bounding_box()
+        assert box is not None
+        return box
+
+    def close_dialog() -> None:
+        app.keyboard.press("Escape")
+        expect(app.get_by_role("dialog")).not_to_be_attached()
+
+    app.set_viewport_size({"width": 1280, "height": 720})
+
+    open_pixel_width_400_dialog(app)
+    box_400 = dialog_box()
+    # Must not fall back to the small preset (500px).
+    assert box_400["width"] == pytest.approx(400, abs=2)
+    close_dialog()
+
+    open_pixel_width_200_dialog(app)
+    box_200 = dialog_box()
+    # 200px is below the centered preset floor (20rem / 320px).
+    assert box_200["width"] == pytest.approx(200, abs=2)
+    close_dialog()
+
+    open_pixel_width_100_dialog(app)
+    box_100 = dialog_box()
+    # Below the side-drawer drag floor (12.5rem / 200px), so the panel
+    # renders at that floor instead of the requested 100px.
+    assert box_100["width"] == pytest.approx(200, abs=2)
+    close_dialog()
+
+    app.set_viewport_size({"width": 600, "height": 600})
+    open_pixel_width_2000_dialog(app)
+    box_2000 = dialog_box()
+    assert box_2000["width"] == pytest.approx(568, abs=1)
+    assert box_2000["x"] == pytest.approx(16, abs=1)
+    close_dialog()
+
+    app.set_viewport_size({"width": 1280, "height": 720})
+    open_pixel_width_drawer_dialog(app)
+    dialog = app.get_by_role("dialog")
+    expect(dialog).to_be_visible()
+    drawer_width = _drawer_width(dialog)
+    # Must not fall back to the small preset (500px) or stretch to the viewport.
+    assert drawer_width == pytest.approx(420, abs=2)
+
+    resize_handle = app.get_by_test_id("stDialogResizeHandle")
+    expect(resize_handle).to_be_attached()
+    # Drag well below the 420px start. The floor is the side-drawer minimum
+    # (12.5rem / 200px), not the requested width.
+    _drag_handle_horizontally(app, resize_handle, -400)
+    wait_until(app, lambda: abs(_drawer_width(dialog) - 200) <= 2)
+    resize_handle.dblclick()
+    wait_until(app, lambda: abs(_drawer_width(dialog) - 420) <= 2)
 
 
 # its enough to test this on one browser as showing the error inline is more a backend

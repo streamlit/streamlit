@@ -32,6 +32,8 @@ import {
 import { getLuminance } from "color2k"
 import { getLogger } from "loglevel"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
@@ -150,19 +152,19 @@ function extractStreamlitAlt(source: string): string | undefined {
  */
 function getAuthorProvidedAltText(source: string): string | undefined {
   const streamlitAlt = extractStreamlitAlt(source)
-  if (streamlitAlt) {
+  if (!isNullOrEmptyString(streamlitAlt)) {
     return streamlitAlt
   }
 
   const { title, description } = extractAccessibilityInfo(source)
 
-  if (title && description) {
+  if (!isNullOrEmptyString(title) && !isNullOrEmptyString(description)) {
     return `${title}: ${description}`
   }
-  if (title) {
+  if (!isNullOrEmptyString(title)) {
     return title
   }
-  if (description) {
+  if (!isNullOrEmptyString(description)) {
     return description
   }
   return undefined
@@ -244,7 +246,7 @@ function prepareResponsiveSvg(svg: string): string {
   let intrinsicHeight = 0
 
   const viewBox = svgElement.getAttribute("viewBox")
-  if (viewBox) {
+  if (!isNullOrEmptyString(viewBox)) {
     const [, , vbWidth, vbHeight] = viewBox.split(/[\s,]+/).map(Number)
     if (vbWidth > 0 && vbHeight > 0) {
       intrinsicWidth = vbWidth
@@ -309,6 +311,13 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
   return {
     darkMode: !isLightTheme,
     theme: "base",
+    // Mermaid 12 defaults several diagram types to the "neo" look: drop
+    // shadows, heavier strokes, and taller sequence actors. That skin is not
+    // driven by theme variables, so it sits on top of the flat Streamlit
+    // palette this config tunes. Classic keeps the borders and fills we set.
+    // A diagram can still opt into neo or handDrawn with front-matter `look`.
+    // Layout stays on Mermaid's ELK default; this only selects the skin.
+    look: "classic",
     fontFamily: theme.genericFonts.bodyFont,
     // Slightly smaller than the body font size. Because the SVG is displayed in
     // a sandboxed <img> (which can't access the app's web font), the browser
@@ -534,6 +543,7 @@ const MermaidChart = memo(function MermaidChart({
         const diagramId = `mermaid-${uniqueId.replaceAll(":", "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets isCancelled during the await
         if (isCancelled) return
 
         const finalSvg = prepareResponsiveSvg(svg)
@@ -543,16 +553,11 @@ const MermaidChart = memo(function MermaidChart({
           type: "image/svg+xml;charset=utf-8",
         })
         blobUrl = URL.createObjectURL(blob)
-
-        if (!isCancelled) {
-          setSvgBlobUrl(blobUrl)
-          committedToState = true
-          setIsLoading(false)
-        } else {
-          URL.revokeObjectURL(blobUrl)
-        }
+        setSvgBlobUrl(blobUrl)
+        committedToState = true
+        setIsLoading(false)
       } catch (err) {
-        if (blobUrl && !committedToState) {
+        if (blobUrl !== null && !committedToState) {
           URL.revokeObjectURL(blobUrl)
         }
         if (!isCancelled) {
@@ -578,7 +583,10 @@ const MermaidChart = memo(function MermaidChart({
   useEffect(() => {
     currentSvgBlobUrlRef.current = svgBlobUrl
     return () => {
-      if (svgBlobUrl && svgBlobUrl !== downloadingBlobUrlRef.current) {
+      if (
+        svgBlobUrl !== null &&
+        svgBlobUrl !== downloadingBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(svgBlobUrl)
       }
     }
@@ -593,7 +601,7 @@ const MermaidChart = memo(function MermaidChart({
    * Uses a ref to protect the blob URL from being revoked during async image loading.
    */
   const handleDownloadPng = useCallback((): void => {
-    if (!svgBlobUrl) {
+    if (svgBlobUrl === null) {
       return
     }
 
@@ -605,7 +613,10 @@ const MermaidChart = memo(function MermaidChart({
     const releaseDownloadUrl = (): void => {
       const urlToRevoke = downloadingBlobUrlRef.current
       downloadingBlobUrlRef.current = null
-      if (urlToRevoke && urlToRevoke !== currentSvgBlobUrlRef.current) {
+      if (
+        urlToRevoke !== null &&
+        urlToRevoke !== currentSvgBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(urlToRevoke)
       }
     }
@@ -674,7 +685,7 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
-  if (error) {
+  if (!isNullOrEmptyString(error)) {
     return (
       <StyledToolbarElementContainer
         width={containerWidth}
@@ -731,7 +742,9 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
+          {svgBlobUrl !== null && (
+            <img src={svgBlobUrl} alt={getAltText(source)} />
+          )}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>

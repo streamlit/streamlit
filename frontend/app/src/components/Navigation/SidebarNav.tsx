@@ -196,7 +196,7 @@ const SidebarNav = ({
     // Only count pages in expanded sections
     Object.entries(navigationStructure.sections).forEach(
       ([sectionName, pages]) => {
-        if (expandedSections?.[sectionName]) {
+        if (expandedSections?.[sectionName] === true) {
           count += pages.length
         }
       }
@@ -356,7 +356,10 @@ const SidebarNav = ({
   }
 
   return (
-    <StyledSidebarNavContainer data-testid="stSidebarNav">
+    <StyledSidebarNavContainer
+      aria-label="App pages"
+      data-testid="stSidebarNav"
+    >
       <StyledSidebarNavItems data-testid="stSidebarNavItems">
         {contents}
       </StyledSidebarNavItems>

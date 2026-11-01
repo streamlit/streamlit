@@ -100,6 +100,13 @@ interface StreamlitModalProps {
   size?: "auto" | "default" | "medium" | "large"
   /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
   width?: string
+  /**
+   * Allow an explicit width to be narrower than the centered preset floor
+   * (`minPopupWidth`). The panel still cannot be narrower than
+   * `minSidebarWidth`, the side-drawer drag floor. Leave this false for
+   * presets and non-dialog modals so they keep the theme floor.
+   */
+  relaxMinWidth?: boolean
   /** Placement of the dialog. `"center"` is a modal; `"left"` / `"right"` are full-height drawers. */
   position?: ModalPosition
   children?: ReactNode
@@ -120,10 +127,10 @@ export function calculateModalSize(
   padding?: string,
   largeWidth?: string
 ): string | undefined {
-  if (size === "large" && largeWidth) {
+  if (size === "large" && largeWidth !== undefined) {
     return largeWidth
   }
-  if (size === "medium" && width && padding) {
+  if (size === "medium" && width !== undefined && padding !== undefined) {
     // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
     // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
     // Note: the panel's maxWidth (calc(100% - lg - lg)) keeps this responsive on
@@ -144,6 +151,7 @@ function Modal({
   closeable = true,
   size,
   width,
+  relaxMinWidth = false,
   position = "center",
   children,
 }: Readonly<StreamlitModalProps>): ReactElement {
@@ -176,7 +184,11 @@ function Modal({
       data-testid="stDialog"
       $position={position}
     >
-      <StyledDialogPanel $dialogWidth={dialogWidth} $position={position}>
+      <StyledDialogPanel
+        $dialogWidth={dialogWidth}
+        $position={position}
+        $relaxMinWidth={relaxMinWidth}
+      >
         {resizeSide !== null && (
           <StyledDialogResizeHandle
             $position={resizeSide}

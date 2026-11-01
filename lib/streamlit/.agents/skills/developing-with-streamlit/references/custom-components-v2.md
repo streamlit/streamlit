@@ -3,6 +3,12 @@
 
 Use Streamlit Custom Components v2 (CCv2) when core Streamlit doesn’t have the UI you need and you want to ship a reusable, interactive element (from “tiny inline HTML” to “full bundled frontend app”).
 
+## Prefer a native command first
+
+Before building a component, check the mapping in [third-party-components.md](third-party-components.md) and use the native command if one covers the behavior. If that command is newer than the app's installed Streamlit, suggest upgrading.
+
+Use CCv2 only for UI Streamlit does not provide (for example drag-and-drop or canvas drawing).
+
 ## CRITICAL: CCv2 only — NEVER use v1 APIs for new components
 
 Custom Components **v1 is legacy and superseded by v2**. The `st.components.v1` module still exists in Streamlit (e.g., `declare_component` for existing third-party components), but specific v1 APIs like `components.v1.html()` and `components.v1.iframe()` are deprecated. **For new components, always use CCv2.** The following v1 APIs must **NEVER** appear in new code:
@@ -95,7 +101,7 @@ export default function (component) {
 def my_component(
     label: str,
     *,
-    key: str | None = None,
+    key: str | int | None = None,
     on_value_change: Callable[[], None] | None = None,
     on_submitted_change: Callable[[], None] | None = None,
 ):
@@ -174,7 +180,7 @@ st.write("submitted (trigger):", result.submitted)
 
 Notes:
 
-- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a multi-line string is unambiguously inline content.
+- **Inline JS/CSS should be multi-line**. CCv2 treats path-like strings as file references; a string with a line break inside it (not just leading or trailing newlines) is unambiguously inline content.
 - Prefer querying under `parentElement` (not `document`) to avoid cross-instance leakage.
 
 ## State and triggers (how to think about keys)
@@ -215,6 +221,7 @@ Your frontend entrypoint is the **default export** function. A few rules keep co
 - Render under `parentElement` (not `document`) so instances don’t collide.
 - If you create per-instance resources (React roots, observers, subscriptions), key them by `parentElement` (e.g. `WeakMap`) so multiple instances don’t overwrite each other.
 - Return a cleanup function to tear down event listeners / UI roots / observers when Streamlit unmounts the component.
+- Expect the default export to run again whenever `data` or the theme changes. Cleanup runs only once, at unmount, using the function returned by the last run, so make each run idempotent: assign handlers (`el.onclick = ...`) instead of stacking `addEventListener` calls, and guard one-time setup with the `WeakMap`.
 
 ## Styling and theming
 
