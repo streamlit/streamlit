@@ -213,8 +213,8 @@ st.write(f"Adjacent selected border multi selection: {adjacent_selected_border_m
 st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
 if st.button("Create some elements to unmount component"):
     for _ in range(2):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
+        # The sleep lets the browser render each element on its own, so the
+        # component below is displaced (and kept mounted) before it is re-emitted.
         time.sleep(1)
         st.write("Another element")
 

@@ -17,6 +17,7 @@
 import type { ReactElement } from "react"
 
 import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import type { RetainedElement } from "~lib/render-tree/elementRetention"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
@@ -167,6 +168,8 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    *
    * This is the primary entry point for rendering - it creates a visitor,
    * traverses all children, and returns the accumulated React elements.
+   * Retained elements of the block are interleaved in front of
+   * `children[before]`.
    *
    * @param props - Block props containing the node to render
    * @param disableFullscreenMode - Whether to disable fullscreen mode for elements
@@ -179,9 +182,46 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    */
   static collectReactElements(props: BlockPropsWithoutWidth): ReactElement[] {
     const visitor = new RenderNodeVisitor(props)
-    // Visit all the children nodes and collect the react elements
-    props.node.children.forEach(childNode => childNode.accept(visitor))
+    const { children, retained } = props.node
+
+    if (retained.length === 0) {
+      // Visit all the children nodes and collect the react elements
+      children.forEach(childNode => childNode.accept(visitor))
+      return visitor.reactElements
+    }
+
+    // Each retained element renders right in front of children[before], or
+    // after the last child, which keeps it where it rendered before the
+    // rerun displaced it.
+    let retainedIndex = 0
+    for (let index = 0; index <= children.length; index++) {
+      while (
+        retainedIndex < retained.length &&
+        Math.min(retained[retainedIndex].before, children.length) === index
+      ) {
+        visitor.visitRetainedElement(retained[retainedIndex])
+        retainedIndex++
+      }
+      if (index < children.length) {
+        children[index].accept(visitor)
+      }
+    }
 
     return visitor.reactElements
+  }
+
+  /**
+   * Render a retained element under its element ID, unless an element with
+   * that ID already rendered. It does not advance the positional index, so
+   * the index-based keys of unkeyed siblings stay the same.
+   */
+  private visitRetainedElement({ node, id }: RetainedElement): void {
+    if (this.renderedKeySet.has(id)) {
+      return
+    }
+    this.renderedKeySet.add(id)
+    this.reactElements.push(
+      <ElementNodeRenderer key={id} {...this.props} node={node} isRetained />
+    )
   }
 }

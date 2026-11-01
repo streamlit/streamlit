@@ -22,16 +22,21 @@ import type * as ReactAriaComponents from "react-aria-components"
 import {
   Block as BlockProto,
   Button as ButtonProto,
+  Delta as DeltaProto,
   type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { type AppNode, AppRoot, BlockNode, ElementNode } from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { text } from "~lib/render-tree/test-utils"
+import {
+  forwardMsgMetadata,
+  makeProto,
+  text,
+} from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -1208,5 +1213,136 @@ describe("BlockNodeRenderer container types", () => {
     expect(tabs).toHaveStyle("align-self: stretch;")
     expect(tabs).toHaveStyle("max-height: 100%;")
     expect(tabs).not.toHaveStyle("height: 100%;")
+  })
+})
+
+describe("element retention", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  // ElementNodeRenderer lazy-loads TextInput. Load it up front so the first
+  // render doesn't depend on how fast a cold dynamic import resolves.
+  beforeAll(async () => {
+    await import("~lib/components/widgets/TextInput/TextInput")
+  }, 30_000)
+
+  function writeElement(
+    root: AppRoot,
+    scriptRunId: string,
+    index: number,
+    element: Element.$Properties
+  ): AppRoot {
+    return root.applyDelta(
+      scriptRunId,
+      makeProto(DeltaProto, { newElement: element }),
+      forwardMsgMetadata([0, index])
+    )
+  }
+
+  function renderMain(root: AppRoot): ReactElement {
+    return (
+      <FlexBoxContainer
+        node={root.main}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  const nameInput = {
+    textInput: { id: "$$ID-name-key", label: "Name", default: "" },
+  }
+
+  it("keeps a displaced widget mounted until the run re-emits it", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, { text: { body: "first" } })
+    root = writeElement(root, "run0", 1, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const input = await screen.findByRole("textbox", { name: "Name" })
+
+    // A notice is inserted above the input and overwrites its delta path.
+    const running = {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    }
+    root = writeElement(root, "run1", 0, { text: { body: "first" } })
+    root = writeElement(root, "run1", 1, { text: { body: "notice" } })
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(await screen.findByText("notice")).toBeVisible()
+    expect(input).toBeInTheDocument()
+    expect(input).not.toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).toHaveAttribute("data-retained", "true")
+
+    // The input arrives one slot later and reclaims the mounted instance.
+    root = writeElement(root, "run1", 2, nameInput)
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(input)
+    expect(input).toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).not.toHaveAttribute("data-retained")
+  })
+
+  it("unmounts a displaced widget that the run never re-emits", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root))
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeVisible()
+
+    root = writeElement(root, "run1", 0, { text: { body: "replacement" } })
+    rerenderWithContexts(renderMain(root))
+    expect(await screen.findByText("replacement")).toBeVisible()
+    expect(
+      screen.getByRole("textbox", { name: "Name", hidden: true })
+    ).not.toBeVisible()
+
+    root = root.clearStaleNodes("run1")
+    rerenderWithContexts(renderMain(root))
+
+    expect(screen.getByText("replacement")).toBeVisible()
+    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull()
   })
 })
