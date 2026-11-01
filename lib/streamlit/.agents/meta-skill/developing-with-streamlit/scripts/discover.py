@@ -105,7 +105,8 @@ _MACOS_DEVELOPER_TOOLS = (
     "/var/db/xcode_select_link",
 )
 # (manifest, command that adds a package, command that installs a lockfile
-# that already lists Streamlit). uv comes first: it is the recommended setup.
+# that already lists Streamlit, or "" to always suggest the add command). uv
+# comes first: it is the recommended setup.
 _INSTALL_COMMANDS = (
     ("uv.lock", "uv add", "uv sync"),
     ("poetry.lock", "poetry add", "poetry install"),
@@ -135,6 +136,7 @@ class _Result:
     # "found": has Streamlit. "missing": ran without it. "failed": could not be
     # run or did not answer. "skipped": not run on purpose.
     status: Literal["found", "missing", "failed", "skipped"]
+    # Why the check ended this way, as shown in the "Checked, in order" list.
     detail: str = ""
     package_dir: Path | None = None
     version: str = ""
@@ -297,8 +299,8 @@ def _check(candidate: _Candidate, project_dir: Path, deadline: float) -> _Result
         result = _Result("failed", "has no Python executable (deleted or broken)")
     else:
         result = _probe(candidate.command, project_dir, deadline)
-    # A broken interpreter (for example, a venv whose base Python was upgraded
-    # or removed) can still have a usable package on disk.
+    # An interpreter that cannot run, or was not run on purpose, can still have a
+    # usable package on disk (for example, a venv whose base Python was removed).
     if result.status in {"failed", "skipped"} and candidate.env_root is not None:
         package_dir = _site_packages_streamlit(candidate.env_root)
         if package_dir is not None:
@@ -321,6 +323,8 @@ def _env_candidate(label: str, env_root: Path) -> _Candidate:
 def _python_candidate(label: str, python: Path) -> _Candidate:
     """Return a candidate for an interpreter, with its environment folder if any."""
     python = Path(os.path.abspath(python))
+    # Venvs keep the interpreter in bin/ or Scripts/; Windows conda keeps
+    # python.exe at the environment root.
     in_bin = python.parent.name in {"bin", "Scripts"}
     root = python.parent.parent if in_bin else python.parent
     is_env = os.path.isfile(root / "pyvenv.cfg") or os.path.isdir(root / "conda-meta")
@@ -500,7 +504,7 @@ def _manager_install_command(project_dir: Path, requirement: str) -> str | None:
 
 
 def _install_command(candidate: _Candidate, project_dir: Path, requirement: str) -> str:
-    """Return a command that adds ``requirement`` the way the project manages packages."""
+    """Return a command that installs ``requirement`` the way the project manages packages."""
     manager_command = _manager_install_command(project_dir, requirement)
     if manager_command is not None:
         return manager_command
@@ -633,9 +637,9 @@ def _report_not_found(
     attempts: list[tuple[_Candidate, _Result]], project_dir: Path
 ) -> int:
     """Explain why no interpreter had Streamlit, and return the exit code."""
-    failed = [c.label for c, r in attempts if r.status in {"failed", "skipped"}]
+    unchecked = [c.label for c, r in attempts if r.status in {"failed", "skipped"}]
     fix_failed_step = (
-        f"Some environments could not be checked ({', '.join(failed)}). If one of "
+        f"Some environments could not be checked ({', '.join(unchecked)}). If one of "
         "them runs the app, fixing it may resolve this, but only with the user's "
         "agreement."
     )
@@ -652,7 +656,7 @@ def _report_not_found(
     if missing is not None:
         candidate, result = missing
         steps = [_install_step(result, candidate, project_dir, upgrade=False)]
-        steps += [fix_failed_step] if failed else []
+        steps += [fix_failed_step] if unchecked else []
         _print_error(
             "Streamlit is not installed in any Python environment found for this "
             "project.",
@@ -670,7 +674,7 @@ def _report_not_found(
         "run on purpose, so it is unknown whether Streamlit is installed. This is "
         "a problem with those environments, not a missing package. Re-running "
         "this script only helps if the failure was temporary, such as a timeout.",
-        [retry_step, fix_failed_step] if failed else [retry_step],
+        [retry_step, fix_failed_step] if unchecked else [retry_step],
         attempts,
     )
     return 3

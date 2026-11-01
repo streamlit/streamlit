@@ -4543,12 +4543,10 @@ class TestVendoredMetaSkillDiscovery:
             )
 
         # With no project environment and nothing activated, discover.py falls
-        # back to the interpreter running it, which has Streamlit.
-        env = {
-            key: value
-            for key, value in os.environ.items()
-            if key not in {"VIRTUAL_ENV", "CONDA_PREFIX", "UV_PROJECT_ENVIRONMENT"}
-        }
+        # back to the interpreter running it, which has Streamlit. An inherited
+        # PYTHONPATH could point that lookup at another Streamlit copy.
+        unset = {"VIRTUAL_ENV", "CONDA_PREFIX", "UV_PROJECT_ENVIRONMENT", "PYTHONPATH"}
+        env = {key: value for key, value in os.environ.items() if key not in unset}
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
             capture_output=True,

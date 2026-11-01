@@ -50,14 +50,16 @@ _DISCOVER_PY = (
 _LAUNCHER = os.environ.get("DISCOVER_TEST_PYTHON") or sys.executable
 _SKILL_PARTS = (".agents", "skills", "developing-with-streamlit", "SKILL.md")
 _IS_WINDOWS = os.name == "nt"
-# Variables that point discover.py at environments on the real machine, or
-# that would hide whether it disables bytecode writes itself.
+# Variables that point discover.py, or the probes it runs, at environments or
+# packages on the real machine, or that would hide whether it disables bytecode
+# writes itself.
 _LOOKUP_ENV_VARS = (
     "VIRTUAL_ENV",
     "CONDA_PREFIX",
     "CONDA_EXE",
     "WORKON_HOME",
     "UV_PROJECT_ENVIRONMENT",
+    "PYTHONPATH",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONPYCACHEPREFIX",
 )
@@ -451,6 +453,22 @@ def test_failing_lookup_skips_only_its_own_section(
     labels = [c.label for c in discover._candidates(tmp_path, float("inf"))]
 
     assert labels == ["Python running this script"]
+
+
+def test_path_launchers_keep_their_arguments(
+    discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Pythons on PATH run by full path, and Windows' `py` keeps its `-3`."""
+    _isolate_lookups(monkeypatch, tmp_path / "home")
+    monkeypatch.setattr(discover.shutil, "which", lambda name: str(tmp_path / name))
+
+    candidates = list(discover._active_and_path_interpreters())[1:]
+
+    launchers = [["py", "-3"], ["python"], ["python3"]]
+    expected = launchers if _IS_WINDOWS else [["python3"], ["python"]]
+    assert [c.command for c in candidates] == [
+        [str(tmp_path / name), *args] for name, *args in expected
+    ]
 
 
 def test_environments_recorded_outside_the_project_are_found(

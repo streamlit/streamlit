@@ -60,9 +60,10 @@ jobs:
       - name: Install pytest
         # Same cap as the dev dependencies in the root pyproject.toml.
         run: python -m pip install "pytest<9.1.0"
-      # The root pyproject.toml has no pytest settings, so it replaces
-      # lib/pyproject.toml's, which need the full dev environment. The test
-      # file does not need lib/tests/conftest.py.
+      # `-c pyproject.toml` points at the root file, which has no pytest settings,
+      # so lib/pyproject.toml's settings (which need the full dev environment) are
+      # skipped. `--noconftest` skips lib/tests/conftest.py, which this test file
+      # does not need.
       - name: Run discover.py tests
         run: >
           python -m pytest -c pyproject.toml --rootdir . --noconftest
