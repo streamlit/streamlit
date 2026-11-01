@@ -42,7 +42,7 @@ export interface RetainedElement {
   /** The node's element ID, used to reclaim it. */
   readonly id: string
   /**
-   * The canonical index this entry renders in front of. Values at or past
+   * The `children` index this entry renders in front of. Values at or past
    * `children.length` render after the last child.
    */
   readonly before: number
@@ -76,8 +76,8 @@ function getRetainableId(node: AppNode | undefined): string | undefined {
 }
 
 /**
- * The node that renders under its own key at a slot. A TransientNode (a
- * spinner) renders its anchor that way, so retention compares anchors.
+ * Returns the node React keys at this slot. A spinner is a TransientNode and
+ * renders its anchor under the anchor's key, so retention compares anchors.
  */
 function unwrapTransient(node: AppNode | undefined): AppNode | undefined {
   return node instanceof TransientNode ? node.anchor : node
@@ -173,9 +173,9 @@ export function getRetainedAfterWrite({
     return entries
   }
 
-  // Keep at most one retained entry per ID. A stale copy of an element that
-  // already moved earlier in this run can be displaced too; it renders behind
-  // the current copy, so first-wins render dedup ignores it.
+  // Keep at most one entry per ID. `occupant` may be a stale duplicate of an
+  // element this run already re-emitted at an earlier index. Retaining it is
+  // harmless: the current copy renders first, so render dedup skips this one.
   const prevId = getRetainableId(occupant)
   const displaced =
     occupant instanceof ElementNode &&

@@ -504,10 +504,11 @@ describe("element retention in AppRoot", () => {
     let root = initialRoot().clearStaleNodes("run0")
     root = write(root, "run1", [0], unkeyed("a"))
     root = write(root, "run1", [1], unkeyed("x"))
-    root = root.clearStaleNodes("run1")
+    expect(retainedOf(root.main)).toEqual(["w@2"])
 
-    expect(root.main.retained).toEqual([])
     const activeIds = [...root.getElements()].map(getElementId)
+    // "z" is still a canonical child, while "w" is only retained.
+    expect(activeIds).toContain(idOf("z"))
     expect(activeIds).not.toContain(idOf("w"))
   })
 

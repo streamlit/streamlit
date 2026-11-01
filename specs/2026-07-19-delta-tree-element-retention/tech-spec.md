@@ -269,6 +269,16 @@ zero work, and rendering adds O(retained) to the existing O(children) pass.
 - **Peak memory during a run.** A displaced heavy element (a chart, a WebGL map, an
   iframe) stays mounted while hidden until it is reclaimed or the run's cleanup removes
   it, so peak memory and WebGL context use during that run can be higher than today.
+- **Portaled overlays.** The `:focus-within` exception only covers the element's own DOM
+  subtree. An overlay that a widget portals to `document.body` and that holds focus (a
+  date picker calendar, a color picker, a data editor menu) stays open while its owner is
+  hidden, until the owner is reclaimed (usually moments later in the same run) or the
+  run's cleanup removes it. Today the remount closes the overlay and drops the
+  interaction instead.
+- **Custom components that capture media.** The denylist works by element type, so a v1
+  or v2 custom component that holds a camera or microphone (for example a WebRTC
+  component) keeps capturing while it is hidden, until it is reclaimed or the run ends.
+  The browser's capture indicator stays on during that window.
 
 ## Validation
 
