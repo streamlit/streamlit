@@ -176,7 +176,7 @@ def test_point_selection_persists_and_toggles(
     Point selection uses ECharts' native ``selectedMode``, so the clicked point
     keeps a visible selected state that is re-applied after a rerun. Clicking the
     same point again deselects it. On a ``dataset.source`` DataFrame, the
-    returned indices address the frame's rows.
+    returned indices address that DataFrame's rows.
     """
     # Initially nothing is selected.
     expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()

@@ -1053,13 +1053,13 @@ class EChartsMixin:
             ``selectedMode``, or a ``brush``) or to series whose ``data`` items
             are objects with their own settings. Large mode also skips charts
             with a ``visualMap`` and series with ``"colorBy": "data"``, and
-            lines keep their symbols with an item tooltip or empty values. To
-            opt out, set the option yourself, for example ``"large": False``.
-            pyecharts charts always set both, so pass ``is_large=True`` or
-            ``is_symbol_show=False`` yourself. For even denser lines,
-            ``"sampling": "lttb"`` draws a subset of points that keeps the
-            line's shape. Streamlit doesn't set it because it changes which
-            points are drawn and shown in tooltips.
+            ``line`` series keep their symbols with an item tooltip or empty
+            values. To opt out, set the option yourself, for example
+            ``"large": False``. pyecharts charts always set both, so pass
+            ``is_large=True`` or ``is_symbol_show=False`` yourself. For even
+            denser lines, ``"sampling": "lttb"`` draws a subset of points that
+            keeps the line's shape. Streamlit doesn't set it because it changes
+            which points are drawn and shown in tooltips.
 
         Parameters
         ----------
