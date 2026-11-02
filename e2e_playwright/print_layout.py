@@ -69,14 +69,15 @@ with st.expander("Chart expander", expanded=True):
 
 st.markdown("After the expander chart")
 
-with st.container(key="chart_row"):
-    chart_column, second_column = st.columns(2)
-    with chart_column:
-        st.bar_chart(pd.DataFrame({"value": [1, 3, 2]}), height=160)
-    with second_column:
-        st.markdown("Second chart column")
+with st.container(key="chart_row_group"):
+    with st.container(key="chart_row"):
+        chart_column, second_column = st.columns(2)
+        with chart_column:
+            st.bar_chart(pd.DataFrame({"value": [1, 3, 2]}), height=160)
+        with second_column:
+            st.line_chart(pd.DataFrame({"value": [2, 1, 3]}), height=160)
 
-st.markdown("After the chart row")
+    st.markdown("After the chart row")
 
 with st.container(key="metric_extras"):
     content_column, chart_column = st.columns(2, border=True)

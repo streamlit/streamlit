@@ -235,13 +235,18 @@ def test_print_stacks_chart_rows_without_overlap(
 
     wait_until(app, centered_chart_does_not_overlap)
 
-    chart = chart_row.get_by_test_id("stVegaLiteChart")
+    chart = chart_column.get_by_test_id("stVegaLiteChart")
+    second_chart = (
+        chart_row.get_by_test_id("stColumn").nth(1).get_by_test_id("stVegaLiteChart")
+    )
     after_chart = app.get_by_text("After the chart row", exact=True)
     expect(chart).to_be_visible()
+    expect(second_chart).to_be_visible()
     expect(after_chart).to_be_visible()
 
-    def chart_stays_above_the_heading() -> None:
+    def charts_stack_above_the_heading() -> None:
         chart_box = chart.bounding_box()
+        second_box = second_chart.bounding_box()
         after_box = after_chart.bounding_box()
         content = (
             chart_row.get_by_test_id("stColumn")
@@ -250,14 +255,18 @@ def test_print_stacks_chart_rows_without_overlap(
         )
         display = content.evaluate("element => getComputedStyle(element).display")
         assert chart_box is not None
+        assert second_box is not None
         assert after_box is not None
         # The column content block is height 100%. Once the column stacks,
         # that percentage is auto, so the block has to leave flex or the
         # chart paints over the heading.
         assert display == "block"
-        assert chart_box["y"] + chart_box["height"] <= after_box["y"] + 1
+        # The second column stacks below the first, left-aligned with it.
+        assert chart_box["y"] + chart_box["height"] <= second_box["y"] + 1
+        assert abs(second_box["x"] - chart_box["x"]) <= 1
+        assert second_box["y"] + second_box["height"] <= after_box["y"] + 1
 
-    wait_until(app, chart_stays_above_the_heading)
+    wait_until(app, charts_stack_above_the_heading)
 
     # A stacked column grows to at most 1.25x its screen width instead of
     # the full page, and its stretch-width chart scales up to fill it.
@@ -278,8 +287,11 @@ def test_print_stacks_chart_rows_without_overlap(
     wait_until(app, stacked_column_hugs_its_chart)
 
     # The geometry checks above cover the relevant layout scenarios. The
-    # snapshot stays scoped to the stacked chart row.
-    assert_snapshot(chart_row, name="print_layout-stacked_chart_row")
+    # snapshot shows the stacked chart row with the heading after it.
+    assert_snapshot(
+        get_element_by_key(app, "chart_row_group"),
+        name="print_layout-stacked_chart_row",
+    )
 
     end_browser_print(app)
 
