@@ -534,8 +534,11 @@ The prune reads registration from `widget_ids_this_run`, which every widget ente
 its ID is computed. A Components v2 component also registers a trigger aggregator under
 an ID derived from its own, so the component records that ID in the set as well, and
 the aggregator is rendered exactly when its component is. Like a button, the aggregator
-therefore keeps its unfired state across stale cleanup and reserves its derived key once
-it renders.
+therefore keeps its unfired state across stale cleanup and reserves its derived key,
+`"<component key>__events"`, once it renders. Assigning that key then raises
+`StreamlitValueAssignmentNotAllowedError`, which says the key holds the component's
+events, rather than the instantiated-widget error, whose advice to assign the key
+before creating the widget does not apply: app code never creates that widget.
 
 The set changes at three points:
 

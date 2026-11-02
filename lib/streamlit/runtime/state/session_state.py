@@ -37,6 +37,7 @@ from typing import (
 
 from streamlit import config, util
 from streamlit.errors import (
+    StreamlitValueAssignmentNotAllowedError,
     StreamlitWidgetAlreadyInstantiatedError,
     UnserializableSessionStateError,
 )
@@ -926,6 +927,15 @@ class SessionState:
             form_ids = ctx.shared.form_ids_this_run
 
             if widget_id in widget_ids or user_key in form_ids:
+                if widget_id is not None and _is_internal_key(widget_id):
+                    # Only a Components v2 component registers a widget under
+                    # an internal ID: the aggregator of its event triggers, keyed
+                    # "<component key>__events". App code never creates that
+                    # widget, so the advice to assign the key first would not
+                    # apply.
+                    raise StreamlitValueAssignmentNotAllowedError(
+                        user_key, detail="It holds the events of a custom component."
+                    )
                 raise StreamlitWidgetAlreadyInstantiatedError(user_key)
 
         self._new_session_state[user_key] = value

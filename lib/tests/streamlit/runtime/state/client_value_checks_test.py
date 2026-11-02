@@ -2356,4 +2356,30 @@ def test_a_components_v2_trigger_follows_its_component() -> None:
     assert at.session_state.fired == 1
 
 
+def _events_key_app() -> None:
+    import streamlit as st
+
+    component = st.components.v2.component(
+        "events_key", html="<button>fire</button>", js="export default () => {}"
+    )
+    component(key="cmp", on_fired_change=lambda: None)
+    st.session_state["cmp__events"] = {"event": "fired"}
+
+
+def test_assigning_a_rendered_components_events_key_says_it_is_read_only() -> None:
+    """The error names the events key and says why app code cannot assign it.
+
+    The key is derived from the component's, so the generic advice to assign it
+    before creating the widget would not apply.
+    """
+    at = AppTest.from_function(_events_key_app).run()
+
+    assert len(at.exception) == 1
+    error = at.exception[0]
+    assert error.proto.type.endswith("StreamlitValueAssignmentNotAllowedError")
+    assert "`st.session_state['cmp__events']` is read-only" in error.message
+    assert "events of a custom component" in error.message
+    assert "before creating the widget" not in error.message
+
+
 # endregion Rendered-widget gate
