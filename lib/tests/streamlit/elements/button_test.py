@@ -739,6 +739,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         page._default = False
         page.title = "Test Page"
         page.icon = "🏠"
+        page.help = "Test help"
         page.url_path = "test-page"
         page.is_external = False
 
@@ -752,6 +753,7 @@ class ButtonTest(DeltaGeneratorTestCase):
             assert c.page_script_hash == "test_hash"
             assert c.label == "Test Page"
             assert c.icon == "🏠"
+            assert c.help == "Test help"
 
     def test_marshall_file_with_text_io(self):
         """Test marshall_file with TextIOWrapper."""
