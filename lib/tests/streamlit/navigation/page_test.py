@@ -375,7 +375,7 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
 class StPagesHelpTest(DeltaGeneratorTestCase):
-    """Test st.Page help parameter"""
+    """Test the ``st.Page`` ``help`` parameter."""
 
     @parameterized.expand(
         [

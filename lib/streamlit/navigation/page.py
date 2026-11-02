@@ -232,12 +232,13 @@ class Page:
         menu is hovered over. If this is ``None`` (default), no tooltip is
         displayed. Use one or two sentences that say what the page is.
 
-        Streamlit shows the tooltip without running the page. It's also the
-        default tooltip of ``st.page_link`` for this page. The experimental
-        agent API (see ``server.enableAgentApi``) reports it as the page's
-        ``help`` in its snapshot, except for external-URL pages, which the
-        snapshot doesn't list. It isn't shown on the page and doesn't set the
-        meta description.
+        The tooltip appears as soon as the page is passed to
+        ``st.navigation``, even before the page runs. It's also the default
+        tooltip of ``st.page_link`` for this page. The experimental agent API
+        (see ``server.enableAgentApi``) reports it as the page's ``help`` in
+        its snapshot, except for external-URL pages, which the snapshot
+        doesn't list. It isn't shown on the page and doesn't set the meta
+        description.
 
         The tooltip can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``

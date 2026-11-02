@@ -77,6 +77,8 @@ type CloseReason = "tab" | "shift-tab" | "other"
 /**
  * Presses inside these elements don't close the menu. A menu item's help
  * tooltip is portaled outside the menu, and a link in it must stay clickable.
+ * The selector matches any Streamlit tooltip, but while the menu is open the
+ * only one showing is the focused or hovered item's.
  */
 const MENU_DISMISSAL_EXCLUDE_SELECTORS = [".stTooltipContent"]
 

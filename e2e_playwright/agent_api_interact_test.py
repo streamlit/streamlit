@@ -226,8 +226,8 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     assert isinstance(created["schema_version"], int)
     assert created["page"]["url_path"] == _home_path(created)
     assert {"report", "slow"} <= set(_url_paths(created["pages"]))
-    # A page's help is listed before the agent opens the page; a page without
-    # help has no `help` key.
+    # The snapshot includes a page's help before the agent opens the page, and
+    # omits the `help` key when the page has none.
     pages_by_path = {entry["url_path"]: entry for entry in created["pages"]}
     assert pages_by_path["report"]["help"] == "Quarterly figures for one **region**."
     assert "help" not in pages_by_path[_home_path(created)]

@@ -39,6 +39,7 @@ message AppPage {
   optional string external_url = 8;
 
   // Markdown from `st.Page(help=...)` that says what the page is. The nav shows
-  // it as the item's tooltip and accessible description. Empty when unset.
+  // it as the item's tooltip and accessible description, and the agent
+  // snapshot reports it. Empty when unset.
   string help = 9;
 }
