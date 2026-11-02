@@ -205,7 +205,11 @@ def test_theme_preference_persists_on_reload(
     wait_for_app_run(app)
 
     _wait_for_theme_app_ready(app)
-    assert_snapshot(app, name="persisted_on_reload_before", image_threshold=0.0003)
+    # The pre- and post-reload screenshots share one baseline, so the page must
+    # look the same after reload. A separate post-reload baseline goes stale:
+    # small theme changes pass its looser threshold, so snapshot updates never
+    # regenerate it, and later anti-aliasing jitter pushes it over the limit.
+    assert_snapshot(app, name="persisted_on_reload", image_threshold=0.0003)
 
     # Force a full page reload
     app.reload()
@@ -215,7 +219,7 @@ def test_theme_preference_persists_on_reload(
 
     # Verify the stored theme preference itself persisted in the menu, then
     # close it before snapshotting so the header focus state matches the
-    # committed baselines (and the pre-reload shot above).
+    # pre-reload shot above.
     app.get_by_test_id("stMainMenu").click()
     menu = app.get_by_role("menu", name="Main menu")
     dark_radio = menu.get_by_role("menuitemradio", name="Dark")
@@ -227,4 +231,4 @@ def test_theme_preference_persists_on_reload(
     # After reload, WebKit and Firefox sometimes shift help-icon anti-aliasing by
     # about 1px (~290 pixels). That exceeds this file's usual 0.0003 budget
     # (fewer than 276 mismatched pixels on a 1280x720 screenshot).
-    assert_snapshot(app, name="persisted_on_reload_after", image_threshold=0.0005)
+    assert_snapshot(app, name="persisted_on_reload", image_threshold=0.0005)
