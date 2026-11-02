@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen } from "@testing-library/react"
+import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
@@ -390,4 +390,75 @@ describe("on_change='ignore' mode", () => {
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
     expect(pendingFormIds).toEqual(new Set(["testForm"]))
   })
+})
+
+describe("Radio widget type", () => {
+  const captions = ["First", "Second", "Third"]
+  const equalWidthGrid = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 10rem), 1fr))",
+  }
+  const contentWidthRow = { display: "flex", flexWrap: "wrap" }
+
+  it("renders proto type CARDS as cards that select on a caption click", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: RadioProto.Type.CARDS, captions })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<Radio {...props} />)
+    setStringValueSpy.mockClear()
+
+    const cards = screen.getAllByTestId("stRadioOption")
+    expect(within(cards[1]).getByText("Second")).toBeVisible()
+
+    await user.click(screen.getByText("Second"))
+
+    expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+      props.element.id,
+      "b",
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+    )
+  })
+
+  it("renders proto type DEFAULT with the caption outside the option label", () => {
+    render(
+      <Radio {...getProps({ type: RadioProto.Type.DEFAULT, captions })} />
+    )
+
+    const options = screen.getAllByTestId("stRadioOption")
+    expect(screen.getByText("Second")).toBeVisible()
+    expect(within(options[1]).queryByText("Second")).toBeNull()
+  })
+
+  it.each([
+    {
+      name: "stretch",
+      widthConfig: { useStretch: true },
+      expected: equalWidthGrid,
+    },
+    {
+      name: "pixel",
+      widthConfig: { pixelWidth: 300 },
+      expected: equalWidthGrid,
+    },
+    {
+      name: "content",
+      widthConfig: { useContent: true },
+      expected: contentWidthRow,
+    },
+    { name: "unset", widthConfig: undefined, expected: contentWidthRow },
+  ])(
+    "lays out horizontal cards for a $name width",
+    ({ widthConfig, expected }) => {
+      render(
+        <Radio
+          {...getProps(
+            { type: RadioProto.Type.CARDS, horizontal: true },
+            { widthConfig }
+          )}
+        />
+      )
+
+      expect(screen.getByRole("radiogroup")).toHaveStyle(expected)
+    }
+  )
 })

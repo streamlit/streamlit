@@ -154,7 +154,7 @@ _OMITTED: dict[str, dict[str, str]] = {
         "fig": _CONTENT,
         "clear_figure": "acts on the figure after it is drawn, not on the page",
     },
-    "radio": {"horizontal": _PRESENTATION},
+    "radio": {"horizontal": _PRESENTATION, "type": _PRESENTATION},
     "select_slider": {"value": _STARTING_VALUE},
     "slider": {"value": _STARTING_VALUE},
     "space": {"size": _PRESENTATION},
