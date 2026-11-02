@@ -337,6 +337,8 @@ edited_df = st.data_editor(
 )
 ```
 
+**Hiding a column doesn't protect it.** A column hidden with `column_order`, `column_config` (`hidden=True` or `None`), or `hide_index=True` can still be shown from the editor's toolbar and edited. To prevent edits, disable the column or leave it out of the data.
+
 Access edit details via `st.session_state["my_editor"]["edited_rows"]`.
 
 Import `DataEditorState` from `streamlit.typing` when annotating the pending edit state stored at this Session State key.
