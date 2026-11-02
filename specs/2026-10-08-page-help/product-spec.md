@@ -7,7 +7,7 @@ created: 2026-10-08
 
 ## Summary
 
-Add `help` to `st.Page`: one sentence that says what a page is. It is the tooltip on the page's nav item, the default tooltip for `st.page_link` to that page, and the page's hint in the agent snapshot. It is known when `st.navigation` declares the page, so the nav and an agent can show it for pages that have not run. A meta description for search and link previews is not part of this spec. It needs metadata declared before the script runs, and stays with the `st.App` follow-up ([#9058](https://github.com/streamlit/streamlit/issues/9058)).
+Add `help` to `st.Page`: a brief description, one to three sentences, that says what a page is. It is the tooltip on the page's nav item, the default tooltip for `st.page_link` to that page, and the page's hint in the agent snapshot. It is known when `st.navigation` declares the page, so the nav and an agent can show it for pages that have not run. A meta description for search and link previews is not part of this spec. It needs metadata declared before the script runs, and stays with the `st.App` follow-up ([#9058](https://github.com/streamlit/streamlit/issues/9058)).
 
 ```python
 import streamlit as st
@@ -24,9 +24,9 @@ st.navigation([revenue]).run()
 
 ## Problem
 
-[#16878](https://github.com/streamlit/streamlit/issues/16878) asks for a first-class page description. A page can already declare `title` and `icon`. There is no matching place to say what the page is. Authors put that sentence in `st.caption`, `st.markdown`, or `menu_items["About"]`, none of which is structured metadata and none of which the nav can show before the page runs.
+[#16878](https://github.com/streamlit/streamlit/issues/16878) asks for a first-class page description. A page can already declare `title` and `icon`. There is no matching place to say what the page is. Authors put that text in `st.caption`, `st.markdown`, or `menu_items["About"]`, none of which is structured metadata and none of which the nav can show before the page runs.
 
-Two readers need that sentence before the page runs:
+Two readers need that text before the page runs:
 
 - **Navigation.** `st.Page` can name a page and cannot explain it, so a nav list cannot tell "Regional revenue" apart from "Reports" without running the page. `st.page_link` already has a hover tooltip (`help`), but the built-in nav does not, and the link's tooltip is not shared with the page.
 - **Agents.** The agent snapshot ([#16843](https://github.com/streamlit/streamlit/pull/16843)) identifies each page by `url_path`, `title`, and `icon` only. Widget `help` is already in the snapshot; the page itself has no equivalent, so a model has to infer what "Regional revenue" means from body copy such as `st.caption`. That fails when the meaning is not on the page, and it fails for every page the agent has not opened, where the only way to find out is to run it. [#16843](https://github.com/streamlit/streamlit/pull/16843) lists this as its authored-descriptions follow-up.
@@ -65,8 +65,8 @@ Like `st.page_link`, the tooltip opens on hover over the item itself and has no 
 - Hover waits 1000ms, because the pointer crosses the nav on the way to most clicks. `st.page_link` and button help keep 500ms.
 - Once one tooltip has opened, the shared tooltip warm-up opens the next item's tooltip right away, so scanning the list waits only once.
 - Keyboard focus opens it immediately. Touch shows no popup.
-- The nav link always exposes the sentence as its accessible description, at every breakpoint and while the popup is closed. The nav item renders `help` into a visually hidden, `aria-hidden` element that the link's `aria-describedby` references. That copy renders the Markdown like a widget label, with links as plain text, so it adds no tab stops. Line-start block syntax such as `- item` reads literally there, as it does in labels. That render is reused until `help` changes, so an app with many pages does not re-render every sentence on each nav update. There is no backend pass that strips Markdown.
-- The popup is hidden from assistive tech, so keyboard focus announces the sentence once.
+- The nav link always exposes `help` as its accessible description, at every breakpoint and while the popup is closed. The nav item renders `help` into a visually hidden, `aria-hidden` element that the link's `aria-describedby` references. That copy renders the Markdown like a widget label, with links as plain text, so it adds no tab stops. Line-start block syntax such as `- item` reads literally there, as it does in labels. That render is reused until `help` changes, so an app with many pages does not re-render every page's `help` on each nav update. There is no backend pass that strips Markdown.
+- The popup is hidden from assistive tech, so keyboard focus announces `help` once.
 
 The always-present accessible description applies only to the built-in nav item. `st.page_link` keeps its current tooltip behavior: below the small breakpoint it shows no tooltip, and it references the tooltip as its description only while the tooltip is open. Inheriting `Page.help` changes the tooltip text, not that behavior. Buttons, popovers, and badges share that tooltip code, so changing it would change all of them.
 
@@ -83,7 +83,7 @@ Inheriting from a path goes further than icon inheritance: `st.page_link` copies
 
 `Page.help` is not written into the document and is not shown as body text. It does not fill `<meta name="description">`, `menu_items["About"]`, the browser-tab title, or the nav label. A visible subtitle remains `st.markdown` or `st.caption`.
 
-There is no length limit and no error for a long string. Docs should suggest one or two sentences, since the tooltip and every snapshot carry it.
+There is no length limit and no error for a long string. Docs should suggest a brief description of one to three sentences, since the tooltip and every snapshot carry it.
 
 ### Examples
 
@@ -108,7 +108,7 @@ costs = st.Page(
 st.navigation([revenue, costs]).run()
 ```
 
-A link can keep the page sentence or replace the tooltip locally:
+A link can keep the page's `help` or replace the tooltip locally:
 
 ```python
 st.page_link(revenue)  # tooltip is revenue's help
@@ -137,7 +137,7 @@ Adopt **Option 1**.
 - **Copying `Page.help` into meta tags.** That needs a Markdown-to-text pass kept in sync with the tooltip renderer.
 - **A host-rendered nav that shows `help`.** `SET_APP_PAGES` already sends each page's `help` to the host (see the checklist), but no host nav shows it yet.
 - **A document-level accessible description.** This version exposes `Page.help` on the built-in nav link only. `st.page_link` keeps today's tooltip.
-- **Visible subtitle** under the page heading, and copying the sentence into the About dialog.
+- **Visible subtitle** under the page heading, and copying `help` into the About dialog.
 
 ## Checklist
 
@@ -148,4 +148,4 @@ Adopt **Option 1**.
 | No new dependencies | ✅ The stored string is dedented like every other `help` value. The tooltip and the accessible description reuse the existing Markdown renderer. No Markdown-to-text package. |
 | Metrics collected | ✅ `st.Page` is already wrapped with `@gather_metrics`. String arguments record length, not content, so the help text is not sent. |
 | Any security/legal impact? | Author-controlled Markdown in the tooltip uses the existing help renderer. In the snapshot it is app text like page titles and widget help, which the agent protocol already tells clients to treat as data, not instructions. The snapshot reports nothing the browser does not receive, since the nav gets the same string. No new execution path. |
-| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, a short mention in the multipage-apps guide, and the `st.Page` examples in the bundled `developing-with-streamlit` agent skill (`references/multipage-apps.md`), so coding agents write one sentence per page. `help` is the nav tooltip and the agent hint. It does not set a meta description. |
+| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, a short mention in the multipage-apps guide, and the `st.Page` examples in the bundled `developing-with-streamlit` agent skill (`references/multipage-apps.md`), so coding agents give each page a brief `help` of one to three sentences. `help` is the nav tooltip and the agent hint. It does not set a meta description. |

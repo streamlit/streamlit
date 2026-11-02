@@ -230,7 +230,8 @@ class Page:
     help : str or None
         A tooltip that gets displayed when the page's item in the navigation
         menu is hovered over. If this is ``None`` (default), no tooltip is
-        displayed. Use one or two sentences that say what the page is.
+        displayed. Use a brief description of what the page is, in one to
+        three sentences.
 
         The tooltip appears as soon as the page is passed to
         ``st.navigation``, even before the page runs. It's also the default
