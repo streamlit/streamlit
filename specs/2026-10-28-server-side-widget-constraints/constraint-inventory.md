@@ -9,8 +9,10 @@ browser enforces, what the server does with a client value that violates it as o
 - Server behavior was checked by injecting forged `WidgetStates` through
   `AppTest._run(widget_state=...)`, unless a row says *(code)*, meaning it was checked by
   reading the code.
-- The browser sends the option **label** (`format_func` output) for every option widget.
-  The constraint facts are all on the widget's proto unless a row says otherwise.
+- The browser sends the option **label** (`format_func` output) for every option widget
+  except `st.feedback`, which sends the selected index as text, such as `"2"`, or `""`
+  to clear it. The constraint facts are all on the widget's proto unless a row says
+  otherwise.
 
 **Columns**
 
@@ -70,10 +72,10 @@ browser enforces, what the server does with a client value that violates it as o
 | `selectbox`, `multiselect` | `accept_new_options` | Any non-empty text | Any string, by design | 2: non-empty text stays legal |
 | `multiselect` | `options` | Closed list | late reset: filtered after the callback | 2 |
 | `multiselect` | `max_selections` | Refuses more | raises after the callback, with a message blaming `default` | 2 |
-| `multiselect`, multi `pills` | No duplicates | Impossible in the UI, beyond the repeats a held value has, which a multiselect keeps when options are added | pass | 2: a multiselect accepts the held value's repeats |
+| `multiselect`, multi `pills` | No duplicates | Impossible in the UI, beyond a label several options share, which the browser sends once per selected option (the multiselect's "Select all" does), and the repeats a held value has, which a multiselect keeps when options are added | pass | 2: a shared label may repeat as often as options share it, and a multiselect accepts the held value's repeats |
 | `select_slider` | `options`, range | Index mapped to a label | deser: an unknown label falls back to the default; a reversed range is sorted | 2, 4 |
 | `pills`, `segmented_control` | `options` | Closed list | deser in single mode; unknown values dropped in multi mode | 2 |
-| `pills`, `segmented_control` | `required` in single mode | Cannot deselect | pass: the callback fires with `None` | 5 |
+| `pills`, `segmented_control` | `required` in single mode | Cannot deselect. Does not block the form submit while empty, so a form with `clear_on_submit` submits the empty default it restores. | pass: the callback fires with `None` | 5; 7 needs a browser submit gate first |
 | `selectbox` | `required` (added on 2026-10-29, #17676) | Cannot clear; blocks the form submit while empty | pass: AppTest can set `None` | 5, 7 |
 | `feedback` | Index range, or `""` to clear | Fixed icons; clicking the selected face again sends `""` | deser: reset; a non-numeric value raises | 1, 2 |
 | `menu_button` | `options` | Closed list | done: an unknown option is no click | — |
@@ -99,7 +101,7 @@ browser enforces, what the server does with a client value that violates it as o
 | Constraint | Browser | Server today | Item |
 | --- | --- | --- | --- |
 | Whole editor `disabled=True` | Read-only | done (#16209) | — |
-| `disabled=[cols]`, auto-disabled columns, hidden columns, types that cannot be edited | Edits dropped | pass | 6 |
+| `disabled=[cols]`, auto-disabled columns, types that cannot be edited | Edits dropped | pass | 6 |
 | `num_rows` (`fixed`, `dynamic`, `add`, `delete`) | Gates adding and deleting | pass | 6 |
 | Row and column existence | — | Negative rows pass; out-of-range rows and unknown columns raise | 6 |
 | Edits to a `RangeIndex`; index uniqueness | Not editable; not checked | pass: renames the label, can duplicate the index | 6 |
@@ -114,6 +116,10 @@ browser enforces, what the server does with a client value that violates it as o
 | `ButtonColumn` click | Real rows | Shape and `row >= 0` checked; `row < num_rows` not checked | 8 |
 | Dataframe `selection_mode`, bounds | Gated by mode | pass: `_validate_selection_state` exists but runs only for programmatic selections | 8 |
 | Chart selections (Plotly, Vega-Lite, Deck.gl) | Mode and parameters | pass; bad JSON raises | 12 |
+
+Hiding a column does not protect it. The toolbar's column menu can show a column hidden
+with `column_order`, `hidden` or `None` in `column_config`, or `hide_index`, and the user
+can then edit it unless it is disabled. So item 6 does not refuse edits to hidden columns.
 
 ## Uploads
 
