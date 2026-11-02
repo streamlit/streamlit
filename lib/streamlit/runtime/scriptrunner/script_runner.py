@@ -714,9 +714,8 @@ class ScriptRunner:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
             run_descriptor = RunDescriptor.create(fragment_ids_this_run)
-            # fragment_ids_this_run is sent alongside the descriptor because its
-            # None value marks a full-app run for queue clearing. The descriptor
-            # stores an empty tuple for both None and [], so it can't replace it.
+            # Queue clearing still reads fragment_ids_this_run, where None marks a
+            # full-app run, so it travels alongside the descriptor.
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,

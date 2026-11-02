@@ -202,8 +202,8 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
-  // The backend sets this on new_session only. Deltas carry no run identity;
-  // a delta belongs to the most recent new_session before it.
+  // Identity of the run that a new_session starts. Set only on new_session;
+  // deltas carry none and belong to the most recent new_session before them.
   RunIdentity run = 6;
 
   reserved 3;
@@ -214,7 +214,8 @@ message ForwardMsgMetadata {
 message RunIdentity {
   string script_run_id = 1;
 
-  // Fragment roots selected for this execution. Empty means a full-app run.
+  // Fragments this run reruns, with queued ancestors before their
+  // descendants. Empty means a full-app run.
   repeated string fragment_ids = 2;
 }
 

@@ -22,11 +22,14 @@ import type { ForwardMsgMetadata } from "@streamlit/protobuf"
  */
 export interface RunIdentity {
   scriptRunId: string
-  /** Fragment roots selected for this run. Empty means a full-app run. */
+  /** Fragments this run reruns, ancestors first. Empty means a full-app run. */
   fragmentIds: string[]
 }
 
-/** Run identity attached to a lifecycle message, or undefined when absent. */
+/**
+ * Reads the run identity from ForwardMsg metadata. Returns undefined when
+ * there is no run or its scriptRunId is empty.
+ */
 export function getRunIdentity(
   metadata?: ForwardMsgMetadata | null
 ): RunIdentity | undefined {
