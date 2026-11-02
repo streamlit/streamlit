@@ -313,6 +313,10 @@ class InMemoryCacheStorageWrapper(CacheStorage):
                 del self._mem_cache[key]
             removals = self._take_pending_removals()
             self._report_removals(removals)
-        if is_live and self._eviction_metrics is not None:
-            self._eviction_metrics.record_evictions("global_budget")
+        if self._eviction_metrics is not None:
+            # A matching generation means the entry was still stored, so a
+            # non-live entry had expired without being reaped yet.
+            self._eviction_metrics.record_evictions(
+                "global_budget" if is_live else "ttl"
+            )
         return is_live

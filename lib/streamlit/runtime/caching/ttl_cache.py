@@ -207,11 +207,7 @@ class TTLCache(MutableMapping[K, V]):
                 reason = "max_size"
             else:
                 break
-            # Dispatch through popitem() so subclasses such as TTLCleanupCache
-            # can run their release hooks for automatic capacity evictions.
-            self.popitem()
-            if self._on_evict is not None:
-                self._on_evict(reason, 1)
+            self._evict_lru(reason)
         self._data[key] = value
         if self._sizes is not None and size is not None:
             self._sizes[key] = size
@@ -306,6 +302,20 @@ class TTLCache(MutableMapping[K, V]):
         except StopIteration:
             raise KeyError(f"{type(self).__name__} is empty") from None
         return key, self._remove(key)
+
+    def _evict_lru(self, reason: TTLCacheEvictionReason) -> V:
+        """Evict the least-recently-used entry to make room for a write.
+
+        Subclasses that release evicted values should override this and release
+        after calling super(), so the eviction is reported even if the release
+        raises.
+        """
+        # Call the base popitem() directly so a subclass popitem() override
+        # doesn't release the value before the eviction is reported.
+        _, value = TTLCache.popitem(self)
+        if self._on_evict is not None:
+            self._on_evict(reason, 1)
+        return value
 
     def _remove(self, key: K) -> V:
         value = self._data.pop(key)

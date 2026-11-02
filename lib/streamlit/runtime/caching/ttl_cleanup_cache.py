@@ -22,7 +22,11 @@ from typing import TypeVar
 from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
-from streamlit.runtime.caching.ttl_cache import OnEvict, TTLCache
+from streamlit.runtime.caching.ttl_cache import (
+    OnEvict,
+    TTLCache,
+    TTLCacheEvictionReason,
+)
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -69,6 +73,12 @@ class TTLCleanupCache(TTLCache[K, V]):
         key, value = super().popitem()
         self._on_release(value)
         return key, value
+
+    @override
+    def _evict_lru(self, reason: TTLCacheEvictionReason) -> V:
+        value = super()._evict_lru(reason)
+        self._on_release(value)
+        return value
 
     @override
     def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:

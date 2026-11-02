@@ -605,6 +605,42 @@ def test_global_budget_eviction_is_attributed_to_function(
     assert _evictions(registry, "module.load")["global_budget"] == 1
 
 
+@patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+def test_expired_global_budget_victim_counts_as_ttl_eviction(
+    timer_patch: MagicMock, registry: CacheMetrics
+) -> None:
+    """An expired entry removed by the global budget before reaping is a TTL eviction."""
+    timer_patch.return_value = 0
+    budget = GlobalCacheBudget(max_bytes=6)
+
+    def make_storage(display_name: str, ttl_seconds: float | None) -> Any:
+        return InMemoryCacheStorageWrapper(
+            DummyCacheStorage(),
+            CacheStorageContext(
+                function_key=display_name,
+                function_display_name=display_name,
+                ttl_seconds=ttl_seconds,
+                max_entries=None,
+            ),
+        )
+
+    with patch(
+        "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+        "get_global_cache_budget",
+        return_value=budget,
+    ):
+        expiring = make_storage("module.expiring", ttl_seconds=10)
+        other = make_storage("module.other", ttl_seconds=None)
+
+    expiring.set("a", b"aaaa")
+    timer_patch.return_value = 11
+    other.set("b", b"bbbb")
+
+    evictions = _evictions(registry, "module.expiring")
+    assert evictions["ttl"] == 1
+    assert evictions["global_budget"] == 0
+
+
 def test_persisted_cache_evictions_are_not_counted(registry: CacheMetrics) -> None:
     """Dropping a disk-persisted entry from memory does not remove it from the cache."""
     storage = InMemoryCacheStorageWrapper(
