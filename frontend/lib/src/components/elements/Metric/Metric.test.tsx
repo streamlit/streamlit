@@ -212,282 +212,94 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetric")).toHaveStyle("border: none;")
   })
 
-  it("shrinks a metric value to the card instead of ellipsizing it when printing", () => {
-    render(<Metric {...getProps({ body: "$48.6M", showBorder: true })} />)
-
-    const css = [...document.querySelectorAll("style")]
-      .map(style => style.textContent ?? "")
-      .join("\n")
-
-    expect(css).toContain("@media print")
-    expect(css).toContain(".stMarkdownEllipsis")
-    expect(css).toContain("text-overflow:clip")
-    expect(css).toContain("container-type:inline-size")
-    expect(css).toContain("--st-metric-text-width")
-    expect(css).toContain("atan2(100cqi, var(--st-metric-text-width, 100cqi))")
-    const fontRule = css
-      .split("}")
-      .find(rule => rule.includes("atan2(100cqi, var(--st-metric-text-width"))
-    expect(fontRule).toBeDefined()
-    expect(fontRule).not.toContain(".stMarkdownEllipsis p")
-    // Clips the figure if no width was recorded, instead of overlapping.
-    expect(fontRule).toContain("overflow:hidden")
-    expect(screen.getByTestId("stMetricValue")).toHaveClass("stMetricValue")
-
-    const rect = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockReturnValue({
-        width: 112,
-        height: 36,
-        top: 0,
-        left: 0,
-        bottom: 36,
-        right: 112,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      })
-    window.dispatchEvent(new Event("beforeprint"))
-    rect.mockRestore()
-
-    expect(
-      screen
-        .getByTestId("stMetricValue")
-        .style.getPropertyValue("--st-metric-text-width")
-    ).toBe("112px")
-  })
-
-  it("measures a bold metric value from the rendered markdown", () => {
-    render(<Metric {...getProps({ body: "**$48.6M** `code`" })} />)
-    const value = screen.getByTestId("stMetricValue")
-    // The card font is weight 400. Bold and inline code are wider than a
-    // plain copy of that font, so the probe has to be the rendered markdown.
-    expect(value.querySelector("strong")).not.toBeNull()
-    expect(value.querySelector("code")).not.toBeNull()
-
-    const rect = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function (this: HTMLElement) {
-        const rendered =
-          this.querySelector("strong") !== null &&
-          this.querySelector("code") !== null
-        const width = rendered ? 180 : 40
-        return {
-          width,
-          height: 36,
-          top: 0,
-          left: 0,
-          bottom: 36,
-          right: width,
-          x: 0,
-          y: 0,
-          toJSON: () => ({}),
-        }
-      })
-    window.dispatchEvent(new Event("beforeprint"))
-    rect.mockRestore()
-
-    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe(
-      "180px"
-    )
-    expect(value.querySelectorAll(".stMarkdownEllipsis")).toHaveLength(1)
-  })
-
-  it("keeps a content-width metric at its own width when printing", () => {
-    const before = document.querySelectorAll("style").length
-    render(
-      <Metric
-        {...getProps({ body: "$48.6M" })}
-        widthConfig={new streamlit.WidthConfig({ useContent: true })}
-      />
-    )
-    const css = [...document.querySelectorAll("style")]
-      .slice(before)
-      .map(style => style.textContent ?? "")
-      .join("\n")
-
-    // Containing the value would zero its intrinsic width, so the card
-    // would shrink to the label. The figure still scales to the narrower of
-    // the measured slot and the printed column, which resolves `cqi`.
-    expect(css).not.toContain("container-type:inline-size")
-    expect(css).toContain(
-      "atan2(min(var(--st-metric-available-width, 100cqi), calc(100cqi - 0px)), var(--st-metric-text-width, min(var(--st-metric-available-width, 100cqi), calc(100cqi - 0px))))"
-    )
-    expect(css).not.toContain("100vw")
-    expect(css).not.toContain("overflow:hidden")
-
-    const column = document.createElement("div")
-    Object.defineProperty(column, "clientWidth", { value: 80 })
-    const closest = vi
-      .spyOn(Element.prototype, "closest")
-      .mockImplementation(selector =>
-        selector === ".stElementContainer" ? column : null
+  describe("print layout", () => {
+    /** The CSS rules of an element's own emotion classes. */
+    const rulesOf = (element: HTMLElement): string => {
+      const classes = [...element.classList].filter(
+        cls => cls.includes("emotion-cache") || cls.startsWith("css-")
       )
-    const rect = vi
-      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockReturnValue({
-        width: 112,
-        height: 36,
-        top: 0,
-        left: 0,
-        bottom: 36,
-        right: 112,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      })
-    window.dispatchEvent(new Event("beforeprint"))
-    expect(closest).toHaveBeenCalledWith(".stElementContainer")
-    closest.mockRestore()
-    rect.mockRestore()
-
-    const value = screen.getByTestId("stMetricValue")
-    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
-      "80px"
-    )
-    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe(
-      "112px"
-    )
-
-    window.dispatchEvent(new Event("afterprint"))
-    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
-      ""
-    )
-    expect(value.style.getPropertyValue("--st-metric-text-width")).toBe("")
-  })
-
-  it.each([
-    [
-      "keeps a stretch metric in a content-width container at its own width",
-      new streamlit.WidthConfig({ useStretch: true }),
-      false,
-    ],
-    [
-      "contains a fixed-width metric in a content-width container",
-      new streamlit.WidthConfig({ pixelWidth: 200 }),
-      true,
-    ],
-  ])("%s when printing", (_name, widthConfig, isContained) => {
-    const contentWidthContext: IFlexContext = {
-      direction: Direction.HORIZONTAL,
-      isInHorizontalLayout: true,
-      isDirectlyInColumn: false,
-      isInRoot: false,
-      isInContentWidthContainer: true,
+      expect(classes).not.toHaveLength(0)
+      return [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+        .split("}")
+        .filter(rule => classes.some(cls => rule.includes(`.${cls}`)))
+        .join("}")
     }
-    render(
-      <FlexContext.Provider value={contentWidthContext}>
-        <Metric {...getProps({ body: "$48.6M" })} widthConfig={widthConfig} />
-      </FlexContext.Provider>
-    )
-    const metricClasses = [...screen.getByTestId("stMetric").classList].filter(
-      cls => cls.includes("emotion-cache") || cls.startsWith("css-")
-    )
-    expect(metricClasses).not.toHaveLength(0)
-    const metricRules = [...document.querySelectorAll("style")]
-      .map(style => style.textContent ?? "")
-      .join("\n")
-      .split("}")
-      .filter(rule => metricClasses.some(cls => rule.includes(`.${cls}`)))
-      .join("}")
 
-    expect(metricRules.includes("container-type:inline-size")).toBe(
-      isContained
-    )
-    expect(metricRules.includes("var(--st-metric-available-width")).toBe(
-      !isContained
-    )
-  })
+    it("wraps the card's text and shrinks the value by its character count", () => {
+      render(<Metric {...getProps({ body: "$48.6M", showBorder: true })} />)
 
-  it("fits a bordered content-width metric inside the card's border and padding", () => {
-    const { container } = render(
-      <Metric
-        {...getProps({ body: "$48.6M", showBorder: true })}
-        widthConfig={new streamlit.WidthConfig({ useContent: true })}
-      />
-    )
-    const value = screen.getByTestId("stMetricValue")
-    const card = screen.getByTestId("stMetric")
-    const content = value.parentElement as HTMLElement
-    // jsdom cannot resolve the theme's calc() padding, so set plain lengths.
-    content.style.padding = "0 14px"
-    card.style.borderLeft = "1px solid"
-    card.style.borderRight = "1px solid"
+      const cardRules = rulesOf(screen.getByTestId("stMetric"))
+      expect(cardRules).toContain("@media print")
+      expect(cardRules).toContain("text-overflow:clip")
+      expect(cardRules).toContain("overflow-wrap:anywhere")
 
-    Object.defineProperty(container, "clientWidth", {
-      value: 120,
-      configurable: true,
+      // The figure shrinks to fit a narrower printed card, estimated from
+      // its six characters, without measuring it in JavaScript.
+      const valueRules = rulesOf(screen.getByTestId("stMetricValue"))
+      expect(valueRules).toContain("container-type:inline-size")
+      expect(valueRules).toContain(
+        "font-size:min(1em, calc(100cqi / (6 * 0.6)))"
+      )
+      expect(valueRules).not.toContain(".stMarkdownEllipsis p")
     })
-    const closest = vi
-      .spyOn(Element.prototype, "closest")
-      .mockImplementation(selector =>
-        selector === ".stElementContainer" ? container : null
+
+    it("does not scale an empty value", () => {
+      render(<Metric {...getProps({ body: "" })} />)
+
+      expect(rulesOf(screen.getByTestId("stMetricValue"))).not.toContain(
+        "@media print"
       )
-    window.dispatchEvent(new Event("beforeprint"))
-    closest.mockRestore()
+    })
 
-    // 120px slot minus 2 * 14px padding and 2 * 1px border.
-    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
-      "90px"
+    it.each([
+      [
+        "wraps the value of a content-width metric",
+        new streamlit.WidthConfig({ useContent: true }),
+        false,
+        false,
+      ],
+      [
+        "wraps the value of a stretch metric in a content-width container",
+        new streamlit.WidthConfig({ useStretch: true }),
+        true,
+        false,
+      ],
+      [
+        "shrinks the value of a fixed-width metric in a content-width container",
+        new streamlit.WidthConfig({ pixelWidth: 200 }),
+        true,
+        true,
+      ],
+    ])(
+      "%s when printing",
+      (_name, widthConfig, inContentWidthContainer, isScaled) => {
+        const flexContext: IFlexContext = {
+          direction: Direction.HORIZONTAL,
+          isInHorizontalLayout: true,
+          isDirectlyInColumn: false,
+          isInRoot: false,
+          isInContentWidthContainer: inContentWidthContainer,
+        }
+        render(
+          <FlexContext.Provider value={flexContext}>
+            <Metric
+              {...getProps({ body: "$48.6M" })}
+              widthConfig={widthConfig}
+            />
+          </FlexContext.Provider>
+        )
+
+        // A size container would zero the value's intrinsic width and
+        // collapse a card that is sized by its value.
+        const valueRules = rulesOf(screen.getByTestId("stMetricValue"))
+        expect(valueRules.includes("container-type:inline-size")).toBe(
+          isScaled
+        )
+        expect(valueRules.includes("100cqi")).toBe(isScaled)
+      }
     )
-    expect(
-      value.style.getPropertyValue("--st-metric-available-width")
-    ).not.toBe("120px")
-  })
-
-  it("refits a content-width metric on print media only after beforeprint", () => {
-    const listeners: (() => void)[] = []
-    const matchMedia = vi
-      .spyOn(window, "matchMedia")
-      .mockImplementation((query: string) => ({
-        matches: true,
-        media: query,
-        onchange: null,
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        addListener: vi.fn(),
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
-        removeListener: vi.fn(),
-        addEventListener: vi.fn((_type: string, listener: () => void) => {
-          listeners.push(listener)
-        }),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }))
-
-    render(<Metric {...getProps({ body: "$48.6M" })} />)
-    expect(listeners).toHaveLength(0)
-
-    render(
-      <Metric
-        {...getProps({ body: "$12.1M" })}
-        widthConfig={new streamlit.WidthConfig({ useContent: true })}
-      />
-    )
-    expect(listeners).toHaveLength(1)
-
-    const value = screen.getAllByTestId("stMetricValue")[1]
-    const column = document.createElement("div")
-    Object.defineProperty(column, "clientWidth", { value: 80 })
-    const closest = vi
-      .spyOn(Element.prototype, "closest")
-      .mockImplementation(selector =>
-        selector === ".stElementContainer" ? column : null
-      )
-
-    // Print emulation without beforeprint has no text width to scale by.
-    listeners[0]()
-    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
-      ""
-    )
-
-    value.style.setProperty("--st-metric-text-width", "112px")
-    listeners[0]()
-    expect(value.style.getPropertyValue("--st-metric-available-width")).toBe(
-      "80px"
-    )
-
-    closest.mockRestore()
-    matchMedia.mockRestore()
   })
 
   it("renders with border if passed", () => {

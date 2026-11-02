@@ -20,7 +20,6 @@ import {
   type ReactNode,
   useContext,
   useMemo,
-  useRef,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -30,7 +29,6 @@ import {
   FlexContext,
   FlexContextProvider,
   getHasDefiniteHeight,
-  getIsContentSized,
 } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import {
@@ -49,7 +47,6 @@ import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
 import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
-import { usePrintScreenWidth } from "~lib/components/shared/usePrintScreenWidth"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -57,7 +54,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
-  PRINT_CARD_CLASS,
+  PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
@@ -197,10 +194,10 @@ export const ContainerContentsWrapper = (
     gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
     // Print keeps flex only for a block whose 100% height is definite. A
-    // side-by-side column is stretched by its row, so it is (a stacking row
-    // overrides this with its own block rules). Other wrappers (forms,
-    // expanders, chat messages) are only definite when their own height config
-    // makes them so.
+    // side-by-side column is stretched by its row, so its 100% height is
+    // definite. A row that stacks in print overrides this with its own block
+    // rules. Other wrappers (forms, expanders, chat messages) are only
+    // definite when their own height config makes them so.
     hasDefiniteHeight:
       isColumn ||
       getHasDefiniteHeight({ ...heightContextProps, parentContext }),
@@ -311,11 +308,6 @@ export const FlexBoxContainer = (
   const hasFixedWidth =
     (props.node.deltaBlock.widthConfig?.pixelWidth ?? 0) > 0 ||
     (props.node.deltaBlock.widthConfig?.remWidth ?? 0) > 0
-  const isContentSized = getIsContentSized({
-    hasContentWidth,
-    hasFixedWidth,
-    parentContext,
-  })
 
   return (
     <FlexContextProvider
@@ -329,11 +321,9 @@ export const FlexBoxContainer = (
     >
       <StyledFlexContainerBlock
         {...styles}
-        isContentSized={isContentSized}
         className={[
           getClassnamePrefix(direction),
           convertKeyToClassName(userKey),
-          styles.border ? PRINT_CARD_CLASS : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
@@ -389,11 +379,6 @@ export const BlockNodeRenderer = (
     subElement: extractLayoutSubElement(node.deltaBlock),
     minStretchBehavior,
   })
-
-  // Record the on-screen width so a stacked chart column can print near that
-  // width. Side-by-side rows never read the variable.
-  const columnRef = useRef<HTMLDivElement>(null)
-  usePrintScreenWidth(columnRef, Boolean(node.deltaBlock.column))
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return null
@@ -581,13 +566,12 @@ export const BlockNodeRenderer = (
         className={[
           "stColumn",
           node.deltaBlock.column.showBorder === true
-            ? PRINT_CARD_CLASS
+            ? PRINT_BORDERED_COLUMN_CLASS
             : undefined,
         ]
           .filter(Boolean)
           .join(" ")}
         data-testid="stColumn"
-        ref={columnRef}
       >
         {child}
       </StyledColumn>

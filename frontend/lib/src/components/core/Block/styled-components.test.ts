@@ -24,9 +24,9 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
+import { PrintLayout } from "./ElementContainerConfig"
 import {
-  PRINT_CARD_CLASS,
-  PRINT_HIDDEN_CLASS,
+  PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
   StyledElementContainer,
   StyledFlexContainerBlock,
@@ -65,18 +65,21 @@ describe("StyledFlexContainerBlock print layout", () => {
 
     expect(css).toContain("@media print")
     // The row itself only becomes display:block, and only gives its columns
-    // the full page width, when one of them holds a dataframe, static
-    // table, or chart. A row of compact widgets (metrics, buttons) matches
-    // none of these and keeps its normal flex layout, bordered or not.
-    // Images shrink, and there is no built-in bokeh element class.
-    expect(css).toContain(":is(.stDataFrame")
-    expect(css).not.toContain(`:is(.${PRINT_CARD_CLASS}`)
-    expect(css).not.toContain(`>.stColumn.${PRINT_CARD_CLASS},`)
-    expect(css).toContain(".stTable")
-    expect(css).toContain(".stVegaLiteChart")
-    expect(css).not.toContain(".stImage")
-    expect(css).not.toContain(".stBokehChart")
-    expect(css).toContain(".stPlotlyChart")
+    // the full page width, when one of them holds an element that opted
+    // into a fixed-width print layout (a dataframe, static table, or chart).
+    // A row of compact widgets (metrics, buttons) keeps its normal flex
+    // layout, bordered or not.
+    expect(css).toMatch(
+      new RegExp(
+        `:is\\(\\.${PrintLayout.FIXED_WIDTH}, ?\\.${PrintLayout.GRAPHIC}\\)`
+      )
+    )
+    expect(css).not.toContain(`:is(.${PRINT_BORDERED_COLUMN_CLASS}`)
+    expect(css).not.toContain(`>.stColumn.${PRINT_BORDERED_COLUMN_CLASS},`)
+    // Elements opt in through ElementContainerConfig, so the row names none.
+    expect(css).not.toContain(".stDataFrame")
+    expect(css).not.toContain(".stVegaLiteChart")
+    expect(css).not.toContain("container-type")
     expect(css).toContain(":not([data-st-inactive] *)")
     expect(css).toContain("details:not([open])")
     expect(css).not.toContain("data-testid")
@@ -86,50 +89,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // block would stay a flex column and collapse in Chrome print.
     expect(css).toContain(".stVerticalBlock{display:block")
     expect(css).toContain("margin-bottom:1rem")
-    // A stacked column grows only as far as its chart can scale, so a card
-    // does not stretch across the page around a narrower chart.
-    expect(css).toContain(
-      ">.stColumn{display:block;width:min(100%, calc(var(--st-print-screen-width, 100%) * 1.25))"
-    )
-  })
-
-  it("makes the columns of a side-by-side row size containers", () => {
-    const css = cssOf(
-      render(
-        createElement(StyledFlexContainerBlock, {
-          direction: Direction.HORIZONTAL,
-          border: false,
-        })
-      )
-    )
-
-    // `cqi` inside a printed column then resolves at paper width, which a
-    // content-width metric scales to. A stacking row is not matched.
-    expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn :is\(\.stDataFrame[^{]*\)\) ?> ?\.stColumn\{container-type:inline-size/
-    )
-    expect(css).not.toContain("float:")
-    expect(
-      cssOf(
-        render(
-          createElement(StyledFlexContainerBlock, {
-            direction: Direction.HORIZONTAL,
-            border: false,
-            isContentSized: true,
-          })
-        )
-      )
-    ).not.toContain("container-type")
-    expect(
-      cssOf(
-        render(
-          createElement(StyledFlexContainerBlock, {
-            direction: Direction.VERTICAL,
-            border: false,
-          })
-        )
-      )
-    ).not.toContain("container-type")
+    expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
   })
 
   it("stacks a horizontal container that holds a chart", () => {
@@ -147,7 +107,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // `.stColumn` rule. Each stacked child keeps its own width, capped to
     // the container, and the gap becomes a bottom margin.
     expect(css).toMatch(
-      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stDataFrame[^{]*\{display:block;height:auto;overflow:visible/
+      /:not\(:has\(> ?\.stColumn\)\):has\(:is\(\.stPrintFixedWidth[^{]*\{display:block;height:auto;overflow:visible/
     )
     expect(css).toMatch(
       /:not\(:has\(> ?\.stColumn\)\):has\([^{]*> ?\*\{max-width:100%;min-width:0/
@@ -171,9 +131,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // A chart prints as one piece and moves to the next page, so a split
     // card would leave an empty bordered strip behind. This applies to both
     // orientations.
-    expect(css).toMatch(
-      /:has\(:is\(\.stVegaLiteChart[^{]*\{break-inside:avoid/
-    )
+    expect(css).toMatch(/:has\(\.stPrintGraphic[^{]*\{break-inside:avoid/)
     expect(css).not.toContain("orientation")
 
     const plain = cssOf(
@@ -187,7 +145,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(plain).not.toContain("break-inside")
   })
 
-  it("keeps bordered chart columns and a side-by-side card row on one page", () => {
+  it("keeps a side-by-side row of bordered columns on one page", () => {
     const css = cssOf(
       render(
         createElement(StyledFlexContainerBlock, {
@@ -198,17 +156,14 @@ describe("StyledFlexContainerBlock print layout", () => {
       )
     )
 
-    expect(css).toMatch(
-      new RegExp(
-        `>\\.stColumn\\.${PRINT_CARD_CLASS}:has\\(:is\\(\\.stVegaLiteChart[^{]*\\{break-inside:avoid`
-      )
-    )
     // The whole row only stays together while it is not stacked.
     expect(css).toMatch(
       new RegExp(
-        `:has\\(>\\s?\\.stColumn\\.${PRINT_CARD_CLASS}\\):not\\(:has\\(>\\s?\\.stColumn :is\\(\\.stDataFrame[^{]*\\{break-inside:avoid`
+        `:has\\(>\\s?\\.stColumn\\.${PRINT_BORDERED_COLUMN_CLASS}\\):not\\(:has\\(>\\s?\\.stColumn :is\\(\\.stPrintFixedWidth[^{]*\\{break-inside:avoid`
       )
     )
+    // A single bordered chart column is kept together by StyledColumn.
+    expect(css).not.toContain(`>.stColumn.${PRINT_BORDERED_COLUMN_CLASS}:has(`)
   })
 
   it("keeps a centered container's flex alignment and gaps with margin", () => {
@@ -232,18 +187,8 @@ describe("StyledFlexContainerBlock print layout", () => {
         })
       )
     )
-    expect(gapped).toContain("margin-bottom:16px")
-    // Only a child with a printed sibling after it gets the gap, so a
-    // trailing st.empty, balloons, or snow container adds no blank strip.
-    expect(gapped).toContain(`:has(~ :not(.${PRINT_HIDDEN_CLASS}))`)
-    expect(gapped).not.toContain(":last-child")
-    expect(gapped).toContain(":not(:has(> .stPageLink))")
-    expect(gapped).toContain(":not(:has(> .stCacheSpinner))")
-    // A page link trims the flex gap by xs and a cache spinner cancels it
-    // with -lg. The print margin is the gap minus that trim.
-    expect(gapped).toContain(":has(> .stPageLink)")
-    expect(gapped).toContain("margin-bottom:calc(16px - 0.375rem)")
-    expect(gapped).toContain("margin-bottom:calc(16px - 1rem)")
+    // Every child but the last gets the gap as a bottom margin.
+    expect(gapped).toMatch(/> ?:not\(:last-child\)\{margin-bottom:16px/)
     expect(gapped).not.toContain("padding-bottom:16px")
   })
 
@@ -264,7 +209,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // gap, and print adds no block margin on its own class.
     expect(css).toContain("height:300px")
     expect(css).not.toMatch(OWN_PRINT_BLOCK)
-    expect(css).not.toMatch(/\.css-[\w-]+ ?> ?:has\(~/)
+    expect(css).not.toMatch(/\.css-[\w-]+ ?> ?:not\(:last-child\)/)
   })
 
   it("releases a fixed height around a descendant row that stacks in print", () => {
@@ -283,7 +228,7 @@ describe("StyledFlexContainerBlock print layout", () => {
     // Print cannot scroll, so the stacked row would be cut off at the
     // fixed height. The block grows to fit it as a block box.
     expect(css).toMatch(
-      /:has\(\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
+      /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{height:auto;max-height:none;overflow:visible;display:block/
     )
     expect(css).toContain("margin-bottom:17px")
     // A stretch-height element was sized by the fixed height through size
@@ -392,10 +337,31 @@ describe("StyledElementContainer print layout", () => {
     )
     expect(text).not.toContain("display:none")
   })
+
+  it("trims a page link's gap on screen only", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          isStale: false,
+          width: "100%",
+          height: "auto",
+          elementType: "pageLink",
+          overflow: "visible",
+        })
+      )
+    )
+
+    // Print gives every child a gap margin, which the negative margins
+    // would cancel.
+    expect(css).toMatch(
+      /@media screen\{[^}]*:has\(> ?\.stPageLink\)\{margin-top:-0\.375rem;margin-bottom:-0\.375rem/
+    )
+    expect(css).not.toMatch(/@media print\{[^}]*stPageLink/)
+  })
 })
 
 describe("StyledColumn print layout", () => {
-  it("has no print rule of its own; the enclosing row drives it", () => {
+  it("gives a plain column no print rule of its own", () => {
     const css = cssOf(
       render(
         createElement(StyledColumn, {
@@ -409,6 +375,23 @@ describe("StyledColumn print layout", () => {
     // A plain column prints as a normal flex item unless its row's own
     // print rule (tested above) matches and overrides it from outside.
     expect(css).not.toContain("@media print")
+  })
+
+  it("keeps a bordered column with a chart on one page", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: true,
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*\{break-inside:avoid/
+    )
+    expect(css).not.toContain("stPrintFixedWidth")
   })
 })
 
@@ -456,7 +439,7 @@ describe("StyledLayoutWrapper print layout", () => {
 
     // The row can be the wrapper's own container or nested inside it.
     expect(css).toMatch(
-      /:has\(\.stHorizontalBlock :is\(\.stDataFrame[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
+      /:has\(\.stHorizontalBlock :is\(\.stPrintFixedWidth[^{]*\{display:block;[^}]*flex:0 0 auto;height:auto;max-height:none/
     )
     expect(css).not.toContain(":has(> .stHorizontalBlock")
   })

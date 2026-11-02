@@ -28,7 +28,7 @@ import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
 
 // Helper to create a mock element node
@@ -92,25 +92,24 @@ describe("ElementContainer", () => {
     const container = screen.getByTestId("stElementContainer")
     expect(container).toHaveClass("stElementContainer")
     expect(container).toHaveClass("element-container")
-    expect(container).not.toHaveClass("stPrintHidden")
+    expect(container).not.toHaveClass(PrintLayout.FIXED_WIDTH)
+    expect(container).not.toHaveClass(PrintLayout.GRAPHIC)
   })
 
-  it.each(["empty", "balloons", "snow"])(
-    "marks a %s container as hidden in print",
-    elementType => {
+  it.each([PrintLayout.FIXED_WIDTH, PrintLayout.GRAPHIC])(
+    "adds the %s class from the config's print layout",
+    printLayout => {
       render(
         <ElementContainer
-          node={createMockElementNode(elementType)}
-          config={ElementContainerConfig.DEFAULT}
+          node={mockNode}
+          config={new ElementContainerConfig({ printLayout })}
           isStale={false}
         >
           <div>Content</div>
         </ElementContainer>
       )
 
-      expect(screen.getByTestId("stElementContainer")).toHaveClass(
-        "stPrintHidden"
-      )
+      expect(screen.getByTestId("stElementContainer")).toHaveClass(printLayout)
     }
   )
 

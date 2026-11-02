@@ -153,13 +153,14 @@ with st.container(height=420, key="fixed_height_chart_row"):
 
 st.markdown("After the fixed-height chart row")
 
+with st.container(key="page_links"):
+    st.page_link("http://www.example.com", label="First page link")
+    st.page_link("http://www.example.com", label="Second page link")
+    st.markdown("After the page links")
+
 with st.container(horizontal=True, key="horizontal_buttons"):
     st.button("First button")
     st.button("Second button")
-
-with st.container(border=True, key="trailing_empty"):
-    st.markdown("Text above a trailing placeholder")
-    st.empty()
 
 with st.container(horizontal=True, height=180, key="horizontal_stretch_chart"):
     st.bar_chart(pd.DataFrame({"value": [1, 2, 3]}), height="stretch")
@@ -167,3 +168,17 @@ with st.container(horizontal=True, height=180, key="horizontal_stretch_chart"):
     st.plotly_chart(go.Figure(go.Bar(x=["a", "b", "c"], y=[2, 1, 3])), height="stretch")
 
 st.markdown("After the horizontal stretch chart")
+
+with st.container(key="hidden_chart_row"):
+    tab_column, expander_column = st.columns(2)
+    with tab_column:
+        visible_tab, hidden_tab = st.tabs(["Visible tab", "Hidden tab"])
+        visible_tab.markdown("Visible tab text")
+        hidden_tab.bar_chart(pd.DataFrame({"value": [1, 2, 3]}), height=160)
+    with expander_column, st.expander("Closed expander"):
+        st.line_chart(pd.DataFrame({"value": [3, 2, 1]}), height=160)
+
+with st.container(key="table_row"):
+    table_column, text_column = st.columns(2)
+    table_column.table(pd.DataFrame({"name": ["a", "b"], "value": [1, 2]}))
+    text_column.markdown("Beside the table")

@@ -42,7 +42,6 @@ import {
   DynamicIcon,
   IsSidebarContext,
   NavigationContext,
-  PRINT_INACTIVE_ATTRIBUTE,
   SidebarConfigContext,
   useEmotionTheme,
   useScrollbarGutterSize,
@@ -267,10 +266,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       data-testid="stSidebar"
       aria-label="Sidebar"
       data-collapsed={isCollapsed ? "true" : "false"}
-      // A collapsed sidebar is `display: none` in print, so print CSS cannot
-      // lay out its contents anyway. The marker matches closed tabs, so
-      // `PRINT_VISIBLE_FILTER` never counts its contents as printed.
-      {...{ [PRINT_INACTIVE_ATTRIBUTE]: isCollapsed ? "" : undefined }}
       enable={{
         top: false,
         right: true,

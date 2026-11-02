@@ -20,6 +20,7 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_until
 from e2e_playwright.shared.app_utils import (
     end_browser_print,
     get_element_by_key,
+    get_expander,
     start_browser_print,
 )
 
@@ -32,8 +33,17 @@ def _break_inside(locator: Locator) -> str:
     return str(locator.evaluate("element => getComputedStyle(element).breakInside"))
 
 
-def _container_type(locator: Locator) -> str:
-    return str(locator.evaluate("element => getComputedStyle(element).containerType"))
+def _metric_text_scale(metric_value: Locator) -> float:
+    """Font size of the printed figure relative to the value's own size."""
+    return float(
+        metric_value.evaluate(
+            """element => {
+                const text = element.querySelector(".stMarkdownEllipsis");
+                return parseFloat(getComputedStyle(text).fontSize) /
+                    parseFloat(getComputedStyle(element).fontSize);
+            }"""
+        )
+    )
 
 
 def test_print_stacks_chart_rows_without_overlap(
@@ -112,6 +122,9 @@ def test_print_stacks_chart_rows_without_overlap(
             assert graphic_right <= sidebar_right + 1
 
     wait_until(app, sidebar_content_stays_in_the_sidebar)
+    # The sidebar metric's figure is wider than the printed sidebar, so it
+    # shrinks instead of wrapping.
+    assert _metric_text_scale(sidebar.get_by_test_id("stMetricValue")) < 1
 
     plain = get_element_by_key(app, "plain")
     bordered = get_element_by_key(app, "bordered")
@@ -198,7 +211,9 @@ def test_print_stacks_chart_rows_without_overlap(
 
     # An expander's content block is height 100% of a content-height parent.
     # It prints as a block, so its chart does not cover the next element.
-    expander_chart = app.get_by_test_id("stExpander").get_by_test_id("stVegaLiteChart")
+    expander_chart = get_expander(app, "Chart expander").get_by_test_id(
+        "stVegaLiteChart"
+    )
     after_expander = app.get_by_text("After the expander chart", exact=True)
     expect(expander_chart).to_be_visible()
 
@@ -268,23 +283,18 @@ def test_print_stacks_chart_rows_without_overlap(
 
     wait_until(app, charts_stack_above_the_heading)
 
-    # A stacked column grows to at most 1.25x its screen width instead of
-    # the full page, and its stretch-width chart scales up to fill it.
-    def stacked_column_hugs_its_chart() -> None:
+    # A stacked column takes the full width, and its chart stays inside it.
+    def stacked_chart_fits_its_column() -> None:
         column_box = chart_column.bounding_box()
-        main_box = main_content.bounding_box()
         graphic_box = chart.locator("svg.marks, canvas.marks").first.bounding_box()
         assert column_box is not None
-        assert main_box is not None
         assert graphic_box is not None
-        assert column_box["width"] <= screen_chart_column["width"] * 1.25 + 1
-        assert column_box["width"] < main_box["width"] - 20
-        assert graphic_box["width"] > screen_chart_column["width"]
+        assert column_box["width"] > screen_chart_column["width"]
         assert graphic_box["x"] + graphic_box["width"] <= (
             column_box["x"] + column_box["width"] + 1
         )
 
-    wait_until(app, stacked_column_hugs_its_chart)
+    wait_until(app, stacked_chart_fits_its_column)
 
     # The geometry checks above cover the relevant layout scenarios. The
     # snapshot shows the stacked chart row with the heading after it.
@@ -308,16 +318,17 @@ def _assert_inside(inner: Locator, outer: Locator) -> None:
 
 
 def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
-    """Metric variants fit their card, chart rows and horizontal containers
-    with a chart stack, and a trailing placeholder adds no gap.
+    """Metric variants fit their card, and chart rows and horizontal
+    containers with a chart stack.
     """
     expect(app.get_by_text("After the Plotly row", exact=True)).to_be_visible()
 
     app.set_viewport_size(_PORTRAIT)
     start_browser_print(app)
 
-    # A content-width metric and a metric sparkline both keep the size
-    # measured on screen unless print caps them to the narrower card.
+    # A content-width metric is sized by its figure, so print wraps a figure
+    # wider than the printed column instead of shrinking it. A metric
+    # sparkline is capped to its card.
     metric_columns = get_element_by_key(app, "metric_extras").get_by_test_id("stColumn")
     expect(metric_columns).to_have_count(2)
     content_column, chart_column = metric_columns.nth(0), metric_columns.nth(1)
@@ -327,26 +338,16 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     expect(content_value).to_be_visible()
     expect(sparkline_graphic).to_be_visible()
 
-    content_value_text = content_value.locator(".stMarkdownEllipsis").first
-    unscaled_font_size = float(
-        content_value.evaluate("element => getComputedStyle(element).fontSize")[:-2]
-    )
-
     def metrics_fit_their_columns() -> None:
-        # The figure is wider than the printed column, so it only fits if
-        # print scales it down.
-        font_size = content_value_text.evaluate(
-            "element => getComputedStyle(element).fontSize"
-        )
-        assert float(font_size[:-2]) < unscaled_font_size
         _assert_inside(content_value, content_column)
+        assert content_value.evaluate(
+            "element => element.scrollWidth <= element.clientWidth + 1"
+        )
         _assert_inside(sparkline, chart_column)
         _assert_inside(sparkline_graphic, chart_column)
 
     wait_until(app, metrics_fit_their_columns)
-    # A side-by-side column is a size container, so `cqi` in the metric's
-    # font rule resolves at paper width without a re-measure in JavaScript.
-    assert _container_type(content_column) == "inline-size"
+    assert _metric_text_scale(content_value) == 1
 
     # Plotly, ECharts, and DeckGL charts stack their row like the built-in
     # charts. Each chart and its rendered graphic stay inside the column, and
@@ -384,7 +385,6 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
             assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
         wait_until(app, chart_row_stacks)
-        assert _container_type(row_column) == "normal"
 
     # A horizontal container with a chart stacks like a column row, and the
     # chart spans the container. Its fixed height fits the row but not the
@@ -481,6 +481,50 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     wait_until(app, stretch_charts_keep_height)
 
+    # Page links trim the flex gap on screen. In print they still keep a gap
+    # to the next element instead of overlapping it.
+    page_links = get_element_by_key(app, "page_links").get_by_test_id("stPageLink")
+    expect(page_links).to_have_count(2)
+    after_page_links = app.get_by_text("After the page links", exact=True)
+
+    def page_links_keep_a_gap() -> None:
+        first_box = page_links.nth(0).bounding_box()
+        second_box = page_links.nth(1).bounding_box()
+        after_box = after_page_links.bounding_box()
+        assert first_box is not None
+        assert second_box is not None
+        assert after_box is not None
+        assert first_box["y"] + first_box["height"] < second_box["y"]
+        assert second_box["y"] + second_box["height"] < after_box["y"]
+
+    wait_until(app, page_links_keep_a_gap)
+
+    # A chart in a closed tab or a collapsed expander does not print, so its
+    # row stays side by side. A static table stacks its row like a chart.
+    hidden_chart_columns = get_element_by_key(app, "hidden_chart_row").get_by_test_id(
+        "stColumn"
+    )
+    expect(hidden_chart_columns).to_have_count(2)
+    table_row = get_element_by_key(app, "table_row")
+    table = table_row.get_by_test_id("stTable")
+    beside_table = table_row.get_by_text("Beside the table", exact=True)
+    expect(table).to_be_visible()
+
+    def hidden_charts_and_tables_lay_out() -> None:
+        tab_box = hidden_chart_columns.nth(0).bounding_box()
+        expander_box = hidden_chart_columns.nth(1).bounding_box()
+        table_box = table.bounding_box()
+        beside_box = beside_table.bounding_box()
+        assert tab_box is not None
+        assert expander_box is not None
+        assert table_box is not None
+        assert beside_box is not None
+        assert abs(tab_box["y"] - expander_box["y"]) < 2
+        assert expander_box["x"] >= tab_box["x"] + tab_box["width"] - 1
+        assert table_box["y"] + table_box["height"] <= beside_box["y"] + 1
+
+    wait_until(app, hidden_charts_and_tables_lay_out)
+
     buttons = get_element_by_key(app, "horizontal_buttons").get_by_test_id("stButton")
     expect(buttons).to_have_count(2)
     first_button = buttons.nth(0).bounding_box()
@@ -489,16 +533,5 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     assert second_button is not None
     assert abs(first_button["y"] - second_button["y"]) < 2
     assert second_button["x"] >= first_button["x"] + first_button["width"] - 1
-
-    # The print gap margin only goes on a child with a printed sibling after
-    # it, so a hidden trailing placeholder leaves no blank strip.
-    trailing_children = get_element_by_key(app, "trailing_empty").locator(":scope > *")
-    expect(trailing_children).to_have_count(2)
-    assert (
-        trailing_children.first.evaluate(
-            "element => getComputedStyle(element).marginBottom"
-        )
-        == "0px"
-    )
 
     end_browser_print(app)

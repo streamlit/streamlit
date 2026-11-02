@@ -30,10 +30,6 @@ import { getElementId } from "~lib/util/utils"
 
 import type { ElementContainerConfig } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
-import {
-  PRINT_HIDDEN_CLASS,
-  PRINT_HIDDEN_ELEMENT_TYPES,
-} from "./styled-components"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
@@ -91,9 +87,7 @@ export const ElementContainer = memo(function ElementContainer({
         "stElementContainer",
         "element-container",
         convertKeyToClassName(userKey),
-        PRINT_HIDDEN_ELEMENT_TYPES.has(elementType)
-          ? PRINT_HIDDEN_CLASS
-          : undefined,
+        config.printLayout,
       ]
         .filter(Boolean)
         .join(" ")}

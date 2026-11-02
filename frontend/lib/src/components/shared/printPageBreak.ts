@@ -16,28 +16,21 @@
 
 import type { CSSObject } from "@emotion/styled"
 
+import { PrintLayout } from "~lib/components/core/Block/ElementContainerConfig"
+
 /**
  * Marks a subtree that stays mounted but is not on the printed page: a
- * closed tab panel or a collapsed sidebar.
+ * closed tab panel.
  */
 export const PRINT_INACTIVE_ATTRIBUTE = "data-st-inactive"
 
 /**
  * Excludes an element that is mounted but not on the printed page: inside a
- * closed tab, a collapsed sidebar, or a collapsed expander.
+ * closed tab or a collapsed expander.
  */
 export const PRINT_VISIBLE_FILTER = `:not([${PRINT_INACTIVE_ATTRIBUTE}] *):not(details:not([open]) *)`
 
-/**
- * Selects built-in chart renderers by their stable element classes. A chart's
- * SVG or canvas prints as one piece, so the browser moves it to the next page
- * instead of splitting it. A new chart element must be added here to stack
- * its column row and stay on one page in print.
- */
-export const PRINT_CHART_SELECTOR =
-  ":is(.stVegaLiteChart, .stPlotlyChart, .stDeckGlJsonChart, .stGraphVizChart, .stEChartsChart)"
-
-const VISIBLE_PRINT_CHART = `${PRINT_CHART_SELECTOR}${PRINT_VISIBLE_FILTER}`
+const VISIBLE_PRINT_GRAPHIC = `.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}`
 
 /** Asks the browser not to start a page break inside this box. */
 export const printKeepTogetherRules: CSSObject = {
@@ -45,9 +38,9 @@ export const printKeepTogetherRules: CSSObject = {
 }
 
 /**
- * Emotion selector that matches this box when it contains a chart that
- * prints (not inside a closed tab, a collapsed sidebar, or a closed
- * expander). Pair it with `printKeepTogetherRules` so the box is not split
- * from that chart. A box taller than a page still breaks.
+ * Emotion selector that matches this box when it contains a chart (an
+ * element with `PrintLayout.GRAPHIC`) that prints, so not inside a closed
+ * tab or a closed expander. Pair it with `printKeepTogetherRules` so the
+ * box is not split from that chart. A box taller than a page still breaks.
  */
-export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_CHART})`
+export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC})`

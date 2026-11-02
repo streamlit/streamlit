@@ -27,14 +27,14 @@ import {
 import { Direction } from "~lib/components/core/Layout/utils"
 import {
   PRINT_CHART_CARD_SELECTOR,
-  PRINT_CHART_SELECTOR,
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
-import { PRINT_UPSCALED_WIDTH } from "~lib/components/shared/usePrintScreenWidth"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
+
+import { PrintLayout } from "./ElementContainerConfig"
 
 /**
  * Vertical-alignment rules for columns and horizontal containers target the
@@ -44,22 +44,19 @@ import { assertNever } from "~lib/util/assertNever"
 const CHECKBOX_WRAPPER_SELECTOR = ".stCheckbox"
 
 /**
- * Marks a bordered card (`st.container(border=True)` or a bordered column)
- * so print can keep a row of cards on one page. A border is drawn with an
- * emotion style, which has no stable selector of its own.
+ * Marks a bordered column so print can keep its row of bordered columns on
+ * one page. A border is drawn with an emotion style, which has no stable
+ * selector of its own.
  */
-export const PRINT_CARD_CLASS = "stPrintCard"
+export const PRINT_BORDERED_COLUMN_CLASS = "stPrintBorderedColumn"
 
 /**
- * Content that makes a printed column row stack into one column: a
- * dataframe, a static table, or a chart. These keep a width measured on
- * screen and would overflow a narrower printed column.
- *
- * A border alone does not stack the row. Metrics shrink their text to fit,
- * and text wraps, so a row of bordered metric cards stays side by side. An
- * image is `max-width: 100%` and shrinks into the column too.
+ * Content that makes a printed column row stack into one column: an element
+ * that keeps a width measured on screen (see `PrintLayout`). A border alone
+ * does not stack the row, so a row of bordered metric cards stays side by
+ * side.
  */
-const PRINT_STACK_TRIGGER = `:is(.stDataFrame, .stTable, ${PRINT_CHART_SELECTOR})`
+const PRINT_STACK_TRIGGER = `:is(.${PrintLayout.FIXED_WIDTH}, .${PrintLayout.GRAPHIC})`
 
 /**
  * Relative selector for a dataframe, table, or chart that prints inside a
@@ -84,30 +81,8 @@ const PRINT_STACKING_ROW = `.stHorizontalBlock ${PRINT_STACK_TRIGGER}${PRINT_VIS
 const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 
 /**
- * Element types whose container takes no space on the printed page (`empty`
- * is always hidden; balloons and snow are hidden in print), so print gap
- * margins skip them.
- */
-export const PRINT_HIDDEN_ELEMENT_TYPES = new Set([
-  "empty",
-  ...GLOBAL_ELEMENTS,
-])
-
-/** Marks an element container that takes no space on the printed page. */
-export const PRINT_HIDDEN_CLASS = "stPrintHidden"
-
-/** A child followed by at least one sibling that prints. */
-const CHILD_BEFORE_PRINTED_SIBLING = `& > :has(~ :not(.${PRINT_HIDDEN_CLASS}))`
-
-/**
  * Replaces flex `gap` with bottom margins when a vertical block prints as
- * `display: block` (`gap` does not apply there). Only a child with a printed
- * sibling after it gets one, so a trailing `st.empty`, balloons, or snow
- * container leaves no extra strip:
- * - Most children get the full gap.
- * - A page link keeps its xs trim, so it gets `gap - xs`.
- * - A zero-height cache spinner cancels its gap with -lg, so it gets
- *   `gap - lg`.
+ * `display: block` (`gap` does not apply there).
  */
 function printBlockGapMargins(
   gapWidth: string | undefined,
@@ -117,15 +92,8 @@ function printBlockGapMargins(
     return {}
   }
   return {
-    [`${CHILD_BEFORE_PRINTED_SIBLING}:not(:has(> .stPageLink)):not(:has(> .stCacheSpinner))`]:
-      {
-        marginBottom: gapWidth,
-      },
-    [`${CHILD_BEFORE_PRINTED_SIBLING}:has(> .stPageLink)`]: {
-      marginBottom: `calc(${gapWidth} - ${theme.spacing.xs})`,
-    },
-    [`${CHILD_BEFORE_PRINTED_SIBLING}:has(> .stCacheSpinner)`]: {
-      marginBottom: `calc(${gapWidth} - ${theme.spacing.lg})`,
+    "& > :not(:last-child)": {
+      marginBottom: gapWidth,
     },
   }
 }
@@ -250,8 +218,12 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     },
 
     ":has(> .stPageLink)": {
-      marginTop: `-${theme.spacing.xs}`,
-      marginBottom: `-${theme.spacing.xs}`,
+      // Trims the flex gap. Print replaces the gap with margins, which these
+      // negative margins would cancel, so the next element would overlap.
+      "@media screen": {
+        marginTop: `-${theme.spacing.xs}`,
+        marginBottom: `-${theme.spacing.xs}`,
+      },
     },
 
     ...(isStale && elementType !== "skeleton" && STALE_STYLES),
@@ -298,7 +270,8 @@ interface StyledColumnProps {
 
 /**
  * A column of an `st.columns` row. Print stacking and print containment are
- * applied by the parent row in `StyledFlexContainerBlock`.
+ * applied by the parent row in `StyledFlexContainerBlock`. A bordered column
+ * with a chart avoids page breaks on its own.
  */
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
@@ -352,6 +325,9 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         borderRadius: theme.radii.default,
         padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+        "@media print": {
+          [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+        },
       }),
     }
   }
@@ -427,13 +403,6 @@ export interface StyledFlexContainerBlockProps {
    * definite-height parent, which this style cannot see).
    */
   hasDefiniteHeight?: boolean
-  /**
-   * Whether the block's width comes from its contents, because it or an
-   * ancestor without a fixed width is content-width. Print does not make
-   * its columns size containers, since containment would drop their
-   * contents' width and collapse the row.
-   */
-  isContentSized?: boolean
 }
 
 function isFixedLengthHeight(
@@ -461,7 +430,6 @@ export const StyledFlexContainerBlock =
       overflow,
       overflowX,
       hasDefiniteHeight,
-      isContentSized = false,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -477,10 +445,8 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children. Stacked columns stay close
-      //   to their screen width; other children are full width.
-      // - Columns of a side-by-side row are size containers (unless the row is
-      //   content-sized), so a content-width metric can scale to its column.
+      //   dataframe, or table stacks its children at full width. A chart
+      //   keeps the width it rendered at on screen, capped to the column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -516,27 +482,15 @@ export const StyledFlexContainerBlock =
       const printRules: CSSObject = {
         ...(direction === Direction.HORIZONTAL
           ? {
-              [`> .stColumn.${PRINT_CARD_CLASS}`]: {
-                [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
-              },
-              ...(!isContentSized && {
-                [`&:not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN})) > .stColumn`]:
-                  {
-                    containerType: "inline-size",
-                  },
-              }),
               // A row of bordered cards that stays side by side prints like
               // one card, so a page break does not cut every card at once.
-              [`&:has(> .stColumn.${PRINT_CARD_CLASS}):not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN}))`]:
+              [`&:has(> .stColumn.${PRINT_BORDERED_COLUMN_CLASS}):not(:has(${PRINT_STACK_TRIGGER_IN_COLUMN}))`]:
                 printKeepTogetherRules,
               [`&:has(${PRINT_STACK_TRIGGER_IN_COLUMN})`]: {
                 display: "block",
                 "> .stColumn": {
                   display: "block",
-                  // Grow only as far as its chart can scale, so a card does
-                  // not stretch across the page around a narrower chart.
-                  width: PRINT_UPSCALED_WIDTH,
-                  maxWidth: "100%",
+                  width: "100%",
                   minWidth: 0,
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
