@@ -227,10 +227,11 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert not dg._cursor.is_locked
         assert dg._cursor.index == 0
 
-    def test_constructing_delta_generators_leaves_method_modules_unchanged(self):
-        """Creating DeltaGenerators, including container subclasses, must not
-        write to the shared method objects, and every mixin method keeps the
-        module that defines it.
+    def test_constructing_delta_generators_leaves_method_modules_unchanged(
+        self,
+    ) -> None:
+        """Constructing a DeltaGenerator or container doesn't mutate shared methods,
+        and each mixin method reports the module that defines it.
         """
         owners = (DeltaGenerator, *DeltaGenerator.__bases__)
 
@@ -257,7 +258,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
                     assert func.__module__ == mixin.__module__, (mixin, name)
 
     @pytest.mark.usefixtures("benchmark")
-    def test_constructor_perf(self):
+    def test_constructor_perf(self) -> None:
         """Benchmark DeltaGenerator construction, which runs for every element."""
         self.benchmark(DeltaGenerator)
 

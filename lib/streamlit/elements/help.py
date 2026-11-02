@@ -195,8 +195,8 @@ def _get_signature(obj: object) -> str | None:
     try:
         return str(inspect.signature(obj))
     except (ValueError, NameError):
-        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
-        # NameError for TYPE_CHECKING-only imports
+        # inspect.signature cannot describe some callables (ValueError). On
+        # Python 3.14 it can also raise NameError for a TYPE_CHECKING-only annotation.
         return "(...)"
     except TypeError:
         return None
