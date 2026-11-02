@@ -54,7 +54,7 @@ message ForwardMsgMetadata {
 }
 ```
 
-**Run identity**: `metadata.run` is set only on `new_session`. `ScriptRunner` creates one `RunDescriptor` (`lib/streamlit/runtime/scriptrunner_utils/run_descriptor.py`) per run and passes it on the internal `SCRIPT_STARTED` event. `AppSession` copies it onto the message, and the frontend reads it via `frontend/app/src/util/runIdentity.ts`. Deltas carry no run identity: they belong to the most recent `new_session`.
+**Run identity**: `metadata.run` is set on `new_session` and `script_finished` (a `script_finished` omits it when the backend can't attribute the finish to a run). `ScriptRunner` creates one `RunDescriptor` (`lib/streamlit/runtime/scriptrunner_utils/run_descriptor.py`) per run and passes it on the internal `SCRIPT_STARTED` event and that run's finish event. `AppSession` copies it onto the messages, and the frontend reads it via `frontend/app/src/util/runIdentity.ts`. Deltas carry no run identity: they belong to the most recent `new_session`.
 
 **Semantics**:
 - Backend sets `metadata.active_script_hash` from `ScriptRunContext.active_script_hash`

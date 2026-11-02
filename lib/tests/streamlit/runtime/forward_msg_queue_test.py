@@ -257,6 +257,39 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.clear()
         assert fmq._queue == []
 
+    @parameterized.expand(
+        [
+            ("full_run", None),
+            ("fragment_run", ["some_fragment"]),
+        ]
+    )
+    def test_clear_keeps_run_identity_on_rewritten_script_finished(
+        self, _name: str, fragment_ids_this_run: list[str] | None
+    ):
+        """A retained script_finished keeps metadata.run when its status is rewritten."""
+        fmq = ForwardMsgQueue()
+
+        script_finished_msg = ForwardMsg()
+        script_finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        script_finished_msg.metadata.run.script_run_id = "finished_run_id"
+        script_finished_msg.metadata.run.fragment_ids.append("some_fragment")
+        fmq.enqueue(script_finished_msg)
+
+        fmq.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=fragment_ids_this_run
+        )
+
+        assert len(fmq._queue) == 1
+        retained = fmq._queue[0]
+        assert (
+            retained.script_finished
+            == ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert retained.metadata.run.script_run_id == "finished_run_id"
+        assert list(retained.metadata.run.fragment_ids) == ["some_fragment"]
+
     def test_clear_retains_toast_deltas(self):
         """Toast deltas survive a lifecycle-retaining clear (issue #7740).
 

@@ -202,8 +202,10 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
-  // Identity of the run that a new_session starts. Set only on new_session;
-  // deltas carry none and belong to the most recent new_session before them.
+  // Identity of the run that a new_session starts or a script_finished ends.
+  // Set on new_session and script_finished; a script_finished omits it when
+  // the backend can't attribute the finish to a run. Deltas carry none and
+  // belong to the most recent new_session before them.
   RunIdentity run = 6;
 
   reserved 3;

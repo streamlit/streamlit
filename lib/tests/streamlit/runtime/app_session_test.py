@@ -1506,7 +1506,8 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             expected_events.extend(
                 [
                     session._create_script_finished_message(
-                        ForwardMsg.FINISHED_SUCCESSFULLY
+                        ForwardMsg.FINISHED_SUCCESSFULLY,
+                        RunDescriptor(script_run_id="mock_scriptrun_id"),
                     ),
                     session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
@@ -1514,6 +1515,108 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             )
 
         assert expected_events == forward_msg_queue_events
+
+    async def test_handle_backmsg_exception_run_identity(self):
+        """The synthetic run's new_session and script_finished share one identity.
+
+        The first script_finished ends whatever run was in progress, which
+        AppSession cannot attribute, so it carries no run identity.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        session._clear_queue = MagicMock()
+
+        session.handle_backmsg_exception(RuntimeError("I am error"))
+        await asyncio.sleep(0)
+
+        msgs = session._browser_queue._queue
+        finished_msgs = [m for m in msgs if m.WhichOneof("type") == "script_finished"]
+        new_session_msgs = [m for m in msgs if m.WhichOneof("type") == "new_session"]
+        assert len(finished_msgs) == 2
+        assert len(new_session_msgs) == 1
+
+        assert not finished_msgs[0].metadata.HasField("run")
+        new_session_run = RunDescriptor.from_metadata(new_session_msgs[0].metadata)
+        assert new_session_run is not None
+        assert RunDescriptor.from_metadata(finished_msgs[1].metadata) == new_session_run
+
+    @parameterized.expand(
+        [
+            (
+                "success",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_SUCCESSFULLY,
+                (),
+            ),
+            (
+                "fragment_success",
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+                ("outer", "inner"),
+            ),
+            (
+                "compile_error",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ForwardMsg.FINISHED_WITH_COMPILE_ERROR,
+                (),
+            ),
+            (
+                "stopped_for_rerun",
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ForwardMsg.FINISHED_EARLY_FOR_RERUN,
+                (),
+            ),
+        ]
+    )
+    async def test_script_finished_carries_run_identity(
+        self,
+        _name: str,
+        event: ScriptRunnerEvent,
+        expected_status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        fragment_ids: tuple[str, ...],
+    ):
+        """script_finished's metadata.run is the finish event's run descriptor."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        run_descriptor = RunDescriptor.create(fragment_ids)
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=event,
+            exception=RuntimeError("compile error"),
+            run_descriptor=run_descriptor,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == expected_status
+        assert RunDescriptor.from_metadata(finished_msgs[0].metadata) == run_descriptor
+
+    async def test_script_finished_without_run_descriptor_has_no_run_identity(self):
+        """A finish event without a descriptor yields script_finished without run."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+        assert not finished_msgs[0].metadata.HasField("run")
 
     async def test_handle_backmsg_handles_exceptions(self):
         """Exceptions raised in handle_backmsg should be sent to

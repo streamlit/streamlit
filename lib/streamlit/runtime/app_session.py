@@ -600,17 +600,22 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
+        # Finishes whatever run was in progress. AppSession does not hold that
+        # run's descriptor, so this finish carries no run identity.
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
+        error_run_descriptor = RunDescriptor.create()
         self._on_scriptrunner_event(
             self._scriptrunner,
             ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            run_descriptor=RunDescriptor.create(),
+            run_descriptor=error_run_descriptor,
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            run_descriptor=error_run_descriptor,
         )
 
         # Send an Exception message to the frontend.
@@ -1029,8 +1034,12 @@ class AppSession:
             SCRIPT_STARTED event.
 
         run_descriptor : RunDescriptor | None
-            The identity of the run that is starting. Set only for the
-            SCRIPT_STARTED event.
+            The identity of the run that the event belongs to. Always set for
+            the SCRIPT_STARTED event. Set for the finish events
+            (SCRIPT_STOPPED_WITH_SUCCESS, FRAGMENT_STOPPED_WITH_SUCCESS,
+            SCRIPT_STOPPED_WITH_COMPILE_ERROR, and SCRIPT_STOPPED_FOR_RERUN)
+            when the finished run is known; a finish without it produces a
+            script_finished message with no run identity.
         """
 
         if (
@@ -1094,7 +1103,9 @@ class AppSession:
             else:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            self._enqueue_forward_msg(self._create_script_finished_message(status))
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(status, run_descriptor)
+            )
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -1124,7 +1135,7 @@ class AppSession:
             self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(
                 self._create_script_finished_message(
-                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN, run_descriptor
                 )
             )
             if self._local_sources_watcher:
@@ -1317,10 +1328,18 @@ class AppSession:
             return False, ""
 
     def _create_script_finished_message(
-        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
+        self,
+        status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
-        """Create and return a script_finished ForwardMsg."""
+        """Create and return a script_finished ForwardMsg.
+
+        The message carries run_descriptor's identity in its metadata, or no
+        run identity when run_descriptor is None.
+        """
         msg = ForwardMsg()
+        if run_descriptor is not None:
+            _set_run_identity(msg, run_descriptor)
         msg.script_finished = status
         return msg
 

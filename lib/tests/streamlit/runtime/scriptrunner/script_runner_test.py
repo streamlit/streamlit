@@ -662,6 +662,77 @@ class ScriptRunnerTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            (
+                "success",
+                "good_script.py",
+                None,
+                [ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS],
+            ),
+            (
+                "fragment_success",
+                "good_script.py",
+                ["my_fragment"],
+                [ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS],
+            ),
+            (
+                "stopped_for_rerun",
+                "rerun_once_then_finish.py",
+                None,
+                [
+                    ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                    ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ],
+            ),
+            (
+                "compile_error",
+                "compile_error.py.txt",
+                None,
+                [ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR],
+            ),
+        ]
+    )
+    @patch("streamlit.runtime.scriptrunner.script_runner._LOGGER.exception")
+    def test_finish_event_carries_its_runs_descriptor(
+        self,
+        _name: str,
+        script_name: str,
+        fragment_id_queue: list[str] | None,
+        expected_finish_events: list[ScriptRunnerEvent],
+        _patched_logger_exception: MagicMock,
+    ):
+        """Each finish event sends the descriptor of the run's SCRIPT_STARTED."""
+        scriptrunner = TestScriptRunner(
+            script_name, RerunData(fragment_id_queue=fragment_id_queue or [])
+        )
+        if fragment_id_queue:
+            for fragment_id in fragment_id_queue:
+                scriptrunner._fragment_storage.register(fragment_id, MagicMock())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        finish_events: list[ScriptRunnerEvent] = []
+        current_run_descriptor: RunDescriptor | None = None
+        for event, data in zip(
+            scriptrunner.events, scriptrunner.event_data, strict=True
+        ):
+            if event == ScriptRunnerEvent.SCRIPT_STARTED:
+                current_run_descriptor = data["run_descriptor"]
+            elif event in {
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+            }:
+                assert current_run_descriptor is not None
+                assert data["run_descriptor"] is current_run_descriptor
+                finish_events.append(event)
+                current_run_descriptor = None
+
+        assert finish_events == expected_finish_events
+
+    @parameterized.expand(
+        [
             ("outer_only", ["outer"]),
             ("outer_then_inner", ["outer", "inner"]),
             ("inner_then_outer", ["inner", "outer"]),
@@ -1629,6 +1700,7 @@ class ScriptRunnerTest(unittest.TestCase):
             _finished_run_ctx(has_script_started=False),
             ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
             premature_stop=False,
+            run_descriptor=RunDescriptor.create(),
         )
 
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_not_called()
@@ -1647,6 +1719,7 @@ class ScriptRunnerTest(unittest.TestCase):
             _finished_run_ctx(has_script_started=True),
             ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
             premature_stop=False,
+            run_descriptor=RunDescriptor.create(),
         )
 
         Runtime._instance.media_file_mgr.remove_orphaned_files.assert_called_once()
@@ -1668,6 +1741,7 @@ class ScriptRunnerTest(unittest.TestCase):
                 _finished_run_ctx(has_script_started=True),
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 premature_stop=False,
+                run_descriptor=RunDescriptor.create(),
             )
 
         mock_get_instance.assert_not_called()
@@ -1686,6 +1760,7 @@ class ScriptRunnerTest(unittest.TestCase):
                 _finished_run_ctx(has_script_started=True),
                 ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
                 premature_stop=False,
+                run_descriptor=RunDescriptor.create(),
             )
 
         mock_on_script_finished.assert_called_once()
@@ -1711,6 +1786,7 @@ class ScriptRunnerTest(unittest.TestCase):
                 _finished_run_ctx(has_script_started=True),
                 event,
                 premature_stop=False,
+                run_descriptor=RunDescriptor.create(),
             )
 
         mock_on_script_finished.assert_called_once()
