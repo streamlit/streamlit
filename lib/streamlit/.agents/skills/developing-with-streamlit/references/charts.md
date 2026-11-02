@@ -113,10 +113,10 @@ Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately 
 
 ## Apache ECharts
 
-Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe (pandas, Polars, PyArrow, and others) in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`. Always do this for more than about 1,000 rows, and don't call `.tolist()` or `.to_list()` on a column to fill `series.data`. Graph, sankey, chord, tree, treemap, sunburst, lines, and themeRiver series don't read `dataset`, so give them plain Python values in `series.data` (and `series.links`). A dataframe source has these advantages:
+Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe (pandas, Polars, PyArrow, and others) in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`. Always do this for more than about 1,000 rows. Don't call `.tolist()` or `.to_list()` on a column to fill `series.data`. Graph, sankey, chord, tree, treemap, sunburst, themeRiver, and `lines` (coordinate-pair lines, not `line`) series don't read `dataset`, so give them plain Python values in `series.data` (and `series.links`). A dataframe source has these advantages:
 
 - **Faster for large data.** Streamlit sends the dataframe as Arrow, which is smaller and faster than inline values, and keeps its column order. Map columns with `series[i].encode` when the order isn't enough.
-- **More value types.** Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`. Inline values must already be JSON, so datetimes, NumPy integers, `Decimal`, and `NaN` in `series.data` raise an error.
+- **More value types.** Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`. Inline values must already be JSON-compatible, so datetimes, NumPy integers, `Decimal`, and `NaN` in `series.data` raise an error.
 - **Show data.** The chart's hover toolbar gets a **Show data** button that displays the dataframe as a table.
 - **Agent API.** The agent API reports the dataframe as a table (schema, preview, and the full data). Inline values only appear inside the raw option, and a chart with several dataframes reports no single table.
 

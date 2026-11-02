@@ -667,8 +667,9 @@ with st.container(key="c_dense_line_opt_out"):
         height=_HEIGHT,
     )
 
-# Point selection on a dataset.source DataFrame: data_indices address the
-# frame's rows. Two full-height bars put a bar under each half's center.
+# Point selection on a dataset.source DataFrame: data_indices address that
+# DataFrame's rows. Two full-height bars, one per half of the chart, so a click
+# at 75% width lands on the second bar.
 _selection_df = pd.DataFrame({"day": ["Mon", "Tue"], "sales": [100, 100]})
 dataset_selection_event = st.echarts_chart(
     {

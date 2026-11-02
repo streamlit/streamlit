@@ -980,8 +980,8 @@ class EChartsMixin:
         a JSON string, or a ``pyecharts`` chart instance.
 
         To chart a dataframe, pass it as ``dataset.source`` instead of
-        converting it to lists, always for more than about 1,000 rows. For the
-        advantages, see the ``spec`` parameter.
+        converting it to lists. Always do this for more than about 1,000 rows.
+        For the advantages, see the ``spec`` parameter.
 
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
@@ -1020,7 +1020,8 @@ class EChartsMixin:
               |st.metric|_. ``"percent"`` multiplies values by 100. One format
               applies to every value of a series, so use ``encode.tooltip`` to
               choose which dimensions the tooltip shows. Any other value,
-              including a malformed printf-style string, is ignored.
+              including a malformed printf-style string, is ignored, and the
+              tooltip keeps its default formatting.
             - String ``formatter`` templates in tooltips expand the
               ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
               otherwise supports only in series labels (e.g.
@@ -1074,8 +1075,8 @@ class EChartsMixin:
 
             Put chart data in ``dataset.source`` as a dataframe-like object
             (pandas, Polars, PyArrow, and others) rather than as lists in
-            ``series.data`` or ``xAxis.data``, always for more than about
-            1,000 rows. Graph, sankey, tree, treemap, sunburst, and other
+            ``series.data`` or ``xAxis.data``. Always do this for more than
+            about 1,000 rows. Graph, sankey, tree, treemap, sunburst, and other
             series that don't read ``dataset`` take their data in
             ``series.data`` instead. A dataframe source has these advantages:
 
