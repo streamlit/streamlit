@@ -168,6 +168,7 @@ import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
+import { getRunIdentity, type RunIdentity } from "./util/runIdentity"
 import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -271,6 +272,23 @@ interface State {
 }
 
 export const LOG = getLogger("App")
+
+/**
+ * Run identity of a new_session message. A new_session without identity can
+ * only come from an outdated backend or a replayed old stream, so it renders
+ * under a placeholder full-app run. The placeholder is never
+ * INITIAL_SCRIPT_RUN_ID, which marks the app as not having run yet.
+ */
+function getNewSessionRunIdentity(
+  metadata?: ForwardMsgMetadata | null
+): RunIdentity {
+  const runIdentity = getRunIdentity(metadata)
+  if (runIdentity) {
+    return runIdentity
+  }
+  LOG.error("Received a new_session message without run identity metadata.")
+  return { scriptRunId: generateUID(), fragmentIds: [] }
+}
 
 declare global {
   interface Window {
@@ -1132,7 +1150,10 @@ export class App extends PureComponent<Props, State> {
     try {
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
-          this.handleNewSession(newSessionMsg),
+          this.handleNewSession(
+            newSessionMsg,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         sessionStatusChanged: (msg: SessionStatus) =>
           this.handleSessionStatusChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -1539,8 +1560,12 @@ export class App extends PureComponent<Props, State> {
   /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
+   * @param metadata the ForwardMsg metadata, which carries the run identity
    */
-  handleNewSession = (newSessionProto: NewSession): void => {
+  handleNewSession = (
+    newSessionProto: NewSession,
+    metadata?: ForwardMsgMetadata | null
+  ): void => {
     const initialize = newSessionProto.initialize as Initialize
 
     if (this.hasStreamlitVersionChanged(initialize)) {
@@ -1570,13 +1595,13 @@ export class App extends PureComponent<Props, State> {
 
     const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
     const {
-      scriptRunId,
       name: scriptName,
       mainScriptPath,
-      fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
       mainScriptHash,
     } = newSessionProto
+    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
+      getNewSessionRunIdentity(metadata)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
@@ -2238,7 +2263,10 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata,
     elementHash?: string
   ): void => {
-    // Use functional state update to ensure we have latest elements
+    // Deltas carry no run identity: a delta belongs to the most recent
+    // new_session before it in the stream. Tagging it with
+    // prevState.scriptRunId inside a functional update preserves that,
+    // because React applies queued updaters in order.
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(
         prevState.scriptRunId,

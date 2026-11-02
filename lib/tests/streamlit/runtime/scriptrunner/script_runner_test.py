@@ -51,6 +51,7 @@ from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
+    RunDescriptor,
     ScriptRunner,
     ScriptRunnerEvent,
     StopException,
@@ -519,7 +520,10 @@ class ScriptRunnerTest(unittest.TestCase):
             ],
         )
         script_started_event_data = scriptrunner.event_data[0]
-        script_started_event_data["fragment_ids_this_run"] = ["my_fragment"]
+        assert script_started_event_data["fragment_ids_this_run"] == ["my_fragment"]
+        assert script_started_event_data["run_descriptor"].fragment_ids == (
+            "my_fragment",
+        )
 
         fragment.assert_called_once()
 
@@ -552,12 +556,14 @@ class ScriptRunnerTest(unittest.TestCase):
                 ScriptRunnerEvent.SHUTDOWN,
             ],
         )
+        expected_fragment_ids = ["my_fragment1", "my_fragment2", "my_fragment3"]
         script_started_event_data = scriptrunner.event_data[0]
-        script_started_event_data["fragment_ids_this_run"] = [
-            "my_fragment1",
-            "my_fragment2",
-            "my_fragment3",
-        ]
+        assert (
+            script_started_event_data["fragment_ids_this_run"] == expected_fragment_ids
+        )
+        assert script_started_event_data["run_descriptor"].fragment_ids == tuple(
+            expected_fragment_ids
+        )
 
         fragment.assert_has_calls([call(), call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
@@ -600,6 +606,59 @@ class ScriptRunnerTest(unittest.TestCase):
         assert raised_exception["called"]
         fragment.assert_has_calls([call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
+
+    def test_run_descriptor_uses_ordered_fragment_ids(self):
+        """SCRIPT_STARTED's run descriptor lists fragments in execution order."""
+        scriptrunner = TestScriptRunner(
+            "good_script.py", RerunData(fragment_id_queue=["inner", "outer"])
+        )
+        scriptrunner._fragment_storage.register(
+            "outer", MagicMock(), parent_fragment_id=None
+        )
+        scriptrunner._fragment_storage.register(
+            "inner", MagicMock(), parent_fragment_id="outer"
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert scriptrunner.events[0] == ScriptRunnerEvent.SCRIPT_STARTED
+        script_started_event_data = scriptrunner.event_data[0]
+        assert script_started_event_data["fragment_ids_this_run"] == ["outer", "inner"]
+        run_descriptor = script_started_event_data["run_descriptor"]
+        assert isinstance(run_descriptor, RunDescriptor)
+        assert run_descriptor.fragment_ids == ("outer", "inner")
+        assert run_descriptor.script_run_id
+
+    def test_full_app_run_descriptor_has_no_fragment_ids(self):
+        """A full-app run's descriptor has no fragment IDs."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert scriptrunner.events[0] == ScriptRunnerEvent.SCRIPT_STARTED
+        script_started_event_data = scriptrunner.event_data[0]
+        assert script_started_event_data["fragment_ids_this_run"] is None
+        assert script_started_event_data["run_descriptor"].fragment_ids == ()
+
+    def test_each_run_gets_a_new_run_descriptor(self):
+        """Every rerun loop iteration sends a distinct run descriptor."""
+        scriptrunner = TestScriptRunner("rerun_once_then_finish.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        run_descriptors = [
+            data["run_descriptor"]
+            for event, data in zip(
+                scriptrunner.events, scriptrunner.event_data, strict=True
+            )
+            if event == ScriptRunnerEvent.SCRIPT_STARTED
+        ]
+        assert len(run_descriptors) == 2
+        assert run_descriptors[0].script_run_id != run_descriptors[1].script_run_id
 
     @parameterized.expand(
         [

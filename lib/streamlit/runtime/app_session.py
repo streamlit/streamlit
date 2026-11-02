@@ -53,6 +53,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -155,11 +156,6 @@ class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
-
-
-def _generate_scriptrun_id() -> str:
-    """Randomly generate a unique ID for a script execution."""
-    return str(uuid.uuid4())
 
 
 class AppSession:
@@ -611,6 +607,7 @@ class AppSession:
             self._scriptrunner,
             ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=RunDescriptor.create(),
         )
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
@@ -943,6 +940,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -960,6 +958,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                run_descriptor,
             )
         )
 
@@ -987,6 +986,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -1023,6 +1023,14 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        pages : dict[PageHash, PageInfo] | None
+            The app's pages at the start of the run. Set only for the
+            SCRIPT_STARTED event.
+
+        run_descriptor : RunDescriptor | None
+            The identity of the run that is starting. Set only for the
+            SCRIPT_STARTED event.
         """
 
         if (
@@ -1051,6 +1059,10 @@ class AppSession:
                 raise RuntimeError(
                     "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
                 )
+            if run_descriptor is None:  # pragma: no cover - defensive
+                raise RuntimeError(
+                    "run_descriptor must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -1062,7 +1074,7 @@ class AppSession:
             self._clear_queue(fragment_ids_this_run)
 
             msg = self._create_new_session_message(
-                page_script_hash, fragment_ids_this_run, pages
+                page_script_hash, run_descriptor, pages
             )
 
             self._enqueue_forward_msg(msg)
@@ -1171,20 +1183,17 @@ class AppSession:
     def _create_new_session_message(
         self,
         page_script_hash: str,
-        fragment_ids_this_run: list[str] | None = None,
+        run_descriptor: RunDescriptor,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
+        _set_run_identity(msg, run_descriptor)
 
-        msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._pages_manager.main_script_path
         msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
-
-        if fragment_ids_this_run:
-            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
         self._populate_app_pages(
             msg.new_session, pages or self._pages_manager.get_pages()
@@ -1486,6 +1495,12 @@ class AppSession:
             page_proto.page_name = page_info["page_name"].replace("_", " ")
             page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
+
+
+def _set_run_identity(msg: ForwardMsg, run_descriptor: RunDescriptor) -> None:
+    """Attach the identity of the run that a lifecycle message belongs to."""
+    msg.metadata.run.script_run_id = run_descriptor.script_run_id
+    msg.metadata.run.fragment_ids.extend(run_descriptor.fragment_ids)
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so

@@ -55,7 +55,7 @@ Central orchestrator managing everything.
 - Coordinates script run state
 
 **ForwardMsg handling by type** (essential types shown):
-- `newSession`: Initializes session metadata and script-run context; clears transients or page state as needed
+- `newSession`: Initializes session metadata and script-run context (run ID and fragment IDs from `ForwardMsg.metadata.run`); clears transients or page state as needed
 - `delta`: Updates tree via `AppRoot.applyDelta()`
 - `scriptFinished`: Clears stale nodes, removes inactive widget state, increments message cache run count
 - `sessionStatusChanged`: Updates script run state

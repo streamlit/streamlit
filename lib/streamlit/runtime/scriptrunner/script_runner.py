@@ -43,6 +43,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequests,
@@ -275,7 +276,8 @@ class ScriptRunner:
         # - ENQUEUE_FORWARD_MSG: forward_msg
         # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
         # - SHUTDOWN: client_state (None if setup failed before context creation)
-        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages,
+        #   run_descriptor (a new RunDescriptor for each run)
         self.on_event = Signal()
 
         # Set to true while we're executing. Used by
@@ -711,12 +713,14 @@ class ScriptRunner:
             with self._join_wake_lock:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
+            run_descriptor = RunDescriptor.create(fragment_ids_this_run)
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                run_descriptor=run_descriptor,
             )
 
             # Compile the script. Any errors thrown here will be surfaced

@@ -202,7 +202,20 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
+  // Set on new_session. Deltas carry no run identity: a delta belongs to the
+  // most recent new_session before it.
+  RunIdentity run = 6;
+
   reserved 3;
+}
+
+// Identity of one top-level backend execution: a full-app run or one fragment
+// rerun batch.
+message RunIdentity {
+  string script_run_id = 1;
+
+  // Fragment roots selected for this execution. Empty means a full-app run.
+  repeated string fragment_ids = 2;
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message
