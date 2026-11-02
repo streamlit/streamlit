@@ -885,11 +885,10 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
                 )
             params[param_name] = value
 
-        # Containers may inject protocol/port (e.g. http + 8082 for the local Envoy
-        # sidecar). The owner ``"snowflake"`` connection picks these up from the
-        # mounted default connection file; callers-rights builds params itself, so
-        # pass them through when present. When unset, the connector defaults to
-        # https on port 443.
+        # Optional overrides for containers that route connector traffic through a
+        # local proxy (for example, http and 8082). Without them, the connector
+        # uses https on port 443. The owner "snowflake" connection reads these
+        # values from the mounted default connection file instead.
         for param_name, env_var_name in (
             ("protocol", "SNOWFLAKE_PROTOCOL"),
             ("port", "SNOWFLAKE_PORT"),
