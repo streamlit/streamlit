@@ -516,4 +516,71 @@ describe("Tooltip element", () => {
       expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
     })
   })
+
+  describe("hideFromAssistiveTech", () => {
+    it("hides the open popup from assistive tech and does not describe the trigger with it", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderTooltip({ hideFromAssistiveTech: true })
+
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+      await user.hover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+
+      const tooltipContent = screen.getByTestId("stTooltipContent")
+      expect(tooltipContent).toBeVisible()
+      const popup = tooltipContent.parentElement
+      expect(popup).toHaveAttribute("aria-hidden", "true")
+      expect(popup).not.toHaveAttribute("role")
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+      expect(tooltipTarget).not.toHaveAttribute("aria-describedby")
+    })
+  })
+
+  describe("openOnTouch", () => {
+    /** Renders a tooltip that ignores touch around a "trigger" button. */
+    const renderTouchlessTooltip = (): HTMLElement => {
+      render(
+        <Tooltip {...getProps({ openOnTouch: false })}>
+          <button type="button">trigger</button>
+        </Tooltip>
+      )
+      return screen.getByRole("button", { name: "trigger" })
+    }
+
+    it("does not open on a touch tap when openOnTouch is false", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const trigger = renderTouchlessTooltip()
+
+      await user.pointer({ keys: "[TouchA]", target: trigger })
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+
+      expect(trigger).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("still opens on mouse hover and keyboard focus when openOnTouch is false", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderTouchlessTooltip()
+      const tooltipTarget = screen.getByTestId("stTooltipHoverTarget")
+
+      await user.hover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(0)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      await user.unhover(tooltipTarget)
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+      await user.tab()
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+    })
+  })
 })

@@ -422,6 +422,7 @@ const TopNavSection = ({
           menuTabIndex={clampedIndex === currentLinkIndex ? 0 : -1}
           setMenuItemRef={setMenuItemRef}
           menuItemIndex={currentLinkIndex}
+          help={item.help}
         >
           {pageName}
         </SidebarNavLink>

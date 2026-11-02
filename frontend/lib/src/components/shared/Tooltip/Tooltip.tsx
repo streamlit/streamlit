@@ -94,6 +94,18 @@ export interface TooltipProps {
   error?: boolean
   dismissOnClick?: boolean
   interactive?: boolean
+  /**
+   * Hide the popup from assistive tech and leave the trigger without an
+   * aria-describedby that points at it. Use when the trigger already
+   * references the same text as its accessible description, so focus
+   * announces it once.
+   */
+  hideFromAssistiveTech?: boolean
+  /**
+   * Whether a touch press opens the tooltip. Set to false where a tap
+   * activates the trigger, such as a navigation link.
+   */
+  openOnTouch?: boolean
 }
 
 /** Shared ref to the trigger's DOM element, readable inside the tooltip portal. */
@@ -119,6 +131,7 @@ interface TriggerAreaProps {
   disabled: boolean
   dismissOnClick: boolean
   closeImmediatelyOnPointerLeave: boolean
+  openOnTouch: boolean
   children: ReactNode
 }
 
@@ -132,7 +145,8 @@ interface TriggerAreaProps {
  * focus enters, it opens the tooltip immediately only if:
  * - React Aria reports visible focus (keyboard or screen reader, including a
  *   dialog restoring focus after Escape), or
- * - a touch tap on the trigger moved focus there.
+ * - a touch tap on the trigger moved focus there, unless `openOnTouch` is
+ *   false. Then a touch pointer does not open it on hover either.
  * Like React Aria's useTooltipTrigger, focus from a mouse click, or restored
  * after a mouse close, leaves the tooltip to hover.
  *
@@ -149,6 +163,7 @@ function TriggerArea({
   disabled,
   dismissOnClick,
   closeImmediatelyOnPointerLeave,
+  openOnTouch,
   children,
 }: TriggerAreaProps): ReactElement {
   const state = useContext(TooltipTriggerStateContext)
@@ -177,7 +192,8 @@ function TriggerArea({
       // dialog's close button also sets it.
       isHeldOpenByFocusRef.current =
         !disabled &&
-        (isFocusVisible() || pointerDownTypeRef.current === "touch")
+        (isFocusVisible() ||
+          (openOnTouch && pointerDownTypeRef.current === "touch"))
       if (isHeldOpenByFocusRef.current) state?.open(true)
     },
     onBlurWithin() {
@@ -194,8 +210,10 @@ function TriggerArea({
       data-testid={testId}
       className={className}
       aria-describedby={ariaDescribedBy}
-      onPointerEnter={() => {
-        if (!disabled) state?.open(false)
+      onPointerEnter={e => {
+        if (!disabled && (openOnTouch || e.pointerType !== "touch")) {
+          state?.open(false)
+        }
       }}
       onPointerLeave={() => {
         if (!isHeldOpenByFocusRef.current) {
@@ -239,6 +257,8 @@ function Tooltip({
   error = false,
   dismissOnClick = false,
   interactive = true,
+  hideFromAssistiveTech = false,
+  openOnTouch = true,
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
   const tooltipId = useId()
@@ -340,11 +360,14 @@ function Tooltip({
               error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
             }
             ariaDescribedBy={
-              !isDisabled && state.isOpen ? tooltipId : undefined
+              !isDisabled && state.isOpen && !hideFromAssistiveTech
+                ? tooltipId
+                : undefined
             }
             disabled={isDisabled}
             dismissOnClick={dismissOnClick}
             closeImmediatelyOnPointerLeave={closeDelay === 0}
+            openOnTouch={openOnTouch}
           >
             {children}
           </TriggerArea>
@@ -361,7 +384,8 @@ function Tooltip({
               <StyledTooltip
                 ref={setFloating}
                 id={tooltipId}
-                role="tooltip"
+                role={hideFromAssistiveTech ? undefined : "tooltip"}
+                aria-hidden={hideFromAssistiveTech ? true : undefined}
                 style={floatingStyles}
               >
                 <StyledTooltipContentWrapper

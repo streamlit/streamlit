@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { act, cleanup, renderHook, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useFocusVisible } from "react-aria"
 
 import { render } from "@streamlit/lib/testing"
 
-import SidebarNavLink, { type SidebarNavLinkProps } from "./SidebarNavLink"
+import SidebarNavLink, {
+  NAV_HELP_TOOLTIP_HOVER_DELAY_MS,
+  type SidebarNavLinkProps,
+} from "./SidebarNavLink"
 
 const getProps = (
   props: Partial<SidebarNavLinkProps> = {}
@@ -285,5 +289,177 @@ describe("SidebarNavLink", () => {
       expect(sidebarNavLink).not.toHaveAttribute("rel", "noopener noreferrer")
       expect(screen.queryByText("(opens in new tab)")).not.toBeInTheDocument()
     })
+  })
+
+  describe("with page help", () => {
+    // jsdom pads inline elements with spaces in accessible text, so the bold
+    // word is not next to punctuation.
+    const HELP = "Net revenue by **region** and month."
+    const HELP_TEXT = "Net revenue by region and month."
+
+    beforeAll(() => {
+      // React Aria tracks the interaction modality through document listeners
+      // that useFocusVisible registers once.
+      // eslint-disable-next-line testing-library/no-render-in-lifecycle -- registers the document listeners hover tests depend on
+      renderHook(() => useFocusVisible())
+    })
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+      // Hover opens a tooltip only while the modality is "pointer".
+      document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))
+    })
+
+    afterEach(() => {
+      // Close any open tooltip and let the shared warm-up cool down, so the
+      // next test's first hover waits for the full delay again.
+      act(() => {
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }))
+      })
+      act(() => {
+        vi.advanceTimersByTime(NAV_HELP_TOOLTIP_HOVER_DELAY_MS)
+      })
+      act(() => {
+        cleanup()
+      })
+      vi.useRealTimers()
+    })
+
+    it("exposes the rendered help as the link's accessible description while the tooltip is closed", () => {
+      render(<SidebarNavLink {...getProps({ help: HELP })} />)
+
+      const link = screen.getByRole("link", { name: "Test" })
+      expect(link).toHaveAccessibleDescription(HELP_TEXT)
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("opens the tooltip on hover only after the nav hover delay", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(<SidebarNavLink {...getProps({ help: HELP })} />)
+
+      await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+      act(() => {
+        vi.advanceTimersByTime(NAV_HELP_TOOLTIP_HOVER_DELAY_MS - 1)
+      })
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+        HELP_TEXT
+      )
+    })
+
+    it("opens the next item's tooltip right away once one has opened", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <>
+          <SidebarNavLink {...getProps({ help: "First page." })}>
+            First
+          </SidebarNavLink>
+          <SidebarNavLink {...getProps({ help: "Second page." })}>
+            Second
+          </SidebarNavLink>
+        </>
+      )
+      const [first, second] = screen.getAllByTestId("stTooltipHoverTarget")
+
+      await user.hover(first)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(NAV_HELP_TOOLTIP_HOVER_DELAY_MS)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+        "First page."
+      )
+
+      await user.hover(second)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toHaveTextContent(
+        "Second page."
+      )
+    })
+
+    it("opens immediately on keyboard focus and describes the link once", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(<SidebarNavLink {...getProps({ help: HELP })} />)
+
+      await user.tab()
+      const link = screen.getByRole("link", { name: "Test" })
+      expect(link).toHaveFocus()
+
+      const tooltipContent = screen.getByTestId("stTooltipContent")
+      expect(tooltipContent).toHaveTextContent(HELP_TEXT)
+      // The popup is hidden from assistive tech, so only the hidden
+      // description describes the link.
+      expect(tooltipContent.parentElement).toHaveAttribute(
+        "aria-hidden",
+        "true"
+      )
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+      expect(link.getAttribute("aria-describedby")?.split(" ")).toHaveLength(1)
+      expect(link).toHaveAccessibleDescription(HELP_TEXT)
+    })
+
+    it("does not open on a touch tap", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      // The nav prevents the default navigation and switches pages itself.
+      const onClick = vi.fn(
+        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
+          e.preventDefault()
+      )
+      render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
+
+      await user.pointer({
+        keys: "[TouchA]",
+        target: screen.getByRole("link", { name: "Test" }),
+      })
+      act(() => {
+        vi.advanceTimersByTime(NAV_HELP_TOOLTIP_HOVER_DELAY_MS)
+      })
+
+      expect(onClick).toHaveBeenCalledTimes(1)
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("keeps links in the help out of the tab order", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <>
+          <SidebarNavLink
+            {...getProps({
+              help: "See the [docs](https://docs.streamlit.io).",
+            })}
+          />
+          <button type="button">After</button>
+        </>
+      )
+
+      await user.tab()
+      expect(screen.getByRole("link", { name: "Test" })).toHaveFocus()
+      await user.tab()
+      expect(screen.getByRole("button", { name: "After" })).toHaveFocus()
+    })
+
+    it.each([undefined, null, ""])(
+      "renders the plain link without a tooltip for help=%j",
+      help => {
+        render(<SidebarNavLink {...getProps({ help })} />)
+
+        const link = screen.getByRole("link", { name: "Test" })
+        expect(link).not.toHaveAttribute("aria-describedby")
+        expect(
+          screen.queryByTestId("stTooltipHoverTarget")
+        ).not.toBeInTheDocument()
+        expect(screen.getByTestId("stSidebarNavLinkContainer")).toContainHTML(
+          link.outerHTML
+        )
+        expect(
+          screen.getByTestId("stSidebarNavLinkContainer").childElementCount
+        ).toBe(1)
+      }
+    )
   })
 })

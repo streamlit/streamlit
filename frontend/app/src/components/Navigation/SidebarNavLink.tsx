@@ -14,14 +14,24 @@
  * limitations under the License.
  */
 
-import { type MouseEvent, type ReactElement, useCallback } from "react"
+import {
+  type CSSProperties,
+  type MouseEvent,
+  type ReactElement,
+  useCallback,
+  useId,
+  useMemo,
+} from "react"
 
 import {
   DynamicIcon,
   isMaterialIcon,
+  Placement,
   StreamlitMarkdown,
+  Tooltip,
   useEmotionTheme,
 } from "@streamlit/lib"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   StyledSidebarLinkText,
@@ -30,6 +40,19 @@ import {
   StyledSidebarNavLinkContainer,
   StyledVisuallyHidden,
 } from "./styled-components"
+
+/**
+ * Hover delay for page help on nav items. The pointer crosses the nav on the
+ * way to most clicks, so this waits longer than the 500ms help delay of
+ * buttons and page links.
+ */
+export const NAV_HELP_TOOLTIP_HOVER_DELAY_MS = 1000
+
+/**
+ * Lays out the tooltip trigger as a column, like the link container, so the
+ * link keeps the full row width.
+ */
+const NAV_HELP_TRIGGER_STYLE: CSSProperties = { flexDirection: "column" }
 
 export interface SidebarNavLinkProps {
   isActive: boolean
@@ -48,6 +71,11 @@ export interface SidebarNavLinkProps {
   setMenuItemRef?: (index: number, element: HTMLAnchorElement | null) => void
   /** Position of this link among the top-nav dropdown menuitems. */
   menuItemIndex?: number
+  /**
+   * The page's help Markdown from `st.Page(help=...)`. Shown as the link's
+   * tooltip and always exposed as its accessible description.
+   */
+  help?: string | null
 }
 
 const SidebarNavLink = ({
@@ -64,8 +92,19 @@ const SidebarNavLink = ({
   menuTabIndex,
   setMenuItemRef,
   menuItemIndex,
+  help,
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
+  const helpDescriptionId = useId()
+  // One element for the tooltip and the hidden description, so nav updates
+  // that keep the same help do not render its Markdown again.
+  const helpMarkdown = useMemo(
+    () =>
+      isNullOrEmptyString(help) ? null : (
+        <StreamlitMarkdown source={help} allowHTML={false} />
+      ),
+    [help]
+  )
   // If connection state not connected, or host has disabled inputs,
   // disable sidebar nav links
   const disableSidebarNavLinks = widgetsDisabled
@@ -95,65 +134,94 @@ const SidebarNavLink = ({
     [setMenuItemRef, menuItemIndex]
   )
 
+  const link = (
+    <StyledSidebarNavLink
+      ref={setAnchorRef}
+      data-testid={navLinkTestId}
+      isActive={effectiveIsActive}
+      disabled={disableSidebarNavLinks}
+      isInDropdown={isInDropdown}
+      href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
+      onClick={onClick}
+      aria-current={effectiveIsActive ? "page" : undefined}
+      // Disabled dropdown menuitems stay focusable (WAI-ARIA). pointer-events:
+      // none blocks clicks, and TopNavSection blocks keyboard activation.
+      aria-disabled={isInDropdown && disableSidebarNavLinks ? true : undefined}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
+      role={isInDropdown ? "menuitem" : undefined}
+      tabIndex={isInDropdown ? menuTabIndex : undefined}
+      aria-describedby={helpMarkdown ? helpDescriptionId : undefined}
+    >
+      {icon?.length ? (
+        <StyledSidebarNavIcon isActive={effectiveIsActive}>
+          <DynamicIcon
+            size="base"
+            iconValue={icon}
+            color={
+              !effectiveIsActive && isMaterialIcon(icon)
+                ? // Apply color with opacity on material icons
+                  // But we don't want to apply opacity on emoji icons
+                  theme.colors.fadedText60
+                : theme.colors.bodyText
+            }
+          />
+        </StyledSidebarNavIcon>
+      ) : null}
+      <StyledSidebarLinkText
+        isActive={effectiveIsActive}
+        disabled={disableSidebarNavLinks}
+        isTopNav={isTopNav}
+        label={children}
+      >
+        <StreamlitMarkdown
+          source={children}
+          allowHTML={false}
+          isLabel
+          disableLinks
+          truncate
+          inheritFont
+        />
+      </StyledSidebarLinkText>
+      {isExternal && (
+        <StyledVisuallyHidden>(opens in new tab)</StyledVisuallyHidden>
+      )}
+    </StyledSidebarNavLink>
+  )
+
   return (
     <StyledSidebarNavLinkContainer
       disabled={disableSidebarNavLinks}
       data-testid={navLinkContainerTestId}
       role={isInDropdown ? "none" : undefined}
     >
-      <StyledSidebarNavLink
-        ref={setAnchorRef}
-        data-testid={navLinkTestId}
-        isActive={effectiveIsActive}
-        disabled={disableSidebarNavLinks}
-        isInDropdown={isInDropdown}
-        href={isExternal ? (externalUrl ?? pageUrl) : pageUrl}
-        onClick={onClick}
-        aria-current={effectiveIsActive ? "page" : undefined}
-        // Disabled dropdown menuitems stay focusable (WAI-ARIA). pointer-events:
-        // none blocks clicks, and TopNavSection blocks keyboard activation.
-        aria-disabled={
-          isInDropdown && disableSidebarNavLinks ? true : undefined
-        }
-        target={isExternal ? "_blank" : undefined}
-        rel={isExternal ? "noopener noreferrer" : undefined}
-        role={isInDropdown ? "menuitem" : undefined}
-        tabIndex={isInDropdown ? menuTabIndex : undefined}
-      >
-        {icon?.length ? (
-          <StyledSidebarNavIcon isActive={effectiveIsActive}>
-            <DynamicIcon
-              size="base"
-              iconValue={icon}
-              color={
-                !effectiveIsActive && isMaterialIcon(icon)
-                  ? // Apply color with opacity on material icons
-                    // But we don't want to apply opacity on emoji icons
-                    theme.colors.fadedText60
-                  : theme.colors.bodyText
-              }
-            />
-          </StyledSidebarNavIcon>
-        ) : null}
-        <StyledSidebarLinkText
-          isActive={effectiveIsActive}
-          disabled={disableSidebarNavLinks}
-          isTopNav={isTopNav}
-          label={children}
-        >
-          <StreamlitMarkdown
-            source={children}
-            allowHTML={false}
-            isLabel
-            disableLinks
-            truncate
-            inheritFont
-          />
-        </StyledSidebarLinkText>
-        {isExternal && (
-          <StyledVisuallyHidden>(opens in new tab)</StyledVisuallyHidden>
-        )}
-      </StyledSidebarNavLink>
+      {helpMarkdown ? (
+        <>
+          {/*
+            The popup is hidden from assistive tech: the link's accessible
+            description is the hidden element below, which exists at every
+            breakpoint and while the popup is closed.
+          */}
+          <Tooltip
+            content={helpMarkdown}
+            placement={
+              isTopNav && !isInDropdown ? Placement.BOTTOM : Placement.RIGHT
+            }
+            onMouseEnterDelay={NAV_HELP_TOOLTIP_HOVER_DELAY_MS}
+            style={NAV_HELP_TRIGGER_STYLE}
+            hideFromAssistiveTech
+            openOnTouch={false}
+          >
+            {link}
+          </Tooltip>
+          {/* `hidden` keeps links in the help out of the tab order. */}
+          <div hidden id={helpDescriptionId}>
+            {helpMarkdown}
+          </div>
+        </>
+      ) : (
+        link
+      )}
     </StyledSidebarNavLinkContainer>
   )
 }
