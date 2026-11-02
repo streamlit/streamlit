@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     open_popover,
 )
 
-MULTISELECT_COUNT = 39
+MULTISELECT_COUNT = 40
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -852,6 +852,17 @@ def test_select_all_parameter(app: Page):
 
     input_chips.click()
     expect(app.get_by_role("option", name="Select all")).to_be_visible()
+    _close_dropdown(app)
+
+    # A default that repeats an option keeps the repeat when Select all adds
+    # the rest, and the server accepts it.
+    ms_repeated = get_multiselect(app, "select_all repeated default")
+    ms_repeated.scroll_into_view_if_needed()
+    expect_text(app, "select_all repeated default: ['a', 'a']")
+    _get_multiselect_input(app, "select_all repeated default").click()
+    app.get_by_role("option", name="Select all").click()
+    wait_for_app_run(app)
+    expect_text(app, "select_all repeated default: ['a', 'a', 'b', 'c']")
 
 
 # --- Query parameter binding tests ---

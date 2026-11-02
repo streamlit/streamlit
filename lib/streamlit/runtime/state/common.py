@@ -25,6 +25,7 @@ from typing import (
     Final,
     Generic,
     Literal,
+    Protocol,
     TypeAlias,
     TypeGuard,
     TypeVar,
@@ -34,10 +35,11 @@ from typing import (
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 
 if TYPE_CHECKING:
-    from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.session_state import SessionState
+    from streamlit.runtime.state.widget_checks import Violation
 
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
 TESTING_KEY = "$$STREAMLIT_INTERNAL_KEY_TESTING"
@@ -118,6 +120,17 @@ ValueFieldName: TypeAlias = Literal[
 ]
 
 
+# Value fields whose type is a message, which is copied rather than assigned.
+_MESSAGE_VALUE_FIELD_NAMES: Final = frozenset(
+    {
+        "arrow_value",
+        "chat_input_value",
+        "file_uploader_state_value",
+        "string_trigger_value",
+    }
+)
+
+
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
     return obj in _ARRAY_VALUE_FIELD_NAMES
 
@@ -137,6 +150,52 @@ def unpack_widget_state_value(widget_state: WidgetStateProto) -> Any:
     if field_name == "json_value":
         return json.loads(value)
     return value
+
+
+def pack_widget_state_value(
+    widget_id: str, field_name: ValueFieldName | None, serialized: Any
+) -> WidgetStateProto:
+    """Return the ``WidgetState`` that carries a serialized widget value.
+
+    This is the inverse of ``unpack_widget_state_value``: ``serialized`` is what
+    a widget's serializer returns, and ``field_name`` is the wire field to write
+    it to. With no field, or ``None`` for a scalar field, the state carries no
+    value, which is the unset form.
+    """
+    state = WidgetStateProto(id=widget_id)
+    if field_name is None:
+        return state
+    if is_array_value_field_name(field_name):
+        getattr(state, field_name).data.extend(serialized)
+    elif field_name in {"json_value", "json_trigger_value"}:
+        setattr(state, field_name, json.dumps(serialized))
+    elif field_name in _MESSAGE_VALUE_FIELD_NAMES:
+        getattr(state, field_name).CopyFrom(serialized)
+    elif serialized is not None:
+        # A proto field is not nullable, so a None value is left unset.
+        setattr(state, field_name, serialized)
+    return state
+
+
+class WidgetValidator(Protocol):
+    """Checks one changed client value, usually a serde's ``validate`` method."""
+
+    def __call__(
+        self,
+        ui_value: Any,
+        *,
+        previous: Any = None,
+        value: Any = None,
+        exact: bool = False,
+    ) -> Violation | None:
+        """Return a violation for one changed client value, or None.
+
+        ``ui_value`` is the unpacked wire value, ``value`` is that value after
+        the widget's deserializer, and ``previous`` is the stored value.
+        ``exact`` holds the value to the author's constraints as written,
+        without the allowance a browser needs, such as the bound a float
+        slider rounds to. The agent API sets it.
+        """
 
 
 # Optional hook that allows a widget to customize how its value should be
@@ -217,11 +276,24 @@ class WidgetMetadata(Generic[T]):
     allow_url_duplicates: bool = False
 
     # Whether the widget is disabled. A disabled widget cannot be interacted with
-    # in the browser, so it must never accept a value coming from the frontend.
-    # This is enforced server-side (see SessionState.register_widget): any incoming
-    # value for a disabled widget is discarded and its on-change callback is
-    # suppressed, guarding against forged BackMsg/WidgetState values.
+    # in the browser, so it accepts no client value. The boundary check enforces
+    # this against the metadata of the run the client was shown (see
+    # `widget_checks`): a value sent while the widget was disabled is dropped and
+    # its callback does not run, which guards against forged WidgetState values.
+    # A bound widget also ignores its URL parameter while disabled.
     disabled: bool = False
+
+    # What a client may send, usually the serde's `validate` method. The boundary
+    # check calls it with the unpacked wire value of a changed entry, before
+    # callbacks run (see `widget_checks`). None accepts anything the
+    # deserializer reads.
+    validator: WidgetValidator | None = field(default=None, repr=False)
+
+    # The wire fields a client may send. None means only `value_type`. Only a
+    # widget whose frontend sends more than one field sets it, such as a
+    # Components v1 component, which may send JSON, bytes, or an Arrow table,
+    # or `st.number_input`, which sends an integer input's value as an int.
+    accepted_value_fields: frozenset[ValueFieldName] | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)

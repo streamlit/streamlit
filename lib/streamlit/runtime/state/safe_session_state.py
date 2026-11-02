@@ -90,6 +90,10 @@ class SafeSessionState:
                 widget_ids_this_run, remove_stale_widgets=remove_stale_widgets
             )
 
+    def prune_rendered_widgets(self, widget_ids_this_run: frozenset[str]) -> None:
+        with self._lock:
+            self._state.prune_rendered_widgets(widget_ids_this_run)
+
     def maybe_check_serializable(self) -> None:
         with self._lock:
             self._state.maybe_check_serializable()

@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Generic, Never, TypeVar, cast, overload
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
@@ -57,6 +59,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.type_util import check_python_comparable
@@ -65,6 +68,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 
@@ -96,6 +100,18 @@ class RadioSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_option_index = default_option_index
         self.format_func = format_func
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a widget whose value never changes pays
+        # nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a label that is not one of the options a client was shown."""
+        if ui_value is None:
+            return None
+        return widget_checks.one_of(self._label_counts, ui_value)
 
     def serialize(self, v: T | str | None) -> str | None:
         if v is None:
@@ -596,6 +612,7 @@ class RadioMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,

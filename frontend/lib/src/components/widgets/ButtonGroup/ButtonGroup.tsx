@@ -61,6 +61,10 @@ export interface Props {
 
 /**
  * Get the base content string for an option.
+ *
+ * This is the label the widget sends. The server rebuilds it in
+ * `_browser_label` (`button_group.py`) to tell which option was selected, so a
+ * change to how the label is composed needs the same change there.
  */
 function getOptionBaseContent(
   option: ButtonGroupProto.Option.$Properties

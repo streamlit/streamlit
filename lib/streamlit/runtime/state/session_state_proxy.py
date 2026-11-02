@@ -156,6 +156,9 @@ class SessionStateProxy(MutableMapping[Key, Any]):
         StreamlitWidgetAlreadyInstantiatedError
             If the key belongs to a widget or form already instantiated
             during the current script run.
+        StreamlitValueAssignmentNotAllowedError
+            If the key holds the events of a custom component already
+            instantiated during the current script run.
         """
         key = str(key)
         require_valid_user_key(key)

@@ -1657,6 +1657,50 @@ class ScriptRunnerTest(unittest.TestCase):
         mock_on_script_finished.assert_called_once()
         assert mock_on_script_finished.call_args.kwargs["remove_stale_widgets"] is True
 
+    def test_an_early_stop_forgets_the_widgets_the_run_did_not_send(self) -> None:
+        """st.stop() or an exception in the body prunes rendered widgets only.
+
+        The browser removes the widgets the run did not send, but their values
+        stay, so the stale-state cleanup in ``on_script_finished`` does not run.
+        """
+        scriptrunner = TestScriptRunner("good_script.py")
+        ctx = _finished_run_ctx(has_script_started=True)
+        ctx.shared.widget_ids_this_run.snapshot.return_value = frozenset({"w"})
+        with (
+            patch.object(SessionState, "on_script_finished") as on_finished,
+            patch.object(SessionState, "prune_rendered_widgets") as prune,
+        ):
+            scriptrunner._on_script_finished(
+                ctx, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS, premature_stop=True
+            )
+
+        on_finished.assert_not_called()
+        prune.assert_called_once_with(frozenset({"w"}))
+
+    @parameterized.expand(
+        [
+            # A callback raised or called st.stop(): nothing registered yet.
+            ("body_never_ran", False, False),
+            # A new runner replaced this one, so the browser never saw it end.
+            ("session_requested_stop", True, True),
+        ]
+    )
+    def test_an_interrupted_early_stop_forgets_no_rendered_widget(
+        self, _name: str, has_script_started: bool, stop_requested: bool
+    ) -> None:
+        """An early stop prunes nothing unless the body ran and stopped itself."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        if stop_requested:
+            scriptrunner.request_stop()
+        with patch.object(SessionState, "prune_rendered_widgets") as prune:
+            scriptrunner._on_script_finished(
+                _finished_run_ctx(has_script_started=has_script_started),
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                premature_stop=True,
+            )
+
+        prune.assert_not_called()
+
     def test_dg_stack_preserved_for_fragment_rerun(self):
         """Tests that the dg_stack and cursor are preserved for a fragment rerun.
 

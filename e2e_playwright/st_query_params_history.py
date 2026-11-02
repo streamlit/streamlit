@@ -34,6 +34,16 @@ def query_params_page() -> None:
     )
     st.markdown(f"Selected: {number}")
 
+    # A filter shown as locked. A link cannot set it: it accepts no client input.
+    locked = st.selectbox(
+        "Locked filter",
+        options=["a", "b", "c"],
+        key="locked",
+        bind="query-params",
+        disabled=True,
+    )
+    st.markdown(f"Locked: {locked}")
+
     if st.button("Increment Query Param"):
         value = int(st.query_params.get("value", "0"))
         st.query_params["value"] = str(value + 1)

@@ -12,16 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.Common_pb2 import StringTriggerValue
+from streamlit.proto.Components_pb2 import ArrowTable
 from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.runtime.state.common import (
+    pack_widget_state_value,
     unpack_widget_state_value,
     validate_on_change_mode,
 )
+
+if TYPE_CHECKING:
+    from streamlit.runtime.state.common import ValueFieldName
 
 
 def _widget_state(**fields: Any) -> WidgetState:
@@ -72,6 +80,38 @@ def test_unpack_widget_state_value_keeps_a_chat_input_message() -> None:
 
     assert unpacked == state.chat_input_value
     assert unpacked.data == "hi"
+
+
+@pytest.mark.parametrize(
+    ("field_name", "serialized", "expected"),
+    [
+        (None, "ignored", {}),
+        ("string_value", None, {}),
+        ("string_value", "a", {"string_value": "a"}),
+        ("bool_value", False, {"bool_value": False}),
+        ("int_value", 7, {"int_value": 7}),
+        ("bytes_value", b"\x00", {"bytes_value": b"\x00"}),
+        ("string_array_value", ["a", "b"], {"string_array_value": ["a", "b"]}),
+        ("json_value", {"a": 1}, {"json_value": '{"a": 1}'}),
+        (
+            "string_trigger_value",
+            StringTriggerValue(data="x"),
+            {"string_trigger_value": "x"},
+        ),
+        ("arrow_value", ArrowTable(data=b"t"), None),
+    ],
+)
+def test_pack_widget_state_value(
+    field_name: ValueFieldName | None, serialized: Any, expected: dict[str, Any] | None
+) -> None:
+    """A serialized value is written to its field, and unpacks to what was packed."""
+    state = pack_widget_state_value("w", field_name, serialized)
+
+    assert state.id == "w"
+    if expected is None:
+        assert state.arrow_value == serialized
+    else:
+        assert state == _widget_state(**expected)
 
 
 def test_validate_on_change_mode_returns_callback() -> None:

@@ -50,6 +50,9 @@ from streamlit.proto.Common_pb2 import (
     UploadedFileInfo as UploadedFileInfoProto,
 )
 from streamlit.proto.RootContainer_pb2 import RootContainer as RootContainerProto
+from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.common import WidgetMetadata
+from streamlit.runtime.state.widget_checks import Violation, check_client_value
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFile,
     UploadedFileRec,
@@ -1027,29 +1030,45 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("past_the_limit", 4, "abcdef", "abcd"),
-            ("at_the_limit", 6, "abcdef", "abcdef"),
-            ("no_limit", None, "abcdef", "abcdef"),
+            ("past_the_limit", 4, "abcdef", False),
+            ("at_the_limit", 6, "abcdef", True),
+            ("no_limit", None, "abcdef", True),
             # The browser reads 0 as no limit.
-            ("zero_means_no_limit", 0, "abcdef", "abcdef"),
+            ("zero_means_no_limit", 0, "abcdef", True),
+            # An emoji counts as two UTF-16 code units, as in the browser.
+            ("astral_past_the_limit", 3, "😀😀", False),
+            ("astral_at_the_limit", 4, "😀😀", True),
         ]
     )
-    def test_deserialize_cuts_text_past_max_chars(
-        self, _name: str, max_chars: int | None, sent: str, expected: str
+    def test_validate_refuses_text_past_max_chars(
+        self, _name: str, max_chars: int | None, sent: str, accepted: bool
     ) -> None:
-        """Text a client sends past `max_chars` is cut, as a text input cuts it."""
+        """Text past `max_chars` is refused, and the deserializer never cuts it."""
         serde = ChatInputSerde(max_chars=max_chars)
+        value = ChatInputValueProto(data=sent)
 
-        assert serde.deserialize(ChatInputValueProto(data=sent)) == expected
+        assert serde.deserialize(value) == sent
+        violation = serde.validate(value)
+        if accepted:
+            assert violation is None
+        else:
+            assert violation == Violation("too_long", {"max_chars": max_chars})
 
-    def test_deserialize_cuts_text_past_max_chars_with_files(self) -> None:
-        """The cut applies to the text of a submission that accepts files too."""
+    def test_validate_accepts_a_submission_without_text(self) -> None:
+        """A submission with only files carries no text to count."""
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+
+        assert serde.validate(ChatInputValueProto()) is None
+        assert serde.validate(None) is None
+
+    def test_deserialize_keeps_text_past_max_chars_with_files(self) -> None:
+        """A submission that accepts files keeps its text whole too."""
         serde = ChatInputSerde(accept_files=True, max_chars=2)
 
         result = serde.deserialize(ChatInputValueProto(data="abc"))
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "ab"
+        assert result.text == "abc"
 
 
 class PopUploadFilesTest(DeltaGeneratorTestCase):
@@ -1115,6 +1134,38 @@ class PopUploadFilesTest(DeltaGeneratorTestCase):
         # No file is registered for "missing" so it should be filtered out.
         result = _pop_upload_files(proto)
         assert result == []
+
+    def test_a_refused_submit_consumes_its_attachments(self) -> None:
+        """A submit the boundary check refuses still removes its upload records.
+
+        The browser never resends a submit, so nothing could read them later.
+        """
+        session_id = self.script_run_ctx.session_id
+        file_mgr = self.script_run_ctx.uploaded_file_mgr
+        file_mgr.add_file(
+            session_id=session_id,
+            file=UploadedFileRec("file42", "name42.txt", "text/plain", b"hello"),
+        )
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+        metadata = WidgetMetadata(
+            id="chat",
+            deserializer=serde.deserialize,
+            serializer=serde.serialize,
+            value_type="chat_input_value",
+            validator=serde.validate,
+        )
+        state = WidgetState(id="chat")
+        state.chat_input_value.data = "abc"
+        info = state.chat_input_value.file_uploader_state.uploaded_file_info.add()
+        info.file_id = "file42"
+        info.file_urls.file_id = "file42"
+
+        result = check_client_value(
+            state, metadata=metadata, previous=None, is_rendered=True
+        )
+
+        assert result.violation == Violation("too_long", {"max_chars": 2})
+        assert file_mgr.get_files(session_id=session_id, file_ids=["file42"]) == []
 
     def test_pop_audio_file_returns_none_for_none(self):
         """Test _pop_audio_file returns None when audio_file_info is None."""

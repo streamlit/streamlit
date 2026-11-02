@@ -615,15 +615,25 @@ def _session_state_item(key: str) -> str:
 
 
 class StreamlitValueAssignmentNotAllowedError(LocalizableStreamlitException):
-    """Exception raised when trying to set values where writes are not allowed."""
+    """Exception raised when trying to set values where writes are not allowed.
 
-    def __init__(self, key: str) -> None:
+    Optional ``detail`` says what the key holds, and appears in the error
+    message only.
+    """
+
+    def __init__(self, key: str, *, detail: str | None = None) -> None:
+        message = (
+            "{session_state_item} is read-only and cannot be assigned through "
+            "session state."
+        )
+        if detail:
+            message += " {detail}"
+        message += " Use a different session state key for values you need to set."
         super().__init__(
-            "{session_state_item} is read-only and cannot be "
-            "assigned through session state. Use a different session state key "
-            "for values you need to set.",
+            message,
             session_state_item=_session_state_item(key),
             key=key,
+            detail=detail,
         )
 
 

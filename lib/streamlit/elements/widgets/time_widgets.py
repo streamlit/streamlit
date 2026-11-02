@@ -67,12 +67,14 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str
 from streamlit.time_util import adjust_years
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 # Type for things that point to a specific time (even if a default time, though not None).
 TimeValue: TypeAlias = time | datetime | str | Literal["now"]
@@ -487,24 +489,42 @@ class DateTimeInputSerde:
     value: datetime | None
     min: datetime
     max: datetime
+    required: bool = False
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse what the browser never sends.
+
+        The browser sends ``[]`` or one ``YYYY-MM-DDTHH:MM`` within the bounds,
+        and never empties a required input.
+        """
+        if not ui_value:
+            # None and `[]` read as the default, so they are empty only without one.
+            return widget_checks.filled(self.value, required=self.required)
+        violation = widget_checks.item_count(ui_value, allowed=(0, 1))
+        if violation is not None:
+            return violation
+        parsed = widget_checks.iso_datetime_minutes(ui_value[0])
+        if isinstance(parsed, widget_checks.Violation):
+            return parsed
+        return widget_checks.within(parsed, self.min, self.max)
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
-        if ui_value is not None and len(ui_value) > 0:
-            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
-                try:
-                    deserialized = _normalize_datetime_value(
-                        datetime.strptime(ui_value[0], fmt)
-                    )
-                    break
-                except ValueError:
-                    continue
-            else:
-                # Unparseable URL query param value — revert to default.
-                return self.value
-            if deserialized < self.min or deserialized > self.max:
-                return self.value
-            return deserialized
-        return self.value
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. The legacy layout is
+        # read for URL values, which URL seeding validates after serializing
+        # them again.
+        if ui_value is None or len(ui_value) == 0:
+            return self.value
+        for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
+            try:
+                return _normalize_datetime_value(datetime.strptime(ui_value[0], fmt))
+            except ValueError:
+                continue
+        # The value is left out of the message, which the boundary never logs.
+        raise ValueError("Unable to parse the date and time.")
 
     def serialize(self, v: datetime | None) -> list[str]:
         if v is None:
@@ -516,29 +536,39 @@ class DateTimeInputSerde:
 class TimeInputSerde:
     value: time | None
     step: int = 900
+    required: bool = False
 
     @property
     def _wire_fmt(self) -> str:
         return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
 
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a time that is not ``HH:MM`` or ``HH:MM:SS``, for any ``step``.
+
+        A required input is never emptied.
+        """
+        if ui_value is None:
+            # An unset value reads as the default, so it is empty only without one.
+            return widget_checks.filled(self.value, required=self.required)
+        parsed = widget_checks.iso_time(ui_value)
+        return parsed if isinstance(parsed, widget_checks.Violation) else None
+
     def deserialize(self, ui_value: str | None) -> time | None:
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send.
         if ui_value is None:
             return self.value
         # Try HH:MM:SS first (sub-minute step), fall back to HH:MM for backward compat.
+        # Text in neither layout raises a ValueError.
         # TODO(query-params): URL values that don't align to the step
         # (e.g., ?time=14:37 with step=900) are accepted as-is.
         # Consider snapping to the nearest valid step for consistency
         # with the UI. See also SliderSerde.deserialize.
-        parsed: time | None = None
         try:
             parsed = datetime.strptime(ui_value, "%H:%M:%S").time()
         except ValueError:
-            try:
-                parsed = datetime.strptime(ui_value, "%H:%M").time()
-            except ValueError:
-                pass  # Neither format matched; handled below.
-        if parsed is None:
-            return self.value
+            parsed = datetime.strptime(ui_value, "%H:%M").time()
         # Strip seconds when step is minute-granular so the returned value is
         # consistent regardless of how the value arrived (query-param, session state).
         if self.step % 60 == 0:
@@ -676,6 +706,7 @@ def _validate_datetime_value(
 @dataclass
 class DateInputSerde:
     value: _DateInputValues
+    required: bool = False
 
     @staticmethod
     def _parse_date(value: str) -> date:
@@ -685,25 +716,51 @@ class DateInputSerde:
                 return datetime.strptime(value, fmt).date()
             except ValueError:
                 continue
-        raise ValueError(f"Unable to parse date: {value}")
+        # The value is left out of the message, which the boundary never logs.
+        raise ValueError("Unable to parse the date.")
+
+    def validate(
+        self, ui_value: Sequence[str] | None, **_kwargs: Any
+    ) -> Violation | None:
+        """Refuse what the browser never sends.
+
+        The browser sends ``YYYY-MM-DD`` dates within the bounds: none or one,
+        or for a range none, its start, or both ends in order. A required input
+        gets a date, or a range with both ends.
+        """
+        # An unset value reads as the default, and `[]` as no date even with a
+        # default. A range is empty until both ends are set, as in the browser.
+        selected = self.value.value if ui_value is None else ui_value
+        if self.value.is_range and selected is not None and len(selected) < 2:
+            selected = None
+        violation = widget_checks.filled(selected, required=self.required)
+        if violation is not None or ui_value is None:
+            return violation
+        violation = widget_checks.item_count(
+            ui_value, allowed=(0, 1, 2) if self.value.is_range else (0, 1)
+        )
+        if violation is not None:
+            return violation
+        dates: list[date] = []
+        for text in ui_value:
+            parsed = widget_checks.iso_date(text)
+            if isinstance(parsed, widget_checks.Violation):
+                return parsed
+            violation = widget_checks.within(parsed, self.value.min, self.value.max)
+            if violation is not None:
+                return violation
+            dates.append(parsed)
+        return widget_checks.ordered(dates)
 
     def deserialize(self, ui_value: Any) -> DateWidgetReturn:
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. Text in neither layout
+        # raises a ValueError. The legacy layout is read for URL values, which
+        # URL seeding validates after serializing them again.
         return_value: Sequence[date] | None
         if ui_value is not None:
-            try:
-                return_value = tuple(self._parse_date(v) for v in ui_value)
-            except ValueError:
-                # Invalid URL query param value (e.g. "not-a-date") — revert to default.
-                return_value = self.value.value
-            else:
-                # Reject out-of-range dates from URL query params — revert to default.
-                # Matches SliderSerde.deserialize which validates bounds in the
-                # deserializer so _seed_widget_from_url can detect default equality
-                # and clear the URL param via _clear_url_param.
-                if return_value and any(
-                    d < self.value.min or d > self.value.max for d in return_value
-                ):
-                    return_value = self.value.value
+            return_value = tuple(self._parse_date(v) for v in ui_value)
         else:
             return_value = self.value.value
 
@@ -910,9 +967,12 @@ class TimeWidgetsMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1153,7 +1213,7 @@ class TimeWidgetsMixin:
                 max_value="23 hours",
             )
 
-        serde = TimeInputSerde(parsed_time, step=step)
+        serde = TimeInputSerde(parsed_time, step=step, required=required)
         if parsed_time is not None:
             time_input_proto.default = parsed_time.strftime(serde._wire_fmt)
         time_input_proto.form_id = current_form_id(self.dg)
@@ -1184,6 +1244,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_value",
             disabled=disabled,
@@ -1443,9 +1504,12 @@ class TimeWidgetsMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1702,6 +1766,7 @@ class TimeWidgetsMixin:
             value=default_value_for_proto,
             min=datetime_values.min,
             max=datetime_values.max,
+            required=required,
         )
         widget_state = register_widget(
             date_time_input_proto.id,
@@ -1710,6 +1775,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,
@@ -2019,9 +2085,12 @@ class TimeWidgetsMixin:
             an empty required range.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -2305,7 +2374,7 @@ class TimeWidgetsMixin:
         if isinstance(on_change, str) and on_change == "ignore":
             date_input_proto.ignore_rerun = True
 
-        serde = DateInputSerde(parsed_values)
+        serde = DateInputSerde(parsed_values, required=required)
 
         widget_state = register_widget(
             date_input_proto.id,
@@ -2314,6 +2383,7 @@ class TimeWidgetsMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_array_value",
             disabled=disabled,
@@ -2357,7 +2427,17 @@ class TimeWidgetsMixin:
                 action="value",
                 # No initial date, and not required: a later value can be cleared.
                 clearable=parsed_values.value is None and not required,
-                value_schema=agent_spec.range_of(agent_spec.DATE, partial=True)
+                # A required range that holds both ends takes nothing less. One
+                # that is still empty or holds only its start stays partial, so
+                # its reported value can be sent back unchanged.
+                value_schema=agent_spec.range_of(
+                    agent_spec.DATE,
+                    partial=not (
+                        required
+                        and isinstance(current_value, (list, tuple))
+                        and len(current_value) == 2
+                    ),
+                )
                 if parsed_values.is_range
                 else agent_spec.DATE,
                 label=label,

@@ -14,6 +14,7 @@
 
 """number_input unit test."""
 
+import math
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -35,6 +36,7 @@ from streamlit.errors import (
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -989,30 +991,160 @@ class NumberInputOnChangeModeTest(DeltaGeneratorTestCase):
 @pytest.mark.parametrize(
     ("ui_value", "expected"),
     [
-        (150, 50),  # Above max -> reset to default
-        (-50, 50),  # Below min -> reset to default
-        (50, 50),  # In range -> unchanged
-        (0, 0),  # At min -> unchanged
-        (100, 100),  # At max -> unchanged
-        (None, 50),  # None -> returns default value
+        (None, 50),
+        (42.0, 42),
+        # A conversion, so a URL value of 2.9 still seeds 2.
+        (2.9, 2),
+        # Out of range is validate's to refuse, so it passes through.
+        (150, 150),
+        (-50, -50),
     ],
 )
-def test_serde_resets_out_of_range_to_default(ui_value, expected):
-    """Test that NumberInputSerde.deserialize resets out-of-range values to default."""
+def test_serde_deserialize_converts_and_never_replaces(
+    ui_value: float | None, expected: int
+) -> None:
+    """An integer input truncates to int but never falls back to its default."""
     serde = NumberInputSerde(
         value=50, data_type=NumberInput.INT, min_value=0, max_value=100
     )
-    assert serde.deserialize(ui_value) == expected
+    result = serde.deserialize(ui_value)
+    assert result == expected
+    assert type(result) is int
+
+
+@pytest.mark.parametrize("data_type", [NumberInput.INT, NumberInput.FLOAT])
+@pytest.mark.parametrize(
+    "ui_value",
+    [math.nan, math.inf, -math.inf],
+    ids=["nan", "positive_inf", "negative_inf"],
+)
+def test_serde_deserialize_passes_a_non_finite_number_through(
+    data_type: int, ui_value: float
+) -> None:
+    """NaN and infinity reach validate unconverted, even for an integer input.
+
+    ``int(math.inf)`` would raise ``OverflowError`` for a URL value.
+    """
+    serde = NumberInputSerde(value=0, data_type=data_type, min_value=0, max_value=1)
+    assert serde.deserialize(ui_value) is ui_value
+
+
+_OUT_OF_RANGE = Violation("out_of_range", {"min_value": 0, "max_value": 100})
+_NOT_FINITE = Violation("malformed", {"expected": "a finite number"})
 
 
 @pytest.mark.parametrize(
-    "ui_value",
-    [float("nan"), float("inf"), -float("inf")],
-    ids=["nan", "positive_inf", "negative_inf"],
+    ("data_type", "ui_value", "expected"),
+    [
+        (NumberInput.INT, None, None),
+        (NumberInput.INT, 50, None),
+        # The bounds are inclusive, and a double holding a whole number is fine.
+        (NumberInput.INT, 0, None),
+        (NumberInput.INT, 100.0, None),
+        (NumberInput.INT, 150, _OUT_OF_RANGE),
+        (NumberInput.INT, -50, _OUT_OF_RANGE),
+        (NumberInput.INT, 2.5, Violation("malformed", {"expected": "a whole number"})),
+        (NumberInput.INT, math.inf, _NOT_FINITE),
+        (NumberInput.FLOAT, 2.5, None),
+        (NumberInput.FLOAT, math.nan, _NOT_FINITE),
+        (NumberInput.FLOAT, -math.inf, _NOT_FINITE),
+        (NumberInput.FLOAT, 100.5, _OUT_OF_RANGE),
+    ],
 )
-def test_serde_resets_non_finite_float_to_default(ui_value: float) -> None:
-    """Test that NumberInputSerde.deserialize resets non-finite floats to default."""
+def test_serde_validate(
+    data_type: int, ui_value: float | None, expected: Violation | None
+) -> None:
+    """A finite number within the bounds, and a whole one for an integer input."""
+    serde = NumberInputSerde(value=50, data_type=data_type, min_value=0, max_value=100)
+    assert serde.validate(ui_value) == expected
+
+
+_SAFE = 2**53 - 1
+
+
+@pytest.mark.parametrize(
+    ("has_min", "has_max", "ui_value", "expected"),
+    [
+        # Only the bounds the author set are named.
+        (
+            True,
+            False,
+            -1,
+            Violation("out_of_range", {"min_value": 0, "max_value": None}),
+        ),
+        (
+            False,
+            True,
+            2**53,
+            Violation("out_of_range", {"min_value": None, "max_value": 100}),
+        ),
+        # Past a limit that stands in for an unset bound, nothing names a bound.
+        (
+            True,
+            False,
+            2**60,
+            Violation(
+                "malformed",
+                {
+                    "expected": f"a whole number up to {_SAFE}, the largest a "
+                    "browser holds exactly"
+                },
+            ),
+        ),
+        (
+            False,
+            False,
+            -(2**60),
+            Violation(
+                "malformed",
+                {
+                    "expected": f"a whole number down to {-_SAFE}, the smallest a "
+                    "browser holds exactly"
+                },
+            ),
+        ),
+        (False, False, _SAFE, None),
+    ],
+)
+def test_serde_validate_names_only_the_bounds_the_author_set(
+    has_min: bool, has_max: bool, ui_value: int, expected: Violation | None
+) -> None:
+    """An unset bound is the JavaScript safe-integer limit, which is no author's bound."""
     serde = NumberInputSerde(
-        value=0.5, data_type=NumberInput.FLOAT, min_value=0.0, max_value=1.0
+        value=50,
+        data_type=NumberInput.INT,
+        min_value=0 if has_min else -_SAFE,
+        max_value=100 if has_max else _SAFE,
+        has_min=has_min,
+        has_max=has_max,
     )
-    assert serde.deserialize(ui_value) == 0.5
+    assert serde.validate(ui_value) == expected
+
+
+@pytest.mark.parametrize(
+    ("default", "required", "ui_value", "expected"),
+    [
+        # An unset value reads as the default, so it empties the input only
+        # without one.
+        (None, True, None, Violation("empty_required")),
+        (5, True, None, None),
+        (None, False, None, None),
+        # Zero is a number, not an empty value.
+        (None, True, 0, None),
+    ],
+)
+def test_serde_validate_refuses_emptying_a_required_input(
+    default: int | None,
+    required: bool,
+    ui_value: int | None,
+    expected: Violation | None,
+) -> None:
+    """A required number input cannot be emptied."""
+    serde = NumberInputSerde(
+        value=default,
+        data_type=NumberInput.INT,
+        min_value=0,
+        max_value=100,
+        required=required,
+    )
+    assert serde.validate(ui_value) == expected

@@ -46,6 +46,17 @@ if key is None or key == "inline":
     inline_value = st.container().chat_input("Chat input (inline)", key="inline")
     st.write("inline - value:", inline_value)
 
+if key is None or key == "max_chars_parity":
+    # max_chars counts UTF-16 code units in the browser and on the server, so a
+    # message of exactly max_chars units, such as astral emoji, lands unchanged.
+    parity_value = st.container().chat_input(
+        "Chat input (max_chars=8)", max_chars=8, key="max_chars_parity"
+    )
+    st.write(
+        "max_chars_parity - code points:",
+        " ".join(f"U+{ord(char):04X}" for char in parity_value or "") or "none",
+    )
+
 if key is None or key == "disabled_with_file":
     col1, _ = st.columns(2)
     # Note: This input is disabled, so it will always return None.

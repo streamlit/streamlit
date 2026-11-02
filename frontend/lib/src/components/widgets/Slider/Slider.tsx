@@ -231,6 +231,10 @@ function Slider({
   // the same React batch.
   // React Aria stops on `min + n * step`. Extend the track only when `max` is
   // just past the last step, and commit that end position as `max`.
+  // React Aria also rounds a thumb to the step's precision, which can commit a
+  // value just past a bound. The server mirrors that rounding
+  // (`_browser_bounds` in `slider.py`) to accept such a value, so a change to
+  // how this slider rounds or clamps needs the same change there.
   const trackMax = sliderTrackMax(element.min, element.max, element.step)
   const trackToValue = useCallback(
     (trackValue: number): number =>

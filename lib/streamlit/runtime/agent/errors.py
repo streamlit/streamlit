@@ -67,8 +67,10 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         400,
         (
             "A value the element cannot take: of the wrong JSON type, outside "
-            "its options or over its selection limit, or one the widget cannot "
-            "read. The message lists the legal options where there are some."
+            "its options, selection limit, bounds, or `max_chars`, in the wrong "
+            "layout or range shape, one that empties a `required` widget, or "
+            "one the widget cannot read. The message names the constraint, and lists "
+            "the legal options where there are some."
         ),
     ),
     "not_a_value": (

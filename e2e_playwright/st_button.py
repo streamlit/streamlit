@@ -221,3 +221,18 @@ with hidden_label_tab:
         wrap=False,
         key="wrap_false_hidden_tab_button",
     )
+
+# A button that disables itself in its own on_click. The click was legal when it
+# was made, so the button still returns True in the run the click caused.
+if runtime.exists():
+
+    def _lock_self_disabling_button() -> None:
+        st.session_state.self_disabling_locked = True
+
+    self_disabling_clicked = st.button(
+        "Self-disabling button",
+        key="self_disabling_button",
+        on_click=_lock_self_disabling_button,
+        disabled=st.session_state.get("self_disabling_locked", False),
+    )
+    st.write("self-disabling returned:", self_disabling_clicked)

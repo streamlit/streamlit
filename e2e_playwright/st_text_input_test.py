@@ -35,11 +35,14 @@ from e2e_playwright.shared.app_utils import (
     get_text_input,
 )
 from e2e_playwright.shared.input_utils import (
+    MAX_CHARS_PARITY_TEXTS,
+    MAX_CHARS_PARITY_TOO_LONG,
+    code_points,
     expect_global_hotkeys_not_fired,
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 47
+TEXT_INPUT_ELEMENTS = 48
 
 
 def test_text_input_widget_rendering(
@@ -216,6 +219,38 @@ def test_text_input_limits_input_via_max_chars(app: Page):
     text_input_field.press("Enter")
 
     expect_markdown(app, "value 10: 12345")
+
+
+def test_text_input_max_chars_counts_as_the_server_does(app: Page):
+    """Text of exactly max_chars UTF-16 code units reaches the app unchanged.
+
+    The browser and the server both count UTF-16 code units, so astral emoji
+    and combining sequences at the limit are accepted, and the parity gate fails
+    the test if the server refuses one. One unit more is blocked.
+    """
+    field = get_text_input(app, "Parity text input (max_chars=8)").locator("input")
+    for index, text in enumerate(MAX_CHARS_PARITY_TEXTS):
+        if index % 2:
+            field.clear()
+            field.press_sequentially(text)
+        else:
+            field.fill(text)
+        expect(field).to_have_value(text)
+        field.press("Enter")
+        expect_prefixed_markdown(
+            app, "Parity text input code points:", code_points(text), exact_match=True
+        )
+
+    # The browser keeps the text it held, and the app still has it.
+    field.fill(MAX_CHARS_PARITY_TOO_LONG)
+    expect(field).to_have_value(MAX_CHARS_PARITY_TEXTS[-1])
+    field.press("Enter")
+    expect_prefixed_markdown(
+        app,
+        "Parity text input code points:",
+        code_points(MAX_CHARS_PARITY_TEXTS[-1]),
+        exact_match=True,
+    )
 
 
 def test_text_input_has_correct_value_on_blur(app: Page):

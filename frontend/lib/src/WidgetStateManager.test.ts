@@ -721,6 +721,36 @@ describe("Widget State Manager", () => {
     })
   })
 
+  describe("hasPendingFormValue", () => {
+    it("is true only while the widget's form holds a value for it", () => {
+      widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "submitted", {
+        formId: MOCK_FORM_WIDGET.formId,
+        fromUser: false,
+        fragmentId: undefined,
+      })
+      expect(widgetMgr.hasPendingFormValue(MOCK_FORM_WIDGET)).toBe(false)
+
+      widgetMgr.setStringValue(MOCK_FORM_WIDGET.id, "staged", {
+        formId: MOCK_FORM_WIDGET.formId,
+        fromUser: true,
+        fragmentId: undefined,
+      })
+      expect(widgetMgr.hasPendingFormValue(MOCK_FORM_WIDGET)).toBe(true)
+
+      widgetMgr.submitForm(MOCK_FORM_WIDGET.formId, undefined)
+      expect(widgetMgr.hasPendingFormValue(MOCK_FORM_WIDGET)).toBe(false)
+    })
+
+    it("is false for a widget outside a form", () => {
+      widgetMgr.setStringValue(MOCK_WIDGET.id, "typed", {
+        formId: MOCK_WIDGET.formId,
+        fromUser: true,
+        fragmentId: undefined,
+      })
+      expect(widgetMgr.hasPendingFormValue(MOCK_WIDGET)).toBe(false)
+    })
+  })
+
   describe("submitForm", () => {
     it("calls sendBackMsg with expected data", () => {
       const formId = "mockFormId"

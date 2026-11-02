@@ -1407,9 +1407,13 @@ def test_select_slider():
     assert sr.select_slider[1].value == ("red", "blue")
 
     sr2 = sr.select_slider[0].set_value("violet").run()
-    sr3 = sr2.select_slider[1].set_range("yellow", "orange").run()
+    sr3 = sr2.select_slider[1].set_range("orange", "yellow").run()
     assert sr3.select_slider[0].value == "violet"
     assert sr3.select_slider[1].value == ("orange", "yellow")
+
+    # A reversed range is dropped, as it is from a browser, which never sends one.
+    sr4 = sr3.select_slider[1].set_range("blue", "red").run()
+    assert sr4.select_slider[1].value == ("orange", "yellow")
 
     repr(sr.select_slider[0])
 
@@ -4352,8 +4356,12 @@ def test_menu_button_click_accepts_label_when_format_func_rejects_it() -> None:
     assert at.text[0].value == "choice=b"
 
 
-def test_select_slider_rejects_unserializable_value() -> None:
-    """A value ``format_func`` cannot format fails before the script reruns."""
+def test_select_slider_drops_unserializable_value() -> None:
+    """A value ``format_func`` cannot format is sent as its text and dropped.
+
+    The text names no option, so the server refuses it as it would a
+    browser's, and the widget keeps its value.
+    """
 
     def script() -> None:
         import streamlit as st
@@ -4363,8 +4371,12 @@ def test_select_slider_rejects_unserializable_value() -> None:
     at = AppTest.from_function(script).run()
     assert at.select_slider[0].value == 1
 
-    with pytest.raises(ValueError, match="Could not serialize value x"):
-        at.select_slider[0].set_value("x").run()
+    at.select_slider[0].set_value("x")
+    assert list(at.select_slider[0]._widget_state.string_array_value.data) == ["x"]
+    at.run()
+
+    assert not at.exception
+    assert at.select_slider[0].value == 1
 
 
 def _datetime_input_with_bounds(min_value: str, max_value: str) -> DateTimeInput:

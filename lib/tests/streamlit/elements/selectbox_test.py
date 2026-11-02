@@ -37,6 +37,7 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.runtime.state.widgets import register_widget_from_metadata
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -494,9 +495,9 @@ def test_selectbox_interaction():
 
 
 def test_selectbox_required_is_exposed_in_app_test() -> None:
-    """Test that AppTest exposes required and still allows clearing the value.
+    """AppTest exposes required, and a selection cannot be cleared.
 
-    The required check runs in the browser, so AppTest can still set None.
+    AppTest sends values through the same check a browser value passes.
     """
 
     def script():
@@ -514,7 +515,7 @@ def test_selectbox_required_is_exposed_in_app_test() -> None:
     assert selectbox.value == "m"
 
     at = selectbox.set_value(None).run()
-    assert at.selectbox[0].value is None
+    assert at.selectbox[0].value == "m"
 
 
 def test_selectbox_preserves_selection_when_options_expand():
@@ -834,6 +835,39 @@ class TestSelectboxSerde:
 
         res = serde.serialize(None)
         assert res is None
+
+    @pytest.mark.parametrize(
+        ("default_option_index", "ui_value", "empty"),
+        [
+            # An unset value reads as the default.
+            (None, None, True),
+            (0, None, False),
+            (None, "b", False),
+            # Any label is a selection: the browser treats only a missing
+            # value as empty.
+            (None, " ", False),
+        ],
+    )
+    def test_validate_refuses_clearing_a_required_selectbox(
+        self, default_option_index: int | None, ui_value: str | None, empty: bool
+    ) -> None:
+        """A required selectbox cannot be cleared."""
+        options = ["a", "b", " "]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+
+        def _serde(*, required: bool) -> SelectboxSerde[str]:
+            return SelectboxSerde(
+                options,
+                formatted_options=formatted_options,
+                formatted_option_to_option_index=formatted_option_to_option_index,
+                default_option_index=default_option_index,
+                required=required,
+            )
+
+        assert _serde(required=True).validate(ui_value) == (
+            Violation("empty_required") if empty else None
+        )
+        assert _serde(required=False).validate(ui_value) is None
 
     def test_serialize_falls_back_to_str_when_format_func_raises(self):
         """When format_func raises, serialize falls back to str(value)."""

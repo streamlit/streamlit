@@ -66,6 +66,9 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
   return renderWindow
 }
 
+/** The `hex` react-color reports for a color with no opacity. */
+const TRANSPARENT = "transparent"
+
 export interface BaseColorPickerProps {
   disabled: boolean
   width?: number
@@ -121,6 +124,12 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   // (allowing the user to click and drag). this.props.onChange is only called
   // when the ColorPicker popover is closed.
   const onColorChange = useCallback((color: ColorResult): void => {
+    // react-color's hex field accepts "transparent", which is not a hex
+    // color: the widget's value is always #rrggbb, and the server refuses
+    // anything else. Keep the previous color instead.
+    if (color.hex === TRANSPARENT) {
+      return
+    }
     setValue(color.hex)
   }, [])
 

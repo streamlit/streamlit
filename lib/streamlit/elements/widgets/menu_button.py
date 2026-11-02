@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
@@ -45,6 +47,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
@@ -53,6 +56,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.widget_checks import Violation
 
 T = TypeVar("T")
 
@@ -88,6 +92,17 @@ class MenuButtonSerde(Generic[T]):
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.format_func = format_func
 
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so a menu nobody uses pays nothing for it.
+        return Counter(self.formatted_options)
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a click on an option a client was not shown."""
+        if ui_value is None:
+            return None
+        return widget_checks.one_of(self._label_counts, ui_value)
+
     def serialize(self, v: T | None) -> StringTriggerValue:
         if v is None or len(self.options) == 0:
             # Always return a valid proto object (like ChatInputSerde)
@@ -104,6 +119,9 @@ class MenuButtonSerde(Generic[T]):
         if ui_value is None or len(self.options) == 0:
             return None
 
+        # An unknown label reads as no click. A trigger resets anyway, so there
+        # is nothing to re-sync, and the agent API, which compares wire values,
+        # still has validate refuse it.
         option_index = self.formatted_option_to_option_index.get(ui_value)
         return self.options[option_index] if option_index is not None else None
 
@@ -429,6 +447,7 @@ class MenuButtonMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="string_trigger_value",
             disabled=disabled,

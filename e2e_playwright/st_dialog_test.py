@@ -918,6 +918,13 @@ def test_dialog_with_dataframe_shows_column_menu_correctly(app: Page):
     expect(dialog).to_be_visible()
 
 
+# The first click's st.rerun() completes a full run that no longer renders the
+# dialog, and the later clicks reach the server before the browser closes it.
+# The server refuses them as not rendered, which is the sync race the
+# rendered-widget gate accepts.
+@pytest.mark.allow_refused_widget_values(
+    reason="clicks a button in a dialog again after its rerun closed the dialog"
+)
 def test_dialog_with_rerun_closes_even_if_button_is_clicked_multiple_times(app: Page):
     """Check that the dialog closes even if the button that calls st.rerun is clicked
     multiple times in fast succession. We want to test this since the button click and

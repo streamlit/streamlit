@@ -38,8 +38,9 @@ export type ValueWithSource<T> = {
   value: T
 } & Source
 
-// Interface for a proto that has a .formId
+// Interface for a proto that has an .id and a .formId
 interface ValueElementProtoInterface {
+  id: string
   formId: string
 }
 
@@ -111,12 +112,17 @@ export function useBasicWidgetClientState<
   // - It only has a value the moment when the user calls setValue (internally
   //   called setNextValueWithSource). And then it's immediately set to null
   //   internally.
-
+  //
+  // A value the widget's form staged is already in WidgetStateManager, so a
+  // widget that remounts with one, for example after an element above its
+  // form moved it, writes nothing. Writing it as a server value would move it
+  // out of the form, and the next rerun would send it without a submit.
   const [nextValueWithSource, setNextValueWithSource] =
-    useState<ValueWithSource<T> | null>({
-      value: currentValue,
-      fromUser: false,
-    })
+    useState<ValueWithSource<T> | null>(() =>
+      widgetMgr.hasPendingFormValue(element)
+        ? null
+        : { value: currentValue, fromUser: false }
+    )
 
   // Expose the in-flight event value on this render. The effect below still
   // persists it into currentValue and WidgetStateManager. If callers returned
@@ -170,7 +176,6 @@ export function useBasicWidgetClientState<
 // Interface for a proto that has a setValue, id, and .formId
 interface ValueElementProtoInterfaceWithSetValue extends ValueElementProtoInterface {
   setValue: boolean
-  id: string
 }
 
 /**

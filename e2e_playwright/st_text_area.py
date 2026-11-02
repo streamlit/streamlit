@@ -242,3 +242,11 @@ st.write("required message:", st.session_state.get("required_message", ""))
 
 required_notes = st.text_area("Required notes", key="required_notes", required=True)
 st.write("required notes:", required_notes)
+
+# max_chars counts UTF-16 code units in the browser and on the server, so text of
+# exactly max_chars units, such as astral emoji, reaches the app unchanged.
+parity_area = st.text_area("Parity text area (max_chars=8)", max_chars=8)
+st.write(
+    "Parity text area code points:",
+    " ".join(f"U+{ord(char):04X}" for char in parity_area) or "none",
+)

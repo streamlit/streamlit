@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
+from functools import cached_property
 from numbers import Integral
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, cast, overload
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib import agent_spec
@@ -58,6 +60,7 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import validate_icon_or_emoji
 
@@ -73,6 +76,7 @@ if TYPE_CHECKING:
         WidgetCallback,
         WidgetKwargs,
     )
+    from streamlit.runtime.state.widget_checks import Violation
 
 SpecType: TypeAlias = int | Sequence[int | float]
 
@@ -106,6 +110,22 @@ class _TabsSerde:
     """Serializer/deserializer for tabs widget state (active tab label)."""
 
     default_label: str
+    labels: list[str]
+
+    @cached_property
+    def _label_counts(self) -> Counter[str]:
+        # Built on the first check, so tabs a user never switches pay nothing
+        # for it.
+        return Counter(self.labels)
+
+    def validate(self, ui_value: str | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a label that names no tab.
+
+        Two tabs may share a label, and the browser sends it as shown.
+        """
+        if ui_value is None:
+            return None
+        return widget_checks.one_of(self._label_counts, ui_value)
 
     def serialize(self, v: str) -> str:
         return str(v)
@@ -1366,12 +1386,13 @@ class LayoutsMixin:
             )
             block_id = element_id
 
-            serde = _TabsSerde(default_label=default_label)
+            serde = _TabsSerde(default_label=default_label, labels=list(tabs))
 
             tabs_state = register_widget(
                 element_id,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
+                validator=serde.validate,
                 ctx=ctx,
                 value_type="string_value",
                 on_change_handler=on_change_callback,

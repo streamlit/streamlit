@@ -103,6 +103,28 @@ report_page = st.Page(report, title="Report", url_path="report")
 st.navigation([home_page, report_page]).run()
 """
 
+# A filter the app shows as locked, bound to a parameter on the second page.
+_LOCKED_FILTER_SCRIPT: Final = """
+import streamlit as st
+
+def home():
+    st.text("page=home")
+
+def report():
+    st.text("page=report")
+    st.selectbox(
+        "Quarter",
+        ["Q1", "Q2", "Q3", "Q4"],
+        key="quarter",
+        bind="query-params",
+        disabled=True,
+    )
+
+home_page = st.Page(home, title="Home", default=True)
+report_page = st.Page(report, title="Report", url_path="report")
+st.navigation([home_page, report_page]).run()
+"""
+
 _CONTEXT_SCRIPT: Final = """
 import streamlit as st
 from tests.streamlit.runtime.agent import run_gate
@@ -676,6 +698,36 @@ async def test_an_unknown_page_later_is_refused_before_anything_runs(
 
 
 @pytest.mark.anyio
+async def test_navigation_cannot_set_a_disabled_bound_widget(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """`query_params` cannot set a widget the app shows as disabled, as
+    `widget_state` cannot. The widget keeps its default and the parameter goes.
+    """
+    async with _running_app(tmp_path, options, _LOCKED_FILTER_SCRIPT) as app:
+        created = await app.call(
+            {"page": "report", "query_params": {"quarter": ["Q3"]}}
+        )
+        home_path = next(
+            page["url_path"] for page in created["pages"] if page["title"] == "Home"
+        )
+        handle = created["session_id"]
+        await app.call({"session_id": handle, "page": home_path})
+        navigated = await app.call(
+            {
+                "session_id": handle,
+                "page": "report",
+                "query_params": {"quarter": ["Q2"]},
+            }
+        )
+
+    for document in (created, navigated):
+        assert "page=report" in _texts(document)
+        assert _keyed(document, "quarter")["value"] == "Q1"
+        assert "quarter" not in document["query_params"]
+
+
+@pytest.mark.anyio
 async def test_following_a_page_link(tmp_path: Path, options: dict[str, Any]) -> None:
     """A page link's `page` and `query_params` are a request as they stand."""
     async with _running_app(tmp_path, options, _NAVIGATION_SCRIPT) as app:
@@ -1169,6 +1221,68 @@ async def test_sending_every_reported_value_back_changes_nothing(
     assert len(reported) == 25
     assert _line(echoed, "changed") == "[]"
     assert {key: _keyed(echoed, key)["value"] for key in reported} == reported
+
+
+@pytest.mark.anyio
+async def test_sending_back_a_shared_label_keeps_the_held_option(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Each widget holds "a", which it shows as "A", as it shows the option "A".
+
+    Sending that label back runs no `on_change`, and the widget keeps "a"
+    instead of the last option with the label.
+    """
+    script = """
+    import streamlit as st
+
+    st.session_state.setdefault("changed", [])
+
+    def changed(key):
+        st.session_state.changed.append(key)
+
+    def widget(command, *args, key, **kwargs):
+        command(
+            key,
+            ["a", "A", "b"],
+            *args,
+            format_func=str.upper,
+            key=key,
+            on_change=changed,
+            args=(key,),
+            **kwargs,
+        )
+
+    widget(st.selectbox, key="select")
+    widget(st.radio, key="radio")
+    widget(st.pills, key="pills", default="a")
+    widget(st.select_slider, key="size", value="a")
+    widget(st.multiselect, key="many", default=["a"])
+    held = {key: st.session_state[key] for key in ("select", "radio", "pills", "size", "many")}
+    st.text(f"changed={st.session_state.changed}")
+    st.text(f"held={held}")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call()
+        reported = {
+            action["key"]: _keyed(first, action["key"])["value"]
+            for action in first["actions"]
+            if action["kind"] == "value"
+        }
+        echoed = await app.call(
+            {"session_id": first["session_id"], "widget_state": reported}
+        )
+
+    assert reported == {
+        "select": "A",
+        "radio": "A",
+        "pills": "A",
+        "size": "A",
+        "many": ["A"],
+    }
+    assert _line(echoed, "changed") == "[]"
+    assert _line(echoed, "held") == (
+        "{'select': 'a', 'radio': 'a', 'pills': 'a', 'size': 'a', 'many': ['a']}"
+    )
 
 
 @pytest.mark.anyio

@@ -36,6 +36,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state.widget_checks import Violation
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -377,10 +378,10 @@ def test_time_input_interaction():
     assert time_input.value is None
 
 
-def test_required_time_input_accepts_apptest_none() -> None:
-    """AppTest can still set None on a required time input.
+def test_required_time_input_cannot_be_emptied_in_app_test() -> None:
+    """A required time input keeps its empty default but cannot be emptied again.
 
-    Required is enforced in the browser. A test client bypasses that check.
+    AppTest sends values through the same check a browser value passes.
     """
 
     def script():
@@ -393,8 +394,11 @@ def test_required_time_input_accepts_apptest_none() -> None:
     assert time_input.value is None
 
     at = time_input.set_value(None).run()
-    time_input = at.time_input[0]
-    assert time_input.value is None
+    assert at.time_input[0].value is None
+
+    at = at.time_input[0].set_value(time(8, 45)).run()
+    at = at.time_input[0].set_value(None).run()
+    assert at.time_input[0].value == time(8, 45)
 
 
 def test_time_input_interaction_with_seconds():
@@ -501,11 +505,51 @@ class TestTimeInputSerdeDeserialization:
         result = serde.deserialize("09:10")
         assert result == time(9, 10)
 
-    def test_deserialize_invalid_format_reverts_to_default(self):
-        """Test that unparseable strings revert to the default value."""
+    def test_deserialize_invalid_format_raises(self) -> None:
+        """Unparseable text raises, which URL seeding catches and clears."""
         serde = TimeInputSerde(value=time(8, 45))
-        result = serde.deserialize("not-a-time")
-        assert result == time(8, 45)
+        with pytest.raises(ValueError, match="does not match format"):
+            serde.deserialize("not-a-time")
+
+    @pytest.mark.parametrize(
+        ("ui_value", "step", "is_valid"),
+        [
+            (None, 900, True),
+            ("14:30", 900, True),
+            # Either layout is accepted for any step.
+            ("14:30:00", 60, True),
+            ("14:30", 30, True),
+            ("14:30:15", 30, True),
+            ("24:00", 900, False),
+            ("2:30", 900, False),
+            ("14:30\n", 900, False),
+            ("14:30:00.5", 30, False),
+        ],
+    )
+    def test_validate(self, ui_value: str | None, step: int, is_valid: bool) -> None:
+        """HH:MM and HH:MM:SS, as the browser sends them."""
+        violation = TimeInputSerde(value=time(8, 45), step=step).validate(ui_value)
+        assert (violation is None) is is_valid
+        if not is_valid:
+            assert violation is not None
+            assert violation.kind == "malformed"
+
+    @pytest.mark.parametrize(
+        ("default", "ui_value", "empty"),
+        [
+            # An unset value reads as the default.
+            (None, None, True),
+            (time(8, 45), None, False),
+            (None, "14:30", False),
+        ],
+    )
+    def test_validate_refuses_emptying_a_required_input(
+        self, default: time | None, ui_value: str | None, empty: bool
+    ) -> None:
+        """A required time input is empty only when it reads as no default."""
+        violation = TimeInputSerde(value=default, required=True).validate(ui_value)
+        assert violation == (Violation("empty_required") if empty else None)
+        assert TimeInputSerde(value=default).validate(ui_value) is None
 
 
 @pytest.mark.parametrize(

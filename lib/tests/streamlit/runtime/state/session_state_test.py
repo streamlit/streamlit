@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import unittest
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -51,6 +52,7 @@ from streamlit.proto.Common_pb2 import (
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime import runtime_util
+from streamlit.runtime.fragment import MemoryFragmentStorage, _FragmentLifetime
 from streamlit.runtime.runtime_util import WidgetStateSizeError
 from streamlit.runtime.scriptrunner import RerunData, RerunException, get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_requests import (
@@ -62,7 +64,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
 )
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
-from streamlit.runtime.state import SessionState, get_session_state
+from streamlit.runtime.state import SessionState, get_session_state, widget_checks
 from streamlit.runtime.state.common import (
     GENERATED_ELEMENT_ID_PREFIX,
     BindOption,
@@ -86,11 +88,33 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
 
 def identity(x):
     return x
+
+
+def _changed_ids(ss: SessionState) -> list[str]:
+    """The staged widget values that differ from the previous run's.
+
+    Tests that stage values directly and call ``_call_callbacks`` bypass the
+    boundary check, which is what reports the changed IDs.
+    """
+    return [
+        widget_id
+        for widget_id in ss._new_widget_state
+        if ss._new_widget_state.get(widget_id) != ss._old_state.get(widget_id)
+    ]
+
+
+def _render(ss: SessionState, *widget_ids: str) -> None:
+    """Mark widgets as rendered, as registering them in a run does.
+
+    Tests that set metadata directly need it for a change to pass the
+    boundary check.
+    """
+    ss._new_widget_state.rendered_ids.update(widget_ids)
 
 
 def _raw_session_state() -> SessionState:
@@ -108,6 +132,7 @@ def _create_test_widget_metadata(
     formatted_options: list[str] | None = None,
     clearable: bool = False,
     max_array_length: int | None = None,
+    validator=None,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for query param binding tests."""
     return WidgetMetadata(
@@ -119,6 +144,7 @@ def _create_test_widget_metadata(
         formatted_options=formatted_options,
         clearable=clearable,
         max_array_length=max_array_length,
+        validator=validator,
     )
 
 
@@ -201,7 +227,52 @@ class WStateTests(unittest.TestCase):
     def test_getitem_serialized(self):
         assert isinstance(self.wstates.states["widget_id_1"], Serialized)
         assert self.wstates["widget_id_1"] == "5"
-        assert self.wstates.states["widget_id_1"] == Value("5")
+        assert self.wstates.states["widget_id_1"] == Value("5", "int_value")
+
+    def test_getitem_keeps_the_registered_value_type(self) -> None:
+        """Reading a value that arrived in another field leaves value_type alone."""
+        widget_state = WidgetStateProto(id="widget_id_1", double_value=5.0)
+        self.wstates.set_widget_from_proto(widget_state)
+
+        assert self.wstates["widget_id_1"] == "5.0"
+        assert self.wstates.widget_metadata["widget_id_1"].value_type == "int_value"
+        assert self.wstates.states["widget_id_1"] == Value("5.0", "double_value")
+
+    def test_get_serialized_writes_the_field_the_value_arrived_in(self) -> None:
+        """A value is serialized back to its arrived field, not the registered one."""
+        self.wstates.cache_value("widget_id_2", 5, "double_value")
+
+        serialized = self.wstates.get_serialized("widget_id_2")
+
+        assert serialized.WhichOneof("value") == "double_value"
+        assert serialized.double_value == 5.0
+
+    def test_get_serialized_component_bytes(self) -> None:
+        """A Components v1 value that arrived as bytes is serialized as bytes."""
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="component",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="json_value",
+            )
+        )
+        self.wstates.set_widget_from_proto(
+            WidgetStateProto(id="component", bytes_value=b"\x00\x01")
+        )
+        assert self.wstates["component"] == b"\x00\x01"
+
+        serialized = self.wstates.get_serialized("component")
+
+        assert serialized.bytes_value == b"\x00\x01"
+
+    def test_drop(self) -> None:
+        """drop forgets a value and ignores an unknown ID."""
+        self.wstates.drop("widget_id_2")
+        self.wstates.drop("unknown")
+
+        assert "widget_id_2" not in self.wstates.states
+        assert "widget_id_2" in self.wstates.widget_metadata
 
     def test_getitem_value(self):
         assert self.wstates["widget_id_2"] == 5
@@ -1091,7 +1162,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
 
     ss._set_widget_metadata(meta)
     ss._old_state[wid] = 1
-    ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
+    ss._new_widget_state.set_from_value(wid, 2)  # a changed value
 
     mock_ctx = MagicMock()
     # Self-contained: initialize ThreadState so this test doesn't depend on
@@ -1102,7 +1173,7 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert ThreadState.get().in_fragment_callback is False
     # Rerun is re-queued rather than swallowed.
@@ -1140,7 +1211,7 @@ def test_on_change_callback_rerun_is_requeued() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 1
 
@@ -1167,7 +1238,7 @@ def test_normal_callback_return_queues_no_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     mock_ctx.script_requests.request_rerun_batch.assert_not_called()
 
@@ -1204,7 +1275,7 @@ def test_plain_rerun_plus_normal_callback_queues_one_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the re-queued rerun from the explicit st.rerun() call. No extra forced
     # rerun because neither callback requested a targeted rerun — no conflict.
@@ -1243,7 +1314,7 @@ def test_fragment_widget_callback_rerun_is_requeued() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 1
 
@@ -1256,13 +1327,9 @@ _CURRENT_PAGE_HASH = "current-page-hash"
 
 
 def _state_with_changed_widgets(
-    widgets: list[tuple[str, Callable[[], None] | None]], *, disabled: bool = False
+    widgets: list[tuple[str, Callable[[], None] | None]],
 ) -> SessionState:
-    """Build a SessionState where every listed widget changed, with the given callbacks.
-
-    ``disabled`` applies to the callback-less widgets only, so a test can
-    verify that disabled widgets are filtered from processing.
-    """
+    """Build a SessionState where every listed widget changed, with the given callbacks."""
     ss = SessionState()
     for wid, cb in widgets:
         ss._set_widget_metadata(
@@ -1272,7 +1339,6 @@ def _state_with_changed_widgets(
                 serializer=lambda v: v,
                 value_type="int_value",
                 callback=cb,
-                disabled=disabled and cb is None,
             )
         )
         ss._old_state[wid] = 0
@@ -1299,7 +1365,7 @@ def _call_callbacks_in_main_script(ss: SessionState) -> list[RerunData]:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     return requeue_calls
 
@@ -1346,7 +1412,7 @@ def test_contextless_callback_dispatch_does_not_raise() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=None,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     normal_callback.assert_called_once_with()
 
@@ -1396,7 +1462,7 @@ def test_fragment_origin_target_with_callback_less_change_does_not_escalate() ->
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the composing targeted re-queue; no full-app escalation.
     assert len(requeue_calls) == 1
@@ -1481,7 +1547,7 @@ def test_forced_full_app_rerun_carries_only_replay_trigger_states() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     assert len(requeue_calls) == 2
     forced = requeue_calls[-1]
@@ -1561,7 +1627,7 @@ def test_callback_session_state_mutation_survives_escalation_replay() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # The escalated rerun must NOT include the text_input's string_value.
     assert len(requeue_calls) == 2
@@ -1618,6 +1684,7 @@ def test_fresh_callbacks_run_before_replay_overlay() -> None:
             )
         )
         ss._old_state[wid] = False
+    _render(ss, "fresh", "replay")
 
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="fresh", trigger_value=True)
@@ -1646,6 +1713,7 @@ def test_active_fresh_trigger_wins_over_replay_with_same_id() -> None:
         )
     )
     ss._old_state["trigger"] = None
+    _render(ss, "trigger")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="trigger").string_trigger_value.data = "new"
     replay = WidgetStatesProto()
@@ -1672,6 +1740,7 @@ def test_active_fresh_chat_wins_over_hydrated_replay_with_same_id() -> None:
         )
     )
     ss._old_state["chat"] = None
+    _render(ss, "chat")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="chat").chat_input_value.data = "new"
     replay = WidgetStatesProto()
@@ -1769,6 +1838,7 @@ def test_callback_mutation_survives_replay_overlay() -> None:
         )
     )
     ss._old_state["replay"] = False
+    _render(ss, "fresh", "replay")
     fresh = WidgetStatesProto()
     fresh.widgets.add(id="fresh", trigger_value=True)
     replay = WidgetStatesProto()
@@ -1794,7 +1864,7 @@ def test_preempting_callback_batch_carries_incoming_replay_state() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(incoming_replay_trigger_states=replay)
+        ss._call_callbacks(_changed_ids(ss), incoming_replay_trigger_states=replay)
 
     mock_ctx.script_requests.request_rerun.assert_not_called()
     mock_ctx.script_requests.request_rerun_batch.assert_called_once()
@@ -1818,6 +1888,7 @@ def test_preempting_callback_batch_carries_hydrated_chat_replay() -> None:
         return_value=mock_ctx,
     ):
         ss._call_callbacks(
+            _changed_ids(ss),
             incoming_replay_trigger_states=replay,
             incoming_replay_trigger_values={"chat": hydrated_chat},
         )
@@ -1842,7 +1913,7 @@ def test_targeted_callback_batch_replays_current_interaction_trigger() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     assert batch[0].replay_trigger_states == interaction
@@ -1897,7 +1968,7 @@ def test_targeted_chat_replay_preserves_hydrated_uploaded_files() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     rerun_data = batch[0]
@@ -2048,7 +2119,7 @@ def test_app_wide_escalation_preserves_hydrated_chat_through_request_queue() -> 
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     request = script_requests.on_scriptrunner_yield()
     assert request is not None
@@ -2073,7 +2144,9 @@ def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> 
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks(incoming_replay_trigger_states=incoming_replay)
+        ss._call_callbacks(
+            _changed_ids(ss), incoming_replay_trigger_states=incoming_replay
+        )
 
     batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
     replay = batch[0].replay_trigger_states
@@ -2087,14 +2160,47 @@ def test_targeted_preemption_combines_incoming_and_current_replay_triggers() -> 
 def test_disabled_widget_change_does_not_force_app_wide_rerun() -> None:
     """A disabled widget's reported change is forged or stale, so it is ignored.
 
-    The disabled check prevents stale or forged widget values from being processed.
+    The boundary check refuses it, so its callback cannot vote for the
+    interaction's default rerun and escalate the targeted one.
     """
-
-    ss = _state_with_changed_widgets(
-        [("field", None), ("submit", _raise_targeted_rerun)], disabled=True
+    requeue_calls: list[RerunData] = []
+    ss = SessionState()
+    for wid, callback, disabled in [
+        ("field", lambda: None, True),
+        ("submit", _raise_targeted_rerun, False),
+    ]:
+        ss._set_widget_metadata(
+            WidgetMetadata(
+                id=wid,
+                deserializer=lambda v: v,
+                serializer=lambda v: v,
+                value_type="int_value",
+                callback=callback,
+                disabled=disabled,
+            )
+        )
+        ss._old_state[wid] = 0
+    _render(ss, "field", "submit")
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = None
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    mock_ctx.script_requests.request_rerun_batch.side_effect = lambda batch: (
+        requeue_calls.extend(batch)
     )
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
 
-    requeue_calls = _call_callbacks_in_main_script(ss)
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[
+                    WidgetStateProto(id="field", int_value=1),
+                    WidgetStateProto(id="submit", int_value=1),
+                ]
+            )
+        )
 
     assert len(requeue_calls) == 1
     assert requeue_calls[0].fragment_id_queue == ["other-frag"]
@@ -2146,7 +2252,7 @@ def test_main_script_interaction_escalates_targeted_rerun_to_full_app() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # The targeted re-queue plus one forced full-app rerun.
     assert len(requeue_calls) == 2
@@ -2198,7 +2304,7 @@ def test_fragment_interaction_does_not_escalate_targeted_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the targeted re-queue: the fragment-scoped default was not escalated.
     assert len(requeue_calls) == 1
@@ -2251,7 +2357,7 @@ def test_callbacks_all_targeted_do_not_force_full_app_rerun() -> None:
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     # Only the two targeted re-queues; no forced full-app rerun was added.
     assert len(requeue_calls) == 2
@@ -2340,7 +2446,7 @@ def _coalesce_callback_requests(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=mock_ctx,
     ):
-        ss._call_callbacks()
+        ss._call_callbacks(_changed_ids(ss))
 
     request = script_requests.on_scriptrunner_ready()
     assert request.type is ScriptRequestType.RERUN
@@ -2774,6 +2880,18 @@ class SessionStateMethodTests(unittest.TestCase):
         with pytest.raises(KeyError):
             wstates["baz"]
 
+    def test_compact_state_drops_values_without_metadata(self) -> None:
+        """Compaction drops every widget value, including ones it cannot read."""
+        wstates = WStates()
+        wstates.set_widget_from_proto(WidgetStateProto(id="no_metadata", int_value=1))
+        wstates.set_from_value("readable", 2)
+        session_state = SessionState({}, {}, wstates)
+
+        session_state._compact_state()
+
+        assert wstates.states == {}
+        assert session_state._old_state == {"readable": 2}
+
     def test_set_widgets_from_proto_rejects_oversized_widget_state(self):
         widget_state = WidgetStateProto()
         widget_state.id = "large_widget"
@@ -2948,11 +3066,6 @@ class SessionStateMethodTests(unittest.TestCase):
 
         with pytest.raises(KeyError):
             del self.session_state["nonexistent"]
-
-    def test_widget_changed(self):
-        assert self.session_state._widget_changed("foo")
-        self.session_state._new_widget_state.set_from_value("foo", "bar")
-        assert not self.session_state._widget_changed("foo")
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -3173,8 +3286,9 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
             assert stat.category_name == "st_session_state"
 
             # The expected size of the session state in bytes.
-            # It composes of the session_state's fields.
-            expected_session_state_size_bytes = 3000
+            # It composes of the session_state's fields, including the empty
+            # sets the client value checks keep per session.
+            expected_session_state_size_bytes = 3500
 
             init_size = stat.byte_length
             assert init_size < expected_session_state_size_bytes
@@ -3318,7 +3432,6 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
     def cb_b() -> None:
         calls.append("b")
 
-    ss = SessionState()
     wid = "w-json"
     meta = WidgetMetadata(
         id=wid,
@@ -3328,15 +3441,12 @@ def test_per_key_callbacks_only_fire_for_changed_keys() -> None:
         callbacks={"a": cb_a, "b": cb_b},
     )
 
-    # Register metadata
-    ss._set_widget_metadata(meta)
-
     # Old state: {value: {a:1, b:2}}
-    ss._old_state[wid] = {"value": {"a": 1, "b": 2}}
+    ss = _session_with(meta, old_state={wid: {"value": {"a": 1, "b": 2}}})
     # New state: {value: {a:1, b:3}}
     ss._new_widget_state.set_from_value(wid, {"value": {"a": 1, "b": 3}})
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
     assert calls == ["b"]
 
 
@@ -3352,9 +3462,8 @@ def test_json_change_callbacks_treat_non_dict_values_as_empty(
 ) -> None:
     """A non-dict JSON value counts as empty, so every key on the other side fires."""
     calls: list[str] = []
-    ss = SessionState()
     wid = "w-json"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=lambda v: v,
@@ -3365,12 +3474,12 @@ def test_json_change_callbacks_treat_non_dict_values_as_empty(
                 "b": lambda: calls.append("b"),
                 "c": lambda: calls.append("c"),
             },
-        )
+        ),
+        old_state={wid: old_value},
     )
-    ss._old_state[wid] = old_value
     ss._new_widget_state.set_from_value(wid, new_value)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
 
     assert sorted(calls) == expected_calls
 
@@ -3390,7 +3499,6 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
     def cb_submit() -> None:
         called.append("submit")
 
-    ss = SessionState()
     wid = "w-trig"
     meta = WidgetMetadata(
         id=wid,
@@ -3400,24 +3508,22 @@ def test_json_trigger_aggregator_routes_to_named_callback() -> None:
         value_type="json_trigger_value",
         callbacks={"click": cb_click, "submit": cb_submit},
     )
-
-    ss._set_widget_metadata(meta)
+    ss = _session_with(meta)
 
     # Emulate serialized proto received from frontend
     ws = WidgetStateProto(id=wid)
     ws.json_trigger_value = json.dumps({"event": "submit"})
     ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
     assert called == ["submit"]
 
 
 def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
     """A list payload runs each named callback in order and skips other entries."""
     called: list[str] = []
-    ss = SessionState()
     wid = "w-trig"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=lambda s: json.loads(s) if s else None,
@@ -3435,13 +3541,17 @@ def test_json_trigger_aggregator_dispatches_each_event_in_a_list() -> None:
     )
     ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss._call_callbacks(_changed_ids(ss))
 
     assert called == ["submit", "click"]
 
 
 def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> None:
-    """A trigger payload that fails to deserialize with KeyError runs no callback."""
+    """A trigger payload that fails to deserialize with KeyError runs no callback.
+
+    The boundary check refuses the payload as unreadable, so it never reaches
+    callback dispatch.
+    """
     called: list[str] = []
 
     def failing_deserializer(value: str | None) -> Any:
@@ -3449,9 +3559,8 @@ def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> N
             return None
         raise KeyError("event")
 
-    ss = SessionState()
     wid = "w-trig"
-    ss._set_widget_metadata(
+    ss = _session_with(
         WidgetMetadata(
             id=wid,
             deserializer=failing_deserializer,
@@ -3462,11 +3571,11 @@ def test_json_trigger_ignores_payload_whose_deserializer_raises_key_error() -> N
     )
     ws = WidgetStateProto(id=wid)
     ws.json_trigger_value = json.dumps({"event": "submit"})
-    ss._new_widget_state.set_widget_from_proto(ws)
 
-    ss._call_callbacks()
+    ss.on_script_will_rerun(_message(ws))
 
     assert called == []
+    assert ss._rejected_client_values == frozenset({wid})
 
 
 def test_trigger_dispatch_ignores_widget_without_state() -> None:
@@ -3528,6 +3637,28 @@ def test_json_trigger_value_gets_reset():
     assert isinstance(new_value, Value)
     assert new_value.value is None
     assert ss._old_state[widget_id] is None
+
+
+def test_reset_triggers_resets_a_button_read_from_another_field() -> None:
+    """A button stays a trigger after reading a value sent in another field."""
+    ss = SessionState()
+    ss._set_widget_metadata(
+        WidgetMetadata(
+            id="button",
+            deserializer=lambda value: value,
+            serializer=lambda value: value,
+            value_type="trigger_value",
+        )
+    )
+    ss._new_widget_state.set_widget_from_proto(
+        WidgetStateProto(id="button", string_value="x")
+    )
+    assert ss._new_widget_state["button"] == "x"
+
+    ss._reset_triggers()
+
+    assert ss._new_widget_state["button"] is False
+    assert ss._get_widget_metadata("button").value_type == "trigger_value"
 
 
 # endregion Multiple callbacks
@@ -3706,6 +3837,11 @@ class MockScriptRunCtx:
     fragment_ids_this_run: list[str] | None = None
     page_script_hash: str = "page_1_hash"
     is_history_navigation: bool = False
+    # No script requests, so a callback's rerun request is not queued.
+    script_requests: None = None
+    fragment_storage: MemoryFragmentStorage = field(
+        default_factory=MemoryFragmentStorage
+    )
 
 
 class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
@@ -3773,6 +3909,7 @@ class OmitQueryBoundWidgetStatesTest(DeltaGeneratorTestCase):
         )
         self.session_state._old_state["bound_widget"] = "previous"
         self.session_state._old_state["plain_widget"] = "previous"
+        _render(self.session_state, "bound_widget", "plain_widget")
 
         self.session_state.on_script_will_rerun(
             widget_states, is_history_navigation=True
@@ -5379,21 +5516,19 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "my_bool" not in self.query_params._query_params
 
-    def test_seed_widget_clears_invalid_value_that_falls_back_to_default(self) -> None:
-        """Test that invalid URL values are cleared when deserializer falls back."""
+    def test_seed_widget_clears_a_value_the_validator_refuses(self) -> None:
+        """A deserializer passes an invalid value through, and validate refuses it."""
         self.query_params._query_params["color"] = "invalid"
-
-        def color_deserializer(value):
-            default = "#000000"
-            if value is None:
-                return default
-            return value if value.startswith("#") else default
 
         metadata = _create_test_widget_metadata(
             "widget_1",
             value_type="string_value",
-            deserializer=color_deserializer,
-            serializer=lambda x: x,
+            deserializer=lambda value: "#000000" if value is None else value,
+            validator=lambda ui_value, **_kwargs: (
+                None
+                if ui_value.startswith("#")
+                else widget_checks.Violation("malformed")
+            ),
         )
 
         seeded = self.session_state._seed_widget_from_url(
@@ -5402,6 +5537,27 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "color" not in self.query_params._query_params
+        assert "widget_1" not in self.session_state._new_widget_state
+
+    def test_seed_widget_sorts_a_reversed_range(self) -> None:
+        """A range with reversed ends is sorted and checked again."""
+        self.query_params._query_params["span"] = ["80", "20"]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="double_array_value",
+            deserializer=lambda value: (0.0, 100.0) if value is None else tuple(value),
+            serializer=list,
+            validator=lambda ui_value, **_kwargs: widget_checks.ordered(ui_value),
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "span", "widget_1", ["80", "20"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == (20.0, 80.0)
+        assert self.query_params._query_params["span"] == ["20", "80"]
 
     def test_seed_widget_clears_valid_value_that_equals_default(self) -> None:
         """Test that valid URL values matching the default are cleared from the URL."""
@@ -6017,14 +6173,20 @@ def _create_disabled_test_metadata(
 class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     """Server-side enforcement of the ``disabled`` widget parameter.
 
-    A disabled widget cannot be interacted with in the browser, so any value
-    arriving from the frontend (e.g. from a stale UI or a forged BackMsg) must
-    be ignored while resolving the widget's value during registration.
+    A disabled widget cannot be interacted with in the browser, so a client
+    value sent while it was disabled (e.g. from a stale UI or a forged BackMsg)
+    is refused at the boundary, before the widget registers again.
     """
 
     def setUp(self) -> None:
         super().setUp()
         self.session_state = SessionState()
+
+    def _send(self, widget_id: str, **field: Any) -> None:
+        """Deliver a client message holding one widget state."""
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(widgets=[WidgetStateProto(id=widget_id, **field)])
+        )
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6033,18 +6195,18 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_discards_incoming_value_for_disabled_widget(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A frontend value for a disabled widget is dropped, keeping the
-        widget's previous value, and the frontend is flagged for re-sync."""
+        """A client value for a disabled widget is dropped, keeping the
+        widget's previous value, and the frontend is flagged for re-sync.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
         # Run 1: register (seeds default), then a legit user value is stored.
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
 
-        # Run 2: the frontend sends a (forged) value while the widget is disabled.
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        # Run 2: the client sends a (forged) value while the widget is disabled.
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "user_value"
@@ -6059,18 +6221,18 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_accepts_incoming_value_for_enabled_widget(
         self, mock_ctx: MagicMock
     ) -> None:
-        """An enabled widget still accepts frontend values (anti-regression)."""
+        """An enabled widget still accepts client values (anti-regression)."""
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=False)
 
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="sent_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "forged_value"
+        assert result.value == "sent_value"
+        assert result.value_changed is False
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6078,14 +6240,17 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     )
     def test_disabled_widget_first_run_uses_default(self, mock_ctx: MagicMock) -> None:
         """On first registration a disabled widget falls back to its default,
-        even if a value is already present (e.g. from a reconnecting client)."""
+        even if a client sent a value (e.g. a browser reconnecting to a new
+        session). The value is checked against this run's metadata.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "default"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6095,19 +6260,19 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
         self, mock_ctx: MagicMock
     ) -> None:
         """A programmatic st.session_state assignment is honored for a disabled
-        widget; only frontend-provided values are discarded."""
+        widget; only client values are refused.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key="cb")
-        self.session_state._compact_state()
 
-        # App sets the value programmatically, and the frontend also sends one.
+        # The client sends a value, then the app sets one programmatically.
+        self._send(widget_id, string_value="forged_value")
         self.session_state._new_session_state["cb"] = "programmatic"
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "programmatic"
+        assert result.value_changed is True
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6116,29 +6281,19 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_widget_drops_forged_value_alongside_programmatic_set(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A forged frontend value must not linger in widget state (or expose its
-        wire label) when a programmatic st.session_state assignment coexists. The
-        programmatic value still wins resolution, but the discarded frontend value
-        is removed from ``_new_widget_state`` rather than lingering until the next
-        compaction."""
+        """A forged client value must not linger in widget state (or expose its
+        wire label) when a programmatic st.session_state assignment coexists.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key="cb")
-        self.session_state._compact_state()
 
-        # App sets the value programmatically; the frontend also submits a forged
-        # value (delivered as a proto so its wire label is captured).
+        self._send(widget_id, string_value="forged_value")
         self.session_state._new_session_state["cb"] = "programmatic"
-        forged_proto = WidgetStateProto()
-        forged_proto.id = widget_id
-        forged_proto.string_value = "forged_value"
-        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "programmatic"
         assert result.incoming_serialized_value is None
-        # The forged frontend value must not linger in the current widget state.
         assert widget_id not in self.session_state._new_widget_state.states
 
     @patch(
@@ -6148,33 +6303,41 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_keyless_widget_discards_incoming_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """Keyless disabled widgets also drop frontend values."""
+        """Keyless disabled widgets also refuse client values."""
         widget_id = "$$ID-hash-None"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
-
         self.session_state.register_widget(metadata, user_key=None)
-        self.session_state._compact_state()
 
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
         result = self.session_state.register_widget(metadata, user_key=None)
 
         assert result.value == "default"
+        assert result.value_changed is True
+
+    def _page_info_queries(self) -> list[str]:
+        """The query strings of the page_info_changed messages sent so far."""
+        return [
+            msg.page_info_changed.query_string
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("page_info_changed")
+        ]
+
+    def _load_url(self, query_string: str) -> None:
+        """Set the URL the client reports, as a rerun request does."""
+        ThreadState.update(active_script_hash="main_hash")
+        self.session_state.query_params.populate_from_query_string(query_string)
+        self.session_state.query_params.set_initial_query_params(query_string)
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_disabled_url_bound_widget_keeps_seeded_value(
+    def test_disabled_url_bound_widget_ignores_its_param_on_initial_load(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A URL-seeded value for a disabled ``bind='query-params'`` widget is
-        preserved, not discarded. URL seeding writes into both widget state and
-        session state, so it counts as a programmatic (app-driven) assignment
-        rather than a frontend interaction — the enforcement guard must not fire
-        (and must not raise) in this case."""
-        ThreadState.update(active_script_hash="main_hash")
-        self.session_state.query_params.set_initial_query_params("cb=url_value")
-
+        """A link cannot set a widget the app shows as disabled. The widget keeps
+        its default, and the parameter is removed from the browser's URL."""
+        self._load_url("cb=url_value&other=1")
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=True, bind="query-params"
@@ -6182,33 +6345,73 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
         result = self.session_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "url_value"
+        assert result.value == "default"
+        assert not self.session_state.query_params.has_param("cb")
+        assert self._page_info_queries() == ["other=1"]
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_disabled_url_bound_widget_url_wins_over_forged_value(
+    def test_disabled_url_bound_widget_ignores_url_and_forged_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """A disabled ``bind='query-params'`` widget seeds from the URL even when
-        the frontend also submits a (forged) value on first registration. URL
-        seeding normally yields to a frontend value, but a disabled widget can't
-        be interacted with, so the URL must win instead of the widget falling back
-        to its default."""
-        ThreadState.update(active_script_hash="main_hash")
-        self.session_state.query_params.set_initial_query_params("cb=url_value")
-
+        """Neither the URL nor a client value sets a disabled bound widget that
+        registers for the first time."""
+        self._load_url("cb=url_value")
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=True, bind="query-params"
         )
-        # The frontend also submits a value for the disabled, URL-bound widget.
-        self.session_state._new_widget_state.set_from_value(widget_id, "forged_value")
+        self._send(widget_id, string_value="forged_value")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "default"
+        assert result.value_changed is True
+        assert not self.session_state.query_params.has_param("cb")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(is_history_navigation=True),
+    )
+    def test_disabled_url_bound_widget_ignores_its_param_on_history_navigation(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Back/forward keeps a disabled widget's value and rewrites the URL to it."""
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=True, bind="query-params"
+        )
+        self.session_state._old_state[widget_id] = "previous"
+        self.session_state._query_param_bound_widget_ids.add(widget_id)
+        self._load_url("cb=from_history")
+
+        result = self.session_state.register_widget(metadata, user_key="cb")
+
+        assert result.value == "previous"
+        assert self.session_state.query_params.get("cb") == "previous"
+        assert self._page_info_queries() == ["cb=previous"]
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_enabled_url_bound_widget_seeds_from_its_param(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """An enabled bound widget still takes its value from the link (control)."""
+        self._load_url("cb=url_value")
+        widget_id = "$$ID-hash-cb"
+        metadata = _create_disabled_test_metadata(
+            widget_id, disabled=False, bind="query-params"
+        )
 
         result = self.session_state.register_widget(metadata, user_key="cb")
 
         assert result.value == "url_value"
+        assert self.session_state.query_params.get("cb") == "url_value"
+        assert self._page_info_queries() == []
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6217,30 +6420,37 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     def test_disabled_widget_clears_incoming_serialized_value(
         self, mock_ctx: MagicMock
     ) -> None:
-        """When a disabled widget's forged frontend value is discarded, the
+        """When a disabled widget's forged client value is refused, the
         captured wire label must not leak to the caller. Otherwise an
         option-based widget (e.g. st.selectbox) could reconcile options against
         the attacker-controlled label via ``resolve_value_against_options``,
-        handing back an option that differs from the preserved value."""
+        handing back an option that differs from the preserved value.
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=True)
 
-        # Run 1: register (seeds default), then a legit user value is stored.
+        # The boundary refuses a value for a widget an earlier run registered.
         self.session_state.register_widget(metadata, user_key="cb")
         self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
-        self.session_state._compact_state()
+        self._send(widget_id, string_value="forged_value")
+        refused_at_boundary = self.session_state.register_widget(
+            metadata, user_key="cb"
+        )
 
-        # Run 2: the frontend sends a (forged) value while the widget is
-        # disabled. Deliver it as a serialized proto, mirroring the real
-        # frontend flow so the wire label is actually captured.
-        forged_proto = WidgetStateProto()
-        forged_proto.id = widget_id
-        forged_proto.string_value = "forged_value"
-        self.session_state._new_widget_state.set_widget_from_proto(forged_proto)
-        result = self.session_state.register_widget(metadata, user_key="cb")
+        # Registration refuses a value for a widget this session never
+        # registered, which is still in its wire form when the label is read.
+        fresh_state = SessionState()
+        fresh_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[WidgetStateProto(id=widget_id, string_value="forged_value")]
+            )
+        )
+        refused_at_registration = fresh_state.register_widget(metadata, user_key="cb")
 
-        assert result.value == "user_value"
-        assert result.incoming_serialized_value is None
+        assert refused_at_boundary.value == "user_value"
+        assert refused_at_boundary.incoming_serialized_value is None
+        assert refused_at_registration.value == "default"
+        assert refused_at_registration.incoming_serialized_value is None
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -6251,7 +6461,8 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
     ) -> None:
         """An enabled widget still exposes the incoming wire label so callers
         can reconcile options against it (anti-regression for the disabled
-        wire-label fix, which must not affect the enabled path)."""
+        wire-label fix, which must not affect the enabled path).
+        """
         widget_id = "$$ID-hash-cb"
         metadata = _create_disabled_test_metadata(widget_id, disabled=False)
 
@@ -6265,37 +6476,41 @@ class DisabledWidgetEnforcementTest(DeltaGeneratorTestCase):
 
 
 class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
-    """A disabled widget's on-change callback must not fire for frontend
-    changes, guarding against forged values triggering side effects."""
+    """A disabled widget's on-change callback must not fire for client
+    changes, guarding against forged values triggering side effects.
+    """
 
     def setUp(self) -> None:
         super().setUp()
+        ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
         self.session_state = SessionState()
 
-    def _stage_changed_widget(self, *, disabled: bool, callback: Any) -> None:
+    def _send_change(self, *, disabled: bool, callback: Any) -> None:
         widget_id = "$$ID-hash-w"
         metadata = _create_disabled_test_metadata(
             widget_id, disabled=disabled, callback=callback
         )
         self.session_state._old_state[widget_id] = "old"
-        self.session_state._new_widget_state.set_from_value(widget_id, "new")
         self.session_state._new_widget_state.set_widget_metadata(metadata)
+        _render(self.session_state, widget_id)
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[WidgetStateProto(id=widget_id, string_value="new")]
+            )
+        )
 
     def test_disabled_widget_callback_is_suppressed(self) -> None:
         """The callback of a changed but disabled widget is not invoked."""
         callback = MagicMock()
-        self._stage_changed_widget(disabled=True, callback=callback)
-
-        self.session_state._call_callbacks()
+        self._send_change(disabled=True, callback=callback)
 
         callback.assert_not_called()
+        assert self.session_state["$$ID-hash-w"] == "old"
 
     def test_enabled_widget_callback_is_called(self) -> None:
         """A changed enabled widget still invokes its callback (control)."""
         callback = MagicMock()
-        self._stage_changed_widget(disabled=False, callback=callback)
-
-        self.session_state._call_callbacks()
+        self._send_change(disabled=False, callback=callback)
 
         callback.assert_called_once()
 
@@ -6316,11 +6531,17 @@ class DisabledWidgetCallbackTest(DeltaGeneratorTestCase):
         )
         self.session_state._set_widget_metadata(metadata)
         self.session_state._old_state[widget_id] = {"value": {"a": 1, "b": 2}}
-        self.session_state._new_widget_state.set_from_value(
-            widget_id, {"value": {"a": 1, "b": 3}}
-        )
+        _render(self.session_state, widget_id)
 
-        self.session_state._call_callbacks()
+        self.session_state.on_script_will_rerun(
+            WidgetStatesProto(
+                widgets=[
+                    WidgetStateProto(
+                        id=widget_id, json_value='{"value": {"a": 1, "b": 3}}'
+                    )
+                ]
+            )
+        )
 
         assert calls == []
 
@@ -6408,3 +6629,822 @@ class DisabledWidgetAppTest(unittest.TestCase):
         at.button[0].click().run()
 
         assert at.session_state["clicked"] is True
+
+
+# region Client value boundary
+
+
+def _boundary_metadata(
+    widget_id: str,
+    *,
+    value_type: str = "string_value",
+    callback: Callable[[], None] | None = None,
+    callbacks: dict[str, Callable[[], None]] | None = None,
+    fragment_id: str | None = None,
+) -> WidgetMetadata:
+    """String-widget metadata whose default is "default"."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=lambda value: "default" if value is None else value,
+        serializer=lambda value: value,
+        value_type=value_type,
+        callback=callback,
+        callbacks=callbacks,
+        fragment_id=fragment_id,
+    )
+
+
+def _session_with(
+    *metadata: WidgetMetadata, old_state: dict[str, Any] | None = None
+) -> SessionState:
+    """A SessionState that registered ``metadata`` and holds ``old_state``."""
+    ThreadState.initialize(run_location=RunLocation.MAIN_SCRIPT)
+    ss = SessionState()
+    for widget_metadata in metadata:
+        ss._set_widget_metadata(widget_metadata)
+        _render(ss, widget_metadata.id)
+    ss._old_state.update(old_state or {})
+    return ss
+
+
+def _message(*states: WidgetStateProto) -> WidgetStatesProto:
+    return WidgetStatesProto(widgets=list(states))
+
+
+@pytest.fixture
+def refusal_logs() -> Iterator[list[str]]:
+    """Collect the refusal messages widget_checks logs at warning level."""
+    collected: list[str] = []
+
+    class _Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            if record.levelno >= logging.WARNING:
+                collected.append(record.getMessage())
+
+    logger = logging.getLogger(widget_checks.__name__)
+    handler = _Collector()
+    logger.addHandler(handler)
+    try:
+        yield collected
+    finally:
+        logger.removeHandler(handler)
+
+
+def test_boundary_reports_only_changed_values() -> None:
+    """An unchanged value is cached without a callback; a changed one runs it."""
+    calls: list[str] = []
+    ss = _session_with(
+        _boundary_metadata("a", callback=lambda: calls.append("a")),
+        _boundary_metadata("b", callback=lambda: calls.append("b")),
+        old_state={"a": "old", "b": "same"},
+    )
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="b", string_value="same"),
+            WidgetStateProto(id="a", string_value="new"),
+        )
+    )
+
+    assert calls == ["a"]
+    assert ss._new_widget_state.states == {
+        "b": Value("same", "string_value"),
+        "a": Value("new", "string_value"),
+    }
+    assert ss._rejected_client_values == frozenset()
+
+
+def test_boundary_drops_a_value_in_the_wrong_field(
+    refusal_logs: list[str],
+) -> None:
+    """A wrong wire field keeps the previous value, runs no callback, and never raises."""
+    callback = MagicMock()
+    ss = _session_with(
+        _boundary_metadata("w", callback=callback), old_state={"w": "previous"}
+    )
+    forged = _message(WidgetStateProto(id="w", bool_value=True))
+
+    ss.on_script_will_rerun(forged)
+    ss.on_script_will_rerun(forged)
+
+    callback.assert_not_called()
+    assert "w" not in ss._new_widget_state.states
+    assert ss["w"] == "previous"
+    assert ss._rejected_client_values == frozenset({"w"})
+    assert ss._pending_resync == {"w"}
+    # Logged once per widget, without the value.
+    assert len(refusal_logs) == 1
+    assert "w (wrong_type)" in refusal_logs[0]
+    assert "True" not in refusal_logs[0]
+
+
+@pytest.mark.parametrize(
+    ("first", "last", "accepted"),
+    [
+        (
+            WidgetStateProto(id="w", bool_value=True),
+            WidgetStateProto(id="w", string_value="new"),
+            True,
+        ),
+        (
+            WidgetStateProto(id="w", string_value="new"),
+            WidgetStateProto(id="w", bool_value=True),
+            False,
+        ),
+    ],
+    ids=["legal_last", "forged_last"],
+)
+def test_boundary_judges_a_repeated_id_on_its_last_entry(
+    first: WidgetStateProto, last: WidgetStateProto, accepted: bool
+) -> None:
+    """Only the last entry of a repeated ID is checked, and its callback runs once."""
+    callback = MagicMock()
+    ss = _session_with(
+        _boundary_metadata("w", callback=callback), old_state={"w": "previous"}
+    )
+
+    ss.on_script_will_rerun(_message(first, last))
+
+    assert callback.call_count == (1 if accepted else 0)
+    assert ss["w"] == ("new" if accepted else "previous")
+
+
+def test_boundary_leaves_unknown_triggers_and_values_for_registration(
+    refusal_logs: list[str],
+) -> None:
+    """With no metadata, a trigger waits for registration, like a value."""
+    ss = _session_with()
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="button", trigger_value=True),
+            WidgetStateProto(id="text", string_value="restored"),
+        )
+    )
+
+    assert isinstance(ss._new_widget_state.states["button"], Serialized)
+    assert isinstance(ss._new_widget_state.states["text"], Serialized)
+    assert ss._unregistered_client_ids == {"button", "text"}
+    assert ss._rejected_client_values == frozenset()
+    assert refusal_logs == []
+
+
+def _button_metadata(
+    widget_id: str,
+    *,
+    callback: Callable[[], None] | None = None,
+    disabled: bool = False,
+    validator: Any = None,
+) -> WidgetMetadata:
+    """Metadata of a button, whose unfired state is False."""
+    return WidgetMetadata(
+        id=widget_id,
+        deserializer=bool,
+        serializer=bool,
+        value_type="trigger_value",
+        callback=callback,
+        disabled=disabled,
+        validator=validator,
+    )
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_counts_a_click_when_its_widget_registers(
+    _mock_ctx: MagicMock,
+) -> None:
+    """A click that is the first interaction after a reconnect is returned.
+
+    No widget had metadata when callbacks ran, so the click's callback does
+    not run, and the trigger resets at the end of the run.
+    """
+    callback = MagicMock()
+    ss = _session_with()
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="button", trigger_value=True)))
+    result = ss.register_widget(_button_metadata("button", callback=callback), None)
+
+    assert result.value is True
+    # A trigger resets anyway, so the browser needs no re-sync.
+    assert result.value_changed is False
+    callback.assert_not_called()
+    _finish_run(ss, "button")
+    assert ss["button"] is False
+
+
+@pytest.mark.parametrize(
+    ("metadata", "kind"),
+    [
+        (_button_metadata("button", disabled=True), "disabled"),
+        (
+            _button_metadata(
+                "button",
+                validator=lambda *_args, **_kwargs: widget_checks.Violation(
+                    "not_an_option"
+                ),
+            ),
+            "not_an_option",
+        ),
+    ],
+)
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_refuses_a_click_its_widget_does_not_accept(
+    _mock_ctx: MagicMock,
+    metadata: WidgetMetadata,
+    kind: str,
+    refusal_logs: list[str],
+) -> None:
+    """The check at registration still applies `disabled` and the validator."""
+    ss = _session_with()
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(WidgetStateProto(id="button", trigger_value=True))
+        )
+        result = ss.register_widget(metadata, None)
+
+    assert result.value is False
+    assert result.value_changed is False
+    assert len(refusal_logs) == 1
+    assert f"button ({kind})" in refusal_logs[0]
+
+
+def test_a_new_session_drops_a_click_whose_widget_never_registers() -> None:
+    """A trigger for a widget the run does not render is gone after the run."""
+    ss = _session_with()
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="button", trigger_value=True)))
+    _finish_run(ss, "other")
+
+    assert "button" not in ss._new_widget_state.states
+
+
+def test_replay_capture_skips_a_trigger_for_an_unregistered_widget() -> None:
+    """A trigger that waits for registration is not replayed past that check."""
+    ss = _session_with(
+        _boundary_metadata(
+            "target", value_type="trigger_value", callback=_raise_targeted_rerun
+        ),
+        old_state={"target": False},
+    )
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            _message(
+                WidgetStateProto(id="unregistered", trigger_value=True),
+                WidgetStateProto(id="target", trigger_value=True),
+            )
+        )
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert [state.id for state in replay.widgets] == ["target"]
+
+
+def test_callbacks_run_in_message_order() -> None:
+    """Accepted changes run their callbacks in the order the message lists them."""
+    calls: list[str] = []
+    ss = _session_with(
+        *(
+            _boundary_metadata(name, callback=lambda name=name: calls.append(name))
+            for name in ("x", "y", "z")
+        ),
+        old_state={"x": "old", "y": "old", "z": "old"},
+    )
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="z", string_value="new"),
+            WidgetStateProto(id="x", string_value="new"),
+            WidgetStateProto(id="y", string_value="new"),
+        )
+    )
+
+    assert calls == ["z", "x", "y"]
+
+
+def test_a_refused_components_v2_value_runs_no_key_callback() -> None:
+    """A dropped JSON state is not diffed against the old map as every key changing."""
+    calls: list[str] = []
+    ss = _session_with(
+        _boundary_metadata(
+            "component",
+            value_type="json_value",
+            callbacks={"a": lambda: calls.append("a"), "b": lambda: calls.append("b")},
+        ),
+        old_state={"component": {"value": {"a": 1, "b": 2}}},
+    )
+
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="component", bytes_value=b"forged"))
+    )
+
+    assert calls == []
+    assert ss["component"] == {"value": {"a": 1, "b": 2}}
+
+
+def test_replay_capture_skips_a_refused_trigger() -> None:
+    """A trigger refused beside a targeted rerun is not replayed in the next run."""
+    ss = _session_with(
+        _boundary_metadata(
+            "target", value_type="trigger_value", callback=_raise_targeted_rerun
+        ),
+        _boundary_metadata("forged", value_type="trigger_value"),
+        old_state={"target": False, "forged": False},
+    )
+    mock_ctx = MagicMock()
+    mock_ctx.fragment_ids_this_run = ["source"]
+    mock_ctx.page_script_hash = _CURRENT_PAGE_HASH
+    forged = WidgetStateProto(id="forged")
+    forged.string_trigger_value.data = "x"
+    refused_target = WidgetStateProto(id="target")
+    refused_target.string_trigger_value.data = "x"
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss.on_script_will_rerun(
+            _message(
+                # A refused entry for the target comes first, the legal click last.
+                refused_target,
+                forged,
+                WidgetStateProto(id="target", trigger_value=True),
+            )
+        )
+
+    batch = mock_ctx.script_requests.request_rerun_batch.call_args.args[0]
+    replay = batch[0].replay_trigger_states
+    assert [(state.id, state.trigger_value) for state in replay.widgets] == [
+        ("target", True)
+    ]
+
+
+def test_a_refused_fresh_trigger_does_not_block_a_replayed_one() -> None:
+    """A replayed trigger is overlaid when the fresh trigger for it was refused."""
+    ss = _session_with(
+        _boundary_metadata("button", value_type="trigger_value"),
+        old_state={"button": False},
+    )
+    forged = WidgetStateProto(id="button")
+    forged.string_trigger_value.data = "x"
+
+    ss.on_script_will_rerun(
+        _message(forged),
+        replay_trigger_states=_message(
+            WidgetStateProto(id="button", trigger_value=True)
+        ),
+    )
+
+    assert ss["button"] is True
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_registration_checks_a_value_for_a_widget_never_registered(
+    _mock_ctx: MagicMock,
+) -> None:
+    """A browser's map sent to a new session keeps its values and runs no callback."""
+    callback = MagicMock()
+    ss = _session_with()
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", string_value="kept")))
+
+    result = ss.register_widget(_boundary_metadata("w", callback=callback), None)
+
+    assert result.value == "kept"
+    assert result.value_changed is False
+    assert ss._new_widget_state.states["w"] == Value("kept", "string_value")
+    assert ss._unregistered_client_ids == set()
+    callback.assert_not_called()
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_registration_drops_a_refused_value_for_a_widget_never_registered(
+    _mock_ctx: MagicMock, refusal_logs: list[str]
+) -> None:
+    """A violating value in a new session falls back to the default and re-syncs."""
+    ss = _session_with()
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    result = ss.register_widget(_boundary_metadata("w"), "w")
+
+    assert result.value == "default"
+    assert result.value_changed is True
+    assert result.incoming_serialized_value is None
+    assert len(refusal_logs) == 1
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_refused_value_keeps_the_previous_value_and_resyncs_once(
+    _mock_ctx: MagicMock,
+) -> None:
+    """Registration reports the previous value as changed once, so the browser adopts it."""
+    metadata = _boundary_metadata("w")
+    ss = _session_with(metadata, old_state={"w": "previous"})
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    first = ss.register_widget(metadata, None)
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", string_value="previous")))
+    second = ss.register_widget(metadata, None)
+
+    assert (first.value, first.value_changed) == ("previous", True)
+    assert (second.value, second.value_changed) == ("previous", False)
+
+
+def test_a_stale_widget_leaves_the_resync_set() -> None:
+    """A refused widget that stops rendering is no longer waiting for a re-sync."""
+    ss = _session_with(_boundary_metadata("w"), old_state={"w": "previous"})
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="w", bool_value=True)))
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    ):
+        ss.on_script_finished(frozenset())
+
+    assert ss._pending_resync == set()
+
+
+def test_clear_resets_the_pending_client_value_sets() -> None:
+    """Clearing session state forgets refusals, warnings, and unchecked values."""
+    ss = _session_with(_boundary_metadata("w"), old_state={"w": "previous"})
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="w", bool_value=True),
+            WidgetStateProto(id="new", string_value="x"),
+        )
+    )
+    assert ss._warned_widget_ids == {"w"}
+
+    ss.clear()
+
+    assert ss._rejected_client_values == frozenset()
+    assert ss._pending_resync == set()
+    assert ss._unregistered_client_ids == set()
+    # A widget that registers again after a cache clear warns again.
+    assert ss._warned_widget_ids == set()
+
+
+# endregion Client value boundary
+
+# region Rendered widgets
+
+
+def _registered(*metadata: WidgetMetadata) -> SessionState:
+    """A SessionState in which a run registered ``metadata``."""
+    ss = _session_with()
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    ):
+        for widget_metadata in metadata:
+            ss.register_widget(widget_metadata, None)
+    return ss
+
+
+def _finish_run(
+    ss: SessionState,
+    *registered: str,
+    fragment_ids_this_run: list[str] | None = None,
+    remove_stale_widgets: bool = True,
+    fragments: MemoryFragmentStorage | None = None,
+) -> None:
+    """End a run that registered the widgets ``registered``.
+
+    ``fragments`` holds the session's fragments once the run has ended.
+    """
+    ctx = MockScriptRunCtx(fragment_ids_this_run=fragment_ids_this_run)
+    if fragments is not None:
+        ctx.fragment_storage = fragments
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=ctx,
+    ):
+        ss.on_script_finished(
+            frozenset(registered), remove_stale_widgets=remove_stale_widgets
+        )
+
+
+def test_registration_marks_a_widget_rendered() -> None:
+    """Registering adds the ID, and neither compaction nor a cache clear removes it."""
+    ss = _registered(_boundary_metadata("w"))
+
+    assert ss._new_widget_state.rendered_ids == {"w"}
+    ss.on_script_will_rerun(_message())
+    ss.clear()
+    assert ss._new_widget_state.rendered_ids == {"w"}
+
+
+def test_merging_widget_states_keeps_the_rendered_widgets() -> None:
+    """``WStates.update`` copies which widgets are rendered with their metadata."""
+    merged = _registered(_boundary_metadata("a"))
+    other = _registered(_boundary_metadata("b"))
+
+    merged._new_widget_state.update(other._new_widget_state)
+
+    assert merged._new_widget_state.rendered_ids == {"a", "b"}
+
+
+def test_a_full_run_forgets_the_widgets_it_did_not_register() -> None:
+    """A completed full run keeps only the rendered widgets it registered."""
+    ss = _registered(_boundary_metadata("shown"), _boundary_metadata("hidden"))
+
+    _finish_run(ss, "shown")
+
+    assert ss._new_widget_state.rendered_ids == {"shown"}
+
+
+def test_a_fragment_run_forgets_only_its_own_widgets() -> None:
+    """A fragment run covers its fragment's widgets, not the rest of the page."""
+    ss = _registered(
+        _boundary_metadata("outside"),
+        _boundary_metadata("kept", fragment_id="f"),
+        _boundary_metadata("hidden", fragment_id="f"),
+        _boundary_metadata("other_fragment", fragment_id="g"),
+    )
+
+    fragments = MemoryFragmentStorage()
+    fragments.register("f", MagicMock())
+    fragments.register("g", MagicMock())
+
+    _finish_run(ss, "kept", fragment_ids_this_run=["f"], fragments=fragments)
+
+    assert ss._new_widget_state.rendered_ids == {"outside", "kept", "other_fragment"}
+
+
+def test_a_fragment_run_forgets_the_widgets_of_nested_fragments_it_removed() -> None:
+    """A parent fragment that stops calling a nested one hides its widgets too.
+
+    The client asked only for the parent, so the nested fragment's ID is not in
+    fragment_ids_this_run, but the run removed it. A dialog the parent opened
+    is never removed by a fragment run and stays mounted with its widgets.
+    """
+    clicked = MagicMock()
+    ss = _registered(
+        _boundary_metadata(
+            "parent_button", value_type="trigger_value", fragment_id="parent"
+        ),
+        _boundary_metadata(
+            "child_button",
+            value_type="trigger_value",
+            callback=clicked,
+            fragment_id="child",
+        ),
+        _boundary_metadata("dialog_input", fragment_id="dialog"),
+        _boundary_metadata("other_input", fragment_id="other"),
+    )
+    fragments = MemoryFragmentStorage()
+    fragments.register("parent", MagicMock())
+    fragments.register("child", MagicMock(), parent_fragment_id="parent")
+    fragments.register(
+        "dialog",
+        MagicMock(),
+        parent_fragment_id="parent",
+        lifetime=_FragmentLifetime.FULL_APP_SCOPED,
+    )
+    fragments.register("other", MagicMock())
+    # The parent reruns without calling the child or opening the dialog.
+    assert fragments.clear_stale_descendants("parent", frozenset()) == ["child"]
+
+    _finish_run(
+        ss, "parent_button", fragment_ids_this_run=["parent"], fragments=fragments
+    )
+
+    assert ss._new_widget_state.rendered_ids == {
+        "parent_button",
+        "dialog_input",
+        "other_input",
+    }
+    # A forged click for the hidden button runs no callback.
+    ss._old_state["child_button"] = False
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="child_button", trigger_value=True))
+    )
+    clicked.assert_not_called()
+    assert ss._rejected_client_values == frozenset({"child_button"})
+
+
+def test_an_interrupted_run_forgets_no_rendered_widget() -> None:
+    """A run whose widget list is incomplete prunes nothing, like the states."""
+    ss = _registered(_boundary_metadata("a"), _boundary_metadata("b"))
+
+    _finish_run(ss, remove_stale_widgets=False)
+
+    assert ss._new_widget_state.rendered_ids == {"a", "b"}
+
+
+def test_client_widget_ids_never_add_a_rendered_widget() -> None:
+    """A page change prunes against the client's IDs, so a forged ID stays out."""
+    ss = _registered(_boundary_metadata("on_page"), _boundary_metadata("gone"))
+    ss._set_widget_metadata(_boundary_metadata("forged"))
+
+    # The page-change cleanup passes the IDs from the client's message.
+    _finish_run(ss, "on_page", "forged")
+
+    assert ss._new_widget_state.rendered_ids == {"on_page"}
+
+
+def test_a_hidden_widget_stops_waiting_for_a_resync() -> None:
+    """A hidden widget's pending re-sync is forgotten, and a shown widget's is kept."""
+    ss = _registered(_boundary_metadata("shown"), _boundary_metadata("hidden"))
+    ss._pending_resync.update({"shown", "hidden"})
+
+    _finish_run(ss, "shown")
+
+    assert ss._pending_resync == {"shown"}
+
+
+def test_an_early_stop_prunes_rendered_widgets_and_keeps_values() -> None:
+    """st.stop() before a widget forgets that it rendered, but not its value."""
+    ss = _registered(_boundary_metadata("before"), _boundary_metadata("after"))
+    ss._new_widget_state.set_from_value("after", "kept")
+
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    ):
+        ss.prune_rendered_widgets(frozenset({"before"}))
+
+    assert ss._new_widget_state.rendered_ids == {"before"}
+    assert ss["after"] == "kept"
+
+
+def test_a_change_for_a_widget_the_run_hid_is_refused(
+    refusal_logs: list[str],
+) -> None:
+    """A run that stops rendering a widget refuses its next change, at debug level."""
+    callback = MagicMock()
+    ss = _registered(
+        _boundary_metadata("hidden", callback=callback),
+        _boundary_metadata("hidden_button", value_type="trigger_value"),
+    )
+    _finish_run(ss)
+    ss._old_state.update({"hidden": "previous", "hidden_button": False})
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="hidden", string_value="new"),
+            WidgetStateProto(id="hidden_button", trigger_value=True),
+        )
+    )
+
+    callback.assert_not_called()
+    assert ss["hidden"] == "previous"
+    assert ss["hidden_button"] is False
+    assert ss._rejected_client_values == frozenset({"hidden", "hidden_button"})
+    # Nothing to correct in the browser, which removed it.
+    assert ss._pending_resync == set()
+    assert refusal_logs == []
+    assert "hidden" not in ss._warned_widget_ids
+
+
+def test_an_unchanged_value_for_a_hidden_widget_passes() -> None:
+    """The browser resends values for widgets it still shows, unchanged."""
+    ss = _registered(_boundary_metadata("hidden"))
+    _finish_run(ss)
+    ss._old_state["hidden"] = "same"
+
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="hidden", string_value="same"))
+    )
+
+    assert ss._rejected_client_values == frozenset()
+    assert ss["hidden"] == "same"
+
+
+def test_a_refusal_for_a_hidden_widget_is_a_warning_under_the_parity_gate(
+    refusal_logs: list[str],
+) -> None:
+    """The e2e parity gate sees a correct browser refused as not rendered."""
+    ss = _registered(_boundary_metadata("hidden"))
+    _finish_run(ss)
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(WidgetStateProto(id="hidden", string_value="new"))
+        )
+
+    assert len(refusal_logs) == 1
+    assert "hidden (not_rendered)" in refusal_logs[0]
+
+
+def test_the_run_every_hide_race_drops_the_click() -> None:
+    """A fragment's auto-rerun hides a button just before its click arrives.
+
+    The message order is replayed: the click was made on the page the browser
+    still showed, but the fragment run had already removed the button.
+    """
+    clicked = MagicMock()
+    outside_changed = MagicMock()
+    ss = _registered(
+        _boundary_metadata(
+            "button", value_type="trigger_value", callback=clicked, fragment_id="f"
+        ),
+        _boundary_metadata("outside", callback=outside_changed),
+    )
+    _finish_run(ss, "button", "outside")
+    # The run_every rerun of fragment "f" no longer renders the button.
+    _finish_run(ss, fragment_ids_this_run=["f"])
+    ss._old_state.update({"button": False, "outside": "old"})
+
+    ss.on_script_will_rerun(
+        _message(
+            WidgetStateProto(id="button", trigger_value=True),
+            WidgetStateProto(id="outside", string_value="new"),
+        )
+    )
+
+    clicked.assert_not_called()
+    outside_changed.assert_called_once()
+
+
+def test_an_interrupted_run_keeps_accepting_the_widgets_it_did_not_reach() -> None:
+    """st.rerun() before a widget registers leaves it rendered, so its change lands."""
+    callback = MagicMock()
+    ss = _registered(_boundary_metadata("later", callback=callback))
+    _finish_run(ss, remove_stale_widgets=False)
+    ss._old_state["later"] = "old"
+
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="later", string_value="new")))
+
+    callback.assert_called_once()
+
+
+def test_a_value_refused_outside_a_fragment_is_corrected_at_the_next_full_run() -> None:
+    """A fragment run keeps the re-sync of a widget outside it until it registers."""
+    outside = _boundary_metadata("outside")
+    ss = _registered(outside)
+    ss._old_state["outside"] = "previous"
+
+    # A fragment run receives the browser's whole map, with a refused value.
+    ss.on_script_will_rerun(_message(WidgetStateProto(id="outside", bool_value=True)))
+    _finish_run(ss, fragment_ids_this_run=["f"])
+    assert ss._pending_resync == {"outside"}
+
+    # The next full run registers the widget and tells the browser its value.
+    ss.on_script_will_rerun(
+        _message(WidgetStateProto(id="outside", string_value="previous"))
+    )
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    ):
+        result = ss.register_widget(outside, None)
+
+    assert (result.value, result.value_changed) == ("previous", True)
+    assert ss._pending_resync == set()
+
+
+@patch(
+    "streamlit.runtime.state.session_state.get_script_run_ctx",
+    return_value=MockScriptRunCtx(),
+)
+def test_a_new_session_checks_its_values_at_registration_not_at_the_gate(
+    _mock_ctx: MagicMock, refusal_logs: list[str]
+) -> None:
+    """A reconnect's widget map has no metadata yet, so nothing is rendered either.
+
+    Its values wait for registration, which renders the widget, and a trigger
+    whose widget does not register is dropped without a log line.
+    """
+    callback = MagicMock()
+    ss = _session_with()
+
+    with patch_config_options({"global.e2eTest": True}):
+        ss.on_script_will_rerun(
+            _message(
+                WidgetStateProto(id="w", string_value="restored"),
+                WidgetStateProto(id="button", trigger_value=True),
+            )
+        )
+        result = ss.register_widget(_boundary_metadata("w", callback=callback), None)
+        ss.on_script_finished(frozenset({"w"}))
+
+    assert result.value == "restored"
+    assert ss._new_widget_state.rendered_ids == {"w"}
+    assert "button" not in ss._new_widget_state.states
+    callback.assert_not_called()
+    assert refusal_logs == []
+    assert ss._warned_widget_ids == set()
+
+
+# endregion Rendered widgets

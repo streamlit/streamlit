@@ -856,6 +856,9 @@ function ChatInput({
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>): void => {
     const { value: targetValue } = e.target
 
+    // `length` counts UTF-16 code units. The server counts them the same way
+    // (`widget_checks.text_length`) and refuses longer text, so keep the two in
+    // sync. `MAX_CHARS_PARITY` tests both sides.
     if (maxChars !== 0 && targetValue.length > maxChars) {
       return
     }

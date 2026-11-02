@@ -182,6 +182,30 @@ function useStatefulWaveformControllerMock(): WaveformController {
   }
 }
 
+/**
+ * Strings and their length in UTF-16 code units, which the browser counts as
+ * `value.length` and the server as `widget_checks.utf16_length`. The same
+ * strings are in `_MAX_CHARS_PARITY` in
+ * lib/tests/streamlit/runtime/state/widget_checks_test.py, which checks the
+ * server's count, and in `MAX_CHARS_PARITY` in useOnInputChange.test.ts.
+ * Change all three together.
+ */
+const MAX_CHARS_PARITY: [name: string, text: string, units: number][] = [
+  ["ascii", "abcde", 5],
+  // 漢字のテスト, in the Basic Multilingual Plane.
+  ["cjk", "\u6f22\u5b57\u306e\u30c6\u30b9\u30c8", 6],
+  // Three grinning faces, each a surrogate pair.
+  ["astral_emoji", "\u{1F600}\u{1F600}\u{1F600}", 6],
+  // "e" and a combining acute accent, twice.
+  ["combining_marks", "e\u0301e\u0301", 4],
+  // A family: woman, zero-width joiner, woman, zero-width joiner, girl.
+  ["zwj_sequence", "\u{1F469}\u200D\u{1F469}\u200D\u{1F467}", 8],
+  // The German flag, two regional indicator symbols.
+  ["flag", "\u{1F1E9}\u{1F1EA}", 4],
+  ["line_breaks", "a\nb\nc", 5],
+  ["mixed", "a\u{1F600}e\u0301\n\u6f22", 7],
+]
+
 describe("ChatInput widget", () => {
   afterEach(() => {
     useWaveformControllerMock.mockReset()
@@ -249,6 +273,35 @@ describe("ChatInput widget", () => {
     await user.type(chatInput, "1")
     expect(chatInput).toHaveTextContent("1234567890")
   })
+
+  it.each(MAX_CHARS_PARITY)(
+    "sends %s text at maxChars as typed, and refuses it one unit past",
+    async (_name, text, units) => {
+      expect(text.length).toBe(units)
+      const user = userEvent.setup()
+
+      const pastLimit = getProps({ maxChars: units - 1 })
+      const { unmount } = render(<ChatInput {...pastLimit} />)
+      await user.click(screen.getByTestId("stChatInputTextArea"))
+      await user.paste(text)
+      expect(screen.getByTestId("stChatInputTextArea")).toHaveValue("")
+      unmount()
+
+      const atLimit = getProps({ maxChars: units })
+      const spy = vi.spyOn(atLimit.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...atLimit} />)
+      const chatInput = screen.getByTestId("stChatInputTextArea")
+      await user.click(chatInput)
+      await user.paste(text)
+      expect(chatInput).toHaveValue(text)
+      await user.keyboard("{Enter}")
+      expect(spy).toHaveBeenCalledWith(
+        atLimit.element.id,
+        mockChatInputValue(text),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
+    }
+  )
 
   it("sends and resets the value on enter", async () => {
     const user = userEvent.setup()

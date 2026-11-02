@@ -17,7 +17,8 @@ from __future__ import annotations
 import math
 import numbers
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast, overload
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
@@ -59,13 +60,24 @@ from streamlit.runtime.state import (
     get_session_state,
     register_widget,
     validate_on_change_mode,
+    widget_checks,
 )
 from streamlit.string_util import to_help_str, validate_icon_or_emoji
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import ValueFieldName
+    from streamlit.runtime.state.widget_checks import Violation
 
 _LOGGER: Final = get_logger(__name__)
+
+# The frontend sends an integer input's value as int_value and a float
+# input's as double_value, and AppTest and the agent API send double_value
+# for both. A keyed input keeps its ID when its type changes, so the browser
+# can still hold an int_value for a float input.
+_ACCEPTED_FIELDS: Final[frozenset[ValueFieldName]] = frozenset(
+    {"double_value", "int_value"}
+)
 
 Number: TypeAlias = int | float
 
@@ -76,28 +88,71 @@ class NumberInputSerde:
     data_type: int
     min_value: Number
     max_value: Number
+    required: bool = False
+    # Whether the author set each bound. An unset one is the JavaScript
+    # safe-number limit, which no refusal names as the widget's bound.
+    has_min: bool = True
+    has_max: bool = True
+
+    def validate(self, ui_value: Number | None, **_kwargs: Any) -> Violation | None:
+        """Refuse a number the browser would not commit.
+
+        The browser commits only finite numbers within the bounds it was sent,
+        and only whole numbers for an integer input. The bounds include the
+        JavaScript safe-number limits that stand in for unset ones. A required
+        input is never emptied.
+        """
+        if ui_value is None:
+            # An unset value reads as the default, as the browser commits the
+            # default when the user empties a field that has one. It is empty
+            # only without a default.
+            return widget_checks.filled(self.value, required=self.required)
+        # NaN fails every comparison. An integer input can receive a double
+        # such as 2.5, because a number input accepts either numeric field.
+        violation = widget_checks.finite(ui_value)
+        if violation is None and self.data_type == NumberInputProto.INT:
+            violation = widget_checks.whole_number(ui_value)
+        if violation is not None:
+            return violation
+        if widget_checks.within(ui_value, self.min_value, self.max_value) is None:
+            return None
+        min_value = self.min_value if self.has_min else None
+        max_value = self.max_value if self.has_max else None
+        violation = widget_checks.within(ui_value, min_value, max_value)
+        if violation is not None:
+            return violation
+        # The value is within the bounds the author set, but past a limit
+        # that stands in for an unset one. Only an integer input can get here:
+        # its stand-in is the largest whole number a double holds exactly, and
+        # a float input's is the largest double, which no finite value passes.
+        limit = (
+            f"up to {self.max_value}, the largest"
+            if ui_value > self.max_value
+            else f"down to {self.min_value}, the smallest"
+        )
+        return widget_checks.Violation(
+            "malformed",
+            MappingProxyType(
+                {"expected": f"a whole number {limit} a browser holds exactly"}
+            ),
+        )
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
 
     def deserialize(self, ui_value: Number | None) -> Number | None:
+        # Converts a value, but never swaps an invalid one for the default:
+        # the boundary compares the result with the stored value, and
+        # validate refuses what a client may not send. URL seeding validates
+        # the result.
         val: Number | None = ui_value if ui_value is not None else self.value
-
-        if val is not None:
-            if self.data_type == NumberInputProto.INT:
-                val = int(val)
-            # Reset to default if outside [min_value, max_value]. This
-            # rejects out-of-range values seeded from URL query params;
-            # a no-op for frontend values since the UI enforces bounds.
-            # Returning the default triggers _seed_widget_from_url's
-            # "deserialized == default" check, which clears the URL param.
-            if (
-                (self.data_type == NumberInputProto.FLOAT and not math.isfinite(val))
-                or val < self.min_value
-                or val > self.max_value
-            ):
-                return self.value
-
+        if (
+            self.data_type == NumberInputProto.INT
+            and val is not None
+            and math.isfinite(val)
+        ):
+            # A URL value of 2.9 still seeds 2.
+            val = int(val)
         return val
 
 
@@ -518,9 +573,12 @@ class NumberInputMixin:
             ``required=True`` for an empty required field.
 
             .. note::
-               This check runs in the user's browser and can be bypassed.
-               If requiredness is security-relevant, you must also check the
-               value on the server (in your app code) after it is submitted.
+               Streamlit refuses a change that empties a required field, even
+               from a modified client. A field the user never filled still
+               returns its empty default, and only the browser blocks a form
+               submit while such a field is empty. If requiredness is
+               security-relevant, also check for the empty default in your
+               app code.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -896,6 +954,9 @@ class NumberInputMixin:
             data_type,
             min_value,
             max_value,
+            required=required,
+            has_min=has_user_min,
+            has_max=has_user_max,
         )
         widget_state = register_widget(
             number_input_proto.id,
@@ -904,8 +965,10 @@ class NumberInputMixin:
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
+            validator=serde.validate,
             ctx=ctx,
             value_type="double_value",
+            accepted_value_fields=_ACCEPTED_FIELDS,
             disabled=disabled,
             bind=bind,
             persist_state=persist_state,
@@ -918,11 +981,10 @@ class NumberInputMixin:
         # If the value is no longer valid (outside bounds), reset to default.
         # This handles the case where min_value/max_value change dynamically
         # and the previously entered value is no longer within bounds.
-        # Note: This is NOT redundant with the serde bounds check — the
-        # serde only runs on serialized values (URL seeding, frontend
-        # submissions), while this catches already-deserialized values
-        # carried over from a previous rerun with different bounds.
-        # Both paths reset to the widget's default value for consistency.
+        # Note: This is NOT redundant with the serde's validate, which checks
+        # client and URL values against the bounds the client was shown. This
+        # reconciles a value carried over from a previous rerun, or set
+        # through session state, with this run's bounds.
         current_value = widget_state.value
         value_needs_reset = False
 
@@ -975,7 +1037,6 @@ class NumberInputMixin:
                 placeholder=placeholder,
                 icon=icon,
                 disabled=disabled,
-                # Checked by the browser, not by this interface.
                 required=required,
                 label_visibility=label_visibility,
                 on_change="ignore" if on_change == "ignore" else "rerun",

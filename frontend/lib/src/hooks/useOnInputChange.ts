@@ -64,6 +64,9 @@ export default function useOnInputChange({
     (e: OnInputChangeEventType): void => {
       const { value: newValue } = e.target
 
+      // `length` counts UTF-16 code units. The server counts them the same way
+      // (`widget_checks.text_length`) and refuses longer text, so keep the two
+      // in sync. `MAX_CHARS_PARITY` tests both sides.
       if (maxChars !== 0 && newValue.length > maxChars) {
         return
       }

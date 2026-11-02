@@ -282,6 +282,12 @@ class ScriptRunner:
         # _maybe_handle_execution_control_request.
         self._execing = False
 
+        # Whether the session asked this runner to stop, as it does when a new
+        # runner replaces a running one (`runner.fastReruns`), rather than the
+        # script calling `st.stop()`. The browser then never sees the stopped
+        # run end, so the run counts as interrupted.
+        self._stop_requested = False
+
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
 
@@ -311,6 +317,7 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
+        self._stop_requested = True
         self._requests.request_stop()
         self._wake_parallel_join_barrier_if_waiting()
 
@@ -1009,6 +1016,15 @@ class ScriptRunner:
                     ctx.has_script_started
                     and event != ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
                 ),
+            )
+        elif ctx.has_script_started and not self._stop_requested:
+            # st.stop() or an uncaught exception ended the body early. The
+            # widget values stay, but the browser removes every widget the run
+            # did not send, so those no longer count as rendered. When the
+            # session requested the stop (fast reruns), the browser still shows
+            # this run's widgets, so nothing is pruned.
+            self._session_state.prune_rendered_widgets(
+                ctx.shared.widget_ids_this_run.snapshot()
             )
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS

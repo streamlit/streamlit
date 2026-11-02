@@ -375,6 +375,20 @@ def test_value_assignment_not_allowed_error_message(key: str) -> None:
     assert "parameter" not in exc.exec_kwargs
 
 
+def test_value_assignment_not_allowed_error_message_with_detail() -> None:
+    """A detail says what the key holds, between the refusal and the advice."""
+    detail = "It holds the events of a custom component."
+    exc = errors.StreamlitValueAssignmentNotAllowedError("cmp__events", detail=detail)
+
+    assert str(exc) == (
+        "`st.session_state['cmp__events']` is read-only and cannot be assigned "
+        "through session state. It holds the events of a custom component. Use a "
+        "different session state key for values you need to set."
+    )
+    assert exc.exec_kwargs["detail"] == detail
+    assert "parameter" not in exc.exec_kwargs
+
+
 @pytest.mark.parametrize(
     ("key", "fence_len"),
     [

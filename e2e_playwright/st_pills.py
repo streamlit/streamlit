@@ -94,11 +94,14 @@ st.write("pills-disabled:", str(s3))
 
 st.header("Pills in form")
 with st.form(key="my_form", clear_on_submit=True):
+    # Required, so the second submit in test_pills_work_in_forms sends the
+    # empty selection the form cleared to.
     st.pills(
         "Elements  (label hidden)",
         ["Water", "Fire", "Earth", "Air"],
         key="pills_in_form",
         label_visibility="hidden",
+        required=True,
     )
     st.form_submit_button("Submit")
 
@@ -492,3 +495,14 @@ st.text(f"ignore_pills_multi: {ignore_multi}")
 if st.button("Apply ignore pills", key="apply_ignore_pills"):
     st.text(f"Applied ignore pills: {ignore_single}")
     st.text(f"Applied ignore multi pills: {ignore_multi}")
+
+# --- Labels the browser trims around their icon ---
+
+_edge_whitespace_labels = {"fire": "🔥 Fire ", "ice": " Ice"}
+edge_whitespace = st.pills(
+    "Edge whitespace pills",
+    ["fire", "ice"],
+    format_func=lambda option: _edge_whitespace_labels[option],
+    key="edge_whitespace_pills",
+)
+st.text(f"edge_whitespace_pills: {edge_whitespace}")

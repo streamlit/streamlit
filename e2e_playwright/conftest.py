@@ -29,11 +29,11 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 from pathlib import Path
 from random import randint
-from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, Self
+from tempfile import NamedTemporaryFile
+from typing import IO, TYPE_CHECKING, Any, Final, Literal, Protocol, Self
 from urllib import parse
 
 import pytest
@@ -128,6 +128,12 @@ def pytest_configure(config: pytest.Config) -> None:
         "Set upload_test_assets=True when the hosted app needs "
         "`e2e_playwright/static/` to be available. "
         "Only the documented keyword arguments are supported (unknown kwargs error).",
+    )
+    config.addinivalue_line(
+        "markers",
+        "allow_refused_widget_values(reason): let the app server refuse widget "
+        "values the browser sent, for a test that provokes a sync race on "
+        "purpose. Without it, any refusal fails the test.",
     )
 
 
@@ -283,15 +289,45 @@ class AsyncSubprocess:
     args: list[str]
     cwd: str
     env: dict[str, str]
+    # Keep the output file after terminate(), until discard_output(), so the
+    # parity gate can still read what the process logged last.
+    retain_output: bool
     _proc: subprocess.Popen[str] | None
-    _stdout_file: TextIOWrapper | None
+    _stdout_file: IO[str] | None
+    _stdout_path: str | None
 
     def __init__(self, args: list[str], cwd: str, env: dict[str, str] | None = None):
         self.args = args
         self.cwd = cwd
         self.env = env or {}
+        self.retain_output = False
         self._proc = None
         self._stdout_file = None
+        self._stdout_path = None
+
+    @property
+    def is_running(self) -> bool:
+        """Whether the process was started and not yet stopped."""
+        return self._proc is not None
+
+    def read_output(self, start: int) -> tuple[str, int]:
+        """Return the output written from byte ``start`` on, and the end offset.
+
+        This reads through its own handle: the process shares the offset of the
+        handle it writes to, so seeking that one would move where it writes.
+        """
+        if self._stdout_path is None:
+            return "", start
+        with open(self._stdout_path, "rb") as output:
+            output.seek(start)
+            data = output.read()
+        return data.decode("utf-8", errors="replace"), start + len(data)
+
+    def discard_output(self) -> None:
+        """Delete the captured output file."""
+        if self._stdout_path is not None:
+            Path(self._stdout_path).unlink(missing_ok=True)
+            self._stdout_path = None
 
     def _stop_process(self) -> None:
         """Stop the subprocess with timeout handling.
@@ -341,6 +377,8 @@ class AsyncSubprocess:
             stdout = self._stdout_file.read()
             self._stdout_file.close()
             self._stdout_file = None
+        if not self.retain_output:
+            self.discard_output()
 
         return stdout
 
@@ -353,7 +391,8 @@ class AsyncSubprocess:
         # file. We do this instead of using subprocess.PIPE (which causes the
         # Popen object to capture the output to its own internal buffer),
         # because large amounts of output can cause it to deadlock.
-        self._stdout_file = TemporaryFile("w+", encoding="utf-8")
+        self._stdout_file = NamedTemporaryFile("w+", encoding="utf-8", delete=False)
+        self._stdout_path = self._stdout_file.name
         print(f"Running: {shlex.join(self.args)}")
         self._proc = subprocess.Popen(
             self.args,
@@ -374,6 +413,121 @@ class AsyncSubprocess:
         if self._stdout_file is not None:
             self._stdout_file.close()
             self._stdout_file = None
+        self.discard_output()
+
+
+# region Browser parity gate
+
+# Every value the server refuses is logged with this text when global.e2eTest
+# is set, which start_app_server always sets (see widget_checks.log_violation).
+# A correct browser must never be refused, so any such line fails the test.
+_REFUSED_WIDGET_VALUE_MARKER: Final = "Refused a client value for widget"
+
+# The servers start_app_server started, with how much of each one's output the
+# gate has read. This covers modules that start their own servers per test.
+_gated_servers: dict[AsyncSubprocess, int] = {}
+
+
+def _watch_for_refused_widget_values(proc: AsyncSubprocess) -> None:
+    """Have the parity gate read ``proc``'s output after each test."""
+    proc.retain_output = True
+    _gated_servers[proc] = 0
+
+
+def _read_refused_widget_values() -> list[str]:
+    """Return the refusal lines the gated servers logged since the last read.
+
+    A server that has stopped is read one last time and then forgotten.
+    """
+    refusals: list[str] = []
+    for proc, offset in list(_gated_servers.items()):
+        output, _gated_servers[proc] = proc.read_output(offset)
+        refusals.extend(
+            line for line in output.splitlines() if _REFUSED_WIDGET_VALUE_MARKER in line
+        )
+        if not proc.is_running:
+            del _gated_servers[proc]
+            proc.discard_output()
+    return refusals
+
+
+@dataclass
+class _PreviousTest:
+    """The test that ran last in this process.
+
+    A refusal logged after its teardown read, such as one a server writes
+    while the test is tearing down, belongs to it, so it follows that test's
+    marker rather than the next test's.
+    """
+
+    nodeid: str | None = None
+    allows_refusals: bool = False
+
+
+_previous_test = _PreviousTest()
+
+
+def _allows_refused_widget_values(node: pytest.Item | pytest.Collector) -> bool:
+    return node.get_closest_marker("allow_refused_widget_values") is not None
+
+
+def _read_late_refused_widget_values() -> list[str]:
+    """Return the refusals logged since the previous test's teardown read.
+
+    They are dropped when the previous test is marked as refusing widget
+    values on purpose.
+    """
+    refusals = _read_refused_widget_values()
+    return [] if _previous_test.allows_refusals else refusals
+
+
+def _report_refused_widget_values(
+    refusals: list[str], *, late: list[str], late_from: str | None
+) -> None:
+    """Fail the current test for refusals no marked test caused.
+
+    ``late`` are the refusals logged after ``late_from`` finished.
+    """
+    if not refusals and not late:
+        return
+    lines = list(refusals)
+    if late:
+        lines.append(f"Logged after {late_from} finished, which may have caused these:")
+        lines.extend(late)
+    pytest.fail(
+        "The server refused a widget value a browser sent. A correct browser "
+        "must never be refused, so a check is stricter than the frontend. If "
+        "the test provokes a sync race on purpose, mark it with "
+        "@pytest.mark.allow_refused_widget_values(reason=...).\n" + "\n".join(lines),
+        pytrace=False,
+    )
+
+
+@pytest.fixture(autouse=True)
+def fail_on_refused_widget_values(
+    request: pytest.FixtureRequest,
+) -> Generator[None, None, None]:
+    """Fail a test whose app server refused a value the browser sent.
+
+    Autouse fixtures set up first, so this one tears down last, after fixtures
+    that stop a per-test server. A refusal logged before this test starts,
+    after the previous test's teardown read, belongs to the previous test:
+    it is dropped if that test is marked, and otherwise reported here. A
+    refusal logged during this test follows this test's marker.
+    """
+    late_from = _previous_test.nodeid
+    late = _read_late_refused_widget_values()
+    allows_refusals = _allows_refused_widget_values(request.node)
+    _previous_test.nodeid = request.node.nodeid
+    _previous_test.allows_refusals = allows_refusals
+    yield
+    during = _read_refused_widget_values()
+    _report_refused_widget_values(
+        [] if allows_refusals else during, late=late, late_from=late_from
+    )
+
+
+# endregion
 
 
 def resolve_test_to_script(test_module: ModuleType) -> str:
@@ -602,6 +756,10 @@ def app_server(
     yield streamlit_proc
     streamlit_stdout = streamlit_proc.terminate()
     print(streamlit_stdout, flush=True)
+    # A refusal logged after the module's last test finished belongs to it.
+    _report_refused_widget_values(
+        [], late=_read_late_refused_widget_values(), late_from=_previous_test.nodeid
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -1843,6 +2001,7 @@ def start_app_server(
         proc.start()
 
         if wait_for_app_server_to_start(app_port):
+            _watch_for_refused_widget_values(proc)
             return proc
 
         stdout = proc.terminate()

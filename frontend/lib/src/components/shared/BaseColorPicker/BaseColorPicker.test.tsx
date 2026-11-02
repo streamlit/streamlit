@@ -234,6 +234,27 @@ describe("ColorPicker widget", () => {
     expect(colorBlock).toHaveStyle("background-color: #333333")
   })
 
+  it("keeps the previous color when transparent is typed", async () => {
+    // react-color's hex field accepts "transparent", which is not a hex color.
+    // The server refuses anything but #rgb or #rrggbb.
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<BaseColorPicker {...getProps({ value: "#336699", onChange })} />)
+
+    const trigger = screen.getByRole("button", { name: /label color picker/i })
+    await user.click(trigger)
+    const colorInput = screen.getByRole("textbox")
+    await user.clear(colorInput)
+    await user.type(colorInput, "transparent")
+    await user.click(trigger)
+
+    expect(onChange).toHaveBeenCalledWith("#336699")
+    expect(onChange).not.toHaveBeenCalledWith("transparent")
+    expect(screen.getByTestId("stColorPickerBlock")).toHaveStyle(
+      "background-color: #336699"
+    )
+  })
+
   it("should update the widget value when it's changed", async () => {
     const user = userEvent.setup()
     const props = getProps()
