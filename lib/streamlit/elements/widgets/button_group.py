@@ -285,13 +285,27 @@ class _MultiSelectButtonGroupSerde(Generic[T]):
         # nothing for it.
         return Counter(self.formatted_options)
 
+    @cached_property
+    def _default_repeats(self) -> Counter[str] | None:
+        # Built on the first check, like the label counts.
+        return widget_checks.repeats(
+            self.formatted_options[i] for i in self.default_option_indices
+        )
+
     def validate(
         self, ui_value: Sequence[str] | None, **_kwargs: Any
     ) -> Violation | None:
-        """Refuse labels a client was not shown, or a repeated one."""
+        """Refuse labels a client was not shown, or a repeated one.
+
+        A label may repeat as often as the default repeats it, such as
+        ``default=["a", "a"]``, because a form that clears on submit sends
+        that default back. A toggle in the browser never repeats one.
+        """
         if ui_value is None:
             return None
-        return widget_checks.items_of(self._label_counts, ui_value)
+        return widget_checks.items_of(
+            self._label_counts, ui_value, held=self._default_repeats
+        )
 
     def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
         """Serialize multi-select values to list of strings for wire format."""

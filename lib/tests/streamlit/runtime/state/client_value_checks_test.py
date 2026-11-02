@@ -577,6 +577,61 @@ def test_a_repeat_the_held_value_has_is_accepted(
         assert "(duplicate_items)" in refusal_logs[0]
 
 
+def _repeated_default_form_app() -> None:
+    import streamlit as st
+
+    with st.form("tags_form", clear_on_submit=True):
+        st.multiselect("Tags", ["a", "b", "c"], default=["a", "a"], key="tags")
+        st.pills(
+            "Pills",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            default=["a", "a"],
+            key="pills",
+        )
+        st.form_submit_button("Save", key="save")
+
+
+def _submit_tags(at: AppTest, labels: tuple[str, ...]) -> None:
+    at._run(
+        widget_state=forged_many(
+            WidgetState(id=_widget_id(at, "tags"), string_array_value=_labels(*labels)),
+            WidgetState(
+                id=_widget_id(at, "pills"), string_array_value=_labels(*labels)
+            ),
+            WidgetState(id=_widget_id(at, "save"), trigger_value=True),
+        )
+    )
+
+
+def test_a_form_that_clears_on_submit_restores_a_repeated_default(
+    refusal_logs: list[str],
+) -> None:
+    """A default that repeats an option passes when a cleared form sends it back.
+
+    After a submit of ``["b"]``, neither the held value nor the options repeat
+    ``"a"``, yet the form sends the default ``["a", "a"]`` with the next submit.
+    A repeat past the default's is still refused.
+    """
+    at = AppTest.from_function(_repeated_default_form_app).run()
+
+    with patch_config_options({"global.e2eTest": True}):
+        _submit_tags(at, ("b",))
+        assert at.multiselect(key="tags").value == ["b"]
+        assert at.pills(key="pills").value == ["b"]
+        _submit_tags(at, ("a", "a"))
+        assert at.multiselect(key="tags").value == ["a", "a"]
+        assert at.pills(key="pills").value == ["a", "a"]
+        assert refusal_logs == []
+
+        _submit_tags(at, ("a", "a", "a"))
+
+    assert at.multiselect(key="tags").value == ["a", "a"]
+    assert at.pills(key="pills").value == ["a", "a"]
+    assert len(refusal_logs) == 2
+    assert all("(duplicate_items)" in log for log in refusal_logs)
+
+
 def _shared_label_range_app() -> None:
     import streamlit as st
 

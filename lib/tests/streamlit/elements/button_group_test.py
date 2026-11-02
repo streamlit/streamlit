@@ -221,6 +221,32 @@ class TestButtonGroupSerde:
         )
         assert _serde(required=False).validate(wire) is None
 
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
+        [
+            # A form that clears on submit sends the default back.
+            (["Apple", "Apple"], None),
+            (["Apple", "Apple", "Banana"], None),
+            # A repeat past the default's is one the browser never sends.
+            (["Apple", "Apple", "Apple"], "duplicate_items"),
+            (["Banana", "Banana"], "duplicate_items"),
+        ],
+    )
+    def test_multi_select_validate_allows_the_repeats_the_default_has(
+        self, ui_value: list[str], expected: str | None
+    ) -> None:
+        """A label may repeat as often as the default repeats it."""
+        serde = _MultiSelectButtonGroupSerde[str](
+            ["apple", "banana"],
+            formatted_options=["Apple", "Banana"],
+            formatted_option_to_option_index={"Apple": 0, "Banana": 1},
+            default_option_indices=[0, 0],
+        )
+
+        violation = serde.validate(_wire(*ui_value))
+
+        assert (violation.kind if violation else None) == expected
+
     def test_multi_select_serialize(self):
         """Test multi-select serialization returns list of formatted strings."""
         options = ["apple", "banana", "cherry"]

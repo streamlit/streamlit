@@ -496,11 +496,15 @@ of the first extra repeat. With `accept_new`, which `accept_new_options` sets, a
 non-empty label is legal, a shared label included, because the browser lets the user type
 one. `max_items` and `unique` still apply, and a new label can be listed once.
 
-A multiselect may also list a label as often as the value it holds lists it, which
-`items_of` takes as `held`. An author's `default` or a session-state value can repeat an
-option, such as `default=["a", "a"]`, and the browser keeps every item it holds when the
-user adds options, so "Select all" then sends `["a", "a", "b", "c"]`. The browser never
-adds a repeat, so a label listed more often than both the options and the held value
+A multiselect may also list a label as often as the value it holds or its default lists
+it, which `items_of` takes as `held` (`widget_checks.repeats` counts them). An author's
+`default` or a session-state value can repeat an option, such as `default=["a", "a"]`,
+and the browser keeps every item it holds when the user adds options, so "Select all"
+then sends `["a", "a", "b", "c"]`. A form that clears on submit sends the default back
+whatever the widget holds, so a submit of `["b"]` followed by a cleared submit sends
+`["a", "a"]`. Multi-select `st.pills` and `st.segmented_control` take the default's
+repeats only, because a toggle in the browser builds a set. The browser never adds a
+repeat, so a label listed more often than the options, the held value, and the default
 list it is still `duplicate_items`.
 
 **The previous value.** Check 3 already passes unchanged values, so a validator sees only

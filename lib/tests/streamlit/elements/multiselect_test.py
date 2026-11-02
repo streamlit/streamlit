@@ -958,6 +958,36 @@ class TestMultiSelectSerde:
 
         assert (violation.kind if violation else None) == expected
 
+    @pytest.mark.parametrize(
+        ("sent", "previous", "expected"),
+        [
+            # A cleared form sends the default back, whatever the widget holds.
+            (["a", "a"], ["b"], None),
+            (["a", "a", "b"], None, None),
+            # The held value and the default each allow their own repeats.
+            (["a", "a", "b", "b"], ["b", "b"], None),
+            # A repeat past both is one the browser never sends.
+            (["a", "a", "a"], ["a", "a"], "duplicate_items"),
+            (["b", "b"], ["a"], "duplicate_items"),
+        ],
+    )
+    def test_validate_allows_the_repeats_the_default_has(
+        self, sent: list[str], previous: Any, expected: str | None
+    ) -> None:
+        """A label may repeat as often as the default repeats it too."""
+        options = ["a", "b", "c"]
+        formatted_options, formatted_option_to_option_index = create_mappings(options)
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_options_indices=[0, 0],
+        )
+
+        violation = serde.validate(sent, previous=previous)
+
+        assert (violation.kind if violation else None) == expected
+
 
 def test_multiselect_preserves_selection_when_options_expand():
     """Test that valid selections are preserved when options are expanded."""

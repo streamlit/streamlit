@@ -666,6 +666,22 @@ def test_items_of(
     assert widget_checks.items_of(_COUNTS, _labels(*values), **options) == expected
 
 
+@pytest.mark.parametrize(
+    ("labels", "expected"),
+    [
+        (["a", "b", "a"], Counter({"a": 2, "b": 1})),
+        # No label listed twice: there is no repeat to allow.
+        (["a", "b"], None),
+        ([], None),
+    ],
+)
+def test_repeats_counts_only_a_list_that_repeats_a_label(
+    labels: list[str], expected: Counter[str] | None
+) -> None:
+    """Counts come back only when some label is listed more than once."""
+    assert widget_checks.repeats(labels) == expected
+
+
 def test_an_ambiguous_label_is_accepted_and_counts_as_a_change() -> None:
     """A browser session keeps a shared label, which the agent API refuses."""
     result = check_client_value(

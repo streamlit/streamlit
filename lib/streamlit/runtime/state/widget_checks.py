@@ -61,7 +61,7 @@ from streamlit.logger import get_logger
 from streamlit.runtime.state.common import ValueFieldName, unpack_widget_state_value
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Mapping, Sequence
+    from collections.abc import Collection, Iterable, Mapping, Sequence
 
     from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.common import WidgetMetadata
@@ -347,9 +347,11 @@ def items_of(
         does. Then any non-empty text is legal, a shared label included, and a
         new label can be listed once.
     held : Mapping[str, int] or None
-        How often the widget's held value lists each label, for a value that
-        repeats one, such as an author's ``default=["a", "a"]``. The browser
-        keeps those repeats when the user adds an option, but never adds one.
+        How often the widget's held value or its default lists each label, for
+        one that repeats a label, such as ``default=["a", "a"]``, as
+        ``repeats`` counts them. The browser keeps a held value's repeats when
+        the user adds an option, and a form that clears on submit restores the
+        default's, but the browser never adds a repeat.
 
     Returns
     -------
@@ -396,6 +398,16 @@ def items_of(
             "ambiguous_option", MappingProxyType({"positions": (ambiguous,)})
         )
     return None
+
+
+def repeats(labels: Iterable[str]) -> Counter[str] | None:
+    """How often each label is listed, or ``None`` if none is listed twice.
+
+    ``items_of`` takes the counts as ``held``, so a value or a default that
+    repeats an option lets a client send those repeats back.
+    """
+    counts = Counter(labels)
+    return counts if len(counts) < counts.total() else None
 
 
 def within(value: Any, min_value: Any, max_value: Any) -> Violation | None:
