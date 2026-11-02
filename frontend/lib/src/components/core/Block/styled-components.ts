@@ -664,6 +664,8 @@ export interface StyledGridCellProps {
   $columnSpan?: number
   $columnSpanAll?: boolean
   $rowSpan?: number
+  /** Whether this cell holds a retained copy of a displaced element. */
+  $isRetained?: boolean
 }
 
 export const StyledGridCell = styled.div<StyledGridCellProps>(
@@ -674,6 +676,7 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
     $columnSpan,
     $columnSpanAll,
     $rowSpan,
+    $isRetained,
   }) => {
     const { fallback, safe } = gridCellJustifyContent(verticalAlignment)
 
@@ -703,6 +706,8 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
           $columnSpan &&
           $columnSpan > 1 && { gridColumn: `span ${$columnSpan}` }),
         ...($rowSpan && $rowSpan > 1 && { gridRow: `span ${$rowSpan}` }),
+        // A hidden cell takes no track, so later cells keep their places.
+        ...($isRetained === true && RETAINED_STYLES),
       },
       // Second declaration so unknown `safe` does not drop the fallback.
       safe &&

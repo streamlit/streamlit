@@ -83,7 +83,7 @@ Immutable root with 4 top-level containers:
 - Container for children (BlockNode | ElementNode | TransientNode)
 - Contains `BlockProto` (layout containers like: columns, expanders, forms, tabs, dialogs)
 - Tracks: `scriptRunId`, `fragmentId`, `activeScriptHash`
-- `retained`: displaced prior-run elements kept mounted (hidden) until the run re-emits them or stale cleanup removes them. Not delta-addressable; `RenderNodeVisitor` renders each entry in front of `children[before]`. See `elementRetention.ts` and [element-identity.md](element-identity.md).
+- `retained`: displaced prior-run elements kept mounted (hidden) until the run re-emits them or stale cleanup removes them. Not delta-addressable; `RenderNodeVisitor` renders each entry in front of `children[before]`, and `GridContainer` gives each one a hidden grid cell there. See `elementRetention.ts` and [element-identity.md](element-identity.md).
 
 **ElementNode** (`ElementNode.ts`):
 - Leaf node for UI elements

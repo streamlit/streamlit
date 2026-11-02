@@ -43,6 +43,7 @@ import {
   type DOMRectKeys,
   useResizeObserver,
 } from "~lib/hooks/useResizeObserver"
+import type { RetainedElement } from "~lib/render-tree/elementRetention"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   getElementId,
@@ -93,6 +94,8 @@ interface GridCellProps {
   columnSpan?: number
   columnSpanAll: boolean
   rowSpan?: number
+  /** Hides the cell of a retained element unless it holds focus. */
+  isRetained: boolean
   children: ReactNode
 }
 
@@ -166,6 +169,7 @@ const GridCell = ({
   columnSpan,
   columnSpanAll,
   rowSpan,
+  isRetained,
   children,
 }: GridCellProps): ReactElement => {
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -181,6 +185,7 @@ const GridCell = ({
       $columnSpan={columnSpan}
       $columnSpanAll={columnSpanAll}
       $rowSpan={rowSpan}
+      $isRetained={isRetained}
     >
       <StyledGridCellBody
         ref={hasFixedRowHeight ? bodyRef : undefined}
@@ -300,28 +305,71 @@ const GridScrollport = ({
   )
 }
 
+interface GridCellSource {
+  node: AppNode
+  sourceKey: string
+  /** Set for a displaced prior-run element; see `BlockNode.retained`. */
+  retained?: RetainedElement
+}
+
+/** A rendered grid child and the layout of the cell that wraps it. */
+interface GridChildCell {
+  element: ReactElement | ReactElement[]
+  nodeId?: string
+  sourceKey: string
+  columnSpan?: number
+  columnSpanAll: boolean
+  rowSpan?: number
+  isRetained: boolean
+}
+
 /**
- * Direct children of a layout-transparent wrapper become grid cells.
+ * The block's children and retained elements, in render order. Direct
+ * children of a layout-transparent wrapper become grid cells.
  *
  * A fragment that writes into a grid does so through one transparent block.
  * That block has no DOM node, so each of its children is a cell. `grid.cell()`
  * inside the fragment stays one cell. Nested transparent wrappers flatten too.
+ * Each retained element comes right before `children[before]`, as in
+ * `RenderNodeVisitor.collectReactElements`.
  */
 function collectGridCellSources(
-  nodes: AppNode[],
+  block: BlockNode,
   keyPrefix = ""
-): { node: AppNode; sourceKey: string }[] {
-  return nodes.flatMap((node, index) => {
+): GridCellSource[] {
+  const { children, retained } = block
+  const sources: GridCellSource[] = []
+  let retainedIndex = 0
+  const addRetainedBefore = (index: number): void => {
+    while (
+      retainedIndex < retained.length &&
+      Math.min(retained[retainedIndex].before, children.length) <= index
+    ) {
+      const entry = retained[retainedIndex]
+      sources.push({
+        node: entry.node,
+        sourceKey: `retained-${entry.id}`,
+        retained: entry,
+      })
+      retainedIndex++
+    }
+  }
+
+  children.forEach((node, index) => {
+    addRetainedBefore(index)
     const sourceKey = keyPrefix === "" ? `${index}` : `${keyPrefix}.${index}`
     if (
       node instanceof BlockNode &&
       node.deltaBlock.transparent &&
       !node.deltaBlock.gridCell
     ) {
-      return collectGridCellSources(node.children, sourceKey)
+      sources.push(...collectGridCellSources(node, sourceKey))
+    } else {
+      sources.push({ node, sourceKey })
     }
-    return [{ node, sourceKey }]
   })
+  addRetainedBefore(children.length)
+  return sources
 }
 
 /**
@@ -479,8 +527,25 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
       componentRegistry,
     })
 
-    return collectGridCellSources(node.children).flatMap(
-      ({ node: childNode, sourceKey }) => {
+    return collectGridCellSources(node).flatMap(
+      ({ node: childNode, sourceKey, retained }): GridChildCell[] => {
+        // A retained element keeps its cell, hidden, so the element stays
+        // mounted until the run re-emits it under the same key.
+        if (retained) {
+          const retainedElement = visitor.visitRetainedElement(retained)
+          return retainedElement
+            ? [
+                {
+                  element: retainedElement,
+                  nodeId: retained.id,
+                  sourceKey,
+                  columnSpanAll: false,
+                  isRetained: true,
+                },
+              ]
+            : []
+        }
+
         // An empty block that does not allow empty renders nothing in other
         // layouts, so it gets no cell either. `grid.cell()` allows empty and
         // keeps the cell it reserves.
@@ -541,6 +606,7 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
             columnSpan,
             columnSpanAll,
             rowSpan,
+            isRetained: false,
           },
         ]
       }
@@ -606,6 +672,7 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           }
           columnSpanAll={child.columnSpanAll}
           rowSpan={child.rowSpan}
+          isRetained={child.isRetained}
         >
           <FlexContextProvider
             direction={Direction.VERTICAL}

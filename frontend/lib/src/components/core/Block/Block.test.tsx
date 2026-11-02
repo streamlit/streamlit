@@ -2511,6 +2511,87 @@ describe("element retention", () => {
     ).not.toHaveAttribute("data-retained")
   })
 
+  it("keeps a displaced widget in a grid cell mounted until the run re-emits it", async () => {
+    const writeGrid = (root: AppRoot, scriptRunId: string): AppRoot =>
+      root.applyDelta(
+        scriptRunId,
+        makeProto(DeltaProto, {
+          addBlock: {
+            allowEmpty: true,
+            gridContainer: {
+              minColumnWidthPx: 220,
+              rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+              columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 0])
+      )
+    const writeGridElement = (
+      root: AppRoot,
+      scriptRunId: string,
+      index: number,
+      element: Element.$Properties
+    ): AppRoot =>
+      root.applyDelta(
+        scriptRunId,
+        makeProto(DeltaProto, { newElement: element }),
+        forwardMsgMetadata([0, 0, index])
+      )
+    const cellOf = (element: HTMLElement): HTMLElement | null =>
+      element.closest<HTMLElement>("[data-testid='stGridCell']")
+
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeGrid(root, "run0")
+    root = writeGridElement(root, "run0", 0, { text: { body: "first" } })
+    root = writeGridElement(root, "run0", 1, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const input = await screen.findByRole("textbox", { name: "Name" })
+
+    // A notice is inserted above the input and overwrites its grid slot.
+    const running = {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    }
+    root = writeGrid(root, "run1")
+    root = writeGridElement(root, "run1", 0, { text: { body: "first" } })
+    root = writeGridElement(root, "run1", 1, { text: { body: "notice" } })
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(await screen.findByText("notice")).toBeVisible()
+    expect(input).toBeInTheDocument()
+    expect(cellOf(input)).not.toBeVisible()
+
+    // The input arrives one slot later and reclaims the mounted cell.
+    root = writeGridElement(root, "run1", 2, nameInput)
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(input)
+    expect(cellOf(input)).toBeVisible()
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(3)
+  })
+
   it("unmounts a displaced widget that the run never re-emits", async () => {
     let root = new AppRoot(
       FAKE_SCRIPT_HASH,
