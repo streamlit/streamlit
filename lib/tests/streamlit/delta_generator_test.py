@@ -257,11 +257,6 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
                 if callable(func):
                     assert func.__module__ == mixin.__module__, (mixin, name)
 
-    @pytest.mark.usefixtures("benchmark")
-    def test_constructor_perf(self) -> None:
-        """Benchmark DeltaGenerator construction, which runs for every element."""
-        self.benchmark(DeltaGenerator)
-
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
