@@ -89,12 +89,16 @@ _ENV_DIRS = (
 _CHILD_ENV_OVERRIDES = {
     # Startup `.pth` files import site-packages modules; never write their caches.
     "PYTHONDONTWRITEBYTECODE": "1",
+    # The parent reads child output, such as Poetry's environment path, as UTF-8.
     "PYTHONIOENCODING": "utf-8",
     # With no runtime installed, the Windows install manager's `py` and `python`
     # download one, and mise shims install missing versions.
     "PYTHON_MANAGER_AUTOMATIC_INSTALL": "false",
     "MISE_AUTO_INSTALL": "false",
 }
+# `py -3` comes first on Windows, where `python` and `python3` may be Store
+# aliases that only print an install hint. Elsewhere, `python` may be missing
+# or Python 2.
 _PATH_LAUNCHERS = (
     (("py", "-3"), ("python",), ("python3",))
     if _IS_WINDOWS
@@ -184,7 +188,10 @@ def _run(
         return _Result("skipped", reason)
     env = dict(os.environ, **_CHILD_ENV_OVERRIDES)
     # A PYTHONHOME meant for one interpreter breaks every other interpreter.
-    env.pop("PYTHONHOME", None)
+    # An activated environment, which is checked on its own, would make
+    # `poetry env info` report it instead of the project's environment.
+    for name in ("PYTHONHOME", "VIRTUAL_ENV", "CONDA_PREFIX"):
+        env.pop(name, None)
     try:
         process = subprocess.Popen(  # noqa: S603 - fixed arguments, detected executables.
             command,
@@ -485,8 +492,8 @@ def _candidates(project_dir: Path, deadline: float) -> Iterator[_Candidate]:
 
 
 def _display_command(command: list[str]) -> str:
-    # Forward slashes work in every shell; PowerShell also needs `& ` before a
-    # quoted path.
+    # Forward slashes work in every shell. PowerShell also needs `& ` before a
+    # quoted path; that prefix is left to the agent.
     executable = command[0].replace("\\", "/") if _IS_WINDOWS else command[0]
     if " " in executable:
         executable = f'"{executable}"'
@@ -666,6 +673,7 @@ def _report_not_found(
         "If Streamlit is installed in an environment that is not listed, re-run "
         "this script with --python <path to that environment's Python>."
     )
+    # With --python, that interpreter is the only one checked.
     if [c.label for c, _ in attempts] == ["--python"]:
         retry_step = (
             "If that may not be the app's Python, re-run this script without "

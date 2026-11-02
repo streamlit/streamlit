@@ -553,7 +553,11 @@ def test_poetry_is_queried_only_in_a_poetry_project(
 def test_child_processes_cannot_install_or_write(
     discover: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Probes run without input, bytecode writes, launcher auto-installs, or PYTHONHOME."""
+    """Probes run without input, bytecode writes, or launcher auto-installs.
+
+    They also drop PYTHONHOME and the activated environment, which Poetry reports.
+    """
+    dropped = ("PYTHONHOME", "VIRTUAL_ENV", "CONDA_PREFIX")
     seen: dict[str, Any] = {}
 
     class FakePopen:
@@ -565,13 +569,14 @@ def test_child_processes_cannot_install_or_write(
         def communicate(self, timeout: float) -> tuple[str, str]:
             return "", ""
 
-    monkeypatch.setenv("PYTHONHOME", str(tmp_path))
+    for name in dropped:
+        monkeypatch.setenv(name, str(tmp_path))
     monkeypatch.setattr(discover.subprocess, "Popen", FakePopen)
 
     discover._run(["python"], tmp_path, deadline=float("inf"))
 
     assert seen["stdin"] == subprocess.DEVNULL
-    assert "PYTHONHOME" not in seen["env"]
+    assert [name for name in dropped if name in seen["env"]] == []
     assert seen["env"]["PYTHONDONTWRITEBYTECODE"] == "1"
     assert seen["env"]["PYTHON_MANAGER_AUTOMATIC_INSTALL"] == "false"
     assert seen["env"]["MISE_AUTO_INSTALL"] == "false"

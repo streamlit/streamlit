@@ -30,7 +30,7 @@ The script is safe to run without asking. It reads files and asks each interpret
 
 It checks the project's environments first (`$UV_PROJECT_ENVIRONMENT`, `.venv`, `venv`, conda, pixi, Pipenv, Poetry), then the active environment and the Pythons on `PATH`. It usually finishes in under a second, stops within about 10 seconds, and prints either:
 
-- **A path on stdout** (exit 0) — the bundled `SKILL.md`. Continue with step 2.
+- **A path on stdout** (exit 0) — the bundled `SKILL.md`. Continue with step 2. A `NOTE:` on stderr does not mean failure; follow its advice if it applies.
 - **An `ERROR:` block on stderr** (non-zero exit) — what happened, why, the next steps, and every environment it checked. Do not install or upgrade packages unless the user asked for it or agrees.
 
 If you already know which Python runs the app (for example, from the command used to run it), pass it with `--python <path>`. Then only that interpreter is checked, so the docs match the app's environment exactly. The same flag reaches environments the script does not find on its own.
