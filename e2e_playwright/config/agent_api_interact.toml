@@ -1,0 +1,3 @@
+[server]
+enableAgentApi = true
+agentWaitTimeout = 5

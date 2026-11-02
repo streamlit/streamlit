@@ -18,19 +18,23 @@
 `GET /_stcore/agent/openapi.json`, which describes it.
 
 The tests call the routes over HTTP with `page.request`, which sends no
-`Origin` header, like the programmatic clients the route serves. Externally
+`Origin` header, like the programmatic clients the route serves. A browser
+`fetch` cannot replace that call: every POST carries `Origin`, and the route
+refuses an origin that is not listed in `server.corsAllowedOrigins`. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
 with `server.enableAgentApi` on, so they derive agent route URLs from
 `agent_api_base_url` and tolerate headers a hosting platform adds. They open
-the app before calling the route, because a host that guards the app's origin
-with a login cookie, as Snowflake does, sets it while the app loads, and
-`page.request` sends the browser context's cookies.
+the app before calling the route. Streamlit in Snowflake keeps the container
+credential in the page's service worker; `page.request` never enters that
+worker, so the tests copy the credential onto the request when a worker has
+one.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import time
 from typing import TYPE_CHECKING, Any, Final
 from urllib.parse import quote, urljoin, urlsplit
 
@@ -51,6 +55,26 @@ _ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
 _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
 _TOKEN_VALUE: Final = "e2e-callers-rights-token"
+_AFFINITY_HEADER: Final = "X-Snowflake-Affinity-Key"
+# Reads the SPCS token and affinity key the host service worker stored.
+# `tokenMap` values are `[tokenEntry, pendingResolves]`.
+_SERVICE_WORKER_CREDENTIALS_JS: Final = """
+() => {
+  const tokenMap = self.tokenDataByType?.spcs?.tokenMap ?? {};
+  let token = null;
+  for (const entry of Object.values(tokenMap)) {
+    const tokenEntry = Array.isArray(entry) ? entry[0] : null;
+    if (tokenEntry && typeof tokenEntry.token === "string" && tokenEntry.token) {
+      token = tokenEntry.token;
+      break;
+    }
+  }
+  const backendId = Object.values(self.backendIdByClient ?? {}).find(
+    (id) => typeof id === "string" && id
+  );
+  return {token, backendId: backendId ?? ""};
+}
+"""
 # A value no deployment's real identity could have.
 _SPOOFED_IDENTITY: Final = "spoofed-agent@e2e.invalid"
 # Each retry waits up to `server.agentWaitTimeout` on the server, so this bounds
@@ -123,6 +147,56 @@ def _interact_url(app_base_url: str) -> str:
     return build_app_url(app_base_url, path=_INTERACT_PATH)
 
 
+def _requires_service_worker_auth(page: Page, url: str) -> bool:
+    """Whether ``url`` is on a different origin from the page's host."""
+    return urlsplit(url).netloc.lower() != urlsplit(page.url).netloc.lower()
+
+
+def _service_worker_auth_headers(page: Page, *, required: bool) -> dict[str, str]:
+    """Return the container credential a host service worker has stored.
+
+    Streamlit in Snowflake authenticates the container origin inside that
+    worker, with ``Authorization: Snowflake Token="…"`` and
+    ``X-Snowflake-Affinity-Key``. ``page.request`` does not enter the worker.
+    Wait for the app's startup messages to populate that token. When no worker
+    is expected, as on the local server, this returns an empty mapping.
+    """
+    deadline = time.monotonic() + 30 if required else time.monotonic()
+    worker_states: list[str] = []
+    while True:
+        worker_states = []
+        for worker in page.context.service_workers:
+            try:
+                credentials = worker.evaluate(_SERVICE_WORKER_CREDENTIALS_JS)
+            except Exception as err:
+                worker_states.append(f"{worker.url}: {type(err).__name__}")
+                continue
+            if not isinstance(credentials, dict):
+                worker_states.append(f"{worker.url}: unexpected credentials")
+                continue
+            token = credentials.get("token")
+            backend_id = credentials.get("backendId")
+            worker_states.append(
+                f"{worker.url}: token={'present' if isinstance(token, str) and token else 'absent'}, "
+                f"backend_id={'present' if isinstance(backend_id, str) and backend_id else 'absent'}"
+            )
+            if not isinstance(token, str) or not token:
+                continue
+            headers = {"Authorization": f'Snowflake Token="{token}"'}
+            if isinstance(backend_id, str) and backend_id:
+                headers[_AFFINITY_HEADER] = backend_id
+            return headers
+
+        if not required:
+            return {}
+        if time.monotonic() >= deadline:
+            raise AssertionError(
+                "No SPCS credential arrived in a service worker: "
+                + (", ".join(worker_states) or "no service workers")
+            )
+        page.wait_for_timeout(100)
+
+
 def _interact(
     page: Page,
     app_base_url: str,
@@ -131,9 +205,19 @@ def _interact(
     headers: dict[str, str] | None = None,
 ) -> APIResponse:
     # A login redirect can turn the POST into a GET without its body, which
-    # the route refuses with a 405 that hides the redirect.
+    # the route refuses with a 405 that hides the redirect. Caller headers win
+    # so a test can still set `Origin` or the caller's-rights token.
+    request_headers = {
+        **_service_worker_auth_headers(
+            page, required=_requires_service_worker_auth(page, app_base_url)
+        ),
+        **(headers or {}),
+    }
     return page.request.post(
-        _interact_url(app_base_url), data=body, headers=headers, max_redirects=0
+        _interact_url(app_base_url),
+        data=body,
+        headers=request_headers or None,
+        max_redirects=0,
     )
 
 
@@ -395,7 +479,9 @@ def test_data_urls_serve_every_row_the_snapshot_counts(
     assert small_table["url"] != table["url"]
 
 
-@pytest.mark.external_test
+@pytest.mark.external_test(
+    config_file="e2e_playwright/config/agent_api_interact.toml",
+)
 def test_snapshot_urls_context_and_headers_follow_the_request(
     app_page: Page, agent_api_base_url: str
 ) -> None:
@@ -427,7 +513,14 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     )
     # Relative to the request, the one base a path-stripping proxy cannot hide.
     assert image_url.startswith("../../media/")
-    image = app_page.request.get(urljoin(_interact_url(agent_api_base_url), image_url))
+    image = app_page.request.get(
+        urljoin(_interact_url(agent_api_base_url), image_url),
+        headers=_service_worker_auth_headers(
+            app_page,
+            required=_requires_service_worker_auth(app_page, agent_api_base_url),
+        )
+        or None,
+    )
     assert image.status == 200
     assert image.headers["content-type"].startswith("image/")
 
@@ -445,13 +538,17 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     assert lines["timezone"] == "Asia/Kolkata"
 
 
-@pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
     app_page: Page, app_base_url: str, agent_api_base_url: str
 ) -> None:
     """A web page's request and other methods than POST are refused without
     the app's HTML, and neither made-up identity headers nor cookies, a forged
     login cookie included, reach `st.user` or `st.context.cookies`.
+
+    Not an external test. On Streamlit in Snowflake the container ingress
+    rejects a request before this route can answer it, unless the request
+    carries the service worker's token. That is a different check from the
+    route refusing `Origin`.
     """
     _refusal(
         _interact(
@@ -523,8 +620,15 @@ def test_the_app_links_a_description_that_reaches_the_api(
 
     page = app_target.page
     # Fetch the schema from the backend, which on split-origin hosts is not
-    # the origin that served the HTML.
-    response = page.request.get(schema_url, max_redirects=0)
+    # the origin that served the HTML. The container ingress requires the same
+    # credential as interact.
+    auth_headers = (
+        _service_worker_auth_headers(
+            page, required=_requires_service_worker_auth(page, schema_url)
+        )
+        or None
+    )
+    response = page.request.get(schema_url, headers=auth_headers, max_redirects=0)
     assert response.status == 200, _describe(response)
     assert response.headers["content-type"].startswith("application/json")
     document: dict[str, Any] = response.json()
@@ -539,5 +643,7 @@ def test_the_app_links_a_description_that_reaches_the_api(
     assert (
         urlsplit(interact_url).path == urlsplit(_interact_url(agent_api_base_url)).path
     )
-    created = _snapshot(page.request.post(interact_url, data={}, max_redirects=0))
+    created = _snapshot(
+        page.request.post(interact_url, data={}, headers=auth_headers, max_redirects=0)
+    )
     assert _SESSION_ID.fullmatch(created["session_id"])

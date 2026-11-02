@@ -123,10 +123,11 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers",
-        "external_test(upload_test_assets=False): "
+        "external_test(upload_test_assets=False, config_file=None): "
         "mark test as compatible with external app execution mode. "
         "Set upload_test_assets=True when the hosted app needs "
         "`e2e_playwright/static/` to be available. "
+        "Set config_file to stage the file as `.streamlit/config.toml`. "
         "Only the documented keyword arguments are supported (unknown kwargs error).",
     )
 
@@ -173,13 +174,13 @@ def pytest_collection_modifyitems(
                 "@pytest.mark.external_test(upload_test_assets=True)."
             )
 
-        allowed_kwargs = {"upload_test_assets"}
+        allowed_kwargs = {"upload_test_assets", "config_file"}
         unknown_kwargs = sorted(set(marker.kwargs) - allowed_kwargs)
         if unknown_kwargs:
             raise pytest.UsageError(
                 "external_test marker received unknown keyword arguments: "
                 f"{', '.join(unknown_kwargs)}. "
-                "Allowed keyword arguments: upload_test_assets."
+                "Allowed keyword arguments: upload_test_assets, config_file."
             )
 
         if "upload_test_assets" in marker.kwargs and not isinstance(
@@ -188,6 +189,12 @@ def pytest_collection_modifyitems(
             raise pytest.UsageError(
                 "external_test marker keyword argument upload_test_assets "
                 "must be a boolean."
+            )
+        if "config_file" in marker.kwargs and not isinstance(
+            marker.kwargs["config_file"], str
+        ):
+            raise pytest.UsageError(
+                "external_test marker keyword argument config_file must be a string."
             )
 
     external_app = _get_config_option_or_env(
