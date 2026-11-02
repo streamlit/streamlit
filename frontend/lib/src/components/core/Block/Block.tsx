@@ -234,11 +234,10 @@ interface FlexBoxContainerProps extends BaseBlockProps {
 }
 
 /**
- * A definite-height grid cell's `grid.cell()` block must fill the cell.
+ * Whether a `grid.cell()` block fills its definite-height grid cell.
  *
- * The cell block has no height of its own. The layout wrapper and the inner
- * flex block both use this so stretch children do not collapse to 0 when one
- * of them forgets the check. Content rows stay content-sized so
+ * The cell block has no height of its own, so without this its stretch
+ * children collapse to 0. Content rows stay content-sized so
  * `vertical_alignment` can still move the cell.
  */
 function shouldFillGridCell(
@@ -273,7 +272,6 @@ export const FlexBoxContainer = (
   // don't fit, instead of wrapping.
   const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
-  // See shouldFillGridCell.
   const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
 
   const styles: StyledFlexContainerBlockProps = {
@@ -288,8 +286,7 @@ export const FlexBoxContainer = (
     overflow: layout_styles.overflow,
     overflowX: enableHorizontalScroll ? ("auto" as const) : undefined,
     border: getBorderBackwardsCompatible(props.node.deltaBlock),
-    // Block height. A filling grid cell uses 100% and min-height 0; see
-    // shouldFillGridCell.
+    // Block height. A filling grid cell uses 100% and min-height 0.
     // - stretch: `flex: 1` fills the LayoutWrapper, which does the sizing. An
     //   auto height lets taller content grow the wrapper instead of overflowing.
     // - pixel: set here so the block can scroll.
@@ -329,16 +326,12 @@ export const FlexBoxContainer = (
       parentWidth={parentWidth}
       hasContentWidth={hasContentWidth}
       hasFixedWidth={hasFixedWidth}
-      // True for `st.columns` columns and `st.grid` cells so auto wrap stays
-      // compact for their direct children. Nested containers omit both fields
-      // and reset the flag. Not inherited from parentContext.
+      // Keeps auto wrap compact for direct children of a column or grid cell.
       isDirectlyInColumn={
         notNullOrUndefined(props.node.deltaBlock.column) ||
         notNullOrUndefined(props.node.deltaBlock.gridCell)
       }
-      // Stretch children of this cell take leftover space. Do not copy
-      // fillAvailableHeight: nested containers must not fill the cell
-      // unless they ask for stretch.
+      // Stretch children of this cell take leftover space.
       verticalStretchGrows={fillGridCell}
       {...heightContextProps}
       // A filling grid cell is a definite-height column even though the cell
@@ -409,7 +402,6 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
-  // See shouldFillGridCell.
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
   if (node.isEmpty && !node.deltaBlock.allowEmpty) {
@@ -470,7 +462,7 @@ export const BlockNodeRenderer = (
         flexContext?.direction ?? Direction.VERTICAL
       ]
     : undefined
-  // See shouldFillGridCell. This wins over the stretch-container wrapper.
+  // A filling grid cell wins over the stretch-container wrapper.
   const layoutWrapperStyles = fillGridCell
     ? { ...styles, height: "100%", flex: "1 1 auto", minHeight: 0 }
     : { ...styles, ...stretchWrapperStyles }

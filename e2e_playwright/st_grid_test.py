@@ -89,23 +89,21 @@ def test_stretch_chart_fills_fixed_row_cell(app: Page):
         wait_until(app, chart_is_stretched)
 
 
-def test_grid_visual_snapshot(themed_app: Page, assert_snapshot: ImageCompareFunction):
+def test_grid_visual_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     """Test grid visual appearance with snapshot."""
-    first_grid = get_element_by_key(themed_app, "auto_sizing")
+    first_grid = get_element_by_key(app, "auto_sizing")
     assert_snapshot(first_grid, name="st_grid-auto_sizing")
 
 
 def test_grid_with_border_snapshot(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test bordered grid visual appearance."""
+    """Test bordered grid visual appearance in light and dark themes."""
     bordered_grid = get_element_by_key(themed_app, "bordered")
     assert_snapshot(bordered_grid, name="st_grid-bordered")
 
 
-def test_grid_with_span_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_grid_with_span_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     """Test grid with span visual appearance."""
-    span_grid = get_element_by_key(themed_app, "spanning")
+    span_grid = get_element_by_key(app, "spanning")
     assert_snapshot(span_grid, name="st_grid-span")

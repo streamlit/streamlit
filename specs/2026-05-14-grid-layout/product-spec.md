@@ -369,10 +369,15 @@ sidebar, nested container, or embed — not the `st.columns` 640px viewport brea
 not the raw `736px` `contentMaxWidth` before padding.
 
 That **resolved column count** `N` is shared by wrapping, last-row track reservation, and
-span clamping. CSS `auto-fit` / `minmax` can wrap without measuring, but it collapses
-empty last-row tracks (leftover items stretch) and cannot clamp `span N`. The MVP computes
-`N` with the same resize-observer pattern other layout containers use, then sets
-`repeat(N, …)`.
+span clamping. CSS alone covers the first two:
+`repeat(auto-fill, minmax(max(<min>px, calc((100% - (N - 1) * gap) / N)), 1fr))` caps the
+count at `N`, wraps at the floor, and keeps empty last-row tracks (`auto-fit` would
+collapse them and stretch leftover items). **Span clamping is the requirement that needs a
+measured width.** CSS cannot clamp `span 3` to the number of tracks that fit: a span wider
+than the track count adds implicit columns instead of shrinking. So the MVP computes `N`
+with the same resize-observer pattern other layout containers use, sets `repeat(N, …)`,
+and clamps each span to `N`. Swapping in `auto-fill` without another way to clamp spans
+would break spanning cells on narrow widths.
 
 Before that observer has a width, first paint uses the same formula against an estimate
 of the grid's own width, so the track count does not jump. The estimate is the parent
