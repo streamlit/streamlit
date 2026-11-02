@@ -110,6 +110,11 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
     product concerns.
 - Assess whether the implementation's complexity is proportionate to the value it provides.
   Call out unnecessary abstractions, indirection, state, dependencies, or maintenance burden.
+- Check that element- and widget-specific logic stays in the element's own implementation
+  (see "Keep elements self-contained" in the root `AGENTS.md`). Flag element-type checks or
+  single-element helpers the PR adds to shared code when they could live in the element.
+  This is usually a non-blocking recommendation. Existing cross-element code is out of scope
+  unless the PR extends it.
 - Weigh edge-case findings by likelihood and impact before raising them. Name the concrete
   trigger and how likely real apps are to hit it. Treat rare or theoretical cases without
   security or data-loss impact as non-blocking. For those, recommend the simplest response that

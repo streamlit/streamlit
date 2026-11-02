@@ -59,6 +59,12 @@ as the only signal. If you show one of those, also log the same message.
   should point at user code.
 - **Deprecations:** use `show_deprecation_warning()`, which already logs.
 
+## Element self-containment
+
+- Keep an element's logic in its own module: `elements/<element>.py`, or `elements/widgets/<widget>.py` for widgets. Validation, defaults, value serialization, and helpers only that element uses belong there as module-private functions.
+- `elements/lib/` holds helpers that several elements share. Move a helper there once a second element needs it.
+- Keep shared infrastructure element-agnostic: `delta_generator.py`, `runtime/` (including session and widget state), and `web/` should not branch on a specific element type. Hand element-specific behavior to the generic mechanism instead, such as the serializer, deserializer, and presenter a widget passes to `register_widget`.
+
 ## Metrics
 
 - Use `gather_metrics` only for public `st.*` APIs. Never use it for internal methods or functions.
