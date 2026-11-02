@@ -198,15 +198,10 @@ function useTableSizer(
   // else: height="auto" (default) - use the default behavior (show at most 10 rows)
 
   if (fullscreenContainerHeight) {
-    // If we are in fullscreen mode, the height and maxHeight should not exceed
-    // the fullscreen container height.
-    initialHeight = Math.min(initialHeight, fullscreenContainerHeight)
+    // In fullscreen, every height mode uses the table's max height,
+    // capped by the fullscreen container.
     maxHeight = Math.min(maxHeight, fullscreenContainerHeight)
-
-    if (!configuredHeight) {
-      // If no explicit height is set, set height to max height (fullscreen mode)
-      initialHeight = maxHeight
-    }
+    initialHeight = maxHeight
   }
 
   // Min width for the resizable table container:

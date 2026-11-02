@@ -308,6 +308,77 @@ describe("useTableSizer hook", () => {
     expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
   })
 
+  it("keeps a configured pixel height expanded after entering fullscreen", () => {
+    const CONTAINER_WIDTH = 1920
+    const CONTAINER_HEIGHT = 1080
+    const CONFIGURED_HEIGHT = 458
+    const NUMBER_OF_ROWS = 100
+    const heightConfig = new streamlit.HeightConfig({
+      pixelHeight: CONFIGURED_HEIGHT,
+    })
+
+    type Props = {
+      fullscreenContainerHeight?: number
+      isFullScreen: boolean
+      measuredContainerHeight: number
+    }
+
+    const initialProps: Props = {
+      isFullScreen: false,
+      measuredContainerHeight: CONFIGURED_HEIGHT,
+    }
+
+    const { result, rerender } = renderHook(
+      ({
+        fullscreenContainerHeight,
+        isFullScreen,
+        measuredContainerHeight,
+      }: Props) =>
+        useTableSizer(
+          DataframeProto.create({
+            arrowData: { data: VERY_TALL },
+          }),
+          mockTheme,
+          NUMBER_OF_ROWS,
+          false,
+          CONTAINER_WIDTH,
+          fullscreenContainerHeight,
+          isFullScreen,
+          undefined,
+          heightConfig,
+          measuredContainerHeight
+        ),
+      { initialProps }
+    )
+
+    expect(result.current.resizableSize.height).toEqual(CONFIGURED_HEIGHT)
+
+    // Enter fullscreen without a new container measurement.
+    rerender({
+      fullscreenContainerHeight: CONTAINER_HEIGHT,
+      isFullScreen: true,
+      measuredContainerHeight: CONFIGURED_HEIGHT,
+    })
+    expect(result.current.maxHeight).toEqual(CONTAINER_HEIGHT)
+    expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
+
+    // A later container measurement must keep the expanded height.
+    rerender({
+      fullscreenContainerHeight: CONTAINER_HEIGHT,
+      isFullScreen: true,
+      measuredContainerHeight: CONTAINER_HEIGHT,
+    })
+    expect(result.current.resizableSize.height).toEqual(CONTAINER_HEIGHT)
+
+    // Exit fullscreen restores the configured pixel height.
+    rerender({
+      fullscreenContainerHeight: undefined,
+      isFullScreen: false,
+      measuredContainerHeight: CONFIGURED_HEIGHT,
+    })
+    expect(result.current.resizableSize.height).toEqual(CONFIGURED_HEIGHT)
+  })
+
   it("adapts size on resizing", () => {
     // The width of the surrounding containers
     const CONTAINER_WIDTH = 700
