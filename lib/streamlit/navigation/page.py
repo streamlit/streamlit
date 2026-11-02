@@ -243,8 +243,7 @@ class Page:
 
         The tooltip can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
-        parameter of ``st.markdown``. In the navigation menu, only mouse
-        users can click links in the tooltip.
+        parameter of ``st.markdown``.
 
     Attributes
     ----------
