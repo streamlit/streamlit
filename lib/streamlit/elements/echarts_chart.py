@@ -804,7 +804,8 @@ def _serialize_option(option: dict[str, Any]) -> str:
             "numbers (NaN/Infinity) are not supported. Pass chart data as a "
             "dataframe in `dataset.source`, which converts datetimes, NumPy "
             "values, and missing values automatically; values anywhere else "
-            "(for example `series.data`) must already be JSON-compatible.",
+            "(for example `series.data`) must already be plain Python values "
+            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -979,7 +980,7 @@ class EChartsMixin:
         a JSON string, or a ``pyecharts`` chart instance.
 
         To chart a dataframe, pass it as ``dataset.source`` in the option
-        object instead of converting it to lists. Do this for any data with
+        object instead of converting it to lists. Do this for any table with
         more than about 1,000 rows. It's faster for large data, converts
         datetimes and missing values, and lets users choose **Show data** to
         view the dataframe as a table. For details, see the ``spec``
@@ -1081,8 +1082,10 @@ class EChartsMixin:
 
             Put chart data in ``dataset.source`` as a dataframe-like object
             (pandas, Polars, PyArrow, and others) rather than as lists in
-            ``series.data`` or ``xAxis.data``, especially for more than about
-            1,000 rows. A dataframe source has these advantages:
+            ``series.data`` or ``xAxis.data``, always for more than about
+            1,000 rows. Graph, sankey, tree, treemap, sunburst, and other
+            series that don't read ``dataset`` take their data in
+            ``series.data`` instead. A dataframe source has these advantages:
 
             - Performance: Streamlit sends the dataframe to the browser as
               Arrow, which is smaller and faster than inline values for large
@@ -1090,9 +1093,9 @@ class EChartsMixin:
             - Value types: Datetimes become ISO-8601 strings (in UTC if
               timezone-aware), durations become milliseconds, and missing
               values become ``null``. Other non-numeric values use the text
-              ``st.dataframe`` shows. Inline values must already be
-              JSON-compatible, so datetimes, NumPy integers, and ``NaN`` raise
-              an error there.
+              ``st.dataframe`` shows. Values elsewhere in the option, such as
+              ``series.data``, must already be JSON-compatible, so datetimes,
+              NumPy integers, and ``NaN`` in them raise an error.
             - Show data: The chart's hover toolbar has a **Show data** button
               that displays the dataframe as a table.
 
