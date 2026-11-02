@@ -54,7 +54,10 @@ import {
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
 import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
@@ -511,7 +514,11 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUser: true })
+      // React Aria calls onChange with the unchanged selection whenever the
+      // menu closes (Escape, click outside), so only commit an actual change.
+      if (!arrayComparator(finalValue, value)) {
+        setValueWithSource({ value: finalValue, fromUser: true })
+      }
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]

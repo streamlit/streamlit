@@ -22,6 +22,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { TextColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useWidgetState from "./useWidgetState"
 
@@ -466,6 +467,10 @@ describe("useWidgetState hook", () => {
 
     it("does not include cell selection when syncCellSelections is false", () => {
       const mockWidgetMgr = createMockWidgetMgr()
+      // A stored row selection makes the cell-less (empty) selection a change.
+      mockWidgetMgr.getStringValue.mockReturnValue(
+        '{"selection":{"rows":[0],"columns":[],"cells":[]}}'
+      )
       const columns = [createMockColumn("col1", 0)]
 
       const { result } = renderHook(() =>
@@ -555,6 +560,128 @@ describe("useWidgetState hook", () => {
           fromUser: true,
         })
       )
+    })
+
+    describe("skips unchanged selections", () => {
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+
+      /**
+       * Renders the hook against a real WidgetStateManager holding
+       * `storedSelection`. `select` syncs a row/column selection and flushes
+       * any scheduled rerun.
+       */
+      const renderSelectionSync = (
+        storedSelection?: string
+      ): {
+        select: (
+          rows: CompactSelection,
+          selectedColumns: CompactSelection
+        ) => void
+        setStringValueSpy: ReturnType<typeof vi.spyOn>
+        sendRerunBackMsg: ReturnType<typeof vi.fn>
+      } => {
+        const sendRerunBackMsg = vi.fn()
+        const widgetMgr = new WidgetStateManager({
+          sendRerunBackMsg,
+          formsDataChanged: vi.fn(),
+        })
+        if (storedSelection !== undefined) {
+          widgetMgr.setStringValue("test-id", storedSelection, {
+            formId: "",
+            fragmentId: undefined,
+            fromUser: false,
+          })
+        }
+        const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+        const { result } = renderHook(() =>
+          useWidgetState({
+            element: DataframeProto.create({
+              id: "test-id",
+              formId: "",
+              editingMode: DataframeProto.EditingMode.READ_ONLY,
+            }),
+            widgetMgr,
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: columns,
+          })
+        )
+        const syncSelectionState = result.current.createSyncSelectionState(
+          columns,
+          (idx: number) => idx
+        )
+        const select = (
+          rows: CompactSelection,
+          selectedColumns: CompactSelection
+        ): void => {
+          act(() => {
+            syncSelectionState(
+              { rows, columns: selectedColumns, current: undefined },
+              true
+            )
+          })
+          act(() => {
+            vi.runAllTimers()
+          })
+        }
+        return { select, setStringValueSpy, sendRerunBackMsg }
+      }
+
+      it("does not commit an empty selection when nothing is stored", () => {
+        const { select, setStringValueSpy, sendRerunBackMsg } =
+          renderSelectionSync()
+
+        select(CompactSelection.empty(), CompactSelection.empty())
+
+        expect(setStringValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // A non-empty selection still commits and reruns.
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.empty()
+        )
+
+        expect(setStringValueSpy).toHaveBeenCalledWith(
+          "test-id",
+          '{"selection":{"rows":[1],"columns":[],"cells":[]}}',
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      })
+
+      it("does not commit a selection equal to a backend-set one", () => {
+        // Backend-set selections arrive as Python json.dumps output, whose
+        // spacing differs from JSON.stringify.
+        const { select, setStringValueSpy, sendRerunBackMsg } =
+          renderSelectionSync(
+            '{"selection": {"rows": [1], "columns": ["col2"], "cells": []}}'
+          )
+
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.fromSingleSelection(1)
+        )
+
+        expect(setStringValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // Clearing the column selection is a real change.
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.empty()
+        )
+
+        expect(setStringValueSpy).toHaveBeenCalledWith(
+          "test-id",
+          '{"selection":{"rows":[1],"columns":[],"cells":[]}}',
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      })
     })
 
     it("serializes row selection in stable ascending order regardless of display order", () => {

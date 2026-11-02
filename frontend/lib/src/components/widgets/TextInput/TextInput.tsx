@@ -604,8 +604,26 @@ function TextInput({
     cancelLiveCommit()
     setUiValueAndRef("")
     setHasUserError(false)
+    // Clearing uncommitted text over an empty committed value is not a
+    // change, so skip the commit (and its rerun), except:
+    // - inside a form, where a script write can change value without
+    //   replacing the text staged in the form
+    // - after a dirty edit dropped an incoming value, so Python does not keep
+    //   the dropped write
+    if (!inForm && value === "" && !droppedIncomingWhileDirtyRef.current) {
+      setDirtyAndRef(false)
+      return
+    }
+    droppedIncomingWhileDirtyRef.current = false
     commitWidgetValue("")
-  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
+  }, [
+    cancelLiveCommit,
+    commitWidgetValue,
+    inForm,
+    setDirtyAndRef,
+    setUiValueAndRef,
+    value,
+  ])
 
   const onChange = useOnInputChange({
     formId,

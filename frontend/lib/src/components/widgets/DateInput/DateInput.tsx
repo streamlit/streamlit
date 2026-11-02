@@ -256,18 +256,26 @@ function DateInput({
 
       setHasRequiredError(false)
       setError(null)
+      // Re-picking or retyping the committed value must not rerun. Compare
+      // the pre-normalization order, so a reversed range still commits (one
+      // rerun) to repaint in order.
+      const hasChanged =
+        lastWrittenIsoRef.current === undefined ||
+        !isoArraysEqual(toWrite, lastWrittenIsoRef.current)
       lastWrittenIsoRef.current = written
       pendingIsoRef.current = keepIncompleteDisplay ? isoValues : written
-      setValueWithSource({ value: written, fromUser })
-      // Inside a form, write synchronously so submit in the same event sees
-      // the staged value. Form widget writes do not schedule a rerun.
-      if (inForm) {
-        updateWidgetMgrState(
-          element,
-          widgetMgr,
-          { value: written, fromUser },
-          fragmentId
-        )
+      if (hasChanged) {
+        setValueWithSource({ value: written, fromUser })
+        // Inside a form, write synchronously so submit in the same event
+        // sees the staged value. Form widget writes do not schedule a rerun.
+        if (inForm) {
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: written, fromUser },
+            fragmentId
+          )
+        }
       }
       setDirty(keepIncompleteDisplay)
       return true

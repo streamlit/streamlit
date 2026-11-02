@@ -26,6 +26,7 @@ import {
   CompactSelection,
   type GridSelection,
 } from "@glideapps/glide-data-grid"
+import { isEqual } from "lodash-es"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
@@ -175,6 +176,10 @@ interface DataframeState {
     columns: string[]
     cells: CellPosition[]
   }
+}
+
+const EMPTY_SELECTION_STATE: DataframeState = {
+  selection: { rows: [], columns: [], cells: [] },
 }
 
 interface UseWidgetStateParams {
@@ -466,22 +471,28 @@ function useWidgetState({
           }
         }
 
-        const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
           formId: element.formId,
         })
+        // Compare parsed values: backend-set selections are serialized by
+        // Python's json.dumps, whose spacing differs from JSON.stringify.
+        // No stored state means nothing is selected.
+        const currentSelectionState = isNullOrEmptyString(currentWidgetState)
+          ? EMPTY_SELECTION_STATE
+          : (JSON.parse(currentWidgetState) as DataframeState)
 
         // Only update if there is actually a difference to the previous selection state
-        if (
-          currentWidgetState === undefined ||
-          currentWidgetState !== newWidgetState
-        ) {
-          widgetMgr.setStringValue(element.id, newWidgetState, {
-            formId: element.formId,
-            fragmentId,
-            fromUser: true,
-          })
+        if (!isEqual(currentSelectionState, selectionState)) {
+          widgetMgr.setStringValue(
+            element.id,
+            JSON.stringify(selectionState),
+            {
+              formId: element.formId,
+              fragmentId,
+              fromUser: true,
+            }
+          )
         }
       }
     },

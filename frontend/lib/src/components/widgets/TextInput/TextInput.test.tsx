@@ -237,7 +237,10 @@ describe("TextInput widget", () => {
 
     it("clears the value and hides the button when clicked", async () => {
       const user = userEvent.setup()
-      const props = getProps({ type: TextInputProto.Type.SEARCH })
+      const props = getProps({
+        type: TextInputProto.Type.SEARCH,
+        default: "shoes",
+      })
       const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
       render(<TextInput {...props} />)
       // Ignore the mount-time registration call so we can assert clear commits
@@ -245,7 +248,7 @@ describe("TextInput widget", () => {
       setStringValueSpy.mockClear()
 
       const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
-      await user.type(searchbox, "laptops")
+      await user.type(searchbox, " laptops")
 
       // Typing alone must not commit — `preventFocusLoss` on the clear button
       // exists so mousedown does not blur-commit "laptops" before clear.
@@ -264,6 +267,65 @@ describe("TextInput widget", () => {
         fragmentId: undefined,
         fromUser: true,
       })
+    })
+
+    it("does not commit or rerun when clearing uncommitted text over an empty value", async () => {
+      const user = userEvent.setup()
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const props = getProps(
+        { type: TextInputProto.Type.SEARCH },
+        { widgetMgr }
+      )
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      setStringValueSpy.mockClear()
+
+      const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+      await user.type(searchbox, "laptops")
+      await user.click(screen.getByTestId("stTextInputClearButton"))
+
+      expect(searchbox.value).toBe("")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+      // The field is clean again, so blurring does not commit either.
+      await user.click(document.body)
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+    })
+
+    it("stages an empty value on clear inside a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        type: TextInputProto.Type.SEARCH,
+        formId: "form",
+      })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+
+      const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
+      await user.type(searchbox, "laptops")
+      await user.click(screen.getByTestId("stTextInputClearButton"))
+
+      // Keystrokes staged "laptops" into the form, so "" must replace it.
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        "",
+        {
+          formId: "form",
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+      expect(props.widgetMgr.getStringValue(props.element)).toBe("")
     })
 
     it("clears a leftover validate error when the search clear button is clicked", async () => {
@@ -1829,6 +1891,7 @@ describe("on_change='ignore' mode", () => {
       {
         ignoreRerun: true,
         type: TextInputProto.Type.SEARCH,
+        default: "shoes",
       },
       { widgetMgr }
     )
@@ -1839,7 +1902,7 @@ describe("on_change='ignore' mode", () => {
     sendRerunBackMsg.mockClear()
 
     const searchbox = screen.getByRole<HTMLInputElement>("searchbox")
-    await user.type(searchbox, "laptops")
+    await user.type(searchbox, " laptops")
     expect(setStringValueSpy).not.toHaveBeenCalled()
 
     await user.click(screen.getByTestId("stTextInputClearButton"))
@@ -2050,9 +2113,10 @@ describe("TextInput live updates", () => {
   it("cancels the timer and commits empty on search-clear", async () => {
     const { user, props, setStringValueSpy } = renderLive({
       type: TextInputProto.Type.SEARCH,
+      default: "shoes",
     })
 
-    await user.type(screen.getByRole("searchbox"), "ab")
+    await user.type(screen.getByRole("searchbox"), " ab")
     await user.click(screen.getByTestId("stTextInputClearButton"))
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
     expect(setStringValueSpy).toHaveBeenCalledWith(
@@ -2063,6 +2127,20 @@ describe("TextInput live updates", () => {
 
     advanceMs(300)
     expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it("cancels the timer and does not commit on search-clear over an empty value", async () => {
+    const { user, setStringValueSpy } = renderLive({
+      type: TextInputProto.Type.SEARCH,
+    })
+
+    await user.type(screen.getByRole("searchbox"), "ab")
+    await user.click(screen.getByTestId("stTextInputClearButton"))
+    expect(screen.getByRole("searchbox")).toHaveValue("")
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+
+    advanceMs(300)
+    expect(setStringValueSpy).not.toHaveBeenCalled()
   })
 
   it("does not live-commit inside a form", async () => {
@@ -2570,6 +2648,41 @@ describe("TextInput live updates", () => {
       "abc",
       fromUserCommit(props)
     )
+  })
+
+  it("resyncs once on search clear after a dirty setValue was dropped", async () => {
+    const { user, props, setStringValueSpy, rerender } = renderLive({
+      type: TextInputProto.Type.SEARCH,
+      default: "",
+    })
+
+    const input = screen.getByRole("searchbox")
+    await user.type(input, "ab")
+    rerender(
+      <TextInput
+        {...props}
+        element={TextInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: "XYZ",
+        })}
+      />
+    )
+    expect(input).toHaveValue("ab")
+
+    // Python may hold the dropped "XYZ", so clearing must commit "".
+    await user.click(screen.getByTestId("stTextInputClearButton"))
+    expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+      props.element.id,
+      "",
+      fromUserCommit(props)
+    )
+
+    // The resync is done, so a later clear over "" is a no-op again.
+    setStringValueSpy.mockClear()
+    await user.type(input, "c")
+    await user.click(screen.getByTestId("stTextInputClearButton"))
+    expect(setStringValueSpy).not.toHaveBeenCalled()
   })
 
   it("does not apply a stale B echo after A then B then A", () => {
