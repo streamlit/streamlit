@@ -196,7 +196,7 @@ def _get_signature(obj: object) -> str | None:
         return str(inspect.signature(obj))
     except (ValueError, NameError):
         # inspect.signature cannot describe some callables (ValueError). On
-        # Python 3.14 it can also raise NameError for a TYPE_CHECKING-only annotation.
+        # Python 3.14+ it can also raise NameError for a TYPE_CHECKING-only annotation.
         return "(...)"
     except TypeError:
         return None
