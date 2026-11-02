@@ -156,6 +156,7 @@ def get_api_client():
 # streamlit_app.py — user-specific state: use session_state, loaded once per session
 if "user" not in st.session_state:
     st.session_state.user = get_user()
+if "settings" not in st.session_state:
     st.session_state.settings = load_settings()
 ```
 
