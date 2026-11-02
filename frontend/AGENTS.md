@@ -32,7 +32,9 @@
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
-- **Keep elements self-contained**: An element's component, styled components, hooks, helpers, and tests live in its folder under `lib/src/components/elements/<Element>/` or `lib/src/components/widgets/<Widget>/` (e.g., `Slider/sliderStep.ts`). Keep shared code element-agnostic: avoid adding `element.type === "..."` checks or single-element helpers to `components/core/` (`Block`, layout wrappers), `render-tree/`, `WidgetStateManager`, `App.tsx`, or `util/`. In `ElementNodeRenderer`, limit an element's case to unpacking its proto, choosing its `ElementContainerConfig`, and rendering the component. Move a helper to a shared module once a second element needs it.
+- **Keep elements self-contained**: An element's component, styled components, hooks, helpers, and tests live in its folder under `lib/src/components/elements/<Element>/` or `lib/src/components/widgets/<Widget>/` (e.g., `Slider/sliderStep.ts`). Move a helper to a shared module once a second element needs it.
+  - Keep shared code element-agnostic: avoid adding `element.type === "..."` checks or single-element helpers to `components/core/` (`Block`, layout wrappers), `render-tree/`, `WidgetStateManager`, `App.tsx`, or `util/`. When shared code genuinely needs element-specific behavior, keep that touch point small instead of adding an abstraction to avoid it.
+  - In `ElementNodeRenderer`, limit an element's case to unpacking its proto, choosing its `ElementContainerConfig`, and rendering the component. A container's case in the `deltaBlock` dispatch of `Block.tsx` is wiring in the same way.
 
 ## Streamlit Frontend Performance Hot Paths
 

@@ -60,7 +60,7 @@ git diff "origin/$BASE_BRANCH"
 - Eliminate redundant code and dead branches
 - Improve naming for clarity (variables, functions, parameters)
 - Consolidate duplicate logic only when it improves readability
-- Move element-specific logic the branch added to shared code into that element's own files when the move is straightforward (see "Keep elements self-contained" in `AGENTS.md`)
+- Move element-specific logic that the branch added to shared code into that element's own files when the move is straightforward (see "Keep elements self-contained" in `AGENTS.md`)
 - Avoid nested ternary operators; prefer `if/else` or `switch/case`
 - Do not add features, refactor unrelated code, or make improvements beyond what was asked
 
