@@ -92,6 +92,7 @@ import {
   ElementContainerConfig,
   MinStretchWidth,
 } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 import { StyledSpace } from "./styled-components"
 import {
   type BaseBlockProps,
@@ -219,6 +220,11 @@ const BidiComponent = lazy(
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
+  /**
+   * Whether this renders a retained copy of a displaced prior-run element.
+   * Retained elements are hidden unless they hold focus.
+   */
+  isRetained?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -1327,9 +1333,11 @@ const ElementNodeRenderer = (
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
   return (
-    <Maybe enable={enable}>
-      <RawElementNodeRenderer {...props} isStale={isStale} />
-    </Maybe>
+    <RetainedElementContext.Provider value={props.isRetained === true}>
+      <Maybe enable={enable}>
+        <RawElementNodeRenderer {...props} isStale={isStale} />
+      </Maybe>
+    </RetainedElementContext.Provider>
   )
 }
 

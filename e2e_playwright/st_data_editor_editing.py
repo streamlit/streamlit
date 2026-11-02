@@ -135,13 +135,13 @@ random_df = pd.DataFrame(
     columns=["Column A", "Column B", "Column C", "Column D", "Column E"],
 )
 
-# Used by the state-persistence test: clicking this button appends elements
-# (with a short delay) which forces the data editor above it to unmount and
-# remount, so we can verify the edited row state survives.
+# Used by the state-persistence test: clicking this button inserts elements
+# (with a short delay) above the data editor, which shifts it to a later
+# position, so we can verify the edited row state survives.
 if st.button("Create some elements to unmount component"):
     for _ in range(3):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
+        # The sleep lets the browser render each element on its own, so the
+        # component below is displaced (and kept mounted) before it is re-emitted.
         time.sleep(1)
         st.write("Another element")
 

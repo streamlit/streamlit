@@ -1541,6 +1541,61 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("red")).toBeVisible()
     })
   })
+
+  describe("no-op interactions", () => {
+    it.each([
+      ["Escape", "escape"],
+      ["a click outside", "outside"],
+    ])(
+      "does not commit or rerun when the dropdown closes via %s without a change",
+      async (_name, closeVia) => {
+        const user = userEvent.setup()
+        const sendRerunBackMsg = vi.fn()
+        const widgetMgr = new WidgetStateManager({
+          sendRerunBackMsg,
+          formsDataChanged: vi.fn(),
+        })
+        const props = getProps({}, { widgetMgr })
+        const setStringArrayValueSpy = vi.spyOn(
+          widgetMgr,
+          "setStringArrayValue"
+        )
+        render(
+          <>
+            <span>Outside</span>
+            <Multiselect {...props} />
+          </>
+        )
+        setStringArrayValueSpy.mockClear()
+
+        await user.click(screen.getByRole("button", { name: "Open" }))
+        expect(screen.getByRole("listbox")).toBeVisible()
+        if (closeVia === "escape") {
+          await user.keyboard("{Escape}")
+        } else {
+          await user.click(screen.getByText("Outside"))
+        }
+        await act(async () => {
+          await new Promise(resolve => {
+            setTimeout(resolve, 0)
+          })
+        })
+
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+        expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // A real selection still commits.
+        await user.click(screen.getByRole("button", { name: "Open" }))
+        await user.click(screen.getByRole("option", { name: "b" }))
+        expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+          props.element.id,
+          ["a", "b"],
+          expect.objectContaining({ fromUser: true })
+        )
+      }
+    )
+  })
 })
 
 describe("Multiselect query param binding", () => {

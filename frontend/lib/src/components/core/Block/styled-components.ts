@@ -71,6 +71,8 @@ export function translateGapWidth(
 
 interface StyledElementContainerProps {
   isStale: boolean
+  /** Whether this is a retained copy of a displaced prior-run element. */
+  isRetained?: boolean
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
   elementType: string
@@ -91,11 +93,23 @@ export const StyledSpace = styled.div({
   height: "100%",
 })
 
+/**
+ * A retained element stays mounted but leaves the layout, unless it holds
+ * focus. Hiding a focused control would blur it (committing a dirty text
+ * input) in Chromium and Firefox, and would strand focus in WebKit.
+ */
+const RETAINED_STYLES = {
+  "&:not(:focus-within)": {
+    display: "none",
+  },
+}
+
 const GLOBAL_ELEMENTS = new Set(["balloons", "snow"])
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
   ({
     theme,
     isStale,
+    isRetained,
     width,
     height,
     elementType,
@@ -144,6 +158,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     },
 
     ...(isStale && elementType !== "skeleton" && STALE_STYLES),
+    ...(isRetained === true && RETAINED_STYLES),
     ...(elementType === "empty"
       ? {
           // Use display: none for empty elements to avoid the flexbox gap.

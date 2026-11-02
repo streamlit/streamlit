@@ -315,6 +315,10 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       // RAC guarantees key matches the id prop passed to <Tab> (always String(index)),
       // but guard against NaN in case id generation ever changes.
       if (Number.isNaN(newIndex)) return
+      // RAC also reports the already-active key (clicking the active tab,
+      // Home on the first tab, End on the last); skip it so dynamic tabs
+      // don't rerun without a change.
+      if (newIndex === activeTabKey) return
       const newLabel = allTabLabels[newIndex]
       setActiveTabKey(newIndex)
       activeTabNameRef.current = newLabel
@@ -332,6 +336,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     },
     [
+      activeTabKey,
       allTabLabels,
       blockId,
       fragmentId,
