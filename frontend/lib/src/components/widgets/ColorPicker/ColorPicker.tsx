@@ -108,9 +108,13 @@ const ColorPicker: FC<Props> = ({
 
   const handleColorClose = useCallback(
     (color: string): void => {
+      // BaseColorPicker reports the draft on every close, so skip closes that
+      // keep the current color (react-color emits lowercase hex, while the
+      // proto value may be uppercase).
+      if (color.toLowerCase() === value.toLowerCase()) return
       setValueWithSource({ value: color, fromUser: true })
     },
-    [setValueWithSource]
+    [setValueWithSource, value]
   )
 
   return (

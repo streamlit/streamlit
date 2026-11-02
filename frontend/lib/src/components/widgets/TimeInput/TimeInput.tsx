@@ -393,7 +393,13 @@ function TimeInput({
       setHasRequiredError(false)
       if (commitImmediatelyRef.current) {
         commitImmediatelyRef.current = false
-        commitDisplayValue(newValue)
+        // A paste or arrow step that lands on the committed time is not a
+        // change, so skip the commit (and its rerun).
+        if (newValue === valueRef.current) {
+          setDirty(false)
+        } else {
+          commitDisplayValue(newValue)
+        }
       } else {
         // Typed / deferred path — mark as dirty so InputInstructions can show.
         setDirty(true)

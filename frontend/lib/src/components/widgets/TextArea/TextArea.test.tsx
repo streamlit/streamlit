@@ -1566,3 +1566,100 @@ describe("on_change='ignore' mode", () => {
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
   })
 })
+
+describe("TextArea no-op interactions", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [400],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function renderWithRerunSpy(): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    setStringValueSpy: ReturnType<typeof vi.spyOn>
+    props: Props
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ default: "hello" }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(<TextArea {...props} />)
+    setStringValueSpy.mockClear()
+    return { sendRerunBackMsg, setStringValueSpy, props }
+  }
+
+  it.each([
+    ["blur", "{Tab}"],
+    ["Ctrl+Enter", "{Control>}{Enter}{/Control}"],
+  ])(
+    "does not commit or rerun an edit reverted to the committed value on %s",
+    async (_trigger, keys) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy()
+
+      const textArea = screen.getByRole("textbox")
+      await user.type(textArea, "x{Backspace}")
+      expect(screen.getByText(/Enter to apply/)).toBeVisible()
+      await user.keyboard(keys)
+
+      expect(textArea).toHaveValue("hello")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+      // The reverted edit is no longer dirty, so the hint disappears.
+      expect(screen.queryByText(/Enter to apply/)).not.toBeInTheDocument()
+    }
+  )
+
+  it("commits and reruns an edit that changes the value", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringValueSpy, props } = renderWithRerunSpy()
+
+    await user.type(screen.getByRole("textbox"), "!")
+    await user.tab()
+
+    expect(setStringValueSpy).toHaveBeenCalledWith(
+      props.element.id,
+      "hello!",
+      { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+    )
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("still submits the form on Ctrl+Enter when the value is unchanged", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const submitFormSpy = vi.spyOn(widgetMgr, "submitForm")
+    const props = getProps({ default: "hello", formId: "form" }, { widgetMgr })
+    render(<TextArea {...props} />)
+
+    await user.type(screen.getByRole("textbox"), "x{Backspace}")
+    await user.keyboard("{Control>}{Enter}{/Control}")
+
+    expect(submitFormSpy).toHaveBeenCalledWith("form", undefined)
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.getStringValue(props.element)).toBe("hello")
+  })
+})

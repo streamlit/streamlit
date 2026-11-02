@@ -297,8 +297,11 @@ const TextArea: FC<Props> = ({
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
+    // An edit reverted to the committed value is not a change, so skip the
+    // commit (and its rerun).
+    if (uiValue === value) return
     setValueWithSource({ value: uiValue, fromUser: true })
-  }, [uiValue, setValueWithSource])
+  }, [uiValue, value, setValueWithSource])
 
   /**
    * Returns whether the current value may be committed or submitted, and
