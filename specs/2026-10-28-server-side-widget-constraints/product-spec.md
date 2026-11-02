@@ -136,8 +136,9 @@ own, provided each reports the violation and lets the caller decide."
    its URL parameter. A URL can still set a form field without a submit, because an
    author who binds a widget accepts that a link can set it. Programmatic
    `st.session_state` writes and widget defaults keep their current rules, apart from
-   one side effect listed in [Behavior changes](#behavior-changes). Making programmatic
-   writes consistent is a follow-up (see [Out of scope](#out-of-scope)).
+   text past `max_chars`, which is cut (see [Behavior changes](#behavior-changes)).
+   Making programmatic writes consistent is a follow-up (see
+   [Out of scope](#out-of-scope)).
 
 There is no new parameter and no config option, not even a hidden kill switch (see
 [Rollout](#rollout)). The check refuses only what the shipped frontend never sends, so a
@@ -188,17 +189,19 @@ value from a client satisfies all of the following:
   options. It is within `max_selections` and lists no option twice. A label several
   options share may appear as often as they share it, as the multiselect's "Select all"
   sends it, and it resolves as before: to the first such option in `st.multiselect`, and
-  to the last elsewhere. A multiselect may also repeat an option as often as the value it
-  holds does, such as an author's `default=["a", "a"]`, which the browser keeps when the
-  user adds options.
+  to the last elsewhere. A multi-select widget may also repeat an option as often as its
+  `default` does, such as `default=["a", "a"]`, which a form that clears on submit
+  restores. A multiselect may repeat one as often as the value it holds does too, which
+  the browser keeps when the user adds options.
 - It is within `min_value`/`max_value` and `max_chars`, and is a well-formed date, time,
-  color, or range. The author's own default passes as written, even text past
-  `max_chars` or a color with a trailing newline, because the browser shows it and
-  sends it back. A float `st.slider` also accepts a bound as the browser rounds it to
-  the step's precision (`min_value=0.123` with `step=0.1` sends `0.12`), and reads it as
-  the bound, so the app never sees a value past `min_value` or `max_value`. The agent
-  API gets no such allowance, so it never moves a request's value: `0.12` is refused
-  there.
+  color, or range. Text past `max_chars` is cut before the browser shows it, whatever
+  its source (see [Behavior changes](#behavior-changes)). Otherwise the author's own
+  default passes as written, such as a color with a trailing newline, because the
+  browser shows it and sends it back. A float `st.slider` also accepts a bound as the
+  browser rounds it to the step's precision (`min_value=0.123` with `step=0.1` sends
+  `0.12`), and reads it as the bound, so the app never sees a value past `min_value` or
+  `max_value`. The agent API gets no such allowance, so it never moves a request's
+  value: `0.12` is refused there.
 - It does not empty a `required` widget. `required` limits what a user can submit, not
   what the widget holds: an untouched required widget still reads as empty (`None`, `""`,
   or `[]`), exactly as in the browser, so an app still has to handle that case. Neither
@@ -376,19 +379,19 @@ The agent spec needs these edits once the relevant items land:
 
 ### Behavior changes
 
-Each change follows from the contract. A correct browser sees only nine of them, all
+Each change follows from the contract. A correct browser sees only eight of them, all
 listed below: the self-disabling button, the URL parameter of a disabled bound widget,
-values from app code or a link that break a constraint, chat input text from app code
-past `max_chars`, a float slider's click at a bound, a form's staged values when it
-remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge
-whitespace, and the sync races. App code also sees one: the Components v2 trigger key.
-A browser that reconnects to a new session, after a server restart or an expired
-`server.disconnectedSessionTTL`, keeps its values as today, apart from text past
-`max_chars`, or an empty value for a required widget whose default is not empty, that
-app code wrote. Its first interaction counts as today too, even when it is a click, a
-form submit, or a chat message: the widget returns it. No callback fires for these
-values and triggers, also as today, and each is checked when its widget registers. The
-other changes affect only forged values, `AppTest`, and the agent API.
+values from app code, a default, or a link that break a constraint, a float slider's
+click at a bound, a form's staged values when it remounts, a color picker's typed
+`transparent`, a pill whose label has an icon and edge whitespace, and the sync races.
+App code also sees one: the Components v2 trigger key. A browser that reconnects to a
+new session, after a server restart or an expired `server.disconnectedSessionTTL`,
+keeps its values as today, apart from a value that app code wrote and that breaks a
+constraint, such as an empty value for a required widget whose default is not empty.
+Its first interaction counts as today too, even when it is a click, a form submit, or a
+chat message: the widget returns it. No callback fires for these values and triggers,
+also as today, and each is checked when its widget registers. The other changes affect
+only forged values, `AppTest`, and the agent API.
 
 - **Callbacks no longer fire for rejected values:** forged, stale, hidden, or disabled.
   This is the point of the spec.
@@ -409,24 +412,13 @@ other changes affect only forged values, `AppTest`, and the agent API.
   needs a changelog entry, but it is rare, because `bind="query-params"` is new. A link
   that presets a filter shown as locked still works if the app reads `st.query_params`
   and passes the value to the widget itself.
-- **Text past `max_chars` from app code or a link.** Today
-  `st.session_state["name"] = "abcd"` for a `max_chars=3` text input is accepted, then
-  truncated to `"abc"` when the browser sends it back. That fires `on_change` although
-  nobody changed the widget, and the browser keeps showing `"abcd"`. Because
-  deserializers stop truncating (item 4), the text now stays as written on both sides
-  until the programmatic-writes follow-up settles one rule. After a reconnect to a new
-  session, the check at registration refuses it, and the widget falls back to its
-  default. Whether to truncate it at registration instead is left to that follow-up. A
-  link is still truncated, but in UTF-16 code units, as the browser counts, so text with
-  astral characters such as emoji keeps fewer characters than today. Both need a
-  changelog entry.
-- **Chat input text from app code is cut to `max_chars` before the browser shows it.**
-  A chat input does not echo its text: the browser writes the text into the field
-  without its `max_chars` check, and Enter sends it as a new message. So with
-  `st.session_state.chat = "abcdefgh"` for a `max_chars=5` chat input, the field now
-  shows `"abcde"`, the message that lands, as it landed before. Today the field shows
-  all eight characters and the server cuts the message. The cut counts UTF-16 code
-  units, as the browser does.
+- **Text past `max_chars` is cut to `max_chars`,** counted in UTF-16 code units as the
+  browser counts, whatever its source: app code, a default, or a link. Today the app
+  already gets the cut text, but the browser shows the full text, and the echo fires
+  `on_change` although nobody changed the widget. Now both show the cut text and no
+  callback fires. A chat input's text from app code is cut the same way, so its field
+  shows the message that lands. Text with astral characters, such as emoji, keeps fewer
+  characters than today's cut, which counts code points. This needs a changelog entry.
 - **Other links that break a constraint** are repaired or cleared by the widget's own
   rules. A reversed range is now sorted (`st.slider`, `st.date_input`). A three-date
   range, a color with a trailing newline, an empty parameter for a required widget, and
@@ -454,8 +446,9 @@ other changes affect only forged values, `AppTest`, and the agent API.
   holds, and no `on_change` runs. Any other label several options share is still
   refused.
 - **A Components v2 component's trigger key** (`"<key>__events"`) can no longer be
-  assigned in `st.session_state` after the component renders. Like any widget key, it
-  raises `StreamlitWidgetAlreadyInstantiatedError`.
+  assigned in `st.session_state` after the component renders. The key holds the
+  component's events and is read-only, so the assignment raises
+  `StreamlitValueAssignmentNotAllowedError`, which names the key and says so.
 - **`AppTest` follows the same rules,** because it sends widget states through the same
   path. A test that sets an out-of-constraint value, such as `set_value` beyond
   `max_value`, `""` or `None` on a filled `required` field, or `set_range` with reversed
@@ -513,9 +506,9 @@ other changes affect only forged values, `AppTest`, and the agent API.
 
 | Item | ✅ or comment |
 | --- | --- |
-| Works on SiS, Cloud, etc? | ✅ Server-side, apart from two frontend fixes (a form keeps its staged values when it remounts, and a color picker keeps its color when the user types `transparent`) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from text past `max_chars`, or an empty value for a required widget whose default is not empty, that app code wrote, and its first click still counts. |
-| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code or a link that break a constraint, chat input text from app code past `max_chars`, a float slider's click at a bound, a form's staged values when it remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
+| Works on SiS, Cloud, etc? | ✅ Server-side, apart from two frontend fixes (a form keeps its staged values when it remounts, and a color picker keeps its color when the user types `transparent`) and the browser re-syncing to values it already accepts through `set_value`. No platform change. Widgets with no such channel keep showing a refused change (see [The contract](#the-contract)); a frontend re-sync for them is a follow-up. A browser that reconnects to a new session, after a restart or a move to another replica, keeps its values as today, apart from a value that app code wrote and that breaks a constraint, such as an empty value for a required widget whose default is not empty, and its first click still counts. |
+| No breaking API changes | ⚠️ No API change. The behavior changes for rejected client values are listed above. The ones a correct browser can see are limited to the self-disabling button, the URL parameter of a disabled bound widget, values from app code, a default, or a link that break a constraint, a float slider's click at a bound, a form's staged values when it remounts, a color picker's typed `transparent`, a pill whose label has an icon and edge whitespace, and the sync races described there. App code can no longer assign a Components v2 trigger key after the component renders. `AppTest` values that violate constraints are now dropped. |
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
-| Any docs changes needed? | A security page listing the guarantees. Update the docstrings that call `required` "client-side only" when item 5 or 7 lands, and the `disabled` notes. With item 6, the `st.data_editor` docstrings for `column_order`, `column_config` (`hidden` and `None`), `hide_index`, and `disabled` say that hidden columns stay editable unless disabled. Add a changelog entry for each behavior change. |
+| Any docs changes needed? | A security page listing the guarantees. The docstrings say that `required` is checked on the server too, and that `validate` on `st.text_input`, including the default email and URL checks of `type=`, runs only in the browser. Update the `disabled` notes. With item 6, the `st.data_editor` docstrings for `column_order`, `column_config` (`hidden` and `None`), `hide_index`, and `disabled` say that hidden columns stay editable unless disabled. Add a changelog entry for each behavior change. |
