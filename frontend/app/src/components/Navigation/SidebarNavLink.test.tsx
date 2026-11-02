@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { act, cleanup, renderHook, screen } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  renderHook,
+  screen,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useFocusVisible } from "react-aria"
 
@@ -441,6 +447,84 @@ describe("SidebarNavLink", () => {
       expect(screen.getByRole("link", { name: "Test" })).toHaveFocus()
       await user.tab()
       expect(screen.getByRole("button", { name: "After" })).toHaveFocus()
+    })
+
+    it("describes the link with a visually hidden copy that is aria-hidden and has no links", () => {
+      render(
+        <SidebarNavLink
+          {...getProps({ help: "See the [docs](https://docs.streamlit.io)." })}
+        />
+      )
+
+      const link = screen.getByRole("link", { name: "Test" })
+      expect(link).toHaveAccessibleDescription("See the docs.")
+      const description = document.getElementById(
+        link.getAttribute("aria-describedby") ?? ""
+      )
+      expect(description).toHaveAttribute("aria-hidden", "true")
+      // Laid out (not display: none), so browsers compute clean spacing.
+      expect(description).not.toHaveAttribute("hidden")
+      expect(description?.querySelector("a")).toBeNull()
+    })
+
+    it("cancels a pending tooltip when the link is clicked", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const onClick = vi.fn(
+        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
+          e.preventDefault()
+      )
+      render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
+      const link = screen.getByRole("link", { name: "Test" })
+
+      await user.hover(link)
+      act(() => {
+        vi.advanceTimersByTime(NAV_HELP_TOOLTIP_HOVER_DELAY_MS / 2)
+      })
+      await user.click(link)
+      act(() => {
+        vi.advanceTimersByTime(NAV_HELP_TOOLTIP_HOVER_DELAY_MS)
+      })
+
+      expect(onClick).toHaveBeenCalledTimes(1)
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("closes an open tooltip when the link is clicked", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      const onClick = vi.fn(
+        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
+          e.preventDefault()
+      )
+      render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
+      const link = screen.getByRole("link", { name: "Test" })
+
+      await user.hover(link)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(NAV_HELP_TOOLTIP_HOVER_DELAY_MS)
+      })
+      expect(screen.getByTestId("stTooltipContent")).toBeVisible()
+
+      await user.click(link)
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("keeps focus and the tooltip on the link when a link in its help is pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(
+        <SidebarNavLink
+          {...getProps({ help: "See the [docs](https://docs.streamlit.io)." })}
+        />
+      )
+
+      await user.tab()
+      const navLink = screen.getByRole("link", { name: "Test" })
+      const tooltipContent = screen.getByTestId("stTooltipContent")
+      const helpLink = within(tooltipContent).getByText("docs")
+      // Press without release, so jsdom does not try to open the link.
+      await user.pointer({ keys: "[MouseLeft>]", target: helpLink })
+
+      expect(navLink).toHaveFocus()
+      expect(screen.getByTestId("stTooltipContent")).toContainElement(helpLink)
     })
 
     it.each([undefined, null, ""])(

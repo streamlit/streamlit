@@ -42,11 +42,21 @@ def archive_page() -> None:
 position: Literal["sidebar", "top"] = st.radio("Position", ["sidebar", "top"])
 
 home_page = st.Page(home, title="Home", default=True)
-revenue = st.Page(revenue_page, title="Revenue", help="Net revenue by **region**.")
+revenue = st.Page(
+    revenue_page, title="Revenue", help="Net revenue by **region**. Excludes `refunds`."
+)
 archive = st.Page(
     archive_page, title="Archive", visibility="hidden", help="Closed periods."
 )
-costs = st.Page(costs_page, title="Costs", help="Operating costs by team.")
+costs = st.Page(
+    costs_page,
+    title="Costs",
+    help=(
+        "Operating costs by team, in EUR, including shared infrastructure, "
+        "licenses, and contractors. Allocations follow the monthly cost model. "
+        "See [the glossary](#glossary)."
+    ),
+)
 docs = st.Page(
     "https://docs.streamlit.io", title="Docs", help="Opens the Streamlit docs."
 )

@@ -74,6 +74,12 @@ interface TopNavSectionProps {
 /** Why the menu was closed — drives focus-return behavior. */
 type CloseReason = "tab" | "shift-tab" | "other"
 
+/**
+ * Presses inside these elements don't close the menu. A menu item's help
+ * tooltip is portaled outside the menu, and a link in it must stay clickable.
+ */
+const MENU_DISMISSAL_EXCLUDE_SELECTORS = [".stTooltipContent"]
+
 const TopNavSection = ({
   title,
   sections,
@@ -128,17 +134,19 @@ const TopNavSection = ({
     setOpen(false)
   }, [])
 
-  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
-    open,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-  })
+  const { floatingStyles, isPositioned, setFloating, setReference } =
+    useFloatingOverlay({
+      open,
+      placement: "bottom-start",
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    })
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
     onClose: closeMenu,
     floatingSetFn: setFloating,
     referenceSetFn: setReference,
+    excludeSelectors: MENU_DISMISSAL_EXCLUDE_SELECTORS,
   })
 
   useLayoutEffect(() => {
@@ -254,23 +262,24 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the initial item (last for ArrowUp, otherwise first) once the menu
-   * DOM mounts. A layout effect can't do this: FloatingPortal mounts its
-   * children one commit after `open` turns true. Child anchor refs run before
-   * this ref, so the target already exists.
+   * Focuses the initial item (last for ArrowUp, otherwise first) once the open
+   * menu is positioned. The menu mounts at the viewport origin and moves to
+   * its trigger a frame later. An item focused before that move would open its
+   * help tooltip at the old spot, and the tooltip closes when its trigger
+   * jumps. The menu's focus handler then syncs `focusedIndex`.
    */
-  const menuListRef = useCallback((node: HTMLDivElement | null): void => {
-    if (node) {
-      const mountedCount = menuItemLinksRef.current.filter(Boolean).length
-      const index = Math.min(
-        initialFocusIndexRef.current,
-        Math.max(0, mountedCount - 1)
-      )
-      initialFocusIndexRef.current = 0
-      menuItemLinksRef.current[index]?.focus()
-      setFocusedIndex(index)
+  useLayoutEffect(() => {
+    if (!open || !isPositioned) {
+      return
     }
-  }, [])
+    const mountedCount = menuItemLinksRef.current.filter(Boolean).length
+    const index = Math.min(
+      initialFocusIndexRef.current,
+      Math.max(0, mountedCount - 1)
+    )
+    initialFocusIndexRef.current = 0
+    menuItemLinksRef.current[index]?.focus()
+  }, [open, isPositioned])
 
   const handleMenuFocus = (event: FocusEvent<HTMLDivElement>): void => {
     const target = event.target
@@ -519,7 +528,6 @@ const TopNavSection = ({
             data-testid="stTopNavPopoverBody"
           >
             <StyledPopoverContent
-              ref={menuListRef}
               id={menuId}
               data-testid="stTopNavPopover"
               role="menu"

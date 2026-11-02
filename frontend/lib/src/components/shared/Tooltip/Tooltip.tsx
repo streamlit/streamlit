@@ -32,6 +32,7 @@ import {
   type Placement as FloatingPlacement,
   FloatingPortal,
   hide,
+  size,
 } from "@floating-ui/react"
 import { useFocusWithin } from "react-aria"
 // isFocusVisible has no public export. This private path is the module React
@@ -41,7 +42,10 @@ import { TooltipTriggerStateContext } from "react-aria-components"
 import { useTooltipTriggerState } from "react-stately"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
-import { useFloatingOverlay } from "~lib/hooks/useFloatingOverlay"
+import {
+  SHIFT_VIEWPORT_PADDING,
+  useFloatingOverlay,
+} from "~lib/hooks/useFloatingOverlay"
 
 import {
   StyledTooltip,
@@ -106,6 +110,12 @@ export interface TooltipProps {
    * activates the trigger, such as a navigation link.
    */
   openOnTouch?: boolean
+  /**
+   * Cap the popup's width to the viewport space on its side, so long content
+   * wraps instead of running off screen. Use with a left or right placement,
+   * where shifting along the side cannot bring a too-wide popup back.
+   */
+  fitAvailableWidth?: boolean
 }
 
 /** Shared ref to the trigger's DOM element, readable inside the tooltip portal. */
@@ -121,6 +131,16 @@ const SetTriggerRefContext = createContext<
 SetTriggerRefContext.displayName = "SetTriggerRefContext"
 
 const HIDE_MIDDLEWARE = [hide({ strategy: "referenceHidden" })]
+
+const FIT_AVAILABLE_WIDTH_MIDDLEWARE = [
+  size({
+    padding: SHIFT_VIEWPORT_PADDING,
+    apply({ availableWidth, elements }) {
+      elements.floating.style.maxWidth = `${Math.max(0, availableWidth)}px`
+    },
+  }),
+  ...HIDE_MIDDLEWARE,
+]
 
 interface TriggerAreaProps {
   tag: "div" | "span"
@@ -259,6 +279,7 @@ function Tooltip({
   interactive = true,
   hideFromAssistiveTech = false,
   openOnTouch = true,
+  fitAvailableWidth = false,
 }: TooltipProps): ReactElement {
   const triggerRef = useRef<Element | null>(null)
   const tooltipId = useId()
@@ -290,7 +311,9 @@ function Tooltip({
       open: state.isOpen,
       placement: FLOATING_UI_PLACEMENT[placement],
       offsetPx: 10,
-      extraMiddleware: HIDE_MIDDLEWARE,
+      extraMiddleware: fitAvailableWidth
+        ? FIT_AVAILABLE_WIDTH_MIDDLEWARE
+        : HIDE_MIDDLEWARE,
     })
 
   // Close tooltip when trigger scrolls out of view (hide middleware detects this).

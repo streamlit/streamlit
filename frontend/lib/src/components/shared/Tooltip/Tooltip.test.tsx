@@ -538,6 +538,28 @@ describe("Tooltip element", () => {
     })
   })
 
+  describe("fitAvailableWidth", () => {
+    it.each([
+      [true, true],
+      [false, false],
+    ])(
+      "caps the popup width to the available space: %s",
+      async (fitAvailableWidth, isCapped) => {
+        const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+        renderTooltip({ fitAvailableWidth, placement: Placement.RIGHT })
+
+        await user.hover(screen.getByTestId("stTooltipHoverTarget"))
+        // Floating UI positions asynchronously; let it run inside act().
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0)
+        })
+
+        const popup = screen.getByTestId("stTooltipContent").parentElement
+        expect(popup?.style.maxWidth.endsWith("px")).toBe(isCapped)
+      }
+    )
+  })
+
   describe("openOnTouch", () => {
     /** Renders a tooltip that ignores touch around a "trigger" button. */
     const renderTouchlessTooltip = (): HTMLElement => {

@@ -378,7 +378,7 @@ export const StyledIconContainer = styled.div(({ theme }) => ({
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
 // Visually hidden but accessible to screen readers
 // Uses standard CSS visually-hidden pattern (hardcoded values required)
-export const StyledVisuallyHidden = styled.span({
+const VISUALLY_HIDDEN_STYLES = {
   position: "absolute",
   width: "1px",
   height: "1px",
@@ -388,5 +388,16 @@ export const StyledVisuallyHidden = styled.span({
   clip: "rect(0, 0, 0, 0)",
   whiteSpace: "nowrap",
   border: 0,
-})
+} as const
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
+
+/**
+ * Holds the page help that a nav link references as its accessible
+ * description. Visually hidden rather than `display: none`, so browsers lay
+ * out its inline Markdown and compute the text without stray spaces.
+ */
+export const StyledSidebarNavLinkHelpDescription = styled.div(
+  VISUALLY_HIDDEN_STYLES
+)

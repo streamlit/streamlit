@@ -38,6 +38,7 @@ import {
   StyledSidebarNavIcon,
   StyledSidebarNavLink,
   StyledSidebarNavLinkContainer,
+  StyledSidebarNavLinkHelpDescription,
   StyledVisuallyHidden,
 } from "./styled-components"
 
@@ -53,6 +54,17 @@ export const NAV_HELP_TOOLTIP_HOVER_DELAY_MS = 1000
  * link keeps the full row width.
  */
 const NAV_HELP_TRIGGER_STYLE: CSSProperties = { flexDirection: "column" }
+
+/**
+ * Keeps focus on the nav link when a link in its help tooltip is pressed.
+ * Focus moving into the popup would blur the link, which closes a tooltip
+ * held open by keyboard focus before the click reaches the help link.
+ */
+function handleHelpTooltipMouseDown(event: MouseEvent<HTMLDivElement>): void {
+  if (event.target instanceof Element && event.target.closest("a")) {
+    event.preventDefault()
+  }
+}
 
 export interface SidebarNavLinkProps {
   isActive: boolean
@@ -96,13 +108,29 @@ const SidebarNavLink = ({
 }: SidebarNavLinkProps): ReactElement => {
   const theme = useEmotionTheme()
   const helpDescriptionId = useId()
-  // One element for the tooltip and the hidden description, so nav updates
-  // that keep the same help do not render its Markdown again.
-  const helpMarkdown = useMemo(
+  // Memoized, so nav updates that keep the same help do not render its
+  // Markdown again. The description copy renders links as text, so it adds
+  // no tab stops.
+  const helpContent = useMemo(
     () =>
-      isNullOrEmptyString(help) ? null : (
-        <StreamlitMarkdown source={help} allowHTML={false} />
-      ),
+      isNullOrEmptyString(help)
+        ? null
+        : {
+            tooltip: (
+              // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- only keeps focus on the nav link; links inside stay the interactive elements
+              <div onMouseDown={handleHelpTooltipMouseDown}>
+                <StreamlitMarkdown source={help} allowHTML={false} />
+              </div>
+            ),
+            description: (
+              <StreamlitMarkdown
+                source={help}
+                allowHTML={false}
+                isLabel
+                disableLinks
+              />
+            ),
+          },
     [help]
   )
   // If connection state not connected, or host has disabled inputs,
@@ -151,7 +179,7 @@ const SidebarNavLink = ({
       rel={isExternal ? "noopener noreferrer" : undefined}
       role={isInDropdown ? "menuitem" : undefined}
       tabIndex={isInDropdown ? menuTabIndex : undefined}
-      aria-describedby={helpMarkdown ? helpDescriptionId : undefined}
+      aria-describedby={helpContent ? helpDescriptionId : undefined}
     >
       {icon?.length ? (
         <StyledSidebarNavIcon isActive={effectiveIsActive}>
@@ -195,15 +223,17 @@ const SidebarNavLink = ({
       data-testid={navLinkContainerTestId}
       role={isInDropdown ? "none" : undefined}
     >
-      {helpMarkdown ? (
+      {helpContent ? (
         <>
           {/*
             The popup is hidden from assistive tech: the link's accessible
             description is the hidden element below, which exists at every
-            breakpoint and while the popup is closed.
+            breakpoint and while the popup is closed. A click dismisses the
+            popup and cancels a pending open, so it does not appear on the
+            page the click navigates to.
           */}
           <Tooltip
-            content={helpMarkdown}
+            content={helpContent.tooltip}
             placement={
               isTopNav && !isInDropdown ? Placement.BOTTOM : Placement.RIGHT
             }
@@ -211,13 +241,21 @@ const SidebarNavLink = ({
             style={NAV_HELP_TRIGGER_STYLE}
             hideFromAssistiveTech
             openOnTouch={false}
+            dismissOnClick
+            fitAvailableWidth
           >
             {link}
           </Tooltip>
-          {/* `hidden` keeps links in the help out of the tab order. */}
-          <div hidden id={helpDescriptionId}>
-            {helpMarkdown}
-          </div>
+          {/*
+            aria-hidden keeps browse mode from reading the help a second time
+            as page text. aria-describedby still reads aria-hidden content.
+          */}
+          <StyledSidebarNavLinkHelpDescription
+            id={helpDescriptionId}
+            aria-hidden="true"
+          >
+            {helpContent.description}
+          </StyledSidebarNavLinkHelpDescription>
         </>
       ) : (
         link

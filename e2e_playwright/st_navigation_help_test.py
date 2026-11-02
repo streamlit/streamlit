@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from playwright.sync_api import Locator, Page, expect
@@ -29,7 +30,12 @@ from e2e_playwright.shared.app_utils import (
 if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
-_REVENUE_HELP = "Net revenue by region."
+_REVENUE_HELP = "Net revenue by region. Excludes refunds."
+_COSTS_HELP = (
+    "Operating costs by team, in EUR, including shared infrastructure, "
+    "licenses, and contractors. Allocations follow the monthly cost model. "
+    "See the glossary."
+)
 
 
 def _page_link(app: Page, label: str) -> Locator:
@@ -92,6 +98,7 @@ def test_sidebar_nav_help_and_page_link_inheritance(
     expect(tooltip).to_be_visible()
     expect(tooltip).to_have_text(_REVENUE_HELP)
     expect(tooltip.locator("strong")).to_have_text("region")
+    expect(tooltip.locator("code")).to_have_text("refunds")
     # The popup is hidden from assistive tech; the link's description is the
     # hidden copy, so focus announces it once.
     expect(app.get_by_role("tooltip")).to_have_count(0)
@@ -125,6 +132,14 @@ def test_sidebar_nav_help_and_page_link_inheritance(
         )
     ).not_to_be_attached()
 
+    # Long help wraps inside a narrow window instead of running off screen.
+    app.set_viewport_size({"width": 800, "height": 720})
+    reset_hovering(app)
+    app.get_by_role("link", name="Costs", exact=True).and_(nav_links).hover()
+    expect(tooltip).to_have_text(_COSTS_HELP)
+    box = _bounding_box(tooltip)
+    assert box["x"] + box["width"] <= 800
+
 
 def test_top_nav_help_tooltips(app: Page) -> None:
     """Top-bar items and dropdown menu items show page help, and the tooltip
@@ -151,13 +166,24 @@ def test_top_nav_help_tooltips(app: Page) -> None:
     app.get_by_test_id("stTopNavSection").filter(has_text="More").click()
     costs_item = app.get_by_role("menuitem", name="Costs")
     docs_item = app.get_by_role("menuitem", name="Docs")
-    expect(costs_item).to_have_accessible_description("Operating costs by team.")
+    expect(costs_item).to_have_accessible_description(_COSTS_HELP)
     expect(docs_item).to_have_accessible_description("Opens the Streamlit docs.")
     # Help does not change how an external item opens.
     expect(docs_item).to_have_attribute("target", "_blank")
 
     costs_item.hover()
-    expect(tooltip).to_have_text("Operating costs by team.")
+    expect(tooltip).to_have_text(_COSTS_HELP)
     # The menu stays open, and does not cover the tooltip.
-    expect(app.get_by_test_id("stTopNavPopover")).to_be_visible()
+    menu = app.get_by_test_id("stTopNavPopover")
+    expect(menu).to_be_visible()
     assert _is_topmost_at_center(tooltip)
+
+    # A link in an item's help works inside the menu. Costs is also the item
+    # the menu focused when it opened.
+    expect(costs_item).to_be_focused()
+    help_link = tooltip.locator("a", has_text="the glossary")
+    help_link.hover()
+    help_link.click()
+    expect(app).to_have_url(re.compile(r"#glossary$"))
+    expect(menu).to_be_visible()
+    expect(tooltip).to_have_text(_COSTS_HELP)
