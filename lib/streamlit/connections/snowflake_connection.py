@@ -885,6 +885,19 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
                 )
             params[param_name] = value
 
+        # Containers may inject protocol/port (e.g. http + 8082 for the local Envoy
+        # sidecar). The owner ``"snowflake"`` connection picks these up from the
+        # mounted default connection file; callers-rights builds params itself, so
+        # pass them through when present. When unset, the connector defaults to
+        # https on port 443.
+        for param_name, env_var_name in (
+            ("protocol", "SNOWFLAKE_PROTOCOL"),
+            ("port", "SNOWFLAKE_PORT"),
+        ):
+            value = os.getenv(env_var_name)
+            if value is not None:
+                params[param_name] = value
+
         # Validate the token file exists, and read it.
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(

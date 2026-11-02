@@ -525,9 +525,12 @@ class TestSnowflakeCallersRightsConnection:
             "SNOWFLAKE_HOST": "account.snowf.com",
             "SNOWFLAKE_DATABASE": "my_database",
             "SNOWFLAKE_SCHEMA": "streamlit_schema",
+            # Injected by the container for the local Envoy sidecar.
+            "SNOWFLAKE_PROTOCOL": "http",
+            "SNOWFLAKE_PORT": "8082",
         }
 
-        def fake_getenv(key: str) -> str:
+        def fake_getenv(key: str) -> str | None:
             return fake_env_values.get(key)
 
         fake_file_token = "ondisk.service.jwt"
@@ -554,8 +557,44 @@ class TestSnowflakeCallersRightsConnection:
             "host": "account.snowf.com",
             "database": "my_database",
             "schema": "streamlit_schema",
+            "protocol": "http",
+            "port": "8082",
             "token": f"{fake_file_token}.{fake_header_token}",
         }
+
+    def test_get_connection_params_omits_unset_protocol_and_port(self):
+        """Protocol and port are optional; omit them when the container leaves them unset."""
+
+        fake_env_values = {
+            "SNOWFLAKE_ACCOUNT": "my-account",
+            "SNOWFLAKE_HOST": "account.snowf.com",
+            "SNOWFLAKE_DATABASE": "my_database",
+            "SNOWFLAKE_SCHEMA": "streamlit_schema",
+        }
+
+        def fake_getenv(key: str) -> str | None:
+            return fake_env_values.get(key)
+
+        fake_file_token = "ondisk.service.jwt"
+        fake_header_token = "header_secret"
+        fake_headers = {SNOWPARK_USER_TOKEN_HEADER_NAME: fake_header_token}
+
+        with (
+            patch.object(os, "getenv", new=fake_getenv),
+            patch.object(os.path, "exists"),
+            patch.object(
+                SnowflakeCallersRightsConnection, "_read_token_file"
+            ) as mock_read_token_file,
+            patch.object(st, "context") as mock_context,
+        ):
+            mock_read_token_file.return_value = fake_file_token
+            mock_context.headers = fake_headers
+            got_params = SnowflakeCallersRightsConnection._get_connection_params()
+
+        assert "protocol" not in got_params
+        assert "port" not in got_params
+        assert got_params["account"] == "my-account"
+        assert got_params["host"] == "account.snowf.com"
 
     @pytest.mark.require_integration
     def test_connect(self):
