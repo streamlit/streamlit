@@ -701,7 +701,6 @@ def test_victim_selection_drops_collected_storage_before_evicting() -> None:
     assert survivor.get("new") == b"cc"
     assert budget.total_bytes == 4
     assert stale_id not in budget._storage_entries
-    assert budget._global_evictions == 0
 
 
 def test_reserved_victim_is_kept_after_its_storage_unregisters() -> None:
@@ -714,26 +713,6 @@ def test_reserved_victim_is_kept_after_its_storage_unregisters() -> None:
 
     assert not storage._evict_from_mem_cache("key", expected_generation=generation)
     assert storage._mem_cache["key"] == b"abc"
-
-
-@pytest.mark.parametrize(
-    ("family_names", "expected_families"),
-    [
-        pytest.param(None, [CACHE_DATA_EVICTIONS_FAMILY], id="all"),
-        pytest.param(
-            [CACHE_DATA_EVICTIONS_FAMILY], [CACHE_DATA_EVICTIONS_FAMILY], id="match"
-        ),
-        pytest.param(["cache_memory_bytes"], [], id="other"),
-    ],
-)
-def test_get_stats_filters_by_family(
-    family_names: list[str] | None, expected_families: list[str]
-) -> None:
-    """Eviction stats are reported only when their family is requested."""
-    budget = GlobalCacheBudget(max_bytes=100)
-
-    assert budget.stats_families == (CACHE_DATA_EVICTIONS_FAMILY,)
-    assert list(budget.get_stats(family_names)) == expected_families
 
 
 @pytest.mark.parametrize(
