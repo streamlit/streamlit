@@ -226,11 +226,13 @@ const SidebarNavLink = ({
       {helpContent ? (
         <>
           {/*
-            The popup is hidden from assistive tech: the link's accessible
-            description is the hidden element below, which exists at every
-            breakpoint and while the popup is closed. A click dismisses the
-            popup and cancels a pending open, so it does not appear on the
-            page the click navigates to.
+            Nav-specific tooltip behavior:
+            - hideFromAssistiveTech: the hidden copy below is the link's
+              description, so the popup would announce the help twice.
+            - openOnTouch={false}: a tap navigates, so touch shows no popup.
+            - dismissOnClick: a click closes the popup and cancels a pending
+              open, so it does not appear on the page the click opens.
+            - fitAvailableWidth: long help wraps instead of running off screen.
           */}
           <Tooltip
             content={helpContent.tooltip}

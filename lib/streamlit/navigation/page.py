@@ -228,17 +228,17 @@ class Page:
            run. The page can be visible or hidden.
 
     help : str or None
-        A short description of the page, such as one or two sentences. If
-        this is ``None`` (default), the page has no description. The
-        description is the tooltip on the page's item in the navigation menu
-        and the default tooltip of ``st.page_link`` for this page. Streamlit
-        shows the tooltip without running the page. The description is also
-        the page's ``help`` in the snapshot of Streamlit's agent API, except
-        for a page defined by an external URL, which the snapshot doesn't
-        list. It isn't shown on the page and doesn't set the page's meta
-        description.
+        A tooltip that gets displayed when the page's item in the navigation
+        menu is hovered over. If this is ``None`` (default), no tooltip is
+        displayed. Use one or two sentences that say what the page is.
 
-        The description can optionally contain GitHub-flavored Markdown,
+        Streamlit shows the tooltip without running the page. It's also the
+        default tooltip of ``st.page_link`` for this page and the page's
+        ``help`` in the snapshot of the experimental agent API (see
+        ``server.enableAgentApi``), which doesn't list external-URL pages.
+        It isn't shown on the page and doesn't set the meta description.
+
+        The tooltip can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
         parameter of ``st.markdown``.
 

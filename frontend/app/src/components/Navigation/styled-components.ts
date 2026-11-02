@@ -376,8 +376,11 @@ export const StyledIconContainer = styled.div(({ theme }) => ({
 }))
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values */
-// Visually hidden but accessible to screen readers
-// Uses standard CSS visually-hidden pattern (hardcoded values required)
+/**
+ * Standard visually-hidden pattern (hardcoded values required): invisible but
+ * laid out, so assistive tech can read it or reference it with
+ * aria-describedby.
+ */
 const VISUALLY_HIDDEN_STYLES = {
   position: "absolute",
   width: "1px",

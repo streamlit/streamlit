@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import FloatRect, Locator, Page, expect
 
+from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     reset_hovering,
@@ -52,16 +53,17 @@ def _bounding_box(locator: Locator) -> FloatRect:
 
 def _is_topmost_at_center(locator: Locator) -> bool:
     """Whether nothing is painted over the center of ``locator``."""
-    is_topmost: bool = locator.evaluate(
-        """el => {
-            const rect = el.getBoundingClientRect()
-            const hit = document.elementFromPoint(
-                rect.left + rect.width / 2, rect.top + rect.height / 2
-            )
-            return el.contains(hit)
-        }"""
+    return bool(
+        locator.evaluate(
+            """el => {
+                const rect = el.getBoundingClientRect()
+                const hit = document.elementFromPoint(
+                    rect.left + rect.width / 2, rect.top + rect.height / 2
+                )
+                return el.contains(hit)
+            }"""
+        )
     )
-    return is_topmost
 
 
 def test_sidebar_nav_help_and_page_link_inheritance(
@@ -88,7 +90,7 @@ def test_sidebar_nav_help_and_page_link_inheritance(
 
     reset_hovering(app)
     revenue_link.hover()
-    # The nav waits longer than other help tooltips before it opens.
+    # Not open yet right after hover; unit tests pin the 1000ms delay.
     expect(tooltip).not_to_be_attached()
     expect(tooltip).to_be_visible()
     expect(tooltip).to_have_text(_REVENUE_HELP)
@@ -109,6 +111,7 @@ def test_sidebar_nav_help_and_page_link_inheritance(
     home_link.focus()
     app.keyboard.press("Tab")
     expect(revenue_link).to_be_focused()
+    # Below the 1000ms hover delay, so this proves focus opens it immediately.
     expect(tooltip).to_have_text(_REVENUE_HELP, timeout=900)
     app.keyboard.press("Escape")
     expect(tooltip).not_to_be_attached()
@@ -156,8 +159,23 @@ def test_top_nav_help_tooltips(app: Page) -> None:
     reset_hovering(app)
     expect(tooltip).not_to_be_attached()
 
-    app.get_by_test_id("stTopNavSection").filter(has_text="More").click()
+    # On the menu's first open, it moves into place a frame after it mounts. A
+    # tooltip that focus opened before that move would close right away, so
+    # measuring it after the text check proves it stayed open beside the item.
+    more_trigger = app.get_by_test_id("stTopNavSection").filter(has_text="More")
     costs_item = app.get_by_role("menuitem", name="Costs")
+    more_trigger.focus()
+    app.keyboard.press("ArrowDown")
+    expect(costs_item).to_be_focused()
+    expect(tooltip).to_have_text(_COSTS_HELP)
+    item_box = _bounding_box(costs_item)
+    tooltip_box = _bounding_box(tooltip)
+    item_center_y = item_box["y"] + item_box["height"] / 2
+    assert tooltip_box["y"] <= item_center_y <= tooltip_box["y"] + tooltip_box["height"]
+    app.keyboard.press("Escape")
+    expect(costs_item).not_to_be_attached()
+
+    more_trigger.click()
     docs_item = app.get_by_role("menuitem", name="Docs")
     expect(costs_item).to_have_accessible_description(_COSTS_HELP)
     expect(docs_item).to_have_accessible_description("Opens the Streamlit docs.")
@@ -169,7 +187,7 @@ def test_top_nav_help_tooltips(app: Page) -> None:
     # The menu stays open, and does not cover the tooltip.
     menu = app.get_by_test_id("stTopNavPopover")
     expect(menu).to_be_visible()
-    assert _is_topmost_at_center(tooltip)
+    wait_until(app, lambda: _is_topmost_at_center(tooltip))
 
     # A link in an item's help works inside the menu. Costs is also the item
     # the menu focused when it opened.

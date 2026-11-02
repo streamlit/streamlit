@@ -262,11 +262,11 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the initial item (last for ArrowUp, otherwise first) once the open
-   * menu is positioned. The menu mounts at the viewport origin and moves to
-   * its trigger a frame later. An item focused before that move would open its
-   * help tooltip at the old spot, and the tooltip closes when its trigger
-   * jumps. The menu's focus handler then syncs `focusedIndex`.
+   * Focuses the initial item (last for ArrowUp, otherwise first) only after
+   * the open menu is positioned, so a help tooltip that focus opens anchors to
+   * the item's final spot. The menu mounts at the viewport origin and moves a
+   * frame later; a tooltip opened before that move closes when its trigger
+   * jumps. `handleMenuFocus` syncs `focusedIndex`.
    */
   useLayoutEffect(() => {
     if (!open || !isPositioned) {

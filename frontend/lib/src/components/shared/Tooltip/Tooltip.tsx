@@ -112,8 +112,8 @@ export interface TooltipProps {
   openOnTouch?: boolean
   /**
    * Cap the popup's width to the viewport space on its side, so long content
-   * wraps instead of running off screen. Use with a left or right placement,
-   * where shifting along the side cannot bring a too-wide popup back.
+   * wraps instead of running off screen. Needed for left or right placements,
+   * where shift cannot move a too-wide popup back on screen.
    */
   fitAvailableWidth?: boolean
 }
@@ -132,6 +132,7 @@ SetTriggerRefContext.displayName = "SetTriggerRefContext"
 
 const HIDE_MIDDLEWARE = [hide({ strategy: "referenceHidden" })]
 
+/** `HIDE_MIDDLEWARE` plus a width cap; see `fitAvailableWidth`. */
 const FIT_AVAILABLE_WIDTH_MIDDLEWARE = [
   size({
     padding: SHIFT_VIEWPORT_PADDING,
