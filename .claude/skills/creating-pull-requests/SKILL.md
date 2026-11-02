@@ -1,6 +1,7 @@
 ---
 name: creating-pull-requests
 description: Creates a draft pull request on GitHub with proper labels, branch naming, and description formatting. Use when changes are ready to be submitted as a PR to the streamlit/streamlit repository.
+disable-model-invocation: true
 ---
 
 # Create pull request
