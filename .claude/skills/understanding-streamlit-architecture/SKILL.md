@@ -195,6 +195,8 @@ Deep dive: `references/element-identity.md`
 5. **Register in ElementNodeRenderer**: Add case to switch statement
 6. **Compile protos**: `make protobuf`
 
+Element logic belongs in steps 3 and 4. Steps 2 and 5 are wiring.
+
 See `wiki/new-feature-guide.md` for a detailed implementation guide.
 
 ## Maintaining this documentation

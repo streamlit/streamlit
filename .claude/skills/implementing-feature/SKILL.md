@@ -122,7 +122,7 @@ Run this phase in a **foreground subagent**. The subagent should:
 The implementation plan must include:
 - Summary of the feature requirements (from spec)
 - Relevant existing patterns found in codebase
-- List of files to create or modify (backend, frontend, proto, tests)
+- List of files to create or modify (backend, frontend, proto, tests), with element-specific logic kept in the element's own files. Give a reason for any element-specific change to shared code (see "Keep elements self-contained" in `AGENTS.md`)
 - Implementation steps in order
 - Key decisions and trade-offs
 - Test strategy (unit tests, E2E tests)
