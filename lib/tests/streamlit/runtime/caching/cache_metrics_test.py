@@ -28,8 +28,9 @@ import pytest
 
 import streamlit as st
 from streamlit.runtime import Runtime
-from streamlit.runtime.caching import cache_metrics
+from streamlit.runtime.caching import cache_background_refresh, cache_metrics
 from streamlit.runtime.caching.cache_metrics import (
+    CACHE_BACKGROUND_REFRESHES_FAMILY,
     CACHE_COMPUTE_DURATION_FAMILY,
     CACHE_EVICTIONS_FAMILY,
     CACHE_LOOKUPS_FAMILY,
@@ -105,16 +106,58 @@ def _evictions(registry: CacheMetrics, display_name: str) -> dict[str, int]:
     return result
 
 
-def _histogram(registry: CacheMetrics, func: Any) -> HistogramStat:
+def _histogram(
+    registry: CacheMetrics, func: Any, trigger: str = "miss"
+) -> HistogramStat:
     stats = registry.get_stats([CACHE_COMPUTE_DURATION_FAMILY])[
         CACHE_COMPUTE_DURATION_FAMILY
     ]
     for stat in stats:
         assert isinstance(stat, HistogramStat)
         assert stat.labels is not None
-        if stat.labels["cache"] == _cache_label(func):
+        if stat.labels["cache"] == _cache_label(func) and (
+            stat.labels["trigger"] == trigger
+        ):
             return stat
-    raise AssertionError(f"No histogram for {_cache_label(func)}")
+    raise AssertionError(f"No {trigger} histogram for {_cache_label(func)}")
+
+
+def _histogram_triggers(registry: CacheMetrics, func: Any) -> set[str]:
+    stats = registry.get_stats([CACHE_COMPUTE_DURATION_FAMILY])[
+        CACHE_COMPUTE_DURATION_FAMILY
+    ]
+    return {
+        stat.labels["trigger"]
+        for stat in stats
+        if stat.labels is not None and stat.labels["cache"] == _cache_label(func)
+    }
+
+
+def _refreshes(registry: CacheMetrics, func: Any) -> dict[str, int]:
+    stats = registry.get_stats([CACHE_BACKGROUND_REFRESHES_FAMILY]).get(
+        CACHE_BACKGROUND_REFRESHES_FAMILY, []
+    )
+    result: dict[str, int] = {}
+    for stat in stats:
+        assert isinstance(stat, CounterStat)
+        assert stat.labels is not None
+        if stat.labels["cache"] == _cache_label(func):
+            result[stat.labels["result"]] = stat.value
+    return result
+
+
+def _run_refreshes_inline() -> Any:
+    """Patch the background manager so refreshes run synchronously on submit."""
+
+    def submit(task: Callable[[], None]) -> bool:
+        task()
+        return True
+
+    return patch.object(
+        cache_background_refresh.get_background_refresh_manager(),
+        "submit",
+        side_effect=submit,
+    )
 
 
 def _wait_for(condition: Callable[[], bool], timeout: float = 5.0) -> None:
@@ -281,6 +324,95 @@ def test_stale_value_served_in_background_mode_is_a_hit(
     refresh_manager_patch.return_value.submit.assert_called_once()
     assert _lookups(registry, load) == {"hit": 1, "miss": 1}
     assert _histogram(registry, load).observation_count == 1
+    # The patched manager declined the refresh, as it does when every worker is busy.
+    assert _refreshes(registry, load) == {"success": 0, "error": 0, "skipped": 1}
+    assert _histogram(registry, load, "refresh").observation_count == 0
+
+
+@patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_background_refresh_records_duration_and_success(
+    timer_patch: MagicMock,
+    registry: CacheMetrics,
+    name: str,
+    decorator: Callable,
+) -> None:
+    """A refresh records its compute time under trigger="refresh", not as a miss."""
+    sleep_seconds = 0.03
+    timer_patch.return_value = 0
+
+    @decorator(ttl=10, refresh_mode="background", show_spinner=False)
+    def load() -> int:
+        time.sleep(sleep_seconds)
+        return 1
+
+    load()
+    timer_patch.return_value = 15
+    with _run_refreshes_inline():
+        load()
+
+    assert _lookups(registry, load) == {"hit": 1, "miss": 1}
+    assert _histogram(registry, load, "miss").observation_count == 1
+    refresh_histogram = _histogram(registry, load, "refresh")
+    assert refresh_histogram.observation_count == 1
+    assert refresh_histogram.observation_sum >= sleep_seconds
+    assert _refreshes(registry, load) == {"success": 1, "error": 0, "skipped": 0}
+
+
+@patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_failed_background_refresh_counts_error_and_duration(
+    timer_patch: MagicMock,
+    registry: CacheMetrics,
+    name: str,
+    decorator: Callable,
+) -> None:
+    """A refresh that raises is counted as an error and still records its time."""
+    timer_patch.return_value = 0
+    calls = [0]
+
+    @decorator(ttl=10, refresh_mode="background", show_spinner=False)
+    def load() -> int:
+        calls[0] += 1
+        if calls[0] > 1:
+            raise RuntimeError("refresh failed")
+        return 1
+
+    load()
+    timer_patch.return_value = 15
+    with _run_refreshes_inline():
+        assert load() == 1
+
+    assert _refreshes(registry, load) == {"success": 0, "error": 1, "skipped": 0}
+    assert _histogram(registry, load, "refresh").observation_count == 1
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_refresh_series_emitted_only_for_background_functions(
+    registry: CacheMetrics, name: str, decorator: Callable
+) -> None:
+    """Background functions emit zero-valued refresh series; foreground ones none."""
+
+    @decorator
+    def foreground() -> int:
+        return 1
+
+    @decorator(ttl=10, refresh_mode="background")
+    def background() -> int:
+        return 1
+
+    foreground()
+    background()
+
+    assert _histogram_triggers(registry, foreground) == {"miss"}
+    assert _refreshes(registry, foreground) == {}
+    assert _histogram_triggers(registry, background) == {"miss", "refresh"}
+    assert _histogram(registry, background, "refresh").observation_count == 0
+    assert _refreshes(registry, background) == {
+        "success": 0,
+        "error": 0,
+        "skipped": 0,
+    }
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
@@ -574,7 +706,7 @@ def test_zero_valued_series_emitted_for_called_function(
 def test_get_stats_filters_families(registry: CacheMetrics) -> None:
     """Only the requested families are computed and returned."""
 
-    @st.cache_data
+    @st.cache_data(ttl=10, refresh_mode="background")
     def load() -> int:
         return 1
 
@@ -584,6 +716,7 @@ def test_get_stats_filters_families(registry: CacheMetrics) -> None:
         CACHE_LOOKUPS_FAMILY,
         CACHE_COMPUTE_DURATION_FAMILY,
         CACHE_EVICTIONS_FAMILY,
+        CACHE_BACKGROUND_REFRESHES_FAMILY,
     }
     for family in registry.stats_families:
         assert set(registry.get_stats([family])) == {family}

@@ -719,6 +719,7 @@ _CACHE_METRICS_FAMILIES = (
     "cache_lookups",
     "cache_compute_duration_seconds",
     "cache_evictions",
+    "cache_background_refreshes",
 )
 
 
@@ -726,11 +727,15 @@ def _install_cache_metrics(runtime: _DummyRuntime) -> None:
     """Serve a real cache metrics registry with known values from the runtime."""
     registry = CacheMetrics()
     metrics = registry.get_function_metrics(CacheType.DATA, "app.load")
+    metrics.enable_background_refresh()
     for _ in range(3):
         metrics.record_hit()
     for seconds in (0.003, 0.3, 75.0):
         metrics.record_miss()
         metrics.record_compute_duration(seconds)
+    metrics.record_compute_duration(2.0, trigger="refresh")
+    metrics.record_background_refresh("success")
+    metrics.record_background_refresh("skipped")
     metrics.record_evictions("ttl", 2)
     stats_mgr = StatsManager()
     stats_mgr.register_provider(registry)
@@ -761,25 +766,47 @@ def test_metrics_endpoint_cache_metrics_text(
     assert f'cache_evictions_total{{{labels},reason="ttl"}} 2' in lines
     assert f'cache_evictions_total{{{labels},reason="max_entries"}} 0' in lines
 
+    assert "# TYPE cache_background_refreshes counter" in lines
+    assert f'cache_background_refreshes_total{{{labels},result="success"}} 1' in lines
+    assert f'cache_background_refreshes_total{{{labels},result="error"}} 0' in lines
+    assert f'cache_background_refreshes_total{{{labels},result="skipped"}} 1' in lines
+
     assert "# TYPE cache_compute_duration_seconds histogram" in lines
     assert "# UNIT cache_compute_duration_seconds seconds" in lines
-    bucket_lines = [
+    miss = 'trigger="miss"'
+    miss_bucket_lines = [
         line
         for line in lines
-        if line.startswith("cache_compute_duration_seconds_bucket")
+        if line.startswith("cache_compute_duration_seconds_bucket") and miss in line
     ]
-    assert bucket_lines[0] == (
-        f'cache_compute_duration_seconds_bucket{{{labels},le="0.005"}} 1'
+    assert miss_bucket_lines[0] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="0.005",{miss}}} 1'
     )
-    assert f'cache_compute_duration_seconds_bucket{{{labels},le="0.5"}} 2' in lines
-    assert f'cache_compute_duration_seconds_bucket{{{labels},le="60.0"}} 2' in lines
-    assert bucket_lines[-1] == (
-        f'cache_compute_duration_seconds_bucket{{{labels},le="+Inf"}} 3'
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="0.5",{miss}}} 2' in lines
     )
-    bucket_counts = [int(line.rsplit(" ", 1)[1]) for line in bucket_lines]
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="60.0",{miss}}} 2' in lines
+    )
+    assert miss_bucket_lines[-1] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="+Inf",{miss}}} 3'
+    )
+    bucket_counts = [int(line.rsplit(" ", 1)[1]) for line in miss_bucket_lines]
     assert bucket_counts == sorted(bucket_counts)
-    assert f"cache_compute_duration_seconds_sum{{{labels}}} 75.303" in lines
-    assert f"cache_compute_duration_seconds_count{{{labels}}} 3" in lines
+    assert f"cache_compute_duration_seconds_sum{{{labels},{miss}}} 75.303" in lines
+    assert f"cache_compute_duration_seconds_count{{{labels},{miss}}} 3" in lines
+
+    refresh = 'trigger="refresh"'
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="1.0",{refresh}}} 0'
+        in lines
+    )
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="2.5",{refresh}}} 1'
+        in lines
+    )
+    assert f"cache_compute_duration_seconds_sum{{{labels},{refresh}}} 2.0" in lines
+    assert f"cache_compute_duration_seconds_count{{{labels},{refresh}}} 1" in lines
     assert lines[-1] == "# EOF"
 
 
@@ -821,22 +848,27 @@ def test_metrics_endpoint_cache_metrics_protobuf(
     assert set(families) == set(_CACHE_METRICS_FAMILIES)
     assert families["cache_lookups"].type == COUNTER
     assert families["cache_evictions"].type == COUNTER
+    assert families["cache_background_refreshes"].type == COUNTER
 
     duration_family = families["cache_compute_duration_seconds"]
     assert duration_family.type == HISTOGRAM
     assert duration_family.unit == "seconds"
-    (metric,) = duration_family.metrics
-    assert {label.name: label.value for label in metric.labels} == {
-        "cache": "app.load",
-        "cache_type": "st_cache_data",
-    }
-    histogram = metric.metric_points[0].histogram_value
+    histograms = {}
+    for metric in duration_family.metrics:
+        labels = {label.name: label.value for label in metric.labels}
+        trigger = labels.pop("trigger")
+        assert labels == {"cache": "app.load", "cache_type": "st_cache_data"}
+        histograms[trigger] = metric.metric_points[0].histogram_value
+    assert set(histograms) == {"miss", "refresh"}
+    histogram = histograms["miss"]
     assert histogram.count == 3
     assert histogram.double_value == pytest.approx(75.303)
     bucket_counts = [bucket.count for bucket in histogram.buckets]
     assert bucket_counts == sorted(bucket_counts)
     assert histogram.buckets[-1].upper_bound == math.inf
     assert histogram.buckets[-1].count == 3
+    assert histograms["refresh"].count == 1
+    assert histograms["refresh"].double_value == pytest.approx(2.0)
 
 
 def test_media_endpoint_serves_file(

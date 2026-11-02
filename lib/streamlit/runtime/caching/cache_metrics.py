@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Per-function lookup, compute-duration, and eviction metrics for cached functions.
+"""Per-function lookup, compute-duration, eviction, and background-refresh metrics
+for cached functions.
 
 Counts live in a process-wide registry keyed by the same ``cache_type`` and
 ``cache`` labels as ``cache_memory_bytes``, so they outlive the cache objects
@@ -38,10 +39,23 @@ if TYPE_CHECKING:
 CACHE_LOOKUPS_FAMILY: Final = "cache_lookups"
 CACHE_COMPUTE_DURATION_FAMILY: Final = "cache_compute_duration_seconds"
 CACHE_EVICTIONS_FAMILY: Final = "cache_evictions"
+CACHE_BACKGROUND_REFRESHES_FAMILY: Final = "cache_background_refreshes"
 
 EvictionReason: TypeAlias = Literal[
     "ttl", "max_entries", "max_size", "global_budget", "validate"
 ]
+# What ran the cached function: a caller's cache miss, or a background refresh of
+# a stale entry.
+ComputeTrigger: TypeAlias = Literal["miss", "refresh"]
+# "skipped" means the refresh could not be scheduled: every refresh worker was
+# busy, background refresh is disabled, or the runtime cannot start threads.
+BackgroundRefreshResult: TypeAlias = Literal["success", "error", "skipped"]
+
+_BACKGROUND_REFRESH_RESULTS: Final[tuple[BackgroundRefreshResult, ...]] = (
+    "success",
+    "error",
+    "skipped",
+)
 
 # Bucket upper bounds in seconds, excluding +Inf. Cached functions range from
 # millisecond lookups to multi-minute queries or model loads, so the buckets
@@ -77,6 +91,21 @@ _EVICTION_REASONS: Final[dict[CacheType, tuple[EvictionReason, ...]]] = {
 }
 
 
+class _DurationHistogram:
+    """Mutable state for one compute-duration histogram series."""
+
+    __slots__ = ("bucket_counts", "count", "sum")
+
+    def __init__(self) -> None:
+        # Per-bucket (non-cumulative) counts. The final slot is the +Inf bucket.
+        self.bucket_counts = [0] * (len(COMPUTE_DURATION_BUCKETS) + 1)
+        self.sum = 0.0
+        self.count = 0
+
+    def snapshot(self) -> tuple[list[int], float, int]:
+        return list(self.bucket_counts), self.sum, self.count
+
+
 class FunctionCacheMetrics:
     """Thread-safe counters for one cached function's ``cache_type`` and ``cache``
     labels.
@@ -93,13 +122,24 @@ class FunctionCacheMetrics:
         self._lock = threading.Lock()
         self._hits = 0
         self._misses = 0
-        # Per-bucket (non-cumulative) counts. The final slot is the +Inf bucket.
-        self._duration_bucket_counts = [0] * (len(COMPUTE_DURATION_BUCKETS) + 1)
-        self._duration_sum = 0.0
-        self._duration_count = 0
+        self._durations: dict[ComputeTrigger, _DurationHistogram] = {
+            "miss": _DurationHistogram(),
+            "refresh": _DurationHistogram(),
+        }
         self._evictions: dict[EvictionReason, int] = dict.fromkeys(
             _EVICTION_REASONS[cache_type], 0
         )
+        # Refresh series are only emitted for functions that use background
+        # refresh, so foreground-only functions don't carry always-zero series.
+        self._background_refresh = False
+        self._refreshes: dict[BackgroundRefreshResult, int] = dict.fromkeys(
+            _BACKGROUND_REFRESH_RESULTS, 0
+        )
+
+    def enable_background_refresh(self) -> None:
+        """Emit refresh series for this function, starting at zero."""
+        with self._lock:
+            self._background_refresh = True
 
     def record_hit(self) -> None:
         with self._lock:
@@ -109,28 +149,43 @@ class FunctionCacheMetrics:
         with self._lock:
             self._misses += 1
 
-    def record_compute_duration(self, seconds: float) -> None:
+    def record_compute_duration(
+        self, seconds: float, trigger: ComputeTrigger = "miss"
+    ) -> None:
         # bisect_left gives the first bucket whose bound is >= seconds, matching
         # the inclusive ``le`` semantics of histogram buckets.
         bucket_index = bisect.bisect_left(COMPUTE_DURATION_BUCKETS, seconds)
         with self._lock:
-            self._duration_bucket_counts[bucket_index] += 1
-            self._duration_sum += seconds
-            self._duration_count += 1
+            histogram = self._durations[trigger]
+            histogram.bucket_counts[bucket_index] += 1
+            histogram.sum += seconds
+            histogram.count += 1
+            if trigger == "refresh":
+                self._background_refresh = True
 
     def record_evictions(self, reason: EvictionReason, count: int = 1) -> None:
         with self._lock:
             self._evictions[reason] = self._evictions.get(reason, 0) + count
+
+    def record_background_refresh(self, result: BackgroundRefreshResult) -> None:
+        with self._lock:
+            self._refreshes[result] += 1
+            self._background_refresh = True
 
     def get_stats(self, family_names: Sequence[str] | None) -> dict[str, list[Stat]]:
         """Return this function's stats for the requested families."""
         with self._lock:
             hits = self._hits
             misses = self._misses
-            bucket_counts = list(self._duration_bucket_counts)
-            duration_sum = self._duration_sum
-            duration_count = self._duration_count
+            background_refresh = self._background_refresh
+            triggers: tuple[ComputeTrigger, ...] = (
+                ("miss", "refresh") if background_refresh else ("miss",)
+            )
+            durations = {
+                trigger: self._durations[trigger].snapshot() for trigger in triggers
+            }
             evictions = dict(self._evictions)
+            refreshes = dict(self._refreshes)
 
         result: dict[str, list[Stat]] = {}
         if family_names is None or CACHE_LOOKUPS_FAMILY in family_names:
@@ -144,23 +199,9 @@ class FunctionCacheMetrics:
                 for lookup_result, value in (("hit", hits), ("miss", misses))
             ]
         if family_names is None or CACHE_COMPUTE_DURATION_FAMILY in family_names:
-            cumulative = 0
-            buckets: list[tuple[float, int]] = []
-            for bound, bucket_count in zip(
-                (*COMPUTE_DURATION_BUCKETS, math.inf), bucket_counts, strict=True
-            ):
-                cumulative += bucket_count
-                buckets.append((bound, cumulative))
             result[CACHE_COMPUTE_DURATION_FAMILY] = [
-                HistogramStat(
-                    family_name=CACHE_COMPUTE_DURATION_FAMILY,
-                    buckets=tuple(buckets),
-                    observation_sum=duration_sum,
-                    observation_count=duration_count,
-                    labels=dict(self.labels),
-                    unit="seconds",
-                    help="Time spent running a cached function on a cache miss.",
-                )
+                self._histogram_stat(trigger, *snapshot)
+                for trigger, snapshot in durations.items()
             ]
         if family_names is None or CACHE_EVICTIONS_FAMILY in family_names:
             result[CACHE_EVICTIONS_FAMILY] = [
@@ -175,7 +216,49 @@ class FunctionCacheMetrics:
                 )
                 for reason, value in sorted(evictions.items())
             ]
+        if background_refresh and (
+            family_names is None or CACHE_BACKGROUND_REFRESHES_FAMILY in family_names
+        ):
+            result[CACHE_BACKGROUND_REFRESHES_FAMILY] = [
+                CounterStat(
+                    family_name=CACHE_BACKGROUND_REFRESHES_FAMILY,
+                    value=refreshes[refresh_result],
+                    labels={**self.labels, "result": refresh_result},
+                    help=(
+                        "Total background refreshes of stale entries by result. "
+                        "skipped means the refresh could not be scheduled."
+                    ),
+                )
+                for refresh_result in _BACKGROUND_REFRESH_RESULTS
+            ]
         return result
+
+    def _histogram_stat(
+        self,
+        trigger: ComputeTrigger,
+        bucket_counts: list[int],
+        duration_sum: float,
+        duration_count: int,
+    ) -> HistogramStat:
+        cumulative = 0
+        buckets: list[tuple[float, int]] = []
+        for bound, bucket_count in zip(
+            (*COMPUTE_DURATION_BUCKETS, math.inf), bucket_counts, strict=True
+        ):
+            cumulative += bucket_count
+            buckets.append((bound, cumulative))
+        return HistogramStat(
+            family_name=CACHE_COMPUTE_DURATION_FAMILY,
+            buckets=tuple(buckets),
+            observation_sum=duration_sum,
+            observation_count=duration_count,
+            labels={**self.labels, "trigger": trigger},
+            unit="seconds",
+            help=(
+                "Time spent running a cached function, on a cache miss or a "
+                "background refresh."
+            ),
+        )
 
 
 class CacheMetrics(StatsProvider):
@@ -193,6 +276,7 @@ class CacheMetrics(StatsProvider):
             CACHE_LOOKUPS_FAMILY,
             CACHE_COMPUTE_DURATION_FAMILY,
             CACHE_EVICTIONS_FAMILY,
+            CACHE_BACKGROUND_REFRESHES_FAMILY,
         )
 
     def get_function_metrics(

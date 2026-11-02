@@ -245,6 +245,7 @@ def _build_cached_func() -> CachedFunc[..., Any]:
     info.func = _placeholder_func
     info.cache_type = CacheType.DATA
     info.display_name = "tests._placeholder_func"
+    info.refresh_mode = "foreground"
     return CachedFunc(info)
 
 

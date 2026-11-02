@@ -723,6 +723,8 @@ class CachedFunc(Generic[P, R]):
         self._metrics = cache_metrics.get_cache_metrics().get_function_metrics(
             info.cache_type, info.display_name
         )
+        if info.refresh_mode == "background":
+            self._metrics.enable_background_refresh()
 
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
@@ -1129,6 +1131,7 @@ class CachedFunc(Generic[P, R]):
                 # Saturated pool, degraded runtime, or scheduling error: keep serving
                 # stale and retry on a later access.
                 lock.release()
+                self._metrics.record_background_refresh("skipped")
 
     def _run_background_refresh(
         self,
@@ -1148,7 +1151,13 @@ class CachedFunc(Generic[P, R]):
         compute lock is always released.
         """
         try:
-            new_value = self._info.func(*func_args, **func_kwargs)
+            compute_start = time.perf_counter()
+            try:
+                new_value = self._info.func(*func_args, **func_kwargs)
+            finally:
+                self._metrics.record_compute_duration(
+                    time.perf_counter() - compute_start, trigger="refresh"
+                )
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, new_value
             )
@@ -1159,8 +1168,10 @@ class CachedFunc(Generic[P, R]):
                 expected_key_generation=expected_key_generation,
             )
             cache.clear_refresh_cooldown(value_key)
+            self._metrics.record_background_refresh("success")
         except Exception as ex:
             cache.mark_refresh_failed(value_key)
+            self._metrics.record_background_refresh("error")
             _LOGGER.warning(
                 "Background cache refresh failed for %s: %s",
                 getattr(self._info.func, "__qualname__", "?"),
