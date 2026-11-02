@@ -257,11 +257,15 @@ function DateInput({
       setHasRequiredError(false)
       setError(null)
       // Re-picking or retyping the committed value must not rerun. Compare
-      // the pre-normalization order, so a reversed range still commits (one
-      // rerun) to repaint in order.
+      // `toWrite` before normalization, so a reversed range (end before
+      // start) still commits once and the rerun repaints it in order. Also
+      // compare the rendered value: a close-effect commit that has not
+      // rendered yet must be repeated by the blur, whose sync render writes
+      // WidgetStateManager before a click in the same gesture can rerun.
       const hasChanged =
         lastWrittenIsoRef.current === undefined ||
-        !isoArraysEqual(toWrite, lastWrittenIsoRef.current)
+        !isoArraysEqual(toWrite, lastWrittenIsoRef.current) ||
+        !isoArraysEqual(toWrite, value)
       lastWrittenIsoRef.current = written
       pendingIsoRef.current = keepIncompleteDisplay ? isoValues : written
       if (hasChanged) {
@@ -288,6 +292,7 @@ function DateInput({
       maxDateCalendar,
       minDateCalendar,
       setValueWithSource,
+      value,
       widgetMgr,
     ]
   )

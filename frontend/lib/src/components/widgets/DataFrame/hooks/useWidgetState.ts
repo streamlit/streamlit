@@ -471,28 +471,30 @@ function useWidgetState({
           }
         }
 
+        const newWidgetState = JSON.stringify(selectionState)
         const currentWidgetState = widgetMgr.getStringValue({
           id: element.id,
           formId: element.formId,
         })
-        // Compare parsed values: backend-set selections are serialized by
-        // Python's json.dumps, whose spacing differs from JSON.stringify.
-        // No stored state means nothing is selected.
-        const currentSelectionState = isNullOrEmptyString(currentWidgetState)
-          ? EMPTY_SELECTION_STATE
-          : (JSON.parse(currentWidgetState) as DataframeState)
+        // Fall back to comparing parsed values: backend-set selections are
+        // serialized by Python's json.dumps, whose spacing differs from
+        // JSON.stringify. No stored state means nothing is selected.
+        const isUnchanged =
+          currentWidgetState === newWidgetState ||
+          isEqual(
+            isNullOrEmptyString(currentWidgetState)
+              ? EMPTY_SELECTION_STATE
+              : (JSON.parse(currentWidgetState) as DataframeState),
+            selectionState
+          )
 
         // Only update if there is actually a difference to the previous selection state
-        if (!isEqual(currentSelectionState, selectionState)) {
-          widgetMgr.setStringValue(
-            element.id,
-            JSON.stringify(selectionState),
-            {
-              formId: element.formId,
-              fragmentId,
-              fromUser: true,
-            }
-          )
+        if (!isUnchanged) {
+          widgetMgr.setStringValue(element.id, newWidgetState, {
+            formId: element.formId,
+            fragmentId,
+            fromUser: true,
+          })
         }
       }
     },
