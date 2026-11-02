@@ -23,6 +23,7 @@ import {
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useFocusVisible } from "react-aria"
+import type { Mock } from "vitest"
 
 import { render } from "@streamlit/lib/testing"
 
@@ -303,6 +304,13 @@ describe("SidebarNavLink", () => {
     const HELP = "Net revenue by **region** and month."
     const HELP_TEXT = "Net revenue by region and month."
 
+    /**
+     * Click handler that prevents the default navigation, as the nav does
+     * before it switches pages itself.
+     */
+    const createNavClickHandler = (): Mock<SidebarNavLinkProps["onClick"]> =>
+      vi.fn<SidebarNavLinkProps["onClick"]>(e => e.preventDefault())
+
     beforeAll(() => {
       // React Aria tracks the interaction modality through document listeners
       // that useFocusVisible registers once.
@@ -411,11 +419,7 @@ describe("SidebarNavLink", () => {
 
     it("does not open on a touch tap", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      // The nav prevents the default navigation and switches pages itself.
-      const onClick = vi.fn(
-        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
-          e.preventDefault()
-      )
+      const onClick = createNavClickHandler()
       render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
 
       await user.pointer({
@@ -469,10 +473,7 @@ describe("SidebarNavLink", () => {
 
     it("cancels a pending tooltip when the link is clicked", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const onClick = vi.fn(
-        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
-          e.preventDefault()
-      )
+      const onClick = createNavClickHandler()
       render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
       const link = screen.getByRole("link", { name: "Test" })
 
@@ -491,10 +492,7 @@ describe("SidebarNavLink", () => {
 
     it("closes an open tooltip when the link is clicked", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-      const onClick = vi.fn(
-        (e: Parameters<SidebarNavLinkProps["onClick"]>[0]) =>
-          e.preventDefault()
-      )
+      const onClick = createNavClickHandler()
       render(<SidebarNavLink {...getProps({ help: HELP, onClick })} />)
       const link = screen.getByRole("link", { name: "Test" })
 
@@ -537,12 +535,10 @@ describe("SidebarNavLink", () => {
         expect(
           screen.queryByTestId("stTooltipHoverTarget")
         ).not.toBeInTheDocument()
-        expect(screen.getByTestId("stSidebarNavLinkContainer")).toContainHTML(
-          link.outerHTML
-        )
-        expect(
-          screen.getByTestId("stSidebarNavLinkContainer").childElementCount
-        ).toBe(1)
+        // The link is the container's only child: no wrapper, no description.
+        const container = screen.getByTestId("stSidebarNavLinkContainer")
+        expect(link.parentElement).toBe(container)
+        expect(container.childElementCount).toBe(1)
       }
     )
   })

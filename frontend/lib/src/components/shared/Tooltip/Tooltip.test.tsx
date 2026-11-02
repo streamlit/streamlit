@@ -539,12 +539,9 @@ describe("Tooltip element", () => {
   })
 
   describe("fitAvailableWidth", () => {
-    it.each([
-      [true, true],
-      [false, false],
-    ])(
-      "caps the popup width to the available space: %s",
-      async (fitAvailableWidth, isCapped) => {
+    it.each([true, false])(
+      "caps the popup width to the available space only if fitAvailableWidth (%s)",
+      async fitAvailableWidth => {
         const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
         renderTooltip({ fitAvailableWidth, placement: Placement.RIGHT })
 
@@ -555,7 +552,7 @@ describe("Tooltip element", () => {
         })
 
         const popup = screen.getByTestId("stTooltipContent").parentElement
-        expect(popup?.style.maxWidth.endsWith("px")).toBe(isCapped)
+        expect(popup?.style.maxWidth.endsWith("px")).toBe(fitAvailableWidth)
       }
     )
   })

@@ -89,7 +89,7 @@ def _raise_if_nested_url_path(url_path: str) -> None:
 
 
 def _normalize_page_help(help: str | None) -> str:
-    """Dedent ``help``; blank text, including whitespace only, means no help."""
+    """Return ``help`` dedented, or ``""`` when it is ``None`` or only whitespace."""
     if help is None:
         return ""
     dedented = to_help_str(help)

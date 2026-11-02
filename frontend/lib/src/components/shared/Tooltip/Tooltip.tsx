@@ -159,14 +159,14 @@ interface TriggerAreaProps {
  * TriggerArea renders the hoverable/focusable wrapper that activates the tooltip.
  *
  * Hover: onPointerEnter/Leave call state.open(false)/close(false) which use the
- * delay configured on useTooltipTriggerState.
+ * delay configured on useTooltipTriggerState. With `openOnTouch` false, a touch
+ * pointer does not open it.
  *
  * Focus: useFocusWithin closes the tooltip when focus leaves the trigger. When
  * focus enters, it opens the tooltip immediately only if:
  * - React Aria reports visible focus (keyboard or screen reader, including a
  *   dialog restoring focus after Escape), or
- * - a touch tap on the trigger moved focus there, unless `openOnTouch` is
- *   false. Then a touch pointer does not open it on hover either.
+ * - `openOnTouch` is true and a touch tap on the trigger moved focus there.
  * Like React Aria's useTooltipTrigger, focus from a mouse click, or restored
  * after a mouse close, leaves the tooltip to hover.
  *

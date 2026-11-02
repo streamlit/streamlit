@@ -730,22 +730,18 @@ class NavigationTest(DeltaGeneratorTestCase):
             st.Page("https://docs.streamlit.io", title="Docs", help="The docs."),
         ]
         st.navigation(pages)
+        expected_help = [
+            "Net revenue by **region**.",
+            "",
+            "A hidden page.",
+            "The docs.",
+        ]
 
         c = self.get_message_from_queue().navigation
-        assert [p.help for p in c.app_pages] == [
-            "Net revenue by **region**.",
-            "",
-            "A hidden page.",
-            "The docs.",
-        ]
+        assert [p.help for p in c.app_pages] == expected_help
 
         registry = self.script_run_ctx.pages_manager.get_pages()
-        assert [registry[page._script_hash]["help"] for page in pages] == [
-            "Net revenue by **region**.",
-            "",
-            "A hidden page.",
-            "The docs.",
-        ]
+        assert [registry[page._script_hash]["help"] for page in pages] == expected_help
 
     def test_direct_url_to_external_page_falls_back_to_default(self):
         """Test that when a user navigates directly to an external page's URL path,

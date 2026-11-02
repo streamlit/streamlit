@@ -139,7 +139,9 @@ class PageLinkTest(DeltaGeneratorTestCase):
         ):
             st.page_link(page)
 
-        realpath.assert_called_once_with("/unresolved/page.py")
+        # Not assert_called_once_with: the one-time direct-execution warning calls
+        # inspect.stack(), which also calls os.path.realpath for loaded modules.
+        realpath.assert_any_call("/unresolved/page.py")
 
     def test_icon(self):
         """Test that it can be called with icon param."""
@@ -407,12 +409,21 @@ class PageLinkHelpInheritanceTest(DeltaGeneratorTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_page_object_help_is_inherited(self) -> None:
-        """An omitted help takes the Page's help."""
-        page = st.Page("foo.py", title="Foo", help="Net revenue by **region**.")
+    @parameterized.expand(
+        [
+            ("file", "foo.py", False),
+            ("external_url", "https://docs.streamlit.io", True),
+        ]
+    )
+    def test_page_object_help_is_inherited(
+        self, _name: str, page_source: str, is_external: bool
+    ) -> None:
+        """An omitted help takes the Page's help, for file and external pages."""
+        page = st.Page(page_source, title="Foo", help="Net revenue by **region**.")
         st.page_link(page)
 
         c = self.get_delta_from_queue().new_element.page_link
+        assert c.external is is_external
         assert c.help == "Net revenue by **region**."
 
     @parameterized.expand(
@@ -428,15 +439,6 @@ class PageLinkHelpInheritanceTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.page_link
         assert c.help == help
-
-    def test_external_page_object_help_is_inherited(self) -> None:
-        """An external Page's help is the link's tooltip."""
-        page = st.Page("https://docs.streamlit.io", title="Docs", help="The docs.")
-        st.page_link(page)
-
-        c = self.get_delta_from_queue().new_element.page_link
-        assert c.external
-        assert c.help == "The docs."
 
     def test_external_url_string_inherits_nothing(self) -> None:
         """An external URL string has no page to inherit help from, even when a

@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import FloatRect, Locator, Page, expect
 
 from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
@@ -44,15 +44,10 @@ def _page_link(app: Page, label: str) -> Locator:
     )
 
 
-def _bounding_box(locator: Locator) -> dict[str, float]:
+def _bounding_box(locator: Locator) -> FloatRect:
     box = locator.bounding_box()
     assert box is not None
-    return {
-        "x": box["x"],
-        "y": box["y"],
-        "width": box["width"],
-        "height": box["height"],
-    }
+    return box
 
 
 def _is_topmost_at_center(locator: Locator) -> bool:
@@ -103,9 +98,8 @@ def test_sidebar_nav_help_and_page_link_inheritance(
     # hidden copy, so focus announces it once.
     expect(app.get_by_role("tooltip")).to_have_count(0)
     # The popup opens to the right of the item.
-    assert _bounding_box(tooltip)["x"] >= (
-        _bounding_box(revenue_link)["x"] + _bounding_box(revenue_link)["width"]
-    )
+    link_box = _bounding_box(revenue_link)
+    assert _bounding_box(tooltip)["x"] >= link_box["x"] + link_box["width"]
     assert_snapshot(tooltip, name="st_navigation_help-sidebar_tooltip")
 
     reset_hovering(app)
@@ -157,9 +151,8 @@ def test_top_nav_help_tooltips(app: Page) -> None:
     revenue_link.hover()
     expect(tooltip).to_have_text(_REVENUE_HELP)
     # The popup opens below a top-bar item.
-    assert _bounding_box(tooltip)["y"] >= (
-        _bounding_box(revenue_link)["y"] + _bounding_box(revenue_link)["height"]
-    )
+    link_box = _bounding_box(revenue_link)
+    assert _bounding_box(tooltip)["y"] >= link_box["y"] + link_box["height"]
     reset_hovering(app)
     expect(tooltip).not_to_be_attached()
 

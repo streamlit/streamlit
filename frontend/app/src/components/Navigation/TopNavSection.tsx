@@ -102,7 +102,7 @@ const TopNavSection = ({
   const prevOpenRef = useRef(false)
   const openRef = useRef(open)
   openRef.current = open
-  /** Item index to focus when the menu mounts (ArrowUp opens on the last). */
+  /** Item index to focus once the open menu is positioned (ArrowUp opens on the last). */
   const initialFocusIndexRef = useRef(0)
 
   const flatLinkCount = useMemo(
