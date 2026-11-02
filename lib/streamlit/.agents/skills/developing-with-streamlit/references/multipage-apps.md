@@ -153,13 +153,16 @@ def get_api_client():
 ```
 
 ```python
-# streamlit_app.py — user-specific state: use session_state
-st.session_state.user = get_user()
-st.session_state.settings = load_settings()
+# streamlit_app.py — user-specific state: use session_state, loaded once per session
+# Don't use setdefault here; it still calls the loader on every rerun.
+if "user" not in st.session_state:
+    st.session_state.user = get_user()
+if "settings" not in st.session_state:
+    st.session_state.settings = load_settings()
 ```
 
 **Why main module (for global state):**
-- Runs before every page
+- Runs before every page on every full rerun, including page switches, so keep its work cheap and wrap one-time setup in `if key not in st.session_state`
 - Ensures state is initialized
 - Single source of truth
 
