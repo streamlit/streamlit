@@ -322,6 +322,10 @@ ignore = [
   # New code-less preview rule in ruff 0.16.5 (pedantic category). Autouse
   # fixtures are intentional in our pytest and e2e test setup.
   "pytest-fixture-autouse",
+  # New code-less preview rule in ruff 0.17.3. Tests patch the shared `time`
+  # clock on purpose. Some consumers import `time` inside the function, so
+  # there is no module binding a private clock can replace.
+  "shared-clock-mock",
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 
