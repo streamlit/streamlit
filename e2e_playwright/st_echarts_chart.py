@@ -666,3 +666,27 @@ with st.container(key="c_dense_line_opt_out"):
         renderer="svg",
         height=_HEIGHT,
     )
+
+# Point selection on a dataset.source DataFrame: data_indices address that
+# DataFrame's rows. Two full-height bars, one per half of the chart, so a click
+# at 75% width lands on the second bar.
+_selection_df = pd.DataFrame({"day": ["Mon", "Tue"], "sales": [100, 100]})
+dataset_selection_event = st.echarts_chart(
+    {
+        "dataset": {"source": _selection_df},
+        "xAxis": {"type": "category"},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [{"type": "bar", "barWidth": "90%", "selectedMode": "multiple"}],
+        **_NO_ANIM,
+    },
+    key="dataset_selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+_dataset_rows = [
+    i
+    for group in dataset_selection_event.selection.selected
+    for i in group["data_indices"]
+]
+_selected_days = ", ".join(_selection_df.iloc[_dataset_rows]["day"]) or "none"
+st.write(f"echarts dataset selection: {_selected_days}")

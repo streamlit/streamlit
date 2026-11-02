@@ -404,13 +404,17 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         """A dataframe in ``series.data`` is rejected with an actionable hint.
 
         Only ``dataset.source`` is converted, so the error has to say where
-        dataframes actually work.
+        dataframes actually work and what inline values must be.
         """
         df = pd.DataFrame({"x": [1, 2]})
         with pytest.raises(StreamlitAPIException) as exc:
             st.echarts_chart({"series": [{"type": "bar", "data": df}]})
 
-        assert "dataset.source" in str(exc.value)
+        message = str(exc.value)
+        assert "dataset.source" in message
+        assert "plain Python values" in message
+        # Must not steer users to converting dataframes into inline lists.
+        assert "convert them to plain lists" not in message
         assert exc.value.error_id == "echarts-spec-not-json-serializable"
 
     def test_js_callback_string_raises(self):
