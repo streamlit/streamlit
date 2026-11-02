@@ -288,9 +288,10 @@ apart from a race, so it is logged at debug level too. Any other rejection is lo
 warning level, once per widget per session: `wrong_type`, `unreadable`,
 `duplicate_items`, `bad_shape`, `malformed`, and `too_long`, which a correct browser
 never sends. `max_chars` is part of a keyed text or chat input's identity, so no rerun
-lowers it under the user. A browser that reconnects to a new session can still send
-back text or a repeated option that app code wrote, which logs one of these warnings
-when its widget registers. Under the
+lowers it under the user, and the widget cuts text app code wrote before the browser
+shows it. A browser that reconnects to a new session can still send back a repeated
+option that app code wrote, which logs `duplicate_items` when its widget registers.
+Under the
 hidden `global.e2eTest` option every rejection is logged at warning level and never
 deduplicated, for the e2e parity gate. That dedup set only holds IDs with metadata: an
 unknown ID is checked only when its widget registers, and an entry whose widget never
@@ -383,8 +384,10 @@ register_widget(
 
 **`deserialize` converts and never replaces.** It keeps its conversions, such as `int()`
 or sorting a reversed range, but it no longer falls back to the default for a value
-`validate` refuses. The text serdes drop their `max_chars` slice entirely, since URL
-seeding takes over truncation. Check 3 compares its result with the stored
+`validate` refuses. The text serdes drop their `max_chars` slice entirely: URL seeding
+cuts a link's text, and the widget cuts its default and text app code wrote when it
+registers (see [Other value sources](#other-value-sources-url-binding-and-session-state)).
+Check 3 compares its result with the stored
 value, so a replaced value would read as unchanged whenever the widget holds its default,
 with no log and no re-sync, and a correct browser can send such a value in a sync race.
 A conversion can still map a forged value onto the stored one, but a correct browser
@@ -697,7 +700,7 @@ of what the widget accepts, and each source applies its own policy to a violatio
 | --- | --- | --- | --- |
 | Client `WidgetStates` | No | Drop it as never sent; the agent API refuses the request | Yes |
 | A bound widget's URL parameter | No: the client sends the query string in `ClientState` | Ignore it for a disabled widget. Otherwise repair it, then validate it, then clear or correct the parameter | The `disabled` rule in item 1, and a refactor onto `validate`, below |
-| Programmatic `st.session_state` writes | Yes: it is app code | Mixed today | Follow-up, below |
+| Programmatic `st.session_state` writes | Yes: it is app code | Mixed today, apart from text past `max_chars`, which is cut | The `max_chars` cut, below; the rest is a follow-up |
 
 **URL binding: a behavior-preserving refactor after item 4.** `_seed_widget_from_url`
 already validates the query string. Items 2 and 4 have it call `validate` where a
@@ -739,27 +742,43 @@ rerun only under those rules. Its value then passes the same `validate`, and a d
 widget ignores it, so the URL cannot be used to get around the drop. The security docs
 should spell this out.
 
-**Programmatic writes: a follow-up, not part of this spec.** App code is trusted, so a
-programmatic value raises no security question. It also does not affect agents: the
-browser and the agent API echo it back unchanged, and unchanged values pass check 3,
+**Text past `max_chars`: cut at registration, whatever its source.** Today the
+deserializer cuts text past `max_chars` from any source, so the app gets the cut text,
+but the browser shows the full text that app code wrote or the author passed as
+`value`, and its echo of that text reads as a change and fires `on_change`. Once
+deserializers stop cutting (item 4), the widgets cut it themselves, with
+`truncate_utf16`, the helper URL seeding uses:
+
+- `st.text_input` and `st.text_area` cut the author's `value` before it fills the
+  proto's `default` and the serde, after the element ID has hashed it as written, so no
+  ID changes. The browser shows the cut default, a form with `clear_on_submit` sends it
+  back within the limit, and `validate` needs no exemption for the author's value.
+- After `register_widget`, a value past `max_chars` can only be text app code wrote: a
+  client's is refused and a link's is cut. The widget writes the cut text back with
+  `reset_state_value` and sets `value_changed`, so the proto carries `set_value` and app
+  code after the widget reads the cut text. A bound widget's parameter is corrected too,
+  because registration has already written the uncut text there. The browser's echo
+  then reads as unchanged, and a reconnect to a new session sends back text that passes.
+- `st.chat_input` does not echo. The browser writes the text into the field without its
+  `max_chars` check, and Enter sends it as a new message, which `validate` would refuse
+  and the cleared field would lose. So it cuts the text it pushes with the same helper,
+  and the message lands cut to the limit, as the deserializer used to cut it.
+
+The cut counts UTF-16 code units, as the check does, so text with astral characters
+keeps fewer characters than the old code-point slice. `truncate_utf16` returns text
+within the limit after the comparison `text_length` makes, so a registration with
+`max_chars` pays one comparison for the default and one for the value, and only text
+longer than half the limit is counted, with one `encode`.
+
+**Other programmatic writes: a follow-up, not part of this spec.** App code is trusted,
+so a programmatic value raises no security question. It also does not affect agents:
+the browser and the agent API echo it back unchanged, and unchanged values pass check 3,
 apart from the browser's echo of a color below. But today an out-of-constraint write has
 four different outcomes, depending on the widget:
 
 - **Reset to the default:** an unknown option, or a number or date out of range.
 - **A clean error:** more than `max_selections`, or a slider above `max_value`.
-- **Accepted unchecked:** text past `max_chars`, a failed `validate`, or the color
-  `"red"`. Text past `max_chars` is corrected one rerun later, though: the browser sends
-  it back, and the deserializer truncates it, which fires `on_change` although nobody
-  changed the widget. Once deserializers stop truncating (item 4), the echo of a text
-  input's or text area's value is unchanged and the text stays as written. The product
-  spec lists this as a behavior change, and whether to truncate at registration instead
-  is left to this follow-up.
-  - A chat input's text is not echoed. The browser writes it into the field without
-    its `max_chars` check, and Enter sends it as a new message, which `validate` would
-    refuse and the cleared field would lose. So `st.chat_input` cuts that text to
-    `max_chars` with `truncate_utf16` when it pushes it to the browser. The message the
-    user sends is then accepted, cut to the limit as the deserializer used to cut it,
-    but in UTF-16 code units.
+- **Accepted unchecked:** a failed `validate`, or the color `"red"`.
   - A color such as `"red"` is reset to the default one rerun later, and `"ff0000"`
     gets its `#`, both with an `on_change`. Once the color picker's deserializer stops
     falling back to the default (item 4), the color stays as written, but the
@@ -855,9 +874,10 @@ Items 1–3 are covered above.
   the browser counts them, so an astral character counts as two and nothing a browser
   accepts is refused. `0` means no limit, as in the browser (`maxChars !== 0`). The text
   serdes used to cut any text to `""` for `max_chars=0`; item 4 drops that slice along
-  with the rest. The author's `value` passes as written even past `max_chars`, as it
-  is returned: the browser shows it and sends it back, also as a change when a form
-  with `clear_on_submit` clears to it.
+  with the rest. The widget cuts its default and text app code wrote to `max_chars`
+  when it registers (see [Other value sources](#other-value-sources-url-binding-and-session-state)),
+  so `validate` has no exemption for the author's `value`: a form with
+  `clear_on_submit` restores the cut default, which is within the limit.
 - The deserializers stop replacing refused values and keep their conversions, such as
   `int()`, and the text serdes stop slicing to `max_chars`. See
   [above](#where-constraints-live-in-each-widgets-serde).
@@ -876,7 +896,7 @@ filled, belongs to item 7.
 - Emptiness follows the widget: `None`, `[]`, `()`, or text that is only whitespace. An
   unset value reads as the widget's default, because the browser commits the default
   when the user empties a field that has one, so it is empty only when the default is.
-  `datetime_input` reads `[]` as its default too. Four cases differ:
+  `datetime_input` reads `[]` as its default too. Three cases differ:
   - `date_input`: `[]` is empty even with a default, because `DateInputSerde` reads it
     as `None` (`()` for a range), and a `required` range with only a start date is
     empty, as in the browser's `isRequiredEmptyDateValue`. Once a required range holds
@@ -894,8 +914,6 @@ filled, belongs to item 7.
     which checks for a missing value. Inside a form it gets no exception: the browser
     keeps a form from submitting while a required selectbox is empty, so a form that
     clears on submit never sends it empty.
-  - Text: emptiness is checked before the exemption for the author's value, so a
-    required text input whose default is `""` still refuses a change to `""`.
 - Whitespace uses the ECMAScript `trim()` set, so the server is never stricter than the
   browser. Python's `str.strip()` also strips `U+001C`–`U+001F` and `U+0085`, which the
   browser keeps, and keeps `U+FEFF`, which the browser strips.
@@ -906,8 +924,8 @@ filled, belongs to item 7.
   a user's change to empty arrives.
 - App code may still empty a required widget through session state, and the browser's
   echo of that value is unchanged. A reconnect to a new session refuses it at
-  registration, as it refuses programmatic text past `max_chars`, so the widget falls
-  back to its default.
+  registration, as it refuses an option app code repeated in a multiselect, so the
+  widget falls back to its default.
 - URL seeding runs the same `validate`, so a link cannot empty a required widget: an
   empty parameter, or a range link with only its start, clears the parameter when the
   default is not empty. A link equal to an empty default is cleared before the check,
@@ -1083,9 +1101,10 @@ a client value no longer rebuilds the widget's metadata.
   and for replay capture alike. A value refused for a widget outside a fragment is
   corrected at the next full run. A run that ends in `st.stop()` or an exception before a
   widget registers keeps that widget's value, and a forged trigger for it is then
-  refused. A programmatic text value past `max_chars` stays as written and fires no
-  `on_change`, and a chat input's reaches the browser cut to `max_chars`, so its submit
-  is accepted.
+  refused. Text past `max_chars` from app code or a default, astral emoji included,
+  reaches the browser and the app cut to `max_chars`, a bound widget's parameter holds
+  the cut text, its echo fires no `on_change`, and a reconnect keeps it. A chat input's
+  reaches the browser cut too, so its submit is accepted.
 - **Forms**: a submit whose required field gets filler that a per-field check drops, such
   as text past `max_chars`, is refused as a whole. A trigger in the form that is not a
   submit button commits no field changes.

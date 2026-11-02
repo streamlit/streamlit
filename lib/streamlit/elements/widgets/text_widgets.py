@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, cast, overload
 
@@ -63,6 +63,7 @@ from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.runtime.state.common import RegisterWidgetResult
     from streamlit.runtime.state.widget_checks import Violation
     from streamlit.type_util import SupportsStr
 
@@ -77,18 +78,58 @@ def _validate_text(
     """Refuse text that empties a required widget, or is past ``max_chars``.
 
     Text of only whitespace is empty, and ``max_chars`` counts UTF-16 code
-    units, both as the browser does. The author's ``value`` is accepted as
-    written, even past ``max_chars``: the browser shows it and sends it back,
-    for example when a form clears to it.
+    units, both as the browser does. The author's ``value`` needs no
+    exemption: the widget cuts it to ``max_chars`` before the browser shows
+    it, so a form that clears to it sends text within the limit.
     """
-    # An unset value reads as the default. Emptiness is checked before the
-    # author's value, because an empty default is still empty.
+    # An unset value reads as the default.
     violation = widget_checks.filled(
         value if ui_value is None else ui_value, required=required
     )
-    if violation is not None or ui_value is None or ui_value == value:
+    if violation is not None or ui_value is None:
         return violation
     return widget_checks.text_length(ui_value, max_chars)
+
+
+def _cut_to_max_chars(
+    widget_state: RegisterWidgetResult[str | None],
+    *,
+    max_chars: int | None,
+    key: str | None,
+    default: str | None,
+    bind: BindOption,
+) -> RegisterWidgetResult[str | None]:
+    """Cut text app code wrote past ``max_chars``, and tell the browser to show it.
+
+    The cut counts UTF-16 code units, as the browser does, and never splits a
+    character. Session state then holds the cut text too, and the browser's
+    echo of it reads as unchanged, so no ``on_change`` fires. A client cannot
+    send such text, because the boundary check refuses it, and URL seeding
+    cuts a link's text, so only text app code wrote is cut here.
+    """
+    text = widget_state.value
+    if text is None:
+        return widget_state
+    cut = widget_checks.truncate_utf16(text, max_chars)
+    if len(cut) == len(text):
+        return widget_state
+    if key is not None:
+        session_state = get_session_state()
+        session_state.reset_state_value(key, cut)
+        if bind == "query-params":
+            # Registration can have written the uncut text to the parameter,
+            # which must not claim text the widget no longer holds. A value at
+            # the default has no parameter.
+            with session_state.query_params() as query_params:
+                if cut == default:
+                    query_params.remove_param(key)
+                elif query_params.has_param(
+                    key
+                ) and not query_params.stored_param_matches_corrected_value(
+                    key, cut, "string_value"
+                ):
+                    query_params.set_corrected_value(key, cut, "string_value")
+    return replace(widget_state, value=cut, value_changed=True)
 
 
 @dataclass
@@ -107,8 +148,8 @@ class TextInputSerde:
 
     def deserialize(self, ui_value: str | None) -> str | None:
         # Never cuts text to max_chars: validate refuses longer text from a
-        # client, URL seeding truncates a link's text, and the author's value
-        # and session state values stay as written, as the browser shows them.
+        # client, URL seeding cuts a link's text, and the widget cuts its
+        # default and text app code wrote when it registers.
         return ui_value if ui_value is not None else self.value
 
     def serialize(self, v: str | None) -> str | None:
@@ -893,6 +934,12 @@ class TextWidgetsMixin:
             effective_validate
         )
 
+        # A default past max_chars is cut before the browser shows it, as text
+        # app code writes is after registration. The element ID above hashes
+        # the default as written.
+        if value is not None:
+            value = widget_checks.truncate_utf16(value, max_chars)
+
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
             value = None
@@ -968,6 +1015,9 @@ class TextWidgetsMixin:
             persist_state=persist_state,
             # Text input is clearable (empty string is a valid value)
             clearable=True,
+        )
+        widget_state = _cut_to_max_chars(
+            widget_state, max_chars=max_chars, key=key, default=value, bind=bind
         )
 
         if widget_state.value_changed:
@@ -1379,6 +1429,11 @@ class TextWidgetsMixin:
             required=required,
         )
 
+        # A default past max_chars is cut before the browser shows it, as in
+        # text_input. The element ID above hashes the default as written.
+        if value is not None:
+            value = widget_checks.truncate_utf16(value, max_chars)
+
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
             value = None
@@ -1427,6 +1482,9 @@ class TextWidgetsMixin:
             persist_state=persist_state,
             # Text area is clearable (empty string is a valid value)
             clearable=True,
+        )
+        widget_state = _cut_to_max_chars(
+            widget_state, max_chars=max_chars, key=key, default=value, bind=bind
         )
 
         if widget_state.value_changed:

@@ -565,12 +565,16 @@ def text_length(text: str, max_chars: int | None) -> Violation | None:
     return Violation("too_long", MappingProxyType({"max_chars": max_chars}))
 
 
-def truncate_utf16(text: str, max_chars: int) -> str:
-    """Cut text to at most ``max_chars`` UTF-16 code units.
+def truncate_utf16(text: str, max_chars: int | None) -> str:
+    """Cut text to at most ``max_chars`` UTF-16 code units, as a browser counts them.
 
-    A character is never split, so the result is valid text that
-    ``text_length`` accepts.
+    ``0`` or ``None`` means no limit, as in the browser. Text within the limit
+    is returned as is, after the length check ``text_length`` makes, so most
+    calls cost one comparison. A character is never split, so the result is
+    valid text that ``text_length`` accepts.
     """
+    if not max_chars or text_length(text, max_chars) is None:
+        return text
     units = 0
     for index, char in enumerate(text):
         units += 2 if ord(char) > 0xFFFF else 1

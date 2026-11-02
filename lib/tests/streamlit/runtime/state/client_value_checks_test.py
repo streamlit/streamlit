@@ -1578,21 +1578,67 @@ def test_a_chat_message_past_max_chars_is_refused(text: str, accepted: bool) -> 
     assert at.markdown[0].value == (f"prompt={text!r}" if accepted else "prompt=None")
 
 
-def test_programmatic_text_past_max_chars_stays_as_written(
-    refusal_logs: list[str],
-) -> None:
-    """Session state text past max_chars is kept, and its echo fires no on_change."""
-    at = AppTest.from_function(_text_app).run()
+def _filled_text_app() -> None:
+    import streamlit as st
+
+    def on_change(name: str) -> None:
+        st.session_state.calls = [*st.session_state.get("calls", []), name]
+
+    def fill() -> None:
+        # Five UTF-16 code units each, so the last emoji does not fit in three.
+        st.session_state.name = "a😀😀"
+        st.session_state.bio = "😀b😀"
+
+    st.button("Fill", key="fill", on_click=fill)
+    st.text_input("Name", max_chars=3, key="name", on_change=on_change, args=["name"])
+    st.text_area("Bio", max_chars=3, key="bio", on_change=on_change, args=["bio"])
+    st.write(f"held={st.session_state.name!r}, {st.session_state.bio!r}")
+
+
+def test_programmatic_text_past_max_chars_is_cut(refusal_logs: list[str]) -> None:
+    """Text app code writes past max_chars is cut when its widget registers.
+
+    The cut counts UTF-16 code units, as the browser does, and never splits an
+    emoji. The browser is sent the cut text, so its echo reads as unchanged and
+    fires no on_change, and app code after the widget reads the cut text too.
+    """
+    at = AppTest.from_function(_filled_text_app).run()
 
     with patch_config_options({"global.e2eTest": True}):
-        at.session_state["name"] = "abcd"
-        at.run()
-        # AppTest sends the widget's value back, as the browser echoes it.
+        at.button(key="fill").click().run()
+        for widget, cut in (
+            (at.text_input(key="name"), "a😀"),
+            (at.text_area(key="bio"), "😀b"),
+        ):
+            assert widget.value == cut
+            assert widget.proto.set_value is True
+            assert widget.proto.value == cut
+        assert at.markdown[0].value == "held='a😀', '😀b'"
+        # AppTest sends each widget's value back, as the browser echoes it.
         at.run()
 
-    assert at.text_input(key="name").value == "abcd"
+    assert at.text_input(key="name").value == "a😀"
+    assert at.text_input(key="name").proto.set_value is False
     assert "calls" not in at.session_state
     assert refusal_logs == []
+
+
+def test_text_past_max_chars_set_between_runs_is_cut() -> None:
+    """A value AppTest writes to session state between runs is cut the same way.
+
+    AppTest sends that value back as the widget's state, so the widget does not
+    count it as a new session state value, yet the browser is still told to
+    show the cut text.
+    """
+    at = AppTest.from_function(_text_app).run()
+    at.session_state["name"] = "abcd"
+    at.run()
+
+    name = at.text_input(key="name")
+    assert name.value == "abc"
+    assert name.proto.set_value is True
+    assert name.proto.value == "abc"
+    assert "calls" not in at.session_state
 
 
 def _chat_draft_app() -> None:
@@ -1642,60 +1688,75 @@ def test_programmatic_chat_text_is_cut_to_max_chars(
     assert refusal_logs == []
 
 
-def test_a_new_session_drops_programmatic_text_past_max_chars() -> None:
-    """A reconnect sends the text back, and the new session falls back to the default.
+def test_a_new_session_keeps_programmatic_text_cut_to_max_chars(
+    refusal_logs: list[str],
+) -> None:
+    """A reconnect sends back the cut text, and the new session keeps it.
 
-    The new session checks the value against the widget's max_chars when it
-    registers, and it has no programmatic value to explain it.
+    The browser was sent the cut text, so the value it sends to a new session
+    passes the check at registration, with no refusal and no re-sync.
     """
-    first = AppTest.from_function(_text_app).run()
-    first.session_state["name"] = "abcd"
-    first.run()
+    first = AppTest.from_function(_filled_text_app).run()
+    first.button(key="fill").click().run()
     restored = first._tree.get_widget_states().widgets
 
-    fresh = AppTest.from_function(_text_app)
-    fresh._run(widget_state=forged_many(*restored))
+    fresh = AppTest.from_function(_filled_text_app)
+    with patch_config_options({"global.e2eTest": True}):
+        fresh._run(widget_state=forged_many(*restored))
 
-    assert fresh.text_input(key="name").value == ""
-    assert fresh.text_input(key="name").proto.set_value is True
+    assert fresh.text_input(key="name").value == "a😀"
+    assert fresh.text_input(key="name").proto.set_value is False
+    assert fresh.text_area(key="bio").value == "😀b"
     assert "calls" not in fresh.session_state
+    assert refusal_logs == []
 
 
 def _long_default_app() -> None:
     import streamlit as st
 
     with st.form("profile", clear_on_submit=True):
-        st.text_input("Code", "abcdef", max_chars=3, key="code")
+        # Six UTF-16 code units, of which only "ab" fits in three: the cut never
+        # splits the emoji.
+        st.text_input("Code", "ab😀cd", max_chars=3, key="code")
         st.form_submit_button("Save", key="save")
 
 
-def test_a_default_past_max_chars_is_never_refused(refusal_logs: list[str]) -> None:
-    """The browser shows a long default as written and sends it back.
+def _submit_code(at: AppTest, text: str) -> None:
+    at._run(
+        widget_state=forged_many(
+            WidgetState(id=_widget_id(at, "code"), string_value=text),
+            WidgetState(id=_widget_id(at, "save"), trigger_value=True),
+        )
+    )
 
-    A form that clears on submit sends the default as a change.
+
+def test_a_default_past_max_chars_is_cut_before_the_browser_shows_it(
+    refusal_logs: list[str],
+) -> None:
+    """The browser is sent the default cut to max_chars, the text the app gets.
+
+    A form that clears on submit sends that cut default back with the next
+    submit, which passes. The uncut default is refused like any text past
+    max_chars.
     """
     at = AppTest.from_function(_long_default_app).run()
-    assert at.text_input(key="code").value == "abcdef"
+    assert at.text_input(key="code").proto.default == "ab"
+    assert at.text_input(key="code").value == "ab"
 
     with patch_config_options({"global.e2eTest": True}):
-        at._run(
-            widget_state=forged_many(
-                WidgetState(id=_widget_id(at, "code"), string_value="ab"),
-                WidgetState(id=_widget_id(at, "save"), trigger_value=True),
-            )
-        )
+        _submit_code(at, "x")
+        assert at.text_input(key="code").value == "x"
+        # The cleared form sends the default it was given back.
+        _submit_code(at, "ab")
         assert at.text_input(key="code").value == "ab"
-        # The cleared form sends the default back with the next submit.
-        at._run(
-            widget_state=forged_many(
-                WidgetState(id=_widget_id(at, "code"), string_value="abcdef"),
-                WidgetState(id=_widget_id(at, "save"), trigger_value=True),
-            )
-        )
+        assert refusal_logs == []
+
+        _submit_code(at, "ab😀cd")
 
     assert not at.exception
-    assert at.text_input(key="code").value == "abcdef"
-    assert refusal_logs == []
+    assert at.text_input(key="code").value == "ab"
+    assert len(refusal_logs) == 1
+    assert "(too_long)" in refusal_logs[0]
 
 
 @pytest.mark.parametrize(
@@ -1726,6 +1787,34 @@ def test_a_bound_url_text_past_max_chars_is_truncated(
     assert not at.exception
     assert at.session_state[key] == expected
     assert at.query_params.get(key) == expected
+
+
+def _bound_filled_text_app() -> None:
+    import streamlit as st
+
+    def fill() -> None:
+        st.session_state.q = "abcdef"
+        st.session_state.d = "abcxyz"
+
+    st.button("Fill", key="fill", on_click=fill)
+    st.text_input("Q", max_chars=3, key="q", bind="query-params")
+    # This cut lands on the default, which a bound widget keeps out of the URL.
+    st.text_input("D", "abc", max_chars=3, key="d", bind="query-params")
+
+
+def test_a_bound_widget_parameter_shows_the_cut_text() -> None:
+    """The parameter of a bound widget holds the text the widget was cut to.
+
+    Registration writes text app code set to the parameter before the widget
+    cuts it, so the cut corrects the parameter too.
+    """
+    at = AppTest.from_function(_bound_filled_text_app).run()
+    at.button(key="fill").click().run()
+
+    assert at.text_input(key="q").value == "abc"
+    assert at.query_params.get("q") == "abc"
+    assert at.text_input(key="d").value == "abc"
+    assert "d" not in at.query_params
 
 
 def _required_app() -> None:

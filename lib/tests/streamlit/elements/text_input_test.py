@@ -1134,8 +1134,9 @@ def test_None_session_state_value_retained():
         (0, "abcdef", True),
         (None, "abcdef", True),
         (3, None, True),
-        # The author's value is accepted as written, even past the limit.
-        (3, "default!", True),
+        # No exemption for the author's value: the widget cuts it to max_chars
+        # before the serde holds it, so text past the limit is always refused.
+        (3, "default!", False),
     ],
 )
 def test_text_serde_validate_counts_max_chars_like_the_browser(
@@ -1186,3 +1187,32 @@ def test_text_serde_validate_refuses_emptying_a_required_widget(
         None if accepted else Violation("empty_required")
     )
     assert optional.validate(sent) is None
+
+
+def _long_default_script(widget: str, max_chars: int) -> None:
+    import streamlit as st
+
+    getattr(st, widget)("Code", "ab😀cd", max_chars=max_chars, key="code")
+
+
+@pytest.mark.parametrize("widget", ["text_input", "text_area"])
+@pytest.mark.parametrize(
+    ("max_chars", "expected"),
+    [
+        # "ab😀" is four UTF-16 code units, so the emoji is left out whole.
+        (3, "ab"),
+        (4, "ab😀"),
+        # 0 means no limit, as in the browser.
+        (0, "ab😀cd"),
+    ],
+)
+def test_a_default_past_max_chars_is_cut_before_the_browser_shows_it(
+    widget: str, max_chars: int, expected: str
+) -> None:
+    """The browser is sent the default cut to max_chars, the text the app gets."""
+    at = AppTest.from_function(_long_default_script, args=(widget, max_chars)).run()
+
+    element = getattr(at, widget)(key="code")
+    assert element.proto.default == expected
+    assert element.value == expected
+    assert element.proto.set_value is False

@@ -1176,12 +1176,10 @@ class ChatMixin:
             # order for the chat input to reflect the value in the backend state.
             # The browser writes this text into the field without its max_chars
             # check, and a submit sends it as a new message, which validate
-            # refuses past max_chars. So the text is cut to the limit here,
-            # in UTF-16 code units as the browser counts them.
-            chat_input_proto.value = (
-                widget_checks.truncate_utf16(widget_state.value, max_chars)
-                if max_chars
-                else widget_state.value
+            # refuses past max_chars. So the text is cut to the limit here, as
+            # text_input and text_area cut text app code wrote.
+            chat_input_proto.value = widget_checks.truncate_utf16(
+                widget_state.value, max_chars
             )
             chat_input_proto.set_value = True
 

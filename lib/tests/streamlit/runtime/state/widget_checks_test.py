@@ -943,11 +943,12 @@ def test_utf16_length_counts_astral_characters_twice() -> None:
     [
         ("abcd", 3, "abc"),
         ("abc", 3, "abc"),
-        ("abc", 0, ""),
         # The emoji does not fit in what is left, so it is left out whole.
         ("a😀b", 2, "a"),
         ("a😀b", 3, "a😀"),
         ("😀😀", 3, "😀"),
+        # Short in code points, but past the limit in UTF-16 code units.
+        ("😀😀😀", 4, "😀😀"),
     ],
 )
 def test_truncate_utf16_never_splits_a_character(
@@ -958,6 +959,12 @@ def test_truncate_utf16_never_splits_a_character(
 
     assert truncated == expected
     assert widget_checks.utf16_length(truncated) <= max_chars
+
+
+@pytest.mark.parametrize("max_chars", [0, None])
+def test_truncate_utf16_reads_zero_or_none_as_no_limit(max_chars: int | None) -> None:
+    """0 and None mean no limit, as in the browser, so nothing is cut."""
+    assert widget_checks.truncate_utf16("a😀" * 100, max_chars) == "a😀" * 100
 
 
 # The characters JavaScript's `trim()` removes, from Node: every code point `c`
