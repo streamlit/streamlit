@@ -19,7 +19,7 @@ app_pages/
 
 Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
 
-Give each `st.Page` a brief `help` (one to three short sentences, about 200 characters) that says what the page is: what it shows, what users can do there, and anything the title doesn't tell, such as scope or units. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page's `help` in the agent API snapshot. It is not shown on the page; use `st.caption` for a visible subtitle.
+Give each `st.Page` a brief `help` (one to three short sentences, about 200 characters) that says what the page is: what it shows, what users can do there, and what sets it apart from similar pages. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page's `help` in the agent API snapshot. It is not shown on the page; use `st.caption` for a visible subtitle.
 
 ```python
 # streamlit_app.py

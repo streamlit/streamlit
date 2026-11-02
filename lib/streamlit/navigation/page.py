@@ -228,20 +228,25 @@ class Page:
            run. The page can be visible or hidden.
 
     help : str or None
-        A tooltip that gets displayed when the page's item in the navigation
-        menu is hovered over. If this is ``None`` (default), no tooltip is
-        displayed. Use a brief description of what the page is, in one to
-        three short sentences (about 200 characters).
+        A short summary of the page, shown as a tooltip on the page's item in
+        the navigation menu. If this is ``None`` (default), no tooltip is
+        displayed.
 
-        The tooltip appears as soon as the page is passed to
-        ``st.navigation``, even before the page runs. It's also the default
+        Write it to help users and agents find the right page without
+        opening it. In one to three short sentences (about 200 characters),
+        say what the page shows, what users can do there, and what sets it
+        apart from similar pages. Describe the page itself, not its current
+        values or step-by-step instructions.
+
+        Streamlit shows the summary as soon as the page is passed to
+        ``st.navigation``, before the page runs. It's also the default
         tooltip of ``st.page_link`` for this page. The agent API (see
         ``server.enableAgentApi``) reports it as the page's ``help`` in its
         snapshot, except for external-URL pages, which the snapshot doesn't
         list. It isn't shown on the page and doesn't set the meta
         description.
 
-        The tooltip can optionally contain GitHub-flavored Markdown,
+        The summary can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
         parameter of ``st.markdown``.
 
@@ -311,7 +316,10 @@ class Page:
                 "page1.py",
                 title="First page",
                 icon="🔥",
-                help="Sales by region for the current quarter.",
+                help=(
+                    "Quarterly sales by region and product line. "
+                    "Filter by region and download the table as CSV."
+                ),
             ),
             st.Page(page2, title="Second page", icon=":material/favorite:"),
             st.Page(
@@ -476,7 +484,7 @@ class Page:
 
     @property
     def help(self) -> str:
-        """The page's help text, as Markdown.
+        """The page's summary from ``help``, as Markdown.
 
         This is the tooltip on the page's item in the navigation menu and the
         default tooltip of ``st.page_link`` for this page. If no help was
