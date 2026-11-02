@@ -233,14 +233,16 @@ class Page:
         displayed. Use one or two sentences that say what the page is.
 
         Streamlit shows the tooltip without running the page. It's also the
-        default tooltip of ``st.page_link`` for this page and the page's
-        ``help`` in the snapshot of the experimental agent API (see
-        ``server.enableAgentApi``), which doesn't list external-URL pages.
-        It isn't shown on the page and doesn't set the meta description.
+        default tooltip of ``st.page_link`` for this page. The experimental
+        agent API (see ``server.enableAgentApi``) reports it as the page's
+        ``help`` in its snapshot, except for external-URL pages, which the
+        snapshot doesn't list. It isn't shown on the page and doesn't set the
+        meta description.
 
         The tooltip can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
-        parameter of ``st.markdown``.
+        parameter of ``st.markdown``. In the navigation menu, only mouse
+        users can click links in the tooltip.
 
     Attributes
     ----------
