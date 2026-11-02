@@ -368,8 +368,8 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
 
 
 def test_client_new_session_without_run_identity_keeps_the_previous_run() -> None:
-    """A `new_session` missing its run identity is logged and ignored, so the
-    previous run keeps owning what is written after it.
+    """The client logs and ignores a `new_session` missing its run identity, so
+    the previous run keeps owning subsequent deltas.
     """
     client = interaction.AgentSessionClient()
     no_identity = ForwardMsg()

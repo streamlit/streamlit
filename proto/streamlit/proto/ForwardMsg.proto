@@ -202,8 +202,8 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
-  // Set on new_session. Deltas carry no run identity: a delta belongs to the
-  // most recent new_session before it.
+  // The backend sets this on new_session only. Deltas carry no run identity;
+  // a delta belongs to the most recent new_session before it.
   RunIdentity run = 6;
 
   reserved 3;

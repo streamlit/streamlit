@@ -24,7 +24,8 @@ import "streamlit/proto/SessionStatus.proto";
 // them may require a good amount of effort so should be avoided if possible.
 
 // This is the first message that is sent when a new session starts.
-// The identity of the run it starts is in ForwardMsg.metadata.run.
+// The enclosing ForwardMsg.metadata.run carries the identity of the run this
+// message starts.
 message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
   // but we send it every time so that we don't have to track whether the

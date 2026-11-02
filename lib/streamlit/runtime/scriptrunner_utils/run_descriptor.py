@@ -35,7 +35,8 @@ class RunDescriptor:
 
     A run is either a full-app run or one fragment rerun batch: the ordered
     fragment roots that one ScriptRunner loop iteration executes together.
-    Lifecycle messages carry this identity in ``ForwardMsg.metadata.run``.
+    This is the backend counterpart of the ``RunIdentity`` proto:
+    ``new_session`` carries this identity in ``ForwardMsg.metadata.run``.
 
     Attributes
     ----------

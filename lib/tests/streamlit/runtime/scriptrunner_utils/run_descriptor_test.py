@@ -40,7 +40,7 @@ def test_create_with_empty_fragment_ids(fragment_ids: list[str] | None) -> None:
 
 
 def test_create_fragment_run_keeps_order() -> None:
-    """Fragment IDs are kept in the given order as an immutable tuple."""
+    """`create` keeps fragment IDs in the given order as an immutable tuple."""
     fragment_ids = ["outer", "inner"]
 
     run = RunDescriptor.create(fragment_ids)
@@ -55,7 +55,7 @@ def test_create_generates_unique_ids() -> None:
 
 
 def test_is_frozen() -> None:
-    """Descriptors cannot be mutated after creation."""
+    """Mutating a descriptor after creation raises."""
     run = RunDescriptor.create()
 
     with pytest.raises(dataclasses.FrozenInstanceError):

@@ -274,9 +274,9 @@ interface State {
 export const LOG = getLogger("App")
 
 /**
- * Run identity of a new_session message. A new_session without identity can
- * only come from an outdated backend or a replayed old stream, so it renders
- * under a placeholder full-app run. The placeholder is never
+ * Run identity of a new_session message. A new_session without identity comes
+ * from a replayed old stream or a mismatched dev build, so it renders under a
+ * placeholder full-app run. The placeholder is never
  * INITIAL_SCRIPT_RUN_ID, which marks the app as not having run yet.
  */
 function getNewSessionRunIdentity(

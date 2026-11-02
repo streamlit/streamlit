@@ -1498,7 +1498,7 @@ class AppSession:
 
 
 def _set_run_identity(msg: ForwardMsg, run_descriptor: RunDescriptor) -> None:
-    """Attach the identity of the run that a lifecycle message belongs to."""
+    """Attach this run's identity to a new_session message."""
     msg.metadata.run.script_run_id = run_descriptor.script_run_id
     msg.metadata.run.fragment_ids.extend(run_descriptor.fragment_ids)
 
