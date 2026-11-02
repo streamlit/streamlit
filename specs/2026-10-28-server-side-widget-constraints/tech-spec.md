@@ -752,8 +752,8 @@ four different outcomes, depending on the widget:
   it back, and the deserializer truncates it, which fires `on_change` although nobody
   changed the widget. Once deserializers stop truncating (item 4), the echo of a text
   input's or text area's value is unchanged and the text stays as written. The product
-  spec lists this as a behavior change and leaves the alternative open (its
-  [open question 1](product-spec.md#open-questions)).
+  spec lists this as a behavior change, and whether to truncate at registration instead
+  is left to this follow-up.
   - A chat input's text is not echoed. The browser writes it into the field without
     its `max_chars` check, and Enter sends it as a new message, which `validate` would
     refuse and the cleared field would lose. So `st.chat_input` cuts that text to
@@ -917,8 +917,9 @@ filled, belongs to item 7.
 and its `validate` checks the payload against it:
 - `editing_mode`
 - the row count
-- the editable columns: not disabled, not auto-disabled for Arrow incompatibility, not
-  hidden, and not a type that cannot be edited
+- the editable columns: not disabled, not auto-disabled for Arrow incompatibility, and
+  not a type that cannot be edited. A hidden column stays editable, because the
+  toolbar's column menu lets a user show and edit it.
 - whether the index can be edited (never for a `RangeIndex`)
 
 Positional keys (`_pos:N`, or integer column keys) are resolved to the names the payload
@@ -950,6 +951,8 @@ exist only on the protos. The check groups a message by form:
   the per-field checks: a field whose change one of them dropped counts with its previous
   value. Otherwise the trigger and all of that form's field changes are dropped together
   (`form_invalid`). This is the only atomic rule, because a submit is a transaction.
+  A required single-select `st.pills` or `st.segmented_control` counts only once the
+  browser blocks a submit while it is empty, which it does not do today.
 - A disabled submit drops the form's field changes too. Today the fields still apply.
 - Changes outside the form in the same message are judged on their own. The browser can
   legitimately send them, for example values buffered by `on_change="ignore"`.
