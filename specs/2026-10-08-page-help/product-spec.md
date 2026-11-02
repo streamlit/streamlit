@@ -7,7 +7,7 @@ created: 2026-10-08
 
 ## Summary
 
-Add `help` to `st.Page`: a brief description, one to three sentences, that says what a page is. It is the tooltip on the page's nav item, the default tooltip for `st.page_link` to that page, and the page's hint in the agent snapshot. It is known when `st.navigation` declares the page, so the nav and an agent can show it for pages that have not run. A meta description for search and link previews is not part of this spec. It needs metadata declared before the script runs, and stays with the `st.App` follow-up ([#9058](https://github.com/streamlit/streamlit/issues/9058)).
+Add `help` to `st.Page`: a brief description, one to three short sentences, that says what a page is. It is the tooltip on the page's nav item, the default tooltip for `st.page_link` to that page, and the page's hint in the agent snapshot. It is known when `st.navigation` declares the page, so the nav and an agent can show it for pages that have not run. A meta description for search and link previews is not part of this spec. It needs metadata declared before the script runs, and stays with the `st.App` follow-up ([#9058](https://github.com/streamlit/streamlit/issues/9058)).
 
 ```python
 import streamlit as st
@@ -83,7 +83,7 @@ Inheriting from a path goes further than icon inheritance: `st.page_link` copies
 
 `Page.help` is not written into the document and is not shown as body text. It does not fill `<meta name="description">`, `menu_items["About"]`, the browser-tab title, or the nav label. A visible subtitle remains `st.markdown` or `st.caption`.
 
-There is no length limit and no error for a long string. Docs should suggest a brief description of one to three sentences, since the tooltip and every snapshot carry it.
+There is no length limit and no error for a long string. Docs should suggest a brief description of one to three short sentences, about 200 characters. The tooltip shows it in a few lines, and every agent snapshot repeats each page's `help`.
 
 ### Examples
 
@@ -148,4 +148,4 @@ Adopt **Option 1**.
 | No new dependencies | ✅ The stored string is dedented like every other `help` value. The tooltip and the accessible description reuse the existing Markdown renderer. No Markdown-to-text package. |
 | Metrics collected | ✅ `st.Page` is already wrapped with `@gather_metrics`. String arguments record length, not content, so the help text is not sent. |
 | Any security/legal impact? | Author-controlled Markdown in the tooltip uses the existing help renderer. In the snapshot it is app text like page titles and widget help, which the agent protocol already tells clients to treat as data, not instructions. The snapshot reports nothing the browser does not receive, since the nav gets the same string. No new execution path. |
-| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, a short mention in the multipage-apps guide, and the `st.Page` examples in the bundled `developing-with-streamlit` agent skill (`references/multipage-apps.md`), so coding agents give each page a brief `help` of one to three sentences. `help` is the nav tooltip and the agent hint. It does not set a meta description. |
+| Any docs changes needed? | ✅ The `st.Page` API page, inheritance on the `st.page_link` page, a short mention in the multipage-apps guide, and the `st.Page` examples in the bundled `developing-with-streamlit` agent skill (`references/multipage-apps.md`), so coding agents give each page a brief `help` of one to three short sentences. `help` is the nav tooltip and the agent hint. It does not set a meta description. |

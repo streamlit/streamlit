@@ -231,7 +231,7 @@ class Page:
         A tooltip that gets displayed when the page's item in the navigation
         menu is hovered over. If this is ``None`` (default), no tooltip is
         displayed. Use a brief description of what the page is, in one to
-        three sentences.
+        three short sentences (about 200 characters).
 
         The tooltip appears as soon as the page is passed to
         ``st.navigation``, even before the page runs. It's also the default
