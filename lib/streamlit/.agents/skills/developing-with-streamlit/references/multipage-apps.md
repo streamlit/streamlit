@@ -19,7 +19,7 @@ app_pages/
 
 Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
 
-Give each `st.Page` a one-sentence `help` that says what the page is. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page description coding agents read. It is not shown on the page; use `st.caption` for a visible subtitle.
+Give each `st.Page` a one-sentence `help` that says what the page is. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page's description in the agent API snapshot. It is not shown on the page; use `st.caption` for a visible subtitle.
 
 ```python
 # streamlit_app.py
@@ -198,18 +198,33 @@ Show different pages based on user role, authentication, or any other condition 
 # streamlit_app.py
 import streamlit as st
 
-pages = [st.Page("app_pages/home.py", title="Home", icon=":material/home:")]
+pages = [
+    st.Page(
+        "app_pages/home.py",
+        title="Home",
+        icon=":material/home:",
+        help="Project overview and recent activity.",
+    )
+]
 
 if st.user.is_logged_in:
     pages.append(
         st.Page(
-            "app_pages/dashboard.py", title="Dashboard", icon=":material/bar_chart:"
+            "app_pages/dashboard.py",
+            title="Dashboard",
+            icon=":material/bar_chart:",
+            help="Usage of your projects by week.",
         )
     )
 
 if st.session_state.get("is_admin"):
     pages.append(
-        st.Page("app_pages/admin.py", title="Admin", icon=":material/settings:")
+        st.Page(
+            "app_pages/admin.py",
+            title="Admin",
+            icon=":material/settings:",
+            help="Project members, roles, and settings.",
+        )
     )
 
 page = st.navigation(pages)

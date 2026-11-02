@@ -233,8 +233,10 @@ class Page:
         description is the tooltip on the page's item in the navigation menu
         and the default tooltip of ``st.page_link`` for this page. Streamlit
         shows the tooltip without running the page. The description is also
-        the page's ``help`` in the snapshot of Streamlit's agent API. It isn't
-        shown on the page and doesn't set the page's meta description.
+        the page's ``help`` in the snapshot of Streamlit's agent API, except
+        for a page defined by an external URL, which the snapshot doesn't
+        list. It isn't shown on the page and doesn't set the page's meta
+        description.
 
         The description can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
