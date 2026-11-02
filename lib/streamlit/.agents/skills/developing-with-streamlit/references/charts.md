@@ -113,10 +113,12 @@ Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately 
 
 ## Apache ECharts
 
-Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`:
+Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe (pandas, Polars, PyArrow, and others) in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`. Always do this for data with more than about 1,000 rows; don't call `.tolist()` or `.to_list()` on a column to fill `series.data`:
 
-- Streamlit sends the frame as Arrow, which is smaller and faster than inline values for large data, and keeps its column order. Map columns with `series[i].encode` when the order isn't enough.
-- The agent API reports the frame as a table (schema, preview, and the full data). Inline values only appear inside the raw option, and a chart with several dataframes reports no single table.
+- **Faster for large data.** Streamlit sends the frame as Arrow, which is smaller and faster than inline values, and keeps its column order. Map columns with `series[i].encode` when the order isn't enough.
+- **More value types.** Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`. Inline values must already be JSON, so datetimes, NumPy integers, `Decimal`, and `NaN` in `series.data` raise an error.
+- **Show data.** The chart's hover toolbar gets a **Show data** button that displays the frame as a table.
+- **Agent API.** The agent API reports the frame as a table (schema, preview, and the full data). Inline values only appear inside the raw option, and a chart with several dataframes reports no single table.
 
 ```python
 df = pd.DataFrame(
@@ -143,7 +145,7 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 
 - **JSON-compatible options only.** JavaScript callbacks (`formatter` functions, `JsCode`), `custom` series, GeoJSON map registration, and ECharts GL / 3D charts raise an error. For those, see [third-party-components.md](third-party-components.md).
 - **Format without JavaScript.** Set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format such as `"dollar"`, `"compact"`, or `"%,d visits"`. String templates (`"{b}: {c}"`) work in labels and tooltips, and tooltip templates also expand `{@dimension}` and `{@[index]}`. One format applies to every value of a series, so set `encode.tooltip` to the dimensions the tooltip should show.
-- **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error. Datetimes become ISO strings (UTC if timezone-aware), durations become milliseconds, and missing values become `null`.
+- **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 
@@ -207,7 +209,7 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 - Pre-aggregate in pandas, Polars, or SQL before charting. Vega-Lite transforms such as `aggregate` and `bin` also run in the browser, on every row.
 - Size charts whose data changes often (filters, live data) by their update cost. When a rerun changes only its data, a Vega-based chart swaps the new rows into its existing view, but Vega still recomputes every row (just under a second at 100,000 rows). Streamlit rebuilds an `on_select` chart that has no `key` instead, because new data remounts it. `st.echarts_chart` updates faster, so prefer it from about 50,000 points on such charts. Reruns that leave a chart's data unchanged cost almost nothing with any command, so don't rewrite a chart because other widgets rerun the app.
 - An existing Plotly Express line or scatter figure also holds up to about 1,000,000 points, because it switches to WebGL above 1,000 points. A `go.Scatter` trace stays SVG; use `go.Scattergl` for large data.
-- For ECharts, pass a dataframe through `dataset.source`, not Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, and the agent API then sees only raw option values instead of a table.
+- For ECharts, pass any data with more than about 1,000 rows as a dataframe in `dataset.source`, never as Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, drops the **Show data** table, and leaves the agent API only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
 
 Streamlit fills rendering defaults that you haven't set yourself, so don't add them by hand:

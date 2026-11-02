@@ -801,9 +801,10 @@ def _serialize_option(option: dict[str, Any]) -> str:
             "The provided ECharts spec is not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects: "
             "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Dataframes are converted "
-            "automatically only inside `dataset.source`; anywhere else (for "
-            "example `series.data`) convert them to plain lists first.",
+            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
+            "dataframe in `dataset.source`, which converts datetimes, NumPy "
+            "values, and missing values automatically; values anywhere else "
+            "(for example `series.data`) must already be JSON-compatible.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -977,6 +978,13 @@ class EChartsMixin:
         dictionary (the same JSON you would pass to ``setOption`` in JavaScript),
         a JSON string, or a ``pyecharts`` chart instance.
 
+        To chart a dataframe, pass it as ``dataset.source`` in the option
+        object instead of converting it to lists. Do this for any data with
+        more than about 1,000 rows. It's faster for large data, converts
+        datetimes and missing values, and lets users choose **Show data** to
+        view the dataframe as a table. For details, see the ``spec``
+        parameter.
+
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
@@ -1071,14 +1079,26 @@ class EChartsMixin:
               typing (the presence of a ``dump_options`` method) and converted
               automatically. ``pyecharts`` is not a Streamlit dependency.
 
-            If your option object includes a ``dataset`` with a dataframe-like
-            ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
-            its rows to ECharts and keeps the column order through
+            Put chart data in ``dataset.source`` as a dataframe-like object
+            (pandas, Polars, PyArrow, and others) rather than as lists in
+            ``series.data`` or ``xAxis.data``, especially for more than about
+            1,000 rows. A dataframe source has these advantages:
+
+            - Performance: Streamlit sends the dataframe to the browser as
+              Arrow, which is smaller and faster than inline values for large
+              data.
+            - Value types: Datetimes become ISO-8601 strings (in UTC if
+              timezone-aware), durations become milliseconds, and missing
+              values become ``null``. Other non-numeric values use the text
+              ``st.dataframe`` shows. Inline values must already be
+              JSON-compatible, so datetimes, NumPy integers, and ``NaN`` raise
+              an error there.
+            - Show data: The chart's hover toolbar has a **Show data** button
+              that displays the dataframe as a table.
+
+            Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
-            isn't included, so use ``df.reset_index()`` to plot it. Datetimes
-            become ISO-8601 strings (in UTC if timezone-aware), durations become
-            milliseconds, and missing values become ``null``. Other non-numeric
-            values use the text ``st.dataframe`` shows.
+            isn't included, so use ``df.reset_index()`` to plot it.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
