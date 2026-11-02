@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { Field } from "apache-arrow"
+import {
+  Field,
+  Float64,
+  Table,
+  tableToIPC,
+  vectorFromArray,
+} from "apache-arrow"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { EMPTY } from "~lib/mocks/arrow/empty"
@@ -175,6 +181,98 @@ describe("Quiver", () => {
         expect(() => q.getCell(0, 5)).toThrow(
           "Column index is out of range: 5"
         )
+      })
+    })
+
+    describe("getDataColumnReader", () => {
+      it.each([
+        { name: "UNICODE", data: UNICODE },
+        { name: "CATEGORICAL", data: CATEGORICAL },
+        { name: "MULTI", data: MULTI },
+      ])("reads the same data values as getCell for $name", ({ data }) => {
+        const q = new Quiver({ data })
+        const { numIndexColumns, numDataRows, numDataColumns } = q.dimensions
+
+        for (let column = 0; column < numDataColumns; column++) {
+          const read = q.getDataColumnReader(column)
+          for (let row = 0; row < numDataRows; row++) {
+            expect(read(row)).toEqual(
+              q.getCell(row, numIndexColumns + column).content
+            )
+          }
+        }
+      })
+
+      it("skips index columns", () => {
+        const q = new Quiver({ data: UNICODE })
+
+        // `getCell` column 0 is the "i1" index; data column 0 starts at "foo".
+        expect(q.getDataColumnReader(0)(0)).toEqual("foo")
+      })
+
+      it.each([-1, 2])(
+        "throws an exception if data column index %s is out of range",
+        column => {
+          const q = new Quiver({ data: UNICODE })
+
+          expect(() => q.getDataColumnReader(column)).toThrow(
+            `Data column index is out of range: ${column}`
+          )
+        }
+      )
+    })
+
+    describe("hasSameBytes", () => {
+      /** Arrow IPC bytes of a one-column float64 table. */
+      const floatBytes = (values: number[]): Uint8Array =>
+        tableToIPC(
+          new Table({ y: vectorFromArray(values, new Float64()) }),
+          "stream"
+        )
+
+      it("matches a copy of the same bytes", () => {
+        const bytes = floatBytes([1, 2, 3])
+
+        expect(
+          new Quiver({ data: bytes }).hasSameBytes(
+            new Quiver({ data: bytes.slice() })
+          )
+        ).toBe(true)
+      })
+
+      it("matches views of the same buffer", () => {
+        const bytes = floatBytes([1, 2, 3])
+        const quiver = new Quiver({ data: bytes })
+
+        expect(quiver.hasSameBytes(quiver)).toBe(true)
+        expect(
+          quiver.hasSameBytes(
+            new Quiver({
+              data: new Uint8Array(
+                bytes.buffer,
+                bytes.byteOffset,
+                bytes.byteLength
+              ),
+            })
+          )
+        ).toBe(true)
+      })
+
+      it("tells apart new values with the same shape and byte size", () => {
+        const before = new Quiver({ data: floatBytes([1, 2, 3]) })
+        const after = new Quiver({ data: floatBytes([1, 2, 4]) })
+
+        // The shape, column names, and byte size all match.
+        expect(after.dimensions).toEqual(before.dimensions)
+        expect(after.columnNames).toEqual(before.columnNames)
+        expect(after.hasSameBytes(before)).toBe(false)
+      })
+
+      it("tells apart data with another row count", () => {
+        const before = new Quiver({ data: floatBytes([1, 2, 3]) })
+        const after = new Quiver({ data: floatBytes([1, 2]) })
+
+        expect(after.hasSameBytes(before)).toBe(false)
       })
     })
   })
@@ -928,5 +1026,52 @@ describe("Quiver", () => {
         ])
       })
     })
+  })
+})
+
+describe("Quiver with stale pandas index metadata", () => {
+  it("loads a table whose pandas metadata names a missing index field", () => {
+    // `pa.Table.from_pandas(df).select(["v"])` keeps the metadata naming the
+    // dropped "row" index field.
+    const table = new Table({ v: vectorFromArray([1, 2], new Float64()) })
+    table.schema.metadata.set(
+      "pandas",
+      JSON.stringify({
+        index_columns: ["row"],
+        column_indexes: [
+          {
+            name: null,
+            field_name: null,
+            pandas_type: "unicode",
+            numpy_type: "str",
+            metadata: { encoding: "UTF-8" },
+          },
+        ],
+        columns: [
+          {
+            name: "v",
+            field_name: "v",
+            pandas_type: "float64",
+            numpy_type: "float64",
+            metadata: null,
+          },
+          {
+            name: "row",
+            field_name: "row",
+            pandas_type: "object",
+            numpy_type: "str",
+            metadata: null,
+          },
+        ],
+      })
+    )
+
+    const quiver = new Quiver({ data: tableToIPC(table, "stream") })
+
+    expect(quiver.dimensions.numIndexColumns).toBe(0)
+    expect(quiver.dimensions.numDataColumns).toBe(1)
+    expect(quiver.getDataColumnReader(0)(1)).toBe(2)
+    // The pandas type tags of the data columns are still read.
+    expect(quiver.columnTypes[0].pandasType?.pandas_type).toBe("float64")
   })
 })

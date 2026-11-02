@@ -17,6 +17,7 @@
 import { type FC, memo, useCallback } from "react"
 
 import type { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
@@ -81,7 +82,7 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,

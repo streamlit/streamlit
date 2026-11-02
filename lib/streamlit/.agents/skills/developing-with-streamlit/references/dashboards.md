@@ -115,6 +115,30 @@ with st.container(border=True):
     st.dataframe(orders_df, hide_index=True, alt="Recent orders")
 ```
 
+## Choosing charts for a dashboard
+
+Prefer one chart engine per page (see [charts.md](charts.md)), and combine engines when a chart needs a type or feature the main one lacks:
+
+- **Operational dashboards** (KPIs, monitoring, several charts driven by the same filters): prefer `st.echarts_chart` for every chart. Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and dense series stay fast with `sampling` and `large`.
+- **Analytical dashboards** (aggregation, binning, faceting, brushing one chart to filter others): prefer `st.altair_chart`, with the simple charts for quick views.
+- Metric sparklines (`chart_data`) work next to either engine.
+
+```python
+st.echarts_chart(
+    {
+        "tooltip": {"trigger": "axis", "valueFormatter": "dollar"},
+        "dataset": {"source": daily_revenue},  # Columns: date, revenue
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [{"type": "line", "showSymbol": False}],
+    },
+    alt="Daily revenue, rising since March",
+)
+```
+
+The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
+
 ## Smooth loading with parallel fragments + skeletons
 
 When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
@@ -187,12 +211,12 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters |
-| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander |
-| `dashboard-seattle-weather` | Weather data visualization |
-| `dashboard-stock-peers` | Stock peer comparison |
+| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
+| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
+| `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
+| `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
 | `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
@@ -201,7 +225,8 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
 - `layouts.md` — Columns, containers, tabs, dialogs
-- `data-display.md` — Charts, dataframes, column configuration
+- `charts.md` — Choosing chart commands, consistent charts, chart selections
+- `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)

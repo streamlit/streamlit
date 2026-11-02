@@ -188,6 +188,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -211,6 +212,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -234,6 +236,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -257,6 +260,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -280,6 +284,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -308,6 +313,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -331,6 +337,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -354,6 +361,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -481,6 +489,26 @@ class SelectboxMixin:
         disabled : bool
             An optional boolean that disables the selectbox if set to ``True``.
             The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a selection if set to
+            ``True``. The default is ``False``. If this is ``True``, an
+            empty selection (``None``) cannot be submitted.
+
+            Inside a form, submission is blocked until the user selects an
+            option. Inside or outside a form, the user can change a
+            selection but can't clear it. The widget still returns its
+            default value until the user selects an option.
+
+            ``required=True`` does not change the widget's default. A
+            selectbox still starts on the option at ``index`` (the first
+            option by default). Use ``index=None`` together with
+            ``required=True`` for an empty required selectbox.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -645,6 +673,7 @@ class SelectboxMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
@@ -668,6 +697,7 @@ class SelectboxMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
@@ -725,6 +755,8 @@ class SelectboxMixin:
             # Treat the provided key as the main identity. Only include
             # accept_new_options in the identity computation because it can
             # invalidate the current selection and is complex to support.
+            # `required` is hashed only for unkeyed widgets: toggling it cannot
+            # make a stored selection illegal.
             key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
@@ -735,6 +767,7 @@ class SelectboxMixin:
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
             width=width,
+            required=required,
         )
 
         session_state = get_session_state().filtered_state
@@ -750,6 +783,7 @@ class SelectboxMixin:
         selectbox_proto.form_id = current_form_id(self.dg)
         selectbox_proto.placeholder = placeholder or ""
         selectbox_proto.disabled = disabled
+        selectbox_proto.required = required
         selectbox_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -831,9 +865,10 @@ class SelectboxMixin:
                 key=element_id,
                 action="value",
                 value_schema=agent_spec.STRING,
-                # No initial selection: a later choice can be cleared back to
-                # the placeholder. `index` itself is only the starting value.
-                clearable=index is None,
+                # No initial selection, and not required: a later choice can be
+                # cleared back to the placeholder. `index` itself is only the
+                # starting value.
+                clearable=index is None and not required,
                 label=label,
                 # The formatted options, not the author's Python objects:
                 # these are the strings a client has to send back to set the
@@ -844,6 +879,10 @@ class SelectboxMixin:
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",
                 disabled=disabled,
+                # Checked by the browser, not by this interface: `null` still
+                # resets the widget to its default, which is empty for
+                # `index=None`.
+                required=required,
                 label_visibility=label_visibility,
                 accept_new_options=accept_new_options,
                 filter_mode=filter_mode,

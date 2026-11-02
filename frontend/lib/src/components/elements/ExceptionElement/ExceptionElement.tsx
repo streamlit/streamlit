@@ -24,7 +24,7 @@ import {
 } from "react"
 
 import { Config, type Exception as ExceptionProto } from "@streamlit/protobuf"
-import { isLocalhost } from "@streamlit/utils"
+import { isLocalhost, isNullOrEmptyString } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import {
@@ -38,7 +38,6 @@ import AlertContainer, {
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
-import { notNullOrUndefined } from "~lib/util/utils"
 
 import SkillsInstallCallout from "./SkillsInstallCallout"
 import {
@@ -67,13 +66,6 @@ interface StackTraceProps {
   stackTrace: string[]
 }
 
-/**
- * Return true if the string is non-null and non-empty.
- */
-function isNonEmptyString(value: string | null | undefined): boolean {
-  return notNullOrUndefined(value) && value !== ""
-}
-
 function ExceptionMessage({
   type,
   message,
@@ -95,7 +87,7 @@ function ExceptionMessage({
     <>
       <StyledMessageType>{type}</StyledMessageType>
       {type.length !== 0 && ": "}
-      {isNonEmptyString(message) ? message : null}
+      {isNullOrEmptyString(message) ? null : message}
     </>
   )
 }

@@ -56,7 +56,7 @@ import Select, {
 } from "react-select"
 import CreatableSelect from "react-select/creatable"
 
-import { isNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, isNullOrUndefined } from "@streamlit/utils"
 
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 
@@ -396,7 +396,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
           paddingLeft: theme.bubblePadding,
           paddingTop: 0,
           paddingBottom: 0,
-          color: data.color
+          color: !isNullOrEmptyString(data.color)
             ? // If a color is set for this option,
               // we use it to determine the text color.
               getLuminance(data.color) > 0.5
@@ -420,7 +420,7 @@ const Editor: ReturnType<ProvideEditorCallback<MultiSelectCell>> = p => {
         }
         return {
           ...styles,
-          color: data.color
+          color: !isNullOrEmptyString(data.color)
             ? // If a color is set for this option,
               // we use it to determine the text color.
               getLuminance(data.color) > 0.5
@@ -617,7 +617,7 @@ const renderer: CustomRenderer<MultiSelectCell> = {
 
       // If a color is set for this option, we use either black or white as the text color depending on the background.
       // Otherwise, use the configured textBubble color.
-      ctx.fillStyle = matchedOption?.color
+      ctx.fillStyle = !isNullOrEmptyString(matchedOption?.color)
         ? getLuminance(color) > 0.5
           ? "#000000"
           : "#ffffff"

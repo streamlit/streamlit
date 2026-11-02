@@ -7,6 +7,8 @@ Most features need implementation in three areas:
 - Frontend: `frontend/`
 - Protobufs: `proto/`
 
+Keep the element's logic in its own backend module and frontend folder. The shared files named below (`Element.proto`, `__init__.py`, `element_mocks.py`, `ElementNodeRenderer.tsx`) are registration points: limit the element's entry in each to wiring. See "Keep elements self-contained" in [`AGENTS.md`](../AGENTS.md).
+
 New features should include:
 - Python unit tests in `lib/tests`
 - Python typing tests in `lib/tests/streamlit/typing/` for public `st.*` commands

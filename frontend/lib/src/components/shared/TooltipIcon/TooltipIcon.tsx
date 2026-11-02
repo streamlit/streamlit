@@ -18,6 +18,8 @@ import { isValidElement, memo, type ReactElement } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import StreamlitMarkdown, {
   type Props as StreamlitMarkdownProps,
 } from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -163,8 +165,9 @@ export function getHelpTooltipAriaLabel(label?: string | null): string {
   // label), so we fall back to a generic "Help" label rather than returning an
   // empty accessible name.
   const trimmed = label?.trim()
-  const normalized = trimmed ? trimmed.replaceAll(/\s+/g, " ") : null
-  return normalized ? `Help for ${normalized}` : "Help"
+  return isNullOrEmptyString(trimmed)
+    ? "Help"
+    : `Help for ${trimmed.replaceAll(/\s+/g, " ")}`
 }
 
 /**

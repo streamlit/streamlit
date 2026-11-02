@@ -2540,6 +2540,41 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
 
         assert captured_is_parallel_worker is True
 
+    def test_run_parallel_fragment_resets_command_tracking_deactivated(self) -> None:
+        """Workers start with tracking on even if the parent copy had it off."""
+        import contextvars
+
+        mock_coordinator = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.parallel_coordinator = mock_coordinator
+
+        captured_flag: bool | None = None
+
+        def capturing_fragment() -> None:
+            nonlocal captured_flag
+            captured_flag = ThreadState.get().command_tracking_deactivated
+
+        ThreadState.initialize(command_tracking_deactivated=True)
+        worker_ctx = contextvars.copy_context()
+        try:
+            with (
+                patch(
+                    "streamlit.runtime.fragment.get_script_run_ctx",
+                    return_value=mock_ctx,
+                ),
+                patch("streamlit.delta_generator_singletons.context_dg_stack"),
+            ):
+
+                def run_worker() -> None:
+                    _run_parallel_fragment("test_id", capturing_fragment, [])
+
+                worker_ctx.run(run_worker)
+
+            assert captured_flag is False
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
+
     def test_nested_sequential_fragment_inherits_is_parallel_worker(self) -> None:
         """Nested sequential fragment via ThreadState.scoped() inherits is_parallel_worker."""
         ThreadState.initialize(is_parallel_worker=True)

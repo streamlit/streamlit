@@ -17,6 +17,7 @@
 import { memo, type ReactElement, useCallback } from "react"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -55,7 +56,7 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "bool_value" as const,

@@ -24,6 +24,7 @@ import {
   type SessionInfo,
   setCookie,
 } from "@streamlit/lib"
+import { PageProfile } from "@streamlit/protobuf"
 
 import { DEFAULT_METRICS_CONFIG, MetricsManager } from "./MetricsManager"
 
@@ -290,6 +291,47 @@ describe("metrics helpers", () => {
     expect(pageProfileProto.installedAgents).toEqual(
       PAGE_PROFILE_DATA.installedAgents
     )
+  })
+
+  it("buildEventProto forwards agentApiUsage through toJSON - pageProfile", async () => {
+    // Round-trips through the wire format and converts like
+    // App.handlePageProfileMsg, so field presence and int64 handling match a
+    // message from the server.
+    const decodedPageProfile = (
+      props: PageProfile.$Properties
+    ): ReturnType<typeof PageProfile.toObject> =>
+      PageProfile.toObject(
+        PageProfile.decode(
+          PageProfile.encode(PageProfile.create(props)).finish()
+        )
+      )
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          agentApiUsage: {
+            instanceId: "0123abcd",
+            httpInteractions: 3,
+            sessions: 1,
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // The event's JSON carries each int64 as a decimal string and omits zero
+    // counts, such as mcpInteractions here.
+    expect(withUsage.agentApiUsage).toStrictEqual({
+      instanceId: "0123abcd",
+      httpInteractions: "3",
+      sessions: "1",
+    })
+    expect(withoutUsage).not.toHaveProperty("agentApiUsage")
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

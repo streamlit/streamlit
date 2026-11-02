@@ -26,7 +26,7 @@ from e2e_playwright.shared.vega_utils import get_vega_graphics_document
 BASELINE_CHARTS = 9
 REGRESSION_CHART_INDEX = 9
 ISSUE_14050_CHART_INDEX = 10
-NUM_CHARTS = 17
+NUM_CHARTS = 20
 
 
 def test_altair_chart_displays_correctly(
@@ -295,3 +295,37 @@ def test_altair_chart_alt_sets_accessible_name(app: Page):
         get_element_by_key(app, "altair_alt_overrides_description")
     )
     expect(overridden).to_have_accessible_name("Streamlit alt overrides description")
+
+
+def test_large_data_defaults(app: Page):
+    """Large charts render to canvas and skip per-mark ARIA unless they opt out."""
+    dense = get_element_by_key(app, "altair_dense_points").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(dense.locator("canvas.marks")).to_be_visible()
+    expect(dense.locator("svg.marks")).to_have_count(0)
+    expect(get_vega_graphics_document(dense)).to_have_accessible_name(
+        "Dense point cloud"
+    )
+
+    # An explicit renderer wins. Below 5,000 rows, every point keeps its role.
+    svg_chart = get_element_by_key(app, "altair_dense_points_svg").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(svg_chart.locator("svg.marks")).to_be_visible()
+    expect(svg_chart.locator("canvas")).to_have_count(0)
+    expect(
+        svg_chart.locator(".mark-symbol path[role='graphics-symbol']")
+    ).to_have_count(2001)
+
+    # A line draws one path, so it stays SVG. Its mark leaves the accessibility
+    # tree, while the axes and the chart name stay.
+    line = get_element_by_key(app, "altair_dense_line").get_by_test_id(
+        "stVegaLiteChart"
+    )
+    expect(line.locator("svg.marks")).to_be_visible()
+    expect(line.locator(".mark-line")).to_have_attribute("aria-hidden", "true")
+    expect(line.locator("[aria-roledescription='axis']")).to_have_count(2)
+    expect(get_vega_graphics_document(line)).to_have_accessible_name(
+        "Dense random walk"
+    )

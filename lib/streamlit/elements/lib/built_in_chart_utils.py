@@ -428,7 +428,7 @@ def _prep_data(
 
     # If y is provided, but x is not, we'll use the index as x.
     # So we need to pull the index into its own column.
-    x_column = _maybe_reset_index_in_place(df, x_column, y_column_list)
+    df, x_column = _maybe_reset_index(df, x_column, y_column_list)
 
     # Drop columns we're not using.
     selected_data = _drop_unused_columns(
@@ -605,9 +605,14 @@ def _melt_data(
     )
 
 
-def _maybe_reset_index_in_place(
+def _maybe_reset_index(
     df: pd.DataFrame, x_column: str | None, y_column_list: list[str]
-) -> str | None:
+) -> tuple[pd.DataFrame, str | None]:
+    """Move the index into a column when the chart plots the index as x.
+
+    Return the dataframe to use, which may be a new object, and the x column
+    name.
+    """
     if x_column is None and len(y_column_list) > 0:
         if df.index.name is None:
             # Pick column name that is unlikely to collide with user-given names.
@@ -617,9 +622,17 @@ def _maybe_reset_index_in_place(
             x_column = str(df.index.name)
 
         df.index.name = x_column
-        df.reset_index(inplace=True)  # noqa: PD002
+        if dataframe_util.is_pandas_version_less_than("3.0.0"):
+            # The caller passes a private copy, so mutating df is safe. Without
+            # Copy-on-Write (pandas < 3), only the in-place call avoids copying
+            # all data.
+            df.reset_index(inplace=True)  # noqa: PD002
+        else:
+            # Copy-on-Write avoids the data copy, and pandas 3.1 deprecates
+            # inplace=True.
+            df = df.reset_index()
 
-    return x_column
+    return df, x_column
 
 
 def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.DataFrame:

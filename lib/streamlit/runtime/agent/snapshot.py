@@ -52,6 +52,11 @@ if TYPE_CHECKING:
 
 SCHEMA_VERSION: Final = 1
 
+# Whether the run a snapshot reports raised: "error" when the script failed to
+# compile, the runtime marked the run failed, or the page shows an uncaught
+# exception, and "ready" otherwise.
+SnapshotStatus: TypeAlias = Literal["ready", "error"]
+
 # Why an element the snapshot shows cannot be used now.
 BlockedReason: TypeAlias = Literal["closed_dialog", "compile_error"]
 
@@ -621,16 +626,19 @@ def build_snapshot(
 
     pages, current_page = _pages(messages, new_session)
 
+    # Two signals, not one: an app's `on_script_error` handler can suppress the
+    # error display, which only the run's own flag still reports, and an
+    # exception raised inside a fragment is rendered while the run still
+    # reports success.
+    status: SnapshotStatus = (
+        "error"
+        if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
+        else "ready"
+    )
     document: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "session_id": session_id,
-        # Two signals, not one: an app's `on_script_error` handler can suppress
-        # the error display, which only the run's own flag still reports, and
-        # an exception raised inside a fragment is rendered while the run still
-        # reports success.
-        "status": "error"
-        if compile_error or _run_failed(session_state) or builder.saw_uncaught_exception
-        else "ready",
+        "status": status,
         "observed_at": dt.datetime.now(dt.UTC)
         .isoformat(timespec="seconds")
         .replace("+00:00", "Z"),

@@ -248,7 +248,7 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
     // Vega appends an unclassed <span> with the current slider value.
     "& input[type='range'] + span": {
       fontSize: theme.fontSizes.sm,
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       lineHeight: theme.lineHeights.small,
       minWidth: "3em",
     },
@@ -321,7 +321,7 @@ export const StyledVegaLiteChartTooltips = (
           // This should use a max of 40% of the available width (- padding):
           maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.4)`,
           textAlign: "right",
-          color: theme.colors.fadedText60,
+          color: theme.colors.fadedText70,
           whiteSpace: "nowrap",
           paddingRight: theme.spacing.twoXS,
         },

@@ -34,14 +34,20 @@ import { zIndices } from "~lib/theme/primitives/zIndices"
 import genericColors from "./themeColors"
 
 // Create colors (includes derived colors)
-const colors = createEmotionColors(genericColors)
+const baseColors = createEmotionColors(genericColors)
+// Built-in themes draw widget borders; createEmotionTheme removes this when
+// showWidgetBorder = false.
+const colors = {
+  ...baseColors,
+  widgetBorderColor: baseColors.borderColor,
+}
 
 // Create shadows (dependent on colors/derived colors)
 const shadows = createShadows(colors)
 
 export default {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
   /** Configured gap (rem/px string) between chrome and first widget. Undefined = use hardcoded defaults. */
   paddingTop: undefined as string | undefined,

@@ -35,6 +35,7 @@ import { Time } from "@internationalized/date"
 import { I18nProvider, type TimeValue } from "react-aria-components"
 
 import type { TimeInput as TimeInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -115,11 +116,11 @@ function TimeInput({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
-        clearable: !element.default,
+        clearable: isNullOrUndefined(element.default),
       }
     : undefined
 
@@ -488,7 +489,9 @@ function TimeInput({
         if (target.getAttribute("role") !== "spinbutton") return
         const segmentType = target.getAttribute("data-type")
         const numValue = Number(text)
-        const current = displayValue ? stringToTime(displayValue) : null
+        const current = isNullOrUndefined(displayValue)
+          ? null
+          : stringToTime(displayValue)
         const currentHour = current
           ? String(current.hour).padStart(2, "0")
           : "00"
@@ -624,7 +627,7 @@ function TimeInput({
         return
       }
 
-      if (!displayValue) return
+      if (isNullOrUndefined(displayValue)) return
 
       // Arrow key on an existing value always commits immediately (like the
       // +/- buttons on st.number_input). Set the flag after the paste-override
@@ -743,7 +746,7 @@ function TimeInput({
    * A clean empty required field paints the error without writing.
    */
   formSubmitValidatorRef.current = () => {
-    if (validationError) {
+    if (validationError !== null) {
       return false
     }
     if (dirtyRef.current) {
@@ -787,18 +790,18 @@ function TimeInput({
   // still empty.
   const displayedError = validationError ?? requiredError
   let pasteErrorAlert: string | null = null
-  if (validationError) {
+  if (validationError !== null) {
     if (pasteOverride) {
-      const seconds = pasteOverride.second ? `:${pasteOverride.second}` : ""
+      const seconds =
+        pasteOverride.second !== undefined ? `:${pasteOverride.second}` : ""
       pasteErrorAlert = `Error: time ${pasteOverride.hour}:${pasteOverride.minute}${seconds} is invalid. ${validationError}`
     } else {
       pasteErrorAlert = `Error: ${validationError}`
     }
   }
   const errorAlertText = pasteErrorAlert ?? requiredError
-  const errorTooltipSource = validationError
-    ? `**Error**: ${validationError}`
-    : requiredError
+  const errorTooltipSource =
+    validationError !== null ? `**Error**: ${validationError}` : requiredError
 
   return (
     <div className="stTimeInput" data-testid="stTimeInput" ref={elementRef}>
@@ -820,7 +823,7 @@ function TimeInput({
           data-disabled={disabled || undefined}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          data-has-error={displayedError ? "" : undefined}
+          data-has-error={displayedError !== null ? "" : undefined}
           onKeyDownCapture={handleKeyCapture}
           onPaste={handlePaste}
         >
@@ -833,8 +836,10 @@ function TimeInput({
              */}
             <StyledTimeField
               aria-label={element.label}
-              aria-describedby={displayedError ? validationErrorId : undefined}
-              isInvalid={!!displayedError}
+              aria-describedby={
+                displayedError !== null ? validationErrorId : undefined
+              }
+              isInvalid={displayedError !== null}
               isRequired={element.required}
               validationBehavior="aria"
               value={
@@ -860,7 +865,10 @@ function TimeInput({
                       if (pasteOverride) {
                         if (type === "hour") return pasteOverride.hour
                         if (type === "minute") return pasteOverride.minute
-                        if (type === "second" && pasteOverride.second)
+                        if (
+                          type === "second" &&
+                          pasteOverride.second !== undefined
+                        )
                           return pasteOverride.second
                       }
                       if (!isPlaceholder) return text
@@ -876,7 +884,7 @@ function TimeInput({
               </StyledTimeFieldInput>
             </StyledTimeField>
           </I18nProvider>
-          {errorTooltipSource && (
+          {errorTooltipSource !== null && (
             <StyledErrorIconContainer data-testid="stTimeInputError">
               <Tooltip
                 content={
@@ -907,7 +915,7 @@ function TimeInput({
                 <Cancel size={theme.iconSizes.base} aria-hidden="true" />
               </StyledClearButton>
             )}
-          {errorAlertText && (
+          {errorAlertText !== null && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
               {errorAlertText}
             </StyledVisuallyHidden>

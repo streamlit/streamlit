@@ -28,6 +28,7 @@ import {
 } from "@glideapps/glide-data-grid"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -313,7 +314,7 @@ function useWidgetState({
         formId: element.formId,
       })
 
-      if (!initialWidgetValue) {
+      if (isNullOrEmptyString(initialWidgetValue)) {
         // No initial widget value was saved in the widget manager.
         // No need to reconstruct something.
         return
@@ -508,7 +509,7 @@ function useWidgetState({
       isMultiCellSelectionActivated: boolean
     }): GridSelection | undefined => {
       // Skip if programmatic selection is set; the dedicated effect handles it
-      if (element.selectionState) {
+      if (!isNullOrEmptyString(element.selectionState)) {
         return undefined
       }
 
@@ -526,7 +527,7 @@ function useWidgetState({
         formId: element.formId,
       })
 
-      if (initialWidgetValue) {
+      if (!isNullOrEmptyString(initialWidgetValue)) {
         return parseSelectionStateToGridSelection(
           initialWidgetValue,
           columns,
@@ -536,7 +537,7 @@ function useWidgetState({
         )
       }
 
-      if (element.selectionDefault) {
+      if (!isNullOrEmptyString(element.selectionDefault)) {
         const defaultSelection = parseSelectionStateToGridSelection(
           element.selectionDefault,
           columns,

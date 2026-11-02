@@ -29,6 +29,8 @@ import {
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
 import { type Key, SelectionIndicator } from "react-aria-components"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { AppNode, BlockNode } from "~lib/AppNode"
 import type { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
 import {
@@ -65,7 +67,7 @@ function getPersistedTabIndex(
   allTabLabels: string[]
 ): { index: number; label: string } | null {
   const stored = widgetMgr.getElementState<string>(blockId, "activeTabLabel")
-  if (!stored) return null
+  if (isNullOrEmptyString(stored)) return null
   const idx = allTabLabels.indexOf(stored)
   return idx >= 0 ? { index: idx, label: stored } : null
 }
@@ -215,7 +217,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           // Without this, subsequent reruns would send a stale widget value that
           // overrides session_state, making tab.open return False for the new tab.
           // fromUser: false avoids scheduling a spurious rerun.
-          if (widgetId) {
+          if (!isNullOrEmptyString(widgetId)) {
             widgetMgr.setStringValue(widgetId, newLabel, {
               formId: "",
               fragmentId,
@@ -321,7 +323,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
       }
 
-      if (isDynamic && widgetId) {
+      if (isDynamic && !isNullOrEmptyString(widgetId)) {
         widgetMgr.setStringValue(widgetId, newLabel, {
           formId: "",
           fragmentId,

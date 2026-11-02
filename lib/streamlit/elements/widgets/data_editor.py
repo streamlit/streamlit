@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import (
@@ -309,12 +310,30 @@ def _parse_value(
 
     Returns
     -------
-    The converted value.
+    The converted value, or ``None`` if the value cannot be parsed.
+
+    Raises
+    ------
+    ValueError, OverflowError
+        If a numeric timedelta value is non-finite or outside the pandas
+        Timedelta range (``OutOfBoundsTimedelta`` is a ``ValueError``).
+        Callers skip such an edit instead of storing ``NaT``.
     """
     if value is None:
         return None
 
     import pandas as pd
+
+    if column_data_kind == ColumnDataKind.TIMEDELTA and isinstance(value, (int, float)):
+        # NumberColumn sends durations as seconds. pd.Timedelta(int) reads ints
+        # as nanoseconds, and pd.Timedelta(seconds=float) truncates
+        # (1.005 -> 1.004999999 s), so pass unit="s" to round to the nearest
+        # nanosecond. Invalid values raise so callers skip the edit instead of
+        # storing NaT.
+        if not math.isfinite(value):
+            # pd.Timedelta(nan, unit="s") returns NaT instead of raising.
+            raise ValueError("Duration seconds must be finite.")
+        return pd.Timedelta(value, unit="s")
 
     try:
         if column_data_kind == ColumnDataKind.LIST:
@@ -374,7 +393,7 @@ def _parse_value(
             if column_data_kind == ColumnDataKind.TIME:
                 return datetime_value.time()
 
-    except (ValueError, pd.errors.ParserError, TypeError) as ex:
+    except (ValueError, pd.errors.ParserError, TypeError, OverflowError) as ex:
         _LOGGER.warning(
             "Failed to parse value %s as %s.",
             value,
@@ -408,20 +427,33 @@ def _apply_cell_edits(
     for row_id, row_changes in edited_rows.items():
         row_pos = int(row_id)
         for col_name, value in row_changes.items():
-            if col_name == INDEX_IDENTIFIER:
-                # The edited cell is part of the index
-                # TODO(lukasmasuch): To support multi-index in the future:
-                # use a tuple of values here instead of a single value
-                old_idx_value = df.index[row_pos]
-                new_idx_value = _parse_value(value, dataframe_schema[INDEX_IDENTIFIER])
-                df.rename(
-                    index={old_idx_value: new_idx_value},
-                    inplace=True,  # noqa: PD002
-                )
-            else:
-                col_pos = df.columns.get_loc(col_name)
-                df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
-                    value, dataframe_schema[col_name]
+            try:
+                if col_name == INDEX_IDENTIFIER:
+                    # The edited cell is part of the index
+                    # TODO(lukasmasuch): To support multi-index in the future:
+                    # use a tuple of values here instead of a single value
+                    new_idx_value = _parse_value(
+                        value, dataframe_schema[INDEX_IDENTIFIER]
+                    )
+                    # Relabel only the edited row, even if other rows share its label.
+                    # Assigning df.index edits df in place without copying column data.
+                    df.index = df.index.delete(row_pos).insert(row_pos, new_idx_value)
+                else:
+                    col_pos = df.columns.get_loc(col_name)
+                    df.iat[row_pos, col_pos] = _parse_value(  # type: ignore
+                        value, dataframe_schema[col_name]
+                    )
+            except (TypeError, ValueError, OverflowError) as ex:
+                # Widget state comes from the client. Skip edits that pandas
+                # rejects (for example, a duration finer than the column unit
+                # or out of range) instead of crashing the run.
+                _LOGGER.warning(
+                    "Failed to apply edit %r to row %s, column %s (%s). Edit ignored.",
+                    value,
+                    row_pos,
+                    col_name,
+                    dataframe_schema.get(col_name),
+                    exc_info=ex,
                 )
 
 
@@ -449,11 +481,15 @@ def _assign_row_values(
     df: pd.DataFrame,
     row_label: Any,
     row_values: list[Any],
-) -> None:
-    """Assign values to a dataframe row via a mapping.
+) -> bool:
+    """Assign a row via a mapping. Return False if pandas rejects the values.
 
-    This avoids numpy attempting to coerce nested sequences (e.g. lists) into
-    multi-dimensional arrays when a column legitimately stores list values.
+    Using a mapping keeps numpy from coercing nested sequences (for example,
+    lists) into multi-dimensional arrays. Widget state comes from the client,
+    so pandas can reject a value (for example, a duration finer than the
+    column unit). Log and skip the row when assignment raises. Some pandas
+    versions widen the timedelta dtype instead of raising; in that case the
+    widened column is kept.
     """
     import warnings
 
@@ -462,13 +498,21 @@ def _assign_row_values(
     # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
     # The warning is not actionable by users and was removed in pandas 3.x.
     # See: https://github.com/streamlit/streamlit/issues/14321
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
-            category=FutureWarning,
+    try:
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+                category=FutureWarning,
+            )
+            df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    except (TypeError, ValueError, OverflowError) as ex:
+        _LOGGER.warning(
+            "Failed to add row. Row addition skipped.",
+            exc_info=ex,
         )
-        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+        return False
+    return True
 
 
 def _apply_row_additions(
@@ -516,7 +560,16 @@ def _apply_row_additions(
         index_step = 1
 
     for added_row in added_rows:
-        index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        try:
+            index_value, new_row = _parse_added_row(df, added_row, dataframe_schema)
+        except (TypeError, ValueError, OverflowError) as ex:
+            # Widget state comes from the client. Skip a row with a value
+            # that cannot be parsed (for example, an out-of-range duration).
+            _LOGGER.warning(
+                "Failed to parse added row. Row addition skipped.",
+                exc_info=ex,
+            )
+            continue
 
         if index_value is not None and index_type != "range":
             # Case 1: Non-range index with an explicitly provided index value
@@ -538,9 +591,8 @@ def _apply_row_additions(
         if index_stop is not None and index_step is not None:
             # Case 2: Range or integer index that can be auto incremented.
             # Add row using the next value in the sequence
-            _assign_row_values(df, index_stop, new_row)
-            # Increment to the next range index value
-            index_stop += index_step
+            if _assign_row_values(df, index_stop, new_row):
+                index_stop += index_step
             continue
 
         # Row cannot be added -> skip it and log a warning.
@@ -551,29 +603,37 @@ def _apply_row_additions(
         )
 
 
-def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> None:
-    """Apply row deletions to the provided dataframe (inplace).
+def _apply_row_deletions(df: pd.DataFrame, deleted_rows: list[int]) -> pd.DataFrame:
+    """Return the dataframe without the deleted rows.
 
     Parameters
     ----------
     df : pd.DataFrame
-        The dataframe to apply the row deletions to.
+        The source dataframe. This function does not modify it.
 
     deleted_rows : List[int]
         A list of row numbers to delete.
+
+    Returns
+    -------
+    pd.DataFrame
+        A new dataframe without the deleted rows. Rows that share a deleted
+        row's index label are deleted too.
     """
-    # Drop rows based in numeric row positions
-    df.drop(df.index[deleted_rows], inplace=True)  # noqa: PD002
+    # drop() takes labels, so map the row positions to their index labels.
+    return df.drop(df.index[deleted_rows])
 
 
 def _apply_dataframe_edits(
     df: pd.DataFrame,
     data_editor_state: DataEditorState,
     dataframe_schema: DataframeSchema,
-) -> None:
-    """Apply edits to the provided dataframe (inplace).
+) -> pd.DataFrame:
+    """Return ``df`` with cell edits, row deletions, and row additions applied.
 
-    This includes cell edits, row additions and row deletions.
+    Cell edits and row additions modify ``df`` in place, but row deletions
+    create a new dataframe. Always use the returned dataframe, since ``df``
+    may be left partially edited.
 
     Parameters
     ----------
@@ -585,17 +645,24 @@ def _apply_dataframe_edits(
 
     dataframe_schema: DataframeSchema
         The schema of the dataframe.
+
+    Returns
+    -------
+    pd.DataFrame
+        The edited dataframe.
     """
     if data_editor_state.get("edited_rows"):
         _apply_cell_edits(df, data_editor_state["edited_rows"], dataframe_schema)
 
     if data_editor_state.get("deleted_rows"):
-        _apply_row_deletions(df, data_editor_state["deleted_rows"])
+        df = _apply_row_deletions(df, data_editor_state["deleted_rows"])
 
     if data_editor_state.get("added_rows"):
         # The addition of new rows needs to happen after the deletion to not have
         # unexpected side-effects, like https://github.com/streamlit/streamlit/issues/8854
         _apply_row_additions(df, data_editor_state["added_rows"], dataframe_schema)
+
+    return df
 
 
 def _is_supported_index(df_index: pd.Index[Any]) -> bool:
@@ -647,9 +714,8 @@ def _fix_column_headers(data_df: pd.DataFrame) -> None:
     elif pd.api.types.infer_dtype(data_df.columns) != "string":
         # If the column names are not all strings, we need to convert them to strings
         # to avoid issues with editing:
-        data_df.rename(
-            columns={column: str(column) for column in data_df.columns},
-            inplace=True,  # noqa: PD002
+        data_df.columns = pd.Index(
+            [str(column) for column in data_df.columns], name=data_df.columns.name
         )
 
 
@@ -941,10 +1007,7 @@ class DataEditorMixin:
                   ``memoryview``, ``dict``, ``set``, ``frozenset``,
                   ``fractions.Fraction``, ``pandas.Interval``, and
                   ``pandas.Period``.
-                - To prevent overflow in JavaScript, columns containing
-                  ``datetime.timedelta`` and ``pandas.Timedelta`` values will
-                  default to uneditable, but this can be changed through column
-                  configuration.
+                - Timedelta values are edited as a number of seconds.
 
         width : "stretch", "content", or int
             The width of the data editor. This can be one of the following:
@@ -1547,7 +1610,7 @@ class DataEditorMixin:
             disabled=disabled is True,
         )
 
-        _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
+        data_df = _apply_dataframe_edits(data_df, widget_state.value, dataframe_schema)
         self.dg._enqueue(
             "dataframe",
             proto,

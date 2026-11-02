@@ -15,13 +15,14 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
+import { Float64, Table, tableToIPC, vectorFromArray } from "apache-arrow"
 import type { View as VegaView } from "vega"
 import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import type { Mock, Mocked } from "vitest"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import type { Quiver } from "~lib/dataframes/Quiver"
+import { Quiver } from "~lib/dataframes/Quiver"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -64,6 +65,25 @@ vi.mock("./arrowUtils", async () => {
     getDataArray: vi.fn(),
   }
 })
+
+/**
+ * A one-row Quiver stand-in. Two stand-ins have the same bytes when their
+ * `content` matches.
+ */
+const fakeQuiver = (content: string): Quiver =>
+  ({
+    content,
+    dimensions: { numDataRows: 1 },
+    hasSameBytes: (other: Quiver) =>
+      (other as unknown as { content: string }).content === content,
+  }) as unknown as Quiver
+
+/** Arrow IPC bytes of a one-column float64 table. */
+const floatBytes = (values: number[]): Uint8Array =>
+  tableToIPC(
+    new Table({ y: vectorFromArray(values, new Float64()) }),
+    "stream"
+  )
 
 // We don't necessarily need to mock all `WidgetStateManager` methods, but let's do so:
 const createMockWidgetMgr = (): Mocked<WidgetStateManager> =>
@@ -113,12 +133,14 @@ describe("useVegaEmbed hook", () => {
     // By default, embed(...) resolves to our mockEmbedReturn
     ;(embed as unknown as Mock).mockResolvedValue(mockEmbedReturn)
 
-    // Mock useVegaLiteSelections returns two callbacks:
+    // Mock useVegaLiteSelections returns its lifecycle callbacks:
     ;(useVegaLiteSelections as Mock).mockReturnValue({
       maybeConfigureSelections: vi
         .fn()
         .mockImplementation((view: VegaView) => view),
+      teardownSelections: vi.fn(),
       onFormCleared: vi.fn(),
+      endSelectionRestore: vi.fn(),
     })
 
     // Default stubs:
@@ -196,6 +218,42 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.runAsync).toHaveBeenCalled()
   })
 
+  it("ends selection restore after the initial resize pulse", async () => {
+    const chartElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["brush"],
+      formId: "",
+    }
+
+    const { result } = renderHook(() =>
+      useVegaEmbed(chartElement, mockWidgetMgr)
+    )
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+
+    const { maybeConfigureSelections, endSelectionRestore } = (
+      useVegaLiteSelections as Mock
+    ).mock.results[0].value as {
+      maybeConfigureSelections: Mock
+      endSelectionRestore: Mock
+    }
+
+    expect(maybeConfigureSelections).toHaveBeenCalledWith(mockVegaView)
+    expect(endSelectionRestore).toHaveBeenCalled()
+    expect(mockVegaView.resize).toHaveBeenCalled()
+    expect(endSelectionRestore.mock.invocationCallOrder[0]).toBeGreaterThan(
+      mockVegaView.resize.mock.invocationCallOrder[0]
+    )
+  })
+
   it("finalizes old view if one exists before creating a new one", async () => {
     const containerRef = { current: null }
     const chartElement: VegaLiteChartElement = {
@@ -239,6 +297,9 @@ describe("useVegaEmbed hook", () => {
 
     // The old finalize method is now called
     expect(mockEmbedReturn.finalize).toHaveBeenCalledTimes(1)
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    expect(teardownSelections).toHaveBeenCalledTimes(1)
   })
 
   it("throws an error if containerRef is missing", async () => {
@@ -293,7 +354,13 @@ describe("useVegaEmbed hook", () => {
     await act(async () => {
       result.current.finalizeView()
     })
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    expect(teardownSelections).toHaveBeenCalledOnce()
     expect(mockEmbedReturn.finalize).toHaveBeenCalled()
+    expect(teardownSelections.mock.invocationCallOrder[0]).toBeLessThan(
+      (mockEmbedReturn.finalize as Mock).mock.invocationCallOrder[0]
+    )
 
     // The stored references are cleared (not easily tested directly,
     // but if we tried to re-finalize, finalize shouldn't be called again):
@@ -303,6 +370,41 @@ describe("useVegaEmbed hook", () => {
     })
     // finalize is not called a second time
     expect(mockEmbedReturn.finalize).toHaveBeenCalledTimes(1)
+    expect(teardownSelections).toHaveBeenCalledTimes(1)
+  })
+
+  it("finalizes and clears the view when selection teardown throws", async () => {
+    const chartElement: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["selection"],
+      formId: "",
+    }
+    const { result } = renderHook(() =>
+      useVegaEmbed(chartElement, mockWidgetMgr)
+    )
+    const containerRef = { current: document.createElement("div") }
+
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+    const { teardownSelections } = (useVegaLiteSelections as Mock).mock
+      .results[0].value
+    teardownSelections.mockImplementationOnce(() => {
+      throw new Error("selection teardown failed")
+    })
+
+    expect(() => result.current.finalizeView()).toThrow(
+      "selection teardown failed"
+    )
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
+
+    expect(() => result.current.finalizeView()).not.toThrow()
+    expect(mockEmbedReturn.finalize).toHaveBeenCalledOnce()
   })
 
   it("updateView returns null if no vegaView is present", async () => {
@@ -532,72 +634,81 @@ describe("useVegaEmbed hook", () => {
     expect(mockVegaView.insert).toHaveBeenCalledWith("lookup", [{ id: 1 }])
   })
 
-  it("replays named datasets that change while embed is pending", async () => {
-    let resolveEmbed!: (value: typeof mockEmbedReturn) => void
-    ;(embed as unknown as Mock).mockImplementation(
-      () =>
-        new Promise(resolve => {
-          resolveEmbed = resolve
-        })
-    )
+  it.each([
+    ["keeps its name", "lookup"],
+    // Altair renames a dataset whenever its data changes.
+    ["is renamed", "lookup_2"],
+  ])(
+    "replays a dataset that changes and %s while embed is pending",
+    async (_description, newName) => {
+      let resolveEmbed!: (value: typeof mockEmbedReturn) => void
+      ;(embed as unknown as Mock).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveEmbed = resolve
+          })
+      )
 
-    const oldDatasets = [
-      {
-        name: "lookup",
-        hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "old" },
-      },
-    ] as WrappedNamedDataset[]
-    const newDatasets = [
-      {
-        name: "lookup",
-        hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "new" },
-      },
-    ] as WrappedNamedDataset[]
+      const oldDatasets = [
+        {
+          name: "lookup",
+          hasName: true,
+          data: fakeQuiver("old"),
+        },
+      ] as WrappedNamedDataset[]
+      const newDatasets = [
+        {
+          name: newName,
+          hasName: true,
+          data: fakeQuiver("new"),
+        },
+      ] as WrappedNamedDataset[]
 
-    const initialElement: VegaLiteChartElement = {
-      id: "chartId",
-      data: null,
-      datasets: oldDatasets,
-      spec: "",
-      useContainerWidth: false,
-      vegaLiteTheme: "",
-      selectionMode: [],
-      formId: "",
+      const initialElement: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: oldDatasets,
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result, rerender } = renderHook(
+        ({ element }) => useVegaEmbed(element, mockWidgetMgr),
+        { initialProps: { element: initialElement } }
+      )
+
+      ;(getInlineData as Mock).mockReturnValue(null)
+      ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
+      ;(getDataArray as Mock).mockReturnValue([{ id: 2 }])
+
+      const containerRef = { current: document.createElement("div") }
+      let createPromise!: Promise<VegaView | null>
+      act(() => {
+        createPromise = result.current.createView(containerRef, {})
+      })
+
+      rerender({
+        element: { ...initialElement, datasets: newDatasets },
+      })
+
+      await act(async () => {
+        const skipped = await result.current.updateView(null, newDatasets)
+        expect(skipped).toBeNull()
+      })
+
+      await act(async () => {
+        resolveEmbed(mockEmbedReturn)
+        await createPromise
+      })
+
+      // The replay writes to the name compiled into the view.
+      expect(mockVegaView.data).toHaveBeenCalledWith("lookup", [{ id: 2 }])
+      expect(mockVegaView.insert).not.toHaveBeenCalled()
     }
-
-    const { result, rerender } = renderHook(
-      ({ element }) => useVegaEmbed(element, mockWidgetMgr),
-      { initialProps: { element: initialElement } }
-    )
-
-    ;(getInlineData as Mock).mockReturnValue(null)
-    ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
-    ;(getDataArray as Mock).mockReturnValue([{ id: 2 }])
-
-    const containerRef = { current: document.createElement("div") }
-    let createPromise!: Promise<VegaView | null>
-    act(() => {
-      createPromise = result.current.createView(containerRef, {})
-    })
-
-    rerender({
-      element: { ...initialElement, datasets: newDatasets },
-    })
-
-    await act(async () => {
-      const skipped = await result.current.updateView(null, newDatasets)
-      expect(skipped).toBeNull()
-    })
-
-    await act(async () => {
-      resolveEmbed(mockEmbedReturn)
-      await createPromise
-    })
-
-    expect(mockVegaView.data).toHaveBeenCalledWith("lookup", [{ id: 2 }])
-  })
+  )
 
   it("replays a second named-dataset update that arrives during deferred runAsync", async () => {
     let resolveEmbed!: (value: typeof mockEmbedReturn) => void
@@ -631,21 +742,21 @@ describe("useVegaEmbed hook", () => {
       {
         name: "lookup",
         hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "a" },
+        data: fakeQuiver("a"),
       },
     ] as WrappedNamedDataset[]
     const datasetsB = [
       {
         name: "lookup",
         hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "b" },
+        data: fakeQuiver("b"),
       },
     ] as WrappedNamedDataset[]
     const datasetsC = [
       {
         name: "lookup",
         hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "c" },
+        data: fakeQuiver("c"),
       },
     ] as WrappedNamedDataset[]
 
@@ -667,9 +778,9 @@ describe("useVegaEmbed hook", () => {
 
     ;(getInlineData as Mock).mockReturnValue(null)
     ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
-    ;(getDataArray as Mock).mockImplementation((quiver: { hash?: string }) => [
-      { id: quiver.hash },
-    ])
+    ;(getDataArray as Mock).mockImplementation(
+      (quiver: { content?: string }) => [{ id: quiver.content }]
+    )
 
     const containerRef = { current: document.createElement("div") }
     let createPromise!: Promise<VegaView | null>
@@ -738,14 +849,14 @@ describe("useVegaEmbed hook", () => {
       {
         name: "lookup",
         hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "a" },
+        data: fakeQuiver("a"),
       },
     ] as WrappedNamedDataset[]
     const datasetsB = [
       {
         name: "lookup",
         hasName: true,
-        data: { dimensions: { numDataRows: 1 }, hash: "b" },
+        data: fakeQuiver("b"),
       },
     ] as WrappedNamedDataset[]
 
@@ -767,9 +878,9 @@ describe("useVegaEmbed hook", () => {
 
     ;(getInlineData as Mock).mockReturnValue(null)
     ;(getDataArrays as Mock).mockReturnValue({ lookup: [{ id: 1 }] })
-    ;(getDataArray as Mock).mockImplementation((quiver: { hash?: string }) => [
-      { id: quiver.hash },
-    ])
+    ;(getDataArray as Mock).mockImplementation(
+      (quiver: { content?: string }) => [{ id: quiver.content }]
+    )
 
     const containerRef = { current: document.createElement("div") }
     let firstPromise!: Promise<VegaView | null>
@@ -795,6 +906,11 @@ describe("useVegaEmbed hook", () => {
       await secondPromise
     })
 
+    const { endSelectionRestore } = (useVegaLiteSelections as Mock).mock
+      .results[0].value as { endSelectionRestore: Mock }
+    const restoreCallsAfterSecond = endSelectionRestore.mock.calls.length
+    expect(restoreCallsAfterSecond).toBeGreaterThan(0)
+
     await act(async () => {
       embedResolvers[0]({
         vgSpec: { data: [{}] },
@@ -809,6 +925,7 @@ describe("useVegaEmbed hook", () => {
     expect(firstView.insert).not.toHaveBeenCalled()
     expect(secondView.data).not.toHaveBeenCalled()
     expect(secondView.runAsync).toHaveBeenCalled()
+    expect(endSelectionRestore).toHaveBeenCalledTimes(restoreCallsAfterSecond)
 
     await act(async () => {
       const updated = await result.current.updateView(null, datasetsB)
@@ -865,7 +982,7 @@ describe("useVegaEmbed hook", () => {
     const dsOld = {
       name: "old",
       hasName: true,
-      data: { dimensions: { numDataRows: 1 }, hash: "X" },
+      data: fakeQuiver("X"),
     } as WrappedNamedDataset
     ;(getDataArray as Mock).mockReturnValue([{ row: 1 }])
 
@@ -883,6 +1000,152 @@ describe("useVegaEmbed hook", () => {
       "old",
       expect.any(Function)
     )
+  })
+
+  it("resets zoom and pan when new data is swapped in", async () => {
+    const bytes = floatBytes([1, 2, 3])
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: new Quiver({ data: bytes }),
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: ["picked_range"],
+      formId: "",
+    }
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {
+        params: [
+          { name: "zoom", select: "interval", bind: "scales" },
+          // Selections that Streamlit reports keep their store.
+          { name: "picked_range", select: "interval", bind: "scales" },
+          { name: "brush", select: "interval" },
+        ],
+        layer: [
+          {
+            params: [
+              { name: "layer_zoom", select: "interval", bind: "scales" },
+            ],
+            mark: "line",
+          },
+        ],
+      })
+    })
+    const update = async (data: Quiver): Promise<void> => {
+      await act(async () => {
+        await result.current.updateView(data, [])
+      })
+    }
+
+    // A rerun with the same data keeps the zoom.
+    await update(new Quiver({ data: bytes.slice() }))
+    expect(mockVegaView.remove).not.toHaveBeenCalled()
+
+    await update(new Quiver({ data: floatBytes([4, 5, 6]) }))
+    const removedStores = mockVegaView.remove.mock.calls.map(([name]) => name)
+    expect(removedStores).toEqual(["zoom_store", "layer_zoom_store"])
+  })
+
+  it("swaps data into the view only when its bytes change", async () => {
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: new Quiver({ data: floatBytes([1, 2, 3]) }),
+      datasets: [],
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+    const update = async (data: Quiver | null): Promise<void> => {
+      await act(async () => {
+        await result.current.updateView(data, [])
+      })
+    }
+
+    // New values with the same shape and byte size replace the rows.
+    const newValues = floatBytes([1, 2, 4])
+    await update(new Quiver({ data: newValues }))
+    expect(mockVegaView.data).toHaveBeenCalledTimes(1)
+    expect(mockVegaView.data).toHaveBeenCalledWith("source", [])
+
+    // A rerun that sends the same bytes again leaves the view alone.
+    await update(new Quiver({ data: newValues.slice() }))
+    expect(mockVegaView.data).toHaveBeenCalledTimes(1)
+
+    // Empty data removes the rows, and the next data is inserted.
+    await update(null)
+    expect(mockVegaView.remove).toHaveBeenCalledWith(
+      "source",
+      expect.any(Function)
+    )
+    await update(new Quiver({ data: floatBytes([5, 6, 7]) }))
+    expect(mockVegaView.insert).toHaveBeenCalledWith("source", [])
+    expect(mockVegaView.data).toHaveBeenCalledTimes(1)
+  })
+
+  it("swaps renamed datasets into the names the view was created with", async () => {
+    // Altair names each dataset by a hash of its contents, so new data
+    // renames the datasets while the view keeps its original names.
+    const datasets = (
+      lineName: string,
+      line: string,
+      pointsName: string,
+      points: string
+    ): WrappedNamedDataset[] => [
+      { name: lineName, hasName: true, data: fakeQuiver(line) },
+      { name: pointsName, hasName: true, data: fakeQuiver(points) },
+    ]
+    const element: VegaLiteChartElement = {
+      id: "chartId",
+      data: null,
+      datasets: datasets("line_1", "a", "points_1", "p"),
+      spec: "",
+      useContainerWidth: false,
+      vegaLiteTheme: "",
+      selectionMode: [],
+      formId: "",
+    }
+    const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+    const containerRef = { current: document.createElement("div") }
+    await act(async () => {
+      await result.current.createView(containerRef, {})
+    })
+    ;(getDataArray as Mock).mockImplementation(
+      (quiver: { content?: string }) => [{ id: quiver.content }]
+    )
+
+    await act(async () => {
+      await result.current.updateView(
+        null,
+        datasets("line_2", "b", "points_2", "p")
+      )
+    })
+    await act(async () => {
+      await result.current.updateView(
+        null,
+        datasets("line_3", "c", "points_3", "p")
+      )
+    })
+
+    // Only the changed dataset is swapped, both times into its view name.
+    expect(mockVegaView.data).toHaveBeenCalledTimes(2)
+    expect(mockVegaView.data).toHaveBeenNthCalledWith(1, "line_1", [
+      { id: "b" },
+    ])
+    expect(mockVegaView.data).toHaveBeenNthCalledWith(2, "line_1", [
+      { id: "c" },
+    ])
+    expect(mockVegaView.insert).not.toHaveBeenCalled()
+    expect(mockVegaView.remove).not.toHaveBeenCalled()
   })
 
   describe("resizeView", () => {

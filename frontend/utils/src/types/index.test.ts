@@ -14,9 +14,22 @@
  * limitations under the License.
  */
 
-import { isNullOrUndefined, notNullOrUndefined } from "."
+import { isNullOrEmptyString, isNullOrUndefined, notNullOrUndefined } from "."
 
 describe("types", () => {
+  describe("isNullOrEmptyString", () => {
+    it.each([null, undefined, ""])("should return true for %j", value => {
+      expect(isNullOrEmptyString(value)).toBe(true)
+    })
+
+    it.each(["a", " ", "0", "false"])(
+      "should return false for the non-empty string %j",
+      value => {
+        expect(isNullOrEmptyString(value)).toBe(false)
+      }
+    )
+  })
+
   describe("isNullOrUndefined", () => {
     it("should return true for null", () => {
       expect(isNullOrUndefined(null)).toBe(true)

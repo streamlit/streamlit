@@ -1147,6 +1147,10 @@ def _run_parallel_fragment(
     ThreadState.update(
         pre_allocated_container_fragment_id=fragment_id,
         is_parallel_worker=True,
+        # Workers are a new nesting stack. Clear a flag copied from an
+        # in-flight parent command so it cannot suppress this worker's
+        # top-level commands.
+        command_tracking_deactivated=False,
     )
 
     coordinator = ctx.parallel_coordinator

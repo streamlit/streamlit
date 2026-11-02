@@ -99,12 +99,12 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.91",
+  "ty==0.0.94",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.17.2",
+  "ruff==0.17.3",
   # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy==2.4.0",
+  "mypy==2.4.1",
   # Pin NumPy by Python version:
   # - Below 3.15, stay under 2.5. NumPy 2.5 stubs use Python 3.12 syntax that
   #   mypy cannot parse while Streamlit type-checks as 3.11, the oldest
@@ -322,6 +322,10 @@ ignore = [
   # New code-less preview rule in ruff 0.16.5 (pedantic category). Autouse
   # fixtures are intentional in our pytest and e2e test setup.
   "pytest-fixture-autouse",
+  # New code-less preview rule in ruff 0.17.3. Tests patch the shared `time`
+  # clock on purpose. Some consumers import `time` inside the function, so
+  # there is no module binding a private clock can replace.
+  "shared-clock-mock",
 ]
 extend-safe-fixes = ["TC002", "TC003"]
 

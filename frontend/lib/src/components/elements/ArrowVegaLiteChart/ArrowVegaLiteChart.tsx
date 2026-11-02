@@ -41,7 +41,7 @@ import type {
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
-import { isLocalhost } from "@streamlit/utils"
+import { isLocalhost, isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   FlexContext,
@@ -407,7 +407,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const handleDownloadPng = useCallback(() => {
     void (async () => {
       const pngUrl = await exportToPng()
-      if (!pngUrl) {
+      if (pngUrl === null) {
         return
       }
 
@@ -607,8 +607,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const labelContext = inputElement.alt?.trim() || undefined
+  const trimmedAlt = inputElement.alt?.trim()
+  const labelContext = isNullOrEmptyString(trimmedAlt) ? undefined : trimmedAlt
 
   if (showData) {
     const derivedHeight =

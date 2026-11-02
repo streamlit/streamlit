@@ -27,6 +27,7 @@ import {
 import moment from "moment"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -142,7 +143,7 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: isSelectSlider(element)
