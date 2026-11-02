@@ -219,6 +219,9 @@ Streamlit never guarantees:
   session. Deciding who may act stays in app code.
 - **`validate` regex matches.** See [Out of scope](#out-of-scope).
 - **What an uploaded file contains.**
+- **That a hidden `st.data_editor` column is read-only.** Hiding a column does not
+  protect it: a user can show it and edit it. To prevent edits, disable the column or
+  leave it out of the data.
 - **That a value is right for the business.**
 
 The security docs should list these guarantees explicitly, so "re-check everything" can
@@ -413,10 +416,10 @@ other changes affect only forged values, `AppTest`, and the agent API.
   deserializers stop truncating (item 4), the text now stays as written on both sides
   until the programmatic-writes follow-up settles one rule. After a reconnect to a new
   session, the check at registration refuses it, and the widget falls back to its
-  default. The alternative is [open question 1](#open-questions). A link is still
-  truncated, but in UTF-16 code units, as the browser counts, so text with astral
-  characters such as emoji keeps fewer characters than today. Both need a changelog
-  entry.
+  default. Whether to truncate it at registration instead is left to that follow-up. A
+  link is still truncated, but in UTF-16 code units, as the browser counts, so text with
+  astral characters such as emoji keeps fewer characters than today. Both need a
+  changelog entry.
 - **Chat input text from app code is cut to `max_chars` before the browser shows it.**
   A chat input does not echo its text: the browser writes the text into the field
   without its `max_chars` check, and Enter sends it as a new message. So with
@@ -471,19 +474,6 @@ other changes affect only forged values, `AppTest`, and the agent API.
   at debug level; the rest are logged at warning level, without the value, which may be
   a password.
 
-## Open questions
-
-1. **Programmatic text past `max_chars`.** Once deserializers stop truncating, an
-   over-long value written to `st.session_state` is no longer corrected when the
-   browser sends it back (see [Behavior changes](#behavior-changes)). The options are
-   to keep it as written until the programmatic-writes follow-up, which this spec
-   proposes, or to truncate it at registration in item 4. Truncating keeps today's end
-   value, one run earlier, removes the spurious `on_change`, and avoids the fallback to
-   the default after a reconnect to a new session. This concerns text inputs and text
-   areas, which echo their value unchanged. A chat input sends its text as a new message
-   instead, so it is already cut when it reaches the browser (see
-   [Behavior changes](#behavior-changes)).
-
 ## Out of scope
 
 - **`validate` regex on the server.** The patterns are JavaScript regular expressions run
@@ -528,4 +518,4 @@ other changes affect only forged values, `AppTest`, and the agent API.
 | No new dependencies | ✅ |
 | Metrics collected | No. Phase 1 only logs rejections. A rejection counter is a possible follow-up, alongside the agent spec's operations follow-up (see [Out of scope](#out-of-scope)). |
 | Any security/legal impact? | ✅ Positive: declared constraints hold for every client. Authorization stays the app's job, and the docs must say exactly what is and is not guaranteed. |
-| Any docs changes needed? | A security page listing the guarantees. Update the docstrings that call `required` "client-side only" when item 5 or 7 lands, and the `disabled` notes. Add a changelog entry for each behavior change. |
+| Any docs changes needed? | A security page listing the guarantees. Update the docstrings that call `required` "client-side only" when item 5 or 7 lands, and the `disabled` notes. With item 6, the `st.data_editor` docstrings for `column_order`, `column_config` (`hidden` and `None`), `hide_index`, and `disabled` say that hidden columns stay editable unless disabled. Add a changelog entry for each behavior change. |
