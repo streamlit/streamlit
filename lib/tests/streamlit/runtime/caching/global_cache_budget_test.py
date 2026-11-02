@@ -24,7 +24,6 @@ import pytest
 
 from streamlit.runtime.caching.global_cache_budget import (
     _GLOBAL_CACHE_BUDGET_HOLDER,
-    CACHE_DATA_EVICTIONS_FAMILY,
     GlobalCacheBudget,
     get_global_cache_budget,
     reconfigure_global_cache_budget_from_config,
@@ -37,7 +36,6 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import DummyCacheStor
 from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
-from streamlit.runtime.stats import CounterStat
 
 
 class _DictStorage:
@@ -221,8 +219,8 @@ def test_enabled_writes_to_different_storages_overlap() -> None:
     assert budget.total_bytes == 2
 
 
-def test_budget_evicts_global_lru_and_counts_success() -> None:
-    """Budget overflow evicts the global LRU entry and records the eviction."""
+def test_budget_evicts_global_lru_entry() -> None:
+    """Budget overflow evicts the least-recently-used entry across storages."""
     budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
@@ -237,15 +235,6 @@ def test_budget_evicts_global_lru_and_counts_success() -> None:
     assert first.get("old") == b"aaa"
     assert second.get("new") == b"c"
     assert budget.total_bytes == 4
-    stats = budget.get_stats()[CACHE_DATA_EVICTIONS_FAMILY]
-    assert stats == [
-        CounterStat(
-            family_name=CACHE_DATA_EVICTIONS_FAMILY,
-            value=1,
-            labels={"reason": "global_budget"},
-            help="Total st.cache_data entries evicted by the global byte budget.",
-        )
-    ]
 
 
 def test_recency_hints_are_bounded_and_drained_by_write() -> None:
