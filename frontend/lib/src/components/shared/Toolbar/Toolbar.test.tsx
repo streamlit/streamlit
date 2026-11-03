@@ -275,40 +275,6 @@ describe("ToolbarAction Button element", () => {
     expect(onClickMock).toHaveBeenCalled()
   })
 
-  it.each([
-    [
-      "hovered",
-      async (user: ReturnType<typeof userEvent.setup>): Promise<void> => {
-        await user.hover(screen.getByRole("button"))
-      },
-    ],
-    [
-      "focused",
-      async (user: ReturnType<typeof userEvent.setup>): Promise<void> => {
-        await user.tab()
-      },
-    ],
-  ])("calls onPreload but not onClick when %s", async (_, interact) => {
-    const user = userEvent.setup()
-    const onClickMock = vi.fn()
-    const onPreloadMock = vi.fn()
-
-    render(
-      <ToolbarAction
-        {...getToolbarActionsProps({
-          onClick: onClickMock,
-          onPreload: onPreloadMock,
-        })}
-      />
-    )
-    expect(onPreloadMock).not.toHaveBeenCalled()
-
-    await interact(user)
-
-    expect(onPreloadMock).toHaveBeenCalledTimes(1)
-    expect(onClickMock).not.toHaveBeenCalled()
-  })
-
   it("hides its tooltip when the action is no longer hovered", async () => {
     vi.useFakeTimers()
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })

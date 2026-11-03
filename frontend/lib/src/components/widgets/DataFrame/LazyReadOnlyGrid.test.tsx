@@ -97,16 +97,14 @@ describe("LazyReadOnlyGrid", () => {
     }
   )
 
-  it("renders the preloaded grid module and reopens without a skeleton", async () => {
-    const { LazyReadOnlyGrid, preloadReadOnlyGrid } = lazyModule
-
-    preloadReadOnlyGrid()
-    await vi.waitFor(() => expect(gridModule.loads).toBe(1))
-    gridModule.release()
-
+  it("reopens without a skeleton once the grid has loaded", async () => {
+    const { LazyReadOnlyGrid } = lazyModule
     const { unmount } = render(<LazyReadOnlyGrid data={fakeQuiver} />)
+    await vi.waitFor(() => expect(gridModule.loads).toBe(1))
+    act(() => {
+      gridModule.release()
+    })
     expect(await screen.findByTestId("mockReadOnlyGrid")).toBeVisible()
-    expect(gridModule.loads).toBe(1)
 
     unmount()
     render(<LazyReadOnlyGrid data={fakeQuiver} />)

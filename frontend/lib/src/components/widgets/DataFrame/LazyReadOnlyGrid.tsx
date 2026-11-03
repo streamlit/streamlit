@@ -28,15 +28,6 @@ const ReadOnlyGrid = lazy(() =>
 )
 
 /**
- * Starts downloading the grid chunk before the grid first renders, e.g. when
- * the user hovers or focuses the action that opens it. It ignores load errors
- * because rendering `LazyReadOnlyGrid` surfaces them.
- */
-export function preloadReadOnlyGrid(): void {
-  import("./ReadOnlyGrid").catch(() => {})
-}
-
-/**
  * `ReadOnlyGrid` that downloads its DataFrame chunk on first render, so pages
  * with charts only load that chunk once a user opens a "Show data" view.
  *
