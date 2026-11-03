@@ -14,6 +14,7 @@
 
 """selectbox unit tests."""
 
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -23,6 +24,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
 from streamlit.errors import (
@@ -157,6 +159,22 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 assert id1 == id2
             else:
                 assert id1 != id2
+
+    def test_agent_description_reports_normalized_icon(self) -> None:
+        """The agent description reports the validated icon and omits an unset one."""
+        agent_spec.register_agent_session(self.script_run_ctx.session_id)
+        try:
+            st.selectbox("with icon", ("m", "f"), icon=" :material/public: ")
+            with_icon = json.loads(self.get_message_from_queue().metadata.agent_props)
+            st.selectbox("without icon", ("m", "f"))
+            without_icon = json.loads(
+                self.get_message_from_queue().metadata.agent_props
+            )
+        finally:
+            agent_spec.forget_agent_session(self.script_run_ctx.session_id)
+
+        assert with_icon["props"]["icon"] == ":material/public:"
+        assert "icon" not in without_icon["props"]
 
     def test_disabled_required_does_not_raise(self) -> None:
         """Disabled required selectboxes are valid and can start empty."""
