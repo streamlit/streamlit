@@ -32,9 +32,10 @@ const ReadOnlyGrid = lazy(() =>
  * with charts only load that chunk once a user opens a "Show data" view.
  *
  * Until the chunk arrives, a skeleton with the grid's height holds its space.
- * Keep both boundaries here: without them, the pending load or a failed one
- * reaches `ElementContainer`'s boundaries, which replace the whole chart (and
- * unmount its fullscreen wrapper while expanded).
+ * The local `Suspense` and `ErrorBoundary` keep a pending or failed load in
+ * the data-view slot. Without them, `ElementContainer`'s boundaries replace
+ * the whole chart; in fullscreen that unmounts the wrapper and leaves the
+ * page scroll-locked.
  */
 export function LazyReadOnlyGrid(props: ReadOnlyGridProps): ReactElement {
   const { height } = props

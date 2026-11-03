@@ -25,8 +25,8 @@ import type * as LazyReadOnlyGridModule from "./LazyReadOnlyGrid"
 import type { ReadOnlyGridProps } from "./ReadOnlyGrid"
 
 /**
- * State of the mocked grid module, which finishes loading once a test calls
- * `release()`, or fails with the error passed to `fail()`.
+ * Controls the mocked grid import: `release()` resolves it and `fail(error)`
+ * rejects it. `loads` and `lastProps` record what the mock received.
  */
 const mockGridModule = {
   loads: 0,
