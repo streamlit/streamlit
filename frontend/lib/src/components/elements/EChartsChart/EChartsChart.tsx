@@ -46,7 +46,6 @@ import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/with
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
-import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -409,14 +408,21 @@ export function EChartsChart({
   }, [themeArg])
   const appliedThemeRef = useRef(themeArg)
 
+  // Called before the effects below so its binding effect runs first, and
+  // `restoreSelection` / `pruneAfterResize` reach the current instance.
   const {
-    isSelectionActivated,
-    configureSelectionOption,
-    bindSelections,
+    applyDisplayOnlyCursorDefault,
     restoreSelection,
-    onFormCleared,
-    prunePixelOnlyBrushAfterResize,
-  } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
+    pruneAfterResize,
+    releaseSelection,
+  } = useEChartsSelections({
+    element,
+    widgetMgr,
+    chart: chartInstance,
+    fragmentId,
+    disabled,
+    parsedOption: option,
+  })
 
   // The option handed to setOption:
   // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
@@ -434,7 +440,7 @@ export function EChartsChart({
     if (!option) {
       return null
     }
-    let prepared = configureSelectionOption(
+    let prepared = applyDisplayOnlyCursorDefault(
       applyTimeLabelFormatters(
         applyTooltipFormatters(
           applyStreamlitOptionDefaults(
@@ -460,7 +466,7 @@ export function EChartsChart({
     option,
     element.theme,
     element.selectionActivated,
-    configureSelectionOption,
+    applyDisplayOnlyCursorDefault,
     element.alt,
     spacing.sm,
     spacing.md,
@@ -533,6 +539,9 @@ export function EChartsChart({
     setChartInstance(chart)
 
     return () => {
+      // A finished brush still waiting on its throttled hit-test needs the
+      // live instance to commit.
+      releaseSelection()
       chart.dispose()
       setChartInstance(null)
       setHasRendered(false)
@@ -543,6 +552,7 @@ export function EChartsChart({
     hasValidSpec,
     hasBeenSized,
     setOpError,
+    releaseSelection,
     instanceGeneration,
   ])
 
@@ -568,7 +578,7 @@ export function EChartsChart({
       setOpError("theme", null)
       // Re-theming re-runs the render pipeline, which drops the native
       // select/brush visuals, so put them back.
-      restoreSelection(chartInstance)
+      restoreSelection()
     } catch (error) {
       setOpError("theme", error)
     }
@@ -618,7 +628,7 @@ export function EChartsChart({
       setOpError("option", null)
       setHasRendered(true)
       // A full replacement clears the selected/brushed state, so restore it.
-      restoreSelection(chartInstance)
+      restoreSelection()
     } catch (error) {
       failedInstanceRef.current = chartInstance
       setOpError("option", error)
@@ -631,17 +641,6 @@ export function EChartsChart({
     setOpError,
     element.alt,
   ])
-
-  // Bind selection handlers to the current instance (no-op for display-only).
-  // Order relative to the option-apply and theme effects does not matter:
-  // `restoreSelection` suppresses the events its own dispatches fire, and
-  // ECharts fires no selection events from `setOption`.
-  useEffect(() => {
-    if (!chartInstance || chartInstance.isDisposed()) {
-      return
-    }
-    return bindSelections(chartInstance)
-  }, [chartInstance, bindSelections])
 
   // Resize the chart when its container dimensions change. Entering/exiting
   // fullscreen changes the measured width/height, so this covers it too.
@@ -689,7 +688,7 @@ export function EChartsChart({
         previousSize &&
         (previousSize.width !== width || previousSize.height !== height)
       ) {
-        prunePixelOnlyBrushAfterResize(chartInstance)
+        pruneAfterResize()
       }
     } catch (error) {
       // `resize` re-runs the full render pipeline, which can throw. Surface it
@@ -698,31 +697,7 @@ export function EChartsChart({
       // trace.
       setOpError("resize", error)
     }
-  }, [
-    chartInstance,
-    width,
-    height,
-    setOpError,
-    prunePixelOnlyBrushAfterResize,
-  ])
-
-  // Reset the selection when the surrounding form is cleared.
-  useEffect(() => {
-    if (!element.formId || !isSelectionActivated) {
-      return
-    }
-
-    const formClearHelper = new FormClearHelper()
-    formClearHelper.manageFormClearListener(
-      widgetMgr,
-      element.formId,
-      onFormCleared
-    )
-
-    return () => {
-      formClearHelper.disconnect()
-    }
-  }, [element.formId, widgetMgr, isSelectionActivated, onFormCleared])
+  }, [chartInstance, width, height, setOpError, pruneAfterResize])
 
   useInsideDataZoomWheelGuard(containerRef, option)
 
