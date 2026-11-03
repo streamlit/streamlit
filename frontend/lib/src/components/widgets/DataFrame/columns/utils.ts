@@ -195,6 +195,25 @@ export function isMissingValueCell(
   )
 }
 
+/** Token drawn for a missing value (null, NaN, etc.) when no placeholder is configured. */
+export const DEFAULT_MISSING_PLACEHOLDER = "None"
+
+/**
+ * Column kinds that draw their own missing state, usually an empty cell,
+ * instead of the missing-value placeholder.
+ */
+const SELF_DRAWN_MISSING_KINDS = new Set([
+  "checkbox",
+  "line_chart",
+  "bar_chart",
+  "progress",
+])
+
+/** Returns `true` if a missing value in this column is drawn as the placeholder. */
+export function showsMissingPlaceholder(column: BaseColumn): boolean {
+  return !SELF_DRAWN_MISSING_KINDS.has(column.kind)
+}
+
 /**
  * Returns `true` if both values are arrays with strictly equal items in the same order.
  */

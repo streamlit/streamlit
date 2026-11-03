@@ -164,6 +164,21 @@ describe("useLazyDataLoader", () => {
     })
   })
 
+  it("reads an unloaded cell for printing without requesting its chunk", async () => {
+    const { client, request } = makeClient(() => Promise.resolve({}))
+    const { result } = renderLoader(client)
+
+    const cell = result.current.getCachedCellContent([0, 2])
+    expect(cell.kind).toBe(GridCellKind.Loading)
+
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 300)
+      })
+    })
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it("shows an error cell when no backend client is available", async () => {
     const { result } = renderLoader(undefined)
     // Chunk 0 is seeded, so it still renders.
