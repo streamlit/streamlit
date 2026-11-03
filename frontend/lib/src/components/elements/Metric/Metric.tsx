@@ -324,8 +324,9 @@ function Metric({
   const chartRef = useRef<HTMLDivElement>(null)
   const flexContext = useContext(FlexContext)
 
-  // A metric without a fixed width inside a content-width container is also
-  // sized by its value.
+  // A content-width metric, or one without a fixed width inside a
+  // content-width container, is sized by its value. Print wraps that value
+  // instead of shrinking it to the card.
   const hasFixedWidth =
     (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0
   const isContentWidth =

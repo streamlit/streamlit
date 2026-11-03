@@ -33,6 +33,10 @@ export const printWidthCapRules = {
   overflow: "visible",
 }
 
+/**
+ * `printWidthCapRules` wrapped in `@media print`, for styles without their
+ * own print block.
+ */
 export const printWidthCapStyles: CSSObject = {
   "@media print": printWidthCapRules,
 }

@@ -1763,12 +1763,10 @@ def goto_app(page: Page, url: str) -> None:
 
 
 def flush_print_media_change(page: Page) -> None:
-    """Deliver the ``matchMedia("print")`` change queued by ``emulate_media``.
+    """Yield one task after ``emulate_media`` changes the media.
 
-    ``emulate_media`` fires ``change`` on the ``MediaQueryList`` objects the
-    page already holds, on the next task. Calling ``matchMedia("print")``
-    again returns a different object, so a ``change`` event dispatched on it
-    never reaches those listeners. Yielding one task delivers the queued event.
+    Playwright queues media-query ``change`` events for the next task. Yielding
+    delivers them before assertions read the printed layout.
 
     Parameters
     ----------

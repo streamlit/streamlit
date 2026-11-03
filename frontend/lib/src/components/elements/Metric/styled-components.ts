@@ -106,10 +106,10 @@ export const StyledMetricLabelText = styled(
 
 interface StyledMetricValueTextProps {
   /**
-   * Character count of the value, used to shrink it to the printed card.
-   * Leave it unset for a content-width card: it is sized by its value, so the
-   * value cannot be a size container, and a figure wider than the printed
-   * column wraps instead.
+   * Character count of the value, which print CSS uses to shrink the figure
+   * to fit the card. Leave unset for a content-width card: the value's width
+   * sizes the card, so making the value a size container would collapse it.
+   * Figures wider than the printed column wrap instead.
    */
   printFitLength?: number
 }

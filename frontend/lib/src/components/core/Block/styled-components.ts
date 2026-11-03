@@ -269,9 +269,9 @@ interface StyledColumnProps {
 }
 
 /**
- * A column of an `st.columns` row. Print stacking and print containment are
- * applied by the parent row in `StyledFlexContainerBlock`. A bordered column
- * with a chart avoids page breaks on its own.
+ * A column of an `st.columns` row. The parent row in
+ * `StyledFlexContainerBlock` stacks its columns in print when needed. A
+ * bordered column with a chart avoids page breaks on its own.
  */
 export const StyledColumn = styled.div<StyledColumnProps>(
   ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
@@ -445,8 +445,9 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children at full width. A chart
-      //   keeps the width it rendered at on screen, capped to the column.
+      //   dataframe, or table stacks its children. Stacked columns print full
+      //   width; other children keep their width, capped to the container. A
+      //   chart keeps the width it rendered at on screen, capped to its column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -658,9 +659,10 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     minHeight,
     maxHeight,
     "@media print": {
-      // See StyledFlexContainerBlock: flex height collapses when printing.
-      // Fixed and stretch-height wrappers keep flex so their child retains
-      // its allocated height.
+      // Chrome print drops the height of a content-height flex column (see
+      // StyledFlexContainerBlock), so this wrapper prints as a block. A
+      // fixed-height wrapper, or a stretch wrapper in a definite-height parent,
+      // keeps flex so its child keeps the height it was given.
       ...((height === undefined || height === "auto") &&
         hasDefiniteHeight !== true && {
           display: "block",

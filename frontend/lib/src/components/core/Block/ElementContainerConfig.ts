@@ -66,9 +66,9 @@ export enum MinStretchWidth {
  */
 export enum PrintLayout {
   /**
-   * Keeps a width measured on screen, so it would overflow a narrower
-   * printed column. A column row or horizontal container that holds it
-   * stacks in print.
+   * An element that keeps a width measured on screen, so it would overflow a
+   * narrower printed column. A column row or horizontal container that holds
+   * it stacks in print.
    * Use for: dataframes, tables
    */
   FIXED_WIDTH = "stPrintFixedWidth",
