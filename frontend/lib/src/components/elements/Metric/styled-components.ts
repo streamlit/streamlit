@@ -76,10 +76,19 @@ export const StyledMetricContent = styled.div<{ showBorder: boolean }>(
   })
 )
 
+/**
+ * Height of the metric sparkline, shared by its Vega spec and the container
+ * that reserves its space.
+ */
+export const METRIC_CHART_HEIGHT = "3.5rem"
+
 export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   ({ theme, showBorder }) => ({
     marginTop: showBorder ? undefined : theme.spacing.lg,
     marginBottom: showBorder ? theme.spacing.twoXL : undefined,
+    // Reserve the sparkline's height while Vega loads, so the card doesn't
+    // grow when the chart draws.
+    minHeight: METRIC_CHART_HEIGHT,
     // The sparkline keeps the pixel width measured on screen. The printed
     // card is often narrower and no longer clips, so cap the chart and its
     // SVG or canvas to the card.
