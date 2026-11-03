@@ -227,6 +227,36 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert not dg._cursor.is_locked
         assert dg._cursor.index == 0
 
+    def test_constructing_delta_generators_leaves_method_modules_unchanged(
+        self,
+    ) -> None:
+        """Constructing a DeltaGenerator or container doesn't mutate shared methods,
+        and each mixin method reports the module that defines it.
+        """
+        owners = (DeltaGenerator, *DeltaGenerator.__bases__)
+
+        def method_modules() -> dict[tuple[str, str], str]:
+            return {
+                (owner.__qualname__, name): func.__module__
+                for owner in owners
+                for name, func in vars(owner).items()
+                if callable(func)
+            }
+
+        before = method_modules()
+
+        DeltaGenerator()
+        st.expander("expander")
+        st.tabs(["tab"])
+        st.status("status")
+        st.popover("popover")
+
+        assert method_modules() == before
+        for mixin in DeltaGenerator.__bases__:
+            for name, func in vars(mixin).items():
+                if callable(func):
+                    assert func.__module__ == mixin.__module__, (mixin, name)
+
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)

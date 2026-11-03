@@ -1307,7 +1307,7 @@ than ranked, and say where one builds on another.
    `props.alt` — exactly the author-written meaning this interface exists to surface.
    What remains is the app and page level, for the snapshot to report: static
    `app_title`/`app_description` on `st.App`, the one reliable source of an app title;
-   `page_description` on `st.set_page_config` and optionally `st.Page`
+   one sentence per page as `help` on `st.Page`
    ([#16878](https://github.com/streamlit/streamlit/issues/16878)); and `help` on media
    ([#3133](https://github.com/streamlit/streamlit/issues/3133)).
 3. **Lazy continuation.** Range reads for lazy dataframes, reusing the existing chunk

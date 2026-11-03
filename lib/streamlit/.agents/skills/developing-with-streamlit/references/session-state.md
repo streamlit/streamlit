@@ -11,7 +11,8 @@ Session state is a dictionary-like object supporting attribute and bracket notat
 # Initialize with setdefault (preferred)
 st.session_state.setdefault("count", 0)
 
-# Alternative: check before setting
+# Check before setting when the default is expensive to compute;
+# setdefault evaluates its default argument on every rerun
 if "count" not in st.session_state:
     st.session_state.count = 0
 
