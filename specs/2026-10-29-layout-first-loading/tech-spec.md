@@ -189,8 +189,7 @@ renders into. Every run passes through one of two places that create that contai
 
 A fragment rerun re-sends its container at the same path with `loading`. The container
 keeps its children, which show with the grace-period overlay until the first fresh visible
-element. The frontend does all clearing, so nothing crosses threads. The prototype's
-main-thread skeleton in the pre-allocated container approximates this for full-app runs.
+element. The frontend does all clearing, so nothing crosses threads.
 
 ### Change 4: start parallel fragments after the layout is sent
 
@@ -227,23 +226,30 @@ parallel runs are covered as well.
 
 ## Prototype
 
-About 100 lines, not committed: `work-tmp/debug/skeleton_dash/prototype.patch`.
+Draft PR [#17838](https://github.com/streamlit/streamlit/pull/17838) implements all five
+changes, with unit tests and an E2E reload scenario in `st_skeleton_test.py`. Its results
+are in the [product spec](./product-spec.md#prototype). It differs from the design above
+in these places:
 
-| Piece                                                                                      | Approximates                     |
-| ------------------------------------------------------------------------------------------ | -------------------------------- |
-| `ElementNode.pendingSkeleton`, the `AppRoot` rule, the `ClearStaleNodeVisitor` collapse, and a delayed `::after` overlay in `ElementContainer` | Change 1 for element anchors |
-| Deferred submit in `ParallelFragmentCoordinator`, with a fixed 50ms sleep as the flush gate | Change 4                         |
-| A `st.skeleton()` written into the pre-allocated fragment container on the script thread before the worker's cursor copy | Change 3 option A on full-app runs |
-
-It validated:
-
-- Cached reruns never show the overlay and keep chart and dataframe nodes.
-- Cache misses overlay at the content's exact size, and the content then updates in place.
-- On a cold page load, the cheap layout and all skeletons appear in the first paint, with
-  no layout shift, under CPU-bound loaders.
-
-It did not validate block anchors, loading blocks and their resolve-on-first-content
-marking, fragment-only reruns, spinner labels, or the real flush gate.
+- **Pending state.** `getLoadingBlockState` derives a loading block's state at render time,
+  memoized on the node, by walking the block's subtree for visible content from the current
+  run. The design instead marks blocks in `SetNodeByDeltaPathVisitor`, which avoids that
+  walk on the delta hot path. Benchmark both before merging.
+- **Blocks from an earlier run.** A loading block that existed in an earlier run and has
+  nothing to keep waits 500ms (`useTimeout`) before showing its inline skeleton. While the
+  inline skeleton shows, the block hides its other children, such as an empty fragment
+  container, which would otherwise add a gap next to it.
+- **Spinner labels.** The flag is `in_skeleton_slot` on `FragmentThreadState` rather than a
+  separate `ContextVar`. A flagged spinner renders nothing inside a pending skeleton, and
+  the loading block reads its text from the block's transient nodes (`findSkeletonLabel`),
+  instead of `RenderNodeVisitor` lifting it.
+- **Flush gate.** `AppSession` keeps `threading.Event` waiters that
+  `on_flushed_messages_sent()` releases once the browser queue is empty.
+  `ScriptRunContext.wait_for_flush` passes the wait to the coordinator, which calls it
+  before submitting deferred work.
+- **Spinner timers of stopped runs.** A delayed `st.spinner` message raised `StopException`
+  tracebacks when its run had already stopped. The prototype suppresses them. This is a
+  pre-existing bug and can be fixed separately.
 
 ## Risks and edge cases
 
