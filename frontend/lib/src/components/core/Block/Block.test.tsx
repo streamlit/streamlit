@@ -1210,3 +1210,73 @@ describe("BlockNodeRenderer container types", () => {
     expect(tabs).not.toHaveStyle("height: 100%;")
   })
 })
+
+describe("loading blocks", () => {
+  const CURRENT_RUN = "current-run"
+
+  function loadingBlock(
+    children: AppNode[],
+    scriptRunId = CURRENT_RUN
+  ): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        },
+        loading: { skeletonHeight: { pixelHeight: 200 } },
+      }),
+      scriptRunId
+    )
+  }
+
+  function renderLoadingBlock(node: BlockNode, isRunning = true): void {
+    renderWithContexts(makeVerticalBlockComponent(node), {
+      scriptRunContext: {
+        scriptRunState: isRunning
+          ? ScriptRunState.RUNNING
+          : ScriptRunState.NOT_RUNNING,
+        scriptRunId: CURRENT_RUN,
+        fragmentIdsThisRun: [],
+      },
+    })
+  }
+
+  it("reserves the skeleton height while the run hasn't drawn into it", () => {
+    renderLoadingBlock(loadingBlock([]))
+
+    const skeleton = screen.getByTestId("stLoadingBlockSkeleton")
+    expect(skeleton).toHaveStyle({ height: "200px" })
+    expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+  })
+
+  it("keeps previous content mounted under an overlay", () => {
+    renderLoadingBlock(loadingBlock([text("previous chart", "previous-run")]))
+
+    expect(screen.getByText("previous chart")).toBeInTheDocument()
+    expect(screen.getByTestId("stPendingSkeleton")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stLoadingBlockSkeleton")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["the run drew content", [text("chart", CURRENT_RUN)], true],
+    ["the run has ended", [], false],
+  ])("shows no skeleton once %s", (_, children, isRunning) => {
+    renderLoadingBlock(loadingBlock(children), isRunning)
+
+    expect(
+      screen.queryByTestId("stLoadingBlockSkeleton")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+  })
+
+  it("shows a single skeleton for nested loading blocks", () => {
+    renderLoadingBlock(loadingBlock([loadingBlock([])]))
+
+    expect(screen.getAllByTestId("stLoadingBlockSkeleton")).toHaveLength(1)
+  })
+})

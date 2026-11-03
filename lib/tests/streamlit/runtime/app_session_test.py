@@ -18,6 +18,7 @@ import asyncio
 import contextvars
 import gc
 import threading
+import time
 import unittest
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -393,6 +394,7 @@ class AppSessionTest(unittest.TestCase):
             on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
             event_loop=session._script_event_loop,
+            wait_for_flush=session._wait_for_browser_flush,
         )
 
         assert session._scriptrunner is not None
@@ -3868,3 +3870,30 @@ def test_create_detached_script_run_ctx_shares_state_and_drops_messages() -> Non
 
     contextvars.copy_context().run(enqueue_with_thread_state)
     assert session.flush_browser_queue() == []
+
+
+def test_flush_waiter_is_released_once_queued_messages_are_sent() -> None:
+    """A flush waiter waits for the messages that were queued before it."""
+    session = _create_test_session()
+    msg = ForwardMsg()
+    msg.delta.new_element.markdown.body = "Layout"
+    session._enqueue_forward_msg(msg)
+
+    flushed = threading.Event()
+    session._add_flush_waiter(flushed)
+    assert not flushed.is_set()
+
+    _flush_and_send(session)
+    assert flushed.is_set()
+
+
+def test_wait_for_browser_flush_returns_right_away_with_an_empty_queue() -> None:
+    """With nothing left to send, waiting for a flush doesn't block."""
+    event_loop = MagicMock()
+    event_loop.call_soon_threadsafe.side_effect = lambda callback: callback()
+    session = _create_test_session(event_loop=event_loop)
+
+    start = time.monotonic()
+    session._wait_for_browser_flush(timeout=5)
+
+    assert time.monotonic() - start < 1

@@ -41,6 +41,10 @@ message Block {
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
   optional bool autoscroll = 16;
+  // Shows a skeleton in the block until the first visible element of the
+  // current run is drawn inside it. Set by `with st.skeleton()` and by
+  // fragments with `loading="skeleton"`.
+  optional Loading loading = 18;
 
   message Vertical {
     bool border = 1;
@@ -229,5 +233,11 @@ message Block {
   // render directly in the parent container's flex context.
   message Transparent {}
 
-  // Next ID: 18
+  message Loading {
+    // Height of the skeleton while the block has no content to keep. If
+    // unset, the frontend uses a default height.
+    optional streamlit.HeightConfig skeleton_height = 1;
+  }
+
+  // Next ID: 19
 }

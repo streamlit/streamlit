@@ -15,7 +15,12 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_button, get_element_by_key
+from e2e_playwright.shared.app_utils import (
+    click_button,
+    get_button,
+    get_element_by_key,
+    get_toggle,
+)
 
 
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
@@ -77,20 +82,19 @@ def test_skeleton_context_manager_with_delay(app: Page):
     # container, so the test does not depend on the total number of static
     # skeletons rendered elsewhere in the app.
     cm_skeletons = get_element_by_key(app, "delay_cm_container").get_by_test_id(
-        "stSkeletonElement"
+        "stLoadingBlockSkeleton"
     )
     expect(cm_skeletons).to_have_count(0)
 
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # The skeleton appears within the container during the delay (1s sleep > 0.5s
-    # delay threshold).
+    # The block is new in this run, so its skeleton reserves space right away.
     expect(cm_skeletons).to_have_count(1, timeout=3000)
 
     # The success message appears after the skeleton clears...
     expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=10000)
-    # ...and the transient skeleton must be gone.
+    # ...and the skeleton must be gone, because the block drew nothing.
     expect(cm_skeletons).to_have_count(0)
 
 
@@ -164,3 +168,36 @@ def test_skeleton_in_form(app: Page):
     expect(form.get_by_text("Form submitted!")).to_be_visible()
     # Skeleton should be gone (replaced)
     expect(skeleton_in_form).not_to_be_visible()
+
+
+def test_skeleton_keeps_previous_content_while_reloading(app: Page):
+    """A skeleton covers the previous run's content instead of replacing it.
+
+    On a cache miss, the previous content stays mounted under the skeleton and
+    is updated in place. The cached function's spinner text becomes the
+    skeleton's label instead of a second loading indicator.
+    """
+    container = get_element_by_key(app, "cached_skeleton_container")
+    # Click without waiting for the run, so the first-load skeleton is observable.
+    get_toggle(app, "Show cached report").click()
+
+    # First load: nothing to keep, so the skeleton reserves the space.
+    expect(container.get_by_test_id("stLoadingBlockSkeleton")).to_be_visible()
+    expect(container.get_by_text("Report version 0")).to_be_visible(timeout=5000)
+    expect(container.get_by_test_id("stLoadingBlockSkeleton")).not_to_be_attached()
+
+    # Cache miss: the previous report stays mounted, covered by the skeleton.
+    get_button(app, "Load next report version").click()
+    overlay = container.get_by_test_id("stPendingSkeleton")
+    expect(overlay).to_be_visible(timeout=3000)
+    expect(overlay.get_by_text("Loading report...")).to_be_visible()
+    expect(container.get_by_text("Report version 0")).to_be_attached()
+    expect(container.get_by_test_id("stSpinner")).not_to_be_attached()
+
+    expect(container.get_by_text("Report version 1")).to_be_visible(timeout=5000)
+    expect(overlay).not_to_be_attached()
+
+    # Cached rerun: the report updates in place without a skeleton.
+    click_button(app, "Rerun skeleton report")
+    expect(container.get_by_text("Report version 1")).to_be_visible()
+    expect(overlay).not_to_be_attached()

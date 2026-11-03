@@ -112,6 +112,10 @@ class FragmentThreadState:
     # _check_not_parallel_worker() to gate APIs that are unsafe during
     # concurrent execution (e.g. st.dialog, st.switch_page).
     is_parallel_worker: bool = False
+    # True while running inside a skeleton slot: a `with st.skeleton()` block
+    # or the body of a fragment with `loading="skeleton"`. Spinners use it to
+    # avoid adding a second loading indicator next to the skeleton.
+    in_skeleton_slot: bool = False
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -135,6 +139,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
+    in_skeleton_slot: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
@@ -203,6 +208,18 @@ class ThreadState:
             _thread_state.reset(token)
 
 
+def is_in_skeleton_slot() -> bool:
+    """Whether the current code runs inside a skeleton slot.
+
+    Returns ``False`` on threads without an initialized ``FragmentThreadState``,
+    such as helper threads that are not attached to a script run.
+    """
+    try:
+        return ThreadState.get().in_skeleton_slot
+    except RuntimeError:
+        return False
+
+
 def is_fragment_callback_warning_suppressed() -> bool:
     """Whether the fragment-callback element warning is suppressed for this write."""
     return _fragment_callback_warning_suppressed.get()
@@ -265,6 +282,10 @@ class ScriptRunContext:
     # Raises StopException or RerunException when this run should end. Read by
     # contended cache waits via get_run_yield_check().
     yield_check: Callable[[], None] = lambda: None
+    # Blocks the calling thread until the messages enqueued so far have been
+    # sent to the browser, or until the timeout in seconds passes. None when
+    # no browser session sends this run's messages (e.g. AppTest).
+    wait_for_flush: Callable[[float], None] | None = None
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -319,6 +340,7 @@ class ScriptRunContext:
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
+            wait_for_flush=self.wait_for_flush,
         )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False

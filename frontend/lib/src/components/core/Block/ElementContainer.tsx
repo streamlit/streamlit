@@ -29,6 +29,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
 import type { ElementContainerConfig } from "./ElementContainerConfig"
+import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
@@ -78,6 +79,10 @@ export const ElementContainer = memo(function ElementContainer({
   const elementType = node.element.type ?? ""
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
+  // A skeleton from this run waits to replace this element. The element stays
+  // mounted, and the overlay covers it after a grace period.
+  const hasPendingSkeleton =
+    node.pendingSkeleton !== undefined && !isFullScreen
 
   return (
     <StyledElementContainerLayoutWrapper
@@ -90,7 +95,9 @@ export const ElementContainer = memo(function ElementContainer({
         .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
+      aria-busy={hasPendingSkeleton || undefined}
       isStale={isStale && !isFullScreen}
+      hasPendingSkeleton={hasPendingSkeleton}
       elementType={elementType}
       node={node}
       config={config}
@@ -104,6 +111,7 @@ export const ElementContainer = memo(function ElementContainer({
           {children}
         </Suspense>
       </ErrorBoundary>
+      {hasPendingSkeleton && <PendingSkeletonOverlay />}
     </StyledElementContainerLayoutWrapper>
   )
 })

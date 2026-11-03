@@ -40,13 +40,20 @@ export class BlockNode implements AppNode {
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
+  /**
+   * A skeleton from the current run that is waiting for this slot's new
+   * content. See `ElementNode.pendingSkeleton`.
+   */
+  public readonly pendingSkeleton?: ElementNode
+
   public constructor(
     activeScriptHash: string,
     children?: AppNode[],
     deltaBlock?: BlockProto,
     scriptRunId?: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    pendingSkeleton?: ElementNode
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
@@ -54,6 +61,20 @@ export class BlockNode implements AppNode {
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.pendingSkeleton = pendingSkeleton
+  }
+
+  /** Return a copy of this node that waits for content under `skeleton`. */
+  public withPendingSkeleton(skeleton: ElementNode): BlockNode {
+    return new BlockNode(
+      this.activeScriptHash,
+      this.children,
+      this.deltaBlock,
+      this.scriptRunId,
+      this.fragmentId,
+      this.deltaMsgReceivedAt,
+      skeleton
+    )
   }
 
   /** True if this Block has no children. */

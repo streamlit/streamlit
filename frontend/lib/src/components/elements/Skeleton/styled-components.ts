@@ -17,7 +17,7 @@
 import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
-const pulseAnimation = keyframes`
+export const pulseAnimation = keyframes`
   0%, 100% {
     opacity: 0.5;
   }

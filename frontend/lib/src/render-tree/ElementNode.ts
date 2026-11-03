@@ -40,6 +40,13 @@ export class ElementNode implements AppNode {
   // The hash of this element's payload for content-based deduplication.
   public readonly elementHash?: string
 
+  /**
+   * A skeleton from the current run that is waiting for this slot's new
+   * content. This node is the previous run's content, which stays mounted and
+   * is covered by the skeleton after a grace period.
+   */
+  public readonly pendingSkeleton?: ElementNode
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -47,7 +54,8 @@ export class ElementNode implements AppNode {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    pendingSkeleton?: ElementNode
   ) {
     this.element = element
     this.metadata = metadata
@@ -55,6 +63,20 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
+    this.pendingSkeleton = pendingSkeleton
+  }
+
+  /** Return a copy of this node that waits for content under `skeleton`. */
+  public withPendingSkeleton(skeleton: ElementNode): ElementNode {
+    return new ElementNode(
+      this.element,
+      this.metadata,
+      this.scriptRunId,
+      this.activeScriptHash,
+      this.fragmentId,
+      this.elementHash,
+      skeleton
+    )
   }
 
   /**

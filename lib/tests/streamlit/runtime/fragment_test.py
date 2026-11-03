@@ -35,6 +35,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementKey,
     StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -2850,3 +2851,105 @@ def test_fragment_identity_different_definitions_diverge() -> None:
     )
     assert first.definition_id != second.definition_id
     assert first.fragment_id != second.fragment_id
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_parallel_fragment_defers_start_from_script_thread(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """A parallel fragment called by the script thread starts after the script."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.shared = SharedRunState()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> None:
+        pass
+
+    my_parallel_fragment()
+
+    assert mock_coordinator.submit.call_args.kwargs["defer"] is True
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_nested_parallel_fragment_starts_immediately(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """A parallel fragment dispatched by a worker isn't deferred."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.shared = SharedRunState()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize(is_parallel_worker=True)
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> None:
+        pass
+
+    my_parallel_fragment()
+
+    assert mock_coordinator.submit.call_args.kwargs["defer"] is False
+
+
+class FragmentLoadingSkeletonTest(DeltaGeneratorTestCase):
+    """Tests for ``@st.fragment(loading="skeleton")``."""
+
+    def _block_messages(self) -> list:
+        return [
+            msg
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta") and msg.delta.HasField("add_block")
+        ]
+
+    def test_loading_skeleton_renders_into_loading_block(self) -> None:
+        """The fragment's container carries the skeleton and receives the body."""
+        slot_flags: list[bool] = []
+
+        @st.fragment(loading="skeleton")
+        def body() -> None:
+            slot_flags.append(ThreadState.get().in_skeleton_slot)
+            st.markdown("Loaded")
+
+        body()
+
+        block_msg = self._block_messages()[0]
+        assert block_msg.delta.add_block.HasField("loading")
+        assert block_msg.delta.add_block.allow_empty
+        markdown_msg = self.get_message_from_queue()
+        assert list(markdown_msg.metadata.delta_path) == [
+            *block_msg.metadata.delta_path,
+            0,
+        ]
+        assert slot_flags == [True]
+        assert not ThreadState.get().in_skeleton_slot
+
+    def test_fragment_without_loading_uses_plain_container(self) -> None:
+        """Without ``loading``, the fragment's container has no skeleton."""
+        slot_flags: list[bool] = []
+
+        @st.fragment
+        def body() -> None:
+            slot_flags.append(ThreadState.get().in_skeleton_slot)
+            st.markdown("Loaded")
+
+        body()
+
+        assert not self._block_messages()[0].delta.add_block.HasField("loading")
+        assert slot_flags == [False]
+
+    def test_invalid_loading_value_raises(self) -> None:
+        """An unsupported ``loading`` value is rejected when decorating."""
+        with pytest.raises(StreamlitValueError):
+            st.fragment(loading="spinner")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]

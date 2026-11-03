@@ -70,6 +70,12 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   }
 
   visitBlockNode(node: BlockNode): AppNode | undefined {
+    // No new content replaced the skeleton this run, so the skeleton takes
+    // over the slot from the previous run's content.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
+    }
+
     let clearStaleNodeVisitor: ClearStaleNodeVisitor | null = null
 
     if (!this.isFragmentRun) {
@@ -147,6 +153,12 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     // at the same delta path.
     if (node.element.type === "toast") {
       return node
+    }
+
+    // No new content replaced the skeleton this run, so the skeleton takes
+    // over the slot from the previous run's content.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
     }
 
     if (this.isFragmentRun) {

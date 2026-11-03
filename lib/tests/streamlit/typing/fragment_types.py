@@ -72,8 +72,27 @@ if TYPE_CHECKING:
 
     assert_type(parallel_fragment(), list[int])
 
+    # With a loading skeleton
+    @st.fragment(parallel=True, loading="skeleton")
+    def loading_fragment() -> None:
+        pass
+
+    assert_type(loading_fragment(), None)
+
+    # With loading=None (default)
+    @st.fragment(loading=None)
+    def fragment_no_loading() -> int:
+        return 1
+
+    assert_type(fragment_no_loading(), int)
+
+    # An unsupported loading value is rejected
+    @st.fragment(loading="spinner")  # type: ignore[call-overload, untyped-decorator]  # ty: ignore[invalid-argument-type]
+    def fragment_bad_loading() -> None:
+        pass
+
     # With all parameters
-    @st.fragment(run_every=10, parallel=False, key="dashboard")
+    @st.fragment(run_every=10, parallel=False, key="dashboard", loading="skeleton")
     def full_fragment() -> bool:
         return True
 

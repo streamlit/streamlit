@@ -16,6 +16,7 @@
 
 import type { CSSProperties } from "react"
 
+import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -25,6 +26,7 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
+import { pulseAnimation } from "~lib/components/elements/Skeleton/styled-components"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -78,6 +80,11 @@ interface StyledElementContainerProps {
   minHeight?: React.CSSProperties["minHeight"]
   maxHeight?: React.CSSProperties["maxHeight"]
   contain?: React.CSSProperties["contain"]
+  /**
+   * Whether a skeleton waits to replace this element's content. The content
+   * keeps its full opacity so the skeleton overlay on top isn't faded with it.
+   */
+  hasPendingSkeleton?: boolean
 }
 
 export const StyledSpace = styled.div({
@@ -103,6 +110,7 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
     minHeight,
     maxHeight,
     contain,
+    hasPendingSkeleton,
   }) => ({
     width,
     height,
@@ -139,11 +147,23 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       marginBottom: `-${theme.spacing.xs}`,
     },
 
-    ...(isStale && elementType !== "skeleton" && STALE_STYLES),
+    ...(isStale &&
+      elementType !== "skeleton" &&
+      hasPendingSkeleton !== true &&
+      STALE_STYLES),
     ...(elementType === "empty"
       ? {
           // Use display: none for empty elements to avoid the flexbox gap.
           display: "none",
+        }
+      : {}),
+    ...(elementType === "spinner"
+      ? {
+          // A spinner shown as a skeleton's label renders nothing in its own
+          // slot, which must not add a flexbox gap either.
+          "&:empty": {
+            display: "none",
+          },
         }
       : {}),
     ...(elementType === "space"
@@ -299,6 +319,11 @@ export interface StyledFlexContainerBlockProps {
    * (from `overflow`) instead of the `overflow` shorthand.
    */
   overflowX?: React.CSSProperties["overflowX"]
+  /**
+   * Whether the block can show a skeleton over its content. It then becomes
+   * the containing block of the absolutely positioned skeleton overlay.
+   */
+  $isSkeletonSlot?: boolean
 }
 
 export const StyledFlexContainerBlock =
@@ -315,6 +340,7 @@ export const StyledFlexContainerBlock =
       justify,
       overflow,
       overflowX,
+      $isSkeletonSlot = false,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -333,6 +359,7 @@ export const StyledFlexContainerBlock =
         alignItems: getAlignItems(align),
         justifyContent: getJustifyContent(justify),
         flexWrap: $wrap ? "wrap" : "nowrap",
+        ...($isSkeletonSlot && { position: "relative" }),
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
@@ -422,3 +449,81 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     maxHeight,
   })
 )
+
+/**
+ * Delay before a skeleton covers content from a previous run. Matches the delay
+ * of the stale fade, so a fast rerun replaces the content before either shows.
+ */
+export const PENDING_SKELETON_DELAY_MS = 500
+
+const pendingSkeletonReveal = keyframes`
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+`
+
+/**
+ * Covers a slot's previous content once the grace period has passed. The
+ * opaque background hides the content, which stays mounted underneath.
+ */
+export const StyledPendingSkeletonOverlay = styled.div(({ theme }) => ({
+  position: "absolute",
+  inset: 0,
+  zIndex: theme.zIndices.skeletonOverlay,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.bgColor,
+  opacity: 0,
+  visibility: "hidden",
+  animation: `${pendingSkeletonReveal} 150ms ease-in ${PENDING_SKELETON_DELAY_MS}ms forwards`,
+}))
+
+const SKELETON_PULSE_STYLES = {
+  animation: `${pulseAnimation} 750ms ease-in infinite`,
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+  },
+}
+
+/** The pulsing skeleton surface of a placeholder. */
+export const StyledSkeletonSurface = styled.div(({ theme }) => ({
+  position: "absolute",
+  inset: 0,
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.darkenedBgMix15,
+  ...SKELETON_PULSE_STYLES,
+}))
+
+interface StyledLoadingBlockSkeletonProps {
+  height: CSSProperties["height"]
+}
+
+/** The skeleton a loading block shows while it has no content to keep. */
+export const StyledLoadingBlockSkeleton =
+  styled.div<StyledLoadingBlockSkeletonProps>(({ height }) => ({
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height,
+    flexShrink: 0,
+  }))
+
+/** Text shown on a skeleton, taken from a spinner in its slot. */
+export const StyledSkeletonLabel = styled.div(({ theme }) => ({
+  position: "relative",
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  padding: theme.spacing.lg,
+  textAlign: "center",
+}))

@@ -94,3 +94,22 @@ with st.form("skeleton_form"):
     submitted = st.form_submit_button("Submit")
     if submitted:
         placeholder.success("Form submitted!")
+
+
+# Skeleton over a cached report: covers the previous version on a cache miss.
+st.subheader("Skeleton keeps previous content")
+
+
+@st.cache_data(show_spinner="Loading report...")
+def load_report(version: int) -> str:
+    time.sleep(1.5)
+    return f"Report version {version}"
+
+
+if st.toggle("Show cached report"):
+    if st.button("Load next report version"):
+        st.session_state.report_version = st.session_state.get("report_version", 0) + 1
+    st.button("Rerun skeleton report")
+    with st.container(key="cached_skeleton_container"):
+        with st.skeleton(height=80):
+            st.write(load_report(st.session_state.get("report_version", 0)))
