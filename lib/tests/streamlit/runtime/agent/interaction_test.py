@@ -42,8 +42,9 @@ if TYPE_CHECKING:
 
 def _new_session(run_id: str, fragment_ids: list[str] | None = None) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.new_session.script_run_id = run_id
-    msg.new_session.fragment_ids_this_run.extend(fragment_ids or [])
+    msg.new_session.SetInParent()
+    msg.metadata.run.script_run_id = run_id
+    msg.metadata.run.fragment_ids.extend(fragment_ids or [])
     return msg
 
 
@@ -311,7 +312,7 @@ def test_client_keeps_the_latest_message_per_type_and_session_event() -> None:
     new_sessions = [msg for msg in messages if msg.HasField("new_session")]
     finishes = [msg for msg in messages if msg.HasField("script_finished")]
     events = [msg for msg in messages if msg.HasField("session_event")]
-    assert [msg.new_session.script_run_id for msg in new_sessions] == ["r2"]
+    assert [msg.metadata.run.script_run_id for msg in new_sessions] == ["r2"]
     assert [msg.script_finished for msg in finishes] == [
         ForwardMsg.FINISHED_WITH_COMPILE_ERROR
     ]
@@ -364,6 +365,39 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
         client.write_forward_msg(_new_session("r1"))
 
     log_exception.assert_called_once()
+
+
+def test_client_new_session_without_run_identity_starts_full_run_with_empty_id() -> (
+    None
+):
+    """A `new_session` missing its run identity logs a warning and starts a
+    full run with an empty run ID, so the previous run's deltas go stale.
+    """
+    client = interaction.AgentSessionClient()
+    no_identity = ForwardMsg()
+    no_identity.new_session.SetInParent()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "first"),
+    )
+
+    with (
+        patch.object(interaction._LOGGER, "warning") as log_warning,
+        patch.object(interaction._LOGGER, "exception") as log_exception,
+    ):
+        client.write_forward_msg(no_identity)
+
+    log_warning.assert_called_once()
+    log_exception.assert_not_called()
+    _write_all(
+        client,
+        _markdown([0, 1], "second"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+    )
+    new_sessions = [msg for msg in client.messages if msg.HasField("new_session")]
+    assert [msg.HasField("metadata") for msg in new_sessions] == [False]
+    assert _bodies(client) == ["second"]
 
 
 def test_request_context_withholds_credentials_and_cookies() -> None:

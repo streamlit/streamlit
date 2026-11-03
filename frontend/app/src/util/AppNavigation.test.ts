@@ -75,8 +75,6 @@ function generateNewSession(changes = {}): NewSession {
     pageScriptHash: "page_script_hash",
     mainScriptHash: "main_script_hash",
     mainScriptPath: "path/to/file.py",
-    scriptRunId: "script_run_id",
-    fragmentIdsThisRun: [],
     ...changes,
   })
 }

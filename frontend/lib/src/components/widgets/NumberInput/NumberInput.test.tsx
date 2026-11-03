@@ -2166,11 +2166,8 @@ describe("NumberInput widget", () => {
 
       expect(input).toHaveDisplayValue("10")
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-      expect(setIntValueSpy).toHaveBeenCalledWith(
-        props.element.id,
-        10,
-        expect.anything()
-      )
+      // The default fallback equals the committed value, so nothing is written.
+      expect(setIntValueSpy).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -2256,10 +2253,11 @@ describe("NumberInput widget", () => {
 
       const input = screen.getByTestId("stNumberInputField")
       await user.type(input, "5")
+      await user.click(document.body)
       await user.clear(input)
       await user.click(document.body)
 
-      expect(setIntValueSpy).toHaveBeenCalledWith(
+      expect(setIntValueSpy).toHaveBeenLastCalledWith(
         props.element.id,
         null,
         expect.anything()
@@ -2423,13 +2421,15 @@ describe("NumberInput widget", () => {
       expect(input).not.toHaveAttribute("aria-required")
 
       await user.type(input, "3")
+      await user.click(document.body)
       await user.clear(input)
       await user.click(document.body)
-      expect(setIntValueSpy).toHaveBeenCalledWith(
+      expect(setIntValueSpy).toHaveBeenLastCalledWith(
         props.element.id,
         null,
         expect.anything()
       )
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     })
 
     it("does not resurrect a leftover required error when required is turned back on", async () => {
@@ -2935,6 +2935,8 @@ describe("on_change='ignore' mode", () => {
     const input = screen.getByTestId("stNumberInputField")
     await user.type(input, "42")
     expect(setIntValueSpy).not.toHaveBeenCalled()
+    // Commit 42 first: clearing an uncommitted edit over null is not a change.
+    await user.keyboard("{Enter}")
 
     await user.click(screen.getByTestId("stNumberInputClearButton"))
 
@@ -2979,5 +2981,128 @@ describe("on_change='ignore' mode", () => {
     )
     await flushScheduledRerun()
     expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
+
+describe("NumberInput no-op interactions", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [250],
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  it.each([
+    ["Tab", "5"],
+    ["Enter", "5"],
+    ["Tab", "05"],
+  ])(
+    "does not commit or rerun when %s commits a retyped %s over 5",
+    async (key, typed) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+      const props = getIntProps({ default: 5 }, { widgetMgr })
+      const setIntValueSpy = vi.spyOn(widgetMgr, "setIntValue")
+      render(<NumberInput {...props} />)
+      setIntValueSpy.mockClear()
+
+      const input = screen.getByTestId("stNumberInputField")
+      await user.clear(input)
+      await user.type(input, typed)
+      await user.keyboard(`{${key}}`)
+
+      expect(input).toHaveValue(5)
+      expect(setIntValueSpy).not.toHaveBeenCalled()
+      await flushScheduledRerun()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it("does not commit or rerun a float edit that parses to the committed number", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getFloatProps({ default: 5 }, { widgetMgr })
+    const setDoubleValueSpy = vi.spyOn(widgetMgr, "setDoubleValue")
+    render(<NumberInput {...props} />)
+    setDoubleValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "5.0")
+    await user.keyboard("{Enter}")
+
+    expect(setDoubleValueSpy).not.toHaveBeenCalled()
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not commit or rerun Escape on an empty clearable field", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getIntProps({ default: null }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(widgetMgr, "setIntValue")
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.click(input)
+    await user.keyboard("{Escape}")
+
+    expect(input).toHaveDisplayValue("")
+    expect(setIntValueSpy).not.toHaveBeenCalled()
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("commits and reruns an edit that changes the number", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getIntProps({ default: 5 }, { widgetMgr })
+    const setIntValueSpy = vi.spyOn(widgetMgr, "setIntValue")
+    render(<NumberInput {...props} />)
+    setIntValueSpy.mockClear()
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "6")
+    await user.tab()
+
+    expect(setIntValueSpy).toHaveBeenCalledWith(props.element.id, 6, {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("still submits the form on Enter when the number is unchanged", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const submitFormSpy = vi.spyOn(widgetMgr, "submitForm")
+    const props = getIntProps({ default: 5, formId: "form" }, { widgetMgr })
+    render(<NumberInput {...props} />)
+
+    const input = screen.getByTestId("stNumberInputField")
+    await user.clear(input)
+    await user.type(input, "5")
+    await user.keyboard("{Enter}")
+
+    expect(submitFormSpy).toHaveBeenCalledWith("form", undefined)
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.getIntValue(props.element)).toBe(5)
   })
 })

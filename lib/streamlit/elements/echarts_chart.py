@@ -1143,7 +1143,9 @@ class EChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened unless you set
             ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
-            note above).
+            note above). Time, value, and log axes hide tick labels that would
+            overlap. To show every label on an axis, add
+            ``"hideOverlap": False`` to its ``axisLabel``.
 
             On a time ``xAxis`` or ``yAxis``, the axis tooltip header and axis
             pointer label show a midnight value as a date (for example

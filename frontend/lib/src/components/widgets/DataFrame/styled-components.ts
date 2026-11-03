@@ -32,7 +32,21 @@ export const StyledResizableContainer =
     ({ theme, disableResize, minHeight }) => ({
       position: "relative",
       display: disableResize ? "flex" : "inline-block",
+      // Top-align this inline-block. Baseline alignment leaves room for font
+      // descenders in the parent's line box, so an auto-height parent renders
+      // taller than the grid (default height, height="content", and a chart's
+      // "Show data" table).
+      verticalAlign: "top",
       height: "100%",
+
+      "@media print": {
+        // The grid keeps the pixel width it measured on screen, and its
+        // canvas paints that full width. Clip it to its container, so a grid
+        // wider than the printed card does not spill past the border.
+        // `clip` does not make a scroll container, unlike `hidden`.
+        maxWidth: "100%",
+        overflow: "clip",
+      },
 
       "& .stDataFrameGlideDataEditor": {
         height: "100%",

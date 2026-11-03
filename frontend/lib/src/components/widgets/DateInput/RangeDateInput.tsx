@@ -151,14 +151,25 @@ interface RangeDateInputProps {
 }
 
 /**
- * Watches `RangeCalendarStateContext`'s `anchorDate` and fires `onAnchorSelect`
- * once per null→non-null transition (first click of a new selection).
- * `RangeCalendar`'s `onChange` only fires after a *complete* range (second
- * click), so this provides the "one date chosen so far" signal.
+ * Watches `RangeCalendarStateContext`'s `anchorDate` and calls `onAnchorSelect`
+ * when the user picks the first day of a new range. `RangeCalendar`'s
+ * `onChange` only fires after a *complete* range (second click), so this
+ * provides the "one date chosen so far" signal.
  *
- * Also seeds `anchorDate` on mount for partial values (start without end),
- * so reopening the popover lets the next click complete the range rather than
- * starting fresh.
+ * While a partial value (start without end) is shown, the watcher keeps
+ * `seedAnchor` as the anchor so the next click completes the range:
+ * - It seeds the anchor on mount, so reopening the popover continues the range.
+ * - It restores the anchor after React Aria drops it. `commitBehavior="reset"`
+ *   drops the anchor when focus leaves the calendar (including into the
+ *   portaled month/year pickers) or a press is released anywhere but one of
+ *   the calendar's buttons (day cells, prev/next arrows, header triggers).
+ *
+ * The watcher reports a mouse or touch press only after React Aria's anchor
+ * settles:
+ * - Pressing a range endpoint anchors on the opposite end (for drag-to-adjust)
+ *   until the `click` that ends the press, which arrives after `isDragging`
+ *   turns false. The watcher waits for the anchor to reach the pressed day.
+ * - A drag that completes the range clears the anchor, so nothing is reported.
  */
 function AnchorDateWatcher({
   seedAnchor,
@@ -173,15 +184,37 @@ function AnchorDateWatcher({
   const stateRef = useRef(state)
   stateRef.current = state
   const anchorDate = state?.anchorDate ?? null
+  const isDragging = state?.isDragging ?? false
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const prevSeedRef = useRef<CalendarDate | null>(null)
+  // Day the current mouse or touch press started on. Cleared once React
+  // Aria's anchor settles.
+  const pressedDateRef = useRef<CalendarDate | null>(null)
 
   useEffect(() => {
     const calendarState = stateRef.current
-    // (Re-)seed when seedAnchor changes to a new non-null value (handles
-    // both initial mount and user editing the start field while the calendar
-    // is open with displayEnd === null).
-    if (seedAnchor && !datesEqual(seedAnchor, prevSeedRef.current)) {
+    if (isDragging) {
+      // React Aria sets `focusedDate` to the pressed day when the press
+      // starts. Keep that first value: `focusedDate` follows the pointer
+      // during a drag.
+      pressedDateRef.current ??= calendarState?.focusedDate ?? null
+      return
+    }
+    if (pressedDateRef.current) {
+      // Wait for the anchor to reach the pressed day. A cleared anchor means
+      // the drag completed the range or was released outside.
+      if (anchorDate && !datesEqual(anchorDate, pressedDateRef.current)) {
+        return
+      }
+      pressedDateRef.current = null
+    }
+    // Reapply `seedAnchor` when the calendar opens, the start field changes
+    // while no end is set, or React Aria has cleared the anchor
+    // (`commitBehavior="reset"`).
+    if (
+      seedAnchor &&
+      (!anchorDate || !datesEqual(seedAnchor, prevSeedRef.current))
+    ) {
       prevSeedRef.current = seedAnchor
       prevAnchorRef.current = seedAnchor
       calendarState?.setAnchorDate(seedAnchor)
@@ -197,7 +230,7 @@ function AnchorDateWatcher({
       onAnchorSelect(anchorDate)
     }
     prevAnchorRef.current = anchorDate
-  }, [anchorDate, onAnchorSelect, seedAnchor])
+  }, [anchorDate, isDragging, onAnchorSelect, seedAnchor])
 
   return null
 }

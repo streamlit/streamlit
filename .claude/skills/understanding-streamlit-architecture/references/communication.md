@@ -19,7 +19,7 @@ Compile with: `make protobuf`
 ```protobuf
 message ForwardMsg {
   string hash = 1;                    // Unique hash for caching
-  ForwardMsgMetadata metadata = 2;    // delta_path, active_script_hash, agent_props
+  ForwardMsgMetadata metadata = 2;    // delta_path, active_script_hash, agent_props, run
 
   oneof type {
     NewSession new_session = 4;
@@ -49,9 +49,16 @@ message ForwardMsgMetadata {
   repeated uint32 delta_path = 2;
   string active_script_hash = 4;
   optional string agent_props = 5;    // JSON command description
+  RunIdentity run = 6;                // script_run_id, fragment_ids
   // ... more fields
 }
 ```
+
+**Run identity** (`metadata.run`: run ID + fragment IDs):
+- Set on `new_session` and `script_finished`; a `script_finished` omits it when the backend can't tell which run finished.
+- `ScriptRunner` creates one `RunDescriptor` (`lib/streamlit/runtime/scriptrunner_utils/run_descriptor.py`) per run and sends it on the run's start and finish events; `AppSession` copies it onto the messages.
+- The frontend reads it via `frontend/app/src/util/runIdentity.ts`.
+- Deltas carry none: they belong to the most recent `new_session`.
 
 **Semantics**:
 - Backend sets `metadata.active_script_hash` from `ScriptRunContext.active_script_hash`

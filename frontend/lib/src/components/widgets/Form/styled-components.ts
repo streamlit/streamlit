@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  PRINT_CHART_CARD_SELECTOR,
+  printKeepTogetherRules,
+} from "~lib/components/shared/printPageBreak"
+
 export const StyledFormSubmitContent = styled.div({
   display: "flex",
 })
@@ -32,6 +37,9 @@ export const StyledForm = styled.div<StyledFormProps>(
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
       padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      "@media print": {
+        [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+      },
     }),
     width: "100%",
     // A stretch form fills its layout wrapper through flex. An auto height

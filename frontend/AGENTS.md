@@ -26,12 +26,17 @@
 - Leverage all of best practices of React 18.
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
+- **Lazy-load large dependencies**: When a component needs a large library (roughly 100 kB or more) only in some cases, such as an optional chart or an overlay opened on click, load it with `React.lazy` or a dynamic `import()` at that point instead of a static import. Otherwise every page that renders the component downloads it. Reserve the content's space while it loads, and skip the work if the component unmounts first. See `ArrowVegaLiteChart/loadVegaEmbed.ts` and `StreamlitMarkdown/MermaidChart.tsx`.
 - Ensure referential stability by leveraging React Hooks.
 - Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`.
   - ✅ `const inputRef = useRef<HTMLInputElement>(null)`
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
+- **Commit widget values only when they change**: A non-trigger widget (one whose value persists across reruns, unlike buttons or `st.chat_input`) must compare the new value with its committed value (the one `WidgetStateManager` would send) before committing. Outside forms, every user commit (`setValueWithSource` / `widgetMgr.set*Value` with `fromUser: true`) schedules a rerun unless `on_change="ignore"`, and neither `useBasicWidgetState` nor `WidgetStateManager` skips unchanged values.
+  - UI libraries often fire change callbacks without a change: React Aria on close, blur, thumb press, or a keyboard shortcut at a bound, and Plotly on double-click.
+  - Keep deliberate re-commits, such as `TextInput` resyncing after it dropped an incoming `setValue`.
+  - Follow `Selectbox` (`shared/Dropdown/Selectbox.tsx`), `ButtonGroup`, and `Slider`, and cover each guarded path with a unit test asserting that the no-op interaction does not call `sendRerunBackMsg`.
 - **Keep elements self-contained**: An element's component, styled components, hooks, helpers, and tests live in its folder under `lib/src/components/elements/<Element>/` or `lib/src/components/widgets/<Widget>/` (e.g., `Slider/sliderStep.ts`). Move a helper to a shared module once a second element needs it.
   - Keep shared code element-agnostic: avoid adding `element.type === "..."` checks or single-element helpers to `components/core/` (`Block`, layout wrappers), `render-tree/`, `WidgetStateManager`, `App.tsx`, or `util/`. When shared code genuinely needs element-specific behavior, keep that touch point small instead of adding an abstraction to avoid it.
   - Avoid applying element-specific CSS from shared code through class names, either by adding a class there for styling or by selecting an element's class (as `:has(> .stPageLink)` in `Block/styled-components.ts` does). Style the element in its own `styled-components.ts`, or set container layout from its `ElementNodeRenderer` case through `ElementContainerConfig` (`styleOverrides` covers layout properties such as width, height, and overflow, not margins). Use a class-name selector in shared code only when those approaches are not feasible.

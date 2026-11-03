@@ -99,7 +99,7 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.94",
+  "ty==0.0.95",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.17.3",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -133,7 +133,8 @@ dev = [
 # Test dependencies
 test = [
   # Testing infrastructure dependencies:
-  # pytest >= 9.1.0 is causing issues and is not yet supported.
+  # pytest >= 9.1.0 is causing issues and is not yet supported. The same cap
+  # is repeated in .github/workflows/meta-skill-discovery.yml.
   "pytest<9.1.0",
   "pytest-cov",
   "hypothesis",

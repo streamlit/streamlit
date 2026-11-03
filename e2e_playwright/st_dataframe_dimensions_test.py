@@ -79,6 +79,15 @@ def test_data_frame_with_different_sizes(app: Page):
 
         expect(element).to_have_css("height", expected_height)
 
+    # Must NOT happen: the element container of the default-height dataframe
+    # (index 0) or the content-height dataframe (index 20) adds a gap below
+    # the grid.
+    element_containers = app.get_by_test_id("stElementContainer").filter(
+        has=app.get_by_test_id("stDataFrame")
+    )
+    expect(element_containers.nth(0)).to_have_css("height", "400px")
+    expect(element_containers.nth(20)).to_have_css("height", "563px")
+
 
 def test_data_frame_resizing(app: Page):
     """Test that st.dataframe should resize as expected."""
