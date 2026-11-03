@@ -43,8 +43,8 @@ class RunDescriptor:
     script_run_id : str
         A unique ID for this run.
     fragment_ids : tuple[str, ...]
-        The fragments this run reruns, parents before nested ones. Empty for a
-        full-app run.
+        Fragments this run reruns, with parent fragments before nested ones.
+        Empty for a full-app run.
     """
 
     script_run_id: str

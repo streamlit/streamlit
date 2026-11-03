@@ -19,7 +19,10 @@ import type { ForwardMsgMetadata } from "@streamlit/protobuf"
 /** The ID of one script run and the fragments it reruns. */
 export interface RunIdentity {
   scriptRunId: string
-  /** Fragments this run reruns, ancestors first. Empty means a full-app run. */
+  /**
+   * Fragments this run reruns, with parent fragments before nested ones.
+   * Empty for a full-app run.
+   */
   fragmentIds: string[]
 }
 
