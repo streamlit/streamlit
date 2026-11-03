@@ -93,10 +93,10 @@ export const StyledErrorIcon = styled.div(({ theme }) => ({
 export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 /**
- * Start icon, overlaid on the input's widened left padding (`$hasIcon` on
- * StyledInput). Matches the st.text_input / st.number_input start icon in
- * size, inset, and color, and ignores pointer events so a click on it opens
- * the dropdown like a click on the value.
+ * Decorative start icon. It ignores pointer events so a click on it opens
+ * the dropdown, and it sits over the input's left padding (see `$hasIcon` on
+ * StyledInput). Size, inset, and color match the st.text_input and
+ * st.number_input start icon.
  */
 export const StyledStartEnhancer = styled.div<{ $isMaterialIcon: boolean }>(
   ({ theme, $isMaterialIcon }) => ({

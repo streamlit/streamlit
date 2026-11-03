@@ -782,11 +782,11 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
-            # Treat the provided key as the main identity. With a key, only
-            # accept_new_options changes the ID: it can invalidate the current
-            # selection and is complex to support. Every other kwarg below,
-            # such as `required` or `icon`, changes the ID of unkeyed widgets
-            # only, since changing it cannot make a stored selection illegal.
+            # A user key is the widget identity. With a key, only
+            # accept_new_options changes the ID, because it can invalidate the
+            # current selection and is complex to support. The other kwargs
+            # below, such as `required` and `icon`, change the ID of unkeyed
+            # widgets only.
             key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
