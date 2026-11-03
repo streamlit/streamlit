@@ -18,9 +18,7 @@
 `GET /_stcore/agent/openapi.json`, which describes it.
 
 The tests call the routes over HTTP with `page.request`, which sends no
-`Origin` header, like the programmatic clients the route serves. They open
-the app before calling the route so `page.request` sends the browser
-context's cookies.
+`Origin` header, like the programmatic clients the route serves.
 """
 
 from __future__ import annotations
