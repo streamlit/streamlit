@@ -1,15 +1,15 @@
 # Advanced server configuration with st.App
 
-Use `st.App` when a normal Streamlit script needs ASGI-level composition: custom HTTP routes, middleware, startup/shutdown hooks, programmatic secrets, custom exception handling, or mounting with another ASGI framework.
+Use `st.App` when a Streamlit app needs ASGI-level composition: custom HTTP routes, middleware, startup/shutdown hooks, programmatic secrets, custom exception handling, or mounting with another ASGI framework. The first argument can be a UI script path or a synchronous callable that contains the app body.
 
-Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, keep the UI in a normal Streamlit script and launch the `st.App` wrapper with `streamlit run asgi_app.py` when possible.
+Do not create an ASGI wrapper for a simple app that only needs Streamlit UI and ordinary Streamlit configuration. When the app does need advanced server features, prefer a script-path wrapper (`st.App("streamlit_app.py")`) launched with `streamlit run asgi_app.py`, or a same-file callable entrypoint (`st.App(main)`) when you want the UI and launcher in one module.
 
 ## Contents
 
 - [When to use it](#when-to-use-it)
 - [Basic ASGI wrapper](#basic-asgi-wrapper)
 - [Direct Python launchers with App.run()](#direct-python-launchers-with-apprun)
-- [Script paths](#script-paths)
+- [Script paths and callable entrypoints](#script-paths-and-callable-entrypoints)
 - [Custom routes](#custom-routes)
 - [Middleware](#middleware)
 - [Lifespan hooks](#lifespan-hooks)
@@ -109,14 +109,20 @@ if __name__ == "__main__":
     app.run()
 ```
 
-Use this pattern only for launcher modules such as `app = st.App("streamlit_app.py")`.
-Avoid same-file launchers like `app = st.App(__file__)`: Streamlit executes app scripts
-in a fake `__main__` module, so an `if __name__ == "__main__": app.run()` block inside
-the Streamlit script can run again during app execution.
+Use this pattern for launcher modules such as `app = st.App("streamlit_app.py")`,
+or for same-file callable entrypoints such as `app = st.App(main)` (see below).
+Avoid same-file path launchers like `app = st.App(__file__)`: Streamlit executes
+file-based entrypoints in a fake `__main__` module, so an
+`if __name__ == "__main__": app.run()` block inside that script can run again
+during app execution.
 
-## Script paths
+## Script paths and callable entrypoints
 
-The `script_path` argument points to the Streamlit UI script, not the ASGI wrapper.
+The first `st.App` argument is either:
+- A path to the Streamlit UI script (not the ASGI wrapper), or
+- A synchronous callable that contains the app body
+
+### Script paths
 
 Relative paths are resolved differently depending on how the app starts:
 - With `streamlit run asgi_app.py`, relative paths resolve from the script passed to `streamlit run`.
@@ -126,6 +132,54 @@ Relative paths are resolved differently depending on how the app starts:
 - With `uvicorn asgi_app:app`, relative paths resolve from the current working directory.
 
 Use an absolute path if the wrapper may be imported from different working directories.
+
+### Callable entrypoints
+
+Pass a zero-argument synchronous function (or other callable) to keep the UI and
+launcher in one file:
+
+```python
+# app.py
+import streamlit as st
+
+
+def main() -> None:
+    st.title("Dashboard")
+    st.write("This app runs from a callable entrypoint.")
+
+
+app = st.App(main)
+
+if __name__ == "__main__":
+    app.run()
+```
+
+Run with `streamlit run app.py`, `python app.py`, or `uv run app.py`.
+
+Callable requirements and behavior:
+- Must be invokable without arguments. Async and generator callables are not
+  supported.
+- Must be defined in a `.py` file. `static/` files and source watching use
+  that file, preferring the app file over installed packages and decorators
+  such as `@st.fragment`. A decorator that does not expose the app function
+  keeps the decorator's file. The callable's directory is also prepended to
+  `sys.path` during runs, so a package module can be imported by its filename
+  as well as its package path.
+- Script-level `config.toml` and `secrets.toml` come from the launched file
+  under `streamlit run` and `App.run()` (`python app.py`). They come from the
+  callable source only when no launched file is set, such as under uvicorn.
+- Streamlit invokes the callable once per full rerun, and the script health
+  check invokes that same retained object when the check is enabled. Locals
+  are created afresh. Closure cells, module globals, and callable-instance
+  attributes are shared across reruns, sessions, and health checks, so those
+  updates can race. Use `st.session_state` for per-session values and
+  synchronize any other shared mutation.
+- Streamlit retains the original callable object for the lifetime of the `App`.
+  Restart the process after changing its definition. Saving the source file
+  can still rerun that original object until the process restarts.
+- Create `st.Page` objects inside the entrypoint. A page created while the
+  module is imported has no script run. `st.navigation`, `st.switch_page`,
+  `st.page_link`, and `Page.run()` reject it.
 
 ## Custom routes
 
@@ -456,9 +510,10 @@ Return `True` from `on_script_error` only when the handler shows its own user-fa
 
 ## Limitations and cautions
 
-- Hosting multiple `App` instances with different `script_path` values in the same process is not supported.
+- Hosting multiple `App` instances with different source paths in the same process is not supported.
 - Lifespan hooks run once per process, not once per browser session.
-- Custom routes and middleware run in the ASGI server context; Streamlit widget APIs belong in the Streamlit script.
+- Custom routes and middleware run in the ASGI server context; Streamlit widget APIs belong in the Streamlit script or callable entrypoint.
+- Callable entrypoints are retained for the process lifetime; definition changes require a restart even when source watching triggers a rerun.
 
 ## References
 

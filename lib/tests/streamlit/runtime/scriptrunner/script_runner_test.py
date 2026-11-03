@@ -17,11 +17,14 @@
 from __future__ import annotations
 
 import asyncio
+import functools
+import logging
 import os
 import sys
 import threading
 import time
 import unittest
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
@@ -32,6 +35,7 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
+from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
@@ -59,6 +63,7 @@ from streamlit.runtime.scriptrunner import script_runner as script_runner_module
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_runner import (
     _clean_problem_modules,
+    _invoke_script_entrypoint,
     _log_if_error,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import (
@@ -74,11 +79,28 @@ from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Generator
 
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+
+
+@contextmanager
+def _installed_event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+    """Install a fresh loop and restore whatever loop the thread had before."""
+    try:
+        previous_loop: asyncio.AbstractEventLoop | None = asyncio.get_event_loop()
+    except RuntimeError:
+        previous_loop = None
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        yield loop
+    finally:
+        asyncio.set_event_loop(previous_loop)
+        loop.close()
+
 
 text_utf = "complete! 👨‍🎤"
 text_utf2 = "complete2! 👨‍🎤"
@@ -173,6 +195,351 @@ class ScriptRunnerTest(unittest.TestCase):
                 scriptrunner.start()
         finally:
             scriptrunner.join()
+
+    def test_callable_entrypoint_runs_on_full_rerun(self) -> None:
+        """Callable entrypoints run on full reruns without compiling the script path."""
+        call_count = 0
+        original_main_module = sys.modules["__main__"]
+
+        def main() -> None:
+            nonlocal call_count
+            call_count += 1
+            st.text(f"call {call_count}")
+            if call_count == 1:
+                st.rerun()
+
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        scriptrunner._script_cache.get_bytecode = MagicMock(
+            side_effect=AssertionError("callable entrypoint must not be compiled")
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert call_count == 2
+        self._assert_text_deltas(scriptrunner, ["call 2"])
+        scriptrunner._script_cache.get_bytecode.assert_not_called()
+        assert sys.modules["__main__"] is original_main_module
+
+    def test_callable_entrypoint_rejects_wrapped_async_return(self) -> None:
+        """Wrappers that return a coroutine are rejected at invocation."""
+
+        def deco(fn: Any) -> Any:
+            @functools.wraps(fn)
+            def wrapper() -> Any:
+                return fn()
+
+            return wrapper
+
+        @deco
+        async def main() -> None:
+            pass
+
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        exception_messages = [
+            element.exception.message
+            for element in scriptrunner.elements()
+            if element.WhichOneof("type") == "exception"
+        ]
+        assert any(
+            "awaitable or generator" in message for message in exception_messages
+        )
+
+    def test_invoke_script_entrypoint_closes_async_generator(self) -> None:
+        """Rejected async-generator returns run cleanup instead of leaking."""
+        closed = False
+        with _installed_event_loop():
+
+            async def agen() -> Any:
+                nonlocal closed
+                try:
+                    yield None
+                finally:
+                    await asyncio.sleep(0)
+                    closed = True
+
+            gen = agen()
+            try:
+                gen.__anext__().send(None)
+            except StopIteration:
+                pass
+
+            def entrypoint() -> Any:
+                return gen
+
+            with pytest.raises(
+                StreamlitAPIException, match="awaitable or generator"
+            ) as exc_info:
+                _invoke_script_entrypoint(entrypoint)
+
+            assert (
+                exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
+            )
+            assert closed is True
+            assert gen.ag_frame is None
+
+    def test_invoke_script_entrypoint_bounds_async_generator_cleanup(self) -> None:
+        """An async generator whose finally awaits forever does not stall the error."""
+        with _installed_event_loop():
+
+            async def agen() -> Any:
+                try:
+                    yield None
+                finally:
+                    await asyncio.sleep(30)
+
+            gen = agen()
+            try:
+                gen.__anext__().send(None)
+            except StopIteration:
+                pass
+
+            def entrypoint() -> Any:
+                return gen
+
+            started = time.monotonic()
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
+                _invoke_script_entrypoint(entrypoint)
+            assert time.monotonic() - started < 1
+            assert gen.ag_frame is None
+
+    def test_invoke_script_entrypoint_retrieves_async_generator_cleanup_error(
+        self,
+    ) -> None:
+        """A failing aclose() is retrieved so asyncio does not report it later."""
+        records: list[logging.LogRecord] = []
+        handler = logging.Handler()
+        handler.emit = records.append  # type: ignore[method-assign]
+        logger = logging.getLogger("streamlit.runtime.scriptrunner.script_runner")
+        previous_level = logger.level
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        try:
+            with _installed_event_loop():
+
+                async def agen() -> Any:
+                    try:
+                        yield None
+                    finally:
+                        raise RuntimeError("cleanup failed")
+
+                gen = agen()
+                try:
+                    gen.__anext__().send(None)
+                except StopIteration:
+                    pass
+
+                def entrypoint() -> Any:
+                    return gen
+
+                with pytest.raises(
+                    StreamlitAPIException, match="awaitable or generator"
+                ):
+                    _invoke_script_entrypoint(entrypoint)
+        finally:
+            logger.removeHandler(handler)
+            logger.setLevel(previous_level)
+
+        assert any(
+            record.exc_info is not None
+            and isinstance(record.exc_info[1], RuntimeError)
+            and "cleanup failed" in str(record.exc_info[1])
+            for record in records
+        )
+
+    def test_invoke_script_entrypoint_closes_unstarted_async_generator(self) -> None:
+        """An unstarted async generator is closed before the entrypoint error."""
+        with _installed_event_loop():
+
+            async def agen() -> Any:
+                yield None
+
+            gen = agen()
+
+            def entrypoint() -> Any:
+                return gen
+
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
+                _invoke_script_entrypoint(entrypoint)
+
+            assert gen.ag_frame is None
+
+    def test_invoke_script_entrypoint_raises_when_close_fails(self) -> None:
+        """A failing close() does not hide the entrypoint error."""
+
+        def gen() -> Any:
+            try:
+                yield None
+            finally:
+                raise RuntimeError("close failed")
+
+        generator = gen()
+        next(generator)
+
+        def entrypoint() -> Any:
+            return generator
+
+        with pytest.raises(
+            StreamlitAPIException, match="awaitable or generator"
+        ) as exc_info:
+            _invoke_script_entrypoint(entrypoint)
+
+        assert exc_info.value.error_id == "app-callable-returns-coroutine-or-generator"
+
+    def test_invoke_script_entrypoint_cancels_task(self) -> None:
+        """Cancelling a returned task runs its finally on the script loop."""
+        ran = False
+        cleaned = False
+        with _installed_event_loop() as loop:
+
+            async def work() -> None:
+                nonlocal ran, cleaned
+                try:
+                    ran = True
+                    await asyncio.sleep(10)
+                finally:
+                    cleaned = True
+
+            task = loop.create_task(work())
+            with pytest.raises(TimeoutError):
+                loop.run_until_complete(asyncio.wait_for(asyncio.shield(task), 0.01))
+            assert ran is True
+            assert cleaned is False
+
+            def entrypoint() -> Any:
+                return task
+
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
+                _invoke_script_entrypoint(entrypoint)
+
+            assert cleaned is True
+            assert task.cancelled()
+
+    def test_invoke_script_entrypoint_bounds_ignored_task_cancellation(self) -> None:
+        """A task that swallows cancellation does not block the entrypoint error."""
+        with _installed_event_loop() as loop:
+
+            async def work() -> None:
+                try:
+                    await asyncio.sleep(30)
+                except asyncio.CancelledError:
+                    await asyncio.sleep(30)
+
+            task = loop.create_task(work())
+            with pytest.raises(TimeoutError):
+                loop.run_until_complete(asyncio.wait_for(asyncio.shield(task), 0.01))
+
+            def entrypoint() -> Any:
+                return task
+
+            started = time.monotonic()
+            with pytest.raises(StreamlitAPIException, match="awaitable or generator"):
+                _invoke_script_entrypoint(entrypoint)
+            assert time.monotonic() - started < 1
+
+            task.get_coro().close()
+
+    def test_invoke_script_entrypoint_leaves_foreign_loop_task(self) -> None:
+        """A task on another loop is cancelled in place and not closed here."""
+        foreign_loop = asyncio.new_event_loop()
+        started = threading.Event()
+
+        async def work() -> None:
+            started.set()
+            await asyncio.sleep(30)
+
+        def run_foreign_loop() -> None:
+            asyncio.set_event_loop(foreign_loop)
+            foreign_loop.run_forever()
+
+        thread = threading.Thread(target=run_foreign_loop, daemon=True)
+        thread.start()
+
+        async def start_task() -> asyncio.Task[None]:
+            return foreign_loop.create_task(work())
+
+        task = asyncio.run_coroutine_threadsafe(start_task(), foreign_loop).result(
+            timeout=2
+        )
+        assert started.wait(timeout=2)
+
+        def entrypoint() -> Any:
+            return task
+
+        try:
+            with _installed_event_loop():
+                began = time.monotonic()
+                with pytest.raises(
+                    StreamlitAPIException, match="awaitable or generator"
+                ):
+                    _invoke_script_entrypoint(entrypoint)
+                assert time.monotonic() - began < 1
+        finally:
+            task.cancel()
+            foreign_loop.call_soon_threadsafe(foreign_loop.stop)
+            thread.join(timeout=2)
+            foreign_loop.close()
+
+    def test_callable_entrypoint_uses_normal_error_handling(self) -> None:
+        """Exceptions from callable entrypoints use the standard script error path."""
+        error_handler = MagicMock(return_value=None)
+        error = ValueError("callable failed")
+
+        def main() -> None:
+            raise error
+
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            script_entrypoint=main,
+            on_script_error=error_handler,
+        )
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        error_handler.assert_called_once_with(error)
+        assert any(
+            element.WhichOneof("type") == "exception"
+            for element in scriptrunner.elements()
+        )
+
+    def test_fragment_rerun_does_not_call_callable_entrypoint(self) -> None:
+        """Fragment-only reruns invoke the fragment, not the callable entrypoint."""
+        main = MagicMock()
+        fragment = MagicMock()
+        scriptrunner = TestScriptRunner(
+            "good_script.py",
+            RerunData(fragment_id_queue=["my_fragment"]),
+            script_entrypoint=main,
+        )
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
+
+        scriptrunner.start()
+        scriptrunner.join()
+
+        main.assert_not_called()
+        fragment.assert_called_once()
+
+    def test_callable_entrypoint_takes_precedence_over_pages_directory(self) -> None:
+        """A callable entrypoint runs instead of the pages-directory MPA path."""
+        main = MagicMock()
+        scriptrunner = TestScriptRunner("good_script.py", script_entrypoint=main)
+
+        with (
+            patch.object(PagesManager, "uses_pages_directory", True),
+            patch.object(script_runner_module, "_mpa_v1") as mpa_v1,
+        ):
+            scriptrunner.start()
+            scriptrunner.join()
+
+        main.assert_called_once_with()
+        mpa_v1.assert_not_called()
 
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
@@ -2206,6 +2573,9 @@ class TestScriptRunner(ScriptRunner):
         self,
         script_name: str,
         initial_rerun_data: RerunData | None = None,
+        *,
+        script_entrypoint: Callable[[], None] | None = None,
+        on_script_error: Callable[[Exception], bool | None] | None = None,
         event_loop: asyncio.AbstractEventLoop | None = None,
     ):
         """Initialize the ScriptRunner for the given script_name.
@@ -2242,6 +2612,8 @@ class TestScriptRunner(ScriptRunner):
             fragment_storage=MemoryFragmentStorage(),
             pages_manager=PagesManager(main_script_path, script_cache),
             event_loop=event_loop,
+            on_script_error=on_script_error,
+            script_entrypoint=script_entrypoint,
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.

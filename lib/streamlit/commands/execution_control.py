@@ -33,6 +33,7 @@ from streamlit.errors import (
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import (
     Page,
+    _raise_if_page_created_outside_run,
     _raise_if_unsafe_page_path,
     _validate_registered_page,
 )
@@ -466,6 +467,7 @@ def switch_page(  # type: ignore[misc]
 
     page_script_hash = ""
     if isinstance(page, Page):
+        _raise_if_page_created_outside_run(page)
         if page.is_external:
             raise StreamlitAPIException(
                 "Cannot use st.switch_page with external URL pages. "

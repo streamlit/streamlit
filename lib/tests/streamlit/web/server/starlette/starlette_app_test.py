@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
+import inspect
 import json
 import os
 import sys
 import threading
 import time
 from contextlib import asynccontextmanager
+from functools import partial, wraps
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -42,6 +45,7 @@ from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMeta
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette import starlette_app_utils
@@ -67,7 +71,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterator
+    from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
     from starlette.requests import Request
 
@@ -1645,6 +1649,840 @@ class TestAppInit:
         app = App(Path("main.py"))
         assert app.script_path == Path("main.py")
 
+    def test_app_accepts_pathlike(self) -> None:
+        """Path-like values such as PurePath stay on the path branch."""
+        from pathlib import PurePath
+
+        app = App(PurePath("main.py"))
+        assert app.script_path == Path("main.py")
+
+    def test_app_preserves_script_path_keyword(self) -> None:
+        """The script_path constructor keyword still accepts path strings."""
+        app = App(script_path="main.py")
+
+        assert app.script_path == Path("main.py")
+
+    def test_app_accepts_callable_and_infers_source_path(self) -> None:
+        """A callable entrypoint uses its source file as the script anchor."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is main
+
+    def test_app_accepts_partial_callable(self) -> None:
+        """functools.partial entrypoints resolve via the wrapped function."""
+
+        def main(prefix: str = "hi") -> None:
+            pass
+
+        entry = partial(main, prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_nested_partial_callable(self) -> None:
+        """Nested functools.partial entrypoints resolve through all layers."""
+
+        def main(prefix: str = "hi", suffix: str = "!") -> None:
+            pass
+
+        entry = partial(partial(main, prefix="hello"), suffix="?")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_partial_of_callable_instance(self) -> None:
+        """partial wrapping a callable instance resolves via type.__call__."""
+
+        class Main:
+            def __call__(self, prefix: str = "hi") -> None:
+                pass
+
+        entry = partial(Main(), prefix="hello")
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_accepts_callable_instance(self) -> None:
+        """Callable class instances resolve via their type's __call__."""
+
+        class Main:
+            def __call__(self) -> None:
+                pass
+
+        entry = Main()
+        app = App(entry)
+
+        assert app.script_path == Path(__file__).resolve()
+        assert app._script_entrypoint is entry
+
+    def test_app_resolves_decorated_callable_to_wrapped_source(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Decorated entrypoints anchor to the wrapped function, not the decorator."""
+        decorator_file = tmp_path / "st_app_callable_deco.py"
+        decorator_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_deco import deco\n\n@deco\ndef main():\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in ("st_app_callable_deco", "st_app_callable_wrapped"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+        assert app._script_entrypoint is app_mod.main
+
+    def test_app_anchors_parameterized_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """@deco(arg) still anchors on the app when the app imports the factory."""
+        decorator_file = tmp_path / "st_app_callable_factory_deco.py"
+        decorator_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(label):\n"
+            "    def inner(fn):\n"
+            "        @functools.wraps(fn)\n"
+            "        def wrapper(*args, **kwargs):\n"
+            "            return fn(*args, **kwargs)\n"
+            "        return wrapper\n"
+            "    return inner\n"
+        )
+        app_file = tmp_path / "st_app_callable_factory_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_factory_deco import deco\n"
+            "\n"
+            "@deco('app')\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_factory_deco",
+            "st_app_callable_factory_wrapped",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_factory_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_decorator_without_wrapped_on_decorator_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A decorator that does not set __wrapped__ keeps the decorator file."""
+        decorator_file = tmp_path / "st_app_callable_plain_deco.py"
+        decorator_file.write_text(
+            "def deco(fn):\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_plain_wrapped.py"
+        app_file.write_text(
+            "from st_app_callable_plain_deco import deco\n"
+            "\n"
+            "@deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_plain_deco",
+            "st_app_callable_plain_wrapped",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_plain_wrapped")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == decorator_file.resolve()
+
+    def test_app_prefers_source_outside_site_packages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A wrapper around a library callable anchors at the wrapper, not site-packages."""
+        lib_dir = tmp_path / "site-packages"
+        lib_dir.mkdir()
+        (lib_dir / "st_app_callable_lib.py").write_text("def render():\n    pass\n")
+        app_file = tmp_path / "st_app_callable_wrapper.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_lib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_lib", "st_app_callable_wrapper"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_wrapper")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in ("st_app_callable_lib", "st_app_callable_wrapper"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+        assert app._script_entrypoint is app_mod.main
+
+    def test_app_prefers_source_outside_interpreter_site_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A site root is an installed library even when it is not named site-packages."""
+        lib_dir = tmp_path / "installed-lib"
+        lib_dir.mkdir()
+        (lib_dir / "st_app_callable_distlib.py").write_text("def render():\n    pass\n")
+        app_file = tmp_path / "st_app_callable_dist_wrapper.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_distlib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_app.site.getsitepackages",
+            lambda: [str(lib_dir)],
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_distlib", "st_app_callable_dist_wrapper"):
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_dist_wrapper")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in (
+                "st_app_callable_distlib",
+                "st_app_callable_dist_wrapper",
+            ):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_subclass_when_call_is_inherited(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A subclass that inherits __call__ anchors at the subclass file."""
+        (tmp_path / "st_app_callable_base.py").write_text(
+            "class Base:\n    def __call__(self):\n        pass\n"
+        )
+        sub_file = tmp_path / "st_app_callable_sub.py"
+        sub_file.write_text(
+            "from st_app_callable_base import Base\nclass Sub(Base):\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        for module_name in ("st_app_callable_base", "st_app_callable_sub"):
+            sys.modules.pop(module_name, None)
+        sub_mod = importlib.import_module("st_app_callable_sub")
+        try:
+            app = App(sub_mod.Sub())
+        finally:
+            for module_name in ("st_app_callable_base", "st_app_callable_sub"):
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == sub_file.resolve()
+
+    def test_app_anchors_wrapper_between_installed_decorator_and_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An app wrapper between an installed decorator and a library stays on the app."""
+        site_dir = tmp_path / "site-packages"
+        site_dir.mkdir()
+        (site_dir / "st_app_callable_nested_lib.py").write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+            "\n"
+            "def render():\n"
+            "    pass\n"
+        )
+        app_file = tmp_path / "st_app_callable_nested_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_nested_lib import deco, render\n"
+            "\n"
+            "@deco\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(site_dir))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = ("st_app_callable_nested_lib", "st_app_callable_nested_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_nested_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_wrapper_around_in_repo_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A wrapper around a library outside site-packages stays on the wrapper."""
+        lib_dir = tmp_path / "repo_lib"
+        app_dir = tmp_path / "repo_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_repo_lib.py").write_text(
+            "def render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_repo_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_repo_lib import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = ("st_app_callable_repo_lib", "st_app_callable_repo_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_repo_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_nested_wrapper_around_in_repo_library(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A nested wrapper around an in-repo library stays on the wrapper file."""
+        lib_dir = tmp_path / "nested_lib"
+        app_dir = tmp_path / "nested_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_nested_repo_lib.py").write_text(
+            "def render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_nested_repo_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_nested_repo_lib import render\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper():\n"
+            "        return fn()\n"
+            "    return wrapper\n"
+            "\n"
+            "entry = deco(render)\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_nested_repo_lib",
+            "st_app_callable_nested_repo_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_nested_repo_app")
+        try:
+            app = App(app_mod.entry)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_keeps_nested_wrapper_when_library_imports_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A library that imports the app module does not steal the app file."""
+        lib_dir = tmp_path / "backref_lib"
+        app_dir = tmp_path / "backref_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_backref_lib.py").write_text(
+            "import st_app_callable_backref_app\n\ndef render():\n    pass\n"
+        )
+        app_file = app_dir / "st_app_callable_backref_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_backref_lib import render\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper():\n"
+            "        return fn()\n"
+            "    return wrapper\n"
+            "\n"
+            "entry = deco(render)\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_backref_lib",
+            "st_app_callable_backref_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_backref_app")
+        try:
+            app = App(app_mod.entry)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_partial_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """wraps(fn)(partial(invoke, fn)) anchors on the app, not invoke."""
+        deco_dir = tmp_path / "partial_deco"
+        app_dir = tmp_path / "partial_deco_app"
+        deco_dir.mkdir()
+        app_dir.mkdir()
+        (deco_dir / "st_app_callable_partial_deco.py").write_text(
+            "import functools\n"
+            "\n"
+            "def invoke(fn, *args, **kwargs):\n"
+            "    return fn(*args, **kwargs)\n"
+            "\n"
+            "def deco(fn):\n"
+            "    return functools.wraps(fn)(functools.partial(invoke, fn))\n"
+        )
+        app_file = app_dir / "st_app_callable_partial_deco_app.py"
+        app_file.write_text(
+            "from st_app_callable_partial_deco import deco\n"
+            "\n"
+            "@deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(deco_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = (
+            "st_app_callable_partial_deco",
+            "st_app_callable_partial_deco_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_partial_deco_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_package_exported_decorator_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """import helpers; @helpers.deco anchors on the app, not the decorator module."""
+        package_dir = tmp_path / "st_app_callable_helpers"
+        package_dir.mkdir()
+        (package_dir / "__init__.py").write_text("from .decorators import deco\n")
+        (package_dir / "decorators.py").write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+        )
+        app_file = tmp_path / "st_app_callable_helpers_app.py"
+        app_file.write_text(
+            "import st_app_callable_helpers\n"
+            "\n"
+            "@st_app_callable_helpers.deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_helpers",
+            "st_app_callable_helpers.decorators",
+            "st_app_callable_helpers_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_helpers_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_same_module_decorator_and_factory_on_wrapped_app(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """import helpers; @helpers.deco and @helpers.deco() anchor on the app."""
+        helpers_file = tmp_path / "st_app_callable_same_mod_helpers.py"
+        helpers_file.write_text(
+            "import functools\n"
+            "\n"
+            "def deco(fn):\n"
+            "    @functools.wraps(fn)\n"
+            "    def wrapper(*args, **kwargs):\n"
+            "        return fn(*args, **kwargs)\n"
+            "    return wrapper\n"
+            "\n"
+            "def factory(label):\n"
+            "    def inner(fn):\n"
+            "        @functools.wraps(fn)\n"
+            "        def wrapper(*args, **kwargs):\n"
+            "            return fn(*args, **kwargs)\n"
+            "        return wrapper\n"
+            "    return inner\n"
+        )
+        deco_app = tmp_path / "st_app_callable_same_mod_deco_app.py"
+        deco_app.write_text(
+            "import st_app_callable_same_mod_helpers\n"
+            "\n"
+            "@st_app_callable_same_mod_helpers.deco\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        factory_app = tmp_path / "st_app_callable_same_mod_factory_app.py"
+        factory_app.write_text(
+            "import st_app_callable_same_mod_helpers\n"
+            "\n"
+            "@st_app_callable_same_mod_helpers.factory('app')\n"
+            "def main():\n"
+            "    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        module_names = (
+            "st_app_callable_same_mod_helpers",
+            "st_app_callable_same_mod_deco_app",
+            "st_app_callable_same_mod_factory_app",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        deco_mod = importlib.import_module("st_app_callable_same_mod_deco_app")
+        factory_mod = importlib.import_module("st_app_callable_same_mod_factory_app")
+        try:
+            deco_result = App(deco_mod.main)
+            factory_result = App(factory_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert deco_result.script_path == deco_app.resolve()
+        assert factory_result.script_path == factory_app.resolve()
+
+    def test_app_anchors_fragment_decorator_outside_site_packages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """@st.fragment stays on the app file when Streamlit is not in site-packages."""
+        app_file = tmp_path / "st_app_callable_fragment_app.py"
+        app_file.write_text(
+            "import streamlit as st\n\n@st.fragment\ndef main():\n    pass\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("st_app_callable_fragment_app", None)
+        app_mod = importlib.import_module("st_app_callable_fragment_app")
+        try:
+            app = App(app_mod.main)
+        finally:
+            sys.modules.pop("st_app_callable_fragment_app", None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_anchors_outer_file_when_every_candidate_is_installed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An installed wrapper wins over the installed callable it wraps."""
+        site_dir = tmp_path / "site-packages"
+        site_dir.mkdir()
+        (site_dir / "st_app_callable_installed_inner.py").write_text(
+            "def render():\n    pass\n"
+        )
+        outer_file = site_dir / "st_app_callable_installed_outer.py"
+        outer_file.write_text(
+            "import functools\n"
+            "from st_app_callable_installed_inner import render\n"
+            "\n"
+            "@functools.wraps(render)\n"
+            "def main():\n"
+            "    return render()\n"
+        )
+        monkeypatch.syspath_prepend(str(site_dir))
+        module_names = (
+            "st_app_callable_installed_inner",
+            "st_app_callable_installed_outer",
+        )
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_installed_outer")
+        try:
+            app = App(app_mod.main)
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == outer_file.resolve()
+
+    def test_app_anchors_partial_subclass_that_overrides_call(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A partial subclass with its own __call__ is not classified via .func."""
+        lib_dir = tmp_path / "partial_lib"
+        app_dir = tmp_path / "partial_app"
+        lib_dir.mkdir()
+        app_dir.mkdir()
+        (lib_dir / "st_app_callable_partial_lib.py").write_text(
+            "async def render(required: str):\n    return required\n"
+        )
+        app_file = app_dir / "st_app_callable_partial_app.py"
+        app_file.write_text(
+            "import functools\n"
+            "from st_app_callable_partial_lib import render\n"
+            "\n"
+            "class SyncPartial(functools.partial):\n"
+            "    def __call__(self):\n"
+            "        return None\n"
+        )
+        monkeypatch.syspath_prepend(str(lib_dir))
+        monkeypatch.syspath_prepend(str(app_dir))
+        module_names = ("st_app_callable_partial_lib", "st_app_callable_partial_app")
+        for module_name in module_names:
+            sys.modules.pop(module_name, None)
+        app_mod = importlib.import_module("st_app_callable_partial_app")
+        lib_mod = importlib.import_module("st_app_callable_partial_lib")
+        try:
+            app = App(app_mod.SyncPartial(lib_mod.render))
+        finally:
+            for module_name in module_names:
+                sys.modules.pop(module_name, None)
+
+        assert app.script_path == app_file.resolve()
+
+    def test_app_rejects_async_partial_subclass_override(self) -> None:
+        """An async __call__ on a partial subclass is rejected even if .func is sync."""
+
+        class AsyncPartial(partial):
+            async def __call__(self) -> None:
+                return None
+
+        def render() -> None:
+            return None
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
+            App(AsyncPartial(render))
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
+
+    def test_uninspectable_signature_typeerror_is_not_argument_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A TypeError from inspect.signature is not reported as a required argument."""
+
+        def main() -> None:
+            pass
+
+        def boom(*_args: Any, **_kwargs: Any) -> Any:
+            raise TypeError("cannot inspect")
+
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_app.inspect.signature", boom
+        )
+        app = App(main)
+        assert app._script_entrypoint is main
+
+    def test_raising_wrapped_descriptor_does_not_fail_app_construction(self) -> None:
+        """A __wrapped__ descriptor that raises is ignored while resolving source."""
+
+        class Entry:
+            def __call__(self) -> None:
+                return None
+
+            @property
+            def __wrapped__(self) -> Any:
+                raise RuntimeError("wrapped descriptor")
+
+        entry = Entry()
+        app = App(entry)
+        assert app._script_entrypoint is entry
+
+    def test_callable_runtime_disables_pages_directory(self) -> None:
+        """Importing a callable App leaves pages/ alone until its runtime starts."""
+        from streamlit.runtime import Runtime
+
+        def main() -> None:
+            pass
+
+        previous = PagesManager.uses_pages_directory
+        previous_runtime = Runtime._instance
+        PagesManager.uses_pages_directory = True
+        Runtime._instance = None
+        try:
+            app = App(main)
+            assert PagesManager.uses_pages_directory is True
+            app._create_runtime()
+            assert PagesManager.uses_pages_directory is False
+        finally:
+            PagesManager.uses_pages_directory = previous
+            Runtime._instance = previous_runtime
+
+    def test_app_rejects_async_callable(self) -> None:
+        """st.App rejects async function callables."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
+            App(main)
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
+
+    def test_app_accepts_sync_wraps_wrapper_around_async(self) -> None:
+        """Construction does not unwrap @wraps; a sync wrapper around async is accepted."""
+
+        def deco(fn: Any) -> Any:
+            @wraps(fn)
+            def wrapper() -> Any:
+                return fn()
+
+            return wrapper
+
+        @deco
+        async def main() -> None:
+            pass
+
+        app = App(main)
+        assert app._script_entrypoint is main
+
+    def test_app_accepts_zero_arg_wrapper_around_required_args(self) -> None:
+        """A zero-arg @wraps wrapper is accepted even if the wrapped function is not."""
+
+        def inner(required: str) -> None:
+            pass
+
+        @wraps(inner)
+        def main() -> None:
+            inner("value")
+
+        app = App(main)
+        assert app._script_entrypoint is main
+
+    def test_app_rejects_async_partial_callable(self) -> None:
+        """st.App rejects functools.partial wrapping an async callable."""
+
+        async def main() -> None:
+            pass
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
+            App(partial(main))
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
+
+    def test_app_rejects_async_generator_callable(self) -> None:
+        """st.App rejects async generator callables."""
+
+        async def main() -> AsyncIterator[None]:
+            yield
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support async"
+        ) as exc_info:
+            App(main)  # type: ignore[arg-type]
+        assert exc_info.value.error_id == "app-async-callable-not-supported"
+
+    def test_app_rejects_generator_callable(self) -> None:
+        """st.App rejects sync generator callables."""
+
+        def main() -> Iterator[None]:
+            yield
+
+        with pytest.raises(
+            StreamlitAPIException, match="does not support generator"
+        ) as exc_info:
+            App(main)  # type: ignore[arg-type]
+        assert exc_info.value.error_id == "app-generator-callable-not-supported"
+
+    def test_app_rejects_callable_that_requires_arguments(self) -> None:
+        """st.App rejects callables that require arguments."""
+
+        def main(required: str) -> None:
+            pass
+
+        with pytest.raises(
+            StreamlitAPIException, match="without arguments"
+        ) as exc_info:
+            App(main)
+        assert exc_info.value.error_id == "app-callable-requires-arguments"
+
+    def test_app_rejects_callable_without_source_file(self) -> None:
+        """st.App rejects callables that are not backed by a source file."""
+
+        def main() -> None:
+            pass
+
+        with (
+            patch.object(inspect, "getsourcefile", return_value=None),
+            patch.object(inspect, "getfile", side_effect=TypeError),
+            pytest.raises(StreamlitAPIException, match="filesystem-backed") as exc_info,
+        ):
+            App(main)
+        assert exc_info.value.error_id == "app-callable-missing-source-file"
+
+    def test_app_rejects_unsupported_entrypoint_type(self) -> None:
+        """Non-path, non-callable entrypoints raise StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match=r"Invalid `script_path` type"
+        ):
+            App(42)  # type: ignore[arg-type]
+
     def test_app_state_is_empty_initially(self) -> None:
         """Test that App state is empty on initialization."""
         app = App("main.py")
@@ -1802,6 +2640,29 @@ class TestAppRun:
             {"server.port": 8502},
             server_mode="starlette-app-direct",
         )
+        runner_cls.assert_called_once_with(app)
+        runner_cls.return_value.run.assert_called_once()
+
+    def test_run_uses_existing_callable_app_instance(
+        self, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """Direct callable launch passes the already-created App to Uvicorn."""
+
+        def main() -> None:
+            pass
+
+        monkeypatch.setattr(sys, "argv", [__file__])
+        app = App(main)
+
+        with (
+            patch("streamlit.web.bootstrap.load_config_options"),
+            patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as runner_cls,
+        ):
+            app.run()
+
         runner_cls.assert_called_once_with(app)
         runner_cls.return_value.run.assert_called_once()
 
@@ -2289,6 +3150,20 @@ class TestAppScriptPathResolution:
         # Error message should include the path and be descriptive
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
+
+    def test_create_runtime_passes_callable_entrypoint(
+        self, reset_runtime: None
+    ) -> None:
+        """RuntimeConfig receives the callable entrypoint from App."""
+
+        def main() -> None:
+            pass
+
+        app = App(main)
+        runtime = app._create_runtime()
+
+        assert runtime._main_script_path == str(Path(__file__).resolve())
+        assert runtime._script_entrypoint is main
 
     def test_init_sets_main_script_path_when_unset(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

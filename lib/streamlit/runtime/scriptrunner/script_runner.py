@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import gc
+import inspect
 import sys
 import threading
 import types
@@ -25,7 +26,7 @@ from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from streamlit import config, runtime, util
-from streamlit.errors import FragmentStorageKeyError
+from streamlit.errors import FragmentStorageKeyError, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -75,6 +76,226 @@ if TYPE_CHECKING:
     from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
+
+# A rejected task can swallow CancelledError or await slow cleanup. Bound the
+# wait so the entrypoint error still surfaces.
+_REJECTED_TASK_CANCEL_WAIT_SECS = 0.1
+
+
+def _close_async_generator(async_gen: Any) -> None:
+    """Finalize an async generator returned by a rejected entrypoint.
+
+    ``aclose()`` returns an awaitable. Closing that awaitable only suppresses
+    the "never awaited" warning on Python 3.12 and earlier and leaves the
+    generator open. On Python 3.13 and later it can raise ``RuntimeError``
+    when cleanup awaits. The script thread keeps a non-running loop so
+    ``run_until_complete`` can drive ``aclose`` without nesting.
+    """
+    closer = async_gen.aclose()
+    temporary_loop: asyncio.AbstractEventLoop | None = None
+    try:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            # Cannot drive aclose while this thread is already running a loop.
+            # Closing the awaitable avoids an un-awaited warning; the running
+            # loop's asyncgen finalizer owns the generator.
+            _close_awaitable(closer)
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = None
+        if loop is None or loop.is_closed():
+            temporary_loop = asyncio.new_event_loop()
+            loop = temporary_loop
+
+        task = loop.create_task(closer)
+        try:
+            # A finally that awaits forever must not block the entrypoint error.
+            loop.run_until_complete(
+                asyncio.wait({task}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+            )
+        except Exception:
+            _LOGGER.debug(
+                "Failed to finalize a rejected async generator entrypoint.",
+                exc_info=True,
+            )
+        _log_finished_task_exception(task)
+        if not task.done():
+            # The timeout only stops waiting. Drive the cancellation briefly so
+            # a finally that honors CancelledError can release resources.
+            task.cancel()
+            try:
+                loop.run_until_complete(
+                    asyncio.wait({task}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+                )
+            except Exception:
+                _LOGGER.debug(
+                    "Failed to finish cancelling a rejected async generator.",
+                    exc_info=True,
+                )
+            _log_finished_task_exception(task)
+            if not task.done():
+                _LOGGER.debug(
+                    "Stopped waiting for a rejected async generator to close."
+                )
+    finally:
+        if temporary_loop is not None:
+            temporary_loop.close()
+
+
+def _task_event_loop(result: Any) -> asyncio.AbstractEventLoop | None:
+    """Return the loop that owns ``result``, if it has one."""
+    get_loop = getattr(result, "get_loop", None)
+    if not callable(get_loop):
+        return None
+    try:
+        loop = get_loop()
+    except Exception:
+        _LOGGER.debug("Failed to read a rejected task loop.", exc_info=True)
+        return None
+    if isinstance(loop, asyncio.AbstractEventLoop):
+        return loop
+    return None
+
+
+def _log_finished_task_exception(task: asyncio.Task[Any]) -> None:
+    """Log a finished task's exception so asyncio does not report it later."""
+    if not task.done() or task.cancelled():
+        return
+    try:
+        error = task.exception()
+    except Exception:
+        _LOGGER.debug(
+            "Failed to read a rejected async generator error.",
+            exc_info=True,
+        )
+        return
+    if error is not None:
+        _LOGGER.debug("Rejected async generator cleanup failed.", exc_info=error)
+
+
+def _cancel_rejected_task(result: Any) -> None:
+    """Cancel a returned task without waiting for cleanup that ignores it.
+
+    ``cancel()`` only requests cancellation. This thread drives that request
+    when it owns the task's loop, and only briefly. A task that swallows
+    ``CancelledError`` must not block the entrypoint error. A task owned by
+    another running loop is cancelled on that loop; closing its coroutine
+    would race the loop that is still scheduling it.
+    """
+    cancel = getattr(result, "cancel", None)
+    if not callable(cancel):
+        return
+
+    task_loop = _task_event_loop(result)
+    if task_loop is not None and task_loop.is_running():
+        try:
+            running_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            running_loop = None
+        if running_loop is not task_loop:
+            try:
+                task_loop.call_soon_threadsafe(cancel)
+            except Exception:
+                _LOGGER.debug(
+                    "Failed to schedule cancellation of a rejected task entrypoint.",
+                    exc_info=True,
+                )
+            return
+
+    try:
+        cancel()
+    except Exception:
+        _LOGGER.debug(
+            "Failed to cancel a rejected future or task entrypoint.",
+            exc_info=True,
+        )
+        return
+
+    if task_loop is None or task_loop.is_closed() or task_loop.is_running():
+        return
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        pass
+    else:
+        return
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        return
+    if loop is not task_loop or loop.is_closed():
+        return
+
+    try:
+        loop.run_until_complete(
+            asyncio.wait({result}, timeout=_REJECTED_TASK_CANCEL_WAIT_SECS)
+        )
+    except Exception:
+        _LOGGER.debug(
+            "Failed to finish cancelling a rejected task entrypoint.",
+            exc_info=True,
+        )
+
+
+def _close_awaitable(awaitable: Any) -> None:
+    """Close an awaitable, ignoring failures while abandoning it."""
+    closer = getattr(awaitable, "close", None)
+    if not callable(closer):
+        return
+    try:
+        closer()
+    except Exception:
+        _LOGGER.debug("Failed to close awaitable.", exc_info=True)
+
+
+def _invoke_script_entrypoint(entrypoint: Callable[[], Any]) -> None:
+    """Call the App entrypoint and reject awaitable or generator results.
+
+    ``App`` inspects only the outer callable, so a sync ``functools.wraps``
+    wrapper around an async function passes construction. This closes a
+    returned awaitable or generator and raises. Wrappers that drive the inner
+    coroutine themselves return ``None`` and are allowed.
+    """
+    result: Any = entrypoint()
+    if not (
+        inspect.isawaitable(result)
+        or inspect.isgenerator(result)
+        or inspect.isasyncgen(result)
+    ):
+        return
+
+    if inspect.isasyncgen(result):
+        _close_async_generator(result)
+    else:
+        closer = getattr(result, "close", None)
+        if callable(closer):
+            try:
+                closer()
+            except Exception:
+                # A failing close() must not hide the entrypoint error.
+                _LOGGER.debug(
+                    "Failed to close a rejected awaitable or generator entrypoint.",
+                    exc_info=True,
+                )
+        else:
+            # Futures and Tasks are awaitable but have cancel(), not close().
+            # Give this thread's loop a short time to finish cancellation, then
+            # raise even if the task ignores it.
+            _cancel_rejected_task(result)
+
+    raise StreamlitAPIException(
+        "st.App callable entrypoints must not return an awaitable or generator. "
+        "Run that work synchronously and return a normal value instead.",
+        error_id="app-callable-returns-coroutine-or-generator",
+    )
 
 
 class ScriptRunnerEvent(Enum):
@@ -180,6 +401,15 @@ def _mpa_v1(main_script_path: str) -> None:
     page.run()
 
 
+def _exec_script(code: types.CodeType | None, module: types.ModuleType | None) -> None:
+    """Execute compiled bytecode for a path-based entrypoint."""
+    if code is None or module is None:  # pragma: no cover - defensive
+        raise RuntimeError(
+            "Script bytecode and module are required for path-based entrypoints."
+        )
+    exec(code, module.__dict__)  # noqa: S102
+
+
 class ScriptRunner:
     def __init__(
         self,
@@ -195,6 +425,7 @@ class ScriptRunner:
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        script_entrypoint: Callable[[], None] | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -250,6 +481,11 @@ class ScriptRunner:
             never closes it. After this runner emits ``SHUTDOWN``, it no longer
             uses the loop. The caller determines when no other runner is using
             the loop and it is safe to close.
+
+        script_entrypoint
+            Optional callable to execute for full app runs instead of compiling
+            and executing ``main_script_path``. The path remains the app's
+            filesystem anchor.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -264,6 +500,7 @@ class ScriptRunner:
 
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
+        self._script_entrypoint = script_entrypoint
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -719,9 +956,9 @@ class ScriptRunner:
                 pages=self._pages_manager.get_pages(),
             )
 
-            # Compile the script. Any errors thrown here will be surfaced
-            # to the user via a modal dialog in the frontend, and won't result
-            # in their previous script elements disappearing.
+            # Resolve the active script and compile path-based entrypoints. Any
+            # errors thrown here will be surfaced to the user via a modal dialog
+            # in the frontend, without removing their previous script elements.
             try:
                 if active_script is not None:
                     script_path = active_script["script_path"]
@@ -740,7 +977,10 @@ class ScriptRunner:
                     msg.page_not_found.page_name = rerun_data.page_name
                     ctx.enqueue(msg)
 
-                code = self._script_cache.get_bytecode(script_path)
+                if self._script_entrypoint is None:
+                    code = self._script_cache.get_bytecode(script_path)
+                else:
+                    code = None
 
             except Exception as ex:
                 # We got a compile error. Send an error event and bail immediately.
@@ -755,31 +995,35 @@ class ScriptRunner:
                 )
                 return
 
-            # If we get here, we've successfully compiled our script. The next step
-            # is to run it. Errors thrown during execution will be shown to the
-            # user as ExceptionElements.
+            # If we get here, we've successfully prepared the entrypoint. Errors
+            # thrown during execution will be shown to the user as ExceptionElements.
 
-            # Create fake module. This gives us a name global namespace to
-            # execute the code in.
-            module = self._new_module("__main__")
+            # Callable entrypoints keep running in the module that defines
+            # them, so pickle and cache keys resolve to that module. Only
+            # file-based scripts get a fresh fake __main__ module.
+            module: types.ModuleType | None = None
+            if self._script_entrypoint is None:
+                # Create fake module. This gives us a named global namespace to
+                # execute the code in.
+                module = self._new_module("__main__")
 
-            # Install the fake module as the __main__ module. This allows
-            # the pickle module to work inside the user's code, since it now
-            # can know the module where the pickled objects stem from.
-            # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
-            # our code, as it will point to the wrong module!!!
-            sys.modules["__main__"] = module
+                # Install the fake module as the __main__ module. This allows
+                # the pickle module to work inside the user's code, since it now
+                # can know the module where the pickled objects stem from.
+                # IMPORTANT: This means we can't use "if __name__ == '__main__'" in
+                # our code, as it will point to the wrong module!!!
+                sys.modules["__main__"] = module
 
-            # Add special variables to the module's globals dict.
-            # Note: The following is a requirement for the CodeHasher to
-            # work correctly. The CodeHasher is scoped to
-            # files contained in the directory of __main__.__file__, which we
-            # assume is the main script directory.
-            module.__dict__["__file__"] = script_path
+                # Add special variables to the module's globals dict.
+                # Note: The following is a requirement for the CodeHasher to
+                # work correctly. The CodeHasher is scoped to
+                # files contained in the directory of __main__.__file__, which we
+                # assume is the main script directory.
+                module.__dict__["__file__"] = script_path
 
             def code_to_exec(
-                code: str = code,
-                module: types.ModuleType = module,
+                code: types.CodeType | None = code,
+                module: types.ModuleType | None = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,
                 fragment_ids_this_run: list[str] | None = fragment_ids_this_run,
@@ -918,10 +1162,12 @@ class ScriptRunner:
                             ctx.parallel_coordinator,
                         )
                         try:
-                            if PagesManager.uses_pages_directory:
+                            if self._script_entrypoint is not None:
+                                _invoke_script_entrypoint(self._script_entrypoint)
+                            elif PagesManager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)
                             else:
-                                exec(code, module.__dict__)  # noqa: S102
+                                _exec_script(code, module)
                             coordinator.join()
                         except BaseException:
                             # Always drain so in-flight worker fragments
