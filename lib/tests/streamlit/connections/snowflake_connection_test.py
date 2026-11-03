@@ -481,7 +481,6 @@ class TestSnowflakeCallersRightsConnection:
             "SNOWFLAKE_HOST",
         ]
 
-        # Validate that we throw an exception if any required env vars are missing.
         for missing_var in env_var_names:
 
             def fake_getenv(key: str) -> str | None:
@@ -536,10 +535,10 @@ class TestSnowflakeCallersRightsConnection:
             pytest.param({}, {}, id="optional-env-unset"),
         ],
     )
-    def test_get_connection_params_all_values_ok(
+    def test_get_connection_params_includes_optional_env_only_when_set(
         self, extra_env: dict[str, str], expected_extra: dict[str, str]
     ) -> None:
-        """Optional env vars are included only when the container sets them."""
+        """The connection includes optional environment variables only when the container sets them."""
 
         fake_env_values = {
             "SNOWFLAKE_ACCOUNT": "my-account",

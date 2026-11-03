@@ -607,8 +607,10 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     Snowflake on containers and any self-managed caller's rights Service. They
     also work on Snowflake serverless compute (``compute_resource: SERVERLESS``).
 
-    This will use the Snowpark-provided account and host to connect. Database,
-    schema, protocol, and port are included when the container sets them.
+    This will use the Snowpark-provided account and host to connect. If the
+    container sets a database, schema, protocol, or port, the connection uses
+    them too. Without a database and schema, the session has no default
+    namespace, so queries must use fully qualified table names.
     Additionally, it will set ``client_session_keep_alive`` to ``True``. These
     values may be overridden with ``**kwargs`` in ``st.connection``. For a
     complete list of keyword arguments, see the documentation for
@@ -854,9 +856,9 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
 
         Raises
         ------
-            StreamlitAPIException: if the required Snowpark environment variables
-            (``SNOWFLAKE_ACCOUNT``, ``SNOWFLAKE_HOST``) or connection tokens are
-            missing; or if this is called outside of a session context.
+            StreamlitAPIException: if ``SNOWFLAKE_ACCOUNT`` or ``SNOWFLAKE_HOST``
+            is unset, the Snowpark token file is missing, or the caller's rights
+            token header is missing.
         """
         # Local import needed to avoid cycles.
         from streamlit import context as st_context
@@ -886,13 +888,13 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
                 )
             params[param_name] = value
 
-        # Optional overrides when the container sets them. Database and schema are
-        # not always mounted; without them the session has no default namespace and
-        # queries must use fully qualified names. Protocol and port are for
-        # containers that route connector traffic through a local proxy (for
-        # example, http and 8082); without them the connector uses https on port
-        # 443. The owner "snowflake" connection reads these values from the
-        # mounted default connection file instead.
+        # Forward these only when the container sets them. The owner "snowflake"
+        # connection reads the same settings from the mounted default connection file.
+        # - Database and schema: some containers do not mount them. The session then
+        #   has no default namespace, so queries need fully qualified names.
+        # - Protocol and port: some containers route the connector through a local
+        #   proxy (for example, http and 8082). Otherwise the connector uses https
+        #   on port 443.
         for param_name, env_var_name in (
             ("database", "SNOWFLAKE_DATABASE"),
             ("schema", "SNOWFLAKE_SCHEMA"),
