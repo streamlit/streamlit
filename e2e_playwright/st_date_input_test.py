@@ -335,6 +335,28 @@ def test_handles_range_start_end_date_changes(app: Page):
     )
 
 
+def test_clicking_range_endpoint_starts_new_range_there(app: Page):
+    """Test that clicking the current start date starts the new range on it."""
+    date_field = get_date_input(app, "Range, two dates").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+
+    # Pressing an endpoint anchors React Aria on the opposite end until the
+    # click ends, so this must not commit July 8.
+    calendar.get_by_label(re.compile(r"Saturday, July 6, 2019 selected$")).click()
+
+    expect_markdown(app, "Value 5: (datetime.date(2019, 7, 6),)")
+
+    calendar.get_by_label("Friday, July 12, 2019").click()
+
+    expect_markdown(
+        app, "Value 5: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 12))"
+    )
+
+
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
     date_input_12_field = get_element_by_key(app, "date_input_12").get_by_test_id(
