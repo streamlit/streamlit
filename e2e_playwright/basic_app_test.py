@@ -18,7 +18,7 @@ from typing import Final
 import pytest
 from playwright.sync_api import Page, Response, WebSocket, expect
 
-from e2e_playwright.conftest import build_app_url
+from e2e_playwright.conftest import build_app_url, wait_until
 from e2e_playwright.shared.app_utils import goto_app
 
 
@@ -79,6 +79,26 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_base_url: str)
         f"basic app exceeds {TOTAL_ASSET_SIZE_THRESHOLD_MB}MB limit. "
         "In case this is expected and justified, you can change the "
         "threshold in the test."
+    )
+
+
+def test_icon_font_loads_before_any_icon_renders(app: Page):
+    """Test that the Material Symbols font is downloaded at startup, so icons that
+    render later appear without waiting for it.
+    """
+    expect(app.get_by_text("Hello world")).to_be_visible()
+    # The basic app renders no icon, so rendering can't be what requests the font.
+    expect(app.get_by_test_id("stIconMaterial")).to_have_count(0)
+    # Checks for the request, not document.fonts.check(): WebKit keeps the font
+    # face "unloaded" until an icon uses it, even after downloading the file.
+    wait_until(
+        app,
+        lambda: bool(
+            app.evaluate(
+                "performance.getEntriesByType('resource')"
+                ".some(e => e.name.includes('MaterialSymbols-Rounded'))"
+            )
+        ),
     )
 
 
