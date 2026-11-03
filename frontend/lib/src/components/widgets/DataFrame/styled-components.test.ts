@@ -59,8 +59,5 @@ describe("StyledResizableContainer layout", () => {
       display: "inline-block",
       verticalAlign: "top",
     })
-    expect(container.firstElementChild).not.toHaveStyle({
-      verticalAlign: "baseline",
-    })
   })
 })

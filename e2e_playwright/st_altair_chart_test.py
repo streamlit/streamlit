@@ -205,8 +205,8 @@ def test_show_chart_data_button(app: Page, assert_snapshot: ImageCompareFunction
     dataframe = app.get_by_test_id("stDataFrame")
 
     expect(dataframe).to_be_visible()
-    # Must NOT happen: the table of this content-height chart is taller than
-    # the chart it replaces.
+    # Must NOT happen: "Show data" grows this fullscreen frame beyond the
+    # content-height chart it replaces.
     expect(chart).to_have_css("height", chart_height)
 
     assert_snapshot(dataframe, name="st_altair_chart-show_chart_data")

@@ -79,8 +79,9 @@ def test_data_frame_with_different_sizes(app: Page):
 
         expect(element).to_have_css("height", expected_height)
 
-    # Must NOT happen: the element container adds space below a grid that has
-    # no pixel height (default height at index 0, content height at index 20).
+    # Must NOT happen: the element container of the default-height dataframe
+    # (index 0) or the content-height dataframe (index 20) adds a gap below
+    # the grid.
     element_containers = app.get_by_test_id("stElementContainer").filter(
         has=app.get_by_test_id("stDataFrame")
     )
