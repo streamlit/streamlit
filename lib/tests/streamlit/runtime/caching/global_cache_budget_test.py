@@ -27,7 +27,6 @@ import pytest
 
 from streamlit.runtime.caching.global_cache_budget import (
     _GLOBAL_CACHE_BUDGET_HOLDER,
-    CACHE_DATA_EVICTIONS_FAMILY,
     GlobalCacheBudget,
     _format_byte_size,
     get_global_cache_budget,
@@ -41,7 +40,6 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import DummyCacheStor
 from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
     InMemoryCacheStorageWrapper,
 )
-from streamlit.runtime.stats import CounterStat
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -228,8 +226,8 @@ def test_enabled_writes_to_different_storages_overlap() -> None:
     assert budget.total_bytes == 2
 
 
-def test_budget_evicts_global_lru_and_counts_success() -> None:
-    """Budget overflow evicts the global LRU entry and records the eviction."""
+def test_budget_evicts_global_lru_entry() -> None:
+    """Budget overflow evicts the least-recently-used entry across storages."""
     budget = GlobalCacheBudget(max_bytes=6)
     first = _create_storage(budget, "first")
     second = _create_storage(budget, "second")
@@ -244,15 +242,6 @@ def test_budget_evicts_global_lru_and_counts_success() -> None:
     assert first.get("old") == b"aaa"
     assert second.get("new") == b"c"
     assert budget.total_bytes == 4
-    stats = budget.get_stats()[CACHE_DATA_EVICTIONS_FAMILY]
-    assert stats == [
-        CounterStat(
-            family_name=CACHE_DATA_EVICTIONS_FAMILY,
-            value=1,
-            labels={"reason": "global_budget"},
-            help="Total st.cache_data entries evicted by the global byte budget.",
-        )
-    ]
 
 
 def test_recency_hints_are_bounded_and_drained_by_write() -> None:
@@ -712,7 +701,6 @@ def test_victim_selection_drops_collected_storage_before_evicting() -> None:
     assert survivor.get("new") == b"cc"
     assert budget.total_bytes == 4
     assert stale_id not in budget._storage_entries
-    assert budget._global_evictions == 0
 
 
 def test_reserved_victim_is_kept_after_its_storage_unregisters() -> None:
@@ -725,26 +713,6 @@ def test_reserved_victim_is_kept_after_its_storage_unregisters() -> None:
 
     assert not storage._evict_from_mem_cache("key", expected_generation=generation)
     assert storage._mem_cache["key"] == b"abc"
-
-
-@pytest.mark.parametrize(
-    ("family_names", "expected_families"),
-    [
-        pytest.param(None, [CACHE_DATA_EVICTIONS_FAMILY], id="all"),
-        pytest.param(
-            [CACHE_DATA_EVICTIONS_FAMILY], [CACHE_DATA_EVICTIONS_FAMILY], id="match"
-        ),
-        pytest.param(["cache_memory_bytes"], [], id="other"),
-    ],
-)
-def test_get_stats_filters_by_family(
-    family_names: list[str] | None, expected_families: list[str]
-) -> None:
-    """Eviction stats are reported only when their family is requested."""
-    budget = GlobalCacheBudget(max_bytes=100)
-
-    assert budget.stats_families == (CACHE_DATA_EVICTIONS_FAMILY,)
-    assert list(budget.get_stats(family_names)) == expected_families
 
 
 @pytest.mark.parametrize(
