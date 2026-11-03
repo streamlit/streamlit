@@ -45,6 +45,10 @@ import { streamlit } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
+import {
+  DynamicIcon,
+  isMaterialIcon,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -78,6 +82,7 @@ import {
   StyledListBoxItem,
   StyledOpenButton,
   StyledPopover,
+  StyledStartEnhancer,
   StyledVisuallyHidden,
 } from "./Selectbox.styled"
 import { useSyncComboBoxEnterTargetFocus } from "./useSyncComboBoxEnterTargetFocus"
@@ -101,6 +106,8 @@ export interface Props {
    * announces the message to assistive tech.
    */
   error?: string | null
+  /** Emoji, `:material/name:`, or `"spinner"` shown at the start of the input. */
+  icon?: string
 }
 
 type ComboOption = {
@@ -242,12 +249,14 @@ const Selectbox: FC<Props> = ({
   filterMode: filterModeProp,
   required = false,
   error,
+  icon,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
   const id = useId()
   const errorId = `${id}-error`
   const hasError = Boolean(error)
+  const hasIcon = !isNullOrEmptyString(icon)
 
   // Floating UI provides scroll-tracking via autoUpdate. Unlike Popover and
   // MenuButton, we cannot replace RAC's <Popover> with FloatingPortal because
@@ -746,7 +755,17 @@ const Selectbox: FC<Props> = ({
             enterTargetKey={enterTargetId}
           />
           <StyledGroup ref={setReference}>
+            {hasIcon && (
+              <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
+                <DynamicIcon
+                  data-testid="stSelectboxIcon"
+                  iconValue={icon}
+                  size="base"
+                />
+              </StyledStartEnhancer>
+            )}
             <StyledInput
+              $hasIcon={hasIcon}
               placeholder={resolvedPlaceholder}
               readOnly={inputReadOnly}
               // inputMode="none" suppresses the mobile software keyboard while

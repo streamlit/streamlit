@@ -68,7 +68,7 @@ from streamlit.runtime.state import (
     register_widget,
     validate_on_change_mode,
 )
-from streamlit.string_util import to_help_str
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -190,6 +190,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -214,6 +215,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -238,6 +240,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -262,6 +265,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -286,6 +290,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[True] = True,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -315,6 +320,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: Literal[False] = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -339,6 +345,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -363,6 +370,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -515,6 +523,26 @@ class SelectboxMixin:
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget aligned with other widgets.
             If this is ``"collapsed"``, Streamlit displays no label or spacer.
+
+        icon : str or None
+            An optional emoji or icon to display within the input field to the
+            left of the value. If ``icon`` is ``None`` (default), no icon is
+            displayed. If ``icon`` is a string, the following options are
+            valid:
+
+            - A single-character emoji. For example, you can set ``icon="🚨"``
+              or ``icon="🔥"``. Emoji short codes are not supported.
+
+            - An icon from the Material Symbols library (rounded style) in the
+              format ``":material/icon_name:"`` where "icon_name" is the name
+              of the icon in snake case.
+
+              For example, ``icon=":material/thumb_up:"`` will display the
+              Thumb Up icon. Find additional icons in the `Material Symbols \
+              <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+              font library.
+
+            - ``"spinner"``: Displays a spinner as an icon.
 
         accept_new_options : bool
             Whether the user can add a selection that isn't included in ``options``.
@@ -675,6 +703,7 @@ class SelectboxMixin:
             disabled=disabled,
             required=required,
             label_visibility=label_visibility,
+            icon=icon,
             accept_new_options=accept_new_options,
             filter_mode=filter_mode,
             width=width,
@@ -699,6 +728,7 @@ class SelectboxMixin:
         disabled: bool = False,
         required: bool = False,
         label_visibility: LabelVisibility = "visible",
+        icon: str | None = None,
         accept_new_options: bool = False,
         filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
@@ -752,11 +782,11 @@ class SelectboxMixin:
         element_id = compute_and_register_element_id(
             "selectbox",
             user_key=key,
-            # Treat the provided key as the main identity. Only include
-            # accept_new_options in the identity computation because it can
-            # invalidate the current selection and is complex to support.
-            # `required` is hashed only for unkeyed widgets: toggling it cannot
-            # make a stored selection illegal.
+            # A user key is the widget identity. With a key, only
+            # accept_new_options changes the ID, because it can invalidate the
+            # current selection and is complex to support. The other kwargs
+            # below, such as `required` and `icon`, change the ID of unkeyed
+            # widgets only.
             key_as_main_identity={"accept_new_options"},
             dg=self.dg,
             label=label,
@@ -768,6 +798,7 @@ class SelectboxMixin:
             filter_mode=filter_mode,
             width=width,
             required=required,
+            icon=icon,
         )
 
         session_state = get_session_state().filtered_state
@@ -792,6 +823,9 @@ class SelectboxMixin:
 
         if help is not None:
             selectbox_proto.help = to_help_str(help)
+
+        if icon is not None:
+            selectbox_proto.icon = validate_icon_or_emoji(icon)
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:
@@ -878,6 +912,7 @@ class SelectboxMixin:
                 # The wire form encodes an explicit empty placeholder as a
                 # single space; report what the author passed.
                 placeholder=placeholder if placeholder != " " else "",
+                icon=selectbox_proto.icon or None,
                 disabled=disabled,
                 # Checked by the browser, not by this interface: `null` still
                 # resets the widget to its default, which is empty for

@@ -1229,6 +1229,53 @@ describe("Selectbox required and error props", () => {
   })
 })
 
+describe("Selectbox icon", () => {
+  it("renders no icon by default", () => {
+    render(<Selectbox {...getProps()} />)
+
+    expect(screen.queryByTestId("stSelectboxIcon")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["an emoji", "👤", "stIconEmoji", "👤"],
+    ["a material icon", ":material/public:", "stIconMaterial", "public"],
+  ])(
+    "renders %s as a decorative icon",
+    (_description, icon, iconTestId, expectedText) => {
+      render(<Selectbox {...getProps({ icon })} />)
+
+      expect(screen.getByTestId("stSelectboxIcon")).toBeVisible()
+      const iconElement = screen.getByTestId(iconTestId)
+      expect(iconElement).toHaveTextContent(expectedText)
+      expect(iconElement).toHaveAttribute("aria-hidden", "true")
+    }
+  )
+
+  it("keeps the icon while typing a new option", async () => {
+    const user = userEvent.setup()
+    render(
+      <Selectbox
+        {...getProps({ icon: "👤", acceptNewOptions: true, value: undefined })}
+      />
+    )
+
+    await user.type(screen.getByRole("combobox"), "zz")
+
+    expect(screen.getByRole("option", { name: /Add: zz/i })).toBeVisible()
+    // getByTestId throws on duplicates, so this also checks for a single icon.
+    expect(screen.getByTestId("stSelectboxIcon")).toBeVisible()
+  })
+
+  it("keeps the icon when disabled", () => {
+    render(
+      <Selectbox {...getProps({ icon: ":material/lock:", disabled: true })} />
+    )
+
+    expect(screen.getByRole("combobox")).toBeDisabled()
+    expect(screen.getByTestId("stSelectboxIcon")).toBeVisible()
+  })
+})
+
 describe("Selectbox dropdown positioning", () => {
   afterEach(() => {
     vi.restoreAllMocks()

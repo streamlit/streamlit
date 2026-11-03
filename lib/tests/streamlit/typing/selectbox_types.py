@@ -139,6 +139,16 @@ if TYPE_CHECKING:
         int | None,
     )
 
+    # Check icon parameter; it does not narrow the return type.
+    assert_type(selectbox("foo", ["a", "b"], icon=":material/public:"), str)
+    assert_type(selectbox("foo", ["a", "b"], icon=None), str)
+    assert_type(selectbox("foo", ["a", "b"], index=None, icon="👤"), str | None)
+    assert_type(selectbox("foo", [1, 2], accept_new_options=True, icon="👤"), int | str)
+    assert_type(
+        selectbox("foo", [1, 2], index=None, accept_new_options=True, icon="👤"),
+        int | str | None,
+    )
+
     def on_selectbox_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -156,6 +166,7 @@ if TYPE_CHECKING:
             disabled=False,
             required=True,
             label_visibility="visible",
+            icon=":material/public:",
             width=320,
         ),
         int,
