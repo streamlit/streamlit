@@ -104,7 +104,7 @@ Tree operations use visitors in `frontend/lib/src/render-tree/visitors/`:
 - `GetNodeByDeltaPathVisitor`: Retrieves node at path
 - `FilterMainScriptElementsVisitor`: Filters by script hash for MPA navigation
 
-Rendering uses `RenderNodeVisitor` (`frontend/lib/src/components/core/Block/RenderNodeVisitor.tsx`) to convert tree to React elements.
+Rendering uses `RenderNodeVisitor` (`frontend/lib/src/components/core/Block/RenderNodeVisitor.tsx`) to convert tree to React elements. It skips later copies of an element or block ID that already rendered. It also skips the stale old copy of content that a rerun moved up one slot: a stale element without an ID whose `elementHash` matches the previous child, when the parent's latest run wrote that child over different content (`ElementNode.replacedDifferentContent`).
 
 ## Rendering pipeline
 

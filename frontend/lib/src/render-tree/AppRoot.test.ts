@@ -1031,6 +1031,94 @@ describe("AppRoot", () => {
         expect(node2.element).not.toBe(node1.element)
       })
     })
+
+    describe("replacedDifferentContent", () => {
+      const applyText = (
+        root: AppRoot,
+        deltaPath: number[],
+        elementHash?: string
+      ): AppRoot =>
+        root.applyDelta(
+          "run_id_2",
+          makeProto(DeltaProto, { newElement: { text: { body: "hello" } } }),
+          forwardMsgMetadata(deltaPath),
+          elementHash
+        )
+
+      /** The element at `deltaPath`, or the anchor of a spinner there. */
+      const elementAt = (root: AppRoot, deltaPath: number[]): ElementNode => {
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root.root,
+          deltaPath
+        )
+        return (
+          node instanceof TransientNode ? node.anchor : node
+        ) as ElementNode
+      }
+
+      const withSpinnerAt = (root: AppRoot, deltaPath: number[]): AppRoot =>
+        root.applyDelta(
+          "run_id_2",
+          makeProto(DeltaProto, {
+            newTransient: { elements: [{ text: { body: "spinner" } }] },
+          }),
+          forwardMsgMetadata(deltaPath)
+        )
+
+      it.each([
+        ["the slot is empty", ROOT, [0, 1, 1], "hash_a"],
+        [
+          "the occupant has a different hash",
+          applyText(ROOT, [0, 1, 1], "hash_b"),
+          [0, 1, 1],
+          "hash_a",
+        ],
+        ["the occupant has no hash", ROOT, [0, 1, 0], "hash_a"],
+        [
+          "both hashes are missing",
+          applyText(ROOT, [0, 1, 1]),
+          [0, 1, 1],
+          undefined,
+        ],
+        ["the occupant is a block", ROOT, [0, 1], "hash_a"],
+        [
+          "a spinner wraps an occupant with a different hash",
+          withSpinnerAt(applyText(ROOT, [0, 1, 1], "hash_b"), [0, 1, 1]),
+          [0, 1, 1],
+          "hash_a",
+        ],
+      ])("is true when %s", (_, root, deltaPath, elementHash) => {
+        const newRoot = applyText(root, deltaPath, elementHash)
+
+        expect(elementAt(newRoot, deltaPath).replacedDifferentContent).toBe(
+          true
+        )
+      })
+
+      it("is false when the occupant has the same hash", () => {
+        const root1 = applyText(ROOT, [0, 1, 1], "hash_a")
+        const root2 = applyText(root1, [0, 1, 1], "hash_a")
+
+        expect(elementAt(root1, [0, 1, 1]).replacedDifferentContent).toBe(true)
+        expect(elementAt(root2, [0, 1, 1]).replacedDifferentContent).toBe(
+          false
+        )
+      })
+
+      it("is false when a spinner wraps an occupant with the same hash", () => {
+        const withSpinner = withSpinnerAt(
+          applyText(ROOT, [0, 1, 1], "hash_a"),
+          [0, 1, 1]
+        )
+        const anchor = elementAt(withSpinner, [0, 1, 1])
+        const newRoot = applyText(withSpinner, [0, 1, 1], "hash_a")
+        const node = elementAt(newRoot, [0, 1, 1])
+
+        expect(node.replacedDifferentContent).toBe(false)
+        // The payload still isn't reused across a transient occupant.
+        expect(node.element).not.toBe(anchor.element)
+      })
+    })
   })
 
   describe("AppRoot.clearStaleNodes", () => {

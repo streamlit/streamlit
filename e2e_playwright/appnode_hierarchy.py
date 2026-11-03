@@ -19,6 +19,8 @@ An app that exercises AppNode hierarchy changes.
 - Insert an element between two others
 - Simulate a long computation (with elements turning stale)
 - Use st.empty() placeholder to update content in place
+- Hide output above other content during a rerun
+- Rerun a page with repeated identical elements
 
 The paired Playwright test ensures only expected elements are visible and
 no stale duplicates remain after updates/reruns.
@@ -41,6 +43,8 @@ mode = st.selectbox(
         "simple_transient_spinner",
         "complex_transient_spinner",
         "chat_transient_spinner",
+        "moved_up_content",
+        "repeated_dividers",
     ],
     key="scenario_mode",
 )
@@ -149,6 +153,35 @@ def render_chat_transient_spinner() -> None:
                 st.write(f"Echo: {prompt}")
 
 
+def render_moved_up_content() -> None:
+    show_header = st.toggle(
+        "Show moved-up header", value=True, key="moved_up_show_header"
+    )
+    if show_header:
+        st.markdown("moved-up header")
+    for i in range(1, 4):
+        st.markdown(f"moved-up line {i}")
+        # Sleep only after hiding the header, so the test can check each line
+        # while the run is still writing them one slot higher.
+        if not show_header:
+            time.sleep(2)
+
+
+def render_repeated_dividers() -> None:
+    st.button("Rerun repeated dividers")
+    with st.container(key="repeated_dividers"):
+        for i in range(1, 3):
+            st.markdown(f"repeated section {i}")
+            st.divider()
+            st.write("")
+            # Sleeping between two identical spacers would expose a rule that
+            # hides the second, still-stale spacer during an unchanged rerun.
+            # The sections also repeat the same dividers further down.
+            time.sleep(2)
+            st.write("")
+            st.divider()
+
+
 if mode == "swap_element":
     render_swap_element()
 elif mode == "insert_between":
@@ -163,3 +196,7 @@ elif mode == "complex_transient_spinner":
     render_complex_transient_spinner()
 elif mode == "chat_transient_spinner":
     render_chat_transient_spinner()
+elif mode == "moved_up_content":
+    render_moved_up_content()
+elif mode == "repeated_dividers":
+    render_repeated_dividers()
