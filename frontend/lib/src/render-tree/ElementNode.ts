@@ -41,9 +41,9 @@ export class ElementNode implements AppNode {
   public readonly elementHash?: string
 
   /**
-   * Whether the write that created this node replaced different content in
-   * its slot, including an empty slot. RenderNodeVisitor uses it to tell
-   * content that moved up from an unchanged rewrite.
+   * Whether the write that created this node filled an empty slot or replaced
+   * different content. RenderNodeVisitor hides the stale neighbor only when
+   * this is true, so an unchanged rewrite of identical neighbors stays visible.
    */
   public readonly replacedDifferentContent: boolean
 

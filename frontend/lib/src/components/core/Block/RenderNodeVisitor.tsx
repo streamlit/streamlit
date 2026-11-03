@@ -165,10 +165,9 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     if (this.renderedKeySet.has(key)) {
       return null
     }
-    // Skip the stale old copy of content that the rerun just moved up one
-    // slot, so it doesn't show twice. When output above disappears, the rerun
-    // writes each element one slot higher, and the next slot keeps the old
-    // copy until the rerun reaches it. Only a shift by one slot is covered.
+    // Hide the old copy of content that the rerun just moved up one slot. It
+    // would otherwise show twice until the rerun overwrites it. Only a one-slot
+    // shift is covered.
     if (this.isStaleCopyOfPreviousSibling(node)) {
       return null
     }
@@ -244,10 +243,9 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    * - that write replaced different content, so an unchanged rerun of
    *   identical adjacent elements (e.g. `st.write("")` pairs) hides nothing.
    *
-   * Toasts are never skipped. Stale cleanup keeps them, so a hidden toast
-   * could show again in a later run and remount, which re-queues a toast
-   * that already expired. They render nothing in place, so hiding gains
-   * nothing.
+   * Toasts are never skipped: they render nothing in place, and stale cleanup
+   * keeps them, so hiding one and showing it again later would remount it and
+   * re-queue a toast that already expired.
    */
   private isStaleCopyOfPreviousSibling(node: ElementNode): boolean {
     const { scriptRunId } = this.props.node

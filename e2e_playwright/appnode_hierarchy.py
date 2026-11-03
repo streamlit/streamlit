@@ -174,9 +174,10 @@ def render_repeated_dividers() -> None:
             st.markdown(f"repeated section {i}")
             st.divider()
             st.write("")
-            # Sleeping between two identical spacers would expose a rule that
-            # hides the second, still-stale spacer during an unchanged rerun.
-            # The sections also repeat the same dividers further down.
+            # Sleep between the two identical spacers. A skip rule that ignored
+            # whether the write changed the slot would hide the second,
+            # still-stale spacer here. Each section repeats the same dividers,
+            # which also covers non-adjacent copies.
             time.sleep(2)
             st.write("")
             st.divider()
