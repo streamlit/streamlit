@@ -274,10 +274,10 @@ interface State {
 export const LOG = getLogger("App")
 
 /**
- * Run identity of a new_session message. A new_session without identity comes
- * from a replayed old stream or a mismatched dev build, so it renders under a
- * placeholder full-app run. The placeholder is never
- * INITIAL_SCRIPT_RUN_ID, which marks the app as not having run yet.
+ * Returns a new_session's run identity, or a placeholder full-app run when the
+ * message has none (an old recorded stream, or a backend from another build).
+ * The placeholder is a fresh ID, never INITIAL_SCRIPT_RUN_ID, because that ID
+ * makes the app report that no script has run yet.
  */
 function getNewSessionRunIdentity(
   metadata?: ForwardMsgMetadata | null
@@ -2263,9 +2263,8 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata,
     elementHash?: string
   ): void => {
-    // Deltas carry no run identity: a delta belongs to the most recent
-    // new_session before it in the stream. Tagging it with
-    // prevState.scriptRunId inside a functional update preserves that,
+    // A delta belongs to the run of the most recent new_session before it.
+    // Reading scriptRunId from prevState (not this.state) keeps that true,
     // because React applies queued updaters in order.
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(

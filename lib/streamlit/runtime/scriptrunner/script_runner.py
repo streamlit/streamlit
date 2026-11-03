@@ -274,14 +274,15 @@ class ScriptRunner:
         # receiver(sender, event=..., **payload); events not listed below carry
         # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages,
+        #   run_descriptor
         # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception, run_descriptor
         # - SCRIPT_STOPPED_WITH_SUCCESS: run_descriptor
         # - FRAGMENT_STOPPED_WITH_SUCCESS: run_descriptor
         # - SCRIPT_STOPPED_FOR_RERUN: run_descriptor
         # - SHUTDOWN: client_state (None if setup failed before context creation)
-        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages,
-        #   run_descriptor (a new RunDescriptor for each run)
-        # A finish event's run_descriptor is the one its run's SCRIPT_STARTED sent.
+        # Each run creates one RunDescriptor and sends the same one on its start
+        # and finish events, so AppSession can tag both messages with that run.
         self.on_event = Signal()
 
         # Set to true while we're executing. Used by
@@ -718,8 +719,8 @@ class ScriptRunner:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
             run_descriptor = RunDescriptor.create(fragment_ids_this_run)
-            # Queue clearing still reads fragment_ids_this_run, where None marks a
-            # full-app run, so it travels alongside the descriptor.
+            # AppSession._clear_queue and LocalScriptRunner take the fragment
+            # list directly, so it's sent next to the descriptor.
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,

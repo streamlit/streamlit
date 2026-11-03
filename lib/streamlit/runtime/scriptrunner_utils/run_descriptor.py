@@ -31,20 +31,20 @@ def _generate_scriptrun_id() -> str:
 
 @dataclass(frozen=True)
 class RunDescriptor:
-    """Identity of one top-level backend execution.
+    """The ID of one script run and the fragments it reruns.
 
-    A run is either a full-app run or one fragment rerun batch: the ordered
-    fragment roots that one ScriptRunner loop iteration executes together.
-    This is the backend counterpart of the ``RunIdentity`` proto:
-    ``new_session`` carries this identity in ``ForwardMsg.metadata.run``.
+    A run is a full-app rerun, or a rerun of one or more fragments that
+    ScriptRunner executes together. ScriptRunner creates one per run, and
+    AppSession writes it into ``ForwardMsg.metadata.run`` (the ``RunIdentity``
+    proto) on that run's ``new_session`` and ``script_finished``.
 
     Attributes
     ----------
     script_run_id : str
         A unique ID for this run.
     fragment_ids : tuple[str, ...]
-        The fragment roots selected for this run, in execution order. Empty
-        for a full-app run.
+        The fragments this run reruns, parents before nested ones. Empty for a
+        full-app run.
     """
 
     script_run_id: str
@@ -60,10 +60,7 @@ class RunDescriptor:
 
     @classmethod
     def from_metadata(cls, metadata: ForwardMsgMetadata) -> RunDescriptor | None:
-        """Read the run identity from ForwardMsg metadata.
-
-        Returns None if the metadata carries no run identity.
-        """
+        """Read the descriptor from ``metadata.run``, or None if it's unset or has no run ID."""
         if not metadata.HasField("run") or not metadata.run.script_run_id:
             return None
         return cls(

@@ -202,22 +202,23 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
-  // Identity of the run that a new_session starts or a script_finished ends.
-  // Set on new_session and script_finished; a script_finished omits it when
-  // the backend can't attribute the finish to a run. Deltas carry none and
-  // belong to the most recent new_session before them.
+  // The run that this message starts (new_session) or ends (script_finished).
+  // - Deltas never set it: a delta belongs to the most recent new_session
+  //   before it.
+  // - A script_finished omits it when the backend doesn't know which run
+  //   finished.
   RunIdentity run = 6;
 
   reserved 3;
 }
 
-// Identity of one top-level backend execution: a full-app run or one fragment
-// rerun batch.
+// Identifies one script run: a full-app rerun, or a rerun of one or more
+// fragments. The frontend uses it to tell which elements are stale after a run.
 message RunIdentity {
   string script_run_id = 1;
 
-  // Fragments this run reruns, with queued ancestors before their
-  // descendants. Empty means a full-app run.
+  // Fragments this run reruns, with parent fragments before nested ones. Empty
+  // for a full-app run.
   repeated string fragment_ids = 2;
 }
 

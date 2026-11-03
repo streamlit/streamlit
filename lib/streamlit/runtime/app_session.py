@@ -600,8 +600,8 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
-        # Finishes whatever run was in progress. AppSession does not hold that
-        # run's descriptor, so this finish carries no run identity.
+        # Ends whatever run was in progress. Only that run's ScriptRunner knows
+        # its descriptor, so this script_finished carries no run identity.
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
@@ -1034,12 +1034,22 @@ class AppSession:
             SCRIPT_STARTED event.
 
         run_descriptor : RunDescriptor | None
-            The identity of the run that the event belongs to. Always set for
-            the SCRIPT_STARTED event. Set for the finish events
-            (SCRIPT_STOPPED_WITH_SUCCESS, FRAGMENT_STOPPED_WITH_SUCCESS,
-            SCRIPT_STOPPED_WITH_COMPILE_ERROR, and SCRIPT_STOPPED_FOR_RERUN)
-            when the finished run is known; a finish without it produces a
-            script_finished message with no run identity.
+            The run that the event starts or finishes, which AppSession copies
+            into the new_session or script_finished metadata.
+
+            - ScriptRunner always sends it, on SCRIPT_STARTED and on that
+              run's finish event.
+            - It is None only when the server fails to handle a message from
+              the browser, for example a rerun or "Clear caches" request that
+              raises, or a message it can't decode. The app then replaces its
+              content with the error, and handle_backmsg_exception first ends
+              whatever run was in progress with a SCRIPT_STOPPED_WITH_SUCCESS.
+              Only that run's ScriptRunner holds its descriptor.
+
+            A script_finished without it has no metadata.run, so nothing can
+            tell which run it ended. Neither the frontend nor the agent client
+            reads run identity from script_finished, so they handle it like
+            any other finish.
         """
 
         if (
@@ -1332,11 +1342,7 @@ class AppSession:
         status: ForwardMsg.ScriptFinishedStatus.ValueType,
         run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
-        """Create and return a script_finished ForwardMsg.
-
-        The message carries run_descriptor's identity in its metadata, or no
-        run identity when run_descriptor is None.
-        """
+        """Create a script_finished ForwardMsg, tagged with run_descriptor's run when given."""
         msg = ForwardMsg()
         if run_descriptor is not None:
             _set_run_identity(msg, run_descriptor)
@@ -1517,7 +1523,7 @@ class AppSession:
 
 
 def _set_run_identity(msg: ForwardMsg, run_descriptor: RunDescriptor) -> None:
-    """Write run_descriptor into msg.metadata.run."""
+    """Tag a lifecycle message (new_session or script_finished) with its run."""
     msg.metadata.run.script_run_id = run_descriptor.script_run_id
     msg.metadata.run.fragment_ids.extend(run_descriptor.fragment_ids)
 

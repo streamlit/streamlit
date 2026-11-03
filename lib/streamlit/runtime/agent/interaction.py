@@ -209,6 +209,8 @@ class AgentSessionClient(SessionClient):
 
         if msg_type == "new_session":
             run = RunDescriptor.from_metadata(msg.metadata)
+            # Without identity the run gets an empty ID and counts as a full-app
+            # run, so its finish drops every delta from earlier runs.
             if run is None:
                 _LOGGER.warning(
                     "Agent session client got a new_session without run identity."

@@ -16,10 +16,7 @@
 
 import type { ForwardMsgMetadata } from "@streamlit/protobuf"
 
-/**
- * Identity of one top-level backend execution: a full-app run or one
- * fragment rerun batch.
- */
+/** The ID of one script run and the fragments it reruns. */
 export interface RunIdentity {
   scriptRunId: string
   /** Fragments this run reruns, ancestors first. Empty means a full-app run. */

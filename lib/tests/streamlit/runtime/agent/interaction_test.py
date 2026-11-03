@@ -367,7 +367,9 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
     log_exception.assert_called_once()
 
 
-def test_client_new_session_without_run_identity_starts_an_unnamed_full_run() -> None:
+def test_client_new_session_without_run_identity_starts_full_run_with_empty_id() -> (
+    None
+):
     """A `new_session` missing its run identity logs a warning and starts a
     full run with an empty run ID, so the previous run's deltas go stale.
     """
