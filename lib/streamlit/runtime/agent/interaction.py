@@ -47,6 +47,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime import RuntimeState
 from streamlit.runtime.agent import snapshot, usage, widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
+from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
@@ -207,8 +208,15 @@ class AgentSessionClient(SessionClient):
         msg_type = msg.WhichOneof("type")
 
         if msg_type == "new_session":
-            self._run_id = msg.new_session.script_run_id
-            self._fragments_this_run = frozenset(msg.new_session.fragment_ids_this_run)
+            run = RunDescriptor.from_metadata(msg.metadata)
+            # Without identity the run gets an empty ID and counts as a full-app
+            # run, so its finish drops every delta from earlier runs.
+            if run is None:
+                _LOGGER.warning(
+                    "Agent session client got a new_session without run identity."
+                )
+            self._run_id = run.script_run_id if run else ""
+            self._fragments_this_run = frozenset(run.fragment_ids if run else ())
             self._element_at = {}
 
         if msg_type == "delta":

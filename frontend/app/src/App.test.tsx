@@ -41,6 +41,7 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  AppRoot,
   BackendOperationClient,
   type CachedTheme,
   CONNECTION_CLOSED_MESSAGE,
@@ -78,7 +79,7 @@ import {
   type Element,
   Exception,
   ForwardMsg,
-  type ForwardMsgMetadata,
+  ForwardMsgMetadata,
   type Logo,
   Navigation,
   type NewSession,
@@ -86,6 +87,7 @@ import {
   type PageInfo,
   type PageNotFound,
   type ParentMessage,
+  type RunIdentity,
   SessionEvent,
   type SessionStatus,
   type StopAutoRerun,
@@ -355,8 +357,11 @@ const NEW_SESSION_JSON: NewSession.$Properties = {
   pageScriptHash: "page_script_hash",
   mainScriptPath: "path/to/file.py",
   mainScriptHash: "page_hash",
+}
+
+const RUN_IDENTITY_JSON: RunIdentity.$Properties = {
   scriptRunId: "script_run_id",
-  fragmentIdsThisRun: [],
+  fragmentIds: [],
 }
 
 const NAVIGATION_JSON: Navigation.$Properties = {
@@ -454,18 +459,26 @@ type ForwardMsgType =
 function sendForwardMessage(
   type: keyof ForwardMsg,
   message: ForwardMsgType,
-  metadata: Partial<ForwardMsgMetadata> | null = null
+  metadata: ForwardMsgMetadata.$Properties | null = null
 ): void {
   act(() => {
     const fwMessage = new ForwardMsg()
     // @ts-expect-error - message union is not assignable to the indexed ForwardMsg field
     fwMessage[type] = cloneDeep(message)
     if (metadata) {
-      fwMessage.metadata = metadata
+      fwMessage.metadata = new ForwardMsgMetadata(cloneDeep(metadata))
     }
 
     getMockConnectionManagerProp("onMessage")(fwMessage)
   })
+}
+
+/** Sends a newSession message whose run identity is in its metadata. */
+function sendNewSession(
+  newSession: NewSession.$Properties,
+  run: RunIdentity.$Properties = RUN_IDENTITY_JSON
+): void {
+  sendForwardMessage("newSession", newSession, { run })
 }
 
 async function openCacheModal(): Promise<void> {
@@ -522,7 +535,7 @@ describe("App", () => {
       "initial"
     )
 
-    sendForwardMessage("newSession", NEW_SESSION_JSON)
+    sendNewSession(NEW_SESSION_JSON)
 
     sendForwardMessage("sessionStatusChanged", {
       runOnSave: false,
@@ -587,7 +600,7 @@ describe("App", () => {
       )
       expect(sessionInfo.isSet).toBe(true)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         config: {},
         initialize: {
           environmentInfo: {
@@ -619,7 +632,7 @@ describe("App", () => {
       )
       expect(sessionInfo.isSet).toBe(true)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         config: {},
         initialize: {
           environmentInfo: {
@@ -629,7 +642,6 @@ describe("App", () => {
           userInfo: {},
           sessionStatus: {},
         },
-        fragmentIdsThisRun: [],
       })
 
       expect(window.location.reload).not.toHaveBeenCalled()
@@ -675,7 +687,7 @@ describe("App", () => {
         version: "oldStreamlitVersion",
       }
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         config: {},
         initialize: {
           environmentInfo: {
@@ -705,7 +717,7 @@ describe("App", () => {
         version: "oldStreamlitVersion",
       }
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         config: {},
         initialize: {
           environmentInfo: {
@@ -715,7 +727,6 @@ describe("App", () => {
           userInfo: {},
           sessionStatus: {},
         },
-        fragmentIdsThisRun: [],
       })
 
       expect(window.location.reload).not.toHaveBeenCalled()
@@ -727,7 +738,7 @@ describe("App", () => {
 
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
-    sendForwardMessage("newSession", NEW_SESSION_JSON)
+    sendNewSession(NEW_SESSION_JSON)
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
   })
@@ -764,7 +775,7 @@ describe("App", () => {
         scriptIsRunning: true,
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", {
         appPages: [
           {
@@ -829,6 +840,7 @@ describe("App", () => {
     afterEach(() => {
       document.title = documentTitle
       window.localStorage.clear()
+      vi.restoreAllMocks()
     })
 
     it("respects the user's theme preference if set, but adds custom theme as an option", () => {
@@ -839,7 +851,7 @@ describe("App", () => {
       )
       renderApp(props)
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
       // When custom theme is available, preset themes are removed
@@ -853,7 +865,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
@@ -877,7 +889,7 @@ describe("App", () => {
       }
       renderApp(props)
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
       // setTheme SHOULD be called to update with the full server config while preserving the selection
@@ -891,10 +903,10 @@ describe("App", () => {
       renderApp(props)
 
       // Send Forward message with custom theme
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -910,13 +922,13 @@ describe("App", () => {
       renderApp(props)
 
       // First, send a custom theme to establish it
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // @ts-expect-error - addThemes is not typed as a vitest mock
       props.theme.addThemes.mockClear()
 
       // Then send null to remove the custom theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -933,12 +945,12 @@ describe("App", () => {
       renderApp(props)
 
       // Send Forward message with custom theme
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       expect(props.theme.setTheme).toHaveBeenCalled()
       // @ts-expect-error - setTheme is not typed as a vitest mock
       props.theme.setTheme.mockClear()
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -960,9 +972,9 @@ describe("App", () => {
       renderApp(props)
 
       // Send Forward message with custom theme
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -984,13 +996,13 @@ describe("App", () => {
       const customThemeConfig = new CustomThemeConfig({ primaryColor: "blue" })
 
       // Send Forward message with custom theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: customThemeConfig,
       })
 
       // Send Forward message with different custom theme
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
       expect(props.theme.setTheme).toHaveBeenCalled()
@@ -1003,7 +1015,7 @@ describe("App", () => {
       const customThemeConfig = new CustomThemeConfig({ primaryColor: "blue" })
 
       // Send Forward message with custom theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: customThemeConfig,
       })
@@ -1016,7 +1028,7 @@ describe("App", () => {
       props.theme.setTheme.mockClear()
 
       // Send Forward message with same custom theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: customThemeConfig,
       })
@@ -1032,7 +1044,7 @@ describe("App", () => {
       // Send first newSession with null custom theme
       // This should process the theme (themeHash changes from "" to "hash_for_undefined_custom_theme")
       // and call addThemes([]) to clear any cached custom themes from localStorage
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -1062,7 +1074,7 @@ describe("App", () => {
       })
 
       // Send first theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -1085,7 +1097,7 @@ describe("App", () => {
         backgroundColor: "white",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -1105,7 +1117,7 @@ describe("App", () => {
       })
 
       // Send first theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -1120,7 +1132,7 @@ describe("App", () => {
         backgroundColor: "white",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -1141,6 +1153,9 @@ describe("App", () => {
       act(() => {
         const fwMessage = new ForwardMsg()
         fwMessage.newSession = cloneDeep(NEW_SESSION_JSON)
+        fwMessage.metadata = new ForwardMsgMetadata({
+          run: cloneDeep(RUN_IDENTITY_JSON),
+        })
         expect(sessionInfo.isSet).toBe(false)
         getMockConnectionManagerProp("onMessage")(fwMessage)
       })
@@ -1158,15 +1173,15 @@ describe("App", () => {
       const setCurrentSpy = vi.spyOn(sessionInfo, "setCurrent")
 
       expect(sessionInfo.isSet).toBe(false)
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(setCurrentSpy).toHaveBeenCalledTimes(1)
       expect(sessionInfo.isSet).toBe(true)
       setCurrentSpy.mockClear()
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       expect(setCurrentSpy).not.toHaveBeenCalled()
       expect(sessionInfo.isSet).toBe(true)
     })
@@ -1180,13 +1195,13 @@ describe("App", () => {
       const setCurrentSpy = vi.spyOn(sessionInfo, "setCurrent")
 
       expect(sessionInfo.isSet).toBe(false)
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(setCurrentSpy).toHaveBeenCalledTimes(1)
       expect(sessionInfo.isSet).toBe(true)
       setCurrentSpy.mockClear()
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       expect(setCurrentSpy).not.toHaveBeenCalled()
       expect(sessionInfo.isSet).toBe(true)
       expect(sessionInfo.current.isConnected).toBe(true)
@@ -1209,7 +1224,7 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(setCurrentSpy).toHaveBeenCalledTimes(2)
       expect(sessionInfo.isSet).toBe(true)
@@ -1272,7 +1287,7 @@ describe("App", () => {
           sectionHeader: "",
         },
       ]
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "hash1",
       })
@@ -1308,7 +1323,7 @@ describe("App", () => {
     it("clears app elements if currentPageScriptHash changes", async () => {
       await makeAppWithElements()
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "different_hash",
       })
@@ -1321,11 +1336,13 @@ describe("App", () => {
     it("does not add stale app elements if currentPageScriptHash changes", async () => {
       await makeAppWithElements()
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        pageScriptHash: "different_hash",
-        scriptRunId: "different_script_run_id",
-      })
+      sendNewSession(
+        {
+          ...NEW_SESSION_JSON,
+          pageScriptHash: "different_hash",
+        },
+        { scriptRunId: "different_script_run_id", fragmentIds: [] }
+      )
 
       // elements are cleared
       expect(
@@ -1366,7 +1383,7 @@ describe("App", () => {
     it("doesn't clear app elements if currentPageScriptHash doesn't change", async () => {
       await makeAppWithElements()
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       const element = await screen.findByText("Here is some text")
       expect(element).toBeInTheDocument()
@@ -1377,9 +1394,9 @@ describe("App", () => {
 
       document.title = "some title"
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        fragmentIdsThisRun: [],
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "script_run_id",
+        fragmentIds: [],
       })
       sendForwardMessage("navigation", {
         appPages: [
@@ -1408,12 +1425,72 @@ describe("App", () => {
 
       document.title = "some title"
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        fragmentIdsThisRun: ["myFragmentId"],
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "script_run_id",
+        fragmentIds: ["myFragmentId"],
       })
 
       expect(document.title).toBe("some title")
+    })
+
+    it("clears transient nodes for the fragments in the run identity", () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+
+      const clearTransientNodesSpy = vi.spyOn(
+        AppRoot.prototype,
+        "clearTransientNodes"
+      )
+
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "fragment_run_id",
+        fragmentIds: ["myFragmentId"],
+      })
+
+      expect(clearTransientNodesSpy).toHaveBeenCalledTimes(1)
+      expect(clearTransientNodesSpy).toHaveBeenCalledWith(["myFragmentId"])
+    })
+
+    it("renders under a placeholder run when the run identity is missing", async () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "Rendered without run identity", help: "" },
+          },
+        },
+        { deltaPath: [0, 0] }
+      )
+
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Received a new_session message without run identity metadata."
+      )
+      expect(
+        await screen.findByText("Rendered without run identity")
+      ).toBeVisible()
+      expect(screen.getByTestId("stApp")).toHaveAttribute(
+        "data-test-script-state",
+        ScriptRunState.RUNNING
+      )
+    })
+
+    it("does not log an error when the run identity is present", () => {
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      renderApp(getProps())
+
+      sendNewSession(NEW_SESSION_JSON)
+
+      expect(logErrorSpy).not.toHaveBeenCalled()
     })
   })
 
@@ -1427,7 +1504,7 @@ describe("App", () => {
 
     it("renders with status widget, toolbar, and main menu by default", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(screen.getByTestId("stHeader")).toBeVisible()
       expect(screen.getByTestId("stToolbar")).toBeVisible()
@@ -1446,7 +1523,7 @@ describe("App", () => {
     it("shows the top bar if hideTopBar === false", () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(screen.getByTestId("stStatusWidget")).toBeVisible()
       expect(screen.getByTestId("stToolbarActions")).toBeVisible()
@@ -1458,7 +1535,7 @@ describe("App", () => {
       vi.mocked(isToolbarDisplayed).mockReturnValue(false)
 
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // main menu should not render
       expect(screen.queryByTestId("stMainMenu")).toBeNull()
@@ -1470,7 +1547,7 @@ describe("App", () => {
       vi.mocked(isToolbarDisplayed).mockReturnValue(true)
 
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // Header/main menu should render
       expect(screen.getByTestId("stHeader")).toBeVisible()
@@ -1502,7 +1579,7 @@ describe("App", () => {
     it("button should be visible in development mode", () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1516,7 +1593,7 @@ describe("App", () => {
     it("button should be hidden in viewer mode", () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1530,7 +1607,7 @@ describe("App", () => {
     it("button should be hidden for hello app", () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1549,7 +1626,7 @@ describe("App", () => {
       renderApp(getProps())
 
       // First make the button visible by setting developer mode
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1575,7 +1652,7 @@ describe("App", () => {
       renderApp(getProps())
 
       // First make the button visible by setting developer mode
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1606,7 +1683,7 @@ describe("App", () => {
 
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -1650,7 +1727,6 @@ describe("App", () => {
       },
       appPages: [],
       pageScriptHash: "top_hash",
-      fragmentIdsThisRun: [],
     }
     const THIS_NAVIGATION_JSON = {
       appPages: [
@@ -1679,7 +1755,7 @@ describe("App", () => {
     it("handles popState events, e.g. clicking browser's back button", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
@@ -1688,7 +1764,7 @@ describe("App", () => {
         pageScriptHash: "sub_hash",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "top_hash",
       })
@@ -1697,7 +1773,7 @@ describe("App", () => {
         pageScriptHash: "top_hash",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
@@ -1753,7 +1829,7 @@ describe("App", () => {
       const connectionManager = getMockConnectionManager()
       expect(connectionManager.sendMessage).not.toHaveBeenCalled()
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
@@ -1777,7 +1853,7 @@ describe("App", () => {
     it("preserves query params from URL on first script run after browser back button", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "top_hash",
       })
@@ -1791,7 +1867,7 @@ describe("App", () => {
       connectionManager.sendMessage.mockClear()
 
       // Navigate to page2
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "sub_hash",
       })
@@ -1825,7 +1901,7 @@ describe("App", () => {
     it("uses current URL query params when browser history stays on the same page", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "top_hash",
       })
@@ -1876,7 +1952,7 @@ describe("App", () => {
     it("uses current URL query params when same-page popstate URL has a fragment", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "top_hash",
       })
@@ -1920,7 +1996,7 @@ describe("App", () => {
     it("reruns same-page history before navigation metadata arrives", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -1957,7 +2033,7 @@ describe("App", () => {
     it("does not set isHistoryNavigation on ordinary widget reruns", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...CURRENT_NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2128,7 +2204,7 @@ describe("App", () => {
     it("uses replaceState during a pending history rerun and pushState afterwards", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2165,7 +2241,7 @@ describe("App", () => {
       expect(replaceStateSpy).toHaveBeenLastCalledWith({}, "", "/?second=1")
       expect(pushStateSpy).not.toHaveBeenCalled()
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2189,7 +2265,7 @@ describe("App", () => {
     it("keeps replaceState for history PageInfo after a superseding widget rerun", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2232,7 +2308,7 @@ describe("App", () => {
 
       // The superseding run's NewSession ends history replaceState so its
       // own PageInfo can pushState instead of overwriting the restored entry.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2251,7 +2327,7 @@ describe("App", () => {
     it("keeps replaceState across consecutive history NewSessions", async () => {
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2283,7 +2359,7 @@ describe("App", () => {
 
       // First history NewSession must not end replaceState for the second
       // history run that was already requested.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2306,7 +2382,7 @@ describe("App", () => {
       )
       expect(pushStateSpy).not.toHaveBeenCalled()
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "spa_hash",
       })
@@ -2346,7 +2422,7 @@ describe("App", () => {
       try {
         renderApp(getProps())
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2377,7 +2453,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalled()
         })
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2405,7 +2481,7 @@ describe("App", () => {
       try {
         renderApp(getProps())
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2445,7 +2521,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalled()
         })
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2473,7 +2549,7 @@ describe("App", () => {
       try {
         renderApp(getProps())
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2490,7 +2566,7 @@ describe("App", () => {
 
         // History run has started — a later auto-rerun is a separate interrupt,
         // not a pending coalesce.
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2510,7 +2586,7 @@ describe("App", () => {
           expect(connectionManager.sendMessage).toHaveBeenCalled()
         })
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           pageScriptHash: "spa_hash",
         })
@@ -2544,7 +2620,7 @@ describe("App", () => {
       renderApp(getProps())
 
       // Set initial pageScriptHash
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "some_other_page_hash",
       })
@@ -2733,7 +2809,7 @@ describe("App", () => {
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "toppage_hash",
@@ -2795,7 +2871,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2827,7 +2903,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2864,7 +2940,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2882,7 +2958,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2907,7 +2983,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2925,7 +3001,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2943,7 +3019,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -2977,7 +3053,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -3015,7 +3091,7 @@ describe("App", () => {
       const props = getProps()
       renderApp(props)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: themeInput,
       })
@@ -3045,7 +3121,7 @@ describe("App", () => {
           const props = getProps()
           renderApp(props)
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: null,
           })
@@ -3066,7 +3142,7 @@ describe("App", () => {
 
           renderApp(props)
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: null,
           })
@@ -3092,7 +3168,7 @@ describe("App", () => {
 
           renderApp(props)
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: null,
           })
@@ -3120,7 +3196,7 @@ describe("App", () => {
 
           renderApp(props)
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: null,
           })
@@ -3144,7 +3220,7 @@ describe("App", () => {
             primaryColor: "blue",
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3170,7 +3246,7 @@ describe("App", () => {
             primaryColor: "blue",
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3203,7 +3279,7 @@ describe("App", () => {
             primaryColor: "blue",
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3237,7 +3313,7 @@ describe("App", () => {
             primaryColor: "blue",
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3265,7 +3341,7 @@ describe("App", () => {
             dark: { primaryColor: "darkblue" },
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3293,7 +3369,7 @@ describe("App", () => {
             dark: { primaryColor: "darkblue" },
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3331,7 +3407,7 @@ describe("App", () => {
             dark: { primaryColor: "darkblue" },
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3367,7 +3443,7 @@ describe("App", () => {
             dark: { primaryColor: "darkblue" },
           })
 
-          sendForwardMessage("newSession", {
+          sendNewSession({
             ...NEW_SESSION_JSON,
             customTheme: themeInput,
           })
@@ -3441,7 +3517,7 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config with light and dark sections
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme,
       })
@@ -3467,7 +3543,7 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config with light and dark sections
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme,
       })
@@ -3493,7 +3569,7 @@ describe("App", () => {
       renderApp(props)
 
       // Send custom theme config
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme,
       })
@@ -3518,7 +3594,7 @@ describe("App", () => {
       renderApp(props)
 
       // First send custom theme
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme,
       })
@@ -3526,7 +3602,7 @@ describe("App", () => {
       vi.mocked(props.theme.setTheme).mockClear()
 
       // Then remove custom theme (send null)
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
@@ -3548,7 +3624,7 @@ describe("App", () => {
         sidebar: { backgroundColor: "white" },
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3560,7 +3636,7 @@ describe("App", () => {
         sidebar: { backgroundColor: "gray" }, // Different sidebar color
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3578,7 +3654,7 @@ describe("App", () => {
         light: { backgroundColor: "white" },
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3590,7 +3666,7 @@ describe("App", () => {
         light: { backgroundColor: "lightgray" }, // Different light background
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3608,7 +3684,7 @@ describe("App", () => {
         dark: { backgroundColor: "black" },
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3620,7 +3696,7 @@ describe("App", () => {
         dark: { backgroundColor: "darkgray" }, // Different dark background
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3640,7 +3716,7 @@ describe("App", () => {
         },
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3654,7 +3730,7 @@ describe("App", () => {
         },
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3672,7 +3748,7 @@ describe("App", () => {
         backgroundColor: "white",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme,
       })
@@ -3680,7 +3756,7 @@ describe("App", () => {
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
       // Send the same theme again
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme,
       })
@@ -3699,7 +3775,7 @@ describe("App", () => {
         textColor: "black",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3713,7 +3789,7 @@ describe("App", () => {
         primaryColor: "blue",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3731,7 +3807,7 @@ describe("App", () => {
         bodyFont: "Arial",
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3743,7 +3819,7 @@ describe("App", () => {
         bodyFont: "Helvetica", // Different font
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3761,7 +3837,7 @@ describe("App", () => {
         headingFontSizes: ["2rem", "1.5rem", "1.25rem"],
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme1,
       })
@@ -3773,7 +3849,7 @@ describe("App", () => {
         headingFontSizes: ["2rem", "1.5rem", "1rem"], // Different array value
       })
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         customTheme: theme2,
       })
@@ -3814,7 +3890,7 @@ describe("App", () => {
 
     it("will not increment cache count if session info is set and the script finished early", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage(
         "scriptFinished",
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
@@ -3828,7 +3904,7 @@ describe("App", () => {
 
     it("will increment cache count if session info is set", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage(
         "scriptFinished",
         ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
@@ -3847,7 +3923,7 @@ describe("App", () => {
         runOnSave: false,
         scriptIsRunning: true,
       })
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", NAVIGATION_JSON)
       // this message now belongs to this^ session
       sendForwardMessage(
@@ -3866,9 +3942,9 @@ describe("App", () => {
       )
 
       // start new session
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+      sendNewSession(NEW_SESSION_JSON, {
         scriptRunId: "different_script_run_id",
+        fragmentIds: [],
       })
 
       await waitFor(() => {
@@ -3887,7 +3963,7 @@ describe("App", () => {
 
     it("will not clear stale nodes if finished with rerun", async () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", NAVIGATION_JSON)
       // Run the script with one new element
       sendForwardMessage("sessionStatusChanged", {
@@ -3925,9 +4001,9 @@ describe("App", () => {
       )
 
       // start new session
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+      sendNewSession(NEW_SESSION_JSON, {
         scriptRunId: "different_script_run_id",
+        fragmentIds: [],
       })
 
       // this message now belongs to this^ session. It overrides the first message of
@@ -4135,7 +4211,7 @@ describe("App", () => {
       expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new session with a different pageScriptHash
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         pageScriptHash: "page_script_hash",
       })
@@ -4164,7 +4240,7 @@ describe("App", () => {
       expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
 
       // Trigger a new scriptRunId via new session
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // Trigger cleanup in script finished handler
       sendForwardMessage(
@@ -4183,7 +4259,7 @@ describe("App", () => {
       renderApp(getProps())
 
       // Initial script run, creates logo
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", {
         appPages: [
           {
@@ -4216,9 +4292,9 @@ describe("App", () => {
       })
 
       // Fragment run - logo is not sent, but should persist (triggers scriptRunId to be updated)
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        fragmentIdsThisRun: ["myFragmentId"],
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "script_run_id",
+        fragmentIds: ["myFragmentId"],
       })
       sendForwardMessage(
         "scriptFinished",
@@ -4229,9 +4305,9 @@ describe("App", () => {
       })
 
       // Full re-run - logo is not sent, should be removed as stale (scriptRunId is different)
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
+      sendNewSession(NEW_SESSION_JSON, {
         scriptRunId: "different_script_run_id",
+        fragmentIds: [],
       })
       sendForwardMessage(
         "scriptFinished",
@@ -4247,7 +4323,7 @@ describe("App", () => {
   describe("App.handlePageNotFound", () => {
     it("includes the missing page name in error modal message if available", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [
           {
@@ -4279,7 +4355,7 @@ describe("App", () => {
 
     it("uses a more generic error message if no page name is available", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [
           {
@@ -4320,7 +4396,7 @@ describe("App", () => {
     it("renders something on the screen", async () => {
       renderApp(getProps())
       // Need to set up a Script ID
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       // Need to set the script to running
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
@@ -4452,7 +4528,7 @@ describe("App", () => {
         expect(screen.getByTestId("stAppSkeleton")).toBeVisible()
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: true,
@@ -4534,7 +4610,7 @@ describe("App", () => {
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 2000)
 
-      sendForwardMessage("newSession", { ...NEW_SESSION_JSON })
+      sendNewSession({ ...NEW_SESSION_JSON })
 
       expect(clearInterval).toHaveBeenCalled()
       expect(clearInterval).toHaveBeenCalled()
@@ -4866,7 +4942,7 @@ describe("App", () => {
       try {
         renderApp(getProps())
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           config: {
             ...NEW_SESSION_JSON.config,
@@ -4888,7 +4964,7 @@ describe("App", () => {
       })
       renderApp(getProps())
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -5081,7 +5157,7 @@ describe("App", () => {
         "sendUpdateWidgetsMessage"
       )
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // Confirm previous session info does not exist
       const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
@@ -5106,7 +5182,7 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // trigger a state transition to RUNNING
       getMockConnectionManager(true)
@@ -5153,7 +5229,7 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
@@ -5196,7 +5272,7 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: false,
@@ -5235,9 +5311,9 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        fragmentIdsThisRun: ["myFragmentId"],
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "script_run_id",
+        fragmentIds: ["myFragmentId"],
       })
 
       sendForwardMessage("sessionStatusChanged", {
@@ -5284,7 +5360,7 @@ describe("App", () => {
         )
       })
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("autoRerun", {
         interval: 1,
         fragmentId: "myFragmentId",
@@ -5404,7 +5480,7 @@ describe("App", () => {
 
       try {
         // We display the clear cache dialog as an example
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           config: {
             ...NEW_SESSION_JSON.config,
@@ -5436,7 +5512,7 @@ describe("App", () => {
 
       try {
         // We display the clear cache dialog as an example
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           config: {
             ...NEW_SESSION_JSON.config,
@@ -5625,7 +5701,7 @@ describe("App", () => {
 
     it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("sessionStatusChanged", {
         runOnSave: false,
         scriptIsRunning: true,
@@ -5882,7 +5958,7 @@ describe("App", () => {
           useExternalAuthToken: false,
         })
 
-        sendForwardMessage("newSession", {
+        sendNewSession({
           ...NEW_SESSION_JSON,
           config: {
             ...NEW_SESSION_JSON.config,
@@ -5915,7 +5991,7 @@ describe("App", () => {
     it("shows hostToolbarItems", () => {
       prepareHostCommunicationManager()
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
 
       expect(
         screen.queryByTestId("stToolbarActionButton")
@@ -5949,7 +6025,7 @@ describe("App", () => {
         { pageScriptHash: "hash2", pageName: "page2", urlPathname: "page2" },
       ]
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "hash1",
@@ -5975,7 +6051,7 @@ describe("App", () => {
       prepareHostCommunicationManager()
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6000,7 +6076,7 @@ describe("App", () => {
       prepareHostCommunicationManager()
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6066,7 +6142,7 @@ describe("App", () => {
       const hostCommunicationMgr = prepareHostCommunicationManager()
       const connectionManager = getMockConnectionManager(true)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
       })
       sendForwardMessage("pageInfoChanged", {
@@ -6231,7 +6307,7 @@ describe("App", () => {
       renderApp(getProps())
       window.history.replaceState({}, "", "/page2")
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", {
         appPages: [
           {
@@ -6250,7 +6326,7 @@ describe("App", () => {
 
     it("can switch to a non-main page", () => {
       renderApp(getProps())
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "hash2",
@@ -6286,7 +6362,7 @@ describe("App", () => {
       renderApp(getProps())
       window.history.pushState({}, "", "/?foo=bar")
 
-      sendForwardMessage("newSession", NEW_SESSION_JSON)
+      sendNewSession(NEW_SESSION_JSON)
       sendForwardMessage("navigation", {
         appPages: [
           {
@@ -6342,7 +6418,7 @@ describe("App", () => {
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "toppage_hash",
@@ -6387,7 +6463,7 @@ describe("App", () => {
         port: "8501",
       } as URL)
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "hash2",
@@ -6425,7 +6501,7 @@ describe("App", () => {
       globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
         "http://example.com/foo"
 
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "hash2",
@@ -6476,7 +6552,7 @@ describe("App", () => {
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "toppage_hash",
@@ -6493,7 +6569,7 @@ describe("App", () => {
       window.history.pushState.mockClear()
 
       // When accessing a different page, a new history for that page is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "subpage_hash",
@@ -6532,7 +6608,7 @@ describe("App", () => {
       ]
 
       // Because the page URL is already "/" pointing to the main page, no new history is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "toppage_hash",
@@ -6551,7 +6627,7 @@ describe("App", () => {
 
       // When running the same, e.g. clicking the "rerun" button,
       // the history is not pushed again.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages: [],
         pageScriptHash: "toppage_hash",
@@ -6567,7 +6643,7 @@ describe("App", () => {
       window.history.pushState.mockClear()
 
       // When accessing a different page, a new history for that page is pushed.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         appPages,
         pageScriptHash: "subpage_hash",
@@ -6610,7 +6686,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     expect(sessionInfo.isSet).toBe(true)
 
     // 2. Send newSession (sets hasReceivedNewSession = true internally in App.tsx)
-    sendForwardMessage("newSession", NEW_SESSION_JSON)
+    sendNewSession(NEW_SESSION_JSON)
 
     // 3. Send scriptFinished
     sendForwardMessage(
@@ -6641,7 +6717,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     expect(sessionInfo.isSet).toBe(true)
 
     // 2. Send newSession (sets hasReceivedNewSession = true)
-    sendForwardMessage("newSession", NEW_SESSION_JSON)
+    sendNewSession(NEW_SESSION_JSON)
 
     // Verify that if script finished now, incrementMessageCacheRunCount would be called
     sendForwardMessage(
@@ -6692,7 +6768,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6715,7 +6791,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6739,7 +6815,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6763,7 +6839,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to minimal with no menu items
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6779,7 +6855,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to minimal
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6805,7 +6881,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       renderApp(getProps())
 
       // Set toolbar mode to VIEWER (non-minimal)
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         config: {
           ...NEW_SESSION_JSON.config,
@@ -6966,7 +7042,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
+        sendNewSession(NEW_SESSION_JSON)
 
         // Trigger disconnection
         act(() => {
@@ -7032,7 +7108,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
           )
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
+        sendNewSession(NEW_SESSION_JSON)
 
         // Set script to running
         sendForwardMessage("sessionStatusChanged", {
@@ -7793,7 +7869,7 @@ describe("Skills install nudge", () => {
   }
 
   const sendRecommendingNewSession = (recommend = true): void => {
-    sendForwardMessage("newSession", {
+    sendNewSession({
       ...NEW_SESSION_JSON,
       initialize: {
         ...NEW_SESSION_JSON.initialize,
@@ -7830,7 +7906,7 @@ describe("Skills install nudge", () => {
       const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
       // Server says the nudge was eligible but withheld it, and says why.
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         initialize: {
           ...NEW_SESSION_JSON.initialize,
@@ -7866,7 +7942,7 @@ describe("Skills install nudge", () => {
         ConnectionState.CONNECTED
       )
     })
-    sendForwardMessage("newSession", {
+    sendNewSession({
       ...NEW_SESSION_JSON,
       initialize: {
         ...NEW_SESSION_JSON.initialize,
@@ -7904,7 +7980,7 @@ describe("Skills install nudge", () => {
     const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
 
     const sendSuppressedNewSession = (): void => {
-      sendForwardMessage("newSession", {
+      sendNewSession({
         ...NEW_SESSION_JSON,
         initialize: {
           ...NEW_SESSION_JSON.initialize,
