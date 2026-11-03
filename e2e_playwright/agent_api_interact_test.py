@@ -24,10 +24,9 @@ refuses an origin that is not listed in `server.corsAllowedOrigins`. Externally
 marked tests also run against a hosted deployment of `agent_api_interact.py`
 with `server.enableAgentApi` on, so they derive agent route URLs from
 `agent_api_base_url` and tolerate headers a hosting platform adds. They open
-the app before calling the route. Streamlit in Snowflake keeps the container
-credential in the page's service worker; `page.request` never enters that
-worker, so the tests copy the credential onto the request when a worker has
-one.
+the app before calling the route. When those tests run in Snowsight, the host
+keeps the container credential in its service worker. `page.request` never
+enters that worker, so those runs copy the credential onto the request.
 """
 
 from __future__ import annotations
@@ -147,19 +146,28 @@ def _interact_url(app_base_url: str) -> str:
     return build_app_url(app_base_url, path=_INTERACT_PATH)
 
 
-def _requires_service_worker_auth(page: Page, url: str) -> bool:
-    """Whether ``url`` is on a different origin from the page's host."""
+def _requires_service_worker_auth(
+    page: Page, url: str, *, external_host_url: str | None
+) -> bool:
+    """Whether this run must send the credential Snowsight's service worker holds.
+
+    That credential exists only when the tests run in Snowsight, which is the
+    run that sets ``external_host_url``. The request needs it when its origin
+    differs from the host page.
+    """
+    if external_host_url is None:
+        return False
     return urlsplit(url).netloc.lower() != urlsplit(page.url).netloc.lower()
 
 
 def _service_worker_auth_headers(page: Page, *, required: bool) -> dict[str, str]:
-    """Return the container credential a host service worker has stored.
+    """Return the container credential Snowsight's service worker has stored.
 
-    Streamlit in Snowflake authenticates the container origin inside that
-    worker, with ``Authorization: Snowflake Token="…"`` and
-    ``X-Snowflake-Affinity-Key``. ``page.request`` does not enter the worker.
-    Wait for the app's startup messages to populate that token. When no worker
-    is expected, as on the local server, this returns an empty mapping.
+    Snowsight authenticates the container origin inside that worker, with
+    ``Authorization: Snowflake Token="…"`` and ``X-Snowflake-Affinity-Key``.
+    ``page.request`` does not enter the worker. Wait for the app's startup
+    messages to populate that token when the run is in Snowsight. Otherwise
+    this returns an empty mapping.
     """
     deadline = time.monotonic() + 30 if required else time.monotonic()
     worker_states: list[str] = []
@@ -203,13 +211,17 @@ def _interact(
     body: dict[str, Any],
     *,
     headers: dict[str, str] | None = None,
+    external_host_url: str | None = None,
 ) -> APIResponse:
     # A login redirect can turn the POST into a GET without its body, which
     # the route refuses with a 405 that hides the redirect. Caller headers win
     # so a test can still set `Origin` or the caller's-rights token.
     request_headers = {
         **_service_worker_auth_headers(
-            page, required=_requires_service_worker_auth(page, app_base_url)
+            page,
+            required=_requires_service_worker_auth(
+                page, app_base_url, external_host_url=external_host_url
+            ),
         ),
         **(headers or {}),
     }
@@ -483,7 +495,7 @@ def test_data_urls_serve_every_row_the_snapshot_counts(
     config_file="e2e_playwright/config/agent_api_interact.toml",
 )
 def test_snapshot_urls_context_and_headers_follow_the_request(
-    app_page: Page, agent_api_base_url: str
+    app_page: Page, agent_api_base_url: str, external_host_url: str | None
 ) -> None:
     """Media URLs resolve against the request's URL, `context` reaches the
     app's `st.context`, and every interaction's run sees that request's
@@ -498,6 +510,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
         agent_api_base_url,
         {"context": {"timezone": "Asia/Kolkata", "locale": "de-DE"}},
         headers=token_header,
+        external_host_url=external_host_url,
     )
     created = _snapshot(response)
     lines = _lines(created)
@@ -517,7 +530,9 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
         urljoin(_interact_url(agent_api_base_url), image_url),
         headers=_service_worker_auth_headers(
             app_page,
-            required=_requires_service_worker_auth(app_page, agent_api_base_url),
+            required=_requires_service_worker_auth(
+                app_page, agent_api_base_url, external_host_url=external_host_url
+            ),
         )
         or None,
     )
@@ -530,6 +545,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
             agent_api_base_url,
             {"session_id": created["session_id"]},
             headers=token_header,
+            external_host_url=external_host_url,
         )
     )
     lines = _lines(rerun)
@@ -601,7 +617,9 @@ def test_refuses_web_pages_and_ignores_client_identity(
 
 @pytest.mark.external_test
 def test_the_app_links_a_description_that_reaches_the_api(
-    app_target: AppTarget, agent_api_base_url: str
+    app_target: AppTarget,
+    agent_api_base_url: str,
+    external_host_url: str | None,
 ) -> None:
     """The loaded app's HTML links the OpenAPI document, in its head and in the
     text a reader without JavaScript gets. The link is relative to the page,
@@ -624,7 +642,10 @@ def test_the_app_links_a_description_that_reaches_the_api(
     # credential as interact.
     auth_headers = (
         _service_worker_auth_headers(
-            page, required=_requires_service_worker_auth(page, schema_url)
+            page,
+            required=_requires_service_worker_auth(
+                page, schema_url, external_host_url=external_host_url
+            ),
         )
         or None
     )
