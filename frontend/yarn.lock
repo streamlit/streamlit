@@ -3674,7 +3674,7 @@ __metadata:
     mermaid: "npm:^12.2.0"
     moment: "npm:^2.31.0"
     moment-duration-format: "npm:^2.3.2"
-    moment-timezone: "npm:^0.6.5"
+    moment-timezone: "npm:^0.6.6"
     native-file-system-adapter: "npm:^3.0.1"
     node-emoji: "npm:^2.2.0"
     numbro: "npm:^2.5.0"
@@ -11556,12 +11556,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"moment-timezone@npm:^0.6.0, moment-timezone@npm:^0.6.5":
+"moment-timezone@npm:^0.6.0":
   version: 0.6.5
   resolution: "moment-timezone@npm:0.6.5"
   dependencies:
     moment: "npm:^2.29.4"
   checksum: 10c0/f281355d79e1d67714d3bc4ef9d817758ea55fd5e5a1e9bf32832ec0abf0376727eb2062c28c6d1ee1767537bb4a4fbab327a50f122e67dc440ad5f95bfcea1a
+  languageName: node
+  linkType: hard
+
+"moment-timezone@npm:^0.6.6":
+  version: 0.6.6
+  resolution: "moment-timezone@npm:0.6.6"
+  dependencies:
+    moment: "npm:^2.29.4"
+  checksum: 10c0/f1d5eaebe54221b1a54d0f35112d205da39c87db2f9bf35120815f8f34d72ccad6561510fa17cf31f9349dcd7bae7d21619bf05bfd909609fae69ca1fa5cef5b
   languageName: node
   linkType: hard
 
