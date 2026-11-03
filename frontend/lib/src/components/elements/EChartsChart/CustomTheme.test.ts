@@ -229,7 +229,6 @@ describe("buildStreamlitEChartsTheme", () => {
     }
     // Must NOT happen: the flag leaks into the shared axisDefaults that
     // category axes use.
-    // Category axes already skip labels that don't fit (`interval: "auto"`).
     expect(categoryLabel.hideOverlap).toBeUndefined()
   })
 

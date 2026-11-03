@@ -136,7 +136,8 @@ export function formatEChartsTooltipValue(value: unknown): string | string[] {
 /**
  * Build the base axis styling (colors, fonts, label margin) that every axis
  * theme key starts from. Value, log, and time axes extend it to hide
- * overlapping labels (see ``continuousAxisDefaults``).
+ * overlapping labels (see ``continuousAxisDefaults`` in
+ * ``buildStreamlitEChartsTheme``).
  */
 function buildAxisDefaults(
   theme: EmotionTheme,
