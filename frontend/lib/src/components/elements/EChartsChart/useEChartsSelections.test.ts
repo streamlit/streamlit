@@ -503,7 +503,7 @@ describe("useEChartsSelections", () => {
     )
   })
 
-  it("flushes a pending selection write on bindSelections cleanup", () => {
+  it("flushes a pending selection write on binding cleanup", () => {
     const { bind, unbind } = renderSelections()
     const chart = createFakeChart()
     bind(chart)

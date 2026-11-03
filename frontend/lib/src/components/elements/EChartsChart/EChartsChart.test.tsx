@@ -972,6 +972,87 @@ describe("EChartsChart", () => {
     )
   })
 
+  it("moves the selection to the instance that replaces a failed one", () => {
+    function createChartInstance(): typeof mockChart & { disposed: boolean } {
+      const chart = {
+        ...mockChart,
+        disposed: false,
+        setOption: vi.fn(),
+        on: vi.fn(),
+        off: vi.fn(),
+        dispatchAction: vi.fn(),
+      }
+      chart.dispose = vi.fn(() => {
+        chart.disposed = true
+      })
+      chart.isDisposed = vi.fn(() => chart.disposed)
+      return chart
+    }
+    const charts: Array<ReturnType<typeof createChartInstance>> = []
+    mockInit.mockImplementation(() => {
+      const chart = createChartInstance()
+      if (charts.length === 0) {
+        chart.setOption.mockImplementation(() => {
+          throw new Error('yAxis "0" not found')
+        })
+      }
+      charts.push(chart)
+      return chart
+    })
+    widgetMgr.setElementState("chart-id", "selectedPoints", [
+      { seriesIndex: 0, dataIndex: 1 },
+    ])
+    const { rerender } = render(
+      <Wrapper
+        element={createElement({ id: "chart-id", selectionActivated: true })}
+      />
+    )
+    expect(screen.getByTestId("stEChartsChartError")).toBeVisible()
+
+    const fixedSpec = JSON.stringify({
+      xAxis: { type: "category", data: ["A", "B"] },
+      yAxis: {},
+      series: [{ type: "bar", data: [1, 2], selectedMode: "single" }],
+    })
+    rerender(
+      <Wrapper
+        element={createElement({
+          id: "chart-id",
+          selectionActivated: true,
+          spec: fixedSpec,
+        })}
+      />
+    )
+
+    expect(charts).toHaveLength(2)
+    const [failedChart, freshChart] = charts
+    // The failed instance's handlers come off before it is disposed.
+    expect(failedChart.off).toHaveBeenCalledWith(
+      "selectchanged",
+      expect.any(Function)
+    )
+    expect(Math.max(...failedChart.off.mock.invocationCallOrder)).toBeLessThan(
+      failedChart.dispose.mock.invocationCallOrder[0]
+    )
+    expect(failedChart.setOption).toHaveBeenCalledTimes(1)
+    // The replacement binds its own handlers and restores the persisted
+    // points after its option renders.
+    expect(freshChart.on).toHaveBeenCalledWith(
+      "selectchanged",
+      expect.any(Function)
+    )
+    expect(freshChart.setOption).toHaveBeenCalledTimes(1)
+    expect(freshChart.dispatchAction).toHaveBeenLastCalledWith({
+      type: "select",
+      seriesIndex: 0,
+      dataIndex: 1,
+    })
+    expect(
+      Math.max(...freshChart.dispatchAction.mock.invocationCallOrder)
+    ).toBeGreaterThan(freshChart.setOption.mock.invocationCallOrder[0])
+    expect(screen.queryByTestId("stEChartsChartError")).not.toBeInTheDocument()
+  })
+
   it("renders a styled error instead of throwing when echarts.init fails", () => {
     mockInit.mockImplementationOnce(() => {
       throw new Error("init failed")
