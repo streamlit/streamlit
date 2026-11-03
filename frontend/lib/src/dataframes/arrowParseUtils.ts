@@ -89,7 +89,17 @@ function parsePandasSchema(table: Table): PandasSchema | undefined {
     // did not touch Pandas during serialization.
     return undefined
   }
-  return JSON.parse(schema) as PandasSchema
+  const pandasSchema = JSON.parse(schema) as PandasSchema
+  // A table edited after `pyarrow.Table.from_pandas` (for example, with
+  // `select`) can keep metadata naming index fields it no longer has. Those
+  // entries are skipped so the remaining columns still load.
+  const fieldNames = new Set(table.schema.fields.map(field => field.name))
+  return {
+    ...pandasSchema,
+    index_columns: pandasSchema.index_columns.filter(
+      indexCol => isPandasRangeIndex(indexCol) || fieldNames.has(indexCol)
+    ),
+  }
 }
 
 /** Parse DataFrame's index data values. */

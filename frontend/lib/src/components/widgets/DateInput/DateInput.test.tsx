@@ -1742,13 +1742,7 @@ describe("DateInput", () => {
       expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
       vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
-      // userEvent.click hangs on already-selected React Aria range cells in JSDOM.
-      const updatedStart = screen.getByLabelText(/Wednesday, March 20, 2024/)
-      /* eslint-disable testing-library/prefer-user-event */
-      fireEvent.pointerDown(updatedStart, { pointerType: "mouse", button: 0 })
-      fireEvent.pointerUp(updatedStart, { pointerType: "mouse", button: 0 })
-      fireEvent.click(updatedStart)
-      /* eslint-enable testing-library/prefer-user-event */
+      await user.click(screen.getByLabelText(/Wednesday, March 20, 2024/))
 
       await waitFor(() => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -1757,6 +1751,11 @@ describe("DateInput", () => {
           expect.objectContaining({ fromUser: true })
         )
       })
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2024-03-25"],
+        expect.anything()
+      )
     })
 
     it("renders and commits a single-day range correctly (start === end)", async () => {
@@ -1847,6 +1846,208 @@ describe("DateInput", () => {
       })
 
       vi.useRealTimers()
+    })
+
+    // Pressing an endpoint briefly anchors React Aria on the opposite end (so a
+    // drag can move the pressed endpoint); that anchor must not be committed.
+    it.each([
+      {
+        endpoint: "start",
+        clicked: "Friday, May 10, 2024",
+        secondClick: "Monday, May 20, 2024",
+        oppositeEndpoint: "2024-05-20",
+        expectedAnchor: "2024-05-10",
+        expectedRange: ["2024-05-10", "2024-05-20"],
+      },
+      {
+        endpoint: "end",
+        clicked: "Monday, May 20, 2024",
+        secondClick: "Saturday, May 25, 2024",
+        oppositeEndpoint: "2024-05-10",
+        expectedAnchor: "2024-05-20",
+        expectedRange: ["2024-05-20", "2024-05-25"],
+      },
+    ])(
+      "starts a new range on the clicked day when the current $endpoint is clicked",
+      async ({
+        clicked,
+        secondClick,
+        oppositeEndpoint,
+        expectedAnchor,
+        expectedRange,
+      }) => {
+        const user = userEvent.setup()
+        const props = getProps({
+          isRange: true,
+          default: ["2024-05-10", "2024-05-20"],
+          min: "2024-01-01",
+          max: "2024-12-31",
+        })
+        render(<DateInput {...props} />)
+        vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+        const region = screen.getByTestId("stDateInput")
+        await user.click(getRangeDateSegments(region, "start").year)
+
+        await user.click(
+          await screen.findByLabelText(new RegExp(`${clicked} selected$`))
+        )
+
+        await waitFor(() => {
+          expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+            props.element.id,
+            [expectedAnchor],
+            expect.objectContaining({ fromUser: true })
+          )
+        })
+        expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+          props.element.id,
+          [oppositeEndpoint],
+          expect.anything()
+        )
+
+        await user.click(await screen.findByLabelText(secondClick))
+
+        await waitFor(() => {
+          expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+            props.element.id,
+            expectedRange,
+            expect.objectContaining({ fromUser: true })
+          )
+        })
+      }
+    )
+
+    it("commits only the adjusted range when an endpoint is dragged", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2024-05-10", "2024-05-20"],
+        min: "2024-01-01",
+        max: "2024-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+
+      const start = await screen.findByLabelText(
+        /Friday, May 10, 2024 selected$/
+      )
+      const target = screen.getByLabelText("Sunday, May 5, 2024")
+      await user.pointer([
+        { keys: "[MouseLeft>]", target: start },
+        { target },
+        { keys: "[/MouseLeft]", target },
+      ])
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-05-05", "2024-05-20"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    })
+
+    it("commits nothing when an endpoint press is released outside the calendar", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2024-05-10", "2024-05-20"],
+        min: "2024-01-01",
+        max: "2024-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+
+      const start = await screen.findByLabelText(
+        /Friday, May 10, 2024 selected$/
+      )
+      await user.pointer([
+        { keys: "[MouseLeft>]", target: start },
+        { target: document.body },
+        { keys: "[/MouseLeft]", target: document.body },
+      ])
+
+      // The release left no anchor behind, so the next click starts a new
+      // range and is the only commit.
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      await user.click(screen.getByLabelText(/Wednesday, May 15, 2024/))
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-05-15"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    })
+
+    // The month/year pickers render outside the calendar, so React Aria
+    // drops the anchor when they take focus.
+    it("completes a range after switching year and month with the header pickers", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2024-12-10", "2024-12-20"],
+        min: "2024-01-01",
+        max: "2025-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.click(
+        await screen.findByLabelText("Saturday, December 28, 2024")
+      )
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-12-28"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+
+      const calendar = screen.getByTestId("stDateInputCalendar")
+      const yearTrigger = within(calendar).getByRole("button", {
+        name: "year",
+      })
+      const monthTrigger = within(calendar).getByRole("button", {
+        name: "month",
+      })
+      await user.click(yearTrigger)
+      await user.click(await screen.findByRole("option", { name: "2025" }))
+      expect(yearTrigger).toHaveTextContent("2025")
+      await user.click(monthTrigger)
+      await user.click(await screen.findByRole("option", { name: "January" }))
+      expect(monthTrigger).toHaveTextContent("January")
+
+      // The start stays anchored, so React Aria highlights days up to the
+      // focused one and this label may end in " selected".
+      await user.click(
+        await screen.findByLabelText(/Sunday, January 5, 2025( selected)?$/)
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+          props.element.id,
+          ["2024-12-28", "2025-01-05"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-01-05"],
+        expect.anything()
+      )
     })
 
     it("commits an empty array when the clear button is clicked", async () => {
@@ -3861,14 +4062,10 @@ describe("DateInput range-mode keyboard navigation", () => {
 
     vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
 
-    // After selection, RAC appends " selected" to the label. Use fireEvent
-    // because userEvent.click hangs on already-selected RAC range cells in JSDOM.
-    const cell2 = screen.getByLabelText("Wednesday, March 6, 2024 selected")
-    /* eslint-disable testing-library/prefer-user-event */
-    fireEvent.pointerDown(cell2, { pointerType: "mouse", button: 0 })
-    fireEvent.pointerUp(cell2, { pointerType: "mouse", button: 0 })
-    fireEvent.click(cell2)
-    /* eslint-enable testing-library/prefer-user-event */
+    // React Aria appends " selected" to the label after selection.
+    await user.click(
+      screen.getByLabelText("Wednesday, March 6, 2024 selected")
+    )
 
     await waitFor(() => {
       expect(
@@ -4029,7 +4226,7 @@ describe("DateInput range-mode Escape with the calendar closed", () => {
       await user.keyboard("0")
       expect(end.day).toHaveTextContent("10")
 
-      if (key) {
+      if (key !== null) {
         await user.keyboard(key)
       } else {
         await user.click(document.body)
@@ -5533,13 +5730,8 @@ describe("required", () => {
     await clearAllSingleSegments(user, region)
     await user.click(document.body)
 
-    await waitFor(() => {
-      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
-        props.element.id,
-        [],
-        expect.anything()
-      )
-    })
+    // The field was already empty, so the blur does not re-stage [].
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
@@ -6304,7 +6496,7 @@ describe("required", () => {
     vi.useRealTimers()
   })
 
-  it("stages an empty incomplete required range in a form without snapping the start date", async () => {
+  it("keeps an incomplete required range in a form without snapping the start date", async () => {
     const user = userEvent.setup()
     vi.setSystemTime(new Date(2024, 2, 15))
 
@@ -6323,18 +6515,9 @@ describe("required", () => {
     await user.click(await screen.findByLabelText("Wednesday, March 6, 2024"))
     await user.click(document.body)
 
-    await waitFor(() => {
-      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
-        props.element.id,
-        [],
-        expect.anything()
-      )
-    })
-    expect(setStringArrayValueSpy).not.toHaveBeenCalledWith(
-      props.element.id,
-      ["2024-03-06"],
-      expect.anything()
-    )
+    // The incomplete range resolves to [], which matches the committed empty
+    // value, so nothing is written.
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
 
     const start = getRangeDateSegments(region, "start")
@@ -6789,4 +6972,114 @@ describe("optional empty default", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument()
     }
   )
+})
+
+describe("DateInput no-op interactions", () => {
+  // Wait for WidgetStateManager's macrotask flush so a missed rerun would still be observed.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function renderWithRerunSpy(elementProps: Partial<DateInputProto>): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    setStringArrayValueSpy: ReturnType<typeof vi.spyOn>
+    props: Props
+  } {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getProps(elementProps, { widgetMgr })
+    const setStringArrayValueSpy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+    return { sendRerunBackMsg, setStringArrayValueSpy, props }
+  }
+
+  it("does not commit or rerun when re-picking the selected calendar date", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy, props } =
+      renderWithRerunSpy({ default: ["2024-06-15"], min: "2024-01-01" })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getSingleDateSegments(region).year)
+    await user.click(await screen.findByLabelText(/Saturday, June 15, 2024/))
+    await flushScheduledRerun()
+
+    expect(screen.queryByTestId("stDateInputCalendar")).not.toBeInTheDocument()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    // A different date still commits and reruns.
+    await user.click(getSingleDateSegments(region).year)
+    await user.click(await screen.findByLabelText(/Sunday, June 16, 2024/))
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledExactlyOnceWith(
+      props.element.id,
+      ["2024-06-16"],
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+
+  it("does not commit or rerun when re-picking the same required range", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy, props } =
+      renderWithRerunSpy({
+        isRange: true,
+        required: true,
+        default: ["2024-03-06", "2024-03-10"],
+        min: "2024-01-01",
+      })
+
+    const region = screen.getByTestId("stDateInput")
+    await user.click(getRangeDateSegments(region, "start").year)
+    await user.click(await screen.findByLabelText(/Wednesday, March 6, 2024/))
+    await user.click(await screen.findByLabelText(/Sunday, March 10, 2024/))
+    await flushScheduledRerun()
+
+    expect(screen.queryByTestId("stDateInputCalendar")).not.toBeInTheDocument()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    // A different range still commits and reruns.
+    await user.click(getRangeDateSegments(region, "start").year)
+    await user.click(await screen.findByLabelText(/Wednesday, March 6, 2024/))
+    await user.click(await screen.findByLabelText(/Tuesday, March 12, 2024/))
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledExactlyOnceWith(
+      props.element.id,
+      ["2024-03-06", "2024-03-12"],
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+
+  it("does not commit or rerun when an empty optional field is edited back to empty", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringArrayValueSpy } = renderWithRerunSpy({
+      default: [],
+      required: false,
+      min: "1970-01-01",
+      max: "2030-12-31",
+    })
+
+    const region = screen.getByTestId("stDateInput")
+    const { year, month, day } = getSingleDateSegments(region)
+    await typeIntoSegment(user, year, "2020")
+    await typeIntoSegment(user, month, "02")
+    await typeIntoSegment(user, day, "06")
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+    await clearSegment(user, day)
+    await user.click(document.body)
+    await flushScheduledRerun()
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
 })

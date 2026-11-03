@@ -366,3 +366,28 @@ with st.container(key="altair_alt_overrides_description"):
         alt="Streamlit alt overrides description",
         width="content",
     )
+
+# Large-data defaults: more than 2,000 points render to canvas, and marks for
+# more than 5,000 rows skip their ARIA descriptions.
+_dense_rng = np.random.default_rng(3)
+_dense_points = pd.DataFrame(
+    {"x": _dense_rng.standard_normal(2001), "y": _dense_rng.standard_normal(2001)}
+)
+_dense_point_chart = alt.Chart(_dense_points).mark_point().encode(x="x:Q", y="y:Q")
+
+with st.container(key="altair_dense_points"):
+    st.altair_chart(_dense_point_chart, alt="Dense point cloud")
+
+with st.container(key="altair_dense_points_svg"):
+    st.altair_chart(
+        _dense_point_chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})
+    )
+
+_dense_walk = pd.DataFrame(
+    {"x": np.arange(5001), "y": np.cumsum(_dense_rng.standard_normal(5001))}
+)
+with st.container(key="altair_dense_line"):
+    st.altair_chart(
+        alt.Chart(_dense_walk).mark_line().encode(x="x:Q", y="y:Q"),
+        alt="Dense random walk",
+    )

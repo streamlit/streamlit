@@ -199,7 +199,7 @@ export function useImagePreview(
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
+      if (previewUrl !== null) {
         URL.revokeObjectURL(previewUrl)
       }
     }

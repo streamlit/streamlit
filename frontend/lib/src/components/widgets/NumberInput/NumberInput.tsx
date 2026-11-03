@@ -31,6 +31,7 @@ import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { TextField } from "react-aria-components"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   DynamicIcon,
@@ -142,7 +143,7 @@ const NumberInput: React.FC<Props> = ({
   const [validationError, setValidationError] = useState<string | null>(null)
   const [hasRequiredError, setHasRequiredError] = useState(false)
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "double_value" as const,
@@ -259,7 +260,7 @@ const NumberInput: React.FC<Props> = ({
       // Validate range and show Streamlit-styled error message if out of range.
       if (notNullOrUndefined(valueArg)) {
         const rangeValidationError = getRangeValidationMessage(valueArg)
-        if (rangeValidationError) {
+        if (rangeValidationError !== null) {
           setValidationError(rangeValidationError)
           return false
         }
@@ -267,21 +268,28 @@ const NumberInput: React.FC<Props> = ({
 
       setHasRequiredError(false)
       setValidationError(null)
-      setValueWithSource({ value: newValue, fromUser })
 
-      // Inside a form, write the committed value to the WidgetStateManager
-      // synchronously. `setValueWithSource` only defers the write to an effect,
-      // but the Enter key handler submits the form synchronously in the same
-      // event, so without this the form would submit the *previously* committed
-      // value (the effect runs after `submitForm`). Writing a form's widget
-      // state doesn't schedule a rerun, so this adds no extra rerun.
-      if (inForm) {
-        updateWidgetMgrState(
-          element,
-          widgetMgr,
-          { value: newValue, fromUser },
-          fragmentId
-        )
+      // An edit that ends on the committed number (e.g. "5.0" over 5, or
+      // clearing an empty field) is not a change, so skip the commit (and its
+      // rerun).
+      if (newValue !== value) {
+        setValueWithSource({ value: newValue, fromUser })
+
+        // Inside a form, write the committed value to the WidgetStateManager
+        // synchronously. `setValueWithSource` only defers the write to an
+        // effect, but the Enter key handler submits the form synchronously in
+        // the same event, so without this the form would submit the
+        // *previously* committed value (the effect runs after `submitForm`).
+        // Writing a form's widget state doesn't schedule a rerun, so this adds
+        // no extra rerun.
+        if (inForm) {
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: newValue, fromUser },
+            fragmentId
+          )
+        }
       }
 
       setDirty(false)
@@ -293,6 +301,7 @@ const NumberInput: React.FC<Props> = ({
       formatCurrentValue,
       getRangeValidationMessage,
       setValueWithSource,
+      value,
       inForm,
       element,
       widgetMgr,
@@ -381,9 +390,11 @@ const NumberInput: React.FC<Props> = ({
   }
   const displayedError = requiredError ?? validationError
   const errorAlertText =
-    requiredError ?? (validationError ? `Error: ${validationError}` : null)
+    requiredError ??
+    (validationError !== null ? `Error: ${validationError}` : null)
   const errorTooltipSource =
-    requiredError ?? (validationError ? `**Error**: ${validationError}` : null)
+    requiredError ??
+    (validationError !== null ? `**Error**: ${validationError}` : null)
 
   // Calculate button enabled states based on the currently displayed value, not the committed value
   const canDec = canDecrement(currentNumericValue, step, min)
@@ -457,13 +468,13 @@ const NumberInput: React.FC<Props> = ({
               skipRequired: inForm,
             })
           }
-          // Also gate on `!validationError`: a step on an out-of-range value
-          // can set a validation error while `dirty` stays false, and in that
-          // case `commitValue` above is not called — so block submission while
-          // an error is visible to keep the UI consistent.
+          // Also gate on `validationError === null`: a step on an out-of-range
+          // value can set a validation error while `dirty` stays false, and in that
+          // case `commitValue` above is not called — so block submission while an
+          // error is visible to keep the UI consistent.
           if (
             shouldSubmitForm &&
-            !validationError &&
+            validationError === null &&
             widgetMgr.allowFormEnterToSubmit(elementFormId)
           ) {
             widgetMgr.submitForm(elementFormId, fragmentId)
@@ -507,7 +518,7 @@ const NumberInput: React.FC<Props> = ({
 
     // A step on an out-of-range value can set validationError while dirty
     // stays false. Keep blocking submit while that error is visible.
-    return !validationError
+    return validationError === null
   }
 
   // Register for every in-form number input so submit checks required and range.
@@ -578,11 +589,11 @@ const NumberInput: React.FC<Props> = ({
         isDisabled={disabled}
         aria-label={element.label}
         validationBehavior="aria"
-        isInvalid={!!displayedError}
+        isInvalid={displayedError !== null}
       >
         <StyledInputContainer
           $isFocused={isFocused}
-          $hasError={!!displayedError}
+          $hasError={displayedError !== null}
           data-testid="stNumberInputContainer"
         >
           {element.icon && (
@@ -610,13 +621,15 @@ const NumberInput: React.FC<Props> = ({
             placeholder={element.placeholder}
             // `aria-invalid` is driven by the TextField's `isInvalid` prop.
             aria-required={element.required ? true : undefined}
-            aria-describedby={displayedError ? validationErrorId : undefined}
+            aria-describedby={
+              displayedError !== null ? validationErrorId : undefined
+            }
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
           />
-          {errorTooltipSource && (
+          {errorTooltipSource !== null && (
             <StyledEndEnhancer>
               <Tooltip
                 content={
@@ -683,7 +696,7 @@ const NumberInput: React.FC<Props> = ({
               </StyledInputControl>
             </StyledInputControls>
           )}
-          {errorAlertText && (
+          {errorAlertText !== null && (
             <StyledVisuallyHidden id={validationErrorId} role="alert">
               {errorAlertText}
             </StyledVisuallyHidden>
@@ -693,7 +706,7 @@ const NumberInput: React.FC<Props> = ({
       {shouldShowInstructions && (
         <StyledInstructionsContainer
           $clearable={clearable}
-          $hasError={!!displayedError}
+          $hasError={displayedError !== null}
         >
           <InputInstructions
             dirty={dirty}

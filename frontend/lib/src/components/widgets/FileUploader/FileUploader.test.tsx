@@ -46,7 +46,7 @@ const createFile = (
     type,
     lastModified: 0,
   })
-  if (webkitRelativePath) {
+  if (webkitRelativePath !== undefined) {
     Object.defineProperty(file, "webkitRelativePath", {
       value: webkitRelativePath,
       writable: false,

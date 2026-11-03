@@ -118,6 +118,27 @@ if TYPE_CHECKING:
         int | str,
     )
 
+    # Check required parameter; it does not narrow the return type.
+    assert_type(selectbox("foo", [1, 2, 3], required=True), int)
+    assert_type(selectbox("foo", [1, 2, 3], required=False), int)
+    assert_type(selectbox("foo", [1, 2, 3], index=None, required=True), int | None)
+    assert_type(
+        selectbox(
+            "foo", ["a", "b"], index=None, accept_new_options=True, required=True
+        ),
+        str | None,
+    )
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=True, on_change="ignore"),
+        int | None,
+    )
+    assert_type(selectbox("foo", [1, 2, 3], disabled=True, required=True), int)
+    dynamic_required: bool = True
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=dynamic_required),
+        int | None,
+    )
+
     def on_selectbox_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -133,6 +154,7 @@ if TYPE_CHECKING:
             kwargs={},
             placeholder="Select a number",
             disabled=False,
+            required=True,
             label_visibility="visible",
             width=320,
         ),

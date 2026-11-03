@@ -42,7 +42,7 @@ import {
   type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
@@ -54,7 +54,10 @@ import {
   type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
 import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
@@ -229,7 +232,7 @@ const Multiselect: FC<Props> = props => {
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -511,7 +514,11 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUser: true })
+      // React Aria calls onChange with the unchanged selection whenever the
+      // menu closes (Escape, click outside), so only commit an actual change.
+      if (!arrayComparator(finalValue, value)) {
+        setValueWithSource({ value: finalValue, fromUser: true })
+      }
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]

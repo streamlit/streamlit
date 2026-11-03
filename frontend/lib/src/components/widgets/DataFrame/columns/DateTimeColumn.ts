@@ -18,6 +18,8 @@ import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import type { DatePickerType } from "@glideapps/glide-data-grid-cells"
 import moment, { type Moment } from "moment-timezone"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { formatMoment } from "~lib/util/formatMoment"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -243,7 +245,7 @@ function BaseDateTimeColumn(
           )
         }
 
-        if (parameters.timezone) {
+        if (!isNullOrEmptyString(parameters.timezone)) {
           try {
             momentDate = applyTimezone(momentDate, parameters.timezone)
           } catch (error) {
@@ -260,8 +262,9 @@ function BaseDateTimeColumn(
         try {
           displayDate = formatMoment(
             momentDate,
-            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank format uses the default pattern
-            parameters.format || defaultFormat,
+            isNullOrEmptyString(parameters.format)
+              ? defaultFormat
+              : parameters.format,
             kind
           )
         } catch (error) {

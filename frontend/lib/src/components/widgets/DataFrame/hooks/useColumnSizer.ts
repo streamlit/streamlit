@@ -18,6 +18,8 @@ import { useCallback, useMemo, useState } from "react"
 
 import type { DataEditorProps, GridColumn } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 type ColumnSizerReturn = Pick<DataEditorProps, "columns" | "onColumnResize">
 
 /**
@@ -42,7 +44,7 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
       _colIndex: number,
       newSizeWithGrow: number
     ) => {
-      if (column.id) {
+      if (!isNullOrEmptyString(column.id)) {
         setColumnSizes(new Map(columnSizes).set(column.id, newSizeWithGrow))
       }
     },
@@ -52,7 +54,7 @@ function useColumnSizer(columns: GridColumn[]): ColumnSizerReturn {
   const sizedColumns = useMemo(() => {
     return columns.map(column => {
       if (
-        column.id &&
+        !isNullOrEmptyString(column.id) &&
         columnSizes.has(column.id) &&
         columnSizes.get(column.id) !== undefined
       ) {

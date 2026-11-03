@@ -14,7 +14,7 @@ Most community components are not maintained by Streamlit. They can break on Str
 | `streamlit-option-menu` | `st.navigation` when the menu switches app sections; `st.segmented_control` when it switches views within one page. |
 | `extra-streamlit-components` (`CookieManager`) | `st.context.cookies` to read the initial request. `st.App` middleware can set a cookie on an HTTP response, not after a widget interaction. See [server-asgi.md](server-asgi.md). |
 | `streamlit-searchbox` | `st.selectbox` to pick from a known list of moderate size (see [High-cardinality options](selection-widgets.md#high-cardinality-options)); `st.text_input(..., type="search", live=True)` to filter results rendered below it. Put the text input in a `@st.fragment` when the rest of the page should stay put. |
-| `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. See [data-display.md](data-display.md). |
+| `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. See [charts.md](charts.md#apache-echarts). |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)`, inside a `@st.fragment` when the rest of the page should stay put. |
 | `streamlit-bokeh` | A Vega-based chart or `st.echarts_chart` for a new chart. Keep `streamlit-bokeh` for an existing Bokeh figure. |
 
@@ -24,7 +24,7 @@ Use the package only when the native command does not cover the behavior:
 - **Folium** — a Folium map or Leaflet behavior that `st.map` and `st.pydeck_chart` do not provide.
 - **Cookies** — `st.context.cookies` is read-only and reflects the initial request. `st.App` middleware can set cookies on HTTP responses, not after a widget interaction. Use a cookie component only when the script must read or change cookies after the page loads; for sign-in, prefer `st.login`.
 - **Search suggestions** — a dropdown of suggestions computed in Python as the user types (`streamlit-searchbox`). `st.text_input` returns the typed text and has no suggestion list.
-- **ECharts** — JavaScript callbacks (`JsCode`, `formatter` functions, `custom` series), GeoJSON map registration, or ECharts GL / 3D charts. `st.echarts_chart` accepts JSON-compatible options only. See [data-display.md](data-display.md).
+- **ECharts** — JavaScript callbacks (`JsCode`, `formatter` functions, `custom` series), GeoJSON map registration, or ECharts GL / 3D charts. `st.echarts_chart` accepts JSON-compatible options only. See [charts.md](charts.md#apache-echarts).
 - **Bokeh** — an existing Bokeh figure. No native command renders a Bokeh object.
 
 ## Installation
