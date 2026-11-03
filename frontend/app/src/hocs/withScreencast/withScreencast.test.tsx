@@ -21,6 +21,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { render } from "@streamlit/lib/testing"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import withScreencast, {
   type ScreenCastHOC,
@@ -44,7 +45,11 @@ class TestComponent extends PureComponent<TestProps> {
   public override render = (): ReactElement => (
     <>
       <div>{this.props.unrelatedProp}</div>
-      <div>{this.props.screenCast ? "Screencast" : "Undefined"}</div>
+      <div>
+        {notNullOrUndefined(this.props.screenCast)
+          ? "Screencast"
+          : "Undefined"}
+      </div>
     </>
   )
 }

@@ -20,12 +20,12 @@ Use `streamlit config show` for the full option list and descriptions. Do not in
 
 Relative `theme.base` paths resolve from the `streamlit run` working directory, not from `config.toml`.
 
-**Where to put keys** (placement the table above leaves out)
+**Where to put keys:**
 
-1. Shared across modes? → put fonts, radii, `showWidgetBorder` / `showSidebarBorder`, and padding on `[theme]` (only keys that should apply to both light and dark)
-2. Toggle light/dark? → put per-mode colors on `[theme.light]` and `[theme.dark]`. A color on `[theme]` also reaches dark mode unless `[theme.dark]` overrides it, which the shared-brand example relies on. See the `shadcn-dual` template
-3. Sidebar should contrast or match? → `[theme.sidebar]` for a locked theme; `[theme.light.sidebar]` / `[theme.dark.sidebar]` when the appearance toggle stays on. Shared sidebar padding can sit on `[theme.sidebar]`
-4. Charts or dataframes need brand palettes? → `chart*` / `dataframe*` on the section for that mode (light, dark, or locked `[theme]`)
+- Shared fonts, radii, padding, and border flags on `[theme]` (`showSidebarBorder` is `[theme]`-only; `showWidgetBorder` may also sit on light/dark/sidebar)
+- Per-mode colors on `[theme.light]` / `[theme.dark]` (a color on `[theme]` also reaches dark unless overridden — see `shadcn-dual`)
+- Sidebar contrast on `[theme.sidebar]` or `[theme.light.sidebar]` / `[theme.dark.sidebar]`
+- Chart and dataframe palettes on the section for that mode
 
 ## Cheat sheet: common customization intents
 
@@ -136,6 +136,7 @@ font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;70
 backgroundColor = "#0f172a"
 secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
+codeTextColor = "#f8fafc"
 textColor = "#f8fafc"
 borderColor = "#334155"
 primaryColor = "#4f46e5"
@@ -191,10 +192,12 @@ secondaryBackgroundColor = "#f6f8fa"  # Widget backgrounds
 textColor = "#1F2328"              # Body text
 
 linkColor = "#0969da"              # Defaults to blueTextColor
-codeTextColor = "#116329"          # Defaults to greenTextColor
-codeBackgroundColor = "#f6f8fa"    # Code blocks; unset → mix of background and secondary
+codeTextColor = "#1F2328"          # Unset follows body text; greenTextColor when surfaces/primary differ
+codeBackgroundColor = "#f6f8fa"    # Built-in default; custom surfaces re-derive if unset
 borderColor = "#d0d7de"
 ```
+
+Built-in themes use fixed border, code, and dataframe colors; changing only textColor, fonts, or radii keeps borders/fills (code text still follows body text). If backgroundColor, secondaryBackgroundColor, or primaryColor differs, unset border, code, and dataframe colors derive from your palette, and unset codeTextColor follows greenTextColor.
 
 Choose a `primaryColor` dark enough for white primary-button text.
 
@@ -284,12 +287,14 @@ linkUnderline = false
 
 ## Border and radius
 
+Built-in themes already show widget borders and the sidebar separator unless you set these flags to `false`. Only set them when opting out or overriding a nested section.
+
 ```toml
 [theme]
 baseRadius = "8px"                 # none/small/medium/large/full or px/rem
 buttonRadius = "8px"               # defaults to baseRadius
-showWidgetBorder = true
-showSidebarBorder = true           # [theme]-only
+showWidgetBorder = false           # opt out; omit to keep the built-in on default
+showSidebarBorder = false          # [theme]-only; omit to keep the built-in on default
 ```
 
 Radius keywords: `"none"`, `"small"` (0.35rem), `"medium"` (0.5rem), `"large"` (1rem), `"full"` (1.4rem).
@@ -318,14 +323,9 @@ paddingTop = "0.5rem"      # Overrides [theme]; inherits if unset
 paddingBottom = "1rem"
 ```
 
-**Main `paddingTop`:** Gap *below* visible header chrome.
+**Main `paddingTop`:** Gap below visible header chrome. Streamlit adds header height, so `"0"` is flush under the header. Embed options leave a configured value as-is. In a bare embed with no header, a very small value can clip overlay toolbars — leave unset or use a small non-zero gap. Print uses the value alone (no header reservation).
 
-- Streamlit adds header height automatically so content clears the overlay — `"0"` is flush under the header, not the top of the viewport.
-- Embed options leave a configured value as-is (for example `?embed=true&embed_options=show_padding`).
-- In a bare embed with no header chrome, a very small value (including `"0"`) can clip the first element's overlay toolbar (dataframe/chart); leave the key unset for the built-in compact-embed clearance, or use a small non-zero gap.
-- Print uses the configured value alone (no header reservation), so small values may overlap a printed logo.
-
-**Sidebar `paddingTop`:** Gap before the first sidebar widget. With sidebar page nav, that is nav → first widget; without page nav, header/logo row → first widget.
+**Sidebar `paddingTop`:** Gap before the first sidebar widget (after nav, or after header/logo when there is no page nav).
 
 **`paddingBottom`:** Replaces the default bottom inset in main or sidebar. Does not affect sticky `st.bottom` content.
 
@@ -338,16 +338,16 @@ Affects sidebar chrome and widgets only (not the main block). `showSidebarBorder
 backgroundColor = "#0f172a"
 secondaryBackgroundColor = "#1e293b"
 codeBackgroundColor = "#1e293b"
+codeTextColor = "#f8fafc"
 textColor = "#f8fafc"
 borderColor = "#334155"
 primaryColor = "#0284c7"
 linkColor = "#38bdf8"
-showWidgetBorder = true
 ```
 
 Per appearance: shared `[theme.sidebar]` plus `[theme.light.sidebar]` / `[theme.dark.sidebar]`. Merge: main → `[theme.sidebar]` → nested sidebar. Unset sidebar backgrounds use Streamlit's default sidebar colors when the main backgrounds still match the built-in pair; otherwise they swap the main `secondaryBackgroundColor` / `backgroundColor` (see [Section merge order](#section-merge-order)).
 
-When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
+When the sidebar contrast differs from main, set a full color set (`textColor`, `linkColor`, `borderColor`, `codeTextColor`, secondary/code backgrounds, `primaryColor`)—not only `backgroundColor`.
 
 ## Light and dark modes
 
@@ -370,12 +370,6 @@ st.image(logo, alt="Company logo")
 - **Harmony:** Neutral base + one brand accent, or a small semantic set (success/error) alongside primary.
 - **Type:** Body 14–16px / 400; clear heading scale; monospace code slightly smaller than body.
 - **Layers:** Keep `secondaryBackgroundColor` distinct from `backgroundColor`—slightly darker on a light theme, slightly lighter on a dark theme. Sidebar may match or deliberately contrast.
-
-## Example: dual light/dark with sidebars
-
-For a complete dual-mode config, copy `assets/templates/themes/configs/shadcn-dual.toml`: a shared `[theme]`, then `[theme.light]` and `[theme.dark]`, each with its own `.sidebar`.
-
-For a single locked dark theme, see the **vscode** template under `assets/templates/themes/configs/`.
 
 ## Common mistakes
 
@@ -423,6 +417,7 @@ backgroundColor = "#11567F"
 backgroundColor = "#11567F"
 secondaryBackgroundColor = "#174D6A"
 textColor = "#ffffff"
+codeTextColor = "#ffffff"
 borderColor = "#1E6D94"
 primaryColor = "#0969da"
 linkColor = "#8ecbff"
@@ -457,15 +452,20 @@ Also avoid:
 
 Do **not** use `st.markdown(..., unsafe_allow_html=True)` or `st.html()` with `<style>` for colors, fonts, branding, or page spacing (including `.block-container` padding) unless the user explicitly asks for CSS. Use `config.toml`.
 
-If they ask for CSS, target `key=` classes (e.g. `.st-key-submit`), never private Streamlit class names for theming.
+If they ask for CSS, give the widget a `key=` and target the `.st-key-<key>` class it generates from `st.html`, never private Streamlit class names:
+
+```python
+st.button("Submit", key="submit")  # Generates: .st-key-submit
+st.html("<style>.st-key-submit button { background: #15803d; color: #fff; }</style>")
+```
 
 ## Development workflow
 
-Most options hot-reload on save + rerun. `fontFaces` additions and updates apply on the next rerun; after removing the last entry, refresh the page. Restart when you newly enable `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the settings appearance toggle. Inspect effective config: `streamlit config show`.
+Most options hot-reload on save + rerun. `fontFaces` additions/updates apply on the next rerun; after removing the last entry, refresh. Restart when newly enabling `[server] enableStaticServing`. Verify with buttons, forms, dataframes, code, charts, sidebar, and (if dual-mode) the appearance toggle. Inspect: `streamlit config show`.
 
 ## Theme templates
 
-Copy from `assets/templates/themes/configs/` into the app’s `.streamlit/config.toml`, or adapt a template into a shared brand file and point each app’s `theme.base` at it. Picker defaults and dual vs locked guidance live in `assets/templates/themes/README.md` — use dual mode only when the settings appearance toggle should stay available.
+Copy from `assets/templates/themes/configs/` into `.streamlit/config.toml`, or adapt into a shared brand file via `theme.base`. See `assets/templates/themes/README.md` for picker defaults; use dual mode only when the appearance toggle should stay available.
 
 | Theme | Mode | Primary | Fonts | Notes |
 |-------|------|---------|-------|-------|

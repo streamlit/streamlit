@@ -318,6 +318,22 @@ def test_latex_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(latex_elements.nth(7), name="st_latex-width_content")
 
 
+def test_dollar_amounts_render_as_text(app: Page):
+    """Test that dollar amounts stay plain text unless the element has a formula."""
+    markdown_elements = get_element_by_key(app, "dollar_amounts").get_by_test_id(
+        "stMarkdown"
+    )
+    expect(markdown_elements).to_have_count(2)
+
+    amounts = markdown_elements.nth(0)
+    expect(amounts).to_have_text("Quota: $315K of $1.46M")
+    expect(amounts.locator("code, .katex")).to_have_count(0)
+
+    escaped_with_formula = markdown_elements.nth(1)
+    expect(escaped_with_formula.locator(".katex")).to_have_count(1)
+    expect(escaped_with_formula).to_contain_text("Costs $5, where")
+
+
 def test_badge_elements(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that badge elements are displayed correctly."""
     badge_container = get_element_by_key(themed_app, "badge_elements")

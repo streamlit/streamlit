@@ -48,12 +48,16 @@ const genericColors = {
 }
 
 // Create colors and shadows using the same pattern as emotionBaseTheme
-const emotionColors = createEmotionColors(genericColors)
+const baseEmotionColors = createEmotionColors(genericColors)
+const emotionColors = {
+  ...baseEmotionColors,
+  widgetBorderColor: baseEmotionColors.borderColor,
+}
 const shadows = createShadows(emotionColors)
 
 const emotionMockTheme = {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
   paddingTop: undefined as string | undefined,
   paddingBottom: undefined as string | undefined,

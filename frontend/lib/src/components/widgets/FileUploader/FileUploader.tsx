@@ -25,6 +25,7 @@ import {
   type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import BaseButton, {
   BaseButtonKind,
@@ -434,7 +435,10 @@ const FileUploader = ({
         file.status.abortController.abort()
       }
 
-      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      if (
+        file.status.type === "uploaded" &&
+        !isNullOrEmptyString(file.status.fileUrls.deleteUrl)
+      ) {
         void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
       }
 

@@ -467,6 +467,76 @@ describe("useDeckGl", () => {
     })
   })
 
+  describe("server view state sync", () => {
+    it("keeps user camera changes when the server changes initialViewState but not views", () => {
+      const initialProps = getUseDeckGlProps()
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      act(() => {
+        result.current.onViewStateChange({
+          viewState: { ...mockInitialViewState, latitude: 55 },
+        } as ViewStateChangeParameters)
+      })
+
+      rerender({
+        ...initialProps,
+        element: getUseDeckGlProps({}, { zoom: 8 }).element,
+      })
+
+      expect(result.current.viewState).toEqual({
+        ...mockInitialViewState,
+        latitude: 55,
+        zoom: 8,
+      })
+    })
+
+    it.each([
+      ["a new", { latitude: 20, longitude: 10, zoom: 0 }],
+      ["an unchanged", mockInitialViewState],
+    ])(
+      "resets the camera when the views change with %s initialViewState",
+      (_, nextViewState) => {
+        const initialProps = getUseDeckGlProps()
+        const { result, rerender } = renderHook(props => useDeckGl(props), {
+          initialProps,
+        })
+
+        // MapController reports its full viewport props, including the default
+        // Web Mercator maxBounds that GlobeController would clamp its zoom to.
+        act(() => {
+          result.current.onViewStateChange({
+            viewState: {
+              ...mockInitialViewState,
+              zoom: 7,
+              maxBounds: [
+                [-Infinity, -90],
+                [Infinity, 90],
+              ],
+              normalize: true,
+            },
+          } as ViewStateChangeParameters)
+        })
+
+        rerender({
+          ...initialProps,
+          element: getUseDeckGlProps(
+            {},
+            {},
+            {
+              initialViewState: nextViewState,
+              views: [{ "@@type": "_GlobeView", controller: true }],
+            }
+          ).element,
+        })
+
+        expect(result.current.viewState).toEqual(nextViewState)
+        expect(result.current.viewState).not.toHaveProperty("maxBounds")
+      }
+    )
+  })
+
   describe("selection sanitization", () => {
     it("keeps a false update trigger when selection rewrites fill colors", () => {
       const props = getUseDeckGlProps(

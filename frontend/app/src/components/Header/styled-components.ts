@@ -27,7 +27,7 @@ interface StyledHeaderProps {
 }
 
 export const StyledHeader = styled.header<StyledHeaderProps>(
-  ({ theme, isTransparentBackground }) => ({
+  ({ theme, isTransparentBackground = false }) => ({
     position: "absolute",
     top: 0,
     left: 0,

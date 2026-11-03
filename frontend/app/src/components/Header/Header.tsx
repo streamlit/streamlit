@@ -55,21 +55,20 @@ const Header = ({
 }: HeaderProps): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
 
-  const shouldShowLogo = logoComponent && !isSidebarOpen
+  // Falsy ReactNode content (null, undefined, false, "", 0) counts as absent.
+  const shouldShowLogo = Boolean(logoComponent) && !isSidebarOpen
   const shouldShowExpandButton = hasSidebar && !isSidebarOpen
 
   // Determine what content should be shown
   // When showToolbar is false (embed=true without show_toolbar), we still show
   // logo, sidebar icon, and navigation, but hide rightContent
-  const shouldShowRightContent = showToolbar && rightContent
+  const shouldShowRightContent = showToolbar && Boolean(rightContent)
 
   // Check if there's any content to display at all
   const hasAnyContent =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo ||
     shouldShowExpandButton ||
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- missing navigation still lets right content count
-    navigation ||
+    Boolean(navigation) ||
     shouldShowRightContent
 
   return (

@@ -378,14 +378,14 @@ function AppView(props: AppViewProps): ReactElement {
 
   // Determine if the header should have transparent background
   // Only transparent when no content is shown at all
-  const shouldShowLogo = logoElement && (!showSidebar || isSidebarCollapsed)
+  const shouldShowLogo =
+    logoElement !== null && (!showSidebar || isSidebarCollapsed)
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
     shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false flag still lets later header content count
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
 
   // The tabindex is required to support scrolling by arrow keys.

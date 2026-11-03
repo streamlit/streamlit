@@ -35,6 +35,7 @@ import { GLTFLoader } from "@loaders.gl/gltf"
 import { MapContext, NavigationControl, StaticMap } from "react-map-gl"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -234,15 +235,17 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
   // Name the chart only when alt is non-blank. Pair aria-label with
   // role="figure" so the name is exposed on this generic div without
   // role="img", which would make the toolbar and Mapbox controls presentational.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledDeckGlChart
       className="stDeckGlJsonChart"
       data-testid="stDeckGlJsonChart"
       isStretchHeight={isStretchHeight}
-      role={accessibleName ? "figure" : undefined}
+      role={accessibleName !== undefined ? "figure" : undefined}
       aria-label={accessibleName}
     >
       {usesMapbox ? <MapBoxCss /> : null}

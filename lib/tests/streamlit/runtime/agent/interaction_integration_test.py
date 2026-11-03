@@ -34,7 +34,7 @@ from unittest.mock import patch
 import pytest
 
 from streamlit.elements.lib import agent_spec
-from streamlit.runtime import Runtime, RuntimeConfig
+from streamlit.runtime import Runtime, RuntimeConfig, metrics_util
 from streamlit.runtime.agent import interaction, snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -45,7 +45,7 @@ from streamlit.runtime.memory_session_storage import MemorySessionStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.scriptrunner import RerunData, ScriptRunner
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
-from tests.streamlit.runtime.agent import run_gate
+from tests.streamlit.runtime.agent import run_gate, usage_counts
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -58,6 +58,8 @@ if TYPE_CHECKING:
     )
 
 _HANDLE: Final = re.compile(r"s_[0-9a-f]{32}")
+# Arrow has no file extension in media storage.
+_DATA_URL: Final = re.compile(r"/media/(?P<file_id>[0-9a-f]+)")
 
 # A run that is expected to time out waits this long; every other run gets the
 # default, which no test comes close to.
@@ -185,6 +187,16 @@ if st.button("Notice", key="open_notice"):
 st.checkbox("Archive", key="archive")
 """
 
+# More rows than `server.agentPreviewRows`, so the table's URL is the only way
+# to read all of it.
+_TABLE_SCRIPT: Final = """
+import pandas as pd
+import streamlit as st
+
+rows = st.number_input("Rows", value=150, key="rows")
+st.dataframe(pd.DataFrame({"n": range(rows)}), key="orders")
+"""
+
 
 @pytest.fixture
 def options() -> Iterator[dict[str, Any]]:
@@ -213,6 +225,7 @@ class _App:
     runtime: Runtime
     registry: interaction.AgentSessionRegistry
     options: dict[str, Any]
+    media_storage: MemoryMediaFileStorage
     # Every response body the build produced, in order.
     bodies: list[bytes] = field(default_factory=list)
 
@@ -235,6 +248,7 @@ class _App:
         body = await interaction.interact(
             self.registry,
             {} if request is None else request,
+            transport="http",
             user_info={} if user_info is None else user_info,
             headers=headers,
             encode=self._encode,
@@ -272,11 +286,12 @@ async def _running_app(
 ) -> AsyncGenerator[_App, None]:
     main_script = tmp_path / "app.py"
     main_script.write_text(textwrap.dedent(script))
+    media_storage = MemoryMediaFileStorage("/media")
     Runtime._instance = None
     runtime = Runtime(
         RuntimeConfig(
             script_path=str(main_script),
-            media_file_storage=MemoryMediaFileStorage("/media"),
+            media_file_storage=media_storage,
             uploaded_file_manager=MemoryUploadedFileManager("/_stcore/upload_file"),
             cache_storage_manager=MemoryCacheStorageManager(),
             session_manager_class=WebsocketSessionManager,
@@ -284,7 +299,9 @@ async def _running_app(
         )
     )
     await runtime.start()
-    app = _App(runtime, interaction.AgentSessionRegistry(runtime), options)
+    app = _App(
+        runtime, interaction.AgentSessionRegistry(runtime), options, media_storage
+    )
     try:
         yield app
     finally:
@@ -344,6 +361,18 @@ def _dialog(document: dict[str, Any]) -> dict[str, Any] | None:
 
 def _action_keys(document: dict[str, Any]) -> set[str]:
     return {action["key"] for action in document["actions"]}
+
+
+def _data_file(document: dict[str, Any], key: str) -> str:
+    """The media file ID behind the `data.url` of the element ``key``."""
+    url = _keyed(document, key)["data"]["url"]
+    match = _DATA_URL.fullmatch(url)
+    assert match is not None, url
+    return match["file_id"]
+
+
+def _stored_files(app: _App) -> set[str]:
+    return set(app.media_storage._files_by_id)
 
 
 @pytest.mark.anyio
@@ -533,33 +562,36 @@ async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
 
         def slow_build(**kwargs: Any) -> snapshot.Snapshot:
             build_started.set()
-            assert build_may_finish.wait(5)
+            # No timeout: one that expired on a slow machine would fail the
+            # abandoned build, and the requests below would then misbehave.
+            build_may_finish.wait()
             return real_build(**kwargs)
 
         with patch.object(
             interaction.snapshot, "build_snapshot", side_effect=slow_build
         ) as build:
-            left = asyncio.create_task(
-                app.call({"session_id": handle, "query_params": {"q": ["left"]}})
-            )
-            assert await asyncio.to_thread(build_started.wait, 5)
-            left.cancel()
-            early = await app.refused(
-                {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
-            )
-            assert early.code == "wait_timed_out"
-            assert early.session_id == handle
-            retry = asyncio.create_task(app.call({"session_id": handle}))
-            await asyncio.sleep(0.05)
+            try:
+                left = asyncio.create_task(
+                    app.call({"session_id": handle, "query_params": {"q": ["left"]}})
+                )
+                assert await asyncio.to_thread(build_started.wait, 5)
+                left.cancel()
+                early = await app.refused(
+                    {"session_id": handle}, run_timeout=_SHORT_TIMEOUT
+                )
+                assert early.code == "wait_timed_out"
+                assert early.session_id == handle
+                retry = asyncio.create_task(app.call({"session_id": handle}))
+                await asyncio.sleep(0.05)
 
-            busy = await app.refused(
-                {"session_id": handle, "query_params": {"q": ["other"]}}
-            )
-            assert busy.code == "session_busy"
-            assert not left.done()
-            assert not retry.done()
-
-            build_may_finish.set()
+                busy = await app.refused(
+                    {"session_id": handle, "query_params": {"q": ["other"]}}
+                )
+                assert busy.code == "session_busy"
+                assert not left.done()
+                assert not retry.done()
+            finally:
+                build_may_finish.set()
             with pytest.raises(asyncio.CancelledError):
                 await left
             collected = await retry
@@ -986,6 +1018,35 @@ async def test_the_registry_caps_sessions_and_reclaims_idle_ones(
     assert stranger.code == "unknown_session"
     assert reclaimed.code == "unknown_session"
     assert owned["session_id"] == replacement
+
+
+@pytest.mark.anyio
+async def test_usage_counts_every_interaction_and_each_session_created(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Every call counts as an interaction, refused ones included, and only a
+    session that was created counts as one.
+    """
+    options["browser.gatherUsageStats"] = True
+    options["server.agentMaxSessions"] = 1
+    # With usage stats on, a new session reads the machine id, which would be
+    # written under the test config's read-only home folder. A fresh
+    # installation with a fixed id keeps the test independent of test order.
+    with (
+        usage_counts.fresh(),
+        patch.object(metrics_util.Installation, "_instance", None),
+        patch.object(metrics_util, "_get_machine_id_v4", return_value="test-v4"),
+    ):
+        async with _running_app(tmp_path, options, _COUNTER_SCRIPT) as app:
+            created = await app.call()
+            await app.call({"session_id": created["session_id"]})
+            full = await app.refused()
+            unknown = await app.refused({"session_id": "s_" + "0" * 32})
+        counts = usage_counts.reported()
+
+    assert full.code == "too_many_sessions"
+    assert unknown.code == "unknown_session"
+    assert counts == {"http_interactions": 4, "mcp_interactions": 0, "sessions": 1}
 
 
 @pytest.mark.anyio
@@ -1631,6 +1692,23 @@ async def test_setting_a_bound_widget_drops_its_parameter(
 
 
 @pytest.mark.anyio
+async def test_a_bound_parameter_its_widget_cannot_take_is_dropped(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A parameter that is not one of its widget's options leaves the widget
+    as it was and is gone from `query_params`, as the protocol describes.
+    """
+    async with _running_app(tmp_path, options, _NAVIGATION_SCRIPT) as app:
+        first = await app.call({"query_params": {"region": ["APAC"]}})
+        moved = await app.call(
+            {"session_id": first["session_id"], "query_params": {"region": ["Mars"]}}
+        )
+
+    assert _keyed(moved, "region")["value"] == "APAC"
+    assert "region" not in moved["query_params"]
+
+
+@pytest.mark.anyio
 async def test_a_timed_out_click_is_collected_not_fired_twice(
     tmp_path: Path, options: dict[str, Any]
 ) -> None:
@@ -1865,3 +1943,120 @@ async def test_a_client_leaving_during_validation_keeps_the_session_claimed(
 
     assert busy.code == "session_busy"
     assert _counts(again)["starts"] == 2
+
+
+@pytest.mark.anyio
+async def test_a_tables_data_file_lives_as_long_as_the_table(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """The file behind `data.url` is stored while the table renders, replaced
+    once a write changes the table, and released when the session closes.
+    """
+    async with _running_app(tmp_path, options, _TABLE_SCRIPT) as app:
+        first = await app.call()
+        handle = first["session_id"]
+        stored_first = _stored_files(app)
+        written = await app.call({"session_id": handle, "widget_state": {"rows": 120}})
+        stored_written = _stored_files(app)
+        app.registry.close(handle)
+        stored_closed = _stored_files(app)
+
+    first_file = _data_file(first, "orders")
+    written_file = _data_file(written, "orders")
+    assert _keyed(first, "orders")["data"]["complete"] is False
+    assert _keyed(written, "orders")["data"]["row_count"] == 120
+    assert stored_first == {first_file}
+    assert written_file != first_file
+    assert stored_written == {written_file}
+    assert stored_closed == set()
+
+
+@pytest.mark.anyio
+async def test_a_fragment_rerun_replaces_only_the_fragments_data_files(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """A fragment rerun keeps the file of a table outside the fragment, which
+    the snapshot still reports, and replaces the one of a table inside it.
+    """
+    script = """
+    import pandas as pd
+    import streamlit as st
+    from tests.streamlit.runtime.agent import run_gate
+
+    run_gate.count("body")
+    st.dataframe(pd.DataFrame({"outside": range(150)}), key="outside")
+
+    @st.fragment
+    def panel():
+        rows = st.number_input("Rows", value=150, key="rows")
+        st.dataframe(pd.DataFrame({"inside": range(rows)}), key="inside")
+
+    panel()
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call()
+        written = await app.call(
+            {"session_id": first["session_id"], "widget_state": {"rows": 120}}
+        )
+        stored = _stored_files(app)
+
+    assert run_gate.value("body") == 1
+    assert _data_file(written, "outside") == _data_file(first, "outside")
+    assert _data_file(written, "inside") != _data_file(first, "inside")
+    assert stored == {_data_file(written, "outside"), _data_file(written, "inside")}
+
+
+@pytest.mark.anyio
+async def test_sessions_showing_the_same_table_share_its_data_file(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Identical tables in two sessions are one stored file, which stays while
+    either session still shows it.
+    """
+    async with _running_app(tmp_path, options, _TABLE_SCRIPT) as app:
+        first = await app.call()
+        second = await app.call()
+        app.registry.close(first["session_id"])
+        stored_after_first = _stored_files(app)
+        app.registry.close(second["session_id"])
+        stored_after_both = _stored_files(app)
+
+    shared = _data_file(first, "orders")
+    assert second["session_id"] != first["session_id"]
+    assert _data_file(second, "orders") == shared
+    assert stored_after_first == {shared}
+    assert stored_after_both == set()
+
+
+@pytest.mark.anyio
+async def test_elements_showing_the_same_table_share_its_data_file(
+    tmp_path: Path, options: dict[str, Any]
+) -> None:
+    """Two elements of one page with identical data are one stored file, which
+    stays while either still renders and is released once neither does.
+    """
+    script = """
+    import pandas as pd
+    import streamlit as st
+
+    frame = pd.DataFrame({"n": range(150)})
+    st.dataframe(frame, key="kept")
+    if st.checkbox("Show copy", value=True, key="show_copy"):
+        st.dataframe(frame, key="copy")
+    """
+    async with _running_app(tmp_path, options, script) as app:
+        first = await app.call()
+        handle = first["session_id"]
+        hidden = await app.call(
+            {"session_id": handle, "widget_state": {"show_copy": False}}
+        )
+        stored_hidden = _stored_files(app)
+        app.registry.close(handle)
+        stored_closed = _stored_files(app)
+
+    shared = _data_file(first, "kept")
+    assert _data_file(first, "copy") == shared
+    assert "copy" not in {node.get("key") for node in _nodes(hidden)}
+    assert _data_file(hidden, "kept") == shared
+    assert stored_hidden == {shared}
+    assert stored_closed == set()

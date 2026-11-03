@@ -1399,7 +1399,7 @@ function RangeDateInput({
         aria-keyshortcuts="Alt+ArrowDown"
         data-testid="stDateInputField"
         data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
+        data-has-error={error !== null ? "" : undefined}
         aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -1415,8 +1415,8 @@ function RangeDateInput({
                   // segment text when the controlled value has not changed.
                   key={formResetKey}
                   aria-label={`${label} start date`}
-                  aria-describedby={error ? errorId : undefined}
-                  isInvalid={!!error}
+                  aria-describedby={error !== null ? errorId : undefined}
+                  isInvalid={error !== null}
                   // Keep invalid state tied to Streamlit's error, not native
                   // constraint validation. Required is exposed on the field
                   // group that contains the focused segments, not via RAC
@@ -1443,8 +1443,8 @@ function RangeDateInput({
                 <DateField
                   key={formResetKey}
                   aria-label={`${label} end date`}
-                  aria-describedby={error ? errorId : undefined}
-                  isInvalid={!!error}
+                  aria-describedby={error !== null ? errorId : undefined}
+                  isInvalid={error !== null}
                   validationBehavior="aria"
                   value={displayEnd}
                   onChange={handleEndFieldChange}
@@ -1464,7 +1464,7 @@ function RangeDateInput({
           </I18nProvider>
         </StyledDateFieldsScroller>
         <StyledTrailingIcons>
-          {error && (
+          {error !== null && (
             <StyledErrorIconContainer data-testid="stDateInputError">
               <Tooltip
                 content={
@@ -1505,7 +1505,7 @@ function RangeDateInput({
             <Icon content={DateRange} size="base" />
           </StyledCalendarButton>
         </StyledTrailingIcons>
-        {error && (
+        {error !== null && (
           <StyledVisuallyHidden id={errorId} role="alert">
             {error.replaceAll("**", "")}
           </StyledVisuallyHidden>

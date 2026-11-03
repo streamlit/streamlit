@@ -369,10 +369,16 @@ function replaceDivergingColors(
 }
 
 /**
- * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
- * we use this method to specifically replace these graph properties.
- * */
-function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
+ * Replaces stand-in colors on graph-object template traces (candlestick,
+ * waterfall, Sankey, table). `Template.layout` does not reach those traces.
+ * When `elementTheme` is `"streamlit"`, the app theme supplies the colors.
+ * Otherwise Plotly's light-theme colors are used.
+ */
+function replaceGOSpecificColors(
+  spec: string,
+  theme: EmotionTheme,
+  elementTheme: string
+): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const INCREASING = "#000032"
   const DECREASING = "#000033"
@@ -385,17 +391,34 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
   const FADED_TEXT_05 = "#000039"
   const BG_MIX = "#000040"
 
-  spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
-  spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
-  spec = spec.replaceAll(TOTAL, getBlue80(theme))
+  if (elementTheme === "streamlit") {
+    spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
+    spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
+    spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
-  spec = spec.replaceAll(GRAY_30, getGray30(theme))
-  spec = spec.replaceAll(GRAY_70, getGray70(theme))
-  spec = spec.replaceAll(GRAY_90, getGray90(theme))
+    spec = spec.replaceAll(GRAY_30, getGray30(theme))
+    spec = spec.replaceAll(GRAY_70, getGray70(theme))
+    spec = spec.replaceAll(GRAY_90, getGray90(theme))
 
-  spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
-  spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
-  spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+    spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
+    spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
+    spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+  } else {
+    // Plotly light-theme colors, so theme=None stays readable on white paper.
+    // - Candlestick increasing/decreasing and waterfall totals: plotly.js supplyDefaults.
+    // - Table fills, lines, and font colors: the built-in "plotly" template.
+    spec = spec.replaceAll(INCREASING, "#3D9970")
+    spec = spec.replaceAll(DECREASING, "#FF4136")
+    spec = spec.replaceAll(TOTAL, "#4499FF")
+
+    spec = spec.replaceAll(GRAY_30, "#B2B5BE")
+    spec = spec.replaceAll(GRAY_70, "#2a3f5f")
+    spec = spec.replaceAll(GRAY_90, "#2a3f5f")
+
+    spec = spec.replaceAll(BG_COLOR, "#EBF0F8")
+    spec = spec.replaceAll(FADED_TEXT_05, "white")
+    spec = spec.replaceAll(BG_MIX, "#C8D4E3")
+  }
   return spec
 }
 
@@ -404,7 +427,7 @@ export function replaceTemporaryColors(
   theme: EmotionTheme,
   elementTheme: string
 ): string {
-  spec = replaceGOSpecificColors(spec, theme)
+  spec = replaceGOSpecificColors(spec, theme, elementTheme)
   spec = replaceCategoricalColors(spec, theme, elementTheme)
   spec = replaceSequentialColors(spec, theme, elementTheme)
   spec = replaceDivergingColors(spec, theme, elementTheme)
@@ -515,40 +538,5 @@ function respectUserFontOnTemplateTraces(
         delete textfont.color
       }
     }
-  }
-}
-
-/**
- * Apply minimum changes to graph to fit streamlit
- * @param layout - spec.layout
- * @param theme - theme from useEmotionTheme()
- * @returns modified spec.layout
- */
-export function layoutWithThemeDefaults(
-  layout: Record<string, unknown>,
-  theme: EmotionTheme
-): Record<string, unknown> {
-  const { colors, genericFonts } = theme
-
-  const themeDefaults = {
-    font: {
-      color: colors.bodyText,
-      family: genericFonts.bodyFont,
-    },
-    paper_bgcolor: colors.bgColor,
-    plot_bgcolor: colors.secondaryBg,
-  }
-
-  // Fill in theme defaults where the user didn't specify layout options.
-  return {
-    ...layout,
-    font: {
-      ...themeDefaults.font,
-      ...(layout.font as Record<string, unknown> | undefined),
-    },
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank paper color uses the theme
-    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank plot color uses the theme
-    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
   }
 }

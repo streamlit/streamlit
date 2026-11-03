@@ -18,6 +18,8 @@ import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import type { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
 import { transparentize } from "color2k"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   hasLightBackgroundColor,
   resolveNamedBackgroundColor,
@@ -81,16 +83,17 @@ export const prepareOptions = (
         )
 
         autoColorIndex += 1
-      } else if (option.color) {
+      } else if (!isNullOrEmptyString(option.color)) {
         // Resolve built-in color names to theme background colors,
         // otherwise use the color value directly.
         resolvedColor = resolveNamedBackgroundColor(option.color, theme)
       }
       // The upstream implementation has some issues with the alpha channel.
       // Therefore, we are blending the color with the background to remove the alpha channel.
-      const blendedColor = resolvedColor
-        ? blend(resolvedColor, theme.colors.bgColor)
-        : undefined
+      const blendedColor =
+        resolvedColor !== undefined
+          ? blend(resolvedColor, theme.colors.bgColor)
+          : undefined
 
       return {
         value: toSafeString(option.value).trim(),

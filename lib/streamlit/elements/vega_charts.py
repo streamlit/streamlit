@@ -37,7 +37,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.built_in_chart_utils import (
     ChartStackType,
     ChartType,
@@ -659,14 +659,17 @@ def _parse_selection_mode(
 
 
 def _reset_counter_pattern(prefix: str, vega_spec: str) -> str:
-    """Altair uses a global counter for unnamed parameters and views.
-    We need to reset these counters on a spec-level to make the
-    spec stable across reruns and avoid changes to the element ID.
+    """Altair names unnamed parameters and views with a global counter
+    (Altair 5) or a hash (Altair 6). ``_stabilize_vega_json_spec`` rewrites
+    those names so the spec and its element ID stay stable across reruns.
     """
 
-    # Altair 6.0.0 introduced a new way to handle parameters,
-    # by using hashes instead of pure counters:
-    pattern = re.compile(rf'"{prefix}[0-9a-z]+"')
+    # Match counter names (``view_1``), hex hash names (``view_79c4``), and
+    # hash names with a position suffix (``view_79c4_0``) that layered and
+    # concatenated views with params get. The hash covers the view's dataset
+    # name, so it changes whenever the data changes. User-chosen names with
+    # other letters, such as ``view_custom_1``, are left unchanged.
+    pattern = re.compile(rf'"{prefix}[0-9a-f]+(?:_[0-9]+)?"')
     # Get all matches without duplicates in order of appearance.
     # Using a set here would not guarantee the order of appearance,
     # which might lead to different replacements on each run.
@@ -785,6 +788,151 @@ def _stabilize_vega_json_spec(vega_spec: str) -> str:
     return vega_spec
 
 
+def arrow_buffers(proto: VegaLiteChartProto) -> list[bytes]:
+    """Every Arrow buffer a Vega-Lite chart's data is split across.
+
+    Inline data and named datasets are both Arrow. The built-in charts and a
+    single-dataframe Altair chart have one; Altair gives each dataframe in a
+    layered or concatenated chart its own named dataset. The agent API serves
+    and previews only a single buffer: several cannot be described as one
+    table, and serving just the first would claim ``complete`` while leaving
+    the rest out, so it reports several as unavailable instead.
+
+    A buffer of at most one empty row is left out, so a reference line drawn
+    beside a dataframe does not turn the chart into several tables. The agent
+    API reports those rows in the specification instead.
+    """
+    return [
+        buffer
+        for _name, buffer in _arrow_datasets(proto)
+        if _empty_rows(buffer) is None
+    ]
+
+
+def _arrow_datasets(proto: VegaLiteChartProto) -> list[tuple[str | None, bytes]]:
+    """Each non-empty Arrow buffer with its dataset name, ``None`` for inline data."""
+    datasets = [
+        (None, proto.data.data),
+        *((dataset.name, dataset.data.data) for dataset in proto.datasets),
+    ]
+    return [(name, buffer) for name, buffer in datasets if buffer]
+
+
+def _empty_rows(arrow_bytes: bytes) -> list[dict[str, Any]] | None:
+    """The rows of an Arrow stream with no columns and at most one row.
+
+    Altair gives a layer without data, such as a rule or a text label at an
+    ``alt.datum`` position, a placeholder dataset of one empty row. ``None``
+    for a stream with columns or more rows, and for unreadable bytes.
+    """
+    import pyarrow as pa
+
+    try:
+        reader = pa.ipc.open_stream(arrow_bytes)
+        if reader.schema.names:
+            return None
+        row_count = reader.read_all().num_rows
+    except pa.ArrowException:
+        return None
+    return [{} for _ in range(row_count)] if row_count <= 1 else None
+
+
+def _restore_empty_datasets(spec: dict[str, Any], proto: VegaLiteChartProto) -> None:
+    """Put the empty rows ``arrow_buffers`` leaves out back into ``spec``.
+
+    A mark can draw once for such a row, and a ``calculate`` transform can fill
+    a value into it, so the reported specification keeps them where the
+    browser's chart reads them.
+    """
+    for name, buffer in _arrow_datasets(proto):
+        rows = _empty_rows(buffer)
+        if rows is None:
+            continue
+        if name is None:
+            spec["data"] = {"values": rows}
+        else:
+            spec["datasets"] = {**spec.get("datasets", {}), name: rows}
+
+
+def loads_data_from_url(spec: Any) -> bool:
+    """Whether a Vega-Lite specification loads any of its data from a URL.
+
+    Checked at any depth: the top level, a layer, or a ``lookup``'s
+    ``from.data``, but not inside inline rows or ``usermeta``. The browser
+    fetches that data itself, so no Arrow buffer holds all of the chart's data.
+    ``spec`` is the parsed specification or its JSON text; malformed text loads
+    nothing.
+    """
+    if isinstance(spec, str):
+        try:
+            spec = json.loads(spec)
+        except ValueError:
+            return False
+    return _loads_from_url(spec)
+
+
+# Keys whose values hold inline rows or arbitrary author metadata, never a data
+# source, so a nested `{"data": {"url": ...}}` there loads nothing.
+_NOT_DATA_SOURCES: Final = frozenset({"datasets", "usermeta", "values"})
+
+
+def _loads_from_url(value: Any) -> bool:
+    """Whether ``value`` holds a ``{"data": {"url": ...}}`` at any depth, outside
+    ``_NOT_DATA_SOURCES``.
+    """
+    if isinstance(value, dict):
+        data = value.get("data")
+        if isinstance(data, dict) and "url" in data:
+            return True
+        return any(
+            _loads_from_url(item)
+            for key, item in value.items()
+            if key not in _NOT_DATA_SOURCES
+        )
+    if isinstance(value, list):
+        return any(_loads_from_url(item) for item in value)
+    return False
+
+
+def _vega_data(proto: VegaLiteChartProto, *, coordinates: str) -> dict[str, Any]:
+    """A Vega-Lite chart's agent ``data``: its one table and its specification.
+
+    Only a chart over a single Arrow buffer is summarized and served. Several
+    buffers are not one table, and data the specification loads from a URL is
+    fetched by the browser, which the agent API does not do; in either case
+    none of it is served, rather than a part passed off as the whole.
+    """
+    buffers = arrow_buffers(proto)
+    spec = agent_data.parse_spec(proto.spec)
+    data: dict[str, Any]
+    if len(buffers) > 1:
+        data = agent_data.unavailable("multiple_datasets")
+    elif loads_data_from_url(spec):
+        data = agent_data.unavailable("external_url")
+    elif buffers:
+        # No block means the buffer could be neither read nor registered, and
+        # an Arrow copy is only left unregistered above the size bound.
+        data = agent_data.arrow(
+            buffers[0], coordinates=coordinates
+        ) or agent_data.unavailable("too_large_to_serve")
+    else:
+        # Inline values travel as Arrow, so what is left in the specification,
+        # such as GeoJSON, is all of it.
+        data = {"complete": True}
+    if isinstance(spec, dict):
+        # The built-in charts write 0 for a size the author left unset, which
+        # means "fill the container", not a size.
+        spec = {
+            name: value
+            for name, value in spec.items()
+            if not (name in {"width", "height"} and value == 0)
+        }
+        _restore_empty_datasets(spec, proto)
+    if spec is not None:
+        data["spec"] = spec
+    return data
+
+
 class VegaChartsMixin:
     """Mix-in class for all vega-related chart commands.
 
@@ -815,6 +963,14 @@ class VegaChartsMixin:
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
+
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
 
         Parameters
         ----------
@@ -1410,6 +1566,14 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
+
         Parameters
         ----------
         data : Anything supported by st.dataframe
@@ -1773,6 +1937,14 @@ class VegaChartsMixin:
         the chart's Altair spec. As a result this is easier to use for many
         "just plot this" scenarios, while being less customizable.
 
+        .. note::
+            A chart with more than 2,000 data points (rows times plotted
+            columns) renders to a canvas instead of SVG so it stays
+            responsive. On a canvas, assistive technologies only get the
+            chart's accessible name (``alt``). To keep SVG, build the chart
+            with ``st.altair_chart`` and set
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``.
+
         Parameters
         ----------
         data : Anything supported by st.dataframe
@@ -2082,6 +2254,28 @@ class VegaChartsMixin:
         statistical visualization library for Python, based on Vega and
         Vega-Lite.
 
+        .. note::
+            To keep large charts responsive, Streamlit changes two rendering
+            settings when your chart doesn't set them:
+
+            - A chart that draws more than 2,000 marks with one mark per row
+              (points, circles, squares, bars, rects, ticks, rules, or text)
+              renders to a canvas instead of SVG, so pointer moves and reruns
+              stay fast. On a canvas, assistive technologies only get the
+              chart's accessible name; marks, axes, and legends aren't
+              exposed.
+            - Streamlit sets ``config.mark.aria`` to ``False`` on charts whose
+              marks draw more than 5,000 rows, including lines and areas. This
+              skips the screen-reader description that Vega-Lite builds for
+              every mark. On SVG charts, axes, legends, and the chart's
+              accessible name stay available.
+
+            Streamlit counts the dataframe rows of each view and adds up
+            layered and concatenated views. Views that aggregate or transform
+            their data aren't counted. To opt out, set the renderer with
+            ``chart.properties(usermeta={"embedOptions": {"renderer": "svg"}})``
+            or the ARIA setting with ``chart.configure(aria=True)``.
+
         Parameters
         ----------
         altair_chart : altair.Chart
@@ -2336,6 +2530,28 @@ class VegaChartsMixin:
 
         `Vega-Lite <https://vega.github.io/vega-lite/>`_ is a high-level
         grammar for defining interactive graphics.
+
+        .. note::
+            To keep large charts responsive, Streamlit changes two rendering
+            settings when your spec doesn't set them:
+
+            - A chart that draws more than 2,000 marks with one mark per row
+              (points, circles, squares, bars, rects, ticks, rules, or text)
+              renders to a canvas instead of SVG, so pointer moves and reruns
+              stay fast. On a canvas, assistive technologies only get the
+              chart's accessible name; marks, axes, and legends aren't
+              exposed.
+            - Streamlit sets ``config.mark.aria`` to ``False`` on charts whose
+              marks draw more than 5,000 rows, including lines and areas. This
+              skips the screen-reader description that Vega-Lite builds for
+              every mark. On SVG charts, axes, legends, and the chart's
+              accessible name stay available.
+
+            Streamlit counts the dataframe rows of each view and adds up
+            layered and concatenated views. Views that aggregate or transform
+            their data aren't counted. To opt out, set
+            ``"usermeta": {"embedOptions": {"renderer": "svg"}}`` or
+            ``"config": {"aria": True}`` in the spec.
 
         Parameters
         ----------
@@ -2793,7 +3009,6 @@ class VegaChartsMixin:
                     command=agent_command,
                     encoding=agent_encoding,
                     selection_mode=list(vega_lite_proto.selection_mode),
-                    on_select=on_select,
                 ),
             )
             return widget_state.value
@@ -2810,7 +3025,6 @@ class VegaChartsMixin:
                 command=agent_command,
                 encoding=agent_encoding,
                 key=key,
-                on_select=on_select,
             ),
         )
 
@@ -2822,13 +3036,12 @@ class VegaChartsMixin:
         encoding: dict[str, Any] | None,
         selection_mode: list[str] | None = None,
         key: str | None = None,
-        on_select: Literal["rerun", "ignore"] | WidgetCallback | None = None,
     ) -> str | None:
         """Describe a Vega chart for the agent API.
 
-        Built here because the element ID and normalized selection modes exist
-        only once the chart proto is filled. The public command passes its own
-        name and encoding arguments in.
+        Built here because the element ID, normalized selection modes, and
+        Arrow buffers exist only once the chart proto is filled. The public
+        command passes its own name and encoding arguments in.
         """
         if not agent_spec.is_recording():
             return None
@@ -2839,9 +3052,11 @@ class VegaChartsMixin:
             if encoding is not None
             else {"selection_mode": selection_mode or None}
         )
-        if command in {"altair_chart", "vega_lite_chart"}:
-            # A callback reaches the server, so it is the same mode as "rerun".
-            own_arguments["on_select"] = "ignore" if on_select == "ignore" else "rerun"
+        if selection_mode:
+            # Reported only with selections on; the documented default,
+            # "ignore", is left out. A callback reaches the server too, so it is
+            # the same mode as "rerun".
+            own_arguments["on_select"] = "rerun"
         return agent_spec.element(
             command,
             # A chart without selections has no element ID, only the author's key.
@@ -2850,6 +3065,9 @@ class VegaChartsMixin:
             # chart without selections has nothing to withhold, so it is fully
             # supported.
             support="action_unsupported" if selection_mode else None,
+            data_builder=lambda: _vega_data(
+                proto, coordinates=self.dg._get_write_delta_path_str()
+            ),
             alt=proto.alt or None,
             **own_arguments,
         )
@@ -2875,8 +3093,9 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
         name = calc_hash(json.dumps(data, sort_keys=True))
         datasets[name] = data
     else:
-        # Serialize first so the dataset name is a stable content hash.
+        # Serialize first so the dataset name is a stable content hash of the
+        # Arrow bytes.
         data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-        name = calc_hash(str(data_bytes))
+        name = calc_hash(data_bytes)
         datasets[name] = data_bytes
     return {"name": name}

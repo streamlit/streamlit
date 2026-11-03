@@ -50,4 +50,11 @@ export default {
   greenTextColor: "#7ED5B0",
   violetTextColor: "#BF8EF7",
   grayTextColor: "#B8B3A8",
+
+  // Stock main chrome (opaque). Sidebar variants live in stockSidebarChrome.
+  borderColor: "#4A4742",
+  dataframeBorderColor: "#3A3834",
+  dataframeHeaderBackgroundColor: "#2D2B27",
+  codeBackgroundColor: "#242321",
+  codeTextColor: "#EDEBE8",
 }

@@ -18,11 +18,11 @@ from __future__ import annotations
 
 import datetime as dt
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args
 from zoneinfo import ZoneInfo
 
 import streamlit as st
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import (
     ElementState,
@@ -67,6 +67,15 @@ def _one_keyed(
     ]
     assert len(matches) == 1, matches
     return matches[0]
+
+
+def _assert_data_resolves(data: dict[str, Any]) -> None:
+    """The `data` invariant: complete, or a URL, or a known reason; never both."""
+    assert data["complete"] is True or "url" in data or "unavailable" in data, data
+    assert not ("url" in data and "unavailable" in data), data
+    if "unavailable" in data:
+        assert data["unavailable"] in get_args(agent_data.UnavailableReason), data
+        assert data["complete"] is False, data
 
 
 def _describe(path: list[int], body: dict[str, Any]) -> ForwardMsg:

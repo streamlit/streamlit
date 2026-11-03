@@ -35,7 +35,7 @@ const getNavTextColor = (
   theme: EmotionTheme,
   isActive: boolean,
   disabled: boolean = false,
-  isTopNav?: boolean
+  isTopNav: boolean = false
 ): string => {
   if (disabled) {
     return theme.colors.fadedText40
@@ -115,7 +115,7 @@ interface StyledSidebarNavLinkProps {
 }
 
 export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
-  ({ theme, isActive, disabled, isInDropdown }) => {
+  ({ theme, isActive, disabled, isInDropdown = false }) => {
     const defaultPageLinkStyles = {
       textDecoration: "none",
       fontWeight: isActive ? theme.fontWeights.bold : theme.fontWeights.normal,

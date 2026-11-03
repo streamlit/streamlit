@@ -132,7 +132,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         # Config options not explicitly set should be commented out.
@@ -151,7 +151,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         assert "[ui]" not in lines
@@ -221,7 +221,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = set(output.split("\n"))
 
         assert "# This option has multiple lines." in lines
@@ -247,7 +247,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
         description_index = lines.index(
             "# This option's description starts from third line."
@@ -278,7 +278,7 @@ class ConfigUtilTest(unittest.TestCase):
 
         [(args, _)] = patched_echo.call_args_list
         # Remove the ascii escape sequences used to color terminal output.
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         # Find the index of the description and the option in the output.
@@ -298,7 +298,7 @@ class ConfigUtilTest(unittest.TestCase):
         config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         assert "[server]" in lines
@@ -320,7 +320,7 @@ class ConfigUtilTest(unittest.TestCase):
         config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
         lines = output.split("\n")
 
         assert "# This is a hidden option." not in lines
@@ -343,7 +343,7 @@ class ConfigUtilTest(unittest.TestCase):
         config_util.show_config({"server": "Server settings."}, config_options)
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
 
         # The banner comment is indented, so parse from the section header.
         server_output = "[server]" + output.split("[server]", 1)[1]
@@ -389,7 +389,7 @@ class ConfigUtilTest(unittest.TestCase):
         )
 
         [(args, _)] = patched_echo.call_args_list
-        output = re.compile(r"\x1b[^m]*m").sub("", args[0])
+        output = re.sub(r"\x1b[^m]*m", "", args[0])
 
         assert 'showErrorDetails = "full"' in output
 

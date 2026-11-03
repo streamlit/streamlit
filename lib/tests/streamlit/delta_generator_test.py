@@ -227,6 +227,36 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert not dg._cursor.is_locked
         assert dg._cursor.index == 0
 
+    def test_constructing_delta_generators_leaves_method_modules_unchanged(
+        self,
+    ) -> None:
+        """Constructing a DeltaGenerator or container doesn't mutate shared methods,
+        and each mixin method reports the module that defines it.
+        """
+        owners = (DeltaGenerator, *DeltaGenerator.__bases__)
+
+        def method_modules() -> dict[tuple[str, str], str]:
+            return {
+                (owner.__qualname__, name): func.__module__
+                for owner in owners
+                for name, func in vars(owner).items()
+                if callable(func)
+            }
+
+        before = method_modules()
+
+        DeltaGenerator()
+        st.expander("expander")
+        st.tabs(["tab"])
+        st.status("status")
+        st.popover("popover")
+
+        assert method_modules() == before
+        for mixin in DeltaGenerator.__bases__:
+            for name, func in vars(mixin).items():
+                if callable(func):
+                    assert func.__module__ == mixin.__module__, (mixin, name)
+
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
@@ -1260,8 +1290,16 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             with pytest.raises(
                 StreamlitInvalidLayoutContextError,
                 match="outside a parallel fragment",
-            ):
+            ) as exc_info:
                 outside_dg._enqueue("text", TextProto())
+
+            message = str(exc_info.value)
+            assert "`st.sidebar`" in message
+            assert "`st.bottom`" in message
+            assert "full app run" in message
+            assert "later fragment rerun" in message
+            assert "if st.button" not in message
+            assert "sequential fragment rerun" not in message
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
@@ -1607,8 +1645,12 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
 
     def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
-        """A fragment-only rerun raises if the fragment did not write to the
-        outside container during the last full app run.
+        """A fragment-only rerun raises when that fragment did not write to the
+        outside container on the last full app run.
+
+        The message is shared with ``parallel=True`` fragments, which cannot
+        reserve that slot, so it also states that outside writes are
+        unsupported for them.
         """
         outside = st.container()
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
@@ -1620,8 +1662,16 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
                 "the fragment did not write to that container during the last full "
                 "app run"
             ),
-        ):
+        ) as exc_info:
             outside.markdown("hi")
+
+        message = str(exc_info.value)
+        assert "`parallel=True`" in message
+        assert "is not supported" in message
+        assert "`st.sidebar`" in message
+        assert "`st.bottom`" in message
+        assert "outside_container.empty()" in message
+        assert "inside the fragment function" in message
 
     def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
         """A main-script write does not reserve a wrapper, so a fragment-only

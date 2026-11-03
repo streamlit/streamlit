@@ -15,6 +15,7 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { version as vegaLiteVersion } from "vega-lite"
 
 import { render } from "~lib/test_util"
 
@@ -25,6 +26,14 @@ import type {
   NumericStatistics,
   TextStatistics,
 } from "./statisticsUtils"
+
+/**
+ * Schema URL matching the installed vega-lite major version. vega-embed warns
+ * when a spec declares a different major.
+ */
+const EXPECTED_VEGA_LITE_SCHEMA = `https://vega.github.io/schema/vega-lite/v${
+  vegaLiteVersion.split(".")[0]
+}.json`
 
 const mockFinalize = vi.fn()
 const mockEmbed = vi.fn()
@@ -143,6 +152,17 @@ describe("StatisticsChart", () => {
       "aria-label",
       "Distribution histogram"
     )
+  })
+
+  it("declares the schema of the installed vega-lite major version", async () => {
+    render(<StatisticsChart statistics={numericStats} />)
+
+    await waitFor(() => {
+      expect(mockEmbed).toHaveBeenCalledTimes(1)
+    })
+
+    const spec = mockEmbed.mock.calls[0][1] as { $schema: string }
+    expect(spec.$schema).toBe(EXPECTED_VEGA_LITE_SCHEMA)
   })
 
   it("encodes histogram bars across the bin width down to a zero baseline", async () => {

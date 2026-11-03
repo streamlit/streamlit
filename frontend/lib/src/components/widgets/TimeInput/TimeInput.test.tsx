@@ -3045,3 +3045,75 @@ describe("required", () => {
     expect(minuteSegment).toHaveTextContent("mm")
   })
 })
+
+describe("TimeInput no-op interactions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Wait for WidgetStateManager's macrotask flush so a missed rerun would still be observed.
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function renderWithRerunSpy(): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    setStringValueSpy: ReturnType<typeof vi.spyOn>
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({ default: "12:45" }, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(<TimeInput {...props} />)
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+    return { sendRerunBackMsg, setStringValueSpy }
+  }
+
+  it.each([
+    { segment: "hour", paste: "12:45" },
+    { segment: "hour", paste: "12" },
+    { segment: "minute", paste: "45" },
+  ])(
+    "does not commit or rerun when pasting $paste into the $segment segment",
+    async ({ segment, paste }) => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy()
+
+      const [hourSegment, minuteSegment] = screen.getAllByRole("spinbutton")
+      await user.click(segment === "hour" ? hourSegment : minuteSegment)
+      await user.paste(paste)
+      await user.tab()
+      await flushScheduledRerun()
+
+      expect(hourSegment).toHaveTextContent("12")
+      expect(minuteSegment).toHaveTextContent("45")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it("still commits and reruns when pasting a different time", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy()
+
+    const [hourSegment] = screen.getAllByRole("spinbutton")
+    await user.click(hourSegment)
+    await user.paste("08:30")
+    await flushScheduledRerun()
+
+    expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+      "123",
+      "08:30",
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+})

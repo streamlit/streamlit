@@ -103,7 +103,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
-  "::placeholder": { color: theme.colors.fadedText60 },
+  "::placeholder": { color: theme.colors.fadedText70 },
   // Suppress the native spin buttons — NumberInput renders its own controls.
   MozAppearance: "textfield",
   "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {

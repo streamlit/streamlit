@@ -59,6 +59,7 @@ export type DerivedColors = {
   fadedText20: string
   fadedText40: string
   fadedText60: string
+  fadedText70: string
 
   bgMix: string
   darkenedBgMix100: string

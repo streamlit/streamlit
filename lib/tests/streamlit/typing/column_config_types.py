@@ -139,6 +139,7 @@ if TYPE_CHECKING:
     assert_type(NumberColumn(format="engineering"), ColumnConfig)
     assert_type(NumberColumn(format="accounting"), ColumnConfig)
     assert_type(NumberColumn(format="bytes"), ColumnConfig)
+    assert_type(NumberColumn(format="duration"), ColumnConfig)
     assert_type(NumberColumn(format="%.2f"), ColumnConfig)
     assert_type(NumberColumn(min_value=None), ColumnConfig)
     assert_type(NumberColumn(min_value=0), ColumnConfig)

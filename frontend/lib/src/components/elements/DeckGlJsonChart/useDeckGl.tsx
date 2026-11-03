@@ -26,6 +26,7 @@ import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
 import type { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -223,9 +224,9 @@ function getStateFromWidgetMgr(
   }
 
   const stringValue = widgetMgr.getStringValue(element)
-  const currState: DeckGlElementState | null = stringValue
-    ? JSON5.parse(stringValue)
-    : null
+  const currState = isNullOrEmptyString(stringValue)
+    ? null
+    : JSON5.parse<DeckGlElementState>(stringValue)
 
   return currState ?? EMPTY_STATE
 }
@@ -421,6 +422,8 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
     null
   )
+  /** Views spec last applied to viewState; a change resets the camera. */
+  const viewsSpecRef = useRef<ParsedDeckGlConfig["views"]>(undefined)
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -480,7 +483,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       jsonCopy.mapProvider === "carto" ||
       jsonCopy.mapStyle?.includes("cartocdn") === true
 
-    if (isUsingCarto && !jsonCopy.cartoKey) {
+    if (isUsingCarto && isNullOrEmptyString(jsonCopy.cartoKey)) {
       jsonCopy.cartoKey = CARTO_STREAMLIT_API_KEY
     }
 
@@ -635,7 +638,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (
-      !cartoKey &&
+      isNullOrEmptyString(cartoKey) &&
       typeof mapStyle === "string" &&
       mapStyle.includes("cartocdn")
     ) {
@@ -659,7 +662,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   ])
 
   useEffect(() => {
-    // If the ViewState on the server has changed, apply the diff to the current state
+    // Reset the camera when the views change instead of merging the diff:
+    // viewState still holds the previous controller's viewport props (e.g.
+    // MapController's default Web Mercator maxBounds), which would constrain
+    // the new view (GlobeController clamps its zoom to them).
+    if (!isEqual(parsedPydeckJson.views, viewsSpecRef.current)) {
+      viewsSpecRef.current = parsedPydeckJson.views
+      setViewState({ ...deck.initialViewState })
+      initialViewStateRef.current = deck.initialViewState
+      return
+    }
+
+    // Same views: apply only the changed server keys so the user's camera
+    // changes survive reruns.
     if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
@@ -677,7 +692,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       setViewState(existing => ({ ...existing, ...diff }))
       initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState])
+  }, [deck.initialViewState, parsedPydeckJson.views])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {
@@ -689,9 +704,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         tooltip
       )
 
-      if (parsedTooltip.html) {
+      if (!isNullOrEmptyString(parsedTooltip.html)) {
         parsedTooltip.html = interpolate(info, parsedTooltip.html, true)
-      } else if (parsedTooltip.text) {
+      } else if (!isNullOrEmptyString(parsedTooltip.text)) {
         parsedTooltip.text = interpolate(info, parsedTooltip.text)
       } else {
         // A tooltip with neither html nor text has nothing to render; returning

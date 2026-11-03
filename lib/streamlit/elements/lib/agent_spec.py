@@ -60,24 +60,36 @@ clearing back to an empty default.
 ``choices`` is the list a request may send when that list is not the ``options``
 parameter. Only the command knows either one, so the snapshot copies them.
 
-Two things deliberately stay out of a command's description, because the command
-cannot know them yet:
+``value``, the widget's current value, deliberately stays out of a command's
+description: the command cannot know it yet, because it is only settled after
+the next run's callbacks and widget reconciliation. It is filled in at snapshot
+time.
 
-- ``value``, the widget's current value, which is only settled after the next
-  run's callbacks and widget reconciliation.
-- ``data``, the derived facts about a dataframe or chart (schema, row counts,
-  bounded previews). Those are budget decisions, and only the serializer knows
-  the response budget.
+``data``, the derived facts about a table, chart, or map (schema, row counts, a
+preview bounded by ``server.agentPreviewRows``, and where the complete data is
+served), is built by the command while recording, through a ``data_builder``
+function that uses ``agent_data``, and the serializer copies it. The preview is therefore fixed when the element is
+emitted, so a later request can only shrink it.
 
-Both are filled in at snapshot time. That split is the same one the agent
-protocol draws between ``props`` (how the element was built), ``value`` (what it
-holds now), and ``data`` (what Streamlit derived).
+That split is the same one the agent protocol draws between ``props`` (how the
+element was built), ``value`` (what it holds now), and ``data`` (what Streamlit
+derived).
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Final, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, Literal, NamedTuple, TypeAlias
+
+from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+_LOGGER: Final = get_logger(__name__)
+
+# Builds an element's ``data`` while recording. See ``element``'s ``data_builder``.
+DataBuilder: TypeAlias = "Callable[[], dict[str, Any] | None]"
 
 # What a client may do with an element on the next interaction. ``value`` means
 # it holds a value that can be set; ``trigger`` means it can be fired once and
@@ -106,6 +118,7 @@ _TRANSPARENT_KEY: Final = "transparent"
 _VALUE_SCHEMA_KEY: Final = "value_schema"
 _CLEARABLE_KEY: Final = "clearable"
 _CHOICES_KEY: Final = "choices"
+_DATA_KEY: Final = "data"
 
 # Building blocks for ``value_schema``: the JSON Schema of the value a request
 # sends an element, in the form the snapshot reports it. They describe shape
@@ -192,6 +205,7 @@ def _json_description(
     transparent: bool = False,
     clearable: bool = False,
     choices: list[Any] | None = None,
+    data_builder: DataBuilder | None = None,
 ) -> str | None:
     """Encode a command description, or return ``None`` when this session is not recording."""
     if not is_recording():
@@ -212,8 +226,23 @@ def _json_description(
         description[_CLEARABLE_KEY] = True
     if choices is not None:
         description[_CHOICES_KEY] = choices
+    if data_builder is not None and (data := _build_data(data_builder)) is not None:
+        description[_DATA_KEY] = data
     description[_PROPS_KEY] = _describe_props(props)
     return json.dumps(description)
+
+
+def _build_data(build: DataBuilder) -> dict[str, Any] | None:
+    """Run a command's data builder, or report no ``data`` if it raises.
+
+    An element without ``data`` costs far less than a command that fails in an
+    agent session where a browser session would have worked.
+    """
+    try:
+        return build()
+    except Exception:
+        _LOGGER.debug("Could not build an element's agent API data.", exc_info=True)
+        return None
 
 
 def element(
@@ -226,6 +255,7 @@ def element(
     support: SupportReason | None = None,
     clearable: bool = False,
     choices: list[Any] | None = None,
+    data_builder: DataBuilder | None = None,
     **props: Any,
 ) -> str | None:
     """Describe an element for the agent API, or return ``None`` when this session is not recording.
@@ -259,6 +289,13 @@ def element(
     choices
         The values a request may send, when they are not the ``options``
         parameter. Omit to use ``options`` when that parameter is a list.
+    data_builder
+        A function that builds the element's ``data``, usually with
+        ``agent_data``, such as ``lambda: agent_data.arrow(...)``. It is called
+        only while recording, so nothing it reads costs a browser session
+        anything, and an exception in it reports no ``data`` instead of
+        failing the command. The result is reported beside ``props`` because
+        it is derived rather than an argument the author passed.
     props
         The command's parameters, under their public names. ``None`` values are
         dropped, so an unsupplied optional parameter is absent rather than null.
@@ -275,6 +312,7 @@ def element(
         value_schema=value_schema,
         clearable=clearable,
         choices=choices,
+        data_builder=data_builder,
     )
 
 

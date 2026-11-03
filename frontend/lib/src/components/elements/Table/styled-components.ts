@@ -43,7 +43,7 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   paddingTop: theme.spacing.sm,
   paddingBottom: 0,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   textAlign: "left",
   wordWrap: "break-word",
   display: "inline-block",
@@ -236,7 +236,7 @@ export const StyledTableCellHeader = styled.th<{
     const baseStyles = {
       ...styleCellFunction(theme, borderMode, truncateContent),
       textAlign: "inherit" as const,
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       // Remove left padding from first cell when no borders, so that the table aligns
       // with the rest of the page.
       "&:first-of-type": {

@@ -17,6 +17,8 @@
 import { debounce, isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -169,7 +171,9 @@ function dispatchPointSelection(
         type: action,
         seriesIndex: entry.seriesIndex,
         dataIndex: entry.dataIndex,
-        ...(entry.dataType ? { dataType: entry.dataType } : {}),
+        ...(isNullOrEmptyString(entry.dataType)
+          ? {}
+          : { dataType: entry.dataType }),
       })
     } catch (error) {
       LOG.warn(`Failed to ${action} persisted point selection`, error)

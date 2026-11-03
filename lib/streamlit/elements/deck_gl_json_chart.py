@@ -33,7 +33,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
@@ -680,8 +680,10 @@ class PydeckMixin:
                     key=pydeck_proto.id,
                     support="action_unsupported",
                     selection_mode=selection_mode,
-                    on_select="ignore" if on_select == "ignore" else "rerun",
+                    # A callback reaches the server too, so it is "rerun".
+                    on_select="rerun",
                     alt=pydeck_proto.alt or None,
+                    data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
                 ),
             )
 
@@ -694,8 +696,8 @@ class PydeckMixin:
             agent_props=agent_spec.element(
                 "pydeck_chart",
                 key=key,
-                on_select="ignore" if on_select == "ignore" else "rerun",
                 alt=pydeck_proto.alt or None,
+                data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
             ),
         )
 

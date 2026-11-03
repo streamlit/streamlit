@@ -221,6 +221,20 @@ export const getNoRestrictedProperties = ({
   ]
 }
 
+// Base options for @typescript-eslint/strict-boolean-expressions. Scoped
+// blocks below tighten individual options for directories with no remaining
+// violations.
+const strictBooleanExpressionsOptions = {
+  allowString: true,
+  allowNumber: true,
+  allowNullableObject: true,
+  allowNullableBoolean: false,
+  allowNullableString: true,
+  allowNullableNumber: true,
+  allowNullableEnum: true,
+  allowAny: true,
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -678,23 +692,34 @@ export default defineConfig([
   // rule's suggested `=== false` is false for null and undefined. The rule
   // always reports mixed-type unions (for example `string | number`); disable
   // those inline with a reason. Other types, including `any`, stay allowed.
-  // The glob covers all of `lib/src`, tests and `vendor/` included; other
-  // packages stay off until they are cleaned up.
+  // The rule covers every package, tests included. The glob has no package
+  // prefix because `app/eslint.config.mjs` re-exports this config, and globs
+  // resolve relative to that file.
   {
-    files: ["lib/src/**/*.{ts,tsx}"],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
-        {
-          allowString: true,
-          allowNumber: true,
-          allowNullableObject: true,
-          allowNullableBoolean: false,
-          allowNullableString: true,
-          allowNullableNumber: true,
-          allowNullableEnum: true,
-          allowAny: true,
-        },
+        strictBooleanExpressionsOptions,
+      ],
+    },
+  },
+  // A nullable string in a condition treats `""` like a missing value. Use
+  // `isNullOrEmptyString` from `@streamlit/utils` when `""` means unset, or
+  // compare with `null` / `undefined` when the value is never empty. Other
+  // directories stay on the base options until they are cleaned up. Globs
+  // resolve from the directory of the config ESLint loads. Linting `lib`
+  // loads this file, so these globs need the `lib/` prefix.
+  {
+    files: [
+      "lib/src/components/elements/**/*.{ts,tsx}",
+      "lib/src/components/shared/**/*.{ts,tsx}",
+      "lib/src/components/widgets/**/*.{ts,tsx}",
+    ],
+    rules: {
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+        { ...strictBooleanExpressionsOptions, allowNullableString: false },
       ],
     },
   },

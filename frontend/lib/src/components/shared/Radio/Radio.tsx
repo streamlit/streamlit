@@ -22,6 +22,8 @@ import {
   useState,
 } from "react"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -111,7 +113,7 @@ function Radio({
         disabled={shouldDisable}
         labelVisibility={labelVisibility}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP_RIGHT}

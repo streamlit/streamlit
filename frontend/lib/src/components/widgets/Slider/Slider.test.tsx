@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import {
@@ -55,7 +55,7 @@ const getProps = (
 
 const triggerChangeEvent = async (
   element: HTMLElement,
-  key: "ArrowLeft" | "ArrowRight" | "End"
+  key: "ArrowLeft" | "ArrowRight" | "Home" | "End"
 ): Promise<void> => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   act(() => {
@@ -134,6 +134,45 @@ describe("Slider widget", () => {
         fragmentId: "myFragmentId",
         fromUser: false,
       }
+    )
+  })
+
+  it.each([
+    { label: "single", value: [8] },
+    { label: "range", value: [2, 7] },
+  ])("applies a $label value set by the backend", ({ value }) => {
+    const props = getProps({ default: value.map(() => 5) })
+    const { rerender } = render(<Slider {...props} />)
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+    rerender(
+      <Slider
+        {...props}
+        element={SliderProto.create({
+          ...props.element,
+          value,
+          setValue: true,
+        })}
+      />
+    )
+
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element.id,
+      value,
+      {
+        formId: props.element.formId,
+        fragmentId: undefined,
+        fromUser: false,
+      }
+    )
+    const sliders = screen.getAllByRole("slider")
+    value.forEach((v, i) => {
+      expect(sliders[i]).toHaveAttribute("value", `${v}`)
+    })
+    expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalledWith(
+      props.element.id,
+      props.element.default,
+      expect.anything()
     )
   })
 
@@ -223,6 +262,41 @@ describe("Slider widget", () => {
 
       expect(slider).toHaveAttribute("value", "5")
     })
+    it("does not commit keyboard changes when disabled", async () => {
+      const props = getProps(undefined, { disabled: true })
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+      const slider = screen.getByRole("slider")
+      expect(slider).toBeDisabled()
+
+      await triggerChangeEvent(slider, "ArrowRight")
+
+      expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
+      expect(slider).toHaveAttribute("value", "5")
+    })
+
+    it.each([
+      { format: "%d", min: "0", max: "10", thumb: "5" },
+      { format: "%0.2f", min: "0.00", max: "10.00", thumb: "5.00" },
+      { format: "$%d", min: "$0", max: "$10", thumb: "$5" },
+    ])(
+      "formats the thumb and min/max labels with format $format",
+      ({ format, min, max, thumb }) => {
+        render(<Slider {...getProps({ format })} />)
+
+        const tickBar = screen.getByTestId("stSliderTickBar")
+        expect(within(tickBar).getByText(min)).toBeVisible()
+        expect(within(tickBar).getByText(max)).toBeVisible()
+        expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent(
+          thumb
+        )
+        expect(screen.getByRole("slider")).toHaveAttribute(
+          "aria-valuetext",
+          thumb
+        )
+      }
+    )
   })
 
   describe("Tick bar visibility", () => {
@@ -389,6 +463,156 @@ describe("Slider widget", () => {
       )
       expect(sliders[0]).toHaveAttribute("value", "1")
       expect(sliders[1]).toHaveAttribute("value", "10")
+    })
+
+    it("moves only the start thumb when it is changed via keyboard", async () => {
+      const props = getProps({ default: [1, 9] })
+
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+      const sliders = screen.getAllByRole("slider")
+
+      await triggerChangeEvent(sliders[0], "ArrowLeft")
+
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        [0, 9],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
+      expect(sliders[0]).toHaveAttribute("value", "0")
+      expect(sliders[1]).toHaveAttribute("value", "9")
+      // The end thumb's lower bound follows the start thumb.
+      expect(sliders[1]).toHaveAttribute("min", "0")
+    })
+  })
+
+  describe("Thumb value label positioning", () => {
+    const SLIDER_WIDTH = 200
+    const THUMB_WIDTH = 20
+    const LABEL_WIDTH = 30
+
+    const createRect = (left: number, width: number): DOMRect => ({
+      left,
+      right: left + width,
+      width,
+      x: left,
+      top: 0,
+      bottom: 0,
+      height: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+
+    /**
+     * Mocks element geometry so the slider spans [0, SLIDER_WIDTH] and each
+     * thumb is centered on the given midpoint.
+     */
+    const mockLayout = (thumbMidpoints: number[]): void => {
+      vi.spyOn(
+        HTMLElement.prototype,
+        "getBoundingClientRect"
+      ).mockImplementation(function getRect(this: HTMLElement): DOMRect {
+        if (this.dataset.testid === "stSlider") {
+          return createRect(0, SLIDER_WIDTH)
+        }
+
+        const thumbValues = screen.queryAllByTestId("stSliderThumbValue")
+        if (thumbValues.includes(this)) {
+          return createRect(0, LABEL_WIDTH)
+        }
+
+        const thumbIndex = thumbValues.findIndex(
+          thumbValue => thumbValue.parentElement === this
+        )
+        if (thumbIndex >= 0) {
+          const midpoint = thumbMidpoints[thumbIndex] ?? 0
+          return createRect(midpoint - THUMB_WIDTH / 2, THUMB_WIDTH)
+        }
+
+        return createRect(0, 0)
+      })
+    }
+
+    const getLabelOffsets = (): { left: string; right: string }[] =>
+      screen.getAllByTestId("stSliderThumbValue").map(thumbValue => ({
+        left: thumbValue.style.left,
+        right: thumbValue.style.right,
+      }))
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it.each([
+      {
+        description: "shifts the label right at the left edge",
+        midpoint: 0,
+        expected: { left: "10px", right: "" },
+      },
+      {
+        description: "shifts the label left at the right edge",
+        midpoint: SLIDER_WIDTH,
+        expected: { left: "", right: "10px" },
+      },
+      {
+        description: "keeps the label centered away from the edges",
+        midpoint: SLIDER_WIDTH / 2,
+        expected: { left: "", right: "" },
+      },
+    ])("$description", ({ midpoint, expected }) => {
+      mockLayout([midpoint])
+      render(<Slider {...getProps()} />)
+
+      expect(getLabelOffsets()).toEqual([expected])
+    })
+
+    it.each([
+      {
+        description:
+          "only shifts the overflowing label when range thumbs are far apart",
+        value: [1, 9],
+        midpoints: [5, 160],
+        expected: [
+          { left: "5px", right: "" },
+          { left: "", right: "" },
+        ],
+      },
+      {
+        description:
+          "places labels on the outer sides of close thumbs when there is room",
+        value: [4, 6],
+        midpoints: [90, 110],
+        expected: [
+          { left: "", right: "20px" },
+          { left: "20px", right: "" },
+        ],
+      },
+      {
+        description:
+          "places the end label after the start label near the left edge",
+        value: [1, 2],
+        midpoints: [15, 35],
+        expected: [
+          { left: "", right: "" },
+          { left: "29px", right: "" },
+        ],
+      },
+      {
+        description:
+          "places the start label before the end label near the right edge",
+        value: [1, 2],
+        midpoints: [165, 185],
+        expected: [
+          { left: "", right: "29px" },
+          { left: "", right: "" },
+        ],
+      },
+    ])("$description", ({ value, midpoints, expected }) => {
+      mockLayout(midpoints)
+      render(<Slider {...getProps({ default: value })} />)
+
+      expect(getLabelOffsets()).toEqual(expected)
     })
   })
 
@@ -729,6 +953,169 @@ describe("Slider widget", () => {
       // Negative assertion: should NOT use the default index (0)
       expect(slider).not.toHaveAttribute("value", "0")
       expect(slider).not.toHaveAttribute("aria-valuetext", "red")
+    })
+
+    it("falls back to the default option when the backend sends no rawValue", () => {
+      const props = getProps({
+        default: [3],
+        min: 0,
+        max: 4,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: ["red", "orange", "yellow", "green", "blue"],
+        rawValue: [],
+        setValue: true,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      render(<Slider {...props} />)
+
+      const slider = screen.getByRole("slider")
+      expect(slider).toHaveAttribute("value", "3")
+      expect(slider).toHaveAttribute("aria-valuetext", "green")
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        props.element.id,
+        ["green"],
+        expect.objectContaining({ fromUser: false })
+      )
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        props.element.id,
+        ["red"],
+        expect.anything()
+      )
+    })
+
+    it("restores the committed option from WidgetStateManager on remount", async () => {
+      const props = getProps({
+        default: [0, 1],
+        min: 0,
+        max: 4,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: ["red", "orange", "yellow", "green", "blue"],
+      })
+
+      const { unmount } = render(<Slider {...props} />)
+      await triggerChangeEvent(screen.getAllByRole("slider")[1], "ArrowRight")
+      expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+        "red",
+        "yellow",
+      ])
+      unmount()
+
+      render(<Slider {...props} />)
+
+      const sliders = screen.getAllByRole("slider")
+      expect(sliders[0]).toHaveAttribute("aria-valuetext", "red")
+      expect(sliders[1]).toHaveAttribute("aria-valuetext", "yellow")
+      expect(sliders[1]).not.toHaveAttribute("aria-valuetext", "orange")
+    })
+  })
+
+  describe("no-op interactions", () => {
+    it.each([
+      { key: "ArrowLeft", start: 0 },
+      { key: "Home", start: 0 },
+      { key: "End", start: 10 },
+    ] as const)(
+      "does not commit or rerun when $key leaves the value at $start",
+      async ({ key, start }) => {
+        const sendRerunBackMsg = vi.fn()
+        const props = getProps(
+          { default: [start] },
+          {
+            widgetMgr: new WidgetStateManager({
+              sendRerunBackMsg,
+              formsDataChanged: vi.fn(),
+            }),
+          }
+        )
+        render(<Slider {...props} />)
+        vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+        const slider = screen.getByRole("slider")
+        await triggerChangeEvent(slider, key)
+        act(() => {
+          vi.runOnlyPendingTimers()
+        })
+
+        expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+        expect(slider).toHaveAttribute("value", `${start}`)
+
+        // A real change still commits and reruns.
+        await triggerChangeEvent(
+          slider,
+          start === 0 ? "ArrowRight" : "ArrowLeft"
+        )
+        act(() => {
+          vi.runOnlyPendingTimers()
+        })
+
+        expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          [start === 0 ? 1 : 9],
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      }
+    )
+
+    it("does not commit a select_slider value that is already stored", async () => {
+      const props = getProps({
+        default: [0],
+        min: 0,
+        max: 2,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: ["red", "orange", "yellow"],
+      })
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      await triggerChangeEvent(screen.getByRole("slider"), "ArrowLeft")
+
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    })
+
+    it("commits a select_slider pick that matches stale indices after the options change", async () => {
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const getSelectSliderProps = (options: string[]): Props =>
+        getProps(
+          {
+            default: [1],
+            min: 0,
+            max: options.length - 1,
+            format: "%s",
+            type: SliderProto.Type.SELECT_SLIDER,
+            options,
+          },
+          { widgetMgr }
+        )
+
+      // "b" is stored at index 1, then moves to index 0 with the new options.
+      const { rerender } = render(
+        <Slider {...getSelectSliderProps(["a", "b", "c"])} />
+      )
+      rerender(<Slider {...getSelectSliderProps(["b", "a", "c"])} />)
+      vi.spyOn(widgetMgr, "setStringArrayValue")
+
+      // Index 1 is now "a", a real change even though the index matches.
+      await triggerChangeEvent(screen.getByRole("slider"), "ArrowRight")
+
+      expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        "1",
+        ["a"],
+        expect.objectContaining({ fromUser: true })
+      )
+      expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        "1",
+        ["b"],
+        expect.anything()
+      )
     })
   })
 })

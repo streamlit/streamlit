@@ -17,17 +17,14 @@
 import type * as Plotly from "plotly.js"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { EmotionTheme } from "~lib/theme/types"
 import type { Figure as PlotlyFigureType } from "~lib/util/reactPlotlyCompat"
 import { keysToSnakeCase, notNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import {
-  applyStreamlitTheme,
-  layoutWithThemeDefaults,
-  replaceTemporaryColors,
-} from "./CustomTheme"
+import { applyStreamlitTheme, replaceTemporaryColors } from "./CustomTheme"
 
 // Copied and Pasted from Plotly type def
 interface SelectionRange {
@@ -79,8 +76,9 @@ function getLegendGroup(data: unknown): string | undefined {
   if (typeof data !== "object" || data === null) {
     return undefined
   }
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank legend group is omitted
-  return (data as { legendgroup?: string }).legendgroup || undefined
+  const { legendgroup } = data as { legendgroup?: string }
+  // Omit an empty legend group.
+  return isNullOrEmptyString(legendgroup) ? undefined : legendgroup
 }
 
 /**
@@ -110,6 +108,14 @@ interface PlotlyWidgetState {
     lasso: PlotlySelection[]
   }
 }
+
+/**
+ * Serialized empty selection. Also the baseline when no selection state is
+ * stored yet, because the chart does not store an initial selection.
+ */
+const EMPTY_SELECTION_STATE = JSON.stringify({
+  selection: { points: [], point_indices: [], box: [], lasso: [] },
+} satisfies PlotlyWidgetState)
 
 /**
  * Parses an SVG path string into separate x and y coordinates.
@@ -197,7 +203,9 @@ export function parseBoxSelection(
  * Apply theming to the Plotly figure.
  *
  * @param plotlyFigure The Plotly figure to apply theming to
- * @param chartTheme The theme of the chart (streamlit or empty string)
+ * @param chartTheme `"streamlit"` applies Streamlit layout defaults. Any other
+ *   value, including `""` (`theme=None`), leaves layout fonts and backgrounds
+ *   as authored. Both paths still resolve template color stand-ins.
  * @param theme The current theme of the app
  * @returns The Plotly figure with theming applied
  */
@@ -211,12 +219,6 @@ export function applyTheming(
   ) as Record<string, unknown>
   if (chartTheme === "streamlit") {
     applyStreamlitTheme(spec, theme)
-  } else {
-    // Apply minor theming improvements to work better with Streamlit
-    spec.layout = layoutWithThemeDefaults(
-      (spec.layout ?? {}) as Record<string, unknown>,
-      theme
-    )
   }
   return spec as unknown as PlotlyFigureType
 }
@@ -297,7 +299,7 @@ export function handleSelection(
         selectedBoxes.push(returnSelection)
       }
       // lasso selection
-      if (selection.type === "path" && selection.path) {
+      if (selection.type === "path" && !isNullOrEmptyString(selection.path)) {
         const xAndy = parseLassoPath(selection.path)
         const returnSelection: PlotlySelection = {
           xref: selection.xref,
@@ -336,7 +338,10 @@ export function handleSelection(
     return
   }
 
-  const currentSelectionState = widgetMgr.getStringValue(element)
+  // Plotly also emits an empty plotly_selected event on double-click, so an
+  // empty selection with nothing stored yet is not a change.
+  const currentSelectionState =
+    widgetMgr.getStringValue(element) ?? EMPTY_SELECTION_STATE
   const newSelectionState = JSON.stringify(selectionState)
   if (currentSelectionState !== newSelectionState) {
     // Only update the widget state if it has changed
@@ -349,7 +354,8 @@ export function handleSelection(
 }
 
 /**
- * Sends an empty selection state to the backend.
+ * Sends an empty selection state to the backend, unless nothing is selected
+ * already (Plotly emits double-click and deselect events either way).
  *
  * @param widgetMgr The widget manager
  * @param element The PlotlyChartProto element
@@ -360,16 +366,13 @@ export function sendEmptySelection(
   element: PlotlyChartProto,
   fragmentId: string | undefined
 ): void {
-  const emptySelectionState: PlotlyWidgetState = {
-    selection: {
-      points: [],
-      point_indices: [],
-      box: [],
-      lasso: [],
-    },
+  const currentSelectionState =
+    widgetMgr.getStringValue(element) ?? EMPTY_SELECTION_STATE
+  if (currentSelectionState === EMPTY_SELECTION_STATE) {
+    return
   }
 
-  widgetMgr.setStringValue(element.id, JSON.stringify(emptySelectionState), {
+  widgetMgr.setStringValue(element.id, EMPTY_SELECTION_STATE, {
     formId: element.formId,
     fragmentId,
     fromUser: true,

@@ -213,8 +213,8 @@ st.write(f"Adjacent selected border multi selection: {adjacent_selected_border_m
 st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
 if st.button("Create some elements to unmount component"):
     for _ in range(2):
-        # The sleep here is needed, because it won't unmount the
-        # component if this is too fast.
+        # The sleep lets the browser render each element on its own, so the
+        # component below is displaced (and kept mounted) before it is re-emitted.
         time.sleep(1)
         st.write("Another element")
 
@@ -458,3 +458,18 @@ st.text(f"ignore_sc_multi: {ignore_multi}")
 if st.button("Apply ignore segmented control", key="apply_ignore_sc"):
     st.text(f"Applied ignore segmented control: {ignore_single}")
     st.text(f"Applied ignore multi segmented control: {ignore_multi}")
+
+# Keep this block last so it does not shift elements that earlier snapshot
+# tests capture.
+# A stretched, selected segment sits directly above a dataframe so the
+# dataframe toolbar overlaps that segment on hover.
+with st.container(key="segmented_control_toolbar_overlap"):
+    st.segmented_control(
+        "Toolbar overlap",
+        ["Left", "Right"],
+        key="segmented_control_toolbar_overlap_sc",
+        default="Right",
+        width="stretch",
+        label_visibility="collapsed",
+    )
+    st.dataframe({"a": [1, 2, 3]})

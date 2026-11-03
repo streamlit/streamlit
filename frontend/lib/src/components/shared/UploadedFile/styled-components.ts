@@ -109,13 +109,13 @@ export const StyledFileChipName = styled.div<StyledFileChipNameProps>(
     fontSize: theme.fontSizes.sm,
     color:
       fileStatus.type === "uploading"
-        ? theme.colors.fadedText60
+        ? theme.colors.fadedText70
         : theme.colors.bodyText,
   })
 )
 
 export const StyledFileChipSize = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.twoSm,
 }))
 

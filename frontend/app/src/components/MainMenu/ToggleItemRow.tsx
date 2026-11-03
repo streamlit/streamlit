@@ -47,7 +47,7 @@ const ToggleItemRow = memo(function ToggleItemRow({
   itemIndex,
   setItemRef,
 }: ToggleItemRowProps): ReactElement {
-  const { key, label, checked, disabled, onToggle } = item
+  const { key, label, checked, disabled = false, onToggle } = item
 
   const handleRef = useCallback(
     (element: HTMLButtonElement | null): void => {
@@ -69,7 +69,6 @@ const ToggleItemRow = memo(function ToggleItemRow({
       isDisabled={disabled}
       role="menuitemcheckbox"
       aria-checked={checked}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- false omits aria-disabled
       aria-disabled={disabled || undefined}
       tabIndex={tabIndex}
       onClick={handleClick}

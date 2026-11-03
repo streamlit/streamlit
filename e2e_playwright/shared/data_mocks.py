@@ -379,6 +379,34 @@ PERIOD_TYPES_DF = pd.DataFrame(
 )
 
 
+# A pyarrow.Table has no pandas metadata, so only the Arrow types and extension
+# tags (pandas.period, pandas.interval) identify these columns.
+PYARROW_TABLE_TYPES = pa.table(
+    {
+        "decimal256": pa.array(
+            [
+                Decimal("-0.03864734299516908213"),
+                Decimal("1234.5"),
+                Decimal("-1.5"),
+            ],
+            pa.decimal256(42, 20),
+        ),
+        "period": pa.array(pd.period_range("2020-01", periods=3, freq="M")),
+        "period_category": pa.DictionaryArray.from_arrays(
+            pa.array([1, 0, 1], pa.int8()),
+            pa.array(pd.period_range("2020-01", periods=2, freq="M")),
+        ),
+        "interval": pa.array(pd.interval_range(0, 3)),
+        "interval_category": pa.array(pd.cut([0.5, 1.5, 2.5], bins=[0, 1, 2, 3])),
+        "date_category": pa.array(
+            [date(2024, 1, 2), date(2024, 1, 1), date(2024, 1, 2)]
+        ).dictionary_encode(),
+        "list_of_dicts": pa.array([[{"a": 1}], [{"a": 2}, {"a": 3}], []]),
+        "float_inf": pa.array([float("inf"), float("-inf"), 1.5]),
+    }
+)
+
+
 SPECIAL_TYPES_DF = pd.DataFrame(
     {
         "categorical": pd.Series(["a", "b", "c", "a", None]).astype("category"),

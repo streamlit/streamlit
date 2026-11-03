@@ -173,7 +173,7 @@ The two trees are not the same structure. The frontend merges deltas as they arr
 - **Element ID** controls whether a stateful element can reconnect to prior state after remounts.
 - **Widgets** use the ID to connect frontend `WidgetStateManager` state, `BackMsg.WidgetStates`, backend `SessionState`, callbacks, and `st.session_state`.
 - **Some non-widgets** also use IDs for frontend-only reconstruction (for example chart view state or media autoplay guards).
-- **Delta-path changes can remount elements**, but a stable `element.id` can still let React preserve a leaf when it remains under the same rendered parent list.
+- **Delta-path changes can remount elements**, but a stable `element.id` can still let React preserve a leaf when it remains under the same rendered parent list. A keyed leaf shifted later by inserted output is kept mounted in its parent's `BlockNode.retained` until it is re-emitted.
 
 Deep dive: `references/element-identity.md`
 
@@ -194,6 +194,8 @@ Deep dive: `references/element-identity.md`
 4. **Frontend component**: `frontend/lib/src/components/elements/<Element>/` or `frontend/lib/src/components/widgets/<Element>/` (depending on element vs widget)
 5. **Register in ElementNodeRenderer**: Add case to switch statement
 6. **Compile protos**: `make protobuf`
+
+Element logic belongs in steps 3 and 4. Steps 2 and 5 are wiring.
 
 See `wiki/new-feature-guide.md` for a detailed implementation guide.
 

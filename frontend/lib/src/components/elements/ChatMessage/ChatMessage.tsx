@@ -17,6 +17,7 @@
 import { memo, type ReactElement } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -45,7 +46,7 @@ function ChatMessageAvatar(
   const theme = useEmotionTheme()
   const crossOrigin = useCrossOriginAttribute(avatar)
 
-  if (avatar) {
+  if (!isNullOrEmptyString(avatar)) {
     switch (avatarType) {
       case undefined:
         // Fall through to default avatar

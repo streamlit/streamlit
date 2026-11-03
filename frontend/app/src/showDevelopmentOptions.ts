@@ -30,6 +30,5 @@ export const showDevelopmentOptions = (
   ) {
     return false
   }
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a false hostIsOwner still allows localhost
-  return hostIsOwner || isLocalhost()
+  return hostIsOwner === true || isLocalhost()
 }

@@ -19,13 +19,7 @@
  * a human-readable format.
  */
 
-import {
-  type Field,
-  Struct,
-  type StructRow,
-  TimeUnit,
-  util,
-} from "apache-arrow"
+import { type Field, Struct, type StructRow, TimeUnit } from "apache-arrow"
 import { trimEnd } from "lodash-es"
 import { getLogger } from "loglevel"
 import moment from "moment-timezone"
@@ -37,6 +31,7 @@ import {
   type ArrowType,
   DataFrameCellType,
   type DataType,
+  getFormattableCategoryType,
   isDatetimeType,
   isDateType,
   isDecimalType,
@@ -95,7 +90,7 @@ const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
  * both real Arrow instances (including a duplicate apache-arrow copy)
  * and duck-typed fixtures stay `no-unsafe-argument` clean.
  */
-function getArrowTimeUnit(
+export function getArrowTimeUnit(
   field: Field | undefined,
   fallback: TimeUnit
 ): TimeUnit {
@@ -249,7 +244,7 @@ function parsePandasIntervalExtensionMetadata(
  * @param unit The unit of the timestamp. 0 is seconds, 1 is milliseconds, 2 is microseconds, 3 is nanoseconds.
  * @returns The timestamp in seconds.
  */
-function convertTimestampToSeconds(
+export function convertTimestampToSeconds(
   timestamp: number | bigint,
   unit: TimeUnit
 ): number {
@@ -269,18 +264,25 @@ function convertTimestampToSeconds(
     return Number(timestamp)
   }
 
-  // Do the calculation based on bigints, if the value
-  // is a bigint and not safe for usage as number.
-  // This might lose some precision since it doesn't keep
-  // fractional parts.
-  if (
-    typeof timestamp === "bigint" &&
-    !Number.isSafeInteger(Number(timestamp))
-  ) {
-    return Number(timestamp / BigInt(unitAdjustment))
+  return divideTicks(timestamp, unitAdjustment)
+}
+
+/**
+ * Divides an Arrow tick count by the number of ticks per target unit.
+ *
+ * Bigints outside JavaScript's safe integer range are divided as bigints, and
+ * the integer quotient is recombined with the remainder, so the fractional
+ * part is kept after the ticks overflow that range.
+ */
+function divideTicks(ticks: number | bigint, ticksPerUnit: number): number {
+  if (typeof ticks === "bigint" && !Number.isSafeInteger(Number(ticks))) {
+    const ticksPerUnitBigInt = BigInt(ticksPerUnit)
+    const wholeUnits = ticks / ticksPerUnitBigInt
+    const remainder = ticks % ticksPerUnitBigInt
+    return Number(wholeUnits) + Number(remainder) / ticksPerUnit
   }
 
-  return Number(timestamp) / unitAdjustment
+  return Number(ticks) / ticksPerUnit
 }
 
 /**
@@ -305,6 +307,38 @@ export function convertTimeToDate(
     getArrowTimeUnit(field, TimeUnit.SECOND)
   )
   return moment.unix(timeInSeconds).utc().toDate()
+}
+
+/**
+ * Converts a duration (timedelta) value to milliseconds based on the unit
+ * information in the field.
+ *
+ * Nanosecond and microsecond counts are divided straight into milliseconds,
+ * avoiding the float noise of going through seconds (`20.987638999999998`).
+ * Bigints outside the safe integer range keep their sub-millisecond remainder.
+ *
+ * @param duration The duration value in the field's unit.
+ * @param field The field containing the unit information. Without one, the
+ * value is read as nanoseconds (the pandas default).
+ * @returns The duration in milliseconds.
+ */
+export function convertDurationToMilliseconds(
+  duration: number | bigint,
+  field?: Field
+): number {
+  const unit = getArrowTimeUnit(field, TimeUnit.NANOSECOND)
+
+  if (unit === TimeUnit.NANOSECOND) {
+    return divideTicks(duration, 1_000_000)
+  }
+  if (unit === TimeUnit.MICROSECOND) {
+    return divideTicks(duration, 1_000)
+  }
+  if (unit === TimeUnit.MILLISECOND) {
+    return Number(duration)
+  }
+  // Interpret it as seconds as a fallback.
+  return Number(duration) * 1000
 }
 
 /**
@@ -381,6 +415,321 @@ function formatDatetime(date: number | Date, field?: Field): string {
   return datetime.format("YYYY-MM-DD HH:mm:ss")
 }
 
+// Pandas Timedelta is stored as int64 nanoseconds (~±292 years).
+const PANDAS_TIMEDELTA_MAX_SECONDS = 2 ** 63 / 1e9
+
+// Below this many ticks, scaling a second count to ticks is off by less than
+// one tick, so the exact tick can be recovered.
+const EXACT_DURATION_TICK_LIMIT = 2 ** 52
+
+/**
+ * Number of decimal second places represented by a duration field's unit.
+ * Without a unit, the field is read as nanoseconds (the pandas default).
+ */
+export function getDurationFractionalSecondDigits(field?: Field): number {
+  switch (getArrowTimeUnit(field, TimeUnit.NANOSECOND)) {
+    case TimeUnit.SECOND:
+      return 0
+    case TimeUnit.MILLISECOND:
+      return 3
+    case TimeUnit.MICROSECOND:
+      return 6
+    case TimeUnit.NANOSECOND:
+    default:
+      return 9
+  }
+}
+
+/**
+ * True when a second count fits a pandas Timedelta and the duration unit
+ * (given as its number of fractional second digits) can represent it.
+ */
+export function isValidDurationSeconds(
+  seconds: number,
+  fractionalSecondDigits: number
+): boolean {
+  if (Math.abs(seconds) >= PANDAS_TIMEDELTA_MAX_SECONDS) {
+    return false
+  }
+
+  const scale = 10 ** fractionalSecondDigits
+  const scaledSeconds = seconds * scale
+  if (!Number.isFinite(scaledSeconds)) {
+    return false
+  }
+  const nearestTick = Math.round(scaledSeconds)
+  if (Math.abs(nearestTick) < EXACT_DURATION_TICK_LIMIT) {
+    // Ticks in this range are exact floats, so a representable second count
+    // is the float nearest to a whole tick. Scaling can land one tick off,
+    // so the neighboring ticks are checked as well.
+    return [nearestTick - 1, nearestTick, nearestTick + 1].some(
+      tick => tick / scale === seconds
+    )
+  }
+  // Past 2^52 ticks (for example, nanosecond durations past about 52 days),
+  // a float second count cannot hold every tick. Converting ticks to float
+  // seconds and back adds up to about one ulp of error, so allow two ulps of
+  // slack. A larger remainder means the value is finer than the column's unit.
+  const tickRemainder = Math.abs(scaledSeconds - nearestTick)
+  return tickRemainder <= Math.abs(scaledSeconds) * Number.EPSILON * 2
+}
+
+/** Calendar units passed to `Intl.DurationFormat`. */
+type DurationParts = {
+  days?: number
+  hours?: number
+  minutes?: number
+  seconds?: number
+  milliseconds?: number
+  microseconds?: number
+  nanoseconds?: number
+}
+
+type DurationFormatter = { format: (duration: DurationParts) => string }
+
+/** Constructor for `Intl.DurationFormat` when the runtime supports it. */
+type DurationFormatCtor = new (
+  locales?: string | readonly string[],
+  options?: {
+    style?: "long" | "short" | "narrow" | "digital"
+    secondsDisplay?: "always" | "auto"
+  }
+) => DurationFormatter
+
+/** Return `Intl.DurationFormat` when the runtime provides it. */
+function getDurationFormatCtor(): DurationFormatCtor | undefined {
+  return (Intl as typeof Intl & { DurationFormat?: DurationFormatCtor })
+    .DurationFormat
+}
+
+type SplitDurationSeconds = {
+  wholeSeconds: number
+  fractionalTicks: number
+  fractionalSecondDigits: number
+}
+
+/** Split non-negative seconds at the requested sub-second precision. */
+function splitDurationSeconds(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): SplitDurationSeconds {
+  const safeFractionalSecondDigits = Math.min(
+    9,
+    Math.max(0, Math.trunc(fractionalSecondDigits))
+  )
+  const fractionalScale = 10 ** safeFractionalSecondDigits
+  let wholeSeconds = Math.floor(absSeconds)
+  let fractionalTicks =
+    safeFractionalSecondDigits === 0
+      ? 0
+      : Math.round((absSeconds - wholeSeconds) * fractionalScale)
+
+  // Floating-point conversion can round a value up to the next whole second.
+  if (fractionalTicks === fractionalScale) {
+    wholeSeconds += 1
+    fractionalTicks = 0
+  }
+
+  return {
+    wholeSeconds,
+    fractionalTicks,
+    fractionalSecondDigits: safeFractionalSecondDigits,
+  }
+}
+
+/** Split a non-negative second count into localized duration parts. */
+function toDurationParts(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): DurationParts {
+  const { wholeSeconds, fractionalTicks } = splitDurationSeconds(
+    absSeconds,
+    fractionalSecondDigits
+  )
+  const days = Math.floor(wholeSeconds / 86400)
+  const hours = Math.floor((wholeSeconds % 86400) / 3600)
+  const minutes = Math.floor((wholeSeconds % 3600) / 60)
+  const seconds = wholeSeconds % 60
+  const parts: DurationParts = {}
+  if (days) {
+    parts.days = days
+  }
+  if (hours) {
+    parts.hours = hours
+  }
+  if (minutes) {
+    parts.minutes = minutes
+  }
+  if (seconds) {
+    parts.seconds = seconds
+  }
+
+  if (fractionalTicks) {
+    // Scale the column unit's fractional ticks up to nanoseconds for
+    // Intl.DurationFormat.
+    const fractionalNanoseconds =
+      fractionalTicks * 10 ** (9 - fractionalSecondDigits)
+    const milliseconds = Math.floor(fractionalNanoseconds / 1_000_000)
+    const microseconds = Math.floor(
+      (fractionalNanoseconds % 1_000_000) / 1_000
+    )
+    const nanoseconds = fractionalNanoseconds % 1_000
+    if (milliseconds) {
+      parts.milliseconds = milliseconds
+    }
+    if (microseconds) {
+      parts.microseconds = microseconds
+    }
+    if (nanoseconds) {
+      parts.nanoseconds = nanoseconds
+    }
+  }
+
+  // Ensure a zero duration has a part for Intl.DurationFormat to render.
+  if (Object.keys(parts).length === 0) {
+    parts.seconds = 0
+  }
+  return parts
+}
+
+const durationFormatters = new Map<string, DurationFormatter>()
+
+/**
+ * Cached `Intl.DurationFormat` instance for the given locale list.
+ *
+ * `showZeroSeconds` keeps a zero seconds part visible. Use it only for an
+ * all-zero duration: it would also append "0 sec" to other durations.
+ */
+function getDurationFormatter(
+  durationFormatCtor: DurationFormatCtor,
+  locales: string | readonly string[] | undefined,
+  showZeroSeconds: boolean
+): DurationFormatter {
+  const localesKey = isNullOrUndefined(locales) ? "" : String(locales)
+  const cacheKey = `${localesKey}|${showZeroSeconds}`
+  const cached = durationFormatters.get(cacheKey)
+  if (cached) {
+    return cached
+  }
+
+  const formatter = new durationFormatCtor(
+    locales,
+    showZeroSeconds
+      ? { style: "short", secondsDisplay: "always" }
+      : { style: "short" }
+  )
+  durationFormatters.set(cacheKey, formatter)
+  return formatter
+}
+
+/** Format duration parts with a cached `Intl.DurationFormat`. */
+function formatDurationParts(
+  durationFormatCtor: DurationFormatCtor,
+  locales: string | readonly string[] | undefined,
+  parts: DurationParts
+): string {
+  // Intl.DurationFormat hides zero-valued units by default, so an all-zero
+  // duration would be an empty string.
+  const isZeroDuration = Object.values(parts).every(value => value === 0)
+  return getDurationFormatter(
+    durationFormatCtor,
+    locales,
+    isZeroDuration
+  ).format(parts)
+}
+
+/** Exact locale-aware duration, or undefined if `Intl.DurationFormat` is missing. */
+function formatDurationWithIntl(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): string | undefined {
+  const durationFormatCtor = getDurationFormatCtor()
+  if (!durationFormatCtor) {
+    return undefined
+  }
+
+  const parts = toDurationParts(absSeconds, fractionalSecondDigits)
+  const locales =
+    typeof navigator !== "undefined" ? navigator.languages : undefined
+  try {
+    return formatDurationParts(durationFormatCtor, locales, parts)
+  } catch (error) {
+    if (!(error instanceof RangeError)) {
+      return undefined
+    }
+  }
+  // A RangeError usually means an unsupported locale, so retry with the
+  // default locale. If that also fails, the caller shows the clock.
+  try {
+    return formatDurationParts(durationFormatCtor, undefined, parts)
+  } catch {
+    return undefined
+  }
+}
+
+/** Format non-negative seconds as an elapsed-time clock (e.g. `00:00:01.5`). */
+function formatDurationClock(
+  absSeconds: number,
+  fractionalSecondDigits: number
+): string {
+  const {
+    wholeSeconds,
+    fractionalTicks,
+    fractionalSecondDigits: digits,
+  } = splitDurationSeconds(absSeconds, fractionalSecondDigits)
+  const hours = Math.floor(wholeSeconds / 3600)
+  const minutes = Math.floor((wholeSeconds % 3600) / 60)
+  const remainingSeconds = wholeSeconds % 60
+  const pad = (value: number): string => String(value).padStart(2, "0")
+  const fractionalPart = fractionalTicks
+    ? `.${String(fractionalTicks).padStart(digits, "0").replace(/0+$/, "")}`
+    : ""
+  return `${pad(hours)}:${pad(minutes)}:${pad(remainingSeconds)}${fractionalPart}`
+}
+
+/**
+ * Duration displays for a value in seconds, named after the `NumberColumn`
+ * formats that select them.
+ */
+export type DurationFormat = "duration" | "compact" | "localized"
+
+/**
+ * Formats a duration that is already expressed in seconds.
+ *
+ * - `duration`: approximate humanized duration (e.g. "a few seconds",
+ *   "a day", "3 months").
+ * - `compact`: elapsed-time clock. Hours are not wrapped at 24, so multi-day
+ *   values stay a single reading (e.g. `336:00:00` for 14 days).
+ * - `localized`: exact, locale-aware duration from `Intl.DurationFormat`
+ *   (e.g. "5 sec", "1 sec, 500 ms"), or the `compact` clock in runtimes
+ *   without that API.
+ *
+ * `compact` and `localized` include sub-second parts up to
+ * `fractionalSecondDigits`. Negative values keep a leading minus.
+ */
+export function formatDurationFromSeconds(
+  seconds: number,
+  format: DurationFormat = "duration",
+  fractionalSecondDigits = 9
+): string {
+  if (!Number.isFinite(seconds)) {
+    return String(seconds)
+  }
+
+  const absSeconds = Math.abs(seconds)
+  let formatted: string
+  if (format === "compact") {
+    formatted = formatDurationClock(absSeconds, fractionalSecondDigits)
+  } else if (format === "localized") {
+    formatted =
+      formatDurationWithIntl(absSeconds, fractionalSecondDigits) ??
+      formatDurationClock(absSeconds, fractionalSecondDigits)
+  } else {
+    formatted = moment.duration(absSeconds, "seconds").humanize()
+  }
+  return seconds < 0 ? `-${formatted}` : formatted
+}
+
 /**
  * Formats a duration value based on the unit information in the field.
  *
@@ -390,17 +739,29 @@ function formatDatetime(date: number | Date, field?: Field): string {
  */
 function formatDuration(duration: number | bigint, field?: Field): string {
   // unit: 0 is seconds, 1 is milliseconds, 2 is microseconds, 3 is nanoseconds.
-  return moment
-    .duration(
-      convertTimestampToSeconds(
-        duration,
-        // The default is NANOSECOND because that is the default unit for duration in pandas.
-        // Though we believe that actually always a unit is populated by arrow.
-        getArrowTimeUnit(field, TimeUnit.NANOSECOND)
-      ),
-      "seconds"
+  return formatDurationFromSeconds(
+    convertTimestampToSeconds(
+      duration,
+      // The default is NANOSECOND because that is the default unit for duration in pandas.
+      // Though we believe that actually always a unit is populated by arrow.
+      getArrowTimeUnit(field, TimeUnit.NANOSECOND)
     )
-    .humanize()
+  )
+}
+
+/**
+ * Converts the raw words of an Arrow decimal to its unscaled integer.
+ *
+ * @param words The value as little-endian two's complement 32-bit words:
+ * 4 words for decimal128 and 8 words for decimal256.
+ * @returns The signed unscaled integer, e.g. -5 for -0.05 with scale 2.
+ */
+function decimalWordsToBigInt(words: Uint32Array): bigint {
+  let unscaled = BigInt(0)
+  for (let i = words.length - 1; i >= 0; i--) {
+    unscaled = (unscaled << BigInt(32)) | BigInt(words[i])
+  }
+  return BigInt.asIntN(words.length * 32, unscaled)
 }
 
 /**
@@ -408,8 +769,9 @@ function formatDuration(duration: number | bigint, field?: Field): string {
  *
  * This code is partly based on: https://github.com/apache/arrow/issues/35745
  *
- * TODO: This is only a temporary workaround until ArrowJS can format decimals correctly.
- * This is tracked here:
+ * ArrowJS has no decimal formatting of its own, and its `util.bigNumToString`
+ * returns wrong digits for decimal256 values. So the raw words are converted
+ * with a native BigInt instead. Related ArrowJS issues:
  * https://github.com/apache/arrow/issues/37920
  * https://github.com/apache/arrow/issues/28804
  * https://github.com/apache/arrow/issues/35745
@@ -417,17 +779,18 @@ function formatDuration(duration: number | bigint, field?: Field): string {
 function formatDecimal(value: Uint32Array, field?: Field): string {
   const scale = getArrowScale(field)
 
-  // Format Uint32Array to a numerical string and pad it with zeros
-  // So that it is exactly the length of the scale.
-  let numString = util.bigNumToString(new util.BN(value)).padStart(scale, "0")
+  // Format the unscaled integer to a numerical string. Negative numbers
+  // start with a minus sign.
+  let numString = decimalWordsToBigInt(value).toString()
 
-  // ArrowJS 13 correctly adds a minus sign for negative numbers.
-  // but it doesn't handle th fractional part yet. So we can just return
-  // the value if scale === 0, but we need to do some additional processing
-  // for the fractional part if scale > 0.
-
-  if (scale === 0) {
+  if (scale === 0 || numString === "0") {
     return numString
+  }
+
+  if (scale < 0) {
+    // A negative scale multiplies the unscaled integer by a power of ten,
+    // e.g. 123 with scale -2 is 12300.
+    return numString + "0".repeat(-scale)
   }
 
   let sign = ""
@@ -437,6 +800,9 @@ function formatDecimal(value: Uint32Array, field?: Field): string {
     sign = "-"
     numString = numString.slice(1)
   }
+  // Pad the digits (without the sign) with zeros so that they are at least
+  // as long as the scale, e.g. 5 with scale 3 is 0.005.
+  numString = numString.padStart(scale, "0")
   // Extract the whole number part. If the number is < 1, it doesn't
   // have a whole number part, so we'll use "0" instead.
   // E.g for 123450 with scale 3, we'll get "123" as the whole part.
@@ -643,6 +1009,13 @@ export function format(x: DataType, type: ArrowType): string {
       return ""
     }
 
+    // Categorical cells hold the category value, e.g. an epoch timestamp for
+    // a date category, so format them with the category type.
+    const categoryType = getFormattableCategoryType(type)
+    if (notNullOrUndefined(categoryType)) {
+      return format(x, categoryType)
+    }
+
     if (isStringType(type)) {
       return String(x)
     }
@@ -652,7 +1025,8 @@ export function format(x: DataType, type: ArrowType): string {
       return formatDate(x as Date | number)
     }
 
-    if (typeof x === "bigint" && isTimeType(type)) {
+    // time64 values are bigints, time32 values are numbers.
+    if ((typeof x === "bigint" || typeof x === "number") && isTimeType(type)) {
       return formatTime(Number(x), type.arrowField)
     }
 

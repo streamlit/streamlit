@@ -73,7 +73,7 @@ const UploadedFileChipIcon: FC<UploadedFileChipIconProps> = ({
         <Icon content={ErrorOutline} size="lg" testid="stFileChipIconError" />
       )
     case "uploaded":
-      if (imagePreviewUrl) {
+      if (imagePreviewUrl !== null) {
         return (
           <StyledFileChipImagePreview
             src={imagePreviewUrl}

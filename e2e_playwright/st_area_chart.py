@@ -41,7 +41,7 @@ utc_df = pd.DataFrame(
     }
 )
 
-utc_df.set_index("index", inplace=True)
+utc_df = utc_df.set_index("index")
 
 # Dataframe to test the color parameter support:
 N = 100

@@ -315,6 +315,47 @@ st.write("Ignore selectbox value:", ignore_select)
 if st.button("Apply ignore selectbox", key="apply_ignore_selectbox"):
     st.write("Applied ignore selectbox value:", ignore_select)
 
+# --- required selectboxes ---
+st.markdown("Required selectboxes:")
+
+with st.form("required_selectbox_form", clear_on_submit=True):
+    st.selectbox(
+        "Required country",
+        ["France", "Germany", "Italy"],
+        index=None,
+        key="required_country",
+        required=True,
+    )
+    st.selectbox(
+        "Required city",
+        ["Paris", "Berlin", "Rome"],
+        index=None,
+        key="required_city",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required selectbox form")
+st.write("required form submitted:", required_form_submitted)
+st.write("required country:", st.session_state.get("required_country"))
+
+required_color = st.selectbox(
+    "Required color",
+    ["red", "green", "blue"],
+    index=None,
+    key="required_color",
+    required=True,
+    accept_new_options=True,
+)
+st.write("required color:", required_color)
+
+st.selectbox(
+    "Required hidden",
+    ["a", "b"],
+    index=None,
+    key="required_hidden_select",
+    required=True,
+    label_visibility="hidden",
+)
+
 # Regression test for https://github.com/streamlit/streamlit/issues/16181:
 # a selectbox near the bottom of the sidebar must flip its dropdown up and stay
 # within the viewport instead of opening downward and overflowing. The
