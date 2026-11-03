@@ -367,6 +367,7 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
+        $showsInlineSkeleton={renderInlineSkeleton}
         $isSkeletonSlot={
           isLoadingBlock || notNullOrUndefined(props.node.pendingSkeleton)
         }

@@ -324,6 +324,12 @@ export interface StyledFlexContainerBlockProps {
    * the containing block of the absolutely positioned skeleton overlay.
    */
   $isSkeletonSlot?: boolean
+  /**
+   * Whether the block shows its inline skeleton. Its other children hold no
+   * visible content yet, so they leave the layout instead of adding gaps (for
+   * example, a spinner shown as the skeleton's label).
+   */
+  $showsInlineSkeleton?: boolean
 }
 
 export const StyledFlexContainerBlock =
@@ -341,6 +347,7 @@ export const StyledFlexContainerBlock =
       overflow,
       overflowX,
       $isSkeletonSlot = false,
+      $showsInlineSkeleton = false,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -360,6 +367,9 @@ export const StyledFlexContainerBlock =
         justifyContent: getJustifyContent(justify),
         flexWrap: $wrap ? "wrap" : "nowrap",
         ...($isSkeletonSlot && { position: "relative" }),
+        ...($showsInlineSkeleton && {
+          "& > :not(.stSkeleton)": { display: "none" },
+        }),
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
