@@ -380,7 +380,7 @@ export const StyledStatisticsBarRow = styled.div(({ theme }) => ({
  * Text label for a compact statistics bar row.
  */
 export const StyledStatisticsBarLabel = styled.span(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -454,7 +454,7 @@ export const StyledStatisticsRow = styled.div(({ theme }) => ({
  * Label for a statistics metric (description term).
  */
 export const StyledStatisticsLabel = styled.dt(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   whiteSpace: "nowrap",
   fontWeight: "normal",
 }))
@@ -481,7 +481,7 @@ export const StyledStatisticsEmpty = styled.div(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: theme.spacing.lg,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   minWidth: "10rem",
 }))

@@ -20,6 +20,7 @@ import type {
   Pagination as PaginationProto,
   streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -269,7 +270,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
   )
 
   // Query param binding for URL synchronization
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "int_value" as const,

@@ -478,6 +478,7 @@ export class AppRoot {
     //  1. Widget State
     //  2. React state of all elements
     let children: AppNode[] = []
+    let retained: BlockNode["retained"] | undefined
     if (
       existingNode instanceof BlockNode &&
       existingNode.deltaBlock.type === block.type
@@ -492,7 +493,10 @@ export class AppRoot {
         block.id !== existingNode.deltaBlock.id
 
       if (!isDialogWithDifferentIdentity) {
+        // Inherit retained elements alongside `children` because they render
+        // among them.
         children = existingNode.children
+        retained = existingNode.retained
       }
     }
 
@@ -502,7 +506,8 @@ export class AppRoot {
       block,
       scriptRunId,
       fragmentId,
-      deltaMsgReceivedAt
+      deltaMsgReceivedAt,
+      retained
     )
     return new AppRoot(
       this.mainScriptHash,

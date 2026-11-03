@@ -46,6 +46,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit import config, runtime, util
 from streamlit.elements.lib import agent_spec
 from streamlit.logger import get_logger
+from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime import runtime_util
 from streamlit.runtime.agent import json_encoding
@@ -329,9 +330,13 @@ def _serve_arrow_over_http(arrow_bytes: bytes, *, coordinates: str) -> str | Non
 def _arrow_in_payload(message: Message) -> bytes:
     """The Arrow data an element's payload carries, or empty bytes.
 
-    A table's payload is its Arrow data. A Vega-Lite chart's is the one buffer
-    its data is in, since only a chart with a single buffer registers a copy.
+    A table's payload is its Arrow data. A Vega-Lite or ECharts chart returns
+    its Arrow buffer only when it has exactly one, because only such a chart
+    registers a copy.
     """
+    if isinstance(message, EChartsChartProto):
+        datasets = message.datasets
+        return datasets[0].data.data if len(datasets) == 1 else b""
     if isinstance(message, VegaLiteChartProto):
         # Imported here: `vega_charts` imports this module.
         from streamlit.elements import vega_charts

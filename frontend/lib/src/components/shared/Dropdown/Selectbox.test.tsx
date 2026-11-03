@@ -1110,6 +1110,125 @@ describe("Selectbox widget with optional props", () => {
   })
 })
 
+describe("Selectbox required and error props", () => {
+  const ERROR_MESSAGE = "This field is required."
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it("renders no required or error chrome by default", () => {
+    render(<Selectbox {...getProps()} />)
+
+    const input = screen.getByRole("combobox")
+    expect(input).not.toHaveAttribute("aria-required")
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(input).not.toHaveAttribute("aria-describedby")
+    expect(screen.getByRole("group")).not.toHaveAttribute("data-invalid")
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stSelectboxErrorIcon")
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("shows the required marker and sets aria-required when required", () => {
+    render(<Selectbox {...getProps({ required: true })} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+      "(required)"
+    )
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveAttribute("aria-required", "true")
+    // Required alone is not an error.
+    expect(input).not.toHaveAttribute("aria-invalid")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it.each([LabelVisibilityOptions.Hidden, LabelVisibilityOptions.Collapsed])(
+    "omits the required marker but keeps aria-required when the label is %s",
+    labelVisibility => {
+      render(<Selectbox {...getProps({ required: true, labelVisibility })} />)
+
+      expect(
+        screen.queryByTestId("stWidgetLabelRequired")
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole("combobox")).toHaveAttribute(
+        "aria-required",
+        "true"
+      )
+    }
+  )
+
+  it("shows the invalid chrome and announces the error", () => {
+    render(
+      <Selectbox
+        {...getProps({ value: null, required: true, error: ERROR_MESSAGE })}
+      />
+    )
+
+    expect(screen.getByTestId("stSelectboxErrorIcon")).toBeVisible()
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent(ERROR_MESSAGE)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(input.getAttribute("aria-describedby")?.split(" ")).toContain(
+      alert.getAttribute("id")
+    )
+    expect(screen.getByRole("group")).toHaveAttribute("data-invalid")
+  })
+
+  it("does not clear a committed value on Escape when not clearable", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["Apple", "Banana", "Cherry"],
+      value: "Banana",
+      clearable: false,
+      required: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(
+      screen.queryByRole("button", { name: "Clear value" })
+    ).not.toBeInTheDocument()
+
+    await user.click(input)
+    await user.keyboard("{Escape}")
+
+    expect(props.onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue("Banana")
+  })
+
+  it("never commits null for a custom value when not clearable", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: ["red", "green"],
+      value: "purple",
+      clearable: false,
+      required: true,
+      acceptNewOptions: true,
+    })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("purple")
+
+    await user.click(input)
+    await user.keyboard("{Escape}")
+    expect(input).toHaveValue("purple")
+
+    await user.clear(input)
+    await user.click(document.body)
+
+    expect(props.onChange).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(input).toHaveValue("purple")
+    })
+  })
+})
+
 describe("Selectbox dropdown positioning", () => {
   afterEach(() => {
     vi.restoreAllMocks()

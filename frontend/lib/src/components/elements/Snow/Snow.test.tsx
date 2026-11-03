@@ -117,7 +117,7 @@ describe("Snow element", () => {
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
         // Setup StreamlitConfig.BACKEND_BASE_URL if specified
-        if (backendBaseUrl) {
+        if (backendBaseUrl !== undefined) {
           globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = backendBaseUrl
         }
 

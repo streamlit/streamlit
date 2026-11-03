@@ -33,6 +33,7 @@ import {
 } from "@internationalized/date"
 
 import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -98,7 +99,7 @@ function DateTimeInput({
     setResetKey(k => k + 1)
   }, [element, resetError])
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,

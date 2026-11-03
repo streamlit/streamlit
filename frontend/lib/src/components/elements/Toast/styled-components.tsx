@@ -110,7 +110,7 @@ export const StyledCloseButton = styled(Button)(({ theme }) => ({
 export const StyledViewButton = styled.button(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   backgroundColor: theme.colors.transparent,
   fontFamily: "inherit",
   margin: theme.spacing.none,

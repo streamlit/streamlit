@@ -30,6 +30,7 @@ import {
   getPopoverContainerStyle,
   getSecondaryIconButtonColorStyles,
 } from "~lib/components/shared/Base/styled-components"
+import { VISUALLY_HIDDEN_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 
 /**
@@ -45,7 +46,8 @@ function getRightInset(theme: EmotionTheme): string {
  * Outer row container for the ComboBox trigger: input + buttons.
  * Uses `[data-focus-within]` (set by React Aria when any descendant is
  * focused) to switch border colour to `primary`, mirroring the focus ring
- * on other Streamlit input widgets.
+ * on other Streamlit input widgets. `[data-invalid]` (set by React Aria from
+ * the ComboBox's `isInvalid`) shows the invalid-input chrome.
  */
 export const StyledGroup = styled(Group)(({ theme }) => ({
   display: "flex",
@@ -69,7 +71,24 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
   "&[data-focus-within]": {
     borderColor: getBorderColor(theme.colors, true),
   },
+  // Declared after focus-within so the error border also shows while focused,
+  // as in st.text_input.
+  "&[data-invalid]": {
+    borderColor: theme.colors.redTextColor,
+    backgroundColor: theme.colors.redBackgroundColor,
+  },
 }))
+
+/** Error icon between the input and the trailing clear and open buttons. */
+export const StyledErrorIcon = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+  paddingLeft: theme.spacing.twoXS,
+  color: theme.colors.redTextColor,
+}))
+
+export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 /**
  * The text input inside the ComboBox. Grows to fill available space and
@@ -100,7 +119,7 @@ export const StyledInput = styled(Input, {
     userSelect: $typingDisabled ? "none" : undefined,
     boxSizing: "border-box",
     "&::placeholder": {
-      color: $placeholderColor ?? theme.colors.fadedText60,
+      color: $placeholderColor ?? theme.colors.fadedText70,
     },
     "&[data-disabled]": {
       cursor: "not-allowed",
@@ -208,7 +227,7 @@ export const StyledEmptyState = styled.span(({ theme }) => ({
   width: "100%",
   height: theme.sizes.emptyDropdownHeight,
   padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.base,

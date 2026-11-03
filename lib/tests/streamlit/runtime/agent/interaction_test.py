@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, get_args
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +25,7 @@ import pytest
 from streamlit.elements.lib import agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.runtime.agent import interaction, tree
+from streamlit.runtime.agent import interaction, tree, usage
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.query_params import (
     CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
@@ -33,6 +33,8 @@ from streamlit.runtime.state.query_params import (
     QueryParams,
     sanitize_query_string,
 )
+from tests.streamlit.runtime.agent import usage_counts
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from streamlit.source_util import PageInfo
@@ -877,3 +879,56 @@ def test_a_session_the_runtime_closed_frees_its_slot() -> None:
         runtime.close_session.assert_not_called()
     finally:
         agent_spec.forget_agent_session(session.app_session_id)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", get_args(usage.Transport))
+async def test_interact_counts_a_refused_call_on_its_own_transport(
+    transport: usage.Transport,
+) -> None:
+    """A call counts once on its transport, even one refused before any session
+    is found or created.
+    """
+    registry = MagicMock()
+    with usage_counts.fresh(), patch_config_options(usage_counts.USAGE_STATS_ON):
+        with pytest.raises(AgentRequestError) as raised:
+            await interaction.interact(
+                registry,
+                {"bogus": 1},
+                transport=transport,
+                user_info={},
+                headers=[],
+                encode=MagicMock(),
+            )
+        counts = usage_counts.reported()
+
+    assert raised.value.code == "invalid_request"
+    registry.create.assert_not_called()
+    assert counts == {**usage_counts.ZERO_COUNTS, f"{transport}_interactions": 1}
+
+
+@pytest.mark.parametrize(
+    ("max_sessions", "failure", "message"),
+    [
+        (0, AgentRequestError, "already holds 0 agent sessions"),
+        (1, RuntimeError, "setup failed"),
+    ],
+    ids=["too_many_sessions", "setup_failed"],
+)
+def test_a_creation_that_fails_counts_no_session(
+    max_sessions: int, failure: type[Exception], message: str
+) -> None:
+    """`create` counts only a session it returns: not one refused at the cap,
+    nor one whose setup failed.
+    """
+    runtime = MagicMock()
+    runtime.connect_session.return_value = "internal"
+    runtime.mark_session_nonresumable.side_effect = RuntimeError("setup failed")
+    registry = interaction.AgentSessionRegistry(runtime)
+    options = {**usage_counts.USAGE_STATS_ON, "server.agentMaxSessions": max_sessions}
+    with usage_counts.fresh(), patch_config_options(options):
+        with pytest.raises(failure, match=message):
+            registry.create({})
+        counts = usage_counts.reported()
+
+    assert counts == {}

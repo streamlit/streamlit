@@ -18,10 +18,14 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import type { ElementNode } from "./ElementNode"
+import type { RetainedElement } from "./elementRetention"
 import { TransientNode } from "./TransientNode"
 import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
+
+/** Shared empty list so blocks without retained elements allocate nothing. */
+const NO_RETAINED_ELEMENTS: readonly RetainedElement[] = []
 
 /**
  * A container AppNode that holds children.
@@ -41,6 +45,13 @@ export class BlockNode implements AppNode {
   public readonly activeScriptHash: string
 
   /**
+   * Displaced prior-run elements that stay mounted (hidden) until the current
+   * run re-emits them or stale cleanup removes them. Ordered by `before`. Not
+   * part of delta-path addressing; see `elementRetention.ts`.
+   */
+  public readonly retained: readonly RetainedElement[]
+
+  /**
    * A skeleton from the current run that is waiting for this slot's new
    * content. See `ElementNode.pendingSkeleton`.
    */
@@ -53,6 +64,7 @@ export class BlockNode implements AppNode {
     scriptRunId?: string,
     fragmentId?: string,
     deltaMsgReceivedAt?: number,
+    retained?: readonly RetainedElement[],
     pendingSkeleton?: ElementNode
   ) {
     this.activeScriptHash = activeScriptHash
@@ -61,6 +73,7 @@ export class BlockNode implements AppNode {
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.retained = retained ?? NO_RETAINED_ELEMENTS
     this.pendingSkeleton = pendingSkeleton
   }
 
@@ -73,6 +86,7 @@ export class BlockNode implements AppNode {
       this.scriptRunId,
       this.fragmentId,
       this.deltaMsgReceivedAt,
+      this.retained,
       skeleton
     )
   }

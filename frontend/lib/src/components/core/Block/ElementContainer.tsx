@@ -29,6 +29,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
 import type { ElementContainerConfig } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
@@ -75,6 +76,7 @@ export const ElementContainer = memo(function ElementContainer({
   children,
 }: ElementContainerProps): ReactElement {
   const { isFullScreen } = useContext(ViewStateContext)
+  const isRetained = useContext(RetainedElementContext)
 
   const elementType = node.element.type ?? ""
   const elementId = getElementId(node.element)
@@ -90,13 +92,16 @@ export const ElementContainer = memo(function ElementContainer({
         "stElementContainer",
         "element-container",
         convertKeyToClassName(userKey),
+        config.printLayout,
       ]
         .filter(Boolean)
         .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
+      data-retained={isRetained || undefined}
       aria-busy={hasPendingSkeleton || undefined}
       isStale={isStale && !isFullScreen}
+      isRetained={isRetained}
       hasPendingSkeleton={hasPendingSkeleton}
       elementType={elementType}
       node={node}

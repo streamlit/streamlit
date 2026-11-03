@@ -17,7 +17,7 @@
 import { memo, type ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import {
   DynamicIcon,
@@ -147,7 +147,7 @@ interface ExpanderIconProps {
 const ExpanderIcon = (props: ExpanderIconProps): ReactElement | null => {
   const { icon } = props
 
-  return icon ? (
+  return !isNullOrEmptyString(icon) ? (
     <DynamicIcon
       size="base"
       iconValue={icon}
@@ -182,8 +182,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // element.id is only set when the backend registers the expander as a
   // stateful widget (on_change="rerun" or bind="query-params"). block.id may
   // still be set for CSS key styling without implying widget mode.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank id means this is not a widget
-  const widgetId = element.id || undefined
+  const widgetId = isNullOrEmptyString(element.id) ? undefined : element.id
   const isWidget = Boolean(widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
@@ -217,7 +216,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // widget manager retains the stale value and sends it back on the next
   // rerun, causing the expander to revert to its old state.
   useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.expanded)) {
+    if (widgetId === undefined || !notNullOrUndefined(element.expanded)) {
       return
     }
     widgetMgr.setBoolValue(widgetId, element.expanded, {
@@ -230,7 +229,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
-      if (widgetId) {
+      if (widgetId !== undefined) {
         widgetMgr.setBoolValue(widgetId, newOpen, {
           formId: undefined,
           fragmentId,
@@ -351,14 +350,14 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </StyledSummaryLabelWrapper>
 
-      {blankLabelAccessibleName && (
+      {!isNullOrEmptyString(blankLabelAccessibleName) && (
         <StyledVisuallyHidden>{blankLabelAccessibleName}</StyledVisuallyHidden>
       )}
 
       {/* Append the state as hidden text rather than setting an aria-label:
           this keeps the markdown or injected empty-label name, and it
           also reaches non-collapsible steps, which ignore aria-label. */}
-      {stepStateLabel && (
+      {stepStateLabel !== undefined && (
         <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>
       )}
 

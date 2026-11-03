@@ -36,6 +36,7 @@ import {
   type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import Icon from "~lib/components/shared/Icon/Icon"
 import {
@@ -460,7 +461,10 @@ const CameraInput = ({
         file.status.abortController.abort()
       }
 
-      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      if (
+        file.status.type === "uploaded" &&
+        !isNullOrEmptyString(file.status.fileUrls.deleteUrl)
+      ) {
         // Fire and forget deletion
         void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
       }
@@ -620,7 +624,7 @@ const CameraInput = ({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      {imgSrc ? (
+      {imgSrc !== null ? (
         <>
           <StyledBox width={width}>
             {imgSrc !== RESTORED_FROM_WIDGET_STRING && (

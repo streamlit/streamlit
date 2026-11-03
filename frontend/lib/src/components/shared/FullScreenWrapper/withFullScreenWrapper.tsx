@@ -18,6 +18,8 @@ import type { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import ElementFullscreenWrapper from "~lib/components/shared/ElementFullscreen/ElementFullscreenWrapper"
 
 function withFullScreenWrapper<P extends object>(
@@ -30,10 +32,10 @@ function withFullScreenWrapper<P extends object>(
       </ElementFullscreenWrapper>
     )
   }
-  ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
-    WrappedComponent.displayName || WrappedComponent.name
-  })`
+  const wrappedName = isNullOrEmptyString(WrappedComponent.displayName)
+    ? WrappedComponent.name
+    : WrappedComponent.displayName
+  ComponentWithFullScreenWrapper.displayName = `withFullScreenWrapper(${wrappedName})`
 
   // Static methods must be copied over
   // https://en.reactjs.org/docs/higher-order-components.html#static-methods-must-be-copied-over

@@ -20,6 +20,8 @@ import {
   type NumberCell,
 } from "@glideapps/glide-data-grid"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import {
   type DurationFormat,
   format as formatArrowCell,
@@ -65,7 +67,7 @@ function getDurationFormat(
     return undefined
   }
   // The "Automatic" menu entry sends an empty format string.
-  if (!format) {
+  if (isNullOrEmptyString(format)) {
     return "duration"
   }
   return format === "compact" || format === "localized" ? format : undefined
@@ -139,7 +141,7 @@ function NumberColumn(props: BaseColumnProps): BaseColumn {
 
   // Period columns without a custom format use Arrow's period formatter.
   const useArrowFormatting =
-    !parameters.format && isPeriodType(props.arrowType)
+    isNullOrEmptyString(parameters.format) && isPeriodType(props.arrowType)
 
   const allowNegative =
     isNullOrUndefined(parameters.min_value) || parameters.min_value < 0

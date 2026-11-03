@@ -11,7 +11,8 @@ Session state is a dictionary-like object supporting attribute and bracket notat
 # Initialize with setdefault (preferred)
 st.session_state.setdefault("count", 0)
 
-# Alternative: check before setting
+# Check before setting when the default is expensive to compute;
+# setdefault evaluates its default argument on every rerun
 if "count" not in st.session_state:
     st.session_state.count = 0
 
@@ -82,7 +83,7 @@ Notes:
 
 ## Widget input constraints are mostly client-side
 
-Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
+Most widget input constraints—`options` allow-lists (`st.selectbox`, `st.multiselect`, `st.radio`), `min_value`/`max_value` (`st.slider`, `st.number_input`), `max_chars` / `validate` (`st.text_input`), `required` (`st.text_input`, `st.text_area`, `st.number_input`, `st.selectbox`, `st.date_input`, `st.time_input`, `st.datetime_input`), `disabled`, and `st.data_editor` column `validate`/`num_rows`—are primarily enforced in the browser for UX. Treat them as guardrails for normal users, **not** as a security boundary: a widget's return value (and its `st.session_state` entry) reflects what the client sent, and a modified or malicious client can submit values outside those constraints.
 
 For any security-relevant or sensitive decision—authorization/role checks, database writes, file paths, spending or quota limits, or anything that must not exceed a declared bound—re-validate the value in your own script before acting on it:
 

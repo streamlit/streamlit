@@ -25,6 +25,8 @@ import {
 import { Close } from "@emotion-icons/material-rounded"
 import type { QueuedToast } from "react-aria-components/Toast"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -67,7 +69,7 @@ export function StreamlitToastItem({
   return (
     <StyledToast toast={toast} data-testid="stToast" className="stToast">
       <StyledToastWrapper>
-        {icon && (
+        {!isNullOrEmptyString(icon) && (
           <DynamicIcon
             iconValue={icon}
             size="xl"

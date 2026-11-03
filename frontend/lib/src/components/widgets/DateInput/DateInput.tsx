@@ -28,6 +28,7 @@ import {
 import type { CalendarDate } from "@internationalized/date"
 
 import type { DateInput as DateInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -109,7 +110,7 @@ function DateInput({
    *
    * Canonical state is the ISO 8601 wire format directly (`string[]`).
    */
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -255,18 +256,30 @@ function DateInput({
 
       setHasRequiredError(false)
       setError(null)
+      // Re-picking or retyping the committed value must not rerun. Compare
+      // `toWrite` before normalization, so a reversed range (end before
+      // start) still commits once and the rerun repaints it in order. Also
+      // compare the rendered value: a close-effect commit that has not
+      // rendered yet must be repeated by the blur, whose sync render writes
+      // WidgetStateManager before a click in the same gesture can rerun.
+      const hasChanged =
+        lastWrittenIsoRef.current === undefined ||
+        !isoArraysEqual(toWrite, lastWrittenIsoRef.current) ||
+        !isoArraysEqual(toWrite, value)
       lastWrittenIsoRef.current = written
       pendingIsoRef.current = keepIncompleteDisplay ? isoValues : written
-      setValueWithSource({ value: written, fromUser })
-      // Inside a form, write synchronously so submit in the same event sees
-      // the staged value. Form widget writes do not schedule a rerun.
-      if (inForm) {
-        updateWidgetMgrState(
-          element,
-          widgetMgr,
-          { value: written, fromUser },
-          fragmentId
-        )
+      if (hasChanged) {
+        setValueWithSource({ value: written, fromUser })
+        // Inside a form, write synchronously so submit in the same event
+        // sees the staged value. Form widget writes do not schedule a rerun.
+        if (inForm) {
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: written, fromUser },
+            fragmentId
+          )
+        }
       }
       setDirty(keepIncompleteDisplay)
       return true
@@ -279,6 +292,7 @@ function DateInput({
       maxDateCalendar,
       minDateCalendar,
       setValueWithSource,
+      value,
       widgetMgr,
     ]
   )
