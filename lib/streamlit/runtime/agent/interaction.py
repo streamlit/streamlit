@@ -210,11 +210,11 @@ class AgentSessionClient(SessionClient):
         if msg_type == "new_session":
             run = RunDescriptor.from_metadata(msg.metadata)
             if run is None:
-                raise RuntimeError(
-                    "new_session is missing its run identity. This should never happen."
+                _LOGGER.warning(
+                    "Agent session client got a new_session without run identity."
                 )
-            self._run_id = run.script_run_id
-            self._fragments_this_run = frozenset(run.fragment_ids)
+            self._run_id = run.script_run_id if run else ""
+            self._fragments_this_run = frozenset(run.fragment_ids if run else ())
             self._element_at = {}
 
         if msg_type == "delta":

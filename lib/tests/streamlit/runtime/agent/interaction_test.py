@@ -367,9 +367,9 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
     log_exception.assert_called_once()
 
 
-def test_client_new_session_without_run_identity_keeps_the_previous_run() -> None:
-    """The client logs and ignores a `new_session` missing its run identity, so
-    the previous run keeps owning subsequent deltas.
+def test_client_new_session_without_run_identity_starts_an_unnamed_full_run() -> None:
+    """A `new_session` missing its run identity logs a warning and starts a
+    full run with an empty run ID, so the previous run's deltas go stale.
     """
     client = interaction.AgentSessionClient()
     no_identity = ForwardMsg()
@@ -380,18 +380,22 @@ def test_client_new_session_without_run_identity_keeps_the_previous_run() -> Non
         _markdown([0, 0], "first"),
     )
 
-    with patch.object(interaction._LOGGER, "exception") as log_exception:
+    with (
+        patch.object(interaction._LOGGER, "warning") as log_warning,
+        patch.object(interaction._LOGGER, "exception") as log_exception,
+    ):
         client.write_forward_msg(no_identity)
 
-    log_exception.assert_called_once()
+    log_warning.assert_called_once()
+    log_exception.assert_not_called()
     _write_all(
         client,
         _markdown([0, 1], "second"),
         _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
     )
     new_sessions = [msg for msg in client.messages if msg.HasField("new_session")]
-    assert [msg.metadata.run.script_run_id for msg in new_sessions] == ["r1"]
-    assert _bodies(client) == ["first", "second"]
+    assert [msg.HasField("metadata") for msg in new_sessions] == [False]
+    assert _bodies(client) == ["second"]
 
 
 def test_request_context_withholds_credentials_and_cookies() -> None:
