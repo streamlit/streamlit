@@ -68,8 +68,9 @@ function canReuseElementPayload(
 
 /**
  * Determine if a new element puts different content into its slot than the
- * node it replaces. A spinner's transient node counts as the node it wraps.
- * An empty slot, a block, or a missing hash counts as different.
+ * node it replaces. When the slot holds a transient node (a spinner or a
+ * skeleton), its anchor is the content already in the slot. An empty slot, a
+ * block, or a missing hash counts as different.
  */
 function replacesDifferentContent(
   existingNode: AppNode | undefined,

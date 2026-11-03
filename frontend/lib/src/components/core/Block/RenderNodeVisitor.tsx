@@ -57,8 +57,8 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   private index: number
   private transientElementCount: number
   /**
-   * The `children` entry before the one being visited. A TransientNode's
-   * anchor is visited with this visitor, so it sees the same previous sibling.
+   * The `children` entry before the one being visited. This visitor also
+   * renders a transient node's anchor, so the anchor sees that same sibling.
    */
   private previousSibling?: AppNode
 
@@ -236,10 +236,11 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   /**
    * Whether `node` is the stale old copy of the content that the parent's
    * latest run just moved into the previous slot. That holds when:
-   * - `node` is stale relative to its parent and has no element ID (elements
-   *   with an ID are deduplicated by key instead);
-   * - the previous `children` entry, or the element a spinner there wraps, was
-   *   written by the parent's latest run with the same non-empty hash;
+   * - `node` was written by an earlier run than its parent block's latest run
+   *   and has no element ID (elements with an ID are deduplicated by key
+   *   instead);
+   * - the previous `children` entry, or the anchor of a transient node there,
+   *   was written by the parent's latest run with the same non-empty hash;
    * - that write replaced different content, so an unchanged rerun of
    *   identical adjacent elements (e.g. `st.write("")` pairs) hides nothing.
    *
