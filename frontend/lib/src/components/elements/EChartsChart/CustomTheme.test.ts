@@ -217,6 +217,21 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(valueAxis.splitArea.areaStyle.color).toHaveLength(2)
   })
 
+  it("hides overlapping labels on time, value, and log axes only", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+    const axisLabelOf = (key: string): Record<string, unknown> =>
+      (echartsTheme[key] as { axisLabel: Record<string, unknown> }).axisLabel
+
+    const categoryLabel = axisLabelOf("categoryAxis")
+    for (const key of ["timeAxis", "valueAxis", "logAxis"]) {
+      // Same label styling as category axes, plus hideOverlap.
+      expect(axisLabelOf(key)).toEqual({ ...categoryLabel, hideOverlap: true })
+    }
+    // Must NOT happen: the flag leaks into the shared axisDefaults that
+    // category axes use.
+    expect(categoryLabel.hideOverlap).toBeUndefined()
+  })
+
   it("themes components that keep fixed light-mode defaults", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
@@ -639,6 +654,39 @@ describe("Streamlit theme resolved by ECharts", () => {
         axisPointerModel.get(["label", "backgroundColor"])
       )
     ).toEqual([bgColor, bgColor])
+  })
+
+  it("hides overlapping time axis labels unless the spec turns it off", () => {
+    const resolveTimeXAxis = (xAxis: Record<string, unknown>): ResolvedModel =>
+      renderThemed({
+        xAxis: { type: "time", ...xAxis },
+        yAxis: { type: "value" },
+        series: [
+          {
+            type: "line",
+            data: [
+              [0, 1],
+              [60_000, 2],
+            ],
+          },
+        ],
+      }).component("xAxis")
+
+    expect(resolveTimeXAxis({}).get(["axisLabel", "hideOverlap"])).toBe(true)
+    // ECharts merges the theme under the spec key by key, so a formatter
+    // alone keeps the default.
+    const formatted = resolveTimeXAxis({
+      axisLabel: { formatter: "{HH}:{mm}" },
+    })
+    expect(formatted.get(["axisLabel", "hideOverlap"])).toBe(true)
+    expect(formatted.get(["axisLabel", "formatter"])).toBe("{HH}:{mm}")
+    // Must NOT happen: the theme overrides the spec's explicit false.
+    expect(
+      resolveTimeXAxis({ axisLabel: { hideOverlap: false } }).get([
+        "axisLabel",
+        "hideOverlap",
+      ])
+    ).toBe(false)
   })
 })
 
