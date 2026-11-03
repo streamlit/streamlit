@@ -32,15 +32,50 @@ export const PRINT_VISIBLE_FILTER = `:not([${PRINT_INACTIVE_ATTRIBUTE}] *):not(d
 
 const VISIBLE_PRINT_GRAPHIC = `.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}`
 
+/**
+ * A dataframe or `st.table` that prints. Those elements can be taller than a
+ * page, so a bordered card around them must be allowed to split.
+ */
+const VISIBLE_PRINT_FIXED_WIDTH = `.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}`
+
 /** Asks the browser not to start a page break inside this box. */
 export const printKeepTogetherRules: CSSObject = {
   breakInside: "avoid",
 }
 
 /**
+ * Lets a tall table continue on the next page instead of moving the whole
+ * card and leaving a blank strip behind.
+ */
+export const printAllowSplitRules: CSSObject = {
+  breakInside: "auto",
+}
+
+/**
+ * Print rules so an HTML table can fragment across pages: the header repeats,
+ * and a row stays on one page when it fits.
+ */
+export const printTableSplitRules: CSSObject = {
+  ...printAllowSplitRules,
+  thead: {
+    display: "table-header-group",
+    breakInside: "avoid",
+    breakAfter: "avoid",
+  },
+  tbody: {
+    display: "table-row-group",
+  },
+  tr: {
+    breakInside: "avoid",
+  },
+}
+
+/**
  * Emotion selector that matches this box when it contains a chart (an
  * element with `PrintLayout.GRAPHIC`) that prints, so not inside a closed
  * tab or a closed expander. Pair it with `printKeepTogetherRules` so the
- * box is not split from that chart. A box taller than a page still breaks.
+ * box is not split from that chart. A box with a visible dataframe or
+ * `st.table` is not matched, so that table can continue on the next page
+ * and repeat its header. A box taller than a page still breaks.
  */
-export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC})`
+export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC}):not(:has(${VISIBLE_PRINT_FIXED_WIDTH}))`
