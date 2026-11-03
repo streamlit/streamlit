@@ -1368,15 +1368,27 @@ def test_agent_api_route_answers_instead_of_the_app_html(
 ) -> None:
     """With defaults, the agent routes answer rather than falling through to
     the app's HTML: the interact route refuses a POST and any other method,
-    and the schema route reports that the API is off and refuses a POST
-    itself, rather than leaving it to the static files mount.
+    the MCP route refuses a message with the 400 MCP clients fall back from
+    and any other method, and the schema route reports that the API is off
+    and refuses a POST itself, rather than leaving it to the static files
+    mount.
     """
     client, runtime = starlette_client
 
     posted = client.post("/_stcore/agent/interact", json={})
     fetched = client.get("/_stcore/agent/interact")
+    mcp_posted = client.post(
+        "/_stcore/agent/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+    )
+    mcp_fetched = client.get("/_stcore/agent/mcp")
     schema = client.get("/_stcore/agent/openapi.json")
     schema_posted = client.post("/_stcore/agent/openapi.json")
+
+    assert mcp_posted.status_code == HTTPStatus.BAD_REQUEST
+    assert mcp_posted.json()["error"]["code"] == -32600
+    assert mcp_posted.json()["error"]["message"].startswith("not_available: ")
+    assert mcp_fetched.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert "<html>" not in mcp_fetched.text
 
     assert posted.status_code == HTTPStatus.FORBIDDEN
     assert posted.json()["error"]["code"] == "not_available"
@@ -1390,6 +1402,65 @@ def test_agent_api_route_answers_instead_of_the_app_html(
     assert schema_posted.headers["Link"] == '<openapi.json>; rel="service-desc"'
     assert schema_posted.content == b""
     assert runtime.last_user_info is None
+
+
+def test_a_reserved_path_refuses_other_methods_by_where_it_is(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """A method the health route does not take keeps the static files' 405 at
+    the app's root, while a reserved path under a page's URL is a 404.
+    """
+    client, _ = starlette_client
+
+    root = client.post("/_stcore/health")
+    under_a_page = client.post("/page2/_stcore/agent/mcp", json={})
+
+    assert root.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert under_a_page.status_code == HTTPStatus.NOT_FOUND
+    assert "<html>" not in under_a_page.text
+
+
+@pytest.mark.parametrize(
+    ("base_url", "mcp_path"),
+    [("", "/_stcore/agent/mcp"), ("app", "/app/_stcore/agent/mcp")],
+)
+def test_the_mcp_url_with_a_trailing_slash_redirects_to_the_route(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, base_url: str, mcp_path: str
+) -> None:
+    """The MCP URL with a trailing slash falls through to the static files
+    mount, whose 308 keeps the POST, so a client that follows it initializes.
+    """
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+    initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+
+    with (
+        patch_config_options(
+            {
+                "server.enableAgentApi": True,
+                "server.baseUrlPath": base_url,
+                "global.developmentMode": False,
+            }
+        ),
+        TestClient(create_starlette_app(_DummyRuntime(component_dir))) as client,
+    ):
+        redirected = client.post(
+            f"{mcp_path}/", json=initialize, follow_redirects=False
+        )
+        followed = client.post(f"{mcp_path}/", json=initialize)
+
+    assert redirected.status_code == HTTPStatus.PERMANENT_REDIRECT
+    assert redirected.headers["location"] == "../mcp"
+    assert [response.status_code for response in followed.history] == [
+        HTTPStatus.PERMANENT_REDIRECT
+    ]
+    assert followed.url.path == mcp_path
+    assert followed.status_code == HTTPStatus.OK, followed.text
+    assert followed.json()["result"]["serverInfo"]["name"] == "streamlit"
 
 
 @patch_config_options({"global.developmentMode": False})
