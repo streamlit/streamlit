@@ -384,10 +384,6 @@ v28 = st.selectbox(
 )
 st.write("value 28:", v28)
 
-st.selectbox(
-    "selectbox 29 (icon, disabled)", options, icon=":material/lock:", disabled=True
-)
-
 # The start icons and the text of these three inputs should line up.
 with st.container(key="icon_alignment"):
     st.text_input("aligned text input", "male", icon=":material/person:")

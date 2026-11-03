@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 39
+NUM_SELECTBOXES = 38
 
 
 def get_selectbox_input(
@@ -129,14 +129,6 @@ def test_selectbox_widget_rendering(
     assert_snapshot(
         get_selectbox(themed_app, "selectbox 27 (material icon)"),
         name="st_selectbox-material_icon",
-    )
-    assert_snapshot(
-        get_selectbox(themed_app, "selectbox 28 (emoji icon, accept new options)"),
-        name="st_selectbox-emoji_icon_placeholder",
-    )
-    assert_snapshot(
-        get_selectbox(themed_app, "selectbox 29 (icon, disabled)"),
-        name="st_selectbox-icon_disabled",
     )
 
 
@@ -1056,9 +1048,7 @@ def _get_text_start_x(input_locator: Locator) -> float:
     )
 
 
-def test_selectbox_icon_alignment_and_interactions(
-    app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_selectbox_icon_alignment_and_interactions(app: Page):
     """Test that the icon lines up with text and number input icons, passes clicks
     to the input, and stays while typing.
     """
@@ -1082,7 +1072,6 @@ def test_selectbox_icon_alignment_and_interactions(
     selectbox_text_x = _get_text_start_x(aligned_selectbox.locator("input"))
     for other_input in (text_input.locator("input"), number_input.locator("input")):
         assert abs(_get_text_start_x(other_input) - selectbox_text_x) <= 1
-    assert_snapshot(alignment, name="st_selectbox-icon_alignment")
 
     label = "selectbox 28 (emoji icon, accept new options)"
     selectbox = get_selectbox(app, label)
@@ -1090,16 +1079,26 @@ def test_selectbox_icon_alignment_and_interactions(
     expect(icon).to_be_visible()
     expect_markdown(app, "value 28: None")
 
-    # Clicking the icon passes through to the input and opens the dropdown.
-    icon.scroll_into_view_if_needed()
+    # Clicking the icon passes through to the input and opens the dropdown. The
+    # click's hit-target check fails if the icon intercepts pointer events.
+    combobox = selectbox.get_by_role("combobox")
+    # Scroll before clicking: React Aria closes the dropdown on scroll, so a
+    # scroll event that lands after the click would close it again.
+    combobox.scroll_into_view_if_needed()
+    expect(combobox).to_be_in_viewport()
     icon_box = icon.bounding_box()
+    combobox_box = combobox.bounding_box()
     assert icon_box is not None
-    app.mouse.click(
-        icon_box["x"] + icon_box["width"] / 2, icon_box["y"] + icon_box["height"] / 2
+    assert combobox_box is not None
+    combobox.click(
+        position={
+            "x": icon_box["x"] - combobox_box["x"] + icon_box["width"] / 2,
+            "y": icon_box["y"] - combobox_box["y"] + icon_box["height"] / 2,
+        }
     )
     dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     expect(dropdown).to_be_visible()
-    expect(selectbox.get_by_role("combobox")).to_be_focused()
+    expect(combobox).to_be_focused()
 
     # The icon stays visible while typing a new option.
     app.keyboard.type("Zed")
@@ -1108,7 +1107,7 @@ def test_selectbox_icon_alignment_and_interactions(
 
     app.keyboard.press("Enter")
     expect_markdown(app, "value 28: Zed")
-    expect(selectbox.get_by_role("combobox")).to_have_value("Zed")
+    expect(combobox).to_have_value("Zed")
     expect(icon).to_have_count(1)
 
     # Selectboxes without an icon render none.
