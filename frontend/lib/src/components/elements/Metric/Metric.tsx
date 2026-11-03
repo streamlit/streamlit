@@ -438,9 +438,8 @@ function Metric({
     }
 
     renderChart().catch((error: unknown) => {
-      // Ignore rejections: embed rejects when teardown races the render, and a
-      // failed chunk load leaves the chart empty. LOG.debug records the error
-      // only when debug logging is enabled.
+      // Leave the chart empty if Vega fails to load or embed rejects during
+      // teardown. LOG.debug shows the error only when debug logging is enabled.
       LOG.debug("Failed to embed metric chart:", error)
     })
 

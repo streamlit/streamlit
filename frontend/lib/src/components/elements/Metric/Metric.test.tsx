@@ -15,6 +15,7 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { type TopLevelSpec, version as vegaLiteVersion } from "vega-lite"
@@ -664,9 +665,38 @@ describe("Metric element", () => {
       unmount()
 
       resolve({ embed, expressionInterpreter })
-      // Metric awaits this promise first, so its cancel check has run by now.
+      // renderChart subscribed to this promise before this await, so its
+      // cancellation check runs before the assertion.
       await promise
 
+      expect(vi.mocked(embed)).not.toHaveBeenCalled()
+    })
+
+    it("leaves the chart empty if vega-embed fails to load", async () => {
+      const loadError = new Error(
+        "Failed to fetch dynamically imported module"
+      )
+      vi.mocked(loadVegaEmbed).mockRejectedValueOnce(loadError)
+      const logDebugSpy = vi.spyOn(getLogger("Metric"), "debug")
+
+      render(
+        <Metric
+          {...getProps({
+            body: "42",
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+
+      await waitFor(() => {
+        expect(logDebugSpy).toHaveBeenCalledWith(
+          "Failed to embed metric chart:",
+          loadError
+        )
+      })
+      expect(screen.getByTestId("stMetricValue")).toHaveTextContent("42")
+      expect(screen.getByTestId("stMetricChart")).toBeEmptyDOMElement()
       expect(vi.mocked(embed)).not.toHaveBeenCalled()
     })
 

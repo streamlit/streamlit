@@ -18,11 +18,15 @@ import type embed from "vega-embed"
 import type { expressionInterpreter } from "vega-interpreter"
 
 /**
- * Loads vega-embed and the CSP-safe Vega expression interpreter.
+ * Loads `vega-embed` and the Vega expression interpreter when a chart is
+ * about to draw.
  *
- * Elements that only sometimes draw a Vega chart (the `st.metric` sparkline,
- * the dataframe column statistics histogram) call this right before drawing,
- * so they don't add the Vega chunk to pages that never draw one.
+ * The interpreter evaluates Vega expressions without `eval`, so charts still
+ * draw when a content security policy (CSP) blocks `eval`. Elements that only
+ * sometimes draw a Vega chart (the `st.metric` sparkline, the dataframe column
+ * statistics histogram) call this right before drawing, so pages that never
+ * draw one skip the Vega chunk. Charts that always draw (`useVegaEmbed`) import
+ * Vega statically instead.
  */
 export async function loadVegaEmbed(): Promise<{
   embed: typeof embed

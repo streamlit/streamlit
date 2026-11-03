@@ -15,6 +15,7 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { version as vegaLiteVersion } from "vega-lite"
@@ -336,9 +337,27 @@ describe("StatisticsChart", () => {
     unmount()
 
     resolve({ embed, expressionInterpreter })
-    // The chart awaits this promise first, so its cancel check has run by now.
+    // renderChart subscribed to this promise before this await, so its
+    // cancellation check runs before the assertion.
     await promise
 
+    expect(mockEmbed).not.toHaveBeenCalled()
+  })
+
+  it("leaves the histogram empty if vega-embed fails to load", async () => {
+    const loadError = new Error("Failed to fetch dynamically imported module")
+    vi.mocked(loadVegaEmbed).mockRejectedValueOnce(loadError)
+    const logDebugSpy = vi.spyOn(getLogger("StatisticsChart"), "debug")
+
+    render(<StatisticsChart statistics={numericStats} />)
+
+    await waitFor(() => {
+      expect(logDebugSpy).toHaveBeenCalledWith(
+        "Failed to embed statistics chart:",
+        loadError
+      )
+    })
+    expect(screen.getByRole("img")).toBeEmptyDOMElement()
     expect(mockEmbed).not.toHaveBeenCalled()
   })
 

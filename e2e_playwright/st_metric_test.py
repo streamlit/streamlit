@@ -87,10 +87,10 @@ def test_zero_delta_has_no_arrow(
 
 
 def _get_metric_after_sparkline_draws(page: Page, label: str) -> Locator:
-    """Get a metric once its sparkline has drawn.
+    """Return the metric after its sparkline's Vega SVG is visible.
 
-    The sparkline draws after its Vega chunk loads, which can finish after the
-    app run.
+    The frontend draws the sparkline only after loading the Vega chunk, which
+    can finish after the app run.
     """
     metric = get_metric(page, label)
     expect(metric.get_by_test_id("stMetricChart").locator("svg")).to_be_visible()

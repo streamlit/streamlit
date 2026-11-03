@@ -288,9 +288,9 @@ function StatisticsChart({
 
     if (spec) {
       renderChart(spec).catch((error: unknown) => {
-        // Load and embed errors (an unmount mid-render, a failed chunk load)
-        // leave the chart empty instead of surfacing to the user. Log at debug
-        // level to keep genuine spec errors discoverable during development.
+        // Leave the histogram empty on load or embed errors (unmount
+        // mid-render, failed chunk load). LOG.debug keeps real spec errors
+        // discoverable during development.
         LOG.debug("Failed to embed statistics chart:", error)
       })
     }
