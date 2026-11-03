@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import io
+from typing import TYPE_CHECKING, Literal
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -36,7 +37,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
 
 _DEFAULT_LAYOUT = LayoutConfig(width="stretch")
@@ -230,6 +231,35 @@ def test_image_to_url_bgr_accepts_3_channel_image(no_runtime: None) -> None:
     )
 
     assert result == ""
+
+
+_EPS_BYTES = (
+    b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\n%%EndComments\n%%EOF\n"
+)
+
+
+# "auto" detects the format before resizing; "PNG" skips straight to resizing.
+@pytest.mark.parametrize("output_format", ["auto", "PNG"])
+@pytest.mark.parametrize("to_input", [bytes, io.BytesIO], ids=["bytes", "BytesIO"])
+def test_image_to_url_rejects_eps_without_rendering(
+    output_format: Literal["auto", "PNG"],
+    to_input: Callable[[bytes], bytes | io.BytesIO],
+) -> None:
+    """``image_to_url`` rejects EPS data before Pillow renders it with Ghostscript."""
+    with (
+        mock.patch("PIL.EpsImagePlugin.Ghostscript") as ghostscript,
+        pytest.raises(StreamlitAPIException, match="EPS images are not supported"),
+    ):
+        image_to_url(
+            to_input(_EPS_BYTES),
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format=output_format,
+            image_id="test-eps",
+        )
+
+    ghostscript.assert_not_called()
 
 
 def test_image_to_url_returns_empty_when_runtime_unavailable(no_runtime: None) -> None:
