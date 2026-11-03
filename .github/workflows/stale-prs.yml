@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Run in dry-run mode (no labels/comments/closures)
+        description: Run in dry-run mode (no labels/comments)
         required: true
         default: false
         type: boolean
@@ -35,8 +35,9 @@ jobs:
           # We only want this to apply to PRs. Issues are not to be marked as stale.
           days-before-issue-stale: -1
           days-before-issue-close: -1
-          days-before-pr-stale: 14
-          days-before-pr-close: 7
+          # Core-team PRs may sit longer; maintainers close old ones rather than the bot.
+          days-before-pr-stale: 90
+          days-before-pr-close: -1
 
           # Exemptions from stale processing.
           exempt-draft-pr: true
@@ -47,12 +48,10 @@ jobs:
           remove-pr-stale-when-updated: true
 
           stale-pr-message: >
-            This pull request has had no activity for 14 days, so it has been marked as stale.
-            If you still want to continue this work, please leave a comment or push a commit
-            within 7 days. A maintainer can also apply the `never-stale` label to opt out.
-          close-pr-message: >
-            This pull request was closed after being marked stale for 7 days with no further
-            activity. If you want to continue, comment here and a maintainer can help reopen.
+            This pull request has had no activity for 90 days, so it has been marked as stale
+            as a reminder. It will not be auto-closed. Continue the work with a comment or a
+            commit, close it if it is no longer needed, or apply the `never-stale` label to
+            opt out of this reminder.
 
           # Toggle dry-run behavior when dispatching this workflow.
           debug-only: ${{ inputs.dry_run }}
@@ -64,14 +63,10 @@ jobs:
         env:
           DRY_RUN: ${{ inputs.dry_run }}
           STALED_JSON: ${{ steps.stale.outputs['staled-issues-prs'] || '[]' }}
-          CLOSED_JSON: ${{ steps.stale.outputs['closed-issues-prs'] || '[]' }}
         run: |
           STALED_COUNT="$(jq 'length' <<<"$STALED_JSON")"
-          CLOSED_COUNT="$(jq 'length' <<<"$CLOSED_JSON")"
           if [ "$DRY_RUN" = "true" ]; then
             echo "Dry run: would mark stale: ${STALED_COUNT}"
-            echo "Dry run: would close: ${CLOSED_COUNT}"
           else
             echo "Marked stale: ${STALED_COUNT}"
-            echo "Closed: ${CLOSED_COUNT}"
           fi
