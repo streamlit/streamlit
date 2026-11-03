@@ -27,8 +27,6 @@ import { Global } from "@emotion/react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
 import { getLogger } from "loglevel"
-import embed from "vega-embed"
-import { expressionInterpreter } from "vega-interpreter"
 import type { TopLevelSpec } from "vega-lite"
 
 import {
@@ -40,6 +38,7 @@ import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { loadVegaEmbed } from "~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -52,6 +51,7 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_CHART_HEIGHT,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
@@ -148,7 +148,7 @@ export function getMetricChartSpec(
     // package. vega-embed logs a version mismatch warning otherwise.
     $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: Math.round(availableWidth),
-    height: Math.round(convertRemToPx("3.5rem")),
+    height: Math.round(convertRemToPx(METRIC_CHART_HEIGHT)),
     data: {
       values: data.map((value, index) => ({ x: index, y: value })),
     },
@@ -386,9 +386,10 @@ function Metric({
   const deltaA11yId = useId()
 
   useEffect(() => {
+    const chartElement = chartRef.current
     if (
       chartData.length === 0 ||
-      !chartRef.current ||
+      !chartElement ||
       // Having a chart width <= 0 causes issues with vega-embed:
       chartWidth <= 0
     ) {
@@ -406,34 +407,41 @@ function Metric({
     let isCancelled = false
     let finalizeEmbed: (() => void) | undefined
 
-    void embed(chartRef.current, spec, {
-      actions: false,
-      renderer: "svg",
-      ast: true,
-      expr: expressionInterpreter,
-      tooltip: {
-        theme: "custom",
-        formatTooltip: (value: { y: number }) => {
-          // Only show the y value in the tooltip since
-          // the x value is just the numeric index of the point:
-          return `${value.y}`
+    const renderChart = async (): Promise<void> => {
+      // Load Vega here, not at module scope, so metrics without a chart don't
+      // download it.
+      const { embed, expressionInterpreter } = await loadVegaEmbed()
+      if (isCancelled) return
+
+      const result = await embed(chartElement, spec, {
+        actions: false,
+        renderer: "svg",
+        ast: true,
+        expr: expressionInterpreter,
+        tooltip: {
+          theme: "custom",
+          formatTooltip: (value: { y: number }) => {
+            // Only show the y value in the tooltip since
+            // the x value is just the numeric index of the point:
+            return `${value.y}`
+          },
         },
-      },
+      })
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets isCancelled during the await
+      if (isCancelled) {
+        // Embed resolved after this effect was cancelled; drop the view.
+        result.finalize()
+      } else {
+        finalizeEmbed = result.finalize
+      }
+    }
+
+    renderChart().catch((error: unknown) => {
+      // Leave the chart empty if Vega fails to load or embed rejects during
+      // teardown. LOG.debug shows the error only when debug logging is enabled.
+      LOG.debug("Failed to embed metric chart:", error)
     })
-      .then(result => {
-        if (isCancelled) {
-          // Embed resolved after this effect was cancelled; drop the view.
-          result.finalize()
-        } else {
-          finalizeEmbed = result.finalize
-        }
-        return
-      })
-      .catch((error: unknown) => {
-        // Ignore embed rejections so teardown races do not throw. LOG.debug
-        // records the error only when debug logging is enabled.
-        LOG.debug("Failed to embed metric chart:", error)
-      })
 
     return () => {
       isCancelled = true

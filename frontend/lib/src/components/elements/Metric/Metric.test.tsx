@@ -15,7 +15,9 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { getLogger } from "loglevel"
 import embed from "vega-embed"
+import { expressionInterpreter } from "vega-interpreter"
 import { type TopLevelSpec, version as vegaLiteVersion } from "vega-lite"
 
 import {
@@ -29,6 +31,7 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
+import { loadVegaEmbed } from "~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
@@ -47,6 +50,12 @@ const EXPECTED_VEGA_LITE_SCHEMA = `https://vega.github.io/schema/vega-lite/v${
 vi.mock("vega-embed", () => ({
   default: vi.fn(),
 }))
+
+// Record when Metric loads Vega. The spy calls through to the real loader,
+// which then imports the mocked vega-embed.
+vi.mock("~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed", {
+  spy: true,
+})
 
 // Mock useCalculatedDimensions hook
 vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
@@ -492,7 +501,11 @@ describe("Metric element", () => {
       })
       render(<Metric {...props} />)
 
+      // The container holds the chart's height before Vega draws into it.
       expect(screen.getByTestId("stMetricChart")).toBeVisible()
+      expect(screen.getByTestId("stMetricChart")).toHaveStyle({
+        minHeight: "3.5rem",
+      })
     })
 
     it("caps a sparkline to the card when printing", () => {
@@ -616,6 +629,77 @@ describe("Metric element", () => {
       ])
     })
 
+    it("loads vega-embed only after chart data is provided", async () => {
+      const { rerender } = render(<Metric {...getProps()} />)
+      expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
+
+      rerender(
+        <Metric
+          {...getProps({
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+
+      expect(vi.mocked(loadVegaEmbed)).toHaveBeenCalledTimes(1)
+      await waitFor(() => {
+        expect(vi.mocked(embed)).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it("does not embed a chart that unmounts while vega-embed loads", async () => {
+      const { promise, resolve } =
+        Promise.withResolvers<Awaited<ReturnType<typeof loadVegaEmbed>>>()
+      vi.mocked(loadVegaEmbed).mockReturnValueOnce(promise)
+
+      const { unmount } = render(
+        <Metric
+          {...getProps({
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+      expect(vi.mocked(loadVegaEmbed)).toHaveBeenCalledTimes(1)
+      unmount()
+
+      resolve({ embed, expressionInterpreter })
+      // renderChart subscribed to this promise before this await, so its
+      // cancellation check runs before the assertion.
+      await promise
+
+      expect(vi.mocked(embed)).not.toHaveBeenCalled()
+    })
+
+    it("leaves the chart empty if vega-embed fails to load", async () => {
+      const loadError = new Error(
+        "Failed to fetch dynamically imported module"
+      )
+      vi.mocked(loadVegaEmbed).mockRejectedValueOnce(loadError)
+      const logDebugSpy = vi.spyOn(getLogger("Metric"), "debug")
+
+      render(
+        <Metric
+          {...getProps({
+            body: "42",
+            chartData: [1, 2, 3],
+            chartType: MetricProto.ChartType.LINE,
+          })}
+        />
+      )
+
+      await waitFor(() => {
+        expect(logDebugSpy).toHaveBeenCalledWith(
+          "Failed to embed metric chart:",
+          loadError
+        )
+      })
+      expect(screen.getByTestId("stMetricValue")).toHaveTextContent("42")
+      expect(screen.getByTestId("stMetricChart")).toBeEmptyDOMElement()
+      expect(vi.mocked(embed)).not.toHaveBeenCalled()
+    })
+
     it("finalizes vega-embed if it resolves after unmount", async () => {
       const lateFinalize = vi.fn()
       const { promise, resolve } = Promise.withResolvers<{
@@ -644,7 +728,7 @@ describe("Metric element", () => {
       })
     })
 
-    it("does not call vega-embed when width is zero", () => {
+    it("does not load vega-embed when width is zero", () => {
       vi.mocked(useCalculatedDimensions).mockReturnValue({
         width: 0,
         height: 100,
@@ -658,7 +742,7 @@ describe("Metric element", () => {
 
       render(<Metric {...props} />)
 
-      expect(vi.mocked(embed)).not.toHaveBeenCalled()
+      expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
     })
 
     it("renders chart with different chart types", async () => {
