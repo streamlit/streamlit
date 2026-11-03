@@ -35,6 +35,11 @@ export const StyledAppViewContainer = styled.div({
   overflow: "hidden",
 
   "@media print": {
+    // Keep the sidebar beside the page, and let the row grow past one
+    // screen so the sidebar is not clipped to the viewport.
+    position: "static",
+    height: "auto",
+    alignItems: "flex-start",
     // print multiple pages if app is scrollable in Safari
     overflow: "visible",
   },
@@ -144,6 +149,7 @@ export const StyledAppViewMain = styled.main<StyledAppViewMainProps>(
       "@media print": {
         // print multiple pages if app is scrollable in Safari
         overflow: "visible",
+        height: "auto",
         "&:focus-visible::before": {
           content: "none",
         },
@@ -328,6 +334,10 @@ export const StyledMainContent = styled.div(({ theme }) => ({
   width: theme.sizes.full,
   minWidth: 0,
   height: `100dvh`,
+
+  "@media print": {
+    height: "auto",
+  },
 
   // Apply relative positioning only on desktop to fix header positioning when sidebar opens.
   // On mobile, relative positioning is omitted to allow the sidebar to properly overlay
