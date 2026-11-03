@@ -19,7 +19,8 @@ covered if loading takes longer than a short grace period. On top of that rule:
 - Spinners inside a skeleton become its label instead of a second indicator.
 
 Cached reruns then show no skeleton, no flicker, and no remount, while cache misses show
-the skeleton in place of the old content at its exact size.
+the skeleton in place of the old content at its exact size. A prototype and a demo
+dashboard confirm this behavior (see [Prototype](#prototype)).
 
 ## Problem
 
@@ -98,14 +99,15 @@ the frontend:
 - **Visible content** is any element other than a skeleton or `st.empty`, or a container
   that holds one. Spinners and other transient elements are not visible content, so a
   cached function's spinner never ends a skeleton.
-- **First load.** If the slot has nothing to keep, the skeleton renders immediately at its
-  `height`.
+- **First load.** If the slot is new, the skeleton renders immediately at its `height`.
 - **Rerun.** If the slot holds content from a previous run, that content stays mounted.
   - Fresh visible content arriving within the grace period (0.5s, the same as the stale
     fade and `st.spinner`) replaces it in place, so the user never sees the skeleton.
     Content of the same type and identity keeps its React state.
   - After the grace period, a skeleton overlay covers the old content at its exact size
     until fresh visible content arrives.
+  - If the slot has nothing to keep, for example because its last run drew nothing, the
+    skeleton also waits for the grace period, so a fast rerun doesn't flash it.
 - **Clearing.** The skeleton disappears as soon as the first fresh visible element lands in
   its slot. If none arrives, it depends on the kind of skeleton:
   - A standalone skeleton remains, as it does today.
@@ -119,9 +121,10 @@ chart_slot = st.skeleton(height=260)
 chart_slot.bar_chart(load_revenue(region), height=260)
 ```
 
-A prototype confirmed it: with 50ms of work on a cache hit, the overlay never became
-visible, and the chart's and dataframe's DOM nodes survived both cached and cache-miss
-reruns. On a miss, the overlay covered the old content after ~0.6s with no height change.
+An early prototype confirmed it: with 50ms of work on a cache hit, the overlay never
+became visible, and the chart's and dataframe's DOM nodes survived both cached and
+cache-miss reruns. On a miss, the overlay covered the old content after ~0.6s with no
+height change.
 
 ![Prototype: on a cache miss, the skeleton covers the old charts at their exact size](./prototype-cache-miss.png)
 
@@ -167,7 +170,7 @@ Recommend standalone mode (fixed by the rule) for dashboards.
 
 ### 3. A skeleton for fragments
 
-**Option A: Fragment-level skeleton** ✅ PREFERRED
+**Option A: Fragment-level skeleton** ✅ PREFERRED, with option B for the first-load size
 
 The fragment's container shows a skeleton on every run of the fragment, under the rule
 above. That includes full-app runs, fragment-only reruns (for example an in-card toggle),
@@ -204,7 +207,28 @@ container is not visible content, so leaving the `with` block doesn't clear the 
 
 - Pros: No new parameter. The size is given at the call site.
 - Cons: Only covers full-app runs, because a fragment-only rerun doesn't re-enter the outer
-  block. Covering reruns needs a second skeleton inside the fragment body.
+  block. Covering those reruns needs option A.
+
+**Prototype finding: A and B combine.** On a rerun, a fragment-level skeleton takes its size
+from the previous content, so only the first load needs a size. Without one, the prototype
+draws it at the minimum element height. The [demo dashboard](#prototype) therefore sizes
+every card body with option B. It adds option A only to the card that refreshes on its own
+(`run_every`), which option B doesn't cover:
+
+```python
+@st.fragment(parallel=True, run_every="15s", loading="skeleton")
+def live_orders():
+    st.bar_chart(load_live_orders(), height=340)
+
+
+with st.container(border=True):
+    st.markdown("**Live orders**")
+    with st.skeleton(height=340):  # Sizes the first load
+        live_orders()  # loading="skeleton" covers the refreshes
+```
+
+The other 10 card bodies needed only option B: they rerun with the app, or hit the cache
+when they rerun on their own.
 
 **Option C: Let parallel fragments fill a placeholder created outside them**
 (`ph = st.skeleton(); card(ph)`)
@@ -221,10 +245,11 @@ about 100ms at most). Fragment reruns and nested parallel fragments are unchange
 `parallel` docstring only promises that fragments *may* run concurrently with the rest of
 the script, so this stays within the contract.
 
-Prototype measurements with two CPU-bound loaders: the layout, footer, and both skeletons
-reached the browser in **~100ms** instead of 750–850ms, and the cards finished 70–300ms
-later than with an immediate start. For I/O-bound loaders the cost is the duration of the
-script body after the dispatch, which is milliseconds in a layout-first script.
+Early prototype measurements with two CPU-bound loaders: the layout, footer, and both
+skeletons reached the browser in **~100ms** instead of 750–850ms, and the cards finished
+70–300ms later than with an immediate start. For I/O-bound loaders the cost is the
+duration of the script body after the dispatch, which is milliseconds in a layout-first
+script.
 
 - Pros: Makes "layout first" hold regardless of GIL-heavy work. Simple mental model:
   "parallel fragments run after the script".
@@ -262,8 +287,9 @@ With option D:
 - **Default `show_spinner=True`:** inside a skeleton's slot, nothing extra is shown. The
   skeleton is the loading indicator.
 - **Explicit text** (`show_spinner="Fetching coverage..."` or `st.spinner("...")`): shown
-  centered on the skeleton, with the spinner icon. It appears at the same time as the
-  overlay and goes away with it.
+  centered on the skeleton, with the spinner icon. On a first load it appears after the
+  spinner's usual 0.5s delay, and on a rerun together with the overlay. It goes away with
+  the skeleton.
 - **Outside skeletons:** spinners are unchanged.
 
 A standalone skeleton can't be tied to a spinner, because the spinner renders at the next
@@ -315,6 +341,34 @@ Content that changes identity still remounts on a miss, for example a dataframe 
 `key`, whose identity includes its data. Guidance keeps recommending a `key` for stateful
 elements.
 
+## Prototype
+
+Draft PR [#17838](https://github.com/streamlit/streamlit/pull/17838) implements the
+preferred option of every change. A
+[BI dashboard demo](https://github.com/streamlit/feature-demos/tree/main/layout-first-loading)
+runs on it with simulated warehouse queries. It has 11 card bodies, each a parallel fragment
+behind a skeleton, with cached loaders and explicit spinner texts. Sidebar controls switch to
+a plain sequential script and to queries that hold the GIL.
+
+- **First load:** the layout and all 11 skeletons appeared in the first paint, and every
+  card had loaded about 2s later. Each card had the same height in its skeleton, loading,
+  and loaded states.
+- **Cached rerun:** no overlay appeared, and the keyed dataframe kept its row selection.
+- **Cache miss with GIL-holding queries:** the overlays appeared after ~0.65s, labeled with
+  each query's spinner text, and every card had updated after ~4.1s. The sequential script,
+  with I/O-bound queries, updated its first card after 8.3s and hadn't finished after 14s.
+
+What the prototype changed in this spec:
+
+- Fragment skeletons rely on option B for their first-load size (see
+  [change 3](#3-a-skeleton-for-fragments)).
+- Skeleton labels need loading blocks, so they move to phase 2 (see [Rollout](#rollout)).
+- A skeleton must be as tall as its content, or the first load shifts. Reruns keep the old
+  content's size, so they never shift. For content without a `height` parameter, authors
+  measure the height by hand: the demo hardcodes 184px for a bordered `st.metric` with a
+  delta and a sparkline, and 34px for a caption below a table. `height="stretch"` in a
+  bounded parent, such as `st.card(height=...)`, avoids the measurement.
+
 ## Alternatives considered
 
 - **Cache-driven skeletons** (`@st.cache_data(show_skeleton=True)`, or an `is_cached()`
@@ -338,9 +392,13 @@ elements.
 
 | Phase | Changes                                                                                  | Kind                                         |
 | ----- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
-| 1     | The rule (change 1), frontend-side grace delay, and change 5 for today's `with` mode     | Bug fix, no API change                       |
-| 2     | Change 2 and the fragment-level skeleton (change 3)                                      | Behavior change and a new fragment parameter |
+| 1     | The rule (change 1), frontend-side grace delay, and hiding auto-generated spinner text inside today's `with` blocks (change 5) | Bug fix, no API change |
+| 2     | Change 2, the fragment-level skeleton (change 3), and skeleton labels for explicit spinner text (change 5) | Behavior change and a new fragment parameter |
 | 3     | Change 4                                                                                 | Behavior change of parallel fragment timing  |
+
+A skeleton label is found by the loading block that the spinner renders into. In today's
+`with` mode, the spinner renders after the skeleton instead of inside it, so labels wait for
+change 2.
 
 Update the embedded skill with each phase. Today `references/best-practices.md`,
 `references/performance.md`, `references/dashboards.md`, and the dashboard templates
@@ -361,12 +419,15 @@ blocks.
 1. Is the change 2 behavior change acceptable, or should context-manager mode stay as it is
    (option C)?
 2. Fragment skeleton API: the name (`loading="skeleton"` is an enum that can grow, vs.
-   `show_skeleton=True`), and its size on a first load. Options are an explicit height
-   argument, the parent's bounded height (`st.card(height=...)`, `st.container(height=...)`),
-   or a fixed default.
+   `show_skeleton=True`), and its size on a first load. The prototype takes the size from an
+   enclosing `with st.skeleton(height=...)` (option B). Is that two-construct pattern
+   acceptable for fragments that rerun on their own, or should the fragment skeleton take an
+   explicit height argument or the parent's bounded height (`st.card(height=...)`,
+   `st.container(height=...)`)?
 3. Should change 4 be the default (option A) or opt-in (option B)? Should it use the
-   "or N ms" variant?
-4. Spinner policy: option D, or the simpler option A?
+   "or N ms" variant? The prototype implements option A without the variant, and the demo
+   didn't need it.
+4. Spinner policy: option D, which the prototype implements, or the simpler option A?
 
 ## Checklist
 
