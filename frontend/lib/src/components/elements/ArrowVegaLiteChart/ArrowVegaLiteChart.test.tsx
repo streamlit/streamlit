@@ -118,6 +118,12 @@ const getProps = (
 })
 
 describe("ArrowVegaLiteChart", () => {
+  // Load the grid's DataFrame module up front, so the first "Show data"
+  // click doesn't spend the `findBy*` timeout on importing it.
+  beforeAll(async () => {
+    await import("~lib/components/widgets/DataFrame/ReadOnlyGrid")
+  })
+
   beforeEach(() => {
     mockWindowLocation("localhost")
     vegaEmbedMock.exportToPng.mockResolvedValue("data:image/png;base64,mock")
@@ -164,6 +170,7 @@ describe("ArrowVegaLiteChart", () => {
 
     // Initially, the chart container should be present
     expect(screen.getByTestId("stVegaLiteChart")).toBeVisible()
+    expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
 
     // The toolbar action should be present when data exists
     const showDataButton = screen.getByRole("button", { name: "Show data" })
@@ -172,6 +179,7 @@ describe("ArrowVegaLiteChart", () => {
     await user.click(showDataButton)
 
     // Should switch to grid view (Show chart action appears) and chart container hidden
+    expect(await screen.findByTestId("stDataFrame")).toBeVisible()
     await screen.findByRole("button", { name: "Show chart" })
     expect(screen.queryByTestId("stVegaLiteChart")).toBeNull()
 
