@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import math
 import unittest
 from typing import TYPE_CHECKING
 from unittest.mock import patch
@@ -38,6 +39,8 @@ from streamlit.runtime.stats import (
     CacheStat,
     CounterStat,
     GaugeStat,
+    HistogramStat,
+    Stat,
     StatsManager,
     StatsProvider,
     group_cache_stats,
@@ -524,3 +527,75 @@ def test_gauge_stat_marshall_metric_proto_without_labels_adds_no_labels() -> Non
     # gauge metric point is populated.
     assert len(metric.labels) == 0
     assert metric.metric_points[0].gauge_value.int_value == 4
+
+
+def _histogram_stat(labels: dict[str, str] | None = None) -> HistogramStat:
+    return HistogramStat(
+        family_name="request_duration_seconds",
+        buckets=((0.5, 1), (1.0, 3), (math.inf, 4)),
+        observation_sum=7.25,
+        observation_count=4,
+        labels=labels,
+        unit="seconds",
+        help="Request duration.",
+    )
+
+
+def test_histogram_stat_implements_stat_protocol() -> None:
+    """HistogramStat has every property required by the Stat protocol."""
+    stat = _histogram_stat()
+
+    assert isinstance(stat, Stat)
+    assert stat.type == "histogram"
+    assert stat.unit == "seconds"
+
+
+def test_histogram_stat_to_metric_str() -> None:
+    """Buckets, sum, and count lines follow the OpenMetrics histogram format."""
+    stat = _histogram_stat(labels={"route": 'a"b', "cache": "x"})
+
+    assert stat.to_metric_str().splitlines() == [
+        'request_duration_seconds_bucket{cache="x",le="0.5",route="a\\"b"} 1',
+        'request_duration_seconds_bucket{cache="x",le="1.0",route="a\\"b"} 3',
+        'request_duration_seconds_bucket{cache="x",le="+Inf",route="a\\"b"} 4',
+        'request_duration_seconds_sum{cache="x",route="a\\"b"} 7.25',
+        'request_duration_seconds_count{cache="x",route="a\\"b"} 4',
+    ]
+
+
+def test_histogram_stat_to_metric_str_without_labels() -> None:
+    """Unlabelled histograms only carry the ``le`` label on bucket lines."""
+    lines = _histogram_stat().to_metric_str().splitlines()
+
+    assert lines[0] == 'request_duration_seconds_bucket{le="0.5"} 1'
+    assert lines[-2:] == [
+        "request_duration_seconds_sum 7.25",
+        "request_duration_seconds_count 4",
+    ]
+
+
+def test_histogram_stat_formats_integral_sum_as_float() -> None:
+    """The sum is always rendered as a float, matching the seconds base unit."""
+    stat = _histogram_stat()._replace(observation_sum=2)
+
+    assert "request_duration_seconds_sum 2.0" in stat.to_metric_str()
+
+
+def test_histogram_stat_marshall_metric_proto() -> None:
+    """The protobuf histogram point carries sorted labels, sum, count, and buckets."""
+    metric = MetricProto()
+    _histogram_stat(labels={"b": "2", "a": "1"}).marshall_metric_proto(metric)
+
+    assert [(label.name, label.value) for label in metric.labels] == [
+        ("a", "1"),
+        ("b", "2"),
+    ]
+    assert len(metric.metric_points) == 1
+    histogram = metric.metric_points[0].histogram_value
+    assert histogram.double_value == 7.25
+    assert histogram.count == 4
+    assert [(bucket.upper_bound, bucket.count) for bucket in histogram.buckets] == [
+        (0.5, 1),
+        (1.0, 3),
+        (math.inf, 4),
+    ]

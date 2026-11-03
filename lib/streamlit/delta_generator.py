@@ -347,13 +347,6 @@ class DeltaGenerator(
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
 
-        # Change the module of all mixin'ed functions to be st.delta_generator,
-        # instead of the original module (e.g. st.elements.markdown)
-        for mixin in self.__class__.__bases__:
-            for func in mixin.__dict__.values():
-                if callable(func):
-                    func.__module__ = self.__module__
-
     def __repr__(self) -> str:
         return util.repr_(self)
 

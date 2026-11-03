@@ -140,7 +140,6 @@ runner's system Python.
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
-| `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 
 ### AI-Assisted Workflows
 

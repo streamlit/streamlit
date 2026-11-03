@@ -9,7 +9,7 @@
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
   - `lib/streamlit/.agents/skills/AGENTS.md` — for bundled agent skills (inside `lib/streamlit/.agents/skills/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
-  - `.claude/skills/AGENTS.md` — for skill instructions (`.claude/skills/`, `.cursor/rules/`, `.github/instructions/`)
+  - `.claude/skills/AGENTS.md` — for skill instructions (`.claude/skills/`, `.cursor/rules/`)
   - `.claude/agents/AGENTS.md` — for agent instructions (`.claude/agents/`)
 - Product alignment is explicitly assessed for user-facing changes. Treat a change as user-facing
   when it adds or modifies a public API, configuration option, CLI surface, rendered UI or
@@ -54,6 +54,11 @@
     product concerns.
 - Assess whether the implementation's complexity is proportionate to the value it provides.
   Call out unnecessary abstractions, indirection, state, dependencies, or maintenance burden.
+- Check that element- and widget-specific logic stays in the element's own implementation
+  (see "Keep elements self-contained" in the root `AGENTS.md`). Flag element-type checks or
+  single-element helpers the PR adds to shared code when they could live in the element.
+  This is usually a non-blocking recommendation. Existing cross-element code is out of scope
+  unless the PR extends it.
 - Weigh edge-case findings by likelihood and impact before raising them. Name the concrete
   trigger and how likely real apps are to hit it. Treat rare or theoretical cases without
   security or data-loss impact as non-blocking. For those, recommend the simplest response that
@@ -197,4 +202,4 @@ Verdict criteria:
   again unless you can show the case is more likely or more harmful than the reply assumed.
   This never applies to security or data-loss findings.
 - Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.
-- Agent and skill instructions (`.claude/agents/`, `.claude/skills/`, and the generated copies under `.cursor/rules/` and `.github/instructions/`) stay high-level on purpose. Do not ask for shell scripts, command sequences, or step-by-step procedures in those files. Comment only when the goal or a real constraint is missing or wrong.
+- Agent and skill instructions (`.claude/agents/`, `.claude/skills/`, and the generated copies under `.cursor/rules/`) stay high-level on purpose. Do not ask for shell scripts, command sequences, or step-by-step procedures in those files. Comment only when the goal or a real constraint is missing or wrong.

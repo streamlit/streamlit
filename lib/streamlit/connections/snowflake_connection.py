@@ -885,6 +885,18 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
                 )
             params[param_name] = value
 
+        # Optional overrides for containers that route connector traffic through a
+        # local proxy (for example, http and 8082). Without them, the connector
+        # uses https on port 443. The owner "snowflake" connection reads these
+        # values from the mounted default connection file instead.
+        for param_name, env_var_name in (
+            ("protocol", "SNOWFLAKE_PROTOCOL"),
+            ("port", "SNOWFLAKE_PORT"),
+        ):
+            value = os.getenv(env_var_name)
+            if value is not None:
+                params[param_name] = value
+
         # Validate the token file exists, and read it.
         if not os.path.exists(SNOWPARK_CONNECTION_TOKEN_FILE):
             raise StreamlitAPIException(

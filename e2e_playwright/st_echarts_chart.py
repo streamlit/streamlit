@@ -666,3 +666,49 @@ with st.container(key="c_dense_line_opt_out"):
         renderer="svg",
         height=_HEIGHT,
     )
+
+# Point selection on a dataset.source DataFrame: data_indices address that
+# DataFrame's rows. Two full-height bars, one per half of the chart, so a click
+# at 75% width lands on the second bar.
+_selection_df = pd.DataFrame({"day": ["Mon", "Tue"], "sales": [100, 100]})
+dataset_selection_event = st.echarts_chart(
+    {
+        "dataset": {"source": _selection_df},
+        "xAxis": {"type": "category"},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [{"type": "bar", "barWidth": "90%", "selectedMode": "multiple"}],
+        **_NO_ANIM,
+    },
+    key="dataset_selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+_dataset_rows = [
+    i
+    for group in dataset_selection_event.selection.selected
+    for i in group["data_indices"]
+]
+_selected_days = ", ".join(_selection_df.iloc[_dataset_rows]["day"]) or "none"
+st.write(f"echarts dataset selection: {_selected_days}")
+
+# A per-minute time axis in a narrow container. ECharts spaces time ticks by
+# the data range, not the chart width, so the theme's `hideOverlap` default
+# has to drop the labels that would collide.
+_minutes = pd.DataFrame(
+    {
+        "minute": pd.date_range("2026-11-03 13:25", periods=30, freq="min"),
+        "orders": np.arange(30) % 7 + 20,
+    }
+)
+with st.container(key="c_narrow_time_axis", width=320):
+    st.echarts_chart(
+        {
+            "dataset": {"source": _minutes},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "encode": {"x": "minute", "y": "orders"}}],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )

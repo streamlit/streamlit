@@ -268,21 +268,28 @@ const NumberInput: React.FC<Props> = ({
 
       setHasRequiredError(false)
       setValidationError(null)
-      setValueWithSource({ value: newValue, fromUser })
 
-      // Inside a form, write the committed value to the WidgetStateManager
-      // synchronously. `setValueWithSource` only defers the write to an effect,
-      // but the Enter key handler submits the form synchronously in the same
-      // event, so without this the form would submit the *previously* committed
-      // value (the effect runs after `submitForm`). Writing a form's widget
-      // state doesn't schedule a rerun, so this adds no extra rerun.
-      if (inForm) {
-        updateWidgetMgrState(
-          element,
-          widgetMgr,
-          { value: newValue, fromUser },
-          fragmentId
-        )
+      // An edit that ends on the committed number (e.g. "5.0" over 5, or
+      // clearing an empty field) is not a change, so skip the commit (and its
+      // rerun).
+      if (newValue !== value) {
+        setValueWithSource({ value: newValue, fromUser })
+
+        // Inside a form, write the committed value to the WidgetStateManager
+        // synchronously. `setValueWithSource` only defers the write to an
+        // effect, but the Enter key handler submits the form synchronously in
+        // the same event, so without this the form would submit the
+        // *previously* committed value (the effect runs after `submitForm`).
+        // Writing a form's widget state doesn't schedule a rerun, so this adds
+        // no extra rerun.
+        if (inForm) {
+          updateWidgetMgrState(
+            element,
+            widgetMgr,
+            { value: newValue, fromUser },
+            fragmentId
+          )
+        }
       }
 
       setDirty(false)
@@ -294,6 +301,7 @@ const NumberInput: React.FC<Props> = ({
       formatCurrentValue,
       getRangeValidationMessage,
       setValueWithSource,
+      value,
       inForm,
       element,
       widgetMgr,

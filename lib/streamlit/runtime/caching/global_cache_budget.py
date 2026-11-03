@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Final
 from streamlit import config
 from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.logger import get_logger
-from streamlit.runtime.stats import CounterStat, StatsProvider
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -34,10 +33,8 @@ if TYPE_CHECKING:
     from streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper import (
         InMemoryCacheStorageWrapper,
     )
-    from streamlit.runtime.stats import Stat
 
 _LOGGER: Final = get_logger(__name__)
-CACHE_DATA_EVICTIONS_FAMILY: Final = "cache_data_evictions"
 
 
 @dataclass
@@ -62,7 +59,7 @@ class _EvictionCandidate:
     generation: int
 
 
-class GlobalCacheBudget(StatsProvider):
+class GlobalCacheBudget:
     """Enforce one LRU byte budget across in-memory ``st.cache_data`` storages.
 
     Storages report every write, read, and removal. Reads append to a bounded,
@@ -94,12 +91,7 @@ class GlobalCacheBudget(StatsProvider):
         self._storage_entries: dict[int, set[str]] = {}
         self._recency_hints: deque[tuple[int, str, int]] = deque(maxlen=4096)
         self._total_bytes = 0
-        self._global_evictions = 0
         self._eviction_warning_emitted = False
-
-    @property
-    def stats_families(self) -> Sequence[str]:
-        return (CACHE_DATA_EVICTIONS_FAMILY,)
 
     @property
     def is_enabled(self) -> bool:
@@ -369,32 +361,11 @@ class GlobalCacheBudget(StatsProvider):
                 expected_generation=candidate.generation,
             )
             if evicted:
-                with self._lock:
-                    self._global_evictions += 1
                 self._warn_eviction_once()
 
     def evict_candidates(self, candidates: Sequence[_EvictionCandidate]) -> None:
         """Remove victims returned by ``record_write_and_reserve_victims``."""
         self._evict_candidates(candidates)
-
-    def get_stats(
-        self, family_names: Sequence[str] | None = None
-    ) -> dict[str, list[Stat]]:
-        if family_names is not None and CACHE_DATA_EVICTIONS_FAMILY not in family_names:
-            return {}
-        with self._lock:
-            self._drain_pending_unregisters_locked()
-            count = self._global_evictions
-        return {
-            CACHE_DATA_EVICTIONS_FAMILY: [
-                CounterStat(
-                    family_name=CACHE_DATA_EVICTIONS_FAMILY,
-                    value=count,
-                    labels={"reason": "global_budget"},
-                    help="Total st.cache_data entries evicted by the global byte budget.",
-                )
-            ]
-        }
 
 
 class _GlobalCacheBudgetHolder:
