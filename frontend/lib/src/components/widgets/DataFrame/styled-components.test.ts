@@ -44,3 +44,23 @@ describe("StyledResizableContainer print layout", () => {
     expect(css).toMatch(/@media print\{[^{]+\{max-width:100%;overflow:clip/)
   })
 })
+
+describe("StyledResizableContainer layout", () => {
+  it("top-aligns the inline-block grid so no descender space is added below it", () => {
+    const { container } = render(
+      createElement(StyledResizableContainer, {
+        isInHorizontalLayout: false,
+        minHeight: 100,
+        disableResize: false,
+      })
+    )
+
+    expect(container.firstElementChild).toHaveStyle({
+      display: "inline-block",
+      verticalAlign: "top",
+    })
+    expect(container.firstElementChild).not.toHaveStyle({
+      verticalAlign: "baseline",
+    })
+  })
+})

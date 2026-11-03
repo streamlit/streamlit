@@ -32,6 +32,10 @@ export const StyledResizableContainer =
     ({ theme, disableResize, minHeight }) => ({
       position: "relative",
       display: disableResize ? "flex" : "inline-block",
+      // A baseline-aligned inline-block reserves room for font descenders
+      // below it, which makes a grid without a pixel height taller than its
+      // content (e.g. a chart's "Show data" grid vs. the chart it replaces).
+      verticalAlign: "top",
       height: "100%",
 
       "@media print": {

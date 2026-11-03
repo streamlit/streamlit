@@ -459,6 +459,7 @@ def test_arrow_dataset_chart_and_show_data(
     assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
 
     chart_handle = chart.element_handle()
+    chart_height = container.evaluate("el => getComputedStyle(el).height")
 
     # The hover-revealed toolbar overlaps the neighboring chart, so dispatch
     # the clicks directly on the buttons (see test_toolbar_actions).
@@ -466,6 +467,8 @@ def test_arrow_dataset_chart_and_show_data(
     dataframe = container.get_by_test_id("stDataFrame")
     expect(dataframe).to_be_visible()
     expect(chart).to_be_hidden()
+    # The table takes the chart's place at the chart's height.
+    expect(container).to_have_css("height", chart_height)
     # The grid draws its cells on a canvas and mirrors the visible ones in an
     # accessibility table, so check a value of the chart's dataframe there.
     # Column 0 is the pandas index, so column 1 is "day".
