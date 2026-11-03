@@ -111,10 +111,12 @@ for any method:
 - At the app's root, a reserved path a route does not take keeps the static file
   server's answer: `POST /_stcore/health` stays a `405`.
 
-**A trailing slash does not connect.** `/_stcore/agent/mcp/` gets the static file
-server's `301`, as every route's slash variant does, and neither official SDK follows a
-`301` for a `POST`, so the client reports a generic connection failure. Paste the URL
-without the slash; accepting it is a [follow-up](#follow-ups).
+**A trailing slash connects.** The static file server answers a path ending in `/`,
+such as `/_stcore/agent/mcp/`, with a `308` for methods other than `GET` and `HEAD`. A
+`308` keeps the `POST` and its body, and both official SDKs follow it, while neither
+follows the `301` it sent before, which turns the `POST` into a `GET`. Its `Location`
+is relative (`../mcp`), so it survives a proxy that strips a path prefix. `GET` and
+`HEAD` keep their `301`, so browsers see no change.
 
 **Each app is its own server.** A user who adds three apps gets three `interact` tools,
 which clients keep apart by the name the user gave each server. A successful
@@ -402,6 +404,13 @@ so neither a retry nor a smaller `limit` helps: the character budget already kee
 page of several rows far below it. On a table, the model can skip that row by reading
 on from the next offset. The `read_unsupported` message says this app's media store
 cannot return files, so no retry helps.
+
+A table whose rows cannot be converted to JSON, such as one holding a timestamp in a
+time zone neither Python nor Arrow knows, is refused with the parent's
+`internal_error`, also as a tool result. Its message tells the model to report that
+the rows cannot be read, since a retry fails the same way. The server logs it at debug
+level, as it does the snapshot's failed preview of the same table, rather than with a
+traceback on every read.
 
 ### Explaining the protocol to the model
 
@@ -821,10 +830,6 @@ rather than ranked, and name the parent spec's follow-up where one builds on it.
 7. **The `2026-07-28` revision**, once ChatGPT or the Claude apps default to it.
 8. **A machine-readable MCP server descriptor**, such as a `.well-known` document, once
    MCP settles on one.
-9. **Accepting a trailing slash.** Answering `/_stcore/agent/mcp/` with a `308`, which
-   keeps the `POST` across the redirect, or serving the slash variant itself, so a
-   pasted URL with a slash connects instead of failing on the static file server's
-   `301`.
 
 Compact responses, the parent spec's follow-up #9, need nothing MCP-specific, since the
 endpoint returns what `interact` returns. This ships without them and documents the
@@ -850,9 +855,9 @@ and most apps are unaffected.
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. On a host that plugs in its own media store, `get_data` returns `read_unsupported` for every call, so only `interact` works there ([Rollout](#rollout)). A prefix-stripping platform needs nothing more for URLs, because result URLs are relative and `get_data` resolves them on the server. |
-| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. One change to the shipped routes: any method on a reserved path under a page's URL is a `404`, so `POST /page2/_stcore/agent/interact` stops answering `405`. No new config options and no `st.*` changes.                                                                                                                                                                                           |
+| No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. Two changes to the shipped routes: any method on a reserved path under a page's URL is a `404`, so `POST /page2/_stcore/agent/interact` stops answering `405`, and a path ending in `/` answers methods other than `GET` and `HEAD` with a `308` instead of a `301`. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
 | Metrics collected          | The parent spec's usage counts, which ride on browser page profiles while `browser.gatherUsageStats` is on. Each `interact` tool call counts in `AgentApiUsage.mcp_interactions`, refused ones included, and each session it creates in `sessions`. With the API off, a request that passes the Host, `Origin`, and content-type checks counts, as on the HTTP route. A `get_data` read is not an interaction and is not counted. The negotiated protocol version is [out of scope](#out-of-scope) for v1. |
 | Any security/legal impact? | ⚠️ The parent spec's surface, made far easier to connect to. No new authority: the same switch, Host, `Origin`, and content-type checks, identity mapping, and limits. `Origin` validation also meets the MCP transport's requirement, `get_data` is no broader than `/media`, tool metadata is never app-authored, and `interact` is never annotated read-only.                                   |
-| Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, without a trailing slash, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
+| Any docs changes needed?   | A guide to connecting an app to AI applications. Its first step is turning on `server.enableAgentApi`, because a failed `initialize` often shows up as a generic connection error and the `-32600` body stays in the client logs. Then the URL, setup for common clients, what works locally versus deployed, and the `st.login` gap. The agent API reference gains the route and both tools, and the deployment docs say that the identity-header policy and any rate limits must cover `/_stcore/agent/mcp` too. |
 | Any other risks?           | MCP revises often, and writing the endpoint by hand means following the revisions common clients negotiate. The server is small enough to track them, and the SDK is the fallback. Clients that confirm every non-read-only tool call will ask before each `interact`, which is the honest cost of not labeling any action safe.                                                |
