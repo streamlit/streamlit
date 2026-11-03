@@ -248,7 +248,7 @@ class Page:
 
         The summary can optionally contain GitHub-flavored Markdown,
         including the Markdown directives described in the ``body``
-        parameter of ``st.markdown``, except ``:help[]``.
+        parameter of ``st.markdown``.
 
     Attributes
     ----------
