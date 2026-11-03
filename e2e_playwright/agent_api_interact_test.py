@@ -18,13 +18,9 @@
 `GET /_stcore/agent/openapi.json`, which describes it.
 
 The tests call the routes over HTTP with `page.request`, which sends no
-`Origin` header, like the programmatic clients the route serves. Externally
-marked tests also run against a hosted deployment of `agent_api_interact.py`
-with `server.enableAgentApi` on, so they derive agent route URLs from
-`agent_api_base_url` and tolerate headers a hosting platform adds. They open
-the app before calling the route, because a host that guards the app's origin
-with a login cookie, as Snowflake does, sets it while the app loads, and
-`page.request` sends the browser context's cookies.
+`Origin` header, like the programmatic clients the route serves. They open
+the app before calling the route so `page.request` sends the browser
+context's cookies.
 """
 
 from __future__ import annotations
@@ -395,7 +391,6 @@ def test_data_urls_serve_every_row_the_snapshot_counts(
     assert small_table["url"] != table["url"]
 
 
-@pytest.mark.external_test
 def test_snapshot_urls_context_and_headers_follow_the_request(
     app_page: Page, agent_api_base_url: str
 ) -> None:
@@ -445,7 +440,6 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     assert lines["timezone"] == "Asia/Kolkata"
 
 
-@pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
     app_page: Page, app_base_url: str, agent_api_base_url: str
 ) -> None:
@@ -502,7 +496,6 @@ def test_refuses_web_pages_and_ignores_client_identity(
     assert _SPOOFED_IDENTITY not in response.text()
 
 
-@pytest.mark.external_test
 def test_the_app_links_a_description_that_reaches_the_api(
     app_target: AppTarget, agent_api_base_url: str
 ) -> None:
