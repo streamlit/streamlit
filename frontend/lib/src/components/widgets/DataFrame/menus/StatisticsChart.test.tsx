@@ -15,8 +15,12 @@
  */
 
 import { screen, waitFor } from "@testing-library/react"
+import { getLogger } from "loglevel"
+import embed from "vega-embed"
+import { expressionInterpreter } from "vega-interpreter"
 import { version as vegaLiteVersion } from "vega-lite"
 
+import { loadVegaEmbed } from "~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed"
 import { render } from "~lib/test_util"
 
 import StatisticsChart from "./StatisticsChart"
@@ -46,6 +50,12 @@ vi.mock("vega-embed", () => ({
     return Promise.resolve({ finalize: mockFinalize })
   },
 }))
+
+// Record when the chart loads Vega. The spy calls through to the real loader,
+// which then imports the mocked vega-embed.
+vi.mock("~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed", {
+  spy: true,
+})
 
 describe("StatisticsChart", () => {
   beforeEach(() => {
@@ -254,7 +264,7 @@ describe("StatisticsChart", () => {
     expect(screen.getByText("banana")).toBeVisible()
     // Bars are labeled with each value's share of the total (not the raw count).
     expect(screen.getByText("30%")).toBeVisible()
-    expect(mockEmbed).not.toHaveBeenCalled()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
   })
 
   it("renders labeled bar chart for boolean statistics", () => {
@@ -270,7 +280,7 @@ describe("StatisticsChart", () => {
     expect(screen.getByText("False")).toBeVisible()
     expect(screen.getByText("60%")).toBeVisible()
     expect(screen.getByText("40%")).toBeVisible()
-    expect(mockEmbed).not.toHaveBeenCalled()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
   })
 
   it("returns null for numeric stats with empty histogram", () => {
@@ -284,7 +294,7 @@ describe("StatisticsChart", () => {
     )
 
     expect(container).toBeEmptyDOMElement()
-    expect(mockEmbed).not.toHaveBeenCalled()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
   })
 
   it("returns null for text stats with no top values", () => {
@@ -298,7 +308,7 @@ describe("StatisticsChart", () => {
     )
 
     expect(container).toBeEmptyDOMElement()
-    expect(mockEmbed).not.toHaveBeenCalled()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
   })
 
   it("returns null for boolean stats with zero count", () => {
@@ -314,6 +324,40 @@ describe("StatisticsChart", () => {
     )
 
     expect(container).toBeEmptyDOMElement()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
+  })
+
+  it("does not embed a histogram that unmounts while vega-embed loads", async () => {
+    const { promise, resolve } =
+      Promise.withResolvers<Awaited<ReturnType<typeof loadVegaEmbed>>>()
+    vi.mocked(loadVegaEmbed).mockReturnValueOnce(promise)
+
+    const { unmount } = render(<StatisticsChart statistics={numericStats} />)
+    expect(vi.mocked(loadVegaEmbed)).toHaveBeenCalledTimes(1)
+    unmount()
+
+    resolve({ embed, expressionInterpreter })
+    // renderChart subscribed to this promise before this await, so its
+    // cancellation check runs before the assertion.
+    await promise
+
+    expect(mockEmbed).not.toHaveBeenCalled()
+  })
+
+  it("leaves the histogram empty if vega-embed fails to load", async () => {
+    const loadError = new Error("Failed to fetch dynamically imported module")
+    vi.mocked(loadVegaEmbed).mockRejectedValueOnce(loadError)
+    const logDebugSpy = vi.spyOn(getLogger("StatisticsChart"), "debug")
+
+    render(<StatisticsChart statistics={numericStats} />)
+
+    await waitFor(() => {
+      expect(logDebugSpy).toHaveBeenCalledWith(
+        "Failed to embed statistics chart:",
+        loadError
+      )
+    })
+    expect(screen.getByRole("img")).toBeEmptyDOMElement()
     expect(mockEmbed).not.toHaveBeenCalled()
   })
 
@@ -353,7 +397,7 @@ describe("StatisticsChart", () => {
     expect(
       screen.getByText("this is a very long value that should be preserved")
     ).toBeVisible()
-    expect(mockEmbed).not.toHaveBeenCalled()
+    expect(vi.mocked(loadVegaEmbed)).not.toHaveBeenCalled()
   })
 
   it("does not render a visible bar for zero values", () => {

@@ -36,7 +36,7 @@ import streamlit as st
 from streamlit import config
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_metrics, cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -783,6 +783,9 @@ class ResourceCache(Cache[R]):
 
         self.key = key
         self.display_name = display_name
+        self._metrics = cache_metrics.get_cache_metrics().get_function_metrics(
+            CacheType.RESOURCE, display_name
+        )
         self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
             maxsize=max_entries,
             # In background mode this is the configured hard-expiration bound; freshness
@@ -790,6 +793,7 @@ class ResourceCache(Cache[R]):
             ttl=ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
             on_release=wrapped_on_release,
+            on_evict=self._metrics.record_evictions,
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
@@ -839,6 +843,7 @@ class ResourceCache(Cache[R]):
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
                 del self._mem_cache[value_key]
+                self._metrics.record_evictions("validate")
                 raise CacheKeyNotFoundError()
 
             return result

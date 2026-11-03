@@ -87,6 +87,7 @@ export const ElementContainer = memo(function ElementContainer({
         "stElementContainer",
         "element-container",
         convertKeyToClassName(userKey),
+        config.printLayout,
       ]
         .filter(Boolean)
         .join(" ")}

@@ -313,7 +313,11 @@ def test_handles_range_end_date_changes(app: Page):
 
 
 def test_handles_range_start_end_date_changes(app: Page):
-    """Test that it correctly handles changes to the start and end date of a range."""
+    """Test that clicking a day of a complete range starts a new range on it.
+
+    Covers a day inside the range, the current start date, and a month change
+    from the header picker before the end date is picked.
+    """
     date_field = get_date_input(app, "Range, two dates").get_by_test_id(
         "stDateInputField"
     )
@@ -332,6 +336,31 @@ def test_handles_range_start_end_date_changes(app: Page):
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
+    )
+
+    # --- Clicking the current start date starts the new range on it ---
+    date_field.get_by_role("spinbutton").first.click()
+    # Pressing the start anchors React Aria on the current end (July 12) until
+    # the click ends, so this must not commit July 12.
+    calendar.get_by_label(re.compile(r"Wednesday, July 10, 2019 selected$")).click()
+
+    expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
+
+    # --- The start date survives a month change from the header picker ---
+    # The picker renders outside the calendar, so focusing it makes React
+    # Aria drop the anchor.
+    month_trigger = calendar.get_by_role("button", name="month", exact=True)
+    month_trigger.click()
+    app.get_by_test_id("stDateInputHeaderPickerPopover").get_by_role(
+        "option", name="August"
+    ).click()
+    expect(month_trigger).to_have_text("August")
+
+    # The start stays anchored, so the hovered day may already read "selected".
+    calendar.get_by_label(re.compile(r"Friday, August 2, 2019( selected)?$")).click()
+
+    expect_markdown(
+        app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 8, 2))"
     )
 
 

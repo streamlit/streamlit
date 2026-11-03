@@ -22,6 +22,7 @@ from streamlit.proto.Alert_pb2 import Alert
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.Exception_pb2 import Exception as Exception_
+from streamlit.proto.ForwardMsg_pb2 import RunIdentity
 from streamlit.proto.NewSession_pb2 import (
     Config,
     CustomThemeConfig,
@@ -63,15 +64,20 @@ pytestmark = pytest.mark.filterwarnings(
             NewSession,
             {
                 ("initialize", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
-                ("script_run_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("name", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("main_script_path", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("custom_theme", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
                 ("app_pages", FD.LABEL_REPEATED, FD.TYPE_MESSAGE),
                 ("page_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
-                ("fragment_ids_this_run", FD.LABEL_REPEATED, FD.TYPE_STRING),
                 ("main_script_hash", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+            },
+        ),
+        (
+            RunIdentity,
+            {
+                ("script_run_id", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+                ("fragment_ids", FD.LABEL_REPEATED, FD.TYPE_STRING),
             },
         ),
         (

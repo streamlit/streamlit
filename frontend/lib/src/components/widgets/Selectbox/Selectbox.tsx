@@ -95,6 +95,7 @@ const Selectbox: FC<Props> = ({
     acceptNewOptions,
     filterMode,
     formId,
+    icon,
   } = element
 
   // Keep the query-param binding clearable whenever the default is empty, even
@@ -204,6 +205,7 @@ const Selectbox: FC<Props> = ({
       filterMode={filterMode}
       required={element.required}
       error={requiredError}
+      icon={icon}
     />
   )
 }
