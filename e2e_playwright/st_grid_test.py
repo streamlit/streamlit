@@ -50,9 +50,32 @@ def test_grid_with_span(app: Page):
     expect(span_grid.get_by_text("Spans 2 columns")).to_be_visible()
     expect(span_grid.get_by_text("Spans all columns")).to_be_visible()
 
-    span_all_cell = span_grid.get_by_test_id("stGridCell").first
+    cells = span_grid.get_by_test_id("stGridCell")
+    span_all_cell = cells.first
     expect(span_all_cell).to_have_css("grid-column-start", "1")
     expect(span_all_cell).to_have_css("grid-column-end", "-1")
+
+    # The row-span cell starts in the row of "Spans 2 columns" and ends with
+    # the row of "Cell 3", so it covers both rows and the gap between them.
+    row_span_cell = cells.filter(has_text="Spans 2 rows")
+    upper_row_cell = cells.filter(has_text="Spans 2 columns")
+    lower_row_cell = cells.filter(has_text="Cell 3")
+
+    def row_span_covers_two_rows() -> bool:
+        span_box = row_span_cell.bounding_box()
+        upper_box = upper_row_cell.bounding_box()
+        lower_box = lower_row_cell.bounding_box()
+        if span_box is None or upper_box is None or lower_box is None:
+            return False
+        span_bottom = span_box["y"] + span_box["height"]
+        lower_bottom = lower_box["y"] + lower_box["height"]
+        return (
+            abs(span_box["y"] - upper_box["y"]) < 1
+            and abs(span_bottom - lower_bottom) < 1
+            and lower_box["y"] > upper_box["y"]
+        )
+
+    wait_until(app, row_span_covers_two_rows)
 
 
 def test_grid_wrap_false_keeps_declared_columns(app: Page):
@@ -95,11 +118,9 @@ def test_grid_visual_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(first_grid, name="st_grid-auto_sizing")
 
 
-def test_grid_with_border_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Test bordered grid visual appearance in light and dark themes."""
-    bordered_grid = get_element_by_key(themed_app, "bordered")
+def test_grid_with_border_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test bordered grid visual appearance."""
+    bordered_grid = get_element_by_key(app, "bordered")
     assert_snapshot(bordered_grid, name="st_grid-bordered")
 
 

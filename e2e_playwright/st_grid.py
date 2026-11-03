@@ -41,6 +41,10 @@ with grid2.cell(column_span=2):
     st.markdown("**Spans 2 columns**")
     st.write("This cell takes up two columns")
 
+with grid2.cell(row_span=2):
+    st.markdown("**Spans 2 rows**")
+    st.write("This cell takes up two rows")
+
 with grid2.cell():
     st.markdown("**Cell 2**")
 
