@@ -87,6 +87,15 @@ const getProps = (props?: Partial<TabProps>): TabProps =>
     renderTabContent: vi.fn(),
   })
 
+/** Let WidgetStateManager's batched (macrotask) rerun flush run. */
+async function flushScheduledRerun(): Promise<void> {
+  await act(async () => {
+    await new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+}
+
 function mockTabListScrollMetrics(
   tablist: HTMLElement,
   metrics: {
@@ -187,7 +196,9 @@ describe("st.tabs", () => {
 
     panels.slice(1).forEach(panel => {
       expect(panel).not.toBeVisible()
+      expect(panel).toHaveAttribute("data-st-inactive")
     })
+    expect(panels[0]).not.toHaveAttribute("data-st-inactive")
   })
 
   it("does not show scroll arrows when tabs don't overflow", () => {
@@ -371,6 +382,71 @@ describe("st.tabs", () => {
         "Tab 2",
         { formId: "", fragmentId: undefined, fromUser: true }
       )
+    })
+
+    it("does not commit or rerun when the active tab is selected again", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[0])
+      await user.keyboard("{Home}")
+      await flushScheduledRerun()
+
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+      // Moving to another tab still commits and reruns.
+      await user.keyboard("{End}")
+      await flushScheduledRerun()
+
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+        widgetId,
+        "Tab 2",
+        { formId: "", fragmentId: undefined, fromUser: true }
+      )
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+
+      // End on the last tab is a no-op again.
+      await user.keyboard("{End}")
+      await flushScheduledRerun()
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not commit or rerun on arrow keys with a single tab", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(1, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      await user.click(screen.getByRole("tab"))
+      await user.keyboard("{ArrowRight}")
+      await user.keyboard("{ArrowLeft}")
+      await flushScheduledRerun()
+
+      expect(screen.getByRole("tab")).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
     })
 
     it("does NOT call widgetMgr.setStringValue on tab click for non-dynamic tabs", async () => {

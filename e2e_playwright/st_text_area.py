@@ -228,8 +228,8 @@ ignore_area = st.text_area(
 st.write("Ignore text area value:", ignore_area)
 
 apply_ignore_area = st.button("Apply ignore text area", key="apply_ignore_text_area")
-# Write into a fixed slot so the button click does not shift the widgets below.
-# A shift can remount a text area mid-rerun and drop a blocked required edit.
+# Write into a fixed slot so the button click does not insert or remove
+# elements below it (keeps required_notes at a stable tree position).
 applied_ignore_area_slot = st.empty()
 if apply_ignore_area:
     applied_ignore_area_slot.write(f"Applied ignore text area value: {ignore_area}")

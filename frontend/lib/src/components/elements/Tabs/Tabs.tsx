@@ -40,6 +40,7 @@ import {
 } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
+import { PRINT_INACTIVE_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
 import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
@@ -315,6 +316,10 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       // RAC guarantees key matches the id prop passed to <Tab> (always String(index)),
       // but guard against NaN in case id generation ever changes.
       if (Number.isNaN(newIndex)) return
+      // RAC also reports the already-active key (clicking the active tab,
+      // Home on the first tab, End on the last); skip it so dynamic tabs
+      // don't rerun without a change.
+      if (newIndex === activeTabKey) return
       const newLabel = allTabLabels[newIndex]
       setActiveTabKey(newIndex)
       activeTabNameRef.current = newLabel
@@ -332,6 +337,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     },
     [
+      activeTabKey,
       allTabLabels,
       blockId,
       fragmentId,
@@ -402,12 +408,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             }
             return (
               <StyledTabPanel
-                data-testid="stTabPanel"
-                id={String(index)}
-                $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
+                data-testid="stTabPanel"
+                id={String(index)}
+                // A closed panel stays mounted but is not printed. Print
+                // layout uses this to ignore the charts and dataframes inside it.
+                {...{
+                  [PRINT_INACTIVE_ATTRIBUTE]:
+                    activeTabKey === index ? undefined : "",
+                }}
+                $isActive={activeTabKey === index}
                 shouldForceMount
                 $constrainedHeight={hasConstrainedHeight}
               >

@@ -19,10 +19,6 @@ syntax = "proto3";
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 
-// NOTE: These proto types are used by some external services so need to
-// remain relatively stable. While they aren't entirely set in stone, changing
-// them may require a good amount of effort so should be avoided if possible.
-
 // This is the first message that is sent when a new session starts.
 // The enclosing ForwardMsg.metadata.run carries the identity of the run this
 // message starts.

@@ -47,6 +47,7 @@ import {
 import {
   ElementContainerConfig,
   MinStretchWidth,
+  PrintLayout,
 } from "./ElementContainerConfig"
 import ElementNodeRenderer, {
   type ElementNodeRendererProps,
@@ -829,15 +830,12 @@ describe("ElementNodeRenderer Block Component", () => {
     }
 
     it.each([
-      ["table", {}, ElementContainerConfig.LARGE_ELEMENT],
       ["audio", {}, ElementContainerConfig.LARGE_ELEMENT],
       [
         "code",
         { codeText: "print('hi')", language: "python" },
         ElementContainerConfig.LARGE_ELEMENT,
       ],
-      ["deckGlJsonChart", {}, ElementContainerConfig.LARGE_OVERFLOW_VISIBLE],
-      ["graphvizChart", {}, ElementContainerConfig.LARGE_OVERFLOW_VISIBLE],
       ["iframe", {}, ElementContainerConfig.LARGE_OVERFLOW_VISIBLE],
       ["video", {}, ElementContainerConfig.LARGE_ELEMENT],
       ["toast", { body: "Hello" }, ElementContainerConfig.DEFAULT],
@@ -865,11 +863,6 @@ describe("ElementNodeRenderer Block Component", () => {
       ["multiselect", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
       ["menuButton", widgetProto, ElementContainerConfig.DEFAULT],
       ["numberInput", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
-      [
-        "plotlyChart",
-        { id: "plotly-1" },
-        ElementContainerConfig.LARGE_ELEMENT,
-      ],
       ["radio", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
       ["selectbox", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
       ["slider", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
@@ -877,25 +870,62 @@ describe("ElementNodeRenderer Block Component", () => {
       ["dateTimeInput", widgetProto, ElementContainerConfig.DEFAULT],
       ["timeInput", widgetProto, ElementContainerConfig.MEDIUM_ELEMENT],
       ["bidiComponent", { id: "bidi-1" }, ElementContainerConfig.DEFAULT],
+    ])(
+      "renders %s with the expected container config",
+      async (type, proto, config) => {
+        expect(await renderAndGetContainerConfig(type, proto)).toBe(config)
+      }
+    )
+
+    it.each([
+      [
+        "table",
+        {},
+        ElementContainerConfig.LARGE_ELEMENT,
+        PrintLayout.FIXED_WIDTH,
+      ],
       [
         "dataframe",
         { id: "df-1", disabled: true },
         ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+        PrintLayout.FIXED_WIDTH,
+      ],
+      [
+        "plotlyChart",
+        { id: "plotly-1" },
+        ElementContainerConfig.LARGE_ELEMENT,
+        PrintLayout.GRAPHIC,
+      ],
+      [
+        "deckGlJsonChart",
+        {},
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+        PrintLayout.GRAPHIC,
+      ],
+      [
+        "graphvizChart",
+        {},
+        ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+        PrintLayout.GRAPHIC,
       ],
       [
         "vegaLiteChart",
         { id: "vega-1" },
         ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+        PrintLayout.GRAPHIC,
       ],
       [
         "echartsChart",
         { id: "echarts-1" },
         ElementContainerConfig.LARGE_OVERFLOW_VISIBLE,
+        PrintLayout.GRAPHIC,
       ],
     ])(
-      "renders %s with the expected container config",
-      async (type, proto, config) => {
-        expect(await renderAndGetContainerConfig(type, proto)).toBe(config)
+      "renders %s with its print layout",
+      async (type, proto, baseConfig, printLayout) => {
+        expect(await renderAndGetContainerConfig(type, proto)).toStrictEqual(
+          baseConfig.with({ printLayout })
+        )
       }
     )
 
@@ -923,6 +953,7 @@ describe("ElementNodeRenderer Block Component", () => {
         overflow: "visible",
         width: "100%",
       })
+      expect(config.printLayout).toBe(PrintLayout.FIXED_WIDTH)
     })
 
     it("gives vegaLiteChart flex basis in a horizontal layout without widthConfig", async () => {
@@ -937,6 +968,7 @@ describe("ElementNodeRenderer Block Component", () => {
         overflow: "visible",
         flex: "1 1 14rem",
       })
+      expect(config.printLayout).toBe(PrintLayout.GRAPHIC)
     })
 
     it("renders chatInput with medium stretch width by default", async () => {

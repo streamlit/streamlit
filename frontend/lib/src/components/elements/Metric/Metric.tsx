@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useEffect, useId, useRef } from "react"
+import {
+  memo,
+  type ReactElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react"
 
 import { Global } from "@emotion/react"
 import type { EmotionIcon } from "@emotion-icons/emotion-icon"
@@ -29,8 +36,9 @@ import {
   type EmotionTheme,
   useEmotionTheme,
 } from "@streamlit/lib"
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
@@ -305,11 +313,25 @@ export function getMetricChartSpec(
 
 export interface MetricProps {
   element: MetricProto
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 }
 
-function Metric({ element }: Readonly<MetricProps>): ReactElement {
+function Metric({
+  element,
+  widthConfig,
+}: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
+  const flexContext = useContext(FlexContext)
+
+  // A content-width metric, or one without a fixed width inside a
+  // content-width container, is sized by its value. Print wraps that value
+  // instead of shrinking it to the card.
+  const hasFixedWidth =
+    (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0
+  const isContentWidth =
+    Boolean(widthConfig?.useContent) ||
+    (!hasFixedWidth && flexContext?.isInContentWidthContainer === true)
 
   const { MetricDirection } = MetricProto
   const {
@@ -455,7 +477,15 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           )}
         </StyledMetricLabelText>
-        <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricValueText
+          data-testid="stMetricValue"
+          // Markdown syntax in the value counts as characters, so a styled
+          // value prints smaller than needed. It never overflows, and Markdown
+          // in metric values is rare, so parsing it is not worth the cost.
+          printFitLength={
+            isContentWidth ? undefined : formattedMetricValue.length
+          }
+        >
           <StreamlitMarkdown
             source={formattedMetricValue}
             allowHTML={false}

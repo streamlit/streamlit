@@ -517,17 +517,31 @@ class TestSnowflakeCallersRightsConnection:
             with pytest.raises(StreamlitAPIException, match="Token header not found"):
                 SnowflakeCallersRightsConnection._get_connection_params()
 
-    def test_get_connection_params_all_values_ok(self):
-        """Tests that correct parameters are generated when all values are present."""
+    @pytest.mark.parametrize(
+        ("extra_env", "expected_extra"),
+        [
+            pytest.param(
+                {"SNOWFLAKE_PROTOCOL": "http", "SNOWFLAKE_PORT": "8082"},
+                {"protocol": "http", "port": "8082"},
+                id="protocol-and-port-set",
+            ),
+            pytest.param({}, {}, id="protocol-and-port-unset"),
+        ],
+    )
+    def test_get_connection_params_all_values_ok(
+        self, extra_env: dict[str, str], expected_extra: dict[str, str]
+    ) -> None:
+        """Protocol and port are included only when the container sets them."""
 
         fake_env_values = {
             "SNOWFLAKE_ACCOUNT": "my-account",
             "SNOWFLAKE_HOST": "account.snowf.com",
             "SNOWFLAKE_DATABASE": "my_database",
             "SNOWFLAKE_SCHEMA": "streamlit_schema",
+            **extra_env,
         }
 
-        def fake_getenv(key: str) -> str:
+        def fake_getenv(key: str) -> str | None:
             return fake_env_values.get(key)
 
         fake_file_token = "ondisk.service.jwt"
@@ -554,6 +568,7 @@ class TestSnowflakeCallersRightsConnection:
             "host": "account.snowf.com",
             "database": "my_database",
             "schema": "streamlit_schema",
+            **expected_extra,
             "token": f"{fake_file_token}.{fake_header_token}",
         }
 
