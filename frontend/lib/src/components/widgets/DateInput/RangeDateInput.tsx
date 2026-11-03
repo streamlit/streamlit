@@ -161,13 +161,15 @@ interface RangeDateInputProps {
  * - It seeds the anchor on mount, so reopening the popover continues the range.
  * - It restores the anchor after React Aria drops it. `commitBehavior="reset"`
  *   drops the anchor when focus leaves the calendar (including into the
- *   portaled month/year pickers) or a press is released outside a day cell.
+ *   portaled month/year pickers) or a press is released anywhere but one of
+ *   the calendar's buttons (day cells, prev/next arrows, header triggers).
  *
- * Mouse and touch presses are reported only after they settle, so the
- * opposite endpoint that React Aria anchors on for drag-to-adjust is never
- * committed. React Aria moves the anchor to a pressed endpoint only on the
- * `click` that ends the press, after `isDragging` has already turned false.
- * A drag that completes the range reports nothing.
+ * The watcher reports a mouse or touch press only after React Aria's anchor
+ * settles:
+ * - Pressing a range endpoint anchors on the opposite end (for drag-to-adjust)
+ *   until the `click` that ends the press, which arrives after `isDragging`
+ *   turns false. The watcher waits for the anchor to reach the pressed day.
+ * - A drag that completes the range clears the anchor, so nothing is reported.
  */
 function AnchorDateWatcher({
   seedAnchor,
@@ -185,7 +187,8 @@ function AnchorDateWatcher({
   const isDragging = state?.isDragging ?? false
   const prevAnchorRef = useRef<CalendarDate | null>(null)
   const prevSeedRef = useRef<CalendarDate | null>(null)
-  // Day a mouse or touch press started on, until its anchor settles.
+  // Day the current mouse or touch press started on. Cleared once React
+  // Aria's anchor settles.
   const pressedDateRef = useRef<CalendarDate | null>(null)
 
   useEffect(() => {
@@ -205,9 +208,9 @@ function AnchorDateWatcher({
       }
       pressedDateRef.current = null
     }
-    // Seed the anchor from `seedAnchor` when:
-    // - the calendar mounts, or the start field changes while no end is set
-    // - React Aria drops the anchor (see above)
+    // Reapply `seedAnchor` when the calendar opens, the start field changes
+    // while no end is set, or React Aria has cleared the anchor
+    // (`commitBehavior="reset"`).
     if (
       seedAnchor &&
       (!anchorDate || !datesEqual(seedAnchor, prevSeedRef.current))

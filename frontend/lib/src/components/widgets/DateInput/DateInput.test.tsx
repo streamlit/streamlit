@@ -1952,6 +1952,44 @@ describe("DateInput", () => {
       expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
     })
 
+    it("commits nothing when an endpoint press is released outside the calendar", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2024-05-10", "2024-05-20"],
+        min: "2024-01-01",
+        max: "2024-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+
+      const start = await screen.findByLabelText(
+        /Friday, May 10, 2024 selected$/
+      )
+      await user.pointer([
+        { keys: "[MouseLeft>]", target: start },
+        { target: document.body },
+        { keys: "[/MouseLeft]", target: document.body },
+      ])
+
+      // The release left no anchor behind, so the next click starts a new
+      // range and is the only commit.
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      await user.click(screen.getByLabelText(/Wednesday, May 15, 2024/))
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-05-15"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    })
+
     // The month/year pickers render outside the calendar, so React Aria
     // drops the anchor when they take focus.
     it("completes a range after switching year and month with the header pickers", async () => {
