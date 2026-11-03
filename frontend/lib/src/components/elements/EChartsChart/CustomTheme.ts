@@ -134,10 +134,9 @@ export function formatEChartsTooltipValue(value: unknown): string | string[] {
 }
 
 /**
- * Build the per-axis theming defaults shared by all axis types
- * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis`` as well as the
- * non-cartesian axes ``angleAxis``/``radiusAxis``/``parallelAxis``/
- * ``singleAxis``).
+ * Build the base axis styling (colors, fonts, label margin) that every axis
+ * theme key starts from. Value, log, and time axes extend it to hide
+ * overlapping labels (see ``continuousAxisDefaults``).
  */
 function buildAxisDefaults(
   theme: EmotionTheme,
@@ -285,11 +284,11 @@ export function buildStreamlitEChartsTheme(
   const labelColor = getGray70(theme)
   const axisLineColor = getGray30(theme)
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
-  // Time, value, and log axes place ticks by the data range, not the chart
-  // width, so a narrow chart can draw their labels over each other. Category
-  // axes already skip labels that don't fit (`interval: "auto"`). ECharts
-  // picks this theme key by axis type, so value- and time-typed single,
-  // parallel, and radius axes get it too.
+  // Hide colliding tick labels on time, value, and log axes. ECharts spaces
+  // their ticks by the data range, not the chart width, so a narrow chart can
+  // draw labels on top of each other. Category axes already thin their labels
+  // (`interval: "auto"`). ECharts looks up this theme key by axis type, so
+  // value- and time-typed single, parallel, and radius axes get it too.
   const continuousAxisDefaults = {
     ...axisDefaults,
     axisLabel: { ...axisDefaults.axisLabel, hideOverlap: true },

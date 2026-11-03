@@ -691,9 +691,9 @@ _dataset_rows = [
 _selected_days = ", ".join(_selection_df.iloc[_dataset_rows]["day"]) or "none"
 st.write(f"echarts dataset selection: {_selected_days}")
 
-# A per-minute time axis in a narrow container. ECharts places time ticks by
-# the data range, not the chart width, so labels that would overlap must be
-# hidden.
+# A per-minute time axis in a narrow container. ECharts spaces time ticks by
+# the data range, not the chart width, so the theme's `hideOverlap` default
+# has to drop the labels that would collide.
 _minutes = pd.DataFrame(
     {
         "minute": pd.date_range("2026-11-03 13:25", periods=30, freq="min"),

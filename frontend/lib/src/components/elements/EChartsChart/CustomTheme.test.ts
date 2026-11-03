@@ -224,10 +224,11 @@ describe("buildStreamlitEChartsTheme", () => {
 
     const categoryLabel = axisLabelOf("categoryAxis")
     for (const key of ["timeAxis", "valueAxis", "logAxis"]) {
-      // Same label styling as category axes, plus the flag.
+      // Same label styling as category axes, plus hideOverlap.
       expect(axisLabelOf(key)).toEqual({ ...categoryLabel, hideOverlap: true })
     }
-    // Must NOT happen: the flag leaks into the object category axes share.
+    // Must NOT happen: the flag leaks into the shared axisDefaults that
+    // category axes use.
     // Category axes already skip labels that don't fit (`interval: "auto"`).
     expect(categoryLabel.hideOverlap).toBeUndefined()
   })
