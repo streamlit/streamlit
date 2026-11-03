@@ -29,14 +29,17 @@ const LOG = getLogger("preloadIconFont")
  * keeps every icon invisible until the file arrives. Calling this at startup
  * downloads the font during that wait instead of after it.
  *
- * This is used instead of a `<link rel="preload">` in index.html, like the one
- * for Source Sans, because:
+ * `document.fonts.load()` fetches only faces that are already declared. The
+ * icon face is declared in time because index.tsx statically imports
+ * `ThemedApp` → `App`, which imports `fonts.css`. Lazy-loading `App` would
+ * silently turn this call into a no-op.
+ *
+ * This uses `document.fonts.load()` instead of a `<link rel="preload">` in
+ * index.html, like the one for Source Sans, because:
  * - The update-emojis-material-icons workflow replaces this font every few
  *   weeks, which changes its hashed file name. Only a Vite build can compute
- *   that name, so a hard-coded preload would silently go stale, and keeping it
- *   current would need either an index.html transform in the build or a build
- *   run inside the update script.
- * - Starting here, after the entry bundle has loaded, keeps the download from
+ *   that name, so a hard-coded preload would silently go stale.
+ * - Starting after the entry bundle has loaded keeps the download from
  *   competing with the JS the app needs to render. A preload's
  *   `fetchpriority="low"` can't promise that over HTTP/1.1: it only delays
  *   when the request is sent, and the download then shares bandwidth.

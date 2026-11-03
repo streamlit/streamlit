@@ -82,9 +82,9 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_base_url: str)
     )
 
 
-def test_icon_font_loads_before_any_icon_renders(app: Page):
-    """Test that the Material Symbols font is downloaded at startup, so icons that
-    render later appear without waiting for it.
+def test_icon_font_is_requested_without_any_icon(app: Page):
+    """Test that the Material Symbols font is requested at startup even though the
+    basic app renders no icon.
     """
     expect(app.get_by_text("Hello world")).to_be_visible()
     # The basic app renders no icon, so rendering can't be what requests the font.

@@ -28,12 +28,13 @@ const mockFontsLoad = (load: FontFaceSet["load"]): void => {
 
 describe("preloadIconFont", () => {
   afterEach(() => {
-    // Removes the instance property installed by mockFontsLoad.
+    // Drops the per-test document.fonts override, so later tests see jsdom
+    // without the Font Loading API again.
     Reflect.deleteProperty(document, "fonts")
     vi.restoreAllMocks()
   })
 
-  it("requests the Material Symbols font face declared in fonts.css", async () => {
+  it("requests the Material Symbols font face without logging a warning", async () => {
     const warn = vi.spyOn(getLogger("preloadIconFont"), "warn")
     const load = vi.fn().mockResolvedValue([])
     mockFontsLoad(load)
