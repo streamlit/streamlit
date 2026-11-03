@@ -28,7 +28,7 @@ import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
 
 // Helper to create a mock element node
@@ -92,7 +92,26 @@ describe("ElementContainer", () => {
     const container = screen.getByTestId("stElementContainer")
     expect(container).toHaveClass("stElementContainer")
     expect(container).toHaveClass("element-container")
+    expect(container).not.toHaveClass(PrintLayout.FIXED_WIDTH)
+    expect(container).not.toHaveClass(PrintLayout.GRAPHIC)
   })
+
+  it.each([PrintLayout.FIXED_WIDTH, PrintLayout.GRAPHIC])(
+    "adds the %s class from the config's print layout",
+    printLayout => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={new ElementContainerConfig({ printLayout })}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveClass(printLayout)
+    }
+  )
 
   describe("user key handling", () => {
     it("applies user-provided key as CSS class for custom styling", () => {

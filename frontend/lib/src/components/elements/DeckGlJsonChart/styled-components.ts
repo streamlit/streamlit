@@ -16,6 +16,10 @@
 
 import styled from "@emotion/styled"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapStyles,
+} from "~lib/components/shared/printWidthCap"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 interface StyledDeckGlChartProps {
@@ -29,6 +33,7 @@ export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
     width: "100%",
     // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
     ...(isStretchHeight && { minHeight: "6.25rem" }),
+    ...printWidthCapStyles,
   })
 )
 
@@ -43,6 +48,8 @@ export const StyledMapContainer = styled.div(({ theme }) => ({
   inset: 0,
   borderRadius: theme.radii.default,
   overflow: "hidden",
+  // The base map and deck.gl canvases keep their on-screen pixel size.
+  "& canvas": printGraphicFitStyles,
   // deck.gl positions tooltips relative to `.deck-widgets-root`, so the root
   // must overlay the canvas without intercepting pointer events. Omit
   // `!important` so deck.gl's inline styles take precedence once a release
