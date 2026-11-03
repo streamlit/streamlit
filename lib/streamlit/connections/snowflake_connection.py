@@ -607,10 +607,12 @@ class SnowflakeConnection(BaseSnowflakeConnection):
     Snowflake on containers and any self-managed caller's rights Service. They
     also work on Snowflake serverless compute (``compute_resource: SERVERLESS``).
 
-    This will use the Snowpark-provided account, host, database, and schema to connect.
-    Additionally, it will set ``client_session_keep_alive`` to ``True``. These values
-    may be overridden with ``**kwargs`` in ``st.connection``. For a complete list
-    of keyword arguments, see the documentation for |snowflake.connector.connect()|_.
+    This will use the Snowpark-provided account and host to connect. Database,
+    schema, protocol, and port are included when the container sets them.
+    Additionally, it will set ``client_session_keep_alive`` to ``True``. These
+    values may be overridden with ``**kwargs`` in ``st.connection``. For a
+    complete list of keyword arguments, see the documentation for
+    |snowflake.connector.connect()|_.
 
     .. |snowflake.connector.connect()| replace:: ``snowflake.connector.connect()``
     .. _snowflake.connector.connect(): https://docs.snowflake.com/en/developer-guide/python-connector/python-connector-api#label-snowflake-connector-methods-connect
@@ -852,8 +854,9 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
 
         Raises
         ------
-            StreamlitAPIException: if any Snowpark environment variables or connection
-            tokens are missing; or if this is called outside of a session context.
+            StreamlitAPIException: if the required Snowpark environment variables
+            (``SNOWFLAKE_ACCOUNT``, ``SNOWFLAKE_HOST``) or connection tokens are
+            missing; or if this is called outside of a session context.
         """
         # Local import needed to avoid cycles.
         from streamlit import context as st_context
@@ -873,8 +876,6 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
         for param_name, env_var_name in (
             ("account", "SNOWFLAKE_ACCOUNT"),
             ("host", "SNOWFLAKE_HOST"),
-            ("database", "SNOWFLAKE_DATABASE"),
-            ("schema", "SNOWFLAKE_SCHEMA"),
         ):
             value = os.getenv(env_var_name)
             if value is None:
@@ -885,11 +886,16 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
                 )
             params[param_name] = value
 
-        # Optional overrides for containers that route connector traffic through a
-        # local proxy (for example, http and 8082). Without them, the connector
-        # uses https on port 443. The owner "snowflake" connection reads these
-        # values from the mounted default connection file instead.
+        # Optional overrides when the container sets them. Database and schema are
+        # not always mounted; without them the session has no default namespace and
+        # queries must use fully qualified names. Protocol and port are for
+        # containers that route connector traffic through a local proxy (for
+        # example, http and 8082); without them the connector uses https on port
+        # 443. The owner "snowflake" connection reads these values from the
+        # mounted default connection file instead.
         for param_name, env_var_name in (
+            ("database", "SNOWFLAKE_DATABASE"),
+            ("schema", "SNOWFLAKE_SCHEMA"),
             ("protocol", "SNOWFLAKE_PROTOCOL"),
             ("port", "SNOWFLAKE_PORT"),
         ):
