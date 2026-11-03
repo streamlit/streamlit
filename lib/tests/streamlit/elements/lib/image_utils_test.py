@@ -245,7 +245,8 @@ def test_image_to_url_rejects_eps_without_rendering(
     output_format: Literal["auto", "PNG"],
     to_input: Callable[[bytes], bytes | io.BytesIO],
 ) -> None:
-    """``image_to_url`` rejects EPS data before Pillow renders it with Ghostscript."""
+    """``image_to_url`` raises a clear error for EPS data instead of rendering it."""
+    # Mock the renderer so the test doesn't depend on Ghostscript being installed.
     with (
         mock.patch("PIL.EpsImagePlugin.Ghostscript") as ghostscript,
         pytest.raises(StreamlitAPIException, match="EPS images are not supported"),

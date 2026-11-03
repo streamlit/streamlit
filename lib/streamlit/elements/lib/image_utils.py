@@ -96,9 +96,9 @@ def _open_image_bytes(image_data: bytes) -> PILImage:
     from PIL import Image
 
     pil_image = Image.open(io.BytesIO(image_data))
-    # Pillow renders EPS by running the external Ghostscript program on the
-    # file's contents. Opening only parses the header, so reject EPS before
-    # anything loads the pixels.
+    # Pillow only renders EPS when Ghostscript is installed, so support would
+    # differ between environments. Opening only parses the header, so this
+    # check runs before anything loads the pixels.
     if pil_image.format == "EPS":
         raise StreamlitAPIException(
             "EPS images are not supported. Convert the image to a format such as "
