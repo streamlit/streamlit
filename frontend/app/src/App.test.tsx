@@ -481,6 +481,17 @@ function sendNewSession(
   sendForwardMessage("newSession", newSession, { run })
 }
 
+/**
+ * Sends a script_finished message for the given run. Pass null to send a
+ * finish without run identity.
+ */
+function sendScriptFinished(
+  status: ForwardMsg.ScriptFinishedStatus,
+  run: RunIdentity.$Properties | null = RUN_IDENTITY_JSON
+): void {
+  sendForwardMessage("scriptFinished", status, run ? { run } : null)
+}
+
 async function openCacheModal(): Promise<void> {
   const user = userEvent.setup({ advanceTimers: advanceUserEventTimers })
   await user.keyboard("c")
@@ -825,10 +836,7 @@ describe("App", () => {
         expect(screen.getByText("Here is some more text")).toBeInTheDocument()
       })
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
     }
 
     let documentTitle: string
@@ -2222,8 +2230,7 @@ describe("App", () => {
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
 
-      sendForwardMessage(
-        "scriptFinished",
+      sendScriptFinished(
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       )
 
@@ -2246,10 +2253,7 @@ describe("App", () => {
         pageScriptHash: "spa_hash",
       })
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
@@ -2366,8 +2370,7 @@ describe("App", () => {
 
       // An interrupt finish from the first run must not drop the epoch for
       // the still-current second history request.
-      sendForwardMessage(
-        "scriptFinished",
+      sendScriptFinished(
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       )
 
@@ -2397,10 +2400,7 @@ describe("App", () => {
       )
       expect(pushStateSpy).not.toHaveBeenCalled()
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
       pushStateSpy.mockClear()
       replaceStateSpy.mockClear()
@@ -3863,10 +3863,7 @@ describe("App", () => {
     it("will not increment cache count if session info is not set", () => {
       renderApp(getProps())
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
       const connectionManager = getMockConnectionManager()
       expect(
@@ -3877,8 +3874,7 @@ describe("App", () => {
     it("will not increment cache count if session info is not set and the script finished early", () => {
       renderApp(getProps())
 
-      sendForwardMessage(
-        "scriptFinished",
+      sendScriptFinished(
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       )
 
@@ -3891,8 +3887,7 @@ describe("App", () => {
     it("will not increment cache count if session info is set and the script finished early", () => {
       renderApp(getProps())
       sendNewSession(NEW_SESSION_JSON)
-      sendForwardMessage(
-        "scriptFinished",
+      sendScriptFinished(
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       )
 
@@ -3905,15 +3900,233 @@ describe("App", () => {
     it("will increment cache count if session info is set", () => {
       renderApp(getProps())
       sendNewSession(NEW_SESSION_JSON)
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
       const connectionManager = getMockConnectionManager()
       expect(
         connectionManager.incrementMessageCacheRunCount
-      ).toHaveBeenCalled()
+      ).toHaveBeenCalledWith(0, [])
+    })
+
+    it("will not increment cache count for a previous run's finish followed by the next NewSession before React commits", () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_a",
+        fragmentIds: [],
+      })
+      const connectionManager = getMockConnectionManager()
+
+      // Requesting a rerun marks finishes until the next NewSession as stale.
+      getStoredValue<WidgetStateManager>(
+        WidgetStateManager
+      ).sendUpdateWidgetsMessage(undefined)
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+      // A single act() keeps React from committing between the two messages,
+      // so setState callbacks only run after the next NewSession arrived.
+      act(() => {
+        const finishedMsg = new ForwardMsg({
+          scriptFinished:
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+          metadata: { run: { scriptRunId: "run_a", fragmentIds: [] } },
+        })
+        const newSessionMsg = new ForwardMsg({
+          newSession: cloneDeep(NEW_SESSION_JSON),
+          metadata: { run: { scriptRunId: "run_b", fragmentIds: [] } },
+        })
+        getMockConnectionManagerProp("onMessage")(finishedMsg)
+        getMockConnectionManagerProp("onMessage")(newSessionMsg)
+      })
+
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
+    })
+
+    it("cleans only the finished run after a later start has updated state", async () => {
+      renderApp(getProps())
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_a",
+        fragmentIds: ["frag_a"],
+      })
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "stale nested from A", help: "" },
+          },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      // The enclosing fragment reruns without the nested child. The child
+      // stays in the tree until that run's successful finish cleans it up.
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_a2",
+        fragmentIds: ["frag_a"],
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      // An unrelated fragment run starts before run_a2's finish arrives.
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_b",
+        fragmentIds: ["frag_b"],
+      })
+      sendForwardMessage(
+        "delta",
+        {
+          type: "addBlock",
+          addBlock: { vertical: {}, allowEmpty: true },
+          fragmentId: "frag_b",
+        },
+        { deltaPath: [0, 1], activeScriptHash: "page_script_hash" }
+      )
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: { type: "text", text: { body: "from B", help: "" } },
+          fragmentId: "frag_b",
+        },
+        { deltaPath: [0, 1, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("stale nested from A")).toBeInTheDocument()
+        expect(screen.getByText("from B")).toBeInTheDocument()
+      })
+
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        { scriptRunId: "run_a2", fragmentIds: ["frag_a"] }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("stale nested from A")
+        ).not.toBeInTheDocument()
+      })
+      expect(screen.getByText("from B")).toBeVisible()
+
+      const connectionManager = getMockConnectionManager()
+      expect(
+        connectionManager.incrementMessageCacheRunCount
+      ).toHaveBeenCalledWith(0, ["frag_a"])
+    })
+
+    it("still skips stale-node cleanup for an interrupted run", async () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_a",
+        fragmentIds: ["frag_a"],
+      })
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "kept during interrupt", help: "" },
+          },
+          fragmentId: "frag_a",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "run_b",
+        fragmentIds: ["frag_b"],
+      })
+
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN,
+        { scriptRunId: "run_a", fragmentIds: ["frag_a"] }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("kept during interrupt")).toBeVisible()
+      })
+      expect(
+        getMockConnectionManager().incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
+    })
+
+    it("skips cleanup, cache aging, and widget completion for a finish without run identity", async () => {
+      let appInstance: App | null = null
+      render(
+        <RootStyleProvider theme={getDefaultTheme()}>
+          <WindowDimensionsProvider>
+            <App
+              {...getProps()}
+              ref={instance => {
+                appInstance = instance
+              }}
+            />
+          </WindowDimensionsProvider>
+        </RootStyleProvider>
+      )
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "kept without identity", help: "" },
+          },
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+      // A full-app run that doesn't rewrite the element would clear it if
+      // the identity-less finish were attributed to that run.
+      sendNewSession(NEW_SESSION_JSON, {
+        scriptRunId: "different_script_run_id",
+        fragmentIds: [],
+      })
+      await waitFor(() => {
+        expect(screen.getByText("kept without identity")).toBeVisible()
+      })
+      const sequenceBefore = (appInstance as App | null)?.state
+        .scriptRunFinishedSequence
+
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        null
+      )
+
+      expect(screen.getByText("kept without identity")).toBeVisible()
+      expect(
+        getMockConnectionManager().incrementMessageCacheRunCount
+      ).not.toHaveBeenCalled()
+      expect(
+        (appInstance as App | null)?.state.scriptRunFinishedSequence
+      ).toBe(sequenceBefore)
     })
 
     it("will clear stale nodes if finished successfully", async () => {
@@ -3951,9 +4164,12 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        {
+          scriptRunId: "different_script_run_id",
+          fragmentIds: [],
+        }
       )
 
       await waitFor(() => {
@@ -4023,8 +4239,7 @@ describe("App", () => {
         { deltaPath: [0, 0] }
       )
 
-      sendForwardMessage(
-        "scriptFinished",
+      sendScriptFinished(
         ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       )
 
@@ -4039,9 +4254,11 @@ describe("App", () => {
         expect(screen.getByText("Here is some other text")).toBeInTheDocument()
       })
 
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY // use finished_fragment_run_successfully here because in the other test we used the finished_successfully status
+      // Finish the replacement run so stale nodes from the interrupted run are
+      // cleared.
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        { scriptRunId: "different_script_run_id", fragmentIds: [] }
       )
 
       // this message was sent in the new session
@@ -4088,8 +4305,7 @@ describe("App", () => {
           appInstance?.addScriptFinishedHandler(laterHandler)
         })
 
-        sendForwardMessage(
-          "scriptFinished",
+        sendScriptFinished(
           ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
         )
 
@@ -4243,10 +4459,7 @@ describe("App", () => {
       sendNewSession(NEW_SESSION_JSON)
 
       // Trigger cleanup in script finished handler
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
       // Since no logo is sent in this script run, logo must not be present in the script anymore
       // Stale logo should be removed
@@ -4283,10 +4496,7 @@ describe("App", () => {
           activeScriptHash: "page_script_hash",
         }
       )
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-      )
+      sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
       await waitFor(() => {
         expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
       })
@@ -4296,9 +4506,9 @@ describe("App", () => {
         scriptRunId: "script_run_id",
         fragmentIds: ["myFragmentId"],
       })
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        { scriptRunId: "script_run_id", fragmentIds: ["myFragmentId"] }
       )
       await waitFor(() => {
         expect(screen.getByTestId("stHeaderLogo")).toBeInTheDocument()
@@ -4309,9 +4519,12 @@ describe("App", () => {
         scriptRunId: "different_script_run_id",
         fragmentIds: [],
       })
-      sendForwardMessage(
-        "scriptFinished",
-        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+      sendScriptFinished(
+        ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+        {
+          scriptRunId: "different_script_run_id",
+          fragmentIds: [],
+        }
       )
       await waitFor(() => {
         expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
@@ -4845,6 +5058,32 @@ describe("App", () => {
       expect(idsAfterStop.length).toBeGreaterThan(0)
       expect(idsAfterStop).not.toContain("fragmentA")
       expect(idsAfterStop.every(id => id === "fragmentB")).toBe(true)
+    })
+
+    it("does not mutate the render tree on stopAutoRerun", async () => {
+      renderApp(getProps())
+      sendNewSession(NEW_SESSION_JSON)
+      sendForwardMessage("navigation", NAVIGATION_JSON)
+      sendForwardMessage(
+        "delta",
+        {
+          type: "newElement",
+          newElement: {
+            type: "text",
+            text: { body: "evicted fragment content", help: "" },
+          },
+          fragmentId: "fragmentA",
+        },
+        { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText("evicted fragment content")).toBeVisible()
+      })
+
+      sendForwardMessage("stopAutoRerun", { fragmentIds: ["fragmentA"] })
+
+      expect(screen.getByText("evicted fragment content")).toBeVisible()
     })
   })
 
@@ -6689,10 +6928,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     sendNewSession(NEW_SESSION_JSON)
 
     // 3. Send scriptFinished
-    sendForwardMessage(
-      "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-    )
+    sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
     // 4. Assert incrementMessageCacheRunCount was called
     // It's called once because hasReceivedNewSession was true.
@@ -6720,10 +6956,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     sendNewSession(NEW_SESSION_JSON)
 
     // Verify that if script finished now, incrementMessageCacheRunCount would be called
-    sendForwardMessage(
-      "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-    )
+    sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
     expect(
       connectionManager.incrementMessageCacheRunCount
     ).toHaveBeenCalledTimes(1)
@@ -6747,10 +6980,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
 
     // 4. Send scriptFinished again
-    sendForwardMessage(
-      "scriptFinished",
-      ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-    )
+    sendScriptFinished(ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY)
 
     // 5. Assert incrementMessageCacheRunCount was NOT called this time
     expect(
