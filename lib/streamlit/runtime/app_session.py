@@ -1039,12 +1039,12 @@ class AppSession:
 
             - ScriptRunner always sends it, on SCRIPT_STARTED and on that
               run's finish event.
-            - It is None only when the server fails to handle a message from
+            - It is None only when the server fails to handle a request from
               the browser, for example a rerun or "Clear caches" request that
-              raises, or a message it can't decode. The app then replaces its
-              content with the error, and handle_backmsg_exception first ends
-              whatever run was in progress with a SCRIPT_STOPPED_WITH_SUCCESS.
-              Only that run's ScriptRunner holds its descriptor.
+              raises. The app then replaces its content with the error, and
+              handle_backmsg_exception first ends whatever run was in progress
+              with a SCRIPT_STOPPED_WITH_SUCCESS. Only that run's ScriptRunner
+              holds its descriptor.
 
             A script_finished without it has no metadata.run, so nothing can
             tell which run it ended. Neither the frontend nor the agent client
