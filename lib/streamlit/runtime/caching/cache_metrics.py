@@ -174,21 +174,33 @@ class FunctionCacheMetrics:
 
     def get_stats(self, family_names: Sequence[str] | None) -> dict[str, list[Stat]]:
         """Return this function's stats for the requested families."""
+
+        def requested(family: str) -> bool:
+            return family_names is None or family in family_names
+
+        want_lookups = requested(CACHE_LOOKUPS_FAMILY)
+        want_durations = requested(CACHE_COMPUTE_DURATION_FAMILY)
+        want_evictions = requested(CACHE_EVICTIONS_FAMILY)
+        want_refreshes = requested(CACHE_BACKGROUND_REFRESHES_FAMILY)
+
         with self._lock:
             hits = self._hits
             misses = self._misses
             background_refresh = self._background_refresh
-            triggers: tuple[ComputeTrigger, ...] = (
-                ("miss", "refresh") if background_refresh else ("miss",)
-            )
-            durations = {
-                trigger: self._durations[trigger].snapshot() for trigger in triggers
-            }
-            evictions = dict(self._evictions)
-            refreshes = dict(self._refreshes)
+            durations: dict[ComputeTrigger, tuple[list[int], float, int]] = {}
+            if want_durations:
+                triggers: tuple[ComputeTrigger, ...] = (
+                    ("miss", "refresh") if background_refresh else ("miss",)
+                )
+                durations = {
+                    trigger: self._durations[trigger].snapshot() for trigger in triggers
+                }
+            evictions = dict(self._evictions) if want_evictions else {}
+            want_refreshes = want_refreshes and background_refresh
+            refreshes = dict(self._refreshes) if want_refreshes else {}
 
         result: dict[str, list[Stat]] = {}
-        if family_names is None or CACHE_LOOKUPS_FAMILY in family_names:
+        if want_lookups:
             result[CACHE_LOOKUPS_FAMILY] = [
                 CounterStat(
                     family_name=CACHE_LOOKUPS_FAMILY,
@@ -198,12 +210,12 @@ class FunctionCacheMetrics:
                 )
                 for lookup_result, value in (("hit", hits), ("miss", misses))
             ]
-        if family_names is None or CACHE_COMPUTE_DURATION_FAMILY in family_names:
+        if want_durations:
             result[CACHE_COMPUTE_DURATION_FAMILY] = [
                 self._histogram_stat(trigger, *snapshot)
                 for trigger, snapshot in durations.items()
             ]
-        if family_names is None or CACHE_EVICTIONS_FAMILY in family_names:
+        if want_evictions:
             result[CACHE_EVICTIONS_FAMILY] = [
                 CounterStat(
                     family_name=CACHE_EVICTIONS_FAMILY,
@@ -216,9 +228,7 @@ class FunctionCacheMetrics:
                 )
                 for reason, value in sorted(evictions.items())
             ]
-        if background_refresh and (
-            family_names is None or CACHE_BACKGROUND_REFRESHES_FAMILY in family_names
-        ):
+        if want_refreshes:
             result[CACHE_BACKGROUND_REFRESHES_FAMILY] = [
                 CounterStat(
                     family_name=CACHE_BACKGROUND_REFRESHES_FAMILY,

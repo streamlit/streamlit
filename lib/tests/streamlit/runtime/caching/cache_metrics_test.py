@@ -758,6 +758,30 @@ def test_get_stats_filters_families(registry: CacheMetrics) -> None:
         assert set(registry.get_stats([family])) == {family}
 
 
+def test_get_stats_skips_snapshots_of_unrequested_families(
+    registry: CacheMetrics,
+) -> None:
+    """A filtered scrape doesn't copy histograms for families it didn't request."""
+
+    @st.cache_data
+    def load() -> int:
+        return 1
+
+    load()
+
+    with patch.object(
+        cache_metrics._DurationHistogram,
+        "snapshot",
+        autospec=True,
+        side_effect=cache_metrics._DurationHistogram.snapshot,
+    ) as snapshot:
+        registry.get_stats([CACHE_LOOKUPS_FAMILY])
+        snapshot.assert_not_called()
+
+        registry.get_stats([CACHE_COMPUTE_DURATION_FAMILY])
+        snapshot.assert_called_once()
+
+
 def test_empty_registry_returns_no_families() -> None:
     """With no cached functions, no families (and no empty headers) are emitted."""
     assert CacheMetrics().get_stats() == {}
