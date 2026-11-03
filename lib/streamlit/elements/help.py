@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import ast
-import contextlib
 import inspect
 import os
 import re
@@ -39,9 +38,6 @@ _STREAMLIT_PACKAGE_DIR: Final = os.path.realpath(os.path.dirname(streamlit.__fil
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
-
-
-CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
@@ -196,31 +192,14 @@ def _get_signature(obj: object) -> str | None:
     if not inspect.isclass(obj) and not callable(obj):
         return None
 
-    sig = ""
-
     try:
-        sig = str(inspect.signature(obj))
+        return str(inspect.signature(obj))
     except (ValueError, NameError):
-        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
-        # NameError for TYPE_CHECKING-only imports
-        sig = "(...)"
+        # inspect.signature cannot describe some callables (ValueError). On
+        # Python 3.14+ it can also raise NameError for a TYPE_CHECKING-only annotation.
+        return "(...)"
     except TypeError:
         return None
-
-    is_delta_gen = False
-    with contextlib.suppress(AttributeError):
-        is_delta_gen = obj.__module__ == "streamlit.delta_generator"
-        # Functions such as numpy.minimum don't have a __module__ attribute,
-        # since we're only using it to check if its a DeltaGenerator, its ok
-        # to continue
-
-    if is_delta_gen:
-        for prefix in CONFUSING_STREAMLIT_SIG_PREFIXES:
-            if sig.startswith(prefix):
-                sig = sig.replace(prefix, "(")
-                break
-
-    return sig
 
 
 def _get_docstring(obj: object) -> str | None:
