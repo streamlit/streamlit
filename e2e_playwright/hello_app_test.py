@@ -17,8 +17,12 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import (
     ImageCompareFunction,
     wait_for_app_run,
+    wait_until,
 )
-from e2e_playwright.shared.app_utils import flush_print_media_change
+from e2e_playwright.shared.app_utils import (
+    end_browser_print,
+    start_browser_print,
+)
 from e2e_playwright.shared.vega_utils import assert_vega_chart_height
 
 
@@ -139,6 +143,18 @@ def _set_landscape_dimensions(app: Page) -> None:
     app.set_viewport_size({"width": portrait_height_px, "height": portrait_width_px})
 
 
+def _print_like_a_browser(app: Page) -> None:
+    """Enter print with ``beforeprint``, so the dataframe prints as a table.
+
+    ``emulate_media`` alone applies the print stylesheet without firing
+    ``beforeprint``, so the dataframe would keep its on-screen canvas.
+    """
+    start_browser_print(app)
+    table = app.locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    expect(table).to_contain_text("China")
+
+
 def test_app_print_mode_portrait_with_sidebar_open(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -148,9 +164,8 @@ def test_app_print_mode_portrait_with_sidebar_open(
     app = themed_app
 
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print", forced_colors="active")
     _set_portrait_dimensions(app)
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
@@ -179,8 +194,7 @@ def test_app_print_mode_portrait_with_sidebar_closed(
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active")
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     assert_snapshot(app, name="hello_app-print_media-portrait-sidebar_closed")
 
@@ -194,9 +208,8 @@ def test_app_print_mode_landscape_with_sidebar_open(
     app = themed_app
 
     _load_dataframe_demo_page(app)
-    app.emulate_media(media="print", forced_colors="active")
     _set_landscape_dimensions(app)
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
     # ensure that the sidebar is visible
     expect(app.get_by_test_id("stSidebar")).to_be_visible()
     expect(app.get_by_test_id("stSidebarContent")).to_be_visible()
@@ -224,10 +237,88 @@ def test_app_print_mode_landscape_with_sidebar_closed(
     app.get_by_test_id("stSidebarCollapseButton").click()
     expect(sidebar_element).not_to_be_visible()
 
-    app.emulate_media(media="print", forced_colors="active")
-    flush_print_media_change(app)
+    _print_like_a_browser(app)
 
     assert_snapshot(app, name="hello_app-print_media-landscape-sidebar_closed")
+
+
+def test_print_mode_fits_dataframe_sidebar_and_chart(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """Print shows every dataframe cell inside the widget, beside a narrow sidebar."""
+    app = themed_app
+
+    _load_dataframe_demo_page(app)
+    _set_portrait_dimensions(app)
+    start_browser_print(app)
+    table = app.locator(".stDataFramePrintTable")
+    expect(table).to_be_visible()
+    expect(table).to_contain_text("China")
+    headers = table.locator("th")
+    expect(headers.first).to_be_visible()
+    # The on-screen canvas only paints the viewport. The print table has the
+    # index plus every year column. The year count comes from the remote CSV,
+    # so this waits until at least the index and five years are present.
+    expect(headers.nth(5)).to_be_visible()
+    expect(app.locator(".stDataFrameResizable")).to_be_hidden()
+
+    def print_layout_fits() -> None:
+        # Retry until the print-media refit and the sidebar reflow settle.
+        fit = app.evaluate(
+            """() => {
+            const table = document.querySelector(".stDataFramePrintTable");
+            const scale = table.closest(".stDataFramePrintScale");
+            const frame = table.closest("[data-testid='stDataFrame']");
+            const chart = document.querySelector("[data-testid='stVegaLiteChart']");
+            const main = document.querySelector("[data-testid='stMainBlockContainer']");
+            const sidebar = document.querySelector("[data-testid='stSidebar']");
+            const box = (el) => el.getBoundingClientRect();
+            const tableBox = box(table);
+            const frameBox = box(frame);
+            const chartBox = box(chart);
+            const mainBox = box(main);
+            const sidebarBox = box(sidebar);
+            const rootFont = parseFloat(
+                getComputedStyle(document.documentElement).fontSize
+            );
+            const inside = (inner, outer) =>
+                inner.left >= outer.left - 1
+                && inner.right <= outer.right + 1
+                && inner.top >= outer.top - 1
+                && inner.bottom <= outer.bottom + 1;
+            const scaleStyle = getComputedStyle(scale);
+            return {
+                tableInsideFrame: inside(tableBox, frameBox),
+                chartInsideMain: inside(chartBox, mainBox),
+                sidebarBesideMain: sidebarBox.right <= mainBox.left + 1,
+                sidebarIsMinWidth: Math.abs(sidebarBox.width - 12.5 * rootFont) < 1,
+                probeWidth: scaleStyle.getPropertyValue("--st-df-print-width"),
+                slotClientWidth: scale.parentElement
+                    ? scale.parentElement.clientWidth
+                    : 0,
+                fontSize: getComputedStyle(table).fontSize,
+                tableWidth: tableBox.width,
+                frameWidth: frameBox.width,
+            };
+        }"""
+        )
+        assert fit["tableInsideFrame"], (
+            f"print table is outside the dataframe: fontSize={fit['fontSize']} "
+            f"tableWidth={fit['tableWidth']} frameWidth={fit['frameWidth']} "
+            f"probeWidth={fit['probeWidth']} "
+            f"slotClientWidth={fit['slotClientWidth']}"
+        )
+        assert fit["chartInsideMain"]
+        assert fit["sidebarBesideMain"]
+        assert fit["sidebarIsMinWidth"]
+
+    wait_until(app, print_layout_fits)
+
+    assert_snapshot(app, name="hello_app-print_media-portrait-beforeprint")
+
+    end_browser_print(app)
+    expect(table).to_have_count(0)
+    expect(app.locator(".stDataFrameResizable")).to_be_visible()
 
 
 def test_max_content_width_uses_px(app: Page):

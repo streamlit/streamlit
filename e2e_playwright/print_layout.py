@@ -39,6 +39,20 @@ with right:
     with st.container(border=True, key="bordered"):
         st.markdown("Bordered column")
 
+feedback = pd.DataFrame(
+    {
+        "Feedback Message": ["Please add support for custom components"],
+        "Date": ["2026-10-20"],
+        "Salesforce Account Name": ["Umbrella"],
+        "Deployment": ["gcp_us_central1"],
+        "Snowflake Account Name": ["ACME_017"],
+        "Username": ["user_388"],
+        "Agreement Type": ["Capacity"],
+    }
+)
+with st.container(border=True, key="feedback"):
+    st.dataframe(feedback, hide_index=True, width="stretch")
+
 with st.container(key="metric_row"):
     for index, column in enumerate(st.columns(4, border=True)):
         column.metric(f"Metric {index}", f"{index * 1000:,}", f"{index}%")
@@ -52,6 +66,7 @@ with st.container(horizontal_alignment="center", key="centered"):
 
 with st.container(horizontal_alignment="center", key="centered_chart"):
     st.bar_chart(pd.DataFrame({"value": [2, 1, 3]}), height=160)
+    st.dataframe(feedback, hide_index=True)
 
 st.markdown("After the centered chart")
 

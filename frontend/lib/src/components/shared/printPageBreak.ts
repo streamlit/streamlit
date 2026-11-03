@@ -17,6 +17,7 @@
 import type { CSSObject } from "@emotion/styled"
 
 import { PrintLayout } from "~lib/components/core/Block/ElementContainerConfig"
+import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 
 /**
  * Marks a subtree that stays mounted but is not on the printed page: a
@@ -41,6 +42,8 @@ export const printKeepTogetherRules: CSSObject = {
  * Emotion selector that matches this box when it contains a chart (an
  * element with `PrintLayout.GRAPHIC`) that prints, so not inside a closed
  * tab or a closed expander. Pair it with `printKeepTogetherRules` so the
- * box is not split from that chart. A box taller than a page still breaks.
+ * box is not split from that chart. A box with a dataframe print table is
+ * not matched, so the table can continue on the next page and repeat its
+ * header. A box taller than a page still breaks.
  */
-export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC})`
+export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC}):not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`
