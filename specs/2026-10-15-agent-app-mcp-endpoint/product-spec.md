@@ -100,14 +100,16 @@ rather than the app's HTML, and its URL carries no version. A person pastes the 
 once; MCP negotiates its protocol revision on each connection, and clients read the tool
 list afresh every time, so the URL never has to change.
 
-Appended to a page's URL instead of the app's, such as `/page2/_stcore/agent/mcp`, it
-is a `404` for any method, rather than the app's HTML with a `200` or the static file
-server's `405`. MCP clients only `POST`, and today only a `GET` gets that `404` on the
-other agent routes: the static file server refuses other methods before it checks
-reserved paths, so `POST /page2/_stcore/agent/interact` answers `405`. Any method on a
-reserved path under a page's URL becomes a `404`, which changes that answer for
-`interact` too. At the app's root, a reserved path a route does not take keeps the
-static file server's answer: `POST /_stcore/health` stays a `405`.
+Under a page's URL, such as `/page2/_stcore/agent/mcp`, every reserved path is a `404`
+for any method:
+
+- The MCP route never answers with the app's HTML and a `200`, or with the static file
+  server's `405`.
+- `POST /page2/_stcore/agent/interact` changes from `405` to `404`. Today only a `GET`
+  gets that `404` on the other agent routes, because the static file server refuses
+  other methods before it checks reserved paths, and MCP clients only `POST`.
+- At the app's root, a reserved path a route does not take keeps the static file
+  server's answer: `POST /_stcore/health` stays a `405`.
 
 **A trailing slash does not connect.** `/_stcore/agent/mcp/` gets the static file
 server's `301`, as every route's slash variant does, and neither official SDK follows a
@@ -141,8 +143,12 @@ ChatGPT plans and modes use custom connectors, and with which tools, is in
 
 ### The tools
 
-MCP requires a server's tool list not to change during a connection: `tools/list` "MUST
-NOT vary per-connection or as a side effect of other requests on the connection"
+In the revisions this server speaks, a tool list changes only through a
+`notifications/tools/list_changed` notification, which a server with no event stream
+cannot send, so this one advertises `listChanged: false`
+([MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)).
+`2026-07-28` rules it out outright: `tools/list` "MUST NOT vary per-connection or as a
+side effect of other requests on the connection"
 ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)). A
 Streamlit app's action space changes after every run. So the tools are fixed, and what
 the app allows now lives in each result as `actions`, exactly as over HTTP.
@@ -239,17 +245,19 @@ arguments follow `interact`'s request rules:
 
 Reads a media file the app still stores:
 
-- **Input:** a media-file id, bare or as a result's relative URL. The
-  server never fetches the argument or joins it to a path; **Reading the argument**
-  below says how it reads the id.
+- **Input:** a media-file id, bare or inside the media URL a result shows, either
+  relative or resolved to an absolute URL. The server never fetches the argument or
+  joins it to a path; **Reading the argument** below says how it reads the id.
 - **`offset` and `limit` apply only to tables.** On every other file the server ignores
   both, including invalid values and the defaults a client sends, so `limit: 0` on an
-  image is not an error. On a table, both must be integers, with `offset` at least 0
-  and `limit` at least 1. As in `interact`, a number with no fractional part, such as
-  `100.0`, counts as an integer, and `null` is the same as omitting the argument, so
-  the input schema types both as an integer or `null`. A boolean, a fraction, a string,
-  or a value out of range is `invalid_request`. An `offset` past the last row returns
-  an empty page: `columns`, `row_count`, `offset`, `rows: []`, and `next_offset: null`.
+  image is not an error. An argument that reads no stored file is `unknown_file`
+  whatever `offset` and `limit` are. On a table, both must be integers, with `offset`
+  at least 0 and `limit` at least 1. As in `interact`, a number with no fractional
+  part, such as `100.0`, counts as an integer, and `null` is the same as omitting the
+  argument, so the input schema types both as an integer or `null`. A boolean, a
+  fraction, a string, or a value out of range is `invalid_request`. An `offset` past
+  the last row returns an empty page: `columns`, `row_count`, `offset`, `rows: []`, and
+  `next_offset: null`.
 - **Tables** come back as JSON rows in the stream's column order, the shape of
   `data.preview`, with `row_count` and the `next_offset` of the following page, `null`
   on the last.
@@ -327,7 +335,9 @@ Reads a media file the app still stores:
   silently cut.
 - **Scope:** any media file the app still stores, which are the same files the `/media`
   route serves to anyone with the URL. The caller's `session_id` must pass the identity
-  check.
+  check. That check gates the caller, not the file: any caller that reaches the route
+  can start a session with `interact`, so, as with `/media`, a file is protected only
+  by its id, which cannot be derived without the file's content.
 - **Lifetime:** a file stays until media storage drops it, the parent spec's fetch-now
   rule. Ids are content hashes, so a table a rerun renders unchanged keeps its id.
   - A full rerun drops its session's references when it starts.
@@ -486,12 +496,12 @@ session.
 
 Checks run in the order `POST /_stcore/agent/interact` uses: the HTTP method (`405`),
 then enablement (`400`), then Host and `Origin` (`403`), then a web page's content type
-(`400`), then body size (`413`), then parsing. Checking Host and `Origin` first would
-hide nothing: the OpenAPI document reports `available` or `disabled` to any caller, by
-design, and a page that fails the `Origin` check cannot use the API either way. A
-disabled API is `400` here, not the HTTP route's `403`, because the official TypeScript
-client reads `403` as an authorization failure: it neither falls back to `initialize`
-nor shows the message.
+(`400`), then body size (`413`), then parsing. Checking enablement before Host and
+`Origin` reveals nothing new: the OpenAPI document already reports `available` or
+`disabled` to any caller, by design, and a page that fails the `Origin` check cannot use
+the API either way. A disabled API is `400` here, not the HTTP route's `403`, because
+the official TypeScript client reads `403` as an authorization failure: it neither
+falls back to `initialize` nor shows the message.
 
 A content type counts as JSON when its media type is `application/json`, whatever its
 parameters, so `application/json; charset=utf-8` passes. Every refusal before parsing
@@ -575,9 +585,10 @@ Nothing new beyond the parent spec's rules, applied to one more route:
 - **`interact` is never annotated read-only**, so clients that confirm writes keep doing
   so. `get_data` is, because it runs no app code.
 - **`get_data` is no broader than the `/media` route,** which serves any live file to
-  whoever holds its URL: it serves the same files, only to a caller whose `session_id`
-  passes the identity check, and never runs a deferred `st.download_button` callable,
-  which only the browser protocol triggers.
+  whoever holds its URL: it serves the same files, by the same id, only to a caller
+  whose `session_id` passes the identity check, and never runs a deferred
+  `st.download_button` callable, which only the browser protocol triggers. The id, not
+  the session, is what protects a file, as **Scope** under [`get_data`](#get_data) says.
 
 What is new is practicality, as in the parent spec: pasting a URL into a chat assistant
 is far easier than writing an HTTP client, so an app with the API on will see more agent
@@ -639,13 +650,14 @@ It lands as one PR after the agent API's v1 stack, behind the same setting, abou
 lines of library code including the tool descriptions, docstrings, and messages, plus
 tests. Beyond the endpoint itself:
 
-- `get_data` reads files through the media file manager. A page's cost scales with the
-  page, not the file: the stored Arrow is an uncompressed IPC stream, which reads
-  without copying, as the snapshot preview already reads it, so a page slices out its
-  rows and JSON-encodes only those. Reading and encoding run off the event loop, as the
-  agent routes already parse requests with `asyncio.to_thread`. The performance tests
-  check repeated pages and concurrent calls on a table near the inherited 200 MB
-  limit; a decoded cache or a cap on reads at once comes in only if they call for one.
+- `get_data` reads files through the media file manager. The stored Arrow is an
+  uncompressed IPC stream, which reads without copying, as the snapshot preview already
+  reads it. A read still walks the stream's batches, but a page slices out only its
+  rows and JSON-encodes only those, so encoding scales with the page, not the file.
+  Reading and encoding run off the event loop, as the agent routes already parse
+  requests with `asyncio.to_thread`. The performance tests check repeated pages, a
+  last-page read, and concurrent calls on a table near the inherited 200 MB limit; a
+  decoded cache or a cap on reads at once comes in only if they call for one.
 - The route is wired like the other two agent routes: `_stcore/agent/mcp` joins the
   reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
   and its endpoint is wrapped so every response carries the `Link` header. That `404`
@@ -837,7 +849,7 @@ and most apps are unaffected.
 
 | Item                       | ✅ or comment                                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. A prefix-stripping platform needs nothing more, because result URLs are relative and `get_data` resolves them on the server. |
+| Works on SiS, Cloud, etc?  | ⚠️ A local app works with every client that connects from the user's machine. A public Community Cloud app works with any client at its prefixed URL (`…/~/+/_stcore/agent/mcp`). A private Community Cloud app or a SiS app sits behind platform authentication that hosted clients cannot complete until agent sign-in (the parent spec's follow-up #10). Multi-replica deployments need session affinity, as for the HTTP API. Hosted MCP clients call from rotating provider IPs and generally send no cookies, and `session_id` is inside the JSON-RPC arguments, so neither IP- nor cookie-based affinity sticks and those clients can see `unknown_session`. v1 adds no separate affinity mechanism. On a host that plugs in its own media store, `get_data` returns `read_unsupported` for every call, so only `interact` works there ([Rollout](#rollout)). A prefix-stripping platform needs nothing more for URLs, because result URLs are relative and `get_data` resolves them on the server. |
 | No breaking API changes    | ✅ Additive: one route under `/_stcore/agent/`, its OpenAPI path and three MCP-only error codes, and a mention of the MCP server in the `<noscript>` text. One change to the shipped routes: any method on a reserved path under a page's URL is a `404`, so `POST /page2/_stcore/agent/interact` stops answering `405`. No new config options and no `st.*` changes.                                                                                                                                                                                           |
 | No new dependencies        | ✅ Written by hand on the existing Starlette server. Tests may use the official MCP SDK as a dev-only dependency.                                                                                                                                                                                                                                                                   |
 | Metrics collected          | The parent spec's usage counts, which ride on browser page profiles while `browser.gatherUsageStats` is on. Each `interact` tool call counts in `AgentApiUsage.mcp_interactions`, refused ones included, and each session it creates in `sessions`. With the API off, a request that passes the Host, `Origin`, and content-type checks counts, as on the HTTP route. A `get_data` read is not an interaction and is not counted. The negotiated protocol version is [out of scope](#out-of-scope) for v1. |
