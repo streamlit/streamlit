@@ -28,7 +28,7 @@ import type { ReadOnlyGridProps } from "./ReadOnlyGrid"
  * State of the mocked grid module, which finishes loading once a test calls
  * `release()`, or fails with the error passed to `fail()`.
  */
-const gridModule = {
+const mockGridModule = {
   loads: 0,
   release: (): void => {},
   fail: (_error: Error): void => {},
@@ -44,17 +44,17 @@ describe("LazyReadOnlyGrid", () => {
     // Fresh modules give each test a lazy component and a grid module that
     // haven't loaded yet.
     vi.resetModules()
-    gridModule.loads = 0
-    gridModule.lastProps = undefined
+    mockGridModule.loads = 0
+    mockGridModule.lastProps = undefined
     vi.doMock("./ReadOnlyGrid", async () => {
-      gridModule.loads += 1
+      mockGridModule.loads += 1
       await new Promise<void>((resolve, reject) => {
-        gridModule.release = resolve
-        gridModule.fail = reject
+        mockGridModule.release = resolve
+        mockGridModule.fail = reject
       })
       return {
         ReadOnlyGrid: (props: ReadOnlyGridProps) => {
-          gridModule.lastProps = props
+          mockGridModule.lastProps = props
           return <div data-testid="mockReadOnlyGrid" />
         },
       }
@@ -68,9 +68,9 @@ describe("LazyReadOnlyGrid", () => {
 
   it.each([
     ["a pixel height", 300, "300px"],
-    ["no height", undefined, mockTheme.emotion.sizes.minElementHeight],
+    ["an unset height", undefined, mockTheme.emotion.sizes.minElementHeight],
   ])(
-    "holds %s with a skeleton until the grid loads",
+    "shows a skeleton sized for %s until the grid loads",
     async (_, height, skeletonHeight) => {
       const { LazyReadOnlyGrid } = lazyModule
       render(
@@ -82,14 +82,14 @@ describe("LazyReadOnlyGrid", () => {
       expect(skeleton).toHaveAttribute("aria-hidden", "true")
       expect(screen.queryByTestId("mockReadOnlyGrid")).not.toBeInTheDocument()
 
-      await vi.waitFor(() => expect(gridModule.loads).toBe(1))
+      await vi.waitFor(() => expect(mockGridModule.loads).toBe(1))
       act(() => {
-        gridModule.release()
+        mockGridModule.release()
       })
 
       expect(await screen.findByTestId("mockReadOnlyGrid")).toBeVisible()
       expect(screen.queryByTestId("stSkeleton")).not.toBeInTheDocument()
-      expect(gridModule.lastProps).toEqual({
+      expect(mockGridModule.lastProps).toEqual({
         data: fakeQuiver,
         height,
         alt: "Sales",
@@ -100,9 +100,9 @@ describe("LazyReadOnlyGrid", () => {
   it("reopens without a skeleton once the grid has loaded", async () => {
     const { LazyReadOnlyGrid } = lazyModule
     const { unmount } = render(<LazyReadOnlyGrid data={fakeQuiver} />)
-    await vi.waitFor(() => expect(gridModule.loads).toBe(1))
+    await vi.waitFor(() => expect(mockGridModule.loads).toBe(1))
     act(() => {
-      gridModule.release()
+      mockGridModule.release()
     })
     expect(await screen.findByTestId("mockReadOnlyGrid")).toBeVisible()
 
@@ -120,9 +120,11 @@ describe("LazyReadOnlyGrid", () => {
     const { LazyReadOnlyGrid } = lazyModule
     render(<LazyReadOnlyGrid data={fakeQuiver} height={300} />)
 
-    await vi.waitFor(() => expect(gridModule.loads).toBe(1))
+    await vi.waitFor(() => expect(mockGridModule.loads).toBe(1))
     act(() => {
-      gridModule.fail(new Error("Failed to fetch dynamically imported module"))
+      mockGridModule.fail(
+        new Error("Failed to fetch dynamically imported module")
+      )
     })
 
     // Vitest wraps the factory's error, so match on the error alert itself.
