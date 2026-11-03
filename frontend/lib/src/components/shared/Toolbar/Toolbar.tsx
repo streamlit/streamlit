@@ -51,6 +51,11 @@ export interface ToolbarActionProps {
   icon?: EmotionIcon
   show_label?: boolean
   onClick: () => void
+  /**
+   * Starts loading what `onClick` needs before a likely click. Called when the
+   * pointer enters the action or the action receives focus.
+   */
+  onPreload?: () => void
   /** Element name composed into aria-label only (not the tooltip). */
   labelContext?: string
 }
@@ -60,13 +65,18 @@ export function ToolbarAction({
   show_label = false,
   icon,
   onClick,
+  onPreload,
   labelContext,
 }: ToolbarActionProps): ReactElement {
   const theme = useEmotionTheme()
 
   const displayLabel = show_label ? label : ""
   return (
-    <div data-testid="stElementToolbarButton">
+    <div
+      data-testid="stElementToolbarButton"
+      onPointerEnter={onPreload}
+      onFocus={onPreload}
+    >
       <Tooltip
         content={
           <StreamlitMarkdown

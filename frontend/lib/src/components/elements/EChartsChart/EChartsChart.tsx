@@ -45,7 +45,10 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import {
+  LazyReadOnlyGrid,
+  preloadReadOnlyGrid,
+} from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
@@ -803,7 +806,7 @@ export function EChartsChart({
   return (
     <>
       {isDataViewOpen && (
-        <ReadOnlyGrid
+        <LazyReadOnlyGrid
           data={dataViewData}
           height={fullScreenHeight ?? pixelHeight ?? dataViewHeight}
           alt={labelContext}
@@ -854,6 +857,7 @@ export function EChartsChart({
                   label="Show data"
                   icon={TableChart}
                   onClick={handleShowData}
+                  onPreload={preloadReadOnlyGrid}
                   labelContext={labelContext}
                 />
               )}
