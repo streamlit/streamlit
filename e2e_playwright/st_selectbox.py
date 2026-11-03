@@ -370,3 +370,26 @@ with st.sidebar:
         key="sidebar_bottom_select",
     )
     st.write("sidebar bottom value:", v_sidebar_bottom)
+
+# --- icon parameter ---
+st.selectbox("selectbox 27 (material icon)", options, icon=":material/public:")
+
+v28 = st.selectbox(
+    "selectbox 28 (emoji icon, accept new options)",
+    options,
+    index=None,
+    icon="👤",
+    placeholder="Pick someone",
+    accept_new_options=True,
+)
+st.write("value 28:", v28)
+
+st.selectbox(
+    "selectbox 29 (icon, disabled)", options, icon=":material/lock:", disabled=True
+)
+
+# The start icons and the text of these three inputs should line up.
+with st.container(key="icon_alignment"):
+    st.text_input("aligned text input", "male", icon=":material/person:")
+    st.number_input("aligned number input", value=1, icon=":material/tag:")
+    st.selectbox("aligned selectbox", options, icon=":material/person:")

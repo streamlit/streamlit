@@ -174,6 +174,19 @@ describe("Selectbox widget", () => {
       screen.getByPlaceholderText("Please select an option...")
     ).toBeInTheDocument()
   })
+
+  it("renders the icon from the proto", () => {
+    render(<Selectbox {...getProps({ icon: ":material/public:" })} />)
+
+    expect(screen.getByTestId("stSelectboxIcon")).toBeVisible()
+    expect(screen.getByTestId("stIconMaterial")).toHaveTextContent("public")
+  })
+
+  it("renders no icon when the proto has none", () => {
+    render(<Selectbox {...getProps()} />)
+
+    expect(screen.queryByTestId("stSelectboxIcon")).not.toBeInTheDocument()
+  })
 })
 
 describe("Selectbox query param binding", () => {

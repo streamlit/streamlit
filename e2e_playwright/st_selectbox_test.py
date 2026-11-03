@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from e2e_playwright.conftest import ImageCompareFunction
 
 
-NUM_SELECTBOXES = 35
+NUM_SELECTBOXES = 39
 
 
 def get_selectbox_input(
@@ -125,6 +125,18 @@ def test_selectbox_widget_rendering(
     assert_snapshot(
         get_selectbox(themed_app, "selectbox 19 (width='stretch')"),
         name="st_selectbox-width_stretch",
+    )
+    assert_snapshot(
+        get_selectbox(themed_app, "selectbox 27 (material icon)"),
+        name="st_selectbox-material_icon",
+    )
+    assert_snapshot(
+        get_selectbox(themed_app, "selectbox 28 (emoji icon, accept new options)"),
+        name="st_selectbox-emoji_icon_placeholder",
+    )
+    assert_snapshot(
+        get_selectbox(themed_app, "selectbox 29 (icon, disabled)"),
+        name="st_selectbox-icon_disabled",
     )
 
 
@@ -1032,3 +1044,74 @@ def test_selectbox_required_marker_and_error_rendering(
     ).click()
     expect(widget.get_by_test_id("stSelectboxErrorIcon")).to_be_visible()
     assert_snapshot(widget, name="st_selectbox-required_error")
+
+
+def _get_text_start_x(input_locator: Locator) -> float:
+    """Return the x-coordinate where the text of an input element starts."""
+    return float(
+        input_locator.evaluate(
+            "el => el.getBoundingClientRect().left"
+            " + parseFloat(getComputedStyle(el).paddingLeft)"
+        )
+    )
+
+
+def test_selectbox_icon_alignment_and_interactions(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the icon lines up with text and number input icons, passes clicks
+    to the input, and stays while typing.
+    """
+    # The icon and the text line up with st.text_input and st.number_input icons.
+    alignment = get_element_by_key(app, "icon_alignment")
+    text_input = alignment.get_by_test_id("stTextInput")
+    number_input = alignment.get_by_test_id("stNumberInput")
+    aligned_selectbox = get_selectbox(alignment, "aligned selectbox")
+    selectbox_icon_box = aligned_selectbox.get_by_test_id(
+        "stSelectboxIcon"
+    ).bounding_box()
+    assert selectbox_icon_box is not None
+    for other_icon in (
+        text_input.get_by_test_id("stTextInputIcon"),
+        number_input.get_by_test_id("stNumberInputIcon"),
+    ):
+        other_icon_box = other_icon.bounding_box()
+        assert other_icon_box is not None
+        assert abs(other_icon_box["x"] - selectbox_icon_box["x"]) <= 1
+        assert abs(other_icon_box["width"] - selectbox_icon_box["width"]) <= 1
+    selectbox_text_x = _get_text_start_x(aligned_selectbox.locator("input"))
+    for other_input in (text_input.locator("input"), number_input.locator("input")):
+        assert abs(_get_text_start_x(other_input) - selectbox_text_x) <= 1
+    assert_snapshot(alignment, name="st_selectbox-icon_alignment")
+
+    label = "selectbox 28 (emoji icon, accept new options)"
+    selectbox = get_selectbox(app, label)
+    icon = selectbox.get_by_test_id("stSelectboxIcon")
+    expect(icon).to_be_visible()
+    expect_markdown(app, "value 28: None")
+
+    # Clicking the icon passes through to the input and opens the dropdown.
+    icon.scroll_into_view_if_needed()
+    icon_box = icon.bounding_box()
+    assert icon_box is not None
+    app.mouse.click(
+        icon_box["x"] + icon_box["width"] / 2, icon_box["y"] + icon_box["height"] / 2
+    )
+    dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+    expect(selectbox.get_by_role("combobox")).to_be_focused()
+
+    # The icon stays visible while typing a new option.
+    app.keyboard.type("Zed")
+    expect(dropdown.get_by_role("option", name="Add: Zed")).to_be_visible()
+    expect(icon).to_be_visible()
+
+    app.keyboard.press("Enter")
+    expect_markdown(app, "value 28: Zed")
+    expect(selectbox.get_by_role("combobox")).to_have_value("Zed")
+    expect(icon).to_have_count(1)
+
+    # Selectboxes without an icon render none.
+    expect(
+        get_selectbox(app, "selectbox 1 (default)").get_by_test_id("stSelectboxIcon")
+    ).to_have_count(0)

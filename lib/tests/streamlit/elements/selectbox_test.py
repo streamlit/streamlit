@@ -68,6 +68,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
         assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
+        assert c.icon == ""
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -101,6 +102,55 @@ class SelectboxTest(DeltaGeneratorTestCase):
             st.selectbox("the label", ("m", "f"), key=key, required=False)
             id1 = self.get_delta_from_queue().new_element.selectbox.id
             st.selectbox("the label", ("m", "f"), key=key, required=True)
+            id2 = self.get_delta_from_queue().new_element.selectbox.id
+
+            if expect_same_id:
+                assert id1 == id2
+            else:
+                assert id1 != id2
+
+    @parameterized.expand(
+        [
+            ("emoji", "👤"),
+            ("material", ":material/public:"),
+            ("spinner", "spinner"),
+        ]
+    )
+    def test_icon_sets_proto_field(self, _: str, icon: str) -> None:
+        """Test that a valid icon is marshalled to the proto field."""
+        st.selectbox("the label", ("m", "f"), icon=icon)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.icon == icon
+
+    @parameterized.expand(
+        [
+            ("unknown_material_icon", ":material/not_a_real_icon:"),
+            ("plain_text", "globe"),
+        ]
+    )
+    def test_invalid_icon_raises(self, _: str, icon: str) -> None:
+        """Test that an invalid icon raises a StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.selectbox("the label", ("m", "f"), icon=icon)
+
+    @parameterized.expand(
+        [
+            ("unkeyed", None, False),
+            ("keyed", "selectbox_key", True),
+        ]
+    )
+    def test_icon_changes_widget_id_only_without_key(
+        self, _: str, key: str | None, expect_same_id: bool
+    ) -> None:
+        """Changing the icon changes the widget id only when it has no key."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.selectbox("the label", ("m", "f"), key=key, icon="👤")
+            id1 = self.get_delta_from_queue().new_element.selectbox.id
+            st.selectbox("the label", ("m", "f"), key=key, icon=":material/public:")
             id2 = self.get_delta_from_queue().new_element.selectbox.id
 
             if expect_same_id:
@@ -401,6 +451,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 args=("arg1", "arg2"),
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
+                icon="👤",
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
@@ -424,6 +475,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
+                icon=":material/public:",
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["apple", "banana", "cherry"],
@@ -515,6 +567,20 @@ def test_selectbox_required_is_exposed_in_app_test() -> None:
 
     at = selectbox.set_value(None).run()
     assert at.selectbox[0].value is None
+
+
+def test_selectbox_icon_is_exposed_in_app_test() -> None:
+    """Test that AppTest exposes the icon, and an empty string when unset."""
+
+    def script():
+        import streamlit as st
+
+        st.selectbox("with icon", ("m", "f"), icon=":material/public:")
+        st.selectbox("without icon", ("m", "f"))
+
+    at = AppTest.from_function(script).run()
+    assert at.selectbox[0].icon == ":material/public:"
+    assert at.selectbox[1].icon == ""
 
 
 def test_selectbox_preserves_selection_when_options_expand():

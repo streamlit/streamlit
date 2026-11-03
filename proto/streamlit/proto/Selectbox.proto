@@ -45,7 +45,11 @@ message Selectbox {
   // If true, an empty selection (None) cannot be committed or submitted
   // (client-side).
   bool required = 17;
-  // Next: 18
+
+  // Emoji, Material icon, or "spinner" shown at the start of the input; empty
+  // means no icon.
+  string icon = 18;
+  // Next: 19
 
   reserved 7;
 }

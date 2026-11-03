@@ -50,6 +50,8 @@ function getRightInset(theme: EmotionTheme): string {
  * the ComboBox's `isInvalid`) shows the invalid-input chrome.
  */
 export const StyledGroup = styled(Group)(({ theme }) => ({
+  // Positioning context for the absolutely positioned StyledStartEnhancer.
+  position: "relative",
   display: "flex",
   flexDirection: "row",
   alignItems: "stretch",
@@ -91,21 +93,58 @@ export const StyledErrorIcon = styled.div(({ theme }) => ({
 export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 /**
+ * Start icon, overlaid on the input's widened left padding (`$hasIcon` on
+ * StyledInput). Matches the st.text_input / st.number_input start icon in
+ * size, inset, and color, and ignores pointer events so a click on it opens
+ * the dropdown like a click on the value.
+ */
+export const StyledStartEnhancer = styled.div<{ $isMaterialIcon: boolean }>(
+  ({ theme, $isMaterialIcon }) => ({
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: theme.spacing.sm,
+    display: "flex",
+    alignItems: "center",
+    minWidth: theme.iconSizes.base,
+    pointerEvents: "none",
+    // Fade Material icons so they read as decoration, not a control.
+    color: $isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+  })
+)
+
+/**
  * The text input inside the ComboBox. Grows to fill available space and
  * shows `$placeholderColor` when disabled (faded vs. normal faded text).
  *
  * `$typingDisabled` (FILTER_MODE_NONE) hides the text caret and shows a pointer
  * cursor so the input looks non-editable — like a plain select — even though it
  * stays focusable for keyboard navigation.
+ *
+ * `$hasIcon` widens the left padding to make room for StyledStartEnhancer, so
+ * the text starts where it does in st.text_input and st.number_input with an
+ * icon.
  */
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $placeholderColor?: string; $typingDisabled?: boolean }>(
-  ({ theme, $placeholderColor, $typingDisabled = false }) => ({
+})<{
+  $placeholderColor?: string
+  $typingDisabled?: boolean
+  $hasIcon?: boolean
+}>(
+  ({
+    theme,
+    $placeholderColor,
+    $typingDisabled = false,
+    $hasIcon = false,
+  }) => ({
     flexGrow: 1,
     flexShrink: 1,
     minWidth: theme.spacing.threeXS,
     padding: theme.spacing.sm,
+    ...($hasIcon && {
+      paddingLeft: `calc(${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.md})`,
+    }),
     border: "none",
     outline: "none",
     background: "transparent",
