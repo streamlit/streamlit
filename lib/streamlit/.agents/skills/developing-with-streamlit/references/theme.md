@@ -248,8 +248,7 @@ If unset, header text/icons use a faded `textColor`. Selected-column header text
 
 ```toml
 [theme]
-# Pick one `font` value; the commented-out lines are alternatives.
-font = "sans-serif"  # or "serif" / "monospace"
+font = "sans-serif"  # Figtree. serif = Source Serif. monospace = Geist Mono.
 # font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
 # font = "'IBM Plex Sans':https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap"
 ```

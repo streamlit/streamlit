@@ -77,6 +77,8 @@ export const StyledMetricValueText = styled.div(({ theme }) => ({
   fontWeight: theme.fontWeights.metricValueFontWeight,
   color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
+  // Keep multi-digit values aligned when compared side-by-side.
+  fontVariantNumeric: "tabular-nums",
 }))
 
 interface StyledMetricDeltaTextProps {
@@ -100,6 +102,7 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     maxWidth: "100%",
     flexShrink: 0,
     padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    fontVariantNumeric: "tabular-nums",
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon

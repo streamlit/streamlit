@@ -22,45 +22,48 @@
 /* Mono, regular */
 
 @font-face {
-  font-family: "Source Code Pro";
+  font-family: "Geist Mono";
   font-weight: 100 900;
   font-style: normal;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code/SourceCodeVF-Upright.ttf.woff2")
+  src: url("../fonts/Geist_Mono/GeistMonoVF-Upright.ttf.woff2")
     format("woff2");
 }
 
 /* Mono, italic */
 
 @font-face {
-  font-family: "Source Code Pro";
+  font-family: "Geist Mono";
   font-weight: 100 900;
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Code/SourceCodeVF-Italic.ttf.woff2")
+  src: url("../fonts/Geist_Mono/GeistMonoVF-Italic.ttf.woff2")
     format("woff2");
 }
 
 /* Sans, regular */
 
+/*
+ * Figtree's cmap is Latin-focused (no Greek/Cyrillic; sparse Vietnamese). Missing
+ * glyphs fall back to the generic sans in the stack. Accepted for the default-theme
+ * refresh; apps that need those scripts should set theme.font / fontFaces.
+ */
 @font-face {
-  font-family: "Source Sans";
+  font-family: "Figtree";
   font-weight: 100 900;
   font-style: normal;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans/SourceSansVF-Upright.ttf.woff2")
-    format("woff2");
+  src: url("../fonts/Figtree/FigtreeVF-Upright.ttf.woff2") format("woff2");
 }
 
 /* Sans, italic */
 
 @font-face {
-  font-family: "Source Sans";
+  font-family: "Figtree";
   font-weight: 100 900;
   font-style: italic;
   /* IMPORTANT: Always use a relative path! */
-  src: url("../fonts/Source_Sans/SourceSansVF-Italic.ttf.woff2")
-    format("woff2");
+  src: url("../fonts/Figtree/FigtreeVF-Italic.ttf.woff2") format("woff2");
 }
 
 /* Serif, regular */

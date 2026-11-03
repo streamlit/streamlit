@@ -28,7 +28,7 @@ def test_vega_chart_width_behavior(themed_app: Page):
 
     expected_widths = [
         704,  # 0: Regular chart (should default to stretch)
-        135,  # 1: Facet chart (should default to content)
+        141,  # 1: Facet chart (should default to content; Figtree label metrics)
         158,  # 2: Chart with row encoding (should default to content)
         444,  # 3: Chart with column encoding (should default to content)
         308,  # 4: Horizontal concatenation chart (should default to content)
