@@ -39,6 +39,7 @@ import {
   EChartsChart as EChartsChartProto,
   type streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
@@ -65,6 +66,7 @@ import {
   STREAMLIT_THEME,
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
+import { applyLargeDataDefaults } from "./largeDataDefaults"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -73,7 +75,10 @@ import {
   StyledEChartsError,
   StyledEChartsErrorOverlay,
 } from "./styled-components"
-import { applyTooltipFormatters } from "./tooltipFormatters"
+import {
+  applyTimeLabelFormatters,
+  applyTooltipFormatters,
+} from "./tooltipFormatters"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -91,7 +96,9 @@ const OPERATION_DESCRIPTIONS: Readonly<Record<ChartErrorSource, string>> = {
 /** Names a chart in console messages by its `alt`, if it has one. */
 function describeChart(alt: string | null | undefined): string {
   const label = alt?.trim()
-  return label ? `ECharts chart "${label}"` : "ECharts chart"
+  return isNullOrEmptyString(label)
+    ? "ECharts chart"
+    : `ECharts chart "${label}"`
 }
 
 /**
@@ -216,7 +223,10 @@ function reconcileEChartsAria(
     }
     return
   }
-  if (dom.getAttribute("role") === "img" && !dom.getAttribute("aria-label")) {
+  if (
+    dom.getAttribute("role") === "img" &&
+    isNullOrEmptyString(dom.getAttribute("aria-label"))
+  ) {
     dom.removeAttribute("role")
   }
 }
@@ -409,8 +419,11 @@ export function EChartsChart({
   } = useEChartsSelections(element, widgetMgr, fragmentId, disabled, option)
 
   // The option handed to setOption:
+  // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
   // - Streamlit theme defaults.
   // - Tooltip string formatters turned into functions.
+  // - Under the Streamlit theme, time axis labels that show midnight values
+  //   as dates.
   // - On display-only charts, a non-pointer series cursor so they don't look
   //   clickable. Selection widgets keep the author's cursor.
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
@@ -422,13 +435,20 @@ export function EChartsChart({
       return null
     }
     let prepared = configureSelectionOption(
-      applyTooltipFormatters(
-        applyStreamlitOptionDefaults(option, element.theme, theme)
+      applyTimeLabelFormatters(
+        applyTooltipFormatters(
+          applyStreamlitOptionDefaults(
+            applyLargeDataDefaults(option, element.selectionActivated),
+            element.theme,
+            theme
+          )
+        ),
+        element.theme
       )
     )
     // Proto `alt` wins over generated / author aria.label.description and
     // forces aria.enabled so the chart stays named.
-    if (element.alt) {
+    if (!isNullOrEmptyString(element.alt)) {
       prepared = applyAltToOption(prepared, element.alt)
     }
     return prepared
@@ -439,6 +459,7 @@ export function EChartsChart({
   }, [
     option,
     element.theme,
+    element.selectionActivated,
     configureSelectionOption,
     element.alt,
     spacing.sm,
@@ -585,7 +606,7 @@ export function EChartsChart({
       // (it sets role="img" then returns). Clear before setOption when
       // Streamlit is not applying alt so a removed name cannot stick;
       // ECharts rewrites the label when it has series data or a description.
-      if (containerRef.current && !element.alt) {
+      if (containerRef.current && isNullOrEmptyString(element.alt)) {
         containerRef.current.removeAttribute("aria-label")
       }
       chartInstance.setOption(preparedOption as echarts.EChartsOption, {
@@ -776,8 +797,8 @@ export function EChartsChart({
     setIsShowingData(false)
   }, [])
 
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const labelContext = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const labelContext = isNullOrEmptyString(trimmedAlt) ? undefined : trimmedAlt
 
   return (
     <>

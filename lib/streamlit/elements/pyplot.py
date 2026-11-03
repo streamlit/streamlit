@@ -91,11 +91,22 @@ class PyplotMixin:
         alt: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
-        """Display a matplotlib.pyplot figure.
+        """Display a matplotlib.pyplot figure as a static image.
 
         Streamlit renders the figure by calling Matplotlib's ``savefig`` with
         ``bbox_inches="tight"`` and ``dpi=200`` so charts look sharp and cropped
         by default.
+
+        .. note::
+            For new charts, prefer a Vega-based chart command (``st.line_chart``,
+            ``st.bar_chart``, ``st.area_chart``, ``st.scatter_chart``, or
+            ``st.altair_chart``) or ``st.echarts_chart``. A ``st.pyplot`` chart
+            is a static image with no zoom, tooltips, or selections. It doesn't
+            follow the app's theme, so a default figure stays white on a dark
+            theme, and it's rendered on the server on every rerun. Use
+            ``st.pyplot`` to display a Matplotlib figure you already have, or
+            output from libraries that only produce Matplotlib figures, such as
+            seaborn.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
@@ -111,6 +122,8 @@ class PyplotMixin:
         fig : Matplotlib Figure
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
+            Pandas' ``DataFrame.plot()`` returns an ``Axes`` rather than a
+            ``Figure``, so pass its ``.get_figure()`` result.
 
         clear_figure : bool
             Whether to clear the figure after rendering it. If this is
@@ -128,7 +141,11 @@ class PyplotMixin:
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
-              of the parent container.
+              of the parent container. Streamlit shrinks a wider image to
+              exactly that many pixels, so it can look blurry on
+              high-resolution screens. With ``"stretch"`` or ``"content"``,
+              Streamlit keeps up to 1,460 pixels, so the figure stays sharp in
+              the default centered layout.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of

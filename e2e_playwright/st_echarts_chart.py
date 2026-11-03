@@ -587,3 +587,106 @@ with st.container(key="c_tooltip_value_format"):
         key="tooltip_value_format",
         height=_HEIGHT,
     )
+
+# A month of daily naive datetimes on a time axis. ECharts' own axis tooltip
+# header prints "00:00:00" for daily data that spans less than about five
+# months.
+with st.container(key="c_daily_time_tooltip"):
+    st.echarts_chart(
+        {
+            "dataset": {
+                "source": pd.DataFrame(
+                    {
+                        "date": pd.date_range("2026-07-20", periods=30, freq="D"),
+                        "sessions": np.arange(30) * 10 + 100,
+                    }
+                )
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "tooltip": {"trigger": "axis", "className": "echarts-daily-tooltip"},
+            "series": [{"type": "line", "name": "Sessions"}],
+            **_NO_ANIM,
+        },
+        key="daily_time_tooltip",
+        height=_HEIGHT,
+    )
+
+# Large-data defaults. The SVG renderer makes the drawn shapes countable: large
+# mode draws a bar series as a few paths, and hidden line symbols draw nothing.
+_dense_rng = np.random.default_rng(17)
+_dense_bars = pd.DataFrame({"x": np.arange(2001), "y": _dense_rng.random(2001)})
+_dense_line = pd.DataFrame(
+    {
+        "x": pd.date_range("2024-01-01", periods=2001, freq="min"),
+        "y": np.cumsum(_dense_rng.standard_normal(2001)),
+    }
+)
+
+
+def _dense_option(
+    df: pd.DataFrame, series: dict[str, Any], x_type: str
+) -> dict[str, Any]:
+    return {
+        "dataset": {"source": df},
+        "xAxis": {"type": x_type},
+        "yAxis": {"type": "value"},
+        "series": [{"encode": {"x": "x", "y": "y"}, **series}],
+        **_NO_ANIM,
+    }
+
+
+with st.container(key="c_dense_bar"):
+    st.echarts_chart(
+        _dense_option(_dense_bars, {"type": "bar"}, "value"),
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_bar_opt_out"):
+    st.echarts_chart(
+        _dense_option(_dense_bars, {"type": "bar", "large": False}, "value"),
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_line"):
+    st.echarts_chart(
+        {
+            **_dense_option(_dense_line, {"type": "line"}, "time"),
+            "tooltip": {"trigger": "axis", "className": "echarts-dense-tooltip"},
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_dense_line_opt_out"):
+    st.echarts_chart(
+        _dense_option(_dense_line, {"type": "line", "showSymbol": True}, "time"),
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+# Point selection on a dataset.source DataFrame: data_indices address that
+# DataFrame's rows. Two full-height bars, one per half of the chart, so a click
+# at 75% width lands on the second bar.
+_selection_df = pd.DataFrame({"day": ["Mon", "Tue"], "sales": [100, 100]})
+dataset_selection_event = st.echarts_chart(
+    {
+        "dataset": {"source": _selection_df},
+        "xAxis": {"type": "category"},
+        "yAxis": {"type": "value", "max": 100},
+        "series": [{"type": "bar", "barWidth": "90%", "selectedMode": "multiple"}],
+        **_NO_ANIM,
+    },
+    key="dataset_selection_chart",
+    on_select="rerun",
+    height=_HEIGHT,
+)
+_dataset_rows = [
+    i
+    for group in dataset_selection_event.selection.selected
+    for i in group["data_indices"]
+]
+_selected_days = ", ".join(_selection_df.iloc[_dataset_rows]["day"]) or "none"
+st.write(f"echarts dataset selection: {_selected_days}")

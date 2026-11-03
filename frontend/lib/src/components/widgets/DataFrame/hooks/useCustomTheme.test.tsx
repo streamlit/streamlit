@@ -199,7 +199,7 @@ describe("useCustomTheme hook", () => {
     expect(fgIconHeader).toBe(mockTheme.emotion.colors.white)
   })
 
-  it("uses the fadedText60 default for header text", () => {
+  it("uses the fadedText70 default for header text", () => {
     const wrapper = ({
       children,
     }: {
@@ -212,8 +212,8 @@ describe("useCustomTheme hook", () => {
     const { textHeader, textGroupHeader, bgIconHeader } =
       result.current.glideTheme
 
-    expect(textHeader).toBe(mockTheme.emotion.colors.fadedText60)
-    expect(textGroupHeader).toBe(mockTheme.emotion.colors.fadedText60)
-    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText60)
+    expect(textHeader).toBe(mockTheme.emotion.colors.fadedText70)
+    expect(textGroupHeader).toBe(mockTheme.emotion.colors.fadedText70)
+    expect(bgIconHeader).toBe(mockTheme.emotion.colors.fadedText70)
   })
 })

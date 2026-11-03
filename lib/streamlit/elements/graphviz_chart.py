@@ -55,10 +55,20 @@ class GraphvizMixin:
     ) -> DeltaGenerator:
         """Display a graph using the d3-graphviz library and Graphviz WASM.
 
+        .. note::
+            Prefer ``st.mermaid_chart`` for flowcharts, sequence diagrams, ER
+            diagrams, and other diagrams that Mermaid can express. Mermaid
+            diagrams follow the app's light and dark theme and show syntax
+            errors in the app. Use ``st.graphviz_chart`` when a diagram needs
+            a Graphviz layout engine, such as ``neato`` or ``fdp``, or
+            clusters. Graphviz charts don't use the app's theme colors, so set
+            node, edge, and font colors in the graph for dark themes.
+
         .. Important::
-            You must install ``graphviz>=0.19.0`` to use this command. You can
-            install all charting dependencies as an extra with
-            Streamlit:
+            To pass ``graphviz.Graph``, ``graphviz.Digraph``, or
+            ``graphviz.Source`` objects, you must install
+            ``graphviz>=0.19.0``. A DOT string works without it. You can
+            install all charting dependencies as an extra with Streamlit:
 
             .. code-block:: shell
 

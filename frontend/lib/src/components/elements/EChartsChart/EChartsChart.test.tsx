@@ -534,6 +534,27 @@ describe("EChartsChart", () => {
     expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
   })
 
+  it.each([
+    ["sets", "the Streamlit theme", "streamlit", "function"],
+    ["skips", "theme=None", "", "undefined"],
+  ] as const)(
+    "%s the time axis label formatter with %s",
+    (_action, _case, theme, expectedType) => {
+      const spec = JSON.stringify({
+        xAxis: { type: "time" },
+        yAxis: { type: "value" },
+        tooltip: { trigger: "axis" },
+        series: [{ type: "line", data: [["2026-08-18", 1]] }],
+      })
+      render(<Wrapper element={createElement({ spec, theme })} />)
+
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.xAxis.axisPointer?.label?.formatter).toBeTypeOf(
+        expectedType
+      )
+    }
+  )
+
   it("leaves the chart container's role to ECharts", () => {
     render(<Wrapper element={createElement()} />)
 
@@ -1255,6 +1276,52 @@ describe("EChartsChart", () => {
       expect(
         screen.queryByTestId("stEChartsChartError")
       ).not.toBeInTheDocument()
+    })
+
+    it("turns on large mode for a dense Arrow bar chart unless it selects", () => {
+      const count = 2001
+      const bytes = tableToIPC(
+        new Table({
+          x: vectorFromArray(
+            Array.from({ length: count }, (_, i) => i),
+            new Float64()
+          ),
+          y: vectorFromArray(
+            Array.from({ length: count }, (_, i) => i % 7),
+            new Float64()
+          ),
+        }),
+        "stream"
+      )
+      const spec = JSON.stringify({
+        dataset: { source: { name: "points" } },
+        xAxis: { type: "value" },
+        yAxis: { type: "value" },
+        series: [{ type: "bar", encode: { x: "x", y: "y" } }],
+      })
+      const datasets = [namedDataset("points", bytes)]
+
+      const { unmount } = render(
+        <Wrapper element={createElement({ spec, datasets })} />
+      )
+      const [displayOption] = mockChart.setOption.mock.calls[0]
+      expect(displayOption.dataset.source).toHaveLength(count)
+      expect(displayOption.series[0].large).toBe(true)
+      unmount()
+
+      mockChart.setOption.mockClear()
+      render(
+        <Wrapper
+          element={createElement({
+            spec,
+            datasets: [namedDataset("points", bytes)],
+            id: "chart-id",
+            selectionActivated: true,
+          })}
+        />
+      )
+      const [selectionOption] = mockChart.setOption.mock.calls[0]
+      expect(selectionOption.series[0]).not.toHaveProperty("large")
     })
 
     it("passes a user-authored name source through unchanged", () => {

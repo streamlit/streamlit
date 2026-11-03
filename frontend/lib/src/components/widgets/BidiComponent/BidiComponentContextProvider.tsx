@@ -23,6 +23,7 @@ import {
 } from "react"
 
 import type { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   BidiComponentContext,
@@ -70,7 +71,7 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
     const getWidgetValue = useCallback(() => {
       const raw = widgetMgr.getJsonValue(widgetInfo)
 
-      if (!raw) {
+      if (isNullOrEmptyString(raw)) {
         return {}
       }
 
@@ -109,8 +110,8 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         bytes,
         data,
         json,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank JSON means no mixed payload, not an empty document
-        mixedJson: mixed?.json || undefined,
+        // Blank JSON means no mixed payload, not an empty document.
+        mixedJson: isNullOrEmptyString(mixed?.json) ? undefined : mixed?.json,
       })
     }, [data, json, arrowData?.data, bytes, mixed?.json, mixed?.arrowBlobs])
 
@@ -124,8 +125,9 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         componentName,
         componentRegistry,
         cssContent: cssContent?.trim(),
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank path means unset
-        cssSourcePath: cssSourcePath || undefined,
+        cssSourcePath: isNullOrEmptyString(cssSourcePath)
+          ? undefined
+          : cssSourcePath,
         data: parsedData,
         fragmentId,
         getWidgetValue,
@@ -133,10 +135,10 @@ export const BidiComponentContextProvider: FC<BidiComponentContextProviderProps>
         id,
         // formId is a plain protobuf string. "" means the widget is not in a form.
         formId: element.formId || undefined,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank script means unset
-        jsContent: jsContent || undefined,
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank path means unset
-        jsSourcePath: jsSourcePath || undefined,
+        jsContent: isNullOrEmptyString(jsContent) ? undefined : jsContent,
+        jsSourcePath: isNullOrEmptyString(jsSourcePath)
+          ? undefined
+          : jsSourcePath,
         theme,
         widgetMgr,
       }

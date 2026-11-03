@@ -119,7 +119,7 @@ export const StyledInput = styled(Input, {
     userSelect: $typingDisabled ? "none" : undefined,
     boxSizing: "border-box",
     "&::placeholder": {
-      color: $placeholderColor ?? theme.colors.fadedText60,
+      color: $placeholderColor ?? theme.colors.fadedText70,
     },
     "&[data-disabled]": {
       cursor: "not-allowed",
@@ -227,7 +227,7 @@ export const StyledEmptyState = styled.span(({ theme }) => ({
   width: "100%",
   height: theme.sizes.emptyDropdownHeight,
   padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.base,

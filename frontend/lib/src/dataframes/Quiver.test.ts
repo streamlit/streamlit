@@ -221,6 +221,60 @@ describe("Quiver", () => {
         }
       )
     })
+
+    describe("hasSameBytes", () => {
+      /** Arrow IPC bytes of a one-column float64 table. */
+      const floatBytes = (values: number[]): Uint8Array =>
+        tableToIPC(
+          new Table({ y: vectorFromArray(values, new Float64()) }),
+          "stream"
+        )
+
+      it("matches a copy of the same bytes", () => {
+        const bytes = floatBytes([1, 2, 3])
+
+        expect(
+          new Quiver({ data: bytes }).hasSameBytes(
+            new Quiver({ data: bytes.slice() })
+          )
+        ).toBe(true)
+      })
+
+      it("matches views of the same buffer", () => {
+        const bytes = floatBytes([1, 2, 3])
+        const quiver = new Quiver({ data: bytes })
+
+        expect(quiver.hasSameBytes(quiver)).toBe(true)
+        expect(
+          quiver.hasSameBytes(
+            new Quiver({
+              data: new Uint8Array(
+                bytes.buffer,
+                bytes.byteOffset,
+                bytes.byteLength
+              ),
+            })
+          )
+        ).toBe(true)
+      })
+
+      it("tells apart new values with the same shape and byte size", () => {
+        const before = new Quiver({ data: floatBytes([1, 2, 3]) })
+        const after = new Quiver({ data: floatBytes([1, 2, 4]) })
+
+        // The shape, column names, and byte size all match.
+        expect(after.dimensions).toEqual(before.dimensions)
+        expect(after.columnNames).toEqual(before.columnNames)
+        expect(after.hasSameBytes(before)).toBe(false)
+      })
+
+      it("tells apart data with another row count", () => {
+        const before = new Quiver({ data: floatBytes([1, 2, 3]) })
+        const after = new Quiver({ data: floatBytes([1, 2]) })
+
+        expect(after.hasSameBytes(before)).toBe(false)
+      })
+    })
   })
 
   describe("Display", () => {

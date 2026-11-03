@@ -27,6 +27,7 @@ import {
 import moment from "moment"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -142,7 +143,7 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: isSelectSlider(element)
@@ -240,13 +241,16 @@ function Slider({
 
   const handleFinalChange = useCallback(
     (newValue: number | number[]): void => {
-      setValueWithSource({
-        value: toArray(newValue).map(trackToValue),
-        fromUser: true,
-      })
+      const finalValue = toArray(newValue).map(trackToValue)
+      // React Aria fires onChangeEnd after every thumb press and keyboard
+      // shortcut, even when the value did not move (e.g. clicking a thumb or
+      // pressing Home at the minimum). Only commit an actual change.
+      if (!matchesStoredValue(element, widgetMgr, finalValue)) {
+        setValueWithSource({ value: finalValue, fromUser: true })
+      }
       setIsDragging(false)
     },
-    [trackToValue, setValueWithSource]
+    [element, widgetMgr, trackToValue, setValueWithSource]
   )
 
   const handleChange = useCallback(
@@ -442,6 +446,27 @@ function updateWidgetMgrState(
     // For regular slider, use numeric values directly
     widgetMgr.setDoubleArrayValue(element.id, vws.value, update)
   }
+}
+
+/**
+ * Whether `value` matches the value stored in WidgetStateManager. For
+ * select_slider, compare option strings rather than indices, because a
+ * change of options can leave the hook's committed indices stale.
+ */
+function matchesStoredValue(
+  element: SliderProto,
+  widgetMgr: WidgetStateManager,
+  value: number[]
+): boolean {
+  if (isSelectSlider(element)) {
+    const stored = widgetMgr.getStringArrayValue(element)
+    return (
+      stored !== undefined &&
+      arrayComparator(indicesToStringValues(value, element.options), stored)
+    )
+  }
+  const stored = widgetMgr.getDoubleArrayValue(element)
+  return stored !== undefined && arrayComparator(value, stored)
 }
 
 function isDateTimeType(element: SliderProto): boolean {

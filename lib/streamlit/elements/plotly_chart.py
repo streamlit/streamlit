@@ -597,6 +597,16 @@ class PlotlyMixin:
         To show Plotly charts in Streamlit, pass a Plotly ``Figure`` or
         ``Data`` object to ``st.plotly_chart``.
 
+        .. note::
+            For new 2D charts, prefer a Vega-based chart command
+            (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
+            ``st.scatter_chart``, or ``st.altair_chart``) or
+            ``st.echarts_chart``. Vega-based charts and ECharts follow the
+            app's theme more closely, load much less code in the browser, and
+            don't need an extra package. Use ``st.plotly_chart`` for 3D
+            charts, scientific chart types such as violin or ternary plots, or
+            a Plotly figure you already have.
+
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
             performance may be enhanced by installing ``orjson`` as well. You
@@ -616,14 +626,20 @@ class PlotlyMixin:
             https://plot.ly/python/ for examples of graph descriptions.
 
             .. note::
-                If your chart contains more than 1000 data points, Plotly will
-                use a WebGL renderer to display the chart. Different browsers
-                have different limits on the number of WebGL contexts per page.
-                If you have multiple WebGL contexts on a page, you may need to
-                switch to SVG rendering mode. You can do this by setting
-                ``render_mode="svg"`` within the figure. For example, the
-                following code defines a Plotly Express line chart that will
-                render in SVG mode when passed to ``st.plotly_chart``:
+                Plotly Express line and scatter charts with more than 1,000
+                data points use a WebGL renderer by default
+                (``render_mode="auto"``). Other figures render to SVG unless
+                they use a WebGL trace type such as ``go.Scattergl``. SVG
+                creates one page element per point, so use WebGL for line and
+                scatter charts with many thousands of points.
+
+                Different browsers have different limits on the number of
+                WebGL contexts per page. If you have many WebGL charts on a
+                page, you may need to switch some of them to SVG. You can do
+                this by setting ``render_mode="svg"`` within the figure. For
+                example, the following code defines a Plotly Express line
+                chart that will render in SVG mode when passed to
+                ``st.plotly_chart``:
                 ``px.line(df, x="x", y="y", render_mode="svg")``.
 
         width : "stretch", "content", or int
@@ -789,11 +805,12 @@ class PlotlyMixin:
 
         **Example 2: Plotly Chart with configuration**
 
-        By default, Plotly charts have scroll zoom enabled. If you have a
-        longer page and want to avoid conflicts between page scrolling and
-        zooming, you can use Plotly's configuration options to disable scroll
-        zoom. In the following example, scroll zoom is disabled, but the zoom
-        buttons are still enabled in the modebar.
+        Use Plotly's configuration options to control chart interactions such
+        as scroll zoom. Plotly enables scroll zoom by default on 3D, geo, and
+        map subplots, but not on 2D charts. On a longer page, you can disable
+        it to avoid conflicts between page scrolling and zooming. The
+        following 2D chart already has scroll zoom off, so the configuration
+        only makes that explicit. The zoom buttons in the modebar still work.
 
         >>> import plotly.graph_objects as go
         >>> import streamlit as st

@@ -55,7 +55,7 @@ const getProps = (
 
 const triggerChangeEvent = async (
   element: HTMLElement,
-  key: "ArrowLeft" | "ArrowRight" | "End"
+  key: "ArrowLeft" | "ArrowRight" | "Home" | "End"
 ): Promise<void> => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   act(() => {
@@ -1009,6 +1009,113 @@ describe("Slider widget", () => {
       expect(sliders[0]).toHaveAttribute("aria-valuetext", "red")
       expect(sliders[1]).toHaveAttribute("aria-valuetext", "yellow")
       expect(sliders[1]).not.toHaveAttribute("aria-valuetext", "orange")
+    })
+  })
+
+  describe("no-op interactions", () => {
+    it.each([
+      { key: "ArrowLeft", start: 0 },
+      { key: "Home", start: 0 },
+      { key: "End", start: 10 },
+    ] as const)(
+      "does not commit or rerun when $key leaves the value at $start",
+      async ({ key, start }) => {
+        const sendRerunBackMsg = vi.fn()
+        const props = getProps(
+          { default: [start] },
+          {
+            widgetMgr: new WidgetStateManager({
+              sendRerunBackMsg,
+              formsDataChanged: vi.fn(),
+            }),
+          }
+        )
+        render(<Slider {...props} />)
+        vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+        const slider = screen.getByRole("slider")
+        await triggerChangeEvent(slider, key)
+        act(() => {
+          vi.runOnlyPendingTimers()
+        })
+
+        expect(props.widgetMgr.setDoubleArrayValue).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+        expect(slider).toHaveAttribute("value", `${start}`)
+
+        // A real change still commits and reruns.
+        await triggerChangeEvent(
+          slider,
+          start === 0 ? "ArrowRight" : "ArrowLeft"
+        )
+        act(() => {
+          vi.runOnlyPendingTimers()
+        })
+
+        expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          [start === 0 ? 1 : 9],
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      }
+    )
+
+    it("does not commit a select_slider value that is already stored", async () => {
+      const props = getProps({
+        default: [0],
+        min: 0,
+        max: 2,
+        format: "%s",
+        type: SliderProto.Type.SELECT_SLIDER,
+        options: ["red", "orange", "yellow"],
+      })
+      render(<Slider {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      await triggerChangeEvent(screen.getByRole("slider"), "ArrowLeft")
+
+      expect(props.widgetMgr.setStringArrayValue).not.toHaveBeenCalled()
+    })
+
+    it("commits a select_slider pick that matches stale indices after the options change", async () => {
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg: vi.fn(),
+        formsDataChanged: vi.fn(),
+      })
+      const getSelectSliderProps = (options: string[]): Props =>
+        getProps(
+          {
+            default: [1],
+            min: 0,
+            max: options.length - 1,
+            format: "%s",
+            type: SliderProto.Type.SELECT_SLIDER,
+            options,
+          },
+          { widgetMgr }
+        )
+
+      // "b" is stored at index 1, then moves to index 0 with the new options.
+      const { rerender } = render(
+        <Slider {...getSelectSliderProps(["a", "b", "c"])} />
+      )
+      rerender(<Slider {...getSelectSliderProps(["b", "a", "c"])} />)
+      vi.spyOn(widgetMgr, "setStringArrayValue")
+
+      // Index 1 is now "a", a real change even though the index matches.
+      await triggerChangeEvent(screen.getByRole("slider"), "ArrowRight")
+
+      expect(widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+        "1",
+        ["a"],
+        expect.objectContaining({ fromUser: true })
+      )
+      expect(widgetMgr.setStringArrayValue).not.toHaveBeenCalledWith(
+        "1",
+        ["b"],
+        expect.anything()
+      )
     })
   })
 })

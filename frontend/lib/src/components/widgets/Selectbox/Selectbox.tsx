@@ -17,6 +17,7 @@
 import { type FC, memo, useCallback, useEffect, useRef, useState } from "react"
 
 import type { Selectbox as SelectboxProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
@@ -100,7 +101,7 @@ const Selectbox: FC<Props> = ({
   // when `required` is set, so `?key=` still restores the empty default. The UI
   // never commits null for a required selectbox, so it never writes an empty
   // param.
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,

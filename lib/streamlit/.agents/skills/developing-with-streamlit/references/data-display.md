@@ -1,14 +1,10 @@
-# Streamlit charts & data
+# Streamlit data display
 
-Present data clearly.
+Present tabular data clearly. For charts, maps, and diagrams, see [charts.md](charts.md).
 
 ## Contents
 
 - [Accessible names (alt)](#accessible-names-alt)
-- [Native charts first](#native-charts-first)
-- [Human-readable labels](#human-readable-labels)
-- [Altair for complex charts](#altair-for-complex-charts)
-- [Apache ECharts](#apache-echarts)
 - [Deprecated: use_container_width](#deprecated-use_container_width)
 - [Dataframe column configuration](#dataframe-column-configuration)
 - [Markdown in dataframe cells](#markdown-in-dataframe-cells)
@@ -26,96 +22,14 @@ Present data clearly.
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` on charts, maps, tables, and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence); Markdown syntax is announced literally. Prefer the chart's takeaway, the map's subject, or the table's purpose — not a data dump and not a paste of the dataframe.
+Pass keyword-only `alt=` on tables and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence) that states the table's purpose; Markdown syntax is announced literally. Do not paste cell values into `alt`. For charts and maps, see [charts.md](charts.md#accessible-names-alt).
 
 ```python
-st.bar_chart(
-    df, x="category", y="revenue", alt="Revenue by product line, highest for Enterprise"
-)
 st.dataframe(df, alt="Top 20 customers by revenue")
 st.table(summary, alt="Quarterly KPI summary")
 ```
 
-- Charts and maps (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, `st.graphviz_chart`, `st.map`, `st.pydeck_chart`, `st.mermaid_chart`): describe the chart's takeaway or the map's subject, not the chart type or a data dump.
-- **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than passing none.
-- **`st.dataframe` / `st.data_editor` / `st.table`:** name the grid or table; do not paste cell values into `alt`.
-- A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
-
-## Native charts first
-
-Prefer Streamlit's native charts for simple cases.
-
-```python
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-st.bar_chart(df, x="category", y="count", alt="Order count by category")
-st.scatter_chart(df, x="age", y="salary", alt="Salary versus age")
-st.area_chart(df, x="date", y="value", alt="Value over time")
-```
-
-Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
-
-## Human-readable labels
-
-Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` if the column names are already readable.
-
-```python
-# BAD: cryptic column names without labels
-st.line_chart(df, x="dt", y="rev")
-
-# GOOD: readable columns, no labels needed
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-
-# GOOD: cryptic columns, add labels
-st.line_chart(
-    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
-)
-```
-
-## Altair for complex charts
-
-Use Altair when you need more control. Altair is bundled with Streamlit (no extra install), while Plotly requires an additional package. Pick one and stay consistent throughout your app.
-
-```python
-import altair as alt
-
-chart = (
-    alt.Chart(df)
-    .mark_line()
-    .encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y("revenue:Q", title="Revenue ($)"),
-        color="region:N",
-    )
-)
-st.altair_chart(chart, alt="Revenue by region over time")
-```
-
-**When to use Altair:**
-
-- Custom axis formatting
-- Multiple series with legends
-- Interactive tooltips
-- Layered visualizations
-
-## Apache ECharts
-
-Use `st.echarts_chart` when you already have an Apache ECharts option dict, a JSON string, or a `pyecharts` chart. Don't add a third-party ECharts component for this. Prefer Vega-based charts unless the spec is already ECharts-native.
-
-Pass JSON-compatible options only. JavaScript callbacks (`formatter` functions, `JsCode`, `custom` series), GeoJSON map registration, and ECharts GL / 3D charts are not supported.
-
-To format tooltip values without JavaScript, set `tooltip.valueFormatter` (or `series[i].tooltip.valueFormatter`) to an `st.metric` number format, such as `"dollar"`, `"compact"`, or `"%,d visits"`. Tooltip `formatter` templates also expand `{@dimension}` and `{@[index]}`, and insert those values as plain text (no number format).
-
-```python
-st.echarts_chart(
-    {
-        "tooltip": {"trigger": "axis", "valueFormatter": "%,d visits"},
-        "xAxis": {"type": "category", "data": ["Mon", "Tue", "Wed"]},
-        "yAxis": {"type": "value"},
-        "series": [{"type": "bar", "data": [1200, 2000, 1500]}],
-    },
-    alt="Weekday traffic, peak on Tuesday",
-)
-```
+A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command.
 
 ## Deprecated: `use_container_width`
 
@@ -368,7 +282,7 @@ selected_data = df.iloc[selected_indices]
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
 
-Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, `PydeckState`, and `EChartsState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, `st.pydeck_chart`, and `st.echarts_chart`, respectively. Do not import these types from Streamlit's internal modules.
+Import `DataframeState` from `streamlit.typing` when annotating the returned event; do not import it from Streamlit's internal modules. For chart selections, see [charts.md](charts.md#chart-selections).
 
 ## Empty DataFrames
 
@@ -428,7 +342,3 @@ See `dashboards.md` for composing metrics into dashboard layouts.
 - [st.table](https://docs.streamlit.io/develop/api-reference/data/st.table)
 - [st.column_config](https://docs.streamlit.io/develop/api-reference/data/st.column_config)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
-- [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
-- [st.bar_chart](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)
-- [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)
-- [st.echarts_chart](https://docs.streamlit.io/develop/api-reference/charts/st.echarts_chart)

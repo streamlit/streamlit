@@ -22,19 +22,21 @@ import {
   useState,
 } from "react"
 
+import { isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
 import { truthy, type View as VegaView } from "vega"
 import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
+import { varName } from "vega-lite"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { Quiver } from "~lib/dataframes/Quiver"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  getAliasedDataSets,
   getDataArray,
   getDataArrays,
-  getDataSets,
   getInlineData,
   type VegaLiteChartElement,
   type WrappedNamedDataset,
@@ -44,6 +46,48 @@ import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
 const DEFAULT_DATA_NAME = "source"
 const LOG = getLogger("useVegaEmbed")
+
+/** Composition keys whose child views can declare their own params. */
+const CHILD_VIEW_KEYS = ["layer", "concat", "hconcat", "vconcat", "spec"]
+
+/**
+ * Returns the selection stores that hold the spec's zoom and pan, so a data
+ * swap can reset them: the `{param}_store` of each interval param bound to
+ * the scales, such as the one Altair's `.interactive()` adds. Params in
+ * `selectionMode` are skipped, because Streamlit reports and restores those
+ * as selections.
+ */
+function getZoomStores(
+  spec: unknown,
+  selectionMode: readonly string[]
+): string[] {
+  const stores = new Set<string>()
+  const visit = (view: unknown): void => {
+    if (!isPlainObject(view)) {
+      return
+    }
+    const viewSpec = view as Record<string, unknown>
+    const params = Array.isArray(viewSpec.params) ? viewSpec.params : []
+    for (const param of params) {
+      const { name, bind } = isPlainObject(param)
+        ? (param as { name?: unknown; bind?: unknown })
+        : {}
+      if (
+        bind === "scales" &&
+        typeof name === "string" &&
+        !selectionMode.includes(name)
+      ) {
+        stores.add(`${varName(name)}_store`)
+      }
+    }
+    for (const key of CHILD_VIEW_KEYS) {
+      const child = viewSpec[key]
+      ;(Array.isArray(child) ? child : [child]).forEach(visit)
+    }
+  }
+  visit(spec)
+  return [...stores]
+}
 
 interface UseVegaEmbedOutput {
   createView: (
@@ -78,6 +122,12 @@ export function useVegaEmbed(
   const defaultDataNameRef = useRef<string>(DEFAULT_DATA_NAME)
   const prevDataRef = useRef<Quiver | null>(null)
   const prevDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // The dataset names compiled into the view, by alias. A data-only rerun of
+  // an Altair chart renames its datasets but keeps the view, so updates write
+  // to the names the view knows.
+  const viewDatasetNamesRef = useRef<Map<string, string>>(new Map())
+  // The selection stores that hold the view's zoom and pan (see getZoomStores).
+  const zoomStoresRef = useRef<string[]>([])
   // Always-up-to-date props for safe access inside stable callbacks to avoid stale closure issues
   const latestDataRef = useRef<Quiver | null>(null)
   const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
@@ -97,7 +147,7 @@ export function useVegaEmbed(
 
   useFormClearHelper({ widgetMgr, element: inputElement, onFormCleared })
 
-  const { data, datasets } = inputElement
+  const { data, datasets, selectionMode } = inputElement
 
   // Keep latest refs in sync during render so createView (which runs in
   // useLayoutEffect, before useEffect) can merge named datasets into the
@@ -127,13 +177,15 @@ export function useVegaEmbed(
     }
   }, [])
 
+  /** Applies one dataset to the view and returns whether its rows changed. */
   const updateData = useCallback(
     (
       view: VegaView,
       name: string,
       prevData: Quiver | null,
       dataArg: Quiver | null
-    ): void => {
+    ): boolean => {
+      const hadRows = (prevData?.dimensions.numDataRows ?? 0) > 0
       if (!dataArg || dataArg.dimensions.numDataRows === 0) {
         // The new data is empty, so we remove the dataset from the
         // chart view if the named dataset exists.
@@ -142,28 +194,32 @@ export function useVegaEmbed(
         } catch {
           // The dataset was already removed, so we do nothing
         }
-        return
+        return hadRows
       }
 
-      if (!prevData || prevData.dimensions.numDataRows === 0) {
+      if (!prevData || !hadRows) {
         // The previous data was empty, so we just insert the new data.
         view.insert(name, getDataArray(dataArg))
-        return
+        return true
       }
 
-      if (dataArg.hash !== prevData.hash) {
-        // Data has changed, replace the dataset.
-        view.data(name, getDataArray(dataArg))
-        LOG.info(`Replaced the ${name} dataset in Vega view.`)
+      if (dataArg.hasSameBytes(prevData)) {
+        return false
       }
+      // Data has changed, replace the dataset.
+      view.data(name, getDataArray(dataArg))
+      LOG.info(`Replaced the ${name} dataset in Vega view.`)
+      return true
     },
     []
   )
 
   /**
    * Applies `inputData`/`inputDatasets` to an existing Vega view by diffing them
-   * against `prevDataRef`/`prevDatasetsRef`. Callers must advance those refs
-   * after the resulting `runAsync()` resolves.
+   * against `prevDataRef`/`prevDatasetsRef`. When any rows change, it also
+   * clears the zoom and pan stores (see getZoomStores), as a double-click
+   * would. Callers must advance those refs after the resulting `runAsync()`
+   * resolves.
    */
   const syncViewData = useCallback(
     (
@@ -173,28 +229,59 @@ export function useVegaEmbed(
     ): void => {
       const prevData = prevDataRef.current
       const prevDatasets = prevDatasetsRef.current
+      let isDataChanged = false
 
       if (prevData || inputData) {
-        updateData(view, defaultDataNameRef.current, prevData, inputData)
+        isDataChanged = updateData(
+          view,
+          defaultDataNameRef.current,
+          prevData,
+          inputData
+        )
       }
 
-      const prevDataSets = getDataSets(prevDatasets) ?? {}
-      const dataSets = getDataSets(inputDatasets) ?? {}
+      // Match datasets by alias rather than name, since Altair renames a
+      // dataset whenever its data changes.
+      const prevDataSets = getAliasedDataSets(prevDatasets)
+      const dataSets = getAliasedDataSets(inputDatasets)
+      // The name the view compiled for this alias. A dataset the view hasn't
+      // seen keeps its own name, and an empty name uses the default dataset.
+      const getViewDatasetName = (alias: string, name: string): string =>
+        (viewDatasetNamesRef.current.get(alias) ?? name) ||
+        defaultDataNameRef.current
 
-      for (const [name, dataset] of Object.entries(dataSets)) {
-        const datasetName = name || defaultDataNameRef.current
-        const prevDataset = prevDataSets[datasetName]
-
-        updateData(view, datasetName, prevDataset, dataset)
+      for (const [alias, { name, data: dataset }] of dataSets) {
+        isDataChanged =
+          updateData(
+            view,
+            getViewDatasetName(alias, name),
+            prevDataSets.get(alias)?.data ?? null,
+            dataset
+          ) || isDataChanged
       }
 
-      // Remove all datasets that are in the previous but not the current datasets.
-      for (const name of Object.keys(prevDataSets)) {
+      // Remove the datasets that the new data no longer sends.
+      for (const [alias, { name, data: prevDataset }] of prevDataSets) {
+        const viewDatasetName = getViewDatasetName(alias, name)
         if (
-          !Object.hasOwn(dataSets, name) &&
-          name !== defaultDataNameRef.current
+          !dataSets.has(alias) &&
+          viewDatasetName !== defaultDataNameRef.current
         ) {
-          updateData(view, name, null, null)
+          isDataChanged =
+            updateData(view, viewDatasetName, prevDataset, null) ||
+            isDataChanged
+        }
+      }
+
+      // New data can lie outside a zoomed-in window, which would show an
+      // empty chart. Reset zoom and pan like a double-click does.
+      if (isDataChanged) {
+        for (const store of zoomStoresRef.current) {
+          try {
+            view.remove(store, truthy)
+          } catch {
+            // The view has no such store, so there is nothing to reset.
+          }
         }
       }
     },
@@ -282,6 +369,13 @@ export function useVegaEmbed(
 
         const createdView = maybeConfigureSelections(view)
         vegaViewRef.current = createdView
+        viewDatasetNamesRef.current = new Map(
+          Array.from(
+            getAliasedDataSets(compiledDatasets),
+            ([alias, { name }]) => [alias, name]
+          )
+        )
+        zoomStoresRef.current = getZoomStores(specForEmbed, selectionMode)
 
         const unbindRangeProgress = bindVegaRangeProgress(container)
         vegaFinalizerRef.current = () => {
@@ -374,6 +468,7 @@ export function useVegaEmbed(
       endSelectionRestore,
       finalizeView,
       maybeConfigureSelections,
+      selectionMode,
       syncViewData,
       teardownSelections,
     ]

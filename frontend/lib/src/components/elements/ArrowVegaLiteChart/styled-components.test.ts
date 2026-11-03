@@ -83,7 +83,7 @@ describe("getVegaBindingStyles", () => {
           }),
         }),
         "& input[type='range'] + span": expect.objectContaining({
-          color: theme.colors.fadedText60,
+          color: theme.colors.fadedText70,
         }),
         "&:not(:has(.vega-bind))": expect.objectContaining({
           display: "none",

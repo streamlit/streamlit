@@ -42,6 +42,7 @@ import {
 } from "react-aria-components"
 
 import { streamlit } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import Icon from "~lib/components/shared/Icon/Icon"
@@ -665,7 +666,8 @@ const Selectbox: FC<Props> = ({
       // filtered list.
       const targetId = enterTargetIdRef.current
       const options = displayOptionsRef.current
-      const target = targetId ? options.find(o => o.id === targetId) : null
+      const target =
+        targetId !== null ? options.find(o => o.id === targetId) : null
       if (target?.isCreatable === true) {
         commitSelection(inputValueRef.current)
         closeDropdownRef.current?.()
@@ -705,7 +707,9 @@ const Selectbox: FC<Props> = ({
         disabled={selectDisabled}
         required={required}
       >
-        {help && <WidgetLabelHelpIcon content={help} label={label} />}
+        {!isNullOrEmptyString(help) && (
+          <WidgetLabelHelpIcon content={help} label={label} />
+        )}
       </WidgetLabel>
       <I18nProvider locale="en-US">
         <ComboBox

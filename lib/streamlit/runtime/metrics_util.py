@@ -31,6 +31,7 @@ from streamlit.errors import LocalizableStreamlitException, StreamlitAPIExceptio
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
+from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
@@ -774,6 +775,8 @@ def create_page_profile_message(
     # Include the server mode for metrics tracking
     if config._server_mode:
         page_profile.server_mode = config._server_mode
+
+    agent_usage.fill_page_profile(page_profile)
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()

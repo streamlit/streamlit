@@ -32,6 +32,8 @@ import {
 import { getLuminance } from "color2k"
 import { getLogger } from "loglevel"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
@@ -150,19 +152,19 @@ function extractStreamlitAlt(source: string): string | undefined {
  */
 function getAuthorProvidedAltText(source: string): string | undefined {
   const streamlitAlt = extractStreamlitAlt(source)
-  if (streamlitAlt) {
+  if (!isNullOrEmptyString(streamlitAlt)) {
     return streamlitAlt
   }
 
   const { title, description } = extractAccessibilityInfo(source)
 
-  if (title && description) {
+  if (!isNullOrEmptyString(title) && !isNullOrEmptyString(description)) {
     return `${title}: ${description}`
   }
-  if (title) {
+  if (!isNullOrEmptyString(title)) {
     return title
   }
-  if (description) {
+  if (!isNullOrEmptyString(description)) {
     return description
   }
   return undefined
@@ -244,7 +246,7 @@ function prepareResponsiveSvg(svg: string): string {
   let intrinsicHeight = 0
 
   const viewBox = svgElement.getAttribute("viewBox")
-  if (viewBox) {
+  if (!isNullOrEmptyString(viewBox)) {
     const [, , vbWidth, vbHeight] = viewBox.split(/[\s,]+/).map(Number)
     if (vbWidth > 0 && vbHeight > 0) {
       intrinsicWidth = vbWidth
@@ -555,7 +557,7 @@ const MermaidChart = memo(function MermaidChart({
         committedToState = true
         setIsLoading(false)
       } catch (err) {
-        if (blobUrl && !committedToState) {
+        if (blobUrl !== null && !committedToState) {
           URL.revokeObjectURL(blobUrl)
         }
         if (!isCancelled) {
@@ -581,7 +583,10 @@ const MermaidChart = memo(function MermaidChart({
   useEffect(() => {
     currentSvgBlobUrlRef.current = svgBlobUrl
     return () => {
-      if (svgBlobUrl && svgBlobUrl !== downloadingBlobUrlRef.current) {
+      if (
+        svgBlobUrl !== null &&
+        svgBlobUrl !== downloadingBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(svgBlobUrl)
       }
     }
@@ -596,7 +601,7 @@ const MermaidChart = memo(function MermaidChart({
    * Uses a ref to protect the blob URL from being revoked during async image loading.
    */
   const handleDownloadPng = useCallback((): void => {
-    if (!svgBlobUrl) {
+    if (svgBlobUrl === null) {
       return
     }
 
@@ -608,7 +613,10 @@ const MermaidChart = memo(function MermaidChart({
     const releaseDownloadUrl = (): void => {
       const urlToRevoke = downloadingBlobUrlRef.current
       downloadingBlobUrlRef.current = null
-      if (urlToRevoke && urlToRevoke !== currentSvgBlobUrlRef.current) {
+      if (
+        urlToRevoke !== null &&
+        urlToRevoke !== currentSvgBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(urlToRevoke)
       }
     }
@@ -677,7 +685,7 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
-  if (error) {
+  if (!isNullOrEmptyString(error)) {
     return (
       <StyledToolbarElementContainer
         width={containerWidth}
@@ -734,7 +742,9 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
+          {svgBlobUrl !== null && (
+            <img src={svgBlobUrl} alt={getAltText(source)} />
+          )}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>
