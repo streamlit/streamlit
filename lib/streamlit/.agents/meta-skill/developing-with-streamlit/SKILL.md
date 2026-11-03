@@ -18,7 +18,7 @@ python <SKILL_DIR>/scripts/discover.py --project-dir <USER_PROJECT_DIR>
 
 The script prints either:
 
-- **A path on stdout** (exit 0) — the bundled `SKILL.md`. Read it; it points into `references/`.
+- **A path on stdout** (exit 0) — the bundled `SKILL.md`. Read it, then read the `references/` it routes to for each feature the change uses.
 - **An `ERROR:` block on stderr** (non-zero exit). Follow the printed instructions and re-run.
 
 `<SKILL_DIR>` is the directory containing this file; `<USER_PROJECT_DIR>` is the absolute path to the user's project. Passing `--project-dir` matters because the script resolves `.venv`, `../.venv`, `Pipfile`, `poetry.lock`, `pdm.lock`, and `uv.lock` relative to it.
