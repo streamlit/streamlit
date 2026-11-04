@@ -71,17 +71,19 @@ type EChartsSourceValue =
   | string
   | EChartsSourceValue[]
 
-/** One `dataset.source` row, keyed by Arrow field name. */
-type EChartsSourceRow = Record<string, EChartsSourceValue>
+/** One `dataset.source` row: one value per dataset dimension, in order. */
+type EChartsSourceRow = EChartsSourceValue[]
 
 /**
- * A sent Arrow dataset: its parsed `Quiver`, its ECharts rows, and its data
- * column names in column order.
+ * A sent Arrow dataset: its parsed `Quiver`, its data column names in column
+ * order, and its ECharts rows for each column order a placeholder asked for.
  */
 type HydratedSource = {
   quiver: Quiver
-  rows: EChartsSourceRow[]
   dimensions: string[]
+  columnIndexByName: Map<string, number>
+  /** Hydrated rows, keyed by the comma-joined column indices they read. */
+  rowsByColumnOrder: Map<string, EChartsSourceRow[]>
 }
 
 /** Converts one decoded Arrow cell of a known column type. */
@@ -292,52 +294,48 @@ function getDataColumnTypes(quiver: Quiver): ArrowType[] {
 /**
  * Converts the data columns of a Quiver into ECharts `dataset.source` rows.
  *
+ * Rows are arrays rather than objects keyed by column name: ECharts' default
+ * tooltip labels each `encode.tooltip` value with its dimension name only for
+ * array rows.
+ *
  * Index columns are skipped, so a PyArrow table built from an indexed pandas
- * dataframe charts only its data columns. Row keys are the Arrow field names,
- * which `hydrateArrowDatasetSources` also uses as the default
- * `dataset.dimensions`.
+ * dataframe charts only its data columns.
  *
  * @param quiver The parsed Arrow table.
- * @returns One plain object of JSON-like values per data row.
+ * @param columnIndices The data column to read for each row entry, or `null`
+ * for an entry that is always `null`. Defaults to every data column in order.
+ * @returns One array of JSON-like values per data row.
  */
-export function quiverToEChartsRows(quiver: Quiver): EChartsSourceRow[] {
+export function quiverToEChartsRows(
+  quiver: Quiver,
+  columnIndices?: readonly (number | null)[]
+): EChartsSourceRow[] {
   const { numDataRows } = quiver.dimensions
-  const columns = getDataColumnTypes(quiver).map((type, index) => {
-    const key = type.arrowField.name
-    return {
-      key,
-      // Assigning `row.__proto__` would replace the row's prototype instead
-      // of adding a key, so that column is defined as an own property.
-      isProtoKey: key === "__proto__",
-      read: quiver.getDataColumnReader(index),
-      convert: getCellConverter(type),
-    }
-  })
+  const types = getDataColumnTypes(quiver)
+  const columns = (columnIndices ?? types.map((_, index) => index)).map(
+    index =>
+      index === null
+        ? null
+        : {
+            read: quiver.getDataColumnReader(index),
+            convert: getCellConverter(types[index]),
+          }
+  )
 
   const rows: EChartsSourceRow[] = []
   for (let rowIndex = 0; rowIndex < numDataRows; rowIndex++) {
-    const row: EChartsSourceRow = {}
-    for (const { key, isProtoKey, read, convert } of columns) {
-      const value = convert(read(rowIndex))
-      if (isProtoKey) {
-        Object.defineProperty(row, key, {
-          value,
-          enumerable: true,
-          writable: true,
-          configurable: true,
-        })
-      } else {
-        row[key] = value
-      }
-    }
-    rows.push(row)
+    rows.push(
+      columns.map(column =>
+        column === null ? null : column.convert(column.read(rowIndex))
+      )
+    )
   }
   return rows
 }
 
 /**
- * Throws when two data columns share a name. Each row is an object keyed by
- * column name, so the second column would silently replace the first.
+ * Throws when two data columns share a name. ECharts reads dimensions by name
+ * (`encode`, author `dataset.dimensions`), so the name would be ambiguous.
  */
 function ensureUniqueColumnNames(names: readonly string[]): void {
   const seen = new Set<string>()
@@ -440,15 +438,60 @@ function getPlaceholderName(source: unknown): string | null {
 }
 
 /**
+ * Returns the name of a `dataset.dimensions` entry: a string or `{name}`.
+ * Numeric names (e.g. integer column labels like `2015`) become strings, as
+ * in ECharts, because Arrow field names are always strings.
+ */
+function getDimensionName(dimension: unknown): string | undefined {
+  const name: unknown = isPlainObject(dimension)
+    ? (dimension as { name?: unknown }).name
+    : dimension
+  if (typeof name === "string") {
+    return name
+  }
+  return typeof name === "number" && Number.isFinite(name)
+    ? String(name)
+    : undefined
+}
+
+/**
+ * Returns the rows of a sent dataset with one entry per dimension, in order.
+ * A dimension that names no data column is `null` in every row. Placeholders
+ * with the same column order share one rows array.
+ */
+function getRows(
+  source: HydratedSource,
+  dimensions: readonly unknown[]
+): EChartsSourceRow[] {
+  const columnIndices = dimensions.map(dimension => {
+    const name = getDimensionName(dimension)
+    return name === undefined
+      ? null
+      : (source.columnIndexByName.get(name) ?? null)
+  })
+  const key = columnIndices.join()
+  let rows = source.rowsByColumnOrder.get(key)
+  if (rows === undefined) {
+    rows = quiverToEChartsRows(source.quiver, columnIndices)
+    source.rowsByColumnOrder.set(key, rows)
+  }
+  return rows
+}
+
+/**
  * Replaces the `dataset.source` placeholders of a freshly parsed option with
  * rows from the matching Arrow datasets.
  *
- * A dataset without `dimensions` gets the data column names, so ECharts keeps
- * the dataframe's column order.
+ * For each hydrated dataset:
+ * - Without `dimensions`, sets `dimensions` to the data column names so
+ *   ECharts keeps the dataframe's column order.
+ * - With `dimensions`, orders each row to match, so the author can reorder
+ *   or pick columns by name.
+ * - Without `sourceHeader`, sets `sourceHeader` to `false` so ECharts does
+ *   not treat a first row of strings as column names.
  *
  * The option is mutated in place, so pass an object nobody else holds (for
- * example, the result of `JSON.parse`). Each dataset is parsed once, and
- * placeholders that share a name share one rows array.
+ * example, the result of `JSON.parse`). Each dataset is parsed once.
  *
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
@@ -491,7 +534,14 @@ export function hydrateArrowDatasetSources(
       type => type.arrowField.name
     )
     ensureUniqueColumnNames(dimensions)
-    const source = { quiver, rows: quiverToEChartsRows(quiver), dimensions }
+    const source: HydratedSource = {
+      quiver,
+      dimensions,
+      columnIndexByName: new Map(
+        dimensions.map((dimension, index) => [dimension, index])
+      ),
+      rowsByColumnOrder: new Map(),
+    }
     sourcesByName.set(name, source)
     return source
   }
@@ -510,10 +560,14 @@ export function hydrateArrowDatasetSources(
       // as `{"name": "Matcha"}` stays untouched.
       const source = name === null ? undefined : getSource(name)
       if (source !== undefined) {
-        datasetOption.source = source.rows
-        if (datasetOption.dimensions === undefined) {
+        if (!Array.isArray(datasetOption.dimensions)) {
           datasetOption.dimensions = source.dimensions
         }
+        datasetOption.source = getRows(
+          source,
+          datasetOption.dimensions as unknown[]
+        )
+        datasetOption.sourceHeader ??= false
         dataViewData ??= source.quiver
       }
     }

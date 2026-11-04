@@ -27,6 +27,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   type EChartsOptionObject,
+  formatTimeLabel,
   formatTooltipItem,
   STREAMLIT_THEME,
   toComponentList,
@@ -82,7 +83,8 @@ function readDimensionValue(
     return value[index ?? dimensionNames.indexOf(dimension)]
   }
   if (isPlainObject(value)) {
-    // Object rows (e.g. converted dataframes) are keyed by dimension name.
+    // Object rows (e.g. inline `dataset.source` records) are keyed by
+    // dimension name.
     const key = index === undefined ? dimension : dimensionNames[index]
     return typeof key === "string"
       ? (value as Record<string, unknown>)[key]
@@ -373,27 +375,6 @@ export function applyTooltipFormatters(
 /** The cartesian axis keys whose ``type: "time"`` axes get date labels. */
 const CARTESIAN_AXIS_KEYS = ["xAxis", "yAxis"] as const
 
-/** Label templates at day and second precision, matching ECharts' own. */
-const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
-const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
-
-/**
- * Format a time axis value as its date when it is exactly midnight, and as its
- * date and time to the second otherwise.
- */
-function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
-  const date = echarts.time.parse(value)
-  // Format through ECharts so the check uses the label's UTC or local clock.
-  // Milliseconds count, so 00:00:00.250 is not midnight.
-  const isMidnight =
-    echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
-  return echarts.time.format(
-    date,
-    isMidnight ? DATE_LABEL_TEMPLATE : DATE_TIME_LABEL_TEMPLATE,
-    useUTC
-  )
-}
-
 /** Whether ``target`` has a non-null ``label.formatter``. */
 function hasLabelFormatter(target: unknown): boolean {
   return !isNullOrUndefined(get(target, "label.formatter"))
@@ -468,7 +449,7 @@ export function applyTimeLabelFormatters(
 
   const useUTC = chartOption.useUTC === true
   const formatter = (params: unknown): string =>
-    formatTimeAxisValue(get(params, "value"), useUTC)
+    formatTimeLabel(get(params, "value"), useUTC)
   const withTimeLabelFormatter = (axis: unknown): unknown => {
     if (!isPlainObject(axis)) {
       return axis

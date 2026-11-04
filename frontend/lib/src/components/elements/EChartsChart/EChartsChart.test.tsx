@@ -1237,11 +1237,14 @@ describe("EChartsChart", () => {
       "stream"
     )
     const SALES_ROWS = [
-      { product: "Matcha", sales: 43.3 },
-      { product: "Latte", sales: 83.1 },
+      ["Matcha", 43.3],
+      ["Latte", 83.1],
     ]
-    const COST_BYTES = tableToIPC(
-      new Table({ cost: vectorFromArray([1.5, 2.5], new Float64()) }),
+    const NEW_SALES_BYTES = tableToIPC(
+      new Table({
+        sales: vectorFromArray([1.5, 2.5], new Float64()),
+        product: vectorFromArray(["Mocha", "Chai"], new Utf8()),
+      }),
       "stream"
     )
 
@@ -1359,15 +1362,16 @@ describe("EChartsChart", () => {
         <Wrapper
           element={createDatasetElement({
             spec: datasetSpec({ name: "h2" }),
-            datasets: [namedDataset("h2", COST_BYTES)],
+            datasets: [namedDataset("h2", NEW_SALES_BYTES)],
           })}
         />
       )
       expect(mockChart.setOption).toHaveBeenCalledTimes(2)
       const [appliedOption] = mockChart.setOption.mock.calls[1]
+      // Rows follow the spec's dimensions, not the dataframe's column order.
       expect(appliedOption.dataset.source).toEqual([
-        { cost: 1.5 },
-        { cost: 2.5 },
+        ["Mocha", 1.5],
+        ["Chai", 2.5],
       ])
       expect(mockChart.dispose).not.toHaveBeenCalled()
     })
