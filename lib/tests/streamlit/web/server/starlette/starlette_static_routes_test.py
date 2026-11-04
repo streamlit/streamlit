@@ -305,6 +305,32 @@ class TestWithBaseUrl:
         assert root.status_code == 405
         assert under_a_page.status_code == 404
 
+    def test_agent_paths_under_a_base_url_check_the_mount_relative_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Under a base URL, an unknown agent path is a 404, and a base URL
+        that itself contains the agent prefix does not reserve its pages.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Base</html>")
+        base_url = "tools/_stcore/agent/reports"
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=base_url
+        )
+        app = Starlette(routes=[Mount(f"/{base_url}", app=static_files)])
+
+        with TestClient(app) as client:
+            page = client.get(f"/{base_url}/page2")
+            fetched = client.get(f"/{base_url}/_stcore/agent/foo")
+            posted = client.post(f"/{base_url}/_stcore/agent/foo", json={})
+
+        assert page.status_code == 200
+        assert page.text == "<html>Base</html>"
+        assert fetched.status_code == 404
+        assert "<html>" not in fetched.text
+        assert posted.status_code == 404
+
     def test_no_redirect_loop_when_mounted(self, tmp_path: Path) -> None:
         """Test that mount root with trailing slash doesn't cause redirect loop.
 

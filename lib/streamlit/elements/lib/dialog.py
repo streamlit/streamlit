@@ -93,8 +93,8 @@ def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None
     # Empty means no dismiss widget. A callback reaches the server, which is
     # the same mode as "rerun": firing the overlay's key closes the dialog.
     has_dismiss_widget = bool(dialog.id)
-    # A non-dismissible dialog shows no close button, so its key is reported
-    # without an action, and a request that fires it is refused.
+    # The browser gives the user no way to dismiss this dialog, so its key is
+    # reported without an action and a request that fires it is refused.
     can_dismiss = has_dismiss_widget and dialog.dismissible
     return agent_spec.block(
         "dialog",

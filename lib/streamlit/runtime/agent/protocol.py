@@ -929,8 +929,8 @@ def _trigger_schema() -> dict[str, Any]:
         "value": {
             "description": (
                 "The payload of a trigger that takes one: the prompt for "
-                "`st.chat_input`, which cannot be empty, the chosen option for "
-                "`st.menu_button`. Omit it for buttons."
+                "`st.chat_input`, which must not be empty, or the chosen option "
+                "for `st.menu_button`. Omit it for buttons."
             )
         },
     }

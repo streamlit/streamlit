@@ -954,9 +954,9 @@ def _encode_trigger(
                 f"The element with key {key!r} is fired with a string `value`, "
                 "the text to submit.",
             )
-        # The browser keeps send disabled while the field is empty, and a
-        # request cannot attach files. Text of only whitespace is sendable
-        # there too, so it is accepted.
+        # The browser sends an empty prompt only with attachments, which a
+        # request cannot carry, so empty text is refused. Whitespace-only text
+        # is sendable in the browser, so it is accepted.
         if not payload:
             raise AgentRequestError(
                 "invalid_value",
