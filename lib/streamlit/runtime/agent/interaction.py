@@ -490,7 +490,7 @@ class AgentSessionRegistry:
         self._reclaim_idle()
         session = self._sessions.get(handle)
         if session is None or session.user_info != user_info:
-            ttl = _duration(float(config.get_option("server.agentSessionTTL")))
+            ttl = format_duration(float(config.get_option("server.agentSessionTTL")))
             raise AgentRequestError(
                 "unknown_session",
                 "This session does not exist or has expired: sessions end after "
@@ -653,7 +653,7 @@ async def interact(
                 raise AgentRequestError(
                     "wait_timed_out",
                     "The app has finished, but its snapshot was still being "
-                    f"built after {_duration(_wait_timeout())}. Nothing is lost: "
+                    f"built after {format_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
                     session_id=session.handle,
                 ) from None
@@ -663,9 +663,9 @@ async def interact(
     if session.busy:
         raise AgentRequestError(
             "session_busy",
-            "This session already has an interaction in flight. If it is one "
-            "whose response you lost, send only `session_id` in a moment to "
-            "collect it.",
+            "This session already has an interaction in flight. Wait for its "
+            "response. If its client timed out or disconnected, send only "
+            "`session_id` in a moment to collect it.",
         )
     session.busy = True
     session.released.clear()
@@ -707,8 +707,12 @@ def _wait_timeout() -> float:
     return float(config.get_option("server.agentWaitTimeout"))
 
 
-def _duration(seconds: float) -> str:
-    """Phrase a number of seconds for an error message, such as "15 minutes"."""
+def format_duration(seconds: float) -> str:
+    """Format ``seconds`` as a short phrase, such as ``15 minutes``.
+
+    An exact non-zero number of minutes is phrased in minutes. Every other
+    duration is phrased in seconds.
+    """
     if seconds and seconds % 60 == 0:
         amount, unit = seconds / 60, "minute"
     else:
@@ -772,8 +776,9 @@ async def _run_interaction(
         # owed to the client that started it.
         raise AgentRequestError(
             "session_busy",
-            "This session is still running an interaction that timed out. "
-            "Send only `session_id` to wait for it, then send this request.",
+            "This session is still running an interaction that timed out or "
+            "whose client disconnected. Send only `session_id` to wait for it, "
+            "then send this request.",
         )
     if pending is not None:
         # Its result goes uncollected, but its run happened, so this request
@@ -966,8 +971,8 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _duration(_wait_timeout())
-            elapsed = _duration(round(time.monotonic() - interaction.started))
+            timeout = format_duration(_wait_timeout())
+            elapsed = format_duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
                 "wait_timed_out",
                 f"The app did not finish within {timeout}, and is still "
@@ -1233,8 +1238,8 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
         if not isinstance(trigger, dict):
             raise AgentRequestError(
                 "invalid_request",
-                "`trigger` must be an object with a `key`, and at most one may "
-                "be sent.",
+                "`trigger` must be an object, `{key, value?}`. Send one "
+                "trigger per request.",
             )
         if extra := set(trigger).difference(TRIGGER_FIELDS):
             raise AgentRequestError(

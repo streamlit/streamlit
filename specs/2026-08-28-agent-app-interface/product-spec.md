@@ -603,7 +603,8 @@ Rules:
   and is auto-derived from the filename when the author does not set it (`""` for the
   default page). The internal page script hash stays internal. A single-page app has one
   page, its script, titled after the file name, so `page` and `pages` are always
-  present.
+  present. A page hidden from the navigation menu (`visibility="hidden"`) is listed
+  with `"hidden": true`, since its URL and `st.switch_page` still open it.
 - **There is no app title.** `st.set_page_config(page_title=...)` titles the browser
   tab: the app's name in an app that sets it once, the page's in one that sets it per
   page, and an app that sets none shows `page.title` there. A client could not tell
@@ -924,7 +925,8 @@ landed is a potential follow-up.
   firing it closes the dialog deliberately. With the default `on_dismiss="ignore"` the
   overlay carries no key, and closing is any full rerun, such as an interaction with no
   changes. The dialog reports `on_dismiss` as `"ignore"` or `"rerun"`, so a client can
-  tell which applies.
+  tell which applies. A `dismissible=False` dialog shows a browser user no way to close
+  it, so its overlay key has no `action` and firing it is `unsupported_element`.
 - **A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
   the tree is as the last run left it, which is where a browser is too: keeping fragments
   coherent is the app's job, and `st.rerun("<key>")` is how one fragment refreshes
@@ -959,10 +961,10 @@ without introducing a new authorization surface.
 
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. A Styler's caption, which `st.table` shows below the table, is its `caption` prop. |
 | Lazy dataframe                 | The same shape, with the first `server.agentPreviewRows` rows of the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up. |
-| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. |
-| Map                            | The Deck.gl specification the browser renders, under `data` as `spec`, for `st.map` and `st.pydeck_chart` alike. Serving `st.map`'s plotted columns as Arrow, like a dataframe's, is follow-up #9.                                                       |
+| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. A built-in chart serves the table its browser plots: several `y` columns are melted to long form under ` -- streamlit-generated` `value` and `color` columns, and an unnamed index plotted as x is `index -- streamlit-generated`. |
+| Map                            | The Deck.gl specification the browser renders, under `data` as `spec`, for `st.map` and `st.pydeck_chart` alike, with a `pdk.Deck` tooltip under `tooltip`. Serving `st.map`'s plotted columns as Arrow, like a dataframe's, is follow-up #9.                                                       |
 | Image, audio, video            | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. `st.pdf` renders through the `streamlit-pdf` custom component and is reported as one. |
 | Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` leaves nothing to fire. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
@@ -998,7 +1000,9 @@ Charts and maps:
   small figure, so it is dropped and named in `spec_omitted`; content a template adds,
   such as a "DRAFT" annotation, a shape, or an image, is kept, since removing decoration
   must not remove meaning. Title text a template sets for the figure, an axis, or the
-  legend is dropped with it in v1; keeping that text is a follow-up. Base64 typed arrays (`bdata`), which a model cannot read, are
+  legend is dropped with it in v1; keeping that text is a follow-up. The colors
+  `#000001` through `#000040`, such as each Plotly Express trace's `line.color`, are placeholders the
+  browser replaces with the app theme's colors, and can be ignored. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
   the figure's data. Serving a large specification behind `data.url` is follow-up #9.
 - **A map reports the specification its browser renders.** `st.map` compiles the columns
@@ -1045,7 +1049,7 @@ back to a browser rather than mistake it for missing content:
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it, and cannot be driven. See [Data, charts, and media](#data-charts-and-media-in-v1). |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Interactive in the app. `support: action_unsupported`: this API reports the widget and cannot deliver the captured bytes.                                                                |
-| `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
+| `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio. Empty text is refused; the browser sends it only with files or audio.   |
 | `st.data_editor` edits, dataframe and chart selections, dataframe button columns | `support: action_unsupported`: the app can edit or select, and this API only reports that. On every data editor, and on a dataframe or chart only when the app enabled selections or added a button column. A display-only table or chart has no `support` field. |
 | Deferred downloads                                                         | `support: action_unsupported`: the browser generates the file on click, and this API has no URL to report until then. An eager download is fully supported.                       |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the preview is the first `server.agentPreviewRows` rows of the loaded chunk.                                            |
@@ -1318,9 +1322,10 @@ than ranked, and say where one builds on another.
    most such requests want one. The read matters most for model clients: their context
    management drops or moves older tool results, and without it the only way back to
    the current state is a rerun, which can repeat side effects. Exposed through MCP
-   too, it lets `get_data` serve that result's files again. v1 already makes the common
-   timeout case safe — a retry after `wait_timed_out` collects the run instead of
-   repeating it — so what remains is general: optional `request_id` for retry
+   too, it gives a model that lost a result from its context that result's file URLs
+   again, for `get_data` to read while media storage keeps them. v1 already makes the
+   common timeout case safe — a retry after `wait_timed_out` collects the run instead
+   of repeating it — so what remains is general: optional `request_id` for retry
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
@@ -1336,15 +1341,20 @@ than ranked, and say where one builds on another.
    ([MCP tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools)),
    and the specification's own guidance for this shape is the opaque-handle pattern
    `session_id` already implements. `interact` must never be annotated read-only. A
-   second, read-only `get_data` tool serves the files a result references, tables as
-   pages of rows, because chat clients cannot resolve or parse a `data.url`. Each tool
-   call takes the same path as an `interact` request, so its HTTP request's headers
-   supply `st.user` and `st.context.headers` in the same way. It is written by hand
-   rather than on the MCP SDK, which keeps it free of new dependencies. It speaks the
-   `initialize`-handshake revisions the common clients support, and adds `2026-07-28`,
-   whose stateless model `session_id` already follows, once they default to it. MCP is
-   how most AI applications connect to tools, so this belongs in the same release cycle
-   as v1 if possible, together with #9.
+   second, read-only `get_data` tool serves any media file the app still stores, such
+   as the files a result references, tables as pages of rows, because chat clients
+   cannot resolve or parse a `data.url`. An `interact` call takes the same path as
+   `POST /_stcore/agent/interact`, so its HTTP request's headers supply `st.user` and
+   `st.context.headers` in the same way; `get_data` only checks the session's identity,
+   then reads stored media. The endpoint is written by hand rather than on the MCP SDK,
+   which keeps it free of new dependencies. It speaks the `initialize`-handshake
+   revisions the common clients support, and adds `2026-07-28`, whose stateless model
+   `session_id` already follows, once they default to it. MCP is how most AI
+   applications connect to tools, so this belongs in the same release cycle as v1 if
+   possible. It does not wait for #9: local coding agents and most apps are unaffected
+   by the largest results. The
+   [MCP endpoint spec](../2026-10-15-agent-app-mcp-endpoint/product-spec.md) details
+   both tools.
 7. **Static app descriptor.** An authenticated route returning app title, description,
    and protocol capabilities _without_ executing app code, so an agent can choose among
    available apps. It depends on the authored `st.App` title/description in follow-up #2
@@ -1412,8 +1422,9 @@ Smaller potential follow-ups and alternatives considered:
   URL, instead of `unavailable: multiple_datasets`; dropping an unnamed pandas index
   under `hide_index`, so `__index_level_0__` is not a meaningless extra column;
   reporting a media element's URL as `data.url`, as a table's is; describing `st.pdf`
-  as media rather than as the custom component it renders through; letting `get_data`
-  read the files of the last few results rather than only the latest; an HTTP route for
+  as media rather than as the custom component it renders through; keeping the last
+  few results' files in media storage for `get_data` after a later run replaces them;
+  an HTTP route for
   `get_data`, for HTTP clients without an Arrow reader that need rows beyond the
   preview; keeping only summaries in the session's message buffer; and lazily loading
   unevaluated sources in `st.dataframe` instead of collecting their first 10,000 rows
