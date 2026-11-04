@@ -1131,6 +1131,9 @@ describe("Selectbox widget", () => {
 
   describe("before React Aria focuses the Enter target", () => {
     beforeEach(() => {
+      // Stub the focus-sync hook so React Aria's focusedKey stays empty
+      // after typing. That exercises Selectbox's keyboard fallbacks for
+      // Enter and ArrowDown.
       vi.spyOn(
         UseSyncEnterTargetFocus,
         "useSyncComboBoxEnterTargetFocus"

@@ -2818,6 +2818,8 @@ describe("WebsocketConnection state machine", () => {
     ws.disconnect()
   })
 
+  // clearTimeout is a no-op here so the guards in setConnectionTimeout and
+  // schedulePingServer still run when a cancelled timer fires.
   describe("when clearTimeout fails to cancel a timer", () => {
     let clearTimeoutSpy: MockInstance
 
@@ -2856,12 +2858,15 @@ describe("WebsocketConnection state machine", () => {
       vi.mocked(args.onConnectionStateChange).mockClear()
       vi.mocked(args.sendClientError).mockClear()
 
+      // The original socket's timeout fires now; the new socket is only
+      // halfway through its own.
       await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS / 2)
 
       expect(newSocket?.readyState).toBe(0)
       expect(args.sendClientError).not.toHaveBeenCalled()
       expect(args.onConnectionStateChange).not.toHaveBeenCalled()
 
+      // The new socket's own timeout fires now.
       await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS / 2)
 
       expect(args.sendClientError).toHaveBeenCalledWith(

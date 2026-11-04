@@ -446,7 +446,7 @@ describe("AudioInput Recording Journey", () => {
     expect(clickedLinks[0]).toHaveAttribute("download", "recording.wav")
   })
 
-  it("names toolbar actions without label context when the label is empty", async () => {
+  it("names the download button without a label suffix when the label is empty", async () => {
     render(<AudioInput {...createProps({ label: "" })} />)
 
     act(() => {

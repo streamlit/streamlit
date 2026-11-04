@@ -970,7 +970,7 @@ describe("CameraInput widget", () => {
         resolveUpload()
         await vi.runAllTimersAsync()
       })
-      // Progress reported after the upload completed is ignored.
+      // CameraInput ignores progress reported after the upload completes.
       reportProgress({ loaded: 75, total: 100 })
 
       expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
@@ -992,8 +992,9 @@ describe("CameraInput widget", () => {
       render(<CameraInput {...props} />)
       await takePhoto()
 
-      // A progress event without a total reports 0%, which renders the
-      // Clear photo button while the upload is still in flight.
+      // Relies on a progress event without a total reporting 0%, which shows
+      // Clear photo while the upload is still running. Update this setup if
+      // that behavior changes.
       reportProgress({ loaded: 10 })
 
       await user.click(screen.getByRole("button", { name: /Clear photo/i }))
