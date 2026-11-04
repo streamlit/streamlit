@@ -20,8 +20,9 @@ body, with no event stream and no MCP session. It answers ``initialize``,
 ``ping``, ``tools/list``, and ``tools/call``. Its two tools are fixed, because
 MCP does not let a tool list change during a connection while an app's action
 space changes after every run: ``interact`` is the agent API's one operation,
-and ``get_data`` reads the media files a result points to, for clients that
-cannot fetch a URL.
+and ``get_data`` reads a stored media file for clients that cannot fetch a URL.
+The route checks the caller's session before a read, not that the latest
+result lists the file.
 
 This module classifies messages, answers the methods that run nothing, and
 reads files for ``get_data``. The route applies the agent API's checks and runs
@@ -53,7 +54,8 @@ _LOGGER: Final = get_logger(__name__)
 
 # The `initialize` handshake revisions the common clients speak, newest first.
 # A client that asks for any other revision is offered the first, and then
-# continues with it or disconnects.
+# continues with it or disconnects. `2025-03-26` is not offered: it requires a
+# server to accept JSON-RPC batches, which this one refuses.
 PROTOCOL_VERSIONS: Final = ("2025-11-25", "2025-06-18")
 PROTOCOL_VERSION_HEADER: Final = "MCP-Protocol-Version"
 
@@ -156,8 +158,8 @@ class Message(NamedTuple):
     """A JSON-RPC message, as ``classify`` read it."""
 
     kind: MessageKind
-    # A request's id and params as sent, and the method of a request or a
-    # notification. None where the message has none.
+    # `id` and `params` are set only for a request, and `method` for a request
+    # or a notification. Every other kind leaves them None.
     id: str | int | None = None
     method: str | None = None
     params: Any = None

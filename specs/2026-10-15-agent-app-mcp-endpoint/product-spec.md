@@ -471,7 +471,8 @@ session.
 - **Protocol versions:** `2025-11-25` and `2025-06-18`, the `initialize`-handshake
   revisions the common clients support. A client that asks for another revision gets
   `2025-11-25` back, and then either continues with it or disconnects, as those
-  revisions' negotiation rules prescribe.
+  revisions' negotiation rules prescribe. `2025-03-26` is not offered, because it
+  requires a server to accept batches, which this one refuses (below).
 - **`2026-07-28` comes later.** In v1, a `2026-07-28` probe gets HTTP `400` with
   `-32600`, echoing the request's `id`, which makes the client fall back to
   `initialize`.

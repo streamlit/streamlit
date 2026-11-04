@@ -154,9 +154,10 @@ def create_streamlit_static_handler(
             except HTTPException as exc:
                 if self._is_reserved(scope["path"]):
                     if path.replace("\\", "/") in _RESERVED_STATIC_PATH_SUFFIXES:
-                        # At the app's root, the static files' own answer
-                        # stands, such as a 405 for a `POST` to the health
-                        # check.
+                        # `path` is relative to the static mount, so an exact
+                        # match is a reserved path at the app's root. There
+                        # the static files' own answer stands, such as a 405
+                        # for a `POST` to the health check.
                         raise
                     # Appended to a page's URL, a reserved path is never a
                     # static file, so it is a 404 for every method: a `POST`

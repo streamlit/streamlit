@@ -635,10 +635,10 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
             return Response(status_code=405, headers={"Allow": "POST"})
         refusal = _refusal_before_body(request)
         if registry is None:
-            # Counted as the interact route counts it: only a request that
-            # passes the checks, whatever its message, since the body is never
-            # read. A client stops after its refused `initialize`, so this is
-            # about one count per attempt.
+            # Count only a POST that passes the Host, Origin, and content-type
+            # checks, as the interact route does. The body is never read, so
+            # this counts attempts, not messages: a client stops after its
+            # refused `initialize`.
             if refusal is None:
                 usage.record_interaction("mcp")
             # 400 rather than the interact route's 403: MCP clients read a 403
