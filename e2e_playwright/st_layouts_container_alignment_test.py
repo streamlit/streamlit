@@ -295,7 +295,11 @@ def _bottom(locator: Locator) -> float:
 
 
 def test_stretch_dataframe_resize_stays_in_parent(app: Page):
-    """Dragging a stretch dataframe taller never overflows its parent."""
+    """A stretch dataframe stays inside its parent when dragged.
+
+    An unbounded card grows with the table. A fixed-height card can be
+    dragged shorter, and dragging taller stops at the space the table fills.
+    """
     # Without a definite parent height, the card grows with the table while
     # it's dragged, and keeps that height after the drag.
     dataframe_card = get_element_by_key(app, "stretch-dataframe-card")
@@ -314,8 +318,8 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
             _bottom(resizable) <= _bottom(dataframe_card)
         )
 
-    # Check mid-drag, where a percentage-height drag would overflow the card.
-    # The useTableSizer unit tests cover the snap-back after release.
+    # Check mid-drag, where a percentage-height drag would overflow the card,
+    # and again after release, where it would snap back.
     wait_until(app, _card_grew_with_dataframe)
     app.mouse.up()
     wait_until(app, _card_grew_with_dataframe)

@@ -515,7 +515,8 @@ describe("useTableSizer hook", () => {
         theme: mockTheme,
       })
 
-      // With 2 rows: calculated = 2*35 + 35 + 2 = 107, matches minimum
+      // Stretch size is "100%". The minimum matches the 2 rows:
+      // header + 2*35 + borders = 107.
       expect(result.current.resizableSize.height).toEqual("100%")
       expect(result.current.minHeight).toEqual(STRETCH_MIN_HEIGHT)
     })
@@ -550,7 +551,8 @@ describe("useTableSizer hook", () => {
         theme: mockTheme,
       })
 
-      // With 3 rows: calculated = 3*35 + 35 + 2 = 142, matches minimum
+      // Stretch size is "100%". With only 3 rows, the minimum is also the
+      // drag cap: header + 3*35 + borders = 142.
       expect(result.current.resizableSize.height).toEqual("100%")
       expect(result.current.maxHeight).toEqual(STRETCH_MIN_HEIGHT)
       expect(result.current.minHeight).toEqual(STRETCH_MIN_HEIGHT)
@@ -657,7 +659,8 @@ describe("useTableSizer hook", () => {
         { initialProps: { measuredContainerHeight: -1 } }
       )
 
-      // The fallback minimum keeps the "100%" height at the auto height.
+      // Stretch height is "100%" before the first measurement. The fallback
+      // minimum is still the auto height.
       expect(result.current.resizableSize.height).toEqual("100%")
       expect(result.current.minHeight).toEqual(398)
 
