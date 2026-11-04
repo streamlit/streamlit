@@ -857,6 +857,7 @@ class ConfigTest(unittest.TestCase):
                 "server.enableWebsocketCompression",
                 "server.websocketPingInterval",
                 "server.enableXsrfProtection",
+                "server.xsrfCookiePartitioned",
                 "server.xsrfCookieSameSite",
                 "server.fileWatcherType",
                 "server.folderWatchBlacklist",
@@ -994,6 +995,40 @@ class ConfigTest(unittest.TestCase):
         with pytest.raises(
             RuntimeError,
             match=r"Invalid value for config option server.xsrfCookieSameSite",
+        ):
+            config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_partitioned_defaults_off(self):
+        """Partitioned is opt-in so existing deployments are unchanged."""
+        assert config.get_option("server.xsrfCookiePartitioned") is False
+        config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_partitioned_valid_with_same_site_none(self):
+        """Partitioned combined with SameSite=None must not raise."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.xsrfCookiePartitioned", True, "test")
+        config._check_conflicts()
+
+    @parameterized.expand(["lax", "strict"])
+    def test_check_conflicts_xsrf_cookie_partitioned_requires_same_site_none(
+        self, same_site
+    ):
+        """Partitioned with Lax or Strict has no effect, so it must raise."""
+        config._set_option("server.xsrfCookieSameSite", same_site, "test")
+        config._set_option("server.xsrfCookiePartitioned", True, "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"server.xsrfCookiePartitioned=true' requires",
+        ):
+            config._check_conflicts()
+
+    def test_check_conflicts_xsrf_cookie_partitioned_rejects_non_bool(self):
+        """A truthy non-bool value must be rejected, not coerced to True."""
+        config._set_option("server.xsrfCookieSameSite", "none", "test")
+        config._set_option("server.xsrfCookiePartitioned", "yes", "test")
+        with pytest.raises(
+            RuntimeError,
+            match=r"Invalid value for config option server.xsrfCookiePartitioned",
         ):
             config._check_conflicts()
 

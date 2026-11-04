@@ -502,9 +502,110 @@ class TestEnsureXsrfCookie:
         assert "SameSite=Lax" in cookie_headers[0]
         assert "Secure" not in cookie_headers[0]
 
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": "none",
+            "server.xsrfCookiePartitioned": True,
+        }
+    )
+    def test_partitioned_adds_attribute_and_secure(self) -> None:
+        """The Partitioned attribute is added, together with Secure."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "SameSite=None" in cookie_headers[0]
+        assert "Secure" in cookie_headers[0]
+        assert cookie_headers[0].endswith("; Partitioned")
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": True,
+            "server.sslCertFile": None,
+            "server.xsrfCookieSameSite": "none",
+        }
+    )
+    def test_partitioned_is_off_by_default(self) -> None:
+        """Without the option, the cookie is not partitioned."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert len(cookie_headers) == 1
+        assert "Partitioned" not in cookie_headers[0]
+
+    @patch_config_options(
+        {
+            "server.enableXsrfProtection": False,
+            "server.xsrfCookieSameSite": "none",
+            "server.xsrfCookiePartitioned": True,
+        }
+    )
+    def test_partitioned_sets_no_cookie_when_xsrf_disabled(self) -> None:
+        """Partitioned does not cause a cookie to be set when XSRF is off."""
+        request = MagicMock()
+        request.cookies = {}
+        response = Response()
+
+        _ensure_xsrf_cookie(request, response)
+
+        assert not [
+            name for name, _ in response.raw_headers if name.lower() == b"set-cookie"
+        ]
+
 
 class TestSetUnquotedCookie:
     """Tests for _set_unquoted_cookie function."""
+
+    def test_sets_partitioned_attribute(self) -> None:
+        """Partitioned is appended after Secure when requested."""
+
+        response = Response()
+
+        _set_unquoted_cookie(
+            response,
+            "test_cookie",
+            "value",
+            same_site="None",
+            secure=True,
+            partitioned=True,
+        )
+
+        cookie_headers = [
+            value.decode("latin-1")
+            for name, value in response.raw_headers
+            if name.lower() == b"set-cookie"
+        ]
+        assert cookie_headers == [
+            "test_cookie=value; Path=/; SameSite=None; Secure; Partitioned"
+        ]
+
+    def test_partitioned_without_secure_raises(self) -> None:
+        """Browsers drop a non-Secure partitioned cookie, so refuse to emit one."""
+
+        response = Response()
+
+        with pytest.raises(ValueError, match="must also be Secure"):
+            _set_unquoted_cookie(
+                response, "test_cookie", "value", secure=False, partitioned=True
+            )
 
     def test_sets_cookie_without_quoting(self) -> None:
         """Test that cookie value is set without URL encoding or quoting."""

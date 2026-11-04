@@ -1215,6 +1215,40 @@ _create_option(
 )
 
 _create_option(
+    "server.xsrfCookiePartitioned",
+    description="""
+        Adds the ``Partitioned`` attribute to the cookie Streamlit uses for
+        Cross-Site Request Forgery (XSRF) protection, which opts it into
+        partitioned storage (CHIPS, Cookies Having Independent Partitioned
+        State). The browser then keeps a separate copy of the cookie for each
+        top-level site that embeds your app. This only has an effect when XSRF
+        protection is enabled (via ``server.enableXsrfProtection`` or an
+        ``[auth]`` section in your secrets). It does not affect authentication
+        cookies.
+
+        This is intended for apps embedded in an iframe on a different site,
+        where browsers that block unpartitioned third-party cookies would
+        otherwise drop the XSRF cookie and break ``st.file_uploader``. It
+        requires ``server.xsrfCookieSameSite`` to be "none", because the
+        browser never sends a Lax or Strict cookie in a cross-site context.
+        Browsers also require partitioned cookies to be ``Secure``, so
+        Streamlit sets ``Secure`` automatically and your app must be served
+        over HTTPS (either directly or via a TLS-terminating proxy).
+
+        Notes:
+        - Browsers store a partitioned cookie separately from an existing
+          unpartitioned cookie with the same name. After enabling this option,
+          a browser that still holds the old cookie may briefly send both, and
+          requests can be rejected until the old cookie is replaced or expires.
+        - Safari supports ``Partitioned`` cookies since 26.2. Safari 18.5
+          rejects cookies that carry the attribute, so leave this option off if
+          you need to support that version.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "server.maxUploadSize",
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
@@ -3449,6 +3483,23 @@ WebSocket connection.
             "Invalid value for config option server.xsrfCookieSameSite: "
             f'"{xsrf_cookie_same_site}". '
             'Valid values are "lax", "strict", and "none".'
+        )
+
+    # A partitioned cookie is only useful (and, for the browser, valid) as a
+    # SameSite=None; Secure cookie, so reject combinations that silently do
+    # nothing. As with SameSite, require a real bool rather than coercing.
+    xsrf_cookie_partitioned = get_option("server.xsrfCookiePartitioned")
+    if not isinstance(xsrf_cookie_partitioned, bool):
+        raise RuntimeError(
+            "Invalid value for config option server.xsrfCookiePartitioned: "
+            f'"{xsrf_cookie_partitioned}". Valid values are true and false.'
+        )
+    if xsrf_cookie_partitioned and xsrf_cookie_same_site.lower() != "none":
+        raise RuntimeError(
+            "The config option 'server.xsrfCookiePartitioned=true' requires "
+            "'server.xsrfCookieSameSite=\"none\"'. Browsers never send a Lax "
+            "or Strict cookie in a cross-site context, so a partitioned cookie "
+            "would have no effect."
         )
 
     # Warn about combinations where SameSite="none" silently has no effect or
