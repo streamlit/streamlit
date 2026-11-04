@@ -27,7 +27,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
   type EChartsOptionObject,
-  formatTimeAxisValue,
+  formatTimeLabel,
   formatTooltipItem,
   STREAMLIT_THEME,
   toComponentList,
@@ -449,7 +449,7 @@ export function applyTimeLabelFormatters(
 
   const useUTC = chartOption.useUTC === true
   const formatter = (params: unknown): string =>
-    formatTimeAxisValue(get(params, "value"), useUTC)
+    formatTimeLabel(get(params, "value"), useUTC)
   const withTimeLabelFormatter = (axis: unknown): unknown => {
     if (!isPlainObject(axis)) {
       return axis

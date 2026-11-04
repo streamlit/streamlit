@@ -346,7 +346,8 @@ The Streamlit theme's default `valueFormatter` and the number formats above also
 datetime strings of dataframe sources like [time labels](#theming): a midnight value as its date,
 others as date and time to the second. They use local time, like a time axis without `useUTC`,
 so a naive datetime keeps its wall-clock time. The formatters don't know the chart's `useUTC`,
-so with `useUTC: true` a timezone-aware value can differ from the axis label. `{@...}`
+so with `useUTC: true` a tooltip datetime (naive or timezone-aware) can differ from its axis
+label. `{@...}`
 placeholders insert values as they are.
 
 Options considered:

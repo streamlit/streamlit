@@ -75,13 +75,14 @@ const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
  * millisecond, with a trailing ``Z`` when timezone-aware. Any tooltip string
  * of this shape is formatted, including one written inline in the option.
  */
-const DATAFRAME_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
+const MILLISECOND_ISO_DATETIME =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
 
 /**
  * Format a time value as its date when it is exactly midnight, and as its
  * date and time to the second otherwise.
  */
-export function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
+export function formatTimeLabel(value: unknown, useUTC: boolean): string {
   const date = echarts.time.parse(value)
   // Format through ECharts so the check uses the label's UTC or local clock.
   // Milliseconds count, so 00:00:00.250 is not midnight.
@@ -106,10 +107,10 @@ export function formatTooltipItem(value: unknown): string {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }
   if (typeof value === "string") {
-    if (DATAFRAME_DATETIME.test(value)) {
+    if (MILLISECOND_ISO_DATETIME.test(value)) {
       // In local time, as on a time axis without ``useUTC``. ECharts reads a
       // naive datetime as local time, so it keeps its wall-clock time.
-      return formatTimeAxisValue(value, false)
+      return formatTimeLabel(value, false)
     }
     // Blank text is missing. Other strings, including numeric ones, pass
     // through so an id or year is not grouped.

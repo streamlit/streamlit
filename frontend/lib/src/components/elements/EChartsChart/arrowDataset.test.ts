@@ -633,7 +633,7 @@ describe("hydrateArrowDatasetSources", () => {
     })
   })
 
-  it("orders rows by the app's dimensions and keeps them", () => {
+  it("orders rows by the author's dimensions and preserves the dimensions array", () => {
     const dimensions = [
       { name: "sales", type: "float" },
       "unknown",

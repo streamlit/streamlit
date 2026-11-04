@@ -82,6 +82,7 @@ type HydratedSource = {
   quiver: Quiver
   dimensions: string[]
   columnIndexByName: Map<string, number>
+  /** Hydrated rows, keyed by the comma-joined column indices they read. */
   rowsByColumnOrder: Map<string, EChartsSourceRow[]>
 }
 
@@ -481,11 +482,13 @@ function getRows(
  * Replaces the `dataset.source` placeholders of a freshly parsed option with
  * rows from the matching Arrow datasets.
  *
- * A dataset without `dimensions` gets the data column names, so ECharts keeps
- * the dataframe's column order. A dataset with `dimensions` gets rows in that
- * order, so it can reorder or pick columns by name. A dataset without
- * `sourceHeader` gets `false`, so ECharts doesn't take a first row of strings
- * for column names.
+ * For each hydrated dataset:
+ * - Without `dimensions`, sets `dimensions` to the data column names so
+ *   ECharts keeps the dataframe's column order.
+ * - With `dimensions`, orders each row to match, so the author can reorder
+ *   or pick columns by name.
+ * - Without `sourceHeader`, sets `sourceHeader` to `false` so ECharts does
+ *   not treat a first row of strings as column names.
  *
  * The option is mutated in place, so pass an object nobody else holds (for
  * example, the result of `JSON.parse`). Each dataset is parsed once.
