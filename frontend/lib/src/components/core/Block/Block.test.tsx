@@ -2429,6 +2429,36 @@ describe("GridContainer Component", () => {
     expect(within(cell).getByTestId("stSkeleton")).toBeVisible()
   })
 
+  it("keeps fragment cells separate and mounted when a spinner wraps their wrapper", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [
+        textInput("First", "grid-spinner-first"),
+        textInput("Second", "grid-spinner-second"),
+      ],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({}, [fragment]))
+    )
+    const [firstCell, secondCell] = screen.getAllByTestId("stGridCell")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [
+          new TransientNode(FAKE_SCRIPT_HASH, fragment, [text("Loading")]),
+        ])
+      )
+    )
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(3)
+    expect(cells[0]).toHaveTextContent("Loading")
+    expect(cells[0]).not.toHaveTextContent("First")
+    expect(cells[1]).toBe(firstCell)
+    expect(cells[2]).toBe(secondCell)
+  })
+
   it("keeps column span when a spinner wraps the cell", () => {
     const cell = new BlockNode(
       FAKE_SCRIPT_HASH,

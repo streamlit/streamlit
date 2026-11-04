@@ -323,6 +323,15 @@ interface GridChildCell {
   isRetained: boolean
 }
 
+/** Whether a node is a layout-transparent wrapper that is not a `grid.cell()`. */
+function isTransparentWrapper(node: AppNode | undefined): node is BlockNode {
+  return (
+    node instanceof BlockNode &&
+    notNullOrUndefined(node.deltaBlock.transparent) &&
+    !node.deltaBlock.gridCell
+  )
+}
+
 /**
  * The block's children and retained elements, in render order. Direct
  * children of a layout-transparent wrapper become grid cells.
@@ -358,12 +367,24 @@ function collectGridCellSources(
   children.forEach((node, index) => {
     addRetainedBefore(index)
     const sourceKey = keyPrefix === "" ? `${index}` : `${keyPrefix}.${index}`
-    if (
-      node instanceof BlockNode &&
-      node.deltaBlock.transparent &&
-      !node.deltaBlock.gridCell
-    ) {
+    if (isTransparentWrapper(node)) {
       sources.push(...collectGridCellSources(node, sourceKey))
+    } else if (
+      node instanceof TransientNode &&
+      isTransparentWrapper(node.anchor)
+    ) {
+      // A spinner at a fragment's wrapper gets its own cell, so the wrapper's
+      // children keep their cells and stay mounted when it appears or clears.
+      sources.push({
+        node: new TransientNode(
+          node.scriptRunId,
+          undefined,
+          node.transientNodes,
+          node.deltaMsgReceivedAt
+        ),
+        sourceKey: `${sourceKey}.transient`,
+      })
+      sources.push(...collectGridCellSources(node.anchor, sourceKey))
     } else {
       sources.push({ node, sourceKey })
     }
