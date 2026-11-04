@@ -2075,9 +2075,11 @@ export class App extends PureComponent<Props, State> {
     status: ForwardMsg.ScriptFinishedStatus,
     metadata?: ForwardMsgMetadata | null
   ): void {
-    // Without identity, the backend couldn't say which run finished. Widget
-    // completion, stale-node cleanup, and cache aging all need that run, so
-    // they are skipped rather than guessed from React state.
+    // A finish without identity only comes from the stop AppSession sends
+    // when handling a BackMsg exception; the error run sent right after it
+    // carries identity and does this work. Widget completion, stale-node
+    // cleanup, and cache aging need the finished run, so they are skipped
+    // here rather than guessed from React state.
     const finishedRun = getRunIdentity(metadata)
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
