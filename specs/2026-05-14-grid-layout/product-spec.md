@@ -239,8 +239,9 @@ A BI panel (title, icon, background, later header actions) is useful outside a g
 should be its own container (Principle 19), not a grid parameter. `st.card` is planned as a
 separate spec and is not a blocker. Composition with that container is a follow-up, not an
 MVP constructor — do not put `column_span` on `st.card`, and do not require
-`grid.cell(...).card(...)` before `st.grid` ships. `st.grid(border=True)` stays for a
-uniform metric wall.
+`grid.cell(...).card(...)` before `st.grid` ships. `st.grid(border=True)` stays for
+uniform bordered cells. Metrics keep their own `border=True`, which looks different from
+a border drawn around the cell.
 
 #### Wrapping: `wrap` Plus `min_column_width`
 
@@ -539,11 +540,11 @@ metrics = [
     ("Retention", "96%", "-0.4%", "Monthly"),
 ]
 
-grid = st.grid(4, border=True)  # max 4; 3 at the default layout
+grid = st.grid(4)  # max 4; 3 at the default layout
 
 for label, value, delta, caption in metrics:
     with grid.cell():
-        st.metric(label, value, delta)
+        st.metric(label, value, delta, border=True)
         st.caption(caption)
 ```
 

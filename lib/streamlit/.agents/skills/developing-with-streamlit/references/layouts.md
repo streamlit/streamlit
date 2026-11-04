@@ -97,9 +97,9 @@ metrics = [
     ("Conversion", "12.4%", "+1.1%"),
     ("Retention", "96%", "-0.4%"),
 ]
-with st.grid(4, border=True):
+with st.grid(4):
     for label, value, delta in metrics:
-        st.metric(label, value, delta)
+        st.metric(label, value, delta, border=True)
 ```
 
 Use `grid.cell()` only when a cell holds several elements, or spans tracks
@@ -119,13 +119,13 @@ with st.grid("auto", min_column_width=72, gap="xsmall"):
         st.button(item, key=f"item-{item}", width="stretch", wrap=True)
 
 # Spanning and grouped cells
-grid = st.grid(3, border=True)
+grid = st.grid(3)
 with grid.cell(column_span="all"):  # Full-width row
     st.markdown("**Featured**")
     st.caption("Spans every column")
 with grid.cell(column_span=2):
-    st.metric("Revenue", "$1.2M", "+8%")
-grid.metric("Users", "762k", "+12%")  # One element, no cell() needed
+    st.metric("Revenue", "$1.2M", "+8%", border=True)
+grid.metric("Users", "762k", "+12%", border=True)  # One element, no cell() needed
 
 # Keep a column count (scrolls horizontally on a phone)
 from numpy.random import default_rng as rng
@@ -245,7 +245,7 @@ with button_col:
 Sibling cards with different content (for example, one `st.metric` without `delta` or `chart_data`) end up with uneven heights.
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
-- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns, and `st.grid(n, border=True)` equal-height bordered cells in each row.
+- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`. `st.columns(n, border=True)` also gives equal-height bordered columns.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
 

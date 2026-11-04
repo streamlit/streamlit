@@ -1183,9 +1183,9 @@ class LayoutsMixin:
                 ("Conversion", "12.4%", "+1.1%"),
                 ("Retention", "96%", "-0.4%"),
             ]
-            grid = st.grid(4, border=True)
+            grid = st.grid(4)
             for label, value, delta in metrics:
-                grid.metric(label, value, delta)
+                grid.metric(label, value, delta, border=True)
 
         .. output::
             https://doc-grid1.streamlit.app/

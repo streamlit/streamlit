@@ -51,15 +51,15 @@ with st.container(horizontal=True):
 
 A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
 
-Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows and, with `border=True`, every card in a row as tall as the tallest one. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows:
+Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
 
 ```python
 # A pixel row height also gives every row the same height.
-with st.grid(4, border=True, row_height=160, gap="medium"):
-    st.metric("Revenue", "$1.2M", "-7%")
-    st.metric("Users", "762k", "+12%")
-    st.metric("Orders", "1.4k")
-    st.metric("Conversion", "3.2%", "+0.1%")
+with st.grid(4, row_height=160, gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%", border=True, height="stretch")
+    st.metric("Users", "762k", "+12%", border=True, height="stretch")
+    st.metric("Orders", "1.4k", border=True, height="stretch")
+    st.metric("Conversion", "3.2%", "+0.1%", border=True, height="stretch")
 ```
 
 **Grid vs horizontal container:**
