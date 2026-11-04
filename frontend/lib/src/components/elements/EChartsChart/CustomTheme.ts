@@ -1137,9 +1137,11 @@ function isDefaultBottomLegend(legend: Record<string, unknown>): boolean {
 }
 
 /**
- * True when a legend shares the top strip with a centered title: visible,
- * horizontal, pinned to the top edge, and horizontally centered (ECharts'
- * default). A legend placed to one side or lower down doesn't overlap it.
+ * True when a legend sits in the top strip that ECharts' default title uses:
+ * visible, horizontal, pinned to the top edge, and horizontally centered.
+ * A legend placed to one side or lower down usually doesn't overlap a title.
+ * The title's own alignment isn't checked, so any visible top title moves
+ * such a legend below it.
  */
 function isLegendInTitleStrip(legend: Record<string, unknown>): boolean {
   const centered =
@@ -1307,11 +1309,12 @@ function stackBottomAnchoredControls(
  * Lay out the legend and chart controls around the plot.
  *
  * A default-bottom legend moves off the footer when bottom-anchored controls
- * are present. In a cartesian chart, a legend in the top title strip also
- * moves below the title, and ``stackedTop`` is the height of that title and
- * legend stack, used as ``grid.top``. Other charts keep the legend in the
- * strip, since their series (pie, funnel, ...) don't move down to clear it.
- * Bottom-anchored controls are then stacked if more than one shares the strip.
+ * are present. In a cartesian chart with a single grid, a legend in the top
+ * title strip also moves below the title, and ``stackedTop`` is the height of
+ * that title and legend stack, used as ``grid.top``. Other charts keep the
+ * legend in the strip, since their series (pie, funnel, ...) and array grids
+ * don't move down to clear it. Bottom-anchored controls are then stacked if
+ * more than one shares the strip.
  */
 function applyControlLayout(
   option: EChartsOptionObject,
@@ -1322,7 +1325,8 @@ function applyControlLayout(
   stackedBottom?: number
 } {
   const titleAtTop = titlePlacement(option).occupiesTop
-  const hasCartesianAxis = "xAxis" in option || "yAxis" in option
+  const hasDefaultGrid =
+    ("xAxis" in option || "yAxis" in option) && !Array.isArray(option.grid)
   const legendTop = titleAtTop ? belowTopTitlePx(option, theme) : 0
   let next = option
   if (
@@ -1332,10 +1336,13 @@ function applyControlLayout(
     next = withLegendsMovedTo(next, legendTop, isDefaultBottomLegend)
   }
   let stackedTop: number | undefined
-  if (titleAtTop && hasCartesianAxis) {
+  if (titleAtTop && hasDefaultGrid) {
     next = withLegendsMovedTo(next, legendTop, isLegendInTitleStrip)
+    // Either move above can place a legend under the title.
     if (next !== option) {
-      // One legend row is ECharts' 14px item plus 5px padding on each side.
+      // Assume one legend row (ECharts' 14px item plus 5px padding on each
+      // side), then a small gap above the plot. A wrapped legend needs an
+      // explicit grid.top.
       stackedTop =
         legendTop +
         convertRemToPx(theme.spacing.twoXL) +

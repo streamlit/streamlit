@@ -1207,6 +1207,7 @@ describe("applyStreamlitOptionDefaults", () => {
         { text: "Sales", subtext: "per day" },
         // Must NOT count: a hidden or bottom title's subtext.
         { text: "Hidden", subtext: "x", show: false },
+        { text: "Bottom", subtext: "y", bottom: 0 },
       ],
       legend: [{ top: "top" }, { top: 0, right: 0 }],
       series: [],
@@ -1241,7 +1242,7 @@ describe("applyStreamlitOptionDefaults", () => {
     expect((result.grid as Record<string, unknown>).top).toBeUndefined()
   })
 
-  it("keeps a top legend in place without a top title or cartesian axes, or with a set grid.top or theme None", () => {
+  it("keeps a top legend in place without a top title, a single grid, or theme Streamlit, and keeps a spec grid.top", () => {
     const noTitle = applyDefaults({
       xAxis: {},
       yAxis: {},
@@ -1267,6 +1268,17 @@ describe("applyStreamlitOptionDefaults", () => {
       series: [{ type: "pie", data: [] }],
     })
     expect(pie.legend).toEqual({ top: 0 })
+
+    // Array grids aren't given a grid.top, so the legend stays put.
+    const multiGrid = applyDefaults({
+      xAxis: [{}, { gridIndex: 1 }],
+      yAxis: [{}, { gridIndex: 1 }],
+      grid: [{ bottom: "55%" }, { top: "55%" }],
+      title: { text: "Price" },
+      legend: { top: 0 },
+      series: [],
+    })
+    expect(multiGrid.legend).toEqual({ top: 0 })
 
     // The legend still moves, but the spec's grid.top wins.
     const userGridTop = applyDefaults({
