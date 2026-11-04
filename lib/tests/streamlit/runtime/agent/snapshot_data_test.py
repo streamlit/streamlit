@@ -25,6 +25,7 @@ from unittest.mock import patch
 import altair as alt
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import pyarrow as pa
 import pydeck as pdk
@@ -295,6 +296,18 @@ class SnapshotDataTest(SnapshotCase):
             assert node["data"]["complete"] is True
             assert _MEDIA_URL.fullmatch(node["data"]["url"])
         assert editor["support"] == "action_unsupported"
+        assert "caption" not in table.get("props", {})
+
+    def test_a_table_reports_its_styler_caption(self) -> None:
+        """`st.table` shows a Styler's caption below the table; `st.dataframe` does not."""
+        styler = _frame(2).style.set_caption("Units per region")
+        st.table(styler)
+        st.dataframe(styler)
+
+        document = self._build().document
+
+        assert _one(document, "table")["props"]["caption"] == "Units per region"
+        assert "caption" not in _one(document, "dataframe").get("props", {})
 
     def test_plotly_drops_its_theme_and_expands_typed_arrays(self) -> None:
         """A figure is complete: its theme is dropped and named, its arrays are numbers."""
@@ -420,6 +433,52 @@ class SnapshotDataTest(SnapshotCase):
         ]
         assert data["spec"]["data"][0]["y"] == [1.5, None, 3.0]
 
+    def test_plotly_drops_theme_stand_in_colors(self) -> None:
+        """A color only the browser resolves is dropped and named; the author's stays."""
+        spec = json.dumps(
+            {
+                "data": [
+                    {"type": "scatter", "line": {"color": "#000001", "dash": "dot"}},
+                    {"type": "bar", "marker": {"color": ["#000002", "red"]}},
+                    {"type": "scatter", "line": {"color": "#000031"}},
+                ],
+                "layout": {
+                    "coloraxis": {"colorscale": [[0.0, "#000011"], [1.0, "#000020"]]},
+                    "paper_bgcolor": "#ffffff",
+                },
+            }
+        )
+
+        data = plotly_chart._plotly_data(spec)
+
+        assert data is not None
+        assert data["spec_omitted"] == [
+            "data[0].line.color",
+            "data[1].marker.color",
+            "layout.coloraxis.colorscale",
+        ]
+        assert data["spec"]["data"][0]["line"] == {"dash": "dot"}
+        assert data["spec"]["data"][1]["marker"] == {}
+        assert data["spec"]["data"][2]["line"] == {"color": "#000031"}
+        assert data["spec"]["layout"] == {
+            "coloraxis": {},
+            "paper_bgcolor": "#ffffff",
+        }
+
+    def test_plotly_express_reports_no_stand_in_colors(self) -> None:
+        """Plotly Express writes the theme's stand-ins into each trace."""
+        frame = pd.DataFrame({"x": [1, 2, 1, 2], "y": [3, 4, 5, 6], "g": list("aabb")})
+        st.plotly_chart(px.line(frame, x="x", y="y", color="g"))
+
+        data = self._data("plotly_chart")
+
+        assert data["spec_omitted"] == [
+            "layout.template",
+            "data[0].line.color",
+            "data[1].line.color",
+        ]
+        assert "#0000" not in json.dumps(data["spec"])
+
     def test_echarts_reports_its_option_as_given(self) -> None:
         """An ECharts option is its own data, reported unchanged: what would be
         a Plotly template or typed array is left as the author wrote it.
@@ -497,6 +556,19 @@ class SnapshotDataTest(SnapshotCase):
         assert data.keys() == {"spec", "complete"}
         assert data["complete"] is True
         assert len(data["spec"]["layers"]) == 2
+        assert "tooltip" not in data["spec"]
+
+    def test_pydeck_reports_its_tooltip_in_the_spec(self) -> None:
+        """The tooltip the browser shows travels beside the spec; it is put back."""
+        tooltip = {"text": "{name}: {count}"}
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[pdk.Layer("ScatterplotLayer", data=[{"p": [0, 0]}])],
+                tooltip=tooltip,
+            )
+        )
+
+        assert self._data("pydeck_chart")["spec"]["tooltip"] == tooltip
 
     def test_a_map_reports_the_deck_gl_spec_its_browser_renders(self) -> None:
         """`st.map` reports its generated Deck.gl spec as a complete chart, like

@@ -821,6 +821,8 @@ def _pages(
             entry["icon"] = page.icon
         if page.help:
             entry["help"] = page.help
+        if page.is_hidden:
+            entry["hidden"] = True
         pages.append(entry)
         if page.page_script_hash == current_hash:
             # A copy, so a caller can change `page` without changing `pages`.

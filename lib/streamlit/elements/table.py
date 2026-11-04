@@ -428,6 +428,8 @@ class TableMixin:
                 # stay because they change which data is presented.
                 hide_index=proto.hide_index,
                 hide_header=proto.hide_header,
+                # A Styler's `set_caption` text, shown below the table.
+                caption=proto.arrow_data.styler.caption or None,
                 alt=normalized_alt,
             )
             if agent_spec.is_recording()
