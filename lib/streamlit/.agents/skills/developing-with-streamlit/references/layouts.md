@@ -245,8 +245,8 @@ with button_col:
 Sibling cards with different content (for example, one `st.metric` without `delta` or `chart_data`) end up with uneven heights.
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
-- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns.
-- In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.columns` when cards should share a width.
+- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. `st.columns(n, border=True)` also gives equal-height bordered columns, and `st.grid(n, border=True)` equal-height bordered cells in each row.
+- In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
 
 ```python

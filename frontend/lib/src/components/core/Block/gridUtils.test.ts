@@ -45,7 +45,7 @@ describe("resolveMinColumnWidthPx", () => {
     ).toBe(280)
   })
 
-  it("keeps a bordered auto floor at 200px for a 16px root", () => {
+  it("uses the 12.5rem theme floor for an auto min_column_width", () => {
     const autoMinColumnWidthPx = cssLengthToPx("12.5rem", 16)
     expect(autoMinColumnWidthPx).toBe(200)
     expect(
@@ -110,21 +110,15 @@ describe("resolveGridColumnCount", () => {
     ).toBe(3)
   })
 
-  it("resolves st.grid(4, border=True) to 3 columns at 704px", () => {
-    const minColumnWidthPx = resolveMinColumnWidthPx({
-      minColumnWidthPx: undefined,
-      autoMinColumnWidthPx: cssLengthToPx("12.5rem", 16),
-    })
+  it("caps st.grid(2) at 2 columns when more would fit", () => {
     expect(
       resolveGridColumnCount({
-        availableWidthPx: 704,
-        minColumnWidthPx,
-        columnGapPx: 16,
-        columns: 4,
+        ...autoFloor,
+        availableWidthPx: 1100,
+        columns: 2,
         wrap: true,
-        fallbackWidthPx: 736,
       })
-    ).toBe(3)
+    ).toBe(2)
   })
 
   it("uses the padded content box when unmeasured", () => {

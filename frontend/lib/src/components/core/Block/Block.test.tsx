@@ -16,7 +16,7 @@
 
 import { type ReactElement, useContext } from "react"
 
-import { screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
 
 import {
@@ -1447,14 +1447,33 @@ describe("GridContainer Component", () => {
   })
 
   it("should cap integer columns at the declared count", () => {
+    // Three 200px tracks fit the 704px fallback, so only the cap gives 2.
     const block = makeGridBlock({
-      columns: 3,
+      columns: 2,
+      minColumnWidthPx: 200,
     })
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     const gridContainer = screen.getByTestId("stGrid")
     expect(gridContainer).toHaveStyle(
-      "grid-template-columns: repeat(3, minmax(0, 1fr))"
+      "grid-template-columns: repeat(2, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "2")
+  })
+
+  it("resolves the column count from the column gap, not the row gap", () => {
+    // A 4rem column gap fits two 200px tracks in 704px. The zero row gap
+    // would fit three.
+    const block = makeGridBlock({
+      minColumnWidthPx: 200,
+      rowGapConfig: { gapSize: streamlit.GapSize.NONE },
+      columnGapConfig: { gapSize: streamlit.GapSize.LARGE },
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveAttribute(
+      "data-test-column-count",
+      "2"
     )
   })
 
@@ -2036,6 +2055,172 @@ describe("GridContainer Component", () => {
     }
   })
 
+  /**
+   * Swaps in a ResizeObserver whose callbacks a test can fire, and runs
+   * animation frames right away so the observer updates apply in `act`.
+   */
+  function captureResizeObservers(): {
+    fireResize: () => void
+    restore: () => void
+  } {
+    const callbacks = new Set<ResizeObserverCallback>()
+    const original = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      private readonly callback: ResizeObserverCallback
+
+      public unobserve = vi.fn()
+
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
+      }
+
+      public observe(): void {
+        callbacks.add(this.callback)
+      }
+
+      public disconnect(): void {
+        callbacks.delete(this.callback)
+      }
+    }
+    const rafSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation(callback => {
+        callback(0)
+        return 0
+      })
+    return {
+      fireResize: () => {
+        act(() => {
+          callbacks.forEach(callback => callback([], {} as ResizeObserver))
+        })
+      },
+      restore: () => {
+        globalThis.ResizeObserver = original
+        rafSpy.mockRestore()
+      },
+    }
+  }
+
+  /** Mocks element boxes: `height` for the given test id, 160px otherwise. */
+  function mockBoxes(
+    measuredTestId: string,
+    size: { width: number; height: number }
+  ): () => void {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height =
+          this.dataset.testid === measuredTestId ? size.height : 160
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: size.width,
+          width: size.width,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    return () => spy.mockRestore()
+  }
+
+  it("reflows the column count when the grid resizes, keeping cells mounted", () => {
+    const size = { width: 704, height: 40 }
+    const restoreBoxes = mockBoxes("stGrid", size)
+    const observers = captureResizeObservers()
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          makeGridBlock({ minColumnWidthPx: 200 }, [
+            textInput("Name", "grid-resize-name"),
+            text("Second"),
+          ])
+        )
+      )
+      const grid = screen.getByTestId("stGrid")
+      expect(grid).toHaveAttribute("data-test-column-count", "3")
+      const [inputCell] = screen.getAllByTestId("stGridCell")
+      const inputContainer = within(inputCell).getByTestId(
+        "stElementContainer"
+      )
+
+      size.width = 260
+      observers.fireResize()
+      expect(grid).toHaveAttribute("data-test-column-count", "1")
+
+      size.width = 704
+      observers.fireResize()
+      expect(grid).toHaveAttribute("data-test-column-count", "3")
+      expect(screen.getAllByTestId("stGridCell")[0]).toBe(inputCell)
+      expect(within(inputCell).getByTestId("stElementContainer")).toBe(
+        inputContainer
+      )
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
+  it("scrolls a measured fixed-height cell only once its content outgrows it", () => {
+    const size = { width: 200, height: 100 }
+    const restoreBoxes = mockBoxes("stGridCellContent", size)
+    const observers = captureResizeObservers()
+    try {
+      renderFixedHeightCell([makeTextElement("A note")])
+      const body = screen.getByTestId("stGridCellBody")
+      // 100px of content in a 160px cell fits.
+      expect(body).toHaveAttribute("data-test-scroll", "false")
+      expect(body).not.toHaveStyle("overflow-y: auto")
+
+      size.height = 400
+      observers.fireResize()
+      expect(body).toHaveAttribute("data-test-scroll", "true")
+      expect(body).toHaveStyle("overflow-y: auto")
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
+  it("scrolls a measured pixel-height grid only once its rows outgrow it", () => {
+    const size = { width: 704, height: 100 }
+    const restoreBoxes = mockBoxes("stGridContentMeasure", size)
+    const observers = captureResizeObservers()
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [makeTextElement("Rows")],
+            new BlockProto({
+              allowEmpty: true,
+              heightConfig: { pixelHeight: 160 },
+              gridContainer: {
+                minColumnWidthPx: 220,
+                rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+              },
+            })
+          )
+        )
+      )
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      // 100px of rows in a 160px port fit.
+      expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+
+      size.height = 400
+      observers.fireResize()
+      expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
   it("keeps a grid.cell() block content-sized when the row height is content", () => {
     const cell = new BlockNode(
       FAKE_SCRIPT_HASH,
@@ -2191,6 +2376,35 @@ describe("GridContainer Component", () => {
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
+  })
+
+  it.each([
+    [
+      "clamps a column span to the resolved column count",
+      { columnSpan: 4 },
+      { gridColumn: "span 3" },
+    ],
+    ["applies a column span", { columnSpan: 2 }, { gridColumn: "span 2" }],
+    ["applies a row span", { rowSpan: 2 }, { gridRow: "span 2" }],
+  ])("%s", (_desc, gridCell, expectedStyle) => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell })
+    )
+    // st.grid(4) wraps to 3 columns at the 704px fallback.
+    const block = makeGridBlock({ columns: 4 }, [cell])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveAttribute(
+      "data-test-column-count",
+      "3"
+    )
+    const cellElement = screen.getByTestId("stGridCell")
+    expect(cellElement).toHaveStyle(expectedStyle)
+    // A span on one axis leaves the other axis at a single track.
+    const otherAxis = "gridColumn" in expectedStyle ? "gridRow" : "gridColumn"
+    expect(getComputedStyle(cellElement)[otherAxis]).toBe("")
   })
 
   it.each([
@@ -2397,6 +2611,44 @@ describe("GridContainer Component", () => {
     expect(cells).toHaveLength(2)
     expect(cells[0]).not.toHaveTextContent("Kept")
     expect(cells[1]).toHaveTextContent("Kept")
+  })
+
+  it("keeps a later cell's controls mounted when an earlier empty container fills in", () => {
+    // `placeholder = grid.container()`, a text input in the next
+    // `grid.cell()`, then a write into `placeholder`.
+    const placeholder = (children: AppNode[]): BlockNode =>
+      new BlockNode(
+        FAKE_SCRIPT_HASH,
+        children,
+        new BlockProto({ allowEmpty: false, vertical: {} })
+      )
+    const queryCell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [textInput("Query", "grid-later-query")],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell: {} })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [placeholder([]), queryCell])
+      )
+    )
+    // The input container is a new node whenever the input remounts.
+    const inputContainer = within(
+      screen.getByTestId("stGridCell")
+    ).getByTestId("stElementContainer")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [placeholder([text("Results")]), queryCell])
+      )
+    )
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("Results")
+    expect(within(cells[1]).getByTestId("stElementContainer")).toBe(
+      inputContainer
+    )
   })
 
   it("does not create a cell for an empty transient child", () => {

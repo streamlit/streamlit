@@ -567,6 +567,14 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
             : []
         }
 
+        // Render the child element using the return value from accept()
+        // instead of indexing into reactElements, since the visitor may
+        // push 0, 1, or multiple elements per node (e.g., transient nodes).
+        // Visit before the empty check below: the visit advances the
+        // positional index that keys later unkeyed siblings, as in other
+        // layouts, so filling an earlier empty block does not remount them.
+        const childElement = childNode.accept(visitor)
+
         // An empty block that does not allow empty renders nothing in other
         // layouts, so it gets no cell either. `grid.cell()` allows empty and
         // keeps the cell it reserves.
@@ -606,10 +614,6 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           nodeId = getElementId(layoutNode.element)
         }
 
-        // Render the child element using the return value from accept()
-        // instead of indexing into reactElements, since the visitor may
-        // push 0, 1, or multiple elements per node (e.g., transient nodes).
-        const childElement = childNode.accept(visitor)
         // Transient nodes (e.g. a cleared spinner) can return [] — that is not
         // null, but it must not become an empty bordered grid cell.
         if (

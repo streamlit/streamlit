@@ -3202,6 +3202,13 @@ class CellTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueOutOfRangeError):
             grid.cell(column_span=5)
 
+    def test_column_span_equal_to_declared_columns(self):
+        """An integer column_span equal to the declared count is allowed."""
+        grid = st.grid(4)
+        grid.cell(column_span=4)
+        cell_block = self.get_all_deltas_from_queue()[1].add_block
+        assert cell_block.grid_cell.column_span == 4
+
     def test_column_span_allowed_on_auto_grid(self):
         """columns='auto' has no declared cap; integer spans are frontend-clamped."""
         grid = st.grid("auto")

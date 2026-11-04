@@ -36,11 +36,31 @@ def test_auto_sizing_grid(app: Page):
 
 
 def test_grid_with_border(app: Page):
-    """The bordered grid renders one cell per grouped child."""
+    """The bordered grid draws a border on each cell inside its track."""
     bordered_grid = get_element_by_key(app, "bordered")
-    expect(bordered_grid).to_be_visible()
-    expect(bordered_grid.get_by_test_id("stGridCell")).to_have_count(6)
+    bordered_cells = bordered_grid.get_by_test_id("stGridCell")
+    expect(bordered_cells).to_have_count(6)
     expect(bordered_grid).to_have_attribute("data-test-column-count", "3")
+    bordered_cell = bordered_cells.first
+    expect(bordered_cell).to_have_css("border-top-style", "solid")
+
+    # The auto-sizing grid also has three tracks at this width, but no border.
+    plain_cell = (
+        get_element_by_key(app, "auto_sizing").get_by_test_id("stGridCell").first
+    )
+    expect(plain_cell).to_have_css("border-top-style", "none")
+
+    def border_stays_inside_track() -> bool:
+        bordered_box = bordered_cell.bounding_box()
+        plain_box = plain_cell.bounding_box()
+        if bordered_box is None or plain_box is None:
+            return False
+        return (
+            bordered_box["width"] > 0
+            and abs(bordered_box["width"] - plain_box["width"]) < 1
+        )
+
+    wait_until(app, border_stays_inside_track)
 
 
 def test_grid_with_span(app: Page):
@@ -57,25 +77,39 @@ def test_grid_with_span(app: Page):
 
     # The row-span cell starts in the row of "Spans 2 columns" and ends with
     # the row of "Cell 3", so it covers both rows and the gap between them.
+    # "Spans 2 columns" starts with "Cell 3" (track 1) and ends with "Cell 4"
+    # (track 2), so it covers both tracks and the gap between them.
     row_span_cell = cells.filter(has_text="Spans 2 rows")
-    upper_row_cell = cells.filter(has_text="Spans 2 columns")
-    lower_row_cell = cells.filter(has_text="Cell 3")
+    column_span_cell = cells.filter(has_text="Spans 2 columns")
+    first_track_cell = cells.filter(has_text="Cell 3")
+    second_track_cell = cells.filter(has_text="Cell 4")
 
-    def row_span_covers_two_rows() -> bool:
-        span_box = row_span_cell.bounding_box()
-        upper_box = upper_row_cell.bounding_box()
-        lower_box = lower_row_cell.bounding_box()
-        if span_box is None or upper_box is None or lower_box is None:
+    def spans_cover_their_tracks() -> bool:
+        row_span_box = row_span_cell.bounding_box()
+        column_span_box = column_span_cell.bounding_box()
+        first_box = first_track_cell.bounding_box()
+        second_box = second_track_cell.bounding_box()
+        if (
+            row_span_box is None
+            or column_span_box is None
+            or first_box is None
+            or second_box is None
+        ):
             return False
-        span_bottom = span_box["y"] + span_box["height"]
-        lower_bottom = lower_box["y"] + lower_box["height"]
+        row_span_bottom = row_span_box["y"] + row_span_box["height"]
+        first_bottom = first_box["y"] + first_box["height"]
+        column_span_right = column_span_box["x"] + column_span_box["width"]
+        second_right = second_box["x"] + second_box["width"]
         return (
-            abs(span_box["y"] - upper_box["y"]) < 1
-            and abs(span_bottom - lower_bottom) < 1
-            and lower_box["y"] > upper_box["y"]
+            abs(row_span_box["y"] - column_span_box["y"]) < 1
+            and abs(row_span_bottom - first_bottom) < 1
+            and first_box["y"] > column_span_box["y"]
+            and abs(column_span_box["x"] - first_box["x"]) < 1
+            and abs(column_span_right - second_right) < 1
+            and second_box["x"] > first_box["x"]
         )
 
-    wait_until(app, row_span_covers_two_rows)
+    wait_until(app, spans_cover_their_tracks)
 
 
 def test_grid_wrap_false_keeps_declared_columns(app: Page):
@@ -93,6 +127,8 @@ def test_stretch_chart_fills_fixed_row_cell(app: Page):
     form. A content-sized cell block collapses these charts to 0px.
     """
     grid = get_element_by_key(app, "stretch_cell")
+    # Three auto-width tracks fit here, so st.grid(2) shows its cap.
+    expect(grid).to_have_attribute("data-test-column-count", "2")
     charts = grid.get_by_test_id("stVegaLiteChart")
     expect(charts).to_have_count(2)
     for index in range(2):
