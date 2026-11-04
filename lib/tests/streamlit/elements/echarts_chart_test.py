@@ -20,6 +20,7 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
@@ -1337,6 +1338,99 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
 def test_serialize_option_uses_compact_separators() -> None:
     """The wire payload omits insignificant JSON whitespace."""
     assert _serialize_option({"a": 1, "b": [2]}) == '{"a":1,"b":[2]}'
+
+
+@pytest.mark.parametrize(
+    ("option", "expected"),
+    [
+        pytest.param(
+            {"series": [{"type": "gauge", "data": [{"value": np.int64(3)}]}]},
+            ["`series[0].data[0].value` is a `numpy.int64`", "`int()`"],
+            id="numpy_int_in_gauge_value",
+        ),
+        pytest.param(
+            {"series": [{"label": {"show": np.bool_(True)}}]},
+            ["`series[0].label.show` is a `numpy.bool", "`bool()`"],
+            id="numpy_bool",
+        ),
+        pytest.param(
+            {"xAxis": {"data": np.array([1, 2])}},
+            ["`xAxis.data` is a `numpy.ndarray`", "Only `dataset.source` accepts"],
+            id="numpy_array",
+        ),
+        pytest.param(
+            {"series": [{"data": [1]}, {"data": pd.Series([1, 2])}]},
+            ["`series[1].data` is a `pandas.Series`", "Only `dataset.source` accepts"],
+            id="pandas_series",
+        ),
+        pytest.param(
+            {"xAxis": {"data": ["a", pd.Timestamp("2024-01-01")]}},
+            ["`xAxis.data[1]` is a `pandas.Timestamp`", "`.isoformat()`"],
+            id="pandas_timestamp",
+        ),
+        pytest.param(
+            {"series": [{"markLine": {"data": [{"yAxis": float("nan")}]}}]},
+            ["`series[0].markLine.data[0].yAxis` is `NaN`", "Use `None`"],
+            id="nan_in_mark_line",
+        ),
+        pytest.param(
+            {"series": [{"data": [np.float64("nan")]}]},
+            ["`series[0].data[0]` is `NaN`"],
+            id="numpy_nan",
+        ),
+        pytest.param(
+            {"series": [{"data": [float("inf")]}]},
+            ["`series[0].data[0]` is `inf`", "non-finite numbers"],
+            id="infinity",
+        ),
+        pytest.param(
+            {"series": [{"data": [pd.NaT]}]},
+            ["`series[0].data[0]` is a `pandas.NaTType`. Use `None` for missing"],
+            id="pandas_nat",
+        ),
+        pytest.param(
+            {"series": ({"data": (1, decimal.Decimal("2.5"))},)},
+            ["`series[0].data[1]` is a `decimal.Decimal`", "plain Python value"],
+            id="decimal_in_tuples",
+        ),
+        pytest.param(
+            {"tooltip": {"formatter": lambda params: params}},
+            ["`tooltip.formatter` is a `function`", "string template"],
+            id="python_callback",
+        ),
+    ],
+)
+def test_serialize_option_error_names_the_offending_value(
+    option: dict[str, Any], expected: list[str]
+) -> None:
+    """The error names the option path and type of the value and how to fix it."""
+    with pytest.raises(StreamlitAPIException) as exc:
+        _serialize_option(option)
+
+    message = str(exc.value)
+    for snippet in expected:
+        assert snippet in message
+    assert "dataset.source" in message
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+def test_serialize_option_circular_reference_raises_generic_error() -> None:
+    """A circular option has no single offending value, so the error stays generic."""
+    option: dict[str, Any] = {"series": [{"type": "bar"}]}
+    option["series"][0]["self"] = option
+
+    with pytest.raises(StreamlitAPIException) as exc:
+        _serialize_option(option)
+
+    assert str(exc.value).startswith(
+        "The provided ECharts spec is not JSON-serializable. `st.echarts_chart`"
+    )
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+def test_serialize_option_accepts_finite_numpy_floats() -> None:
+    """``numpy.float64`` subclasses ``float``, so finite values serialize as-is."""
+    assert _serialize_option({"v": np.float64(1.5)}) == '{"v":1.5}'
 
 
 def test_serde_deserialize_none_returns_empty_selection() -> None:
