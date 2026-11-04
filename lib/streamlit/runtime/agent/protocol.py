@@ -1175,7 +1175,15 @@ def _element_data_schema() -> dict[str, Any]:
                     "Column names and Arrow types, the schema of what `url` "
                     "serves. A pandas index the data carries is a column, an "
                     "unnamed one as `__index_level_0__`, even when `hide_index` "
-                    "hides it; a default range index is not."
+                    "hides it; a default range index is not. A built-in chart "
+                    "(`st.line_chart`, `st.area_chart`, `st.bar_chart`, "
+                    "`st.scatter_chart`) serves the table its browser plots. "
+                    "Several `y` columns are melted to long form, one row per "
+                    "point: `value -- streamlit-generated` holds y and "
+                    "`color -- streamlit-generated` holds the name of the column "
+                    "a value came from. An unnamed index plotted as x is "
+                    "`index -- streamlit-generated`. Other columns keep the "
+                    "author's names. The chart's `spec` refers to these names."
                 ),
                 "items": {
                     "type": "object",
@@ -1235,9 +1243,13 @@ def _element_data_schema() -> dict[str, Any]:
                     "A chart's or map's own specification: the Vega-Lite spec of "
                     "Altair and the built-in charts, the Plotly figure, the "
                     "ECharts option, or the Deck.gl spec of `pydeck_chart` and "
-                    "`map`. A figure, option, or Deck.gl spec holds the plotted "
-                    "values itself, with Plotly's base64 typed arrays expanded "
-                    "into numbers, so its block is `complete`; a Deck.gl layer can "
+                    "`map`, with a `pydeck_chart` tooltip under `tooltip` as "
+                    "`pdk.Deck` takes it. A figure, option, or Deck.gl spec holds "
+                    "the plotted values itself, with Plotly's base64 typed arrays "
+                    "expanded into numbers, so its block is `complete`. The colors "
+                    "`#000001` through `#000040` in a Plotly figure are "
+                    "placeholders the browser replaces with the app theme's "
+                    "colors and can be ignored. A Deck.gl layer can "
                     "still name a URL its browser fetches, which is not fetched "
                     "here. A Vega-Lite chart's table is in `columns`, `preview`, "
                     "and `url` instead, as is a dataframe given as an ECharts "
@@ -1311,6 +1323,14 @@ def _page_schema() -> dict[str, Any]:
                     "What the page is for, as the author's Markdown from "
                     "`st.Page(help=...)`. Absent when the page has none. Read it "
                     "to choose a page without running it."
+                ),
+            },
+            "hidden": {
+                "type": "boolean",
+                "description": (
+                    'The page is left out of the navigation menu (`visibility="hidden"`). '
+                    "It still opens by its `url_path`, as its URL does in a browser. "
+                    "Absent when the page is in the menu."
                 ),
             },
         },

@@ -603,7 +603,8 @@ Rules:
   and is auto-derived from the filename when the author does not set it (`""` for the
   default page). The internal page script hash stays internal. A single-page app has one
   page, its script, titled after the file name, so `page` and `pages` are always
-  present.
+  present. A page hidden from the navigation menu (`visibility="hidden"`) is listed
+  with `"hidden": true`, since its URL and `st.switch_page` still open it.
 - **There is no app title.** `st.set_page_config(page_title=...)` titles the browser
   tab: the app's name in an app that sets it once, the page's in one that sets it per
   page, and an app that sets none shows `page.title` there. A client could not tell
@@ -959,10 +960,10 @@ without introducing a new authorization surface.
 
 | Output                         | v1 representation                                                                                                                                                                                                                                          |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. |
+| Dataframe, table, data editor  | `column_config` in `props`; `data` carries `columns` with their Arrow types, `row_count` and `column_count` when known, `complete`, a bounded typed `preview`, and a `url` serving the full Arrow bytes. Preview rows are values in `columns` order rather than objects, since repeating the column names per row is most of a long preview's size. Values are the data as stored, not as displayed, and an unnamed pandas index stays a column even under `hide_index`, as a column `column_config` hides does. A Styler's caption, which `st.table` shows below the table, is its `caption` prop. |
 | Lazy dataframe                 | The same shape, with the first `server.agentPreviewRows` rows of the chunk already emitted as the preview, `complete: false`, and `unavailable: "lazy_loading"` in place of a `url`: serving the chunk would pass part of the table off as all of it. Fetching row ranges is a follow-up. |
-| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. |
-| Map                            | The Deck.gl specification the browser renders, under `data` as `spec`, for `st.map` and `st.pydeck_chart` alike. Serving `st.map`'s plotted columns as Arrow, like a dataframe's, is follow-up #9.                                                       |
+| Chart                          | Public properties in `props`, the native specification inline and whole, with Plotly's theme template dropped and its base64 typed arrays expanded into numbers, and chart data under `data` exactly as a dataframe's. A Vega-Lite chart's data travels as Arrow beside its specification, so it appears once, under `data`. A built-in chart serves the table its browser plots: several `y` columns are melted to long form under ` -- streamlit-generated` `value` and `color` columns, and an unnamed index plotted as x is `index -- streamlit-generated`. |
+| Map                            | The Deck.gl specification the browser renders, under `data` as `spec`, for `st.map` and `st.pydeck_chart` alike, with a `pdk.Deck` tooltip under `tooltip`. Serving `st.map`'s plotted columns as Arrow, like a dataframe's, is follow-up #9.                                                       |
 | Image, audio, video            | Caption, `alt`, the `format` audio and video take, and the media URL the app already exposed to its own client. `st.image` reports them as the author passed the images: single values for one image, parallel lists for several. An `st.pyplot` figure is an image by the time it is emitted and is reported the same way. |
 | HTML, iframe, custom component | What the element was given: the `st.html` body, an iframe's `src` (a URL, or inline HTML), the `components.html` markup, a custom component's name and arguments. JavaScript is never executed, so `support: browser_required` marks the elements whose rendering depends on it: custom components, `components.html`, inline iframe HTML, and `st.html` with `unsafe_allow_javascript`. Static HTML is fully readable. A URL iframe reports its `src`; the page it embeds is not observed. `st.pdf` renders through the `streamlit-pdf` custom component and is reported as one. |
 | Download                       | Label, `file_name`, `mime` when the author set it, and the existing media URL. `st.download_button` with eager `data` already registers its bytes and carries a `url`, and its click — a rerun or the `on_click` callback — is an ordinary trigger, unless `on_click="ignore"` leaves nothing to fire. Only deferred generation, which carries a file ID instead of a URL, is unsupported. |
@@ -998,7 +999,9 @@ Charts and maps:
   small figure, so it is dropped and named in `spec_omitted`; content a template adds,
   such as a "DRAFT" annotation, a shape, or an image, is kept, since removing decoration
   must not remove meaning. Title text a template sets for the figure, an axis, or the
-  legend is dropped with it in v1; keeping that text is a follow-up. Base64 typed arrays (`bdata`), which a model cannot read, are
+  legend is dropped with it in v1; keeping that text is a follow-up. The colors
+  `#000001` through `#000040`, such as each Plotly Express trace's `line.color`, are placeholders the
+  browser replaces with the app theme's colors, and can be ignored. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
   the figure's data. Serving a large specification behind `data.url` is follow-up #9.
 - **A map reports the specification its browser renders.** `st.map` compiles the columns
