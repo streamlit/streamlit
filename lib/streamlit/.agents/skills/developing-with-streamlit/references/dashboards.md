@@ -49,7 +49,7 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for up to about five metrics that all have the same parts (every metric has a `delta`, or none does; the same for `chart_data`). With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest.
 
 Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
 
@@ -63,14 +63,6 @@ with st.grid(4, row_height=160, gap="medium"):
 ```
 
 For a side-by-side comparison of `st.columns`, `st.grid`, and horizontal containers, see "Side by side: columns vs grid vs horizontal container" in `layouts.md`.
-
-Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of four `st.columns`, which `layouts.md` recommends for up to four KPI cards. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
-
-```python
-for start in range(0, len(kpis), 4):
-    for col, (label, value, delta) in zip(st.columns(4), kpis[start : start + 4]):
-        col.metric(label, value, delta, border=True, height="stretch")
-```
 
 ## Zero deltas
 

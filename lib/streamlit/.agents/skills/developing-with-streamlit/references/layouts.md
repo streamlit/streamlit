@@ -254,7 +254,7 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`. `st.columns(n, border=True)` also gives equal-height bordered columns.
-- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
+- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching. In grid rows without a pixel `row_height`, `grid.cell()` is such a wrapper: make the card itself the cell with `grid.container(border=True, height="stretch")`.
 - A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
@@ -285,45 +285,24 @@ for col, (plan, features) in zip(st.columns(3), plans.items()):
 
 - Give every chart in a row the same integer `height`, or `height="stretch"` on each chart and its card. Default heights differ by library: `st.plotly_chart` is taller than Vega-Lite charts (`st.line_chart`, `st.altair_chart`, and similar) and `st.echarts_chart`, and only the Vega-Lite default scales with `theme.baseFontSize`.
 - For Altair facet, repeat, and concat charts (including `chart1 | chart2` and `chart1 & chart2`), keep the default `height` and size the views in Altair (`.properties(height=...)`). The card around the chart can still use `height="stretch"`. Streamlit's `height` does not resize their views:
-  - `height="stretch"`: the chart renders empty. In a fixed-height container, it overflows instead and the container scrolls.
+  - `height="stretch"`: the chart renders empty. In a fixed-height container or a pixel-height grid row, it overflows instead and scrolls.
   - Integer `height`: the chart paints over the next element.
 
 ## Bento layouts and fixed-height regions
 
-A bento puts a tall card next to a column of smaller cards:
-
-- For stacked metrics or text cards, pass `height="stretch"` to each. They split the tall card's height evenly.
-- Stacked charts are different: without a fixed-height parent, each stretch chart keeps its default height, so the stack outgrows the tall card. Give the charts pixel heights that add up, or use a fixed-height region.
-
-For a region with an exact height, use `st.container(height=N, horizontal=True, border=False)` with stretch cards and stretch elements inside. The cards fill the region exactly, and stretch charts and dataframes shrink to fit their card.
-
-- Pass `border=False`, because a fixed height adds a border by default.
-- For a side column, use `st.container(width=N, height="stretch")`.
-- Do not use `st.columns` in the region. It does not pass the fixed height down, so stretch cards in columns keep their default heights and the content scrolls.
-- On narrow screens, the cards wrap and the region scrolls.
+A bento puts a tall card next to stacked smaller cards. Build it with `st.grid` and a pixel `row_height`: span the tall card with `grid.cell(column_span=2, row_span=2)`, and pass `height="stretch"` to the metrics, cards, charts, and dataframes in the cells. Every cell then has an exact height that they fill, and the bento's height is the row heights plus the gaps. `st.grid(height=N)` does not size the rows; it only makes the grid scroll.
 
 ```python
-# Bento: three metrics share the chart card's height
-chart_col, kpi_col = st.columns([2, 1])
-with chart_col.container(border=True):
-    st.subheader("Revenue")
-    st.line_chart(revenue, height=360, alt="Revenue over time")
-with kpi_col:
-    st.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
-    st.metric("Users", "762k", "+12%", border=True, height="stretch")
-    st.metric("Orders", "1.4k", "+5%", border=True, height="stretch")
-
-# Fixed-height region: the cards fill exactly 480px
-with st.container(height=480, horizontal=True, border=False):
-    with st.container(border=True, height="stretch"):
-        st.markdown("**Revenue**")
-        st.line_chart(revenue, height="stretch", alt="Revenue over time")
-    with st.container(width=320, height="stretch"):
-        with st.container(border=True, height="stretch"):
-            st.bar_chart(by_region, height="stretch", alt="Revenue by region")
-        with st.container(border=True, height="stretch"):
-            st.dataframe(orders, height="stretch", alt="Recent orders")
+# Two 232px rows plus the default gap: exactly 480px
+grid = st.grid(3, row_height=232, border=True)
+with grid.cell(column_span=2, row_span=2):
+    st.markdown("**Revenue**")
+    st.line_chart(revenue, height="stretch", alt="Revenue over time")
+grid.bar_chart(by_region, height="stretch", alt="Revenue by region")
+grid.dataframe(orders, height="stretch", alt="Recent orders")
 ```
+
+With content-height rows (`st.columns`, or a grid without `row_height`), stacked metrics and text cards with `height="stretch"` still split a tall neighbor's height evenly. Stacked stretch charts do not: each keeps its default height, so the stack outgrows the tall card. `st.columns` also does not pass a fixed height down: inside `st.container(height=N)`, stretch cards in columns keep their default heights and the content scrolls.
 
 ## Bordered containers
 
