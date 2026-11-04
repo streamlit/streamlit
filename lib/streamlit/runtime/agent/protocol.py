@@ -1177,12 +1177,13 @@ def _element_data_schema() -> dict[str, Any]:
                     "unnamed one as `__index_level_0__`, even when `hide_index` "
                     "hides it; a default range index is not. A built-in chart "
                     "(`st.line_chart`, `st.area_chart`, `st.bar_chart`, "
-                    "`st.scatter_chart`) serves the table its browser plots: when "
-                    "it plots several `y` columns or the index, that table is in "
-                    "long form, one row per point, under generated names ending "
-                    "in ` -- streamlit-generated`. `index` holds x, `value` holds "
-                    "y, and `color` holds the name of the column a value came "
-                    "from, as the chart's `spec` refers to them."
+                    "`st.scatter_chart`) serves the table its browser plots. "
+                    "Several `y` columns are melted to long form, one row per "
+                    "point: `value -- streamlit-generated` holds y and "
+                    "`color -- streamlit-generated` holds the name of the column "
+                    "a value came from. An unnamed index plotted as x is "
+                    "`index -- streamlit-generated`. Other columns keep the "
+                    "author's names. The chart's `spec` refers to these names."
                 ),
                 "items": {
                     "type": "object",
