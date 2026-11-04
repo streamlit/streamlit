@@ -1406,8 +1406,13 @@ def test_serialize_option_uses_compact_separators() -> None:
         ),
         pytest.param(
             {"series": [{"data": [float("inf")]}]},
-            ["`series[0].data[0]` is `inf`"],
+            ["`series[0].data[0]` is `inf`", "non-finite numbers"],
             id="infinity",
+        ),
+        pytest.param(
+            {"series": [{"data": [pd.NaT]}]},
+            ["`series[0].data[0]` is a `pandas.NaTType`. Use `None` for missing"],
+            id="pandas_nat",
         ),
         pytest.param(
             {"series": ({"data": (1, decimal.Decimal("2.5"))},)},
@@ -1549,6 +1554,13 @@ def test_warns_on_unknown_encode_dimension(
                 "series": [{"data": [1, 2], "encode": {"y": "unknown"}}],
             },
             id="series_with_own_data",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": _SALES_DF},
+                "series": [{"dimensions": ["p", "s"], "encode": {"x": "p"}}],
+            },
+            id="series_dimensions",
         ),
         pytest.param(
             {
@@ -1729,6 +1741,14 @@ def _marker_spec(series: dict[str, Any], **axes: Any) -> dict[str, Any]:
             ["`series[0].markLine.data[0].xAxis` is 5"],
             id="axis_index_into_untyped_axis_with_data",
         ),
+        pytest.param(
+            _marker_spec(
+                {"xAxisId": "years", "markLine": {"data": [{"xAxis": 2023}]}},
+                xAxis=[{"type": "value"}, {"id": "years", "type": "category"}],
+            ),
+            ["`series[0].markLine.data[0].xAxis` is 2023"],
+            id="axis_id_into_category_axis",
+        ),
     ],
 )
 def test_warns_on_numeric_marker_outside_category_range(
@@ -1785,6 +1805,36 @@ def test_warns_on_numeric_marker_outside_category_range(
                 xAxis=[{"type": "value"}, {"type": "category"}],
             ),
             id="first_axis_of_list_is_value",
+        ),
+        pytest.param(
+            _marker_spec(
+                {"xAxisId": "amount", "markLine": {"data": [{"xAxis": 2023}]}},
+                xAxis=[{"type": "category"}, {"id": "amount", "type": "value"}],
+            ),
+            id="axis_id_into_value_axis",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": _YEARS_DF},
+                    {"transform": {"type": "sort", "config": {"dimension": "year"}}},
+                ],
+                "xAxis": {"type": "category"},
+                "yAxis": {"type": "value"},
+                "series": [
+                    {"datasetIndex": 1, "markLine": {"data": [{"xAxis": 2023}]}}
+                ],
+            },
+            id="unknown_count_of_transform_dataset",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": {"day": ["a", "b"], "v": [1, 2]}},
+                "xAxis": {"type": "category"},
+                "yAxis": {"type": "value"},
+                "series": [{"markLine": {"data": [{"xAxis": 1}]}}],
+            },
+            id="unknown_count_of_column_keyed_source",
         ),
         pytest.param(
             {
