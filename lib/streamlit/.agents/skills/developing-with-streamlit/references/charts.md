@@ -179,8 +179,7 @@ event = st.echarts_chart(
     alt="Quarterly sessions by app, web peaks in Q2",
 )
 rows = [
-    frames[s["series_index"]].iloc[s["data_indices"]]
-    for s in event.selection.selected
+    frames[s["series_index"]].iloc[s["data_indices"]] for s in event.selection.selected
 ]
 if rows:
     st.dataframe(pd.concat(rows))
