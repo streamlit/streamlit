@@ -383,9 +383,10 @@ is row 1. It is then checked against its element's `value_schema`, before it is 
   options, `required`, UTF-16 length, order, and labels shared by several options.
 - **An unchanged value skips both checks.** A value that equals the element's reported
   `value` after normalization is left out of the request, as #17782 leaves out a value
-  whose wire form equals the stored one. Comparing parsed JSON needs no encoding, and a
-  selection whose keys come in another order still counts as unchanged. So sending back
-  an unreconciled reported value is accepted and changes nothing.
+  whose wire form equals the stored one. The two are compared as canonical JSON, with
+  sorted keys, as retry matching compares requests. That needs no encoding, a selection
+  whose keys come in another order still counts as unchanged, and `true` never equals
+  `1`. So sending back an unreconciled reported value is accepted and changes nothing.
 - **The validator supports only the keywords the snapshot emits:** `type`, `format`,
   `minimum`, `maximum`, `maxLength`, `pattern`, `items`, `prefixItems`, `minItems`,
   `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, and
