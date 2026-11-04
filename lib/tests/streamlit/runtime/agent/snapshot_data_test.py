@@ -25,7 +25,6 @@ from unittest.mock import patch
 import altair as alt
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import pyarrow as pa
 import pydeck as pdk
@@ -432,52 +431,6 @@ class SnapshotDataTest(SnapshotCase):
             "layout.template.layout.font",
         ]
         assert data["spec"]["data"][0]["y"] == [1.5, None, 3.0]
-
-    def test_plotly_drops_theme_stand_in_colors(self) -> None:
-        """A color only the browser resolves is dropped and named; the author's stays."""
-        spec = json.dumps(
-            {
-                "data": [
-                    {"type": "scatter", "line": {"color": "#000001", "dash": "dot"}},
-                    {"type": "bar", "marker": {"color": ["#000002", "red"]}},
-                    {"type": "scatter", "line": {"color": "#000031"}},
-                ],
-                "layout": {
-                    "coloraxis": {"colorscale": [[0.0, "#000011"], [1.0, "#000020"]]},
-                    "paper_bgcolor": "#ffffff",
-                },
-            }
-        )
-
-        data = plotly_chart._plotly_data(spec)
-
-        assert data is not None
-        assert data["spec_omitted"] == [
-            "data[0].line.color",
-            "data[1].marker.color",
-            "layout.coloraxis.colorscale",
-        ]
-        assert data["spec"]["data"][0]["line"] == {"dash": "dot"}
-        assert data["spec"]["data"][1]["marker"] == {}
-        assert data["spec"]["data"][2]["line"] == {"color": "#000031"}
-        assert data["spec"]["layout"] == {
-            "coloraxis": {},
-            "paper_bgcolor": "#ffffff",
-        }
-
-    def test_plotly_express_reports_no_stand_in_colors(self) -> None:
-        """Plotly Express writes the theme's stand-ins into each trace."""
-        frame = pd.DataFrame({"x": [1, 2, 1, 2], "y": [3, 4, 5, 6], "g": list("aabb")})
-        st.plotly_chart(px.line(frame, x="x", y="y", color="g"))
-
-        data = self._data("plotly_chart")
-
-        assert data["spec_omitted"] == [
-            "layout.template",
-            "data[0].line.color",
-            "data[1].line.color",
-        ]
-        assert "#0000" not in json.dumps(data["spec"])
 
     def test_echarts_reports_its_option_as_given(self) -> None:
         """An ECharts option is its own data, reported unchanged: what would be

@@ -1245,7 +1245,10 @@ def _element_data_schema() -> dict[str, Any]:
                     "`map`, with a `pydeck_chart` tooltip under `tooltip` as "
                     "`pdk.Deck` takes it. A figure, option, or Deck.gl spec holds "
                     "the plotted values itself, with Plotly's base64 typed arrays "
-                    "expanded into numbers, so its block is `complete`; a Deck.gl layer can "
+                    "expanded into numbers, so its block is `complete`. Colors of the form "
+                    "`#0000XX` in a Plotly figure are placeholders the browser "
+                    "replaces with the app theme's colors and can be ignored. A "
+                    "Deck.gl layer can "
                     "still name a URL its browser fetches, which is not fetched "
                     "here. A Vega-Lite chart's table is in `columns`, `preview`, "
                     "and `url` instead, as is a dataframe given as an ECharts "
@@ -1257,12 +1260,9 @@ def _element_data_schema() -> dict[str, Any]:
                 "type": "array",
                 "items": {"type": "string"},
                 "description": (
-                    "Paths dropped from `spec`: the styling in Plotly's "
-                    "`layout.template`, and fields that hold a color Streamlit's "
-                    "theme fills in only in the browser, such as "
-                    "`data[0].line.color` in a Plotly Express figure. Content a "
-                    "template adds, such as annotations, is kept, and nothing "
-                    "that holds data is dropped."
+                    "Paths dropped from `spec`, currently the styling in Plotly's "
+                    "`layout.template`. Content a template adds, such as "
+                    "annotations, is kept, and nothing that holds data is dropped."
                 ),
             },
         },

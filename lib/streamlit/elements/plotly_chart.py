@@ -32,7 +32,7 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import agent_data, agent_spec, streamlit_plotly_theme
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -444,17 +444,11 @@ def _plotly_data(spec_json: str) -> dict[str, Any] | None:
     figure from one the app never configured. A template can also carry
     content, such as a "DRAFT" annotation, and that is kept.
 
-    Streamlit's theme also writes stand-in colors such as `#000001` into the
-    figure, for example a Plotly Express trace's `line.color`, which only the
-    browser replaces with theme colors. Those fields are dropped and named in
-    `spec_omitted` too, so the snapshot never reports a color the browser does
-    not show.
-
-    Nothing else is dropped, at any size: the specification holds the
-    figure's values, so trimming further would remove the only part worth
-    reading, and a large figure is large because it plots a lot of data, the
-    same bytes the app already sends its own client. The figure is therefore
-    `complete`, and a client has no `url` to look for.
+    Nothing beyond the template is dropped, at any size: the specification
+    holds the figure's values, so trimming further would remove the only part
+    worth reading, and a large figure is large because it plots a lot of data,
+    the same bytes the app already sends its own client. The figure is
+    therefore `complete`, and a client has no `url` to look for.
     """
     spec = agent_data.parse_spec(spec_json)
     if spec is None:
@@ -489,50 +483,9 @@ def _plotly_data(spec_json: str) -> dict[str, Any] | None:
             data["spec_omitted"] = ["layout.template"]
         spec = {**spec, "layout": trimmed_layout}
 
-    # Before the typed arrays are expanded, so the walk skips their values.
-    theme_color_paths: list[str] = []
-    spec = _drop_theme_colors(spec, "", theme_color_paths)
-    if theme_color_paths:
-        data["spec_omitted"] = [*data.get("spec_omitted", []), *theme_color_paths]
-
     data["spec"] = _expand_typed_arrays(spec)
     data["complete"] = True
     return data
-
-
-def _drop_theme_colors(value: Any, path: str, dropped: list[str]) -> Any:
-    """Remove the fields that hold Streamlit's theme stand-in colors.
-
-    A field is dropped whole when it holds a stand-in itself, or in a list of
-    values such as a colorway or a colorscale, and its path, such as
-    `data[0].line.color`, is appended to `dropped`.
-    """
-    if isinstance(value, list):
-        return [
-            _drop_theme_colors(item, f"{path}[{index}]", dropped)
-            for index, item in enumerate(value)
-        ]
-    if not isinstance(value, dict):
-        return value
-    kept: dict[str, Any] = {}
-    for name, item in value.items():
-        item_path = f"{path}.{name}" if path else name
-        if _holds_theme_color(item):
-            dropped.append(item_path)
-        else:
-            kept[name] = _drop_theme_colors(item, item_path, dropped)
-    return kept
-
-
-def _holds_theme_color(value: Any) -> bool:
-    """Whether a value is a theme stand-in color, or a list of values holding one."""
-    if isinstance(value, str):
-        return value in streamlit_plotly_theme.PLACEHOLDER_COLORS
-    if isinstance(value, list):
-        return any(
-            _holds_theme_color(item) for item in value if not isinstance(item, dict)
-        )
-    return False
 
 
 def _expand_typed_arrays(value: Any) -> Any:

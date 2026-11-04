@@ -69,13 +69,6 @@ BG_COLOR: Final = "#000038"
 FADED_TEXT_05: Final = "#000039"
 BG_MIX: Final = "#000040"
 
-# Every stand-in the frontend replaces with a theme color (`CustomTheme.tsx`),
-# including `#000035`, which only the frontend defines. A figure that still
-# holds one of these shows a different color in the browser.
-PLACEHOLDER_COLORS: Final = frozenset(
-    f"#0000{number:02d}" for number in range(1, 41) if number != 31
-)
-
 
 def configure_streamlit_plotly_theme() -> None:
     """Configure the Streamlit chart theme for Plotly.
