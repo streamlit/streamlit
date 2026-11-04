@@ -1339,10 +1339,11 @@ than ranked, and say where one builds on another.
    `session_id` already implements. `interact` must never be annotated read-only. A
    second, read-only `get_data` tool serves any media file the app still stores, such
    as the files a result references, tables as pages of rows, because chat clients
-   cannot resolve or parse a `data.url`. Each tool call takes the same path as an
-   `interact` request, so its HTTP request's headers supply `st.user` and
-   `st.context.headers` in the same way. It is written by hand rather than on the MCP
-   SDK, which keeps it free of new dependencies. It speaks the `initialize`-handshake
+   cannot resolve or parse a `data.url`. An `interact` call takes the same path as
+   `POST /_stcore/agent/interact`, so its HTTP request's headers supply `st.user` and
+   `st.context.headers` in the same way; `get_data` only checks the session's identity,
+   then reads stored media. The endpoint is written by hand rather than on the MCP SDK,
+   which keeps it free of new dependencies. It speaks the `initialize`-handshake
    revisions the common clients support, and adds `2026-07-28`, whose stateless model
    `session_id` already follows, once they default to it. MCP is how most AI
    applications connect to tools, so this belongs in the same release cycle as v1 if

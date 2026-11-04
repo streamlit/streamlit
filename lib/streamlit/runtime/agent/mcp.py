@@ -364,8 +364,8 @@ def tool_error(
 def parse_get_data_arguments(arguments: Mapping[str, Any]) -> GetDataArguments:
     """Read a ``get_data`` call's arguments.
 
-    ``null`` for ``offset`` or ``limit`` is the same as omitting it, as
-    ``null`` in any field of an ``interact`` request but ``session_id`` is.
+    ``null`` for ``offset`` or ``limit`` is treated as omitted, matching how
+    ``interact`` handles ``null`` in every optional field except ``session_id``.
     Error messages never echo the caller's values, which may be untrusted or
     not valid Unicode.
 
@@ -470,7 +470,7 @@ def render_get_data(
     body = json_encoding.response_body(jsonrpc_result(request_id, result))
     if len(body) <= MAX_RESULT_BYTES:
         return body
-    if page_of is None or _columns_pass_the_cap(request_id, *page_of):
+    if page_of is None or _columns_alone_exceed_cap(request_id, *page_of):
         message = _FILE_TOO_LARGE_MESSAGE
     else:
         table_offset = page_of[1]
@@ -486,15 +486,16 @@ def render_get_data(
     )
 
 
-def _columns_pass_the_cap(
+def _columns_alone_exceed_cap(
     request_id: str | int | None, table: pa.Table, offset: int
 ) -> bool:
     """Whether a page of ``table`` without rows already makes a response past
     ``MAX_RESULT_BYTES``. Every page repeats the columns, so then no offset
     helps.
     """
-    # Past the last row, so the page has none. An offset at least as long as
-    # the one asked for keeps the size from falling short of that page's.
+    # An offset past the last row gives a page with no rows. Using at least the
+    # requested offset keeps the digit count of the page's `offset`, and so its
+    # size, no smaller than the refused page's.
     columns_only = table_page(table, offset=max(offset, table.num_rows), limit=1)
     result = tool_result(columns_only, is_error=False)
     body = json_encoding.response_body(jsonrpc_result(request_id, result))

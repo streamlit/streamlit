@@ -397,8 +397,9 @@ malformed argument, reuses the parent's `invalid_request`.
 
 A refused read is a tool result, as a refused interaction is: `isError: true`, with an
 error body of the parent's shape in `content[0].text`. That holds for `unknown_file`,
-`result_too_large`, `read_unsupported`, `invalid_request`, and `unknown_session`, so
-clients that hide protocol errors from the model still show it the next step. The
+`result_too_large`, `read_unsupported`, `invalid_request`, `unknown_session`, and the
+parent's `internal_error` for a read that fails unexpectedly, so clients that hide
+protocol errors from the model still show it the next step. The
 `result_too_large` message says the file, or the table row at `offset`, is past the cap,
 so neither a retry nor a smaller `limit` helps: the character budget already keeps a
 page of several rows far below it. On a table, the model can skip that row by reading
@@ -664,8 +665,9 @@ tests. Beyond the endpoint itself:
   reads it. A read still walks the stream's batches, but a page slices out only its
   rows and JSON-encodes only those, so encoding scales with the page, not the file.
   Reading and encoding run off the event loop, as the agent routes already parse
-  requests with `asyncio.to_thread`. The performance tests check repeated pages, a
-  last-page read, and concurrent calls on a table near the inherited 200 MB limit; a
+  requests with `asyncio.to_thread`. The performance tests read one middle page of a
+  table near the inherited 200 MB limit, alone and eight at once. Every read walks the
+  whole stream, whatever its `offset`, so a last page costs what a middle one does. A
   decoded cache or a cap on reads at once comes in only if they call for one.
 - The route is wired like the other two agent routes: `_stcore/agent/mcp` joins the
   reserved paths in `starlette_static_routes.py` that answer `404` under a page's URL,
@@ -681,8 +683,8 @@ tests. Beyond the endpoint itself:
   own format is never called "not a media file".
 - Route-level unit tests, a conformance test against the official MCP SDK clients as a
   dev-only dependency, in both the Python SDK's default `auto` mode, which probes
-  `2026-07-28` first, and its `legacy` mode, performance coverage for repeated pages and
-  concurrent `get_data` calls, and a check that a hosted-style client sends no
+  `2026-07-28` first, and its `legacy` mode, performance coverage for a page of a large
+  table read alone and concurrently, and a check that a hosted-style client sends no
   `Origin`. The route tests cover at least a page's non-JSON request, version
   negotiation and the `2026-07-28` probe's fallback, `get_data` on another identity's
   session, and `next_offset` after a page the character budget cut short. A unit test

@@ -661,7 +661,8 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
                 "request_too_large",
                 f"The request body exceeds {max_request_bytes} bytes.",
             )
-        # Unlike the interact route's, an empty body is no request at all.
+        # Unlike the interact route, which reads an empty body as `{}`,
+        # JSON-RPC has no empty message.
         if not body.strip():
             return _jsonrpc_error_response(
                 400, mcp.PARSE_ERROR, "Parse error: the body is empty."

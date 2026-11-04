@@ -902,7 +902,9 @@ def test_a_page_of_a_large_table_performance(
     benchmark: BenchmarkFixture,
     large_table: tuple[MediaFileManager, mcp.GetDataArguments],
 ) -> None:
-    """Reading a page costs what the page does, not what the file does."""
+    """JSON for one middle page of a ~192 MB table. The stream is still walked;
+    only the page is encoded.
+    """
     media, arguments = large_table
 
     body = benchmark(mcp.render_get_data, 1, media, arguments)

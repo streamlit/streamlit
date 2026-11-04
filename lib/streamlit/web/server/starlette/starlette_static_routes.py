@@ -128,14 +128,11 @@ def create_streamlit_static_handler(
                         headers={"Cache-Control": "no-cache"},
                     )
                 else:
-                    # Clients turn a POST redirected with a 301 into a GET
-                    # without its body, so MCP SDKs don't follow one. A 308
-                    # keeps the method and the body, so a pasted MCP URL with
-                    # a trailing slash, such as `/_stcore/agent/mcp/`, still
-                    # connects. Its Location is relative (`../mcp`), so it
-                    # resolves against the URL the client called: behind a
-                    # proxy that strips a path prefix, an absolute path built
-                    # from scope["path"] would lose that prefix.
+                    # A 308 keeps the method and body, so a pasted MCP URL with a
+                    # trailing slash (`/_stcore/agent/mcp/`) still connects;
+                    # clients turn a POST redirected with a 301 into a bodiless
+                    # GET. The Location is relative (`../mcp`) so it survives a
+                    # proxy that strips a path prefix.
                     trailing_slashes = len(path) - len(redirect_path)
                     last_segment = redirect_path.rsplit("/", 1)[-1]
                     response = RedirectResponse(
