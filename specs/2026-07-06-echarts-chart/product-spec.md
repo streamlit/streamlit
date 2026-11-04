@@ -265,7 +265,11 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
   components aren't clipped. When more than one of those bottom-anchored controls would share
   the footer, Streamlit stacks them; a default-bottom legend that would sit on the same strip
-  is moved to the top. Explicit `top`/`bottom` values in the spec are preserved.
+  is moved to the top. A centered legend at the top edge moves below a top title (and its
+  subtext), and the plot then starts below both unless the spec sets `grid.top`. Explicit
+  `top`/`bottom` values in the spec are preserved. Treemaps get tighter insets with room for
+  the breadcrumb. Horizontal `markLine` labels default to `insideEndTop`, so they aren't
+  clipped past the plot's right edge.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
   (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Light/dark
   re-theming uses `chart.setTheme(...)` on the bundled ECharts `^6.1.0`, which preserves the

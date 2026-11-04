@@ -712,3 +712,65 @@ with st.container(key="c_narrow_time_axis", width=320):
         renderer="svg",
         height=_HEIGHT,
     )
+
+# Layout defaults: a top legend moves below a centered title and subtitle, a
+# treemap fills the chart above its breadcrumb, and a horizontal reference
+# line keeps its end label inside the plot.
+with st.container(key="c_title_top_legend"):
+    st.echarts_chart(
+        {
+            "title": {"text": "Revenue", "subtext": "per quarter"},
+            "legend": {"top": "top"},
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {"name": "Revenue", "type": "line", "data": [820, 932, 901, 934]},
+                {"name": "Cost", "type": "line", "data": [500, 610, 550, 700]},
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_treemap"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "vendor", "value": 60},
+                        {"name": "app", "value": 25},
+                        {"name": "lib", "value": 15},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_reference_lines"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {
+                    "type": "line",
+                    "data": [820, 932, 901, 934],
+                    "markLine": {
+                        "symbol": "none",
+                        "label": {"formatter": "{b}"},
+                        "data": [
+                            {"yAxis": 750, "name": "target"},
+                            {"type": "average", "name": "average"},
+                            {"xAxis": "Q3", "name": "launch"},
+                        ],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
