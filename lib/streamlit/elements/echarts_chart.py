@@ -811,7 +811,12 @@ def _to_json_value(value: object) -> object:
     if isinstance(value, np.timedelta64):
         return float(value / np.timedelta64(1, "ms"))
     if isinstance(value, np.generic):
-        return value.item()
+        item = value.item()
+        # np.longdouble.item() returns another np.longdouble, which would make
+        # json call this hook forever.
+        if isinstance(item, np.generic):
+            raise TypeError(f"{type(value).__name__} is not JSON-serializable.")
+        return item
     if isinstance(value, datetime):
         if value.utcoffset() is None:
             return value.isoformat(timespec="milliseconds")

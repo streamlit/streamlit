@@ -1428,6 +1428,7 @@ def test_serialize_option_converts_scalars(value: Any, expected: Any) -> None:
         pd.NA,
         np.datetime64("NaT", "ms"),
         np.timedelta64("NaT", "ms"),
+        np.longdouble(1.5),
         np.array([1, 2]),
         pd.Series([1, 2]),
         pd.Index([1, 2]),
