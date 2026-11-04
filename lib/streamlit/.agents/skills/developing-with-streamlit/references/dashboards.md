@@ -100,12 +100,8 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric(
-        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
-    )
-    st.metric(
-        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
-    )
+    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend)
+    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend)
     st.metric(
         "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
     )
