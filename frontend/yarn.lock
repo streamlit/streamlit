@@ -3661,7 +3661,7 @@ __metadata:
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    hotkeys-js: "npm:^4.0.8"
+    hotkeys-js: "npm:^4.0.9"
     immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
@@ -3678,7 +3678,7 @@ __metadata:
     native-file-system-adapter: "npm:^3.0.1"
     node-emoji: "npm:^2.2.0"
     numbro: "npm:^2.5.0"
-    plotly.js: "npm:^4.1.2"
+    plotly.js: "npm:^4.2.0"
     protobufjs: "npm:^8.8.1"
     query-string: "npm:^10.0.0"
     re-resizable: "npm:^6.11.2"
@@ -9267,10 +9267,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.0.8":
-  version: 4.0.8
-  resolution: "hotkeys-js@npm:4.0.8"
-  checksum: 10c0/a9cff7d76e4c4db7a1377b9f96d285ab71c8216bfb4b9526b736c09b5ca96556eb71dc697fc4cf31f5e90b0c9ee35bde760c0bd7d9571842d1c52849577f5dcb
+"hotkeys-js@npm:^4.0.9":
+  version: 4.0.9
+  resolution: "hotkeys-js@npm:4.0.9"
+  checksum: 10c0/0376cec403cc5be513aab23a8c444ada5159d81eea562347fce1319f35a3411dfde8ec2a023f930f7d60c6f038ae8cf4f818ff9a91ab430e501fea75a6c10290
   languageName: node
   linkType: hard
 
@@ -10073,9 +10073,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.43.0":
-  version: 6.43.0
-  resolution: "knip@npm:6.43.0"
+"knip@npm:^6.44.0":
+  version: 6.44.0
+  resolution: "knip@npm:6.44.0"
   dependencies:
     formatly: "npm:^0.11.4"
     get-tsconfig: "npm:4.14.3"
@@ -10092,7 +10092,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/f9a9935af721f4f2af13a0a7b7c24f9f10ba8f6365a302aa6074458fa7c592442cd85cda3dd626abed40b67adc3a27150add26754122074ff1f95f3e95cbed2f
+  checksum: 10c0/786d294307ed2dde126852c06993f96a517ed3c8a3277281f4eb5b69773eba6b5f0d4ff875923c58a667cdff200299f8bd7bcfad13dd0add08b4cc45fac22ce0
   languageName: node
   linkType: hard
 
@@ -12561,9 +12561,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"plotly.js@npm:^4.1.2":
-  version: 4.1.2
-  resolution: "plotly.js@npm:4.1.2"
+"plotly.js@npm:^4.2.0":
+  version: 4.2.0
+  resolution: "plotly.js@npm:4.2.0"
   dependencies:
     "@plotly/d3": "npm:3.8.2"
     "@plotly/d3-sankey": "npm:0.12.3"
@@ -12607,7 +12607,7 @@ __metadata:
     topojson-client: "npm:^3.1.0"
     webgl-context: "npm:^2.2.0"
     world-calendars: "npm:^1.0.4"
-  checksum: 10c0/b821e1d37195fc887226b2c6875b53a96dda090b9d19e4feaa6ac70c2941dc2b894f370c52d73f692b95e46f8594013f3b4bd2e05903c4b957f532b7ae32f2ed
+  checksum: 10c0/3c09dbbb62c1db07eac4aaf1fe96b03382058ebf3ab3f07d71db020d20a699dedde5824176e50f21ac41810f453e94cf714da74a0874ef46f9d070fe1e1a1cd7
   languageName: node
   linkType: hard
 
@@ -14236,7 +14236,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.13.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.43.0"
+    knip: "npm:^6.44.0"
     oxfmt: "npm:^0.75.0"
     oxlint: "npm:^1.90.0"
     react: "npm:^18.2.0"

@@ -19,7 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, get_args
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -27,6 +27,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
@@ -283,7 +284,9 @@ class WidgetWritesTest(SnapshotCase):
         st.slider("Level", max_value=20)
         snapshot = self._build()
 
-        assert self._refusal({"detial": "x"}, snapshot=snapshot).code == "unknown_key"
+        unknown = self._refusal({"detial": "x"}, snapshot=snapshot)
+        assert unknown.code == "unknown_key"
+        assert "or it has left the page" in unknown.message
         unregistered = self._refusal({"$$ID-0-None": 1}, snapshot=snapshot)
         assert unregistered.code == "unknown_key"
         authored = self._refusal({"detail": "x"}, snapshot=snapshot)
@@ -308,8 +311,11 @@ class WidgetWritesTest(SnapshotCase):
 
         unsupported = self._refusal({"upload": None}, snapshot=snapshot)
         assert unsupported.code == "unsupported_element"
-        assert "action_unsupported" in unsupported.message
-        assert self._refusal({"off": True}, snapshot=snapshot).code == "disabled_widget"
+        assert "`support: action_unsupported`" in unsupported.message
+        assert "only reports that action" in unsupported.message
+        disabled = self._refusal({"off": True}, snapshot=snapshot)
+        assert disabled.code == "disabled_widget"
+        assert "then use it in the next" in disabled.message
         disabled_trigger = self._refusal(trigger={"key": "wait"}, snapshot=snapshot)
         assert disabled_trigger.code == "disabled_widget"
         for key in ["box", "docs", "get"]:
@@ -750,7 +756,14 @@ class WidgetWritesTest(SnapshotCase):
                 _Refused("no trigger"),
             ),
             ("chat_text", {"key": "prompt", "value": "hi"}, "hi"),
-            ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
+            # The browser keeps send disabled for an empty field, but sends
+            # text of only whitespace.
+            (
+                "chat_empty_text",
+                {"key": "prompt", "value": ""},
+                _Refused("cannot be fired with empty text"),
+            ),
+            ("chat_whitespace_is_fired", {"key": "prompt", "value": "  "}, "  "),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
             # The widget cuts text past `max_chars`, as a text input does.
@@ -793,6 +806,28 @@ class WidgetWritesTest(SnapshotCase):
         assert "key" not in dialog
         assert dialog["props"]["on_dismiss"] == "ignore"
 
+    def test_a_non_dismissible_dialog_cannot_be_dismissed(self) -> None:
+        """A browser user cannot close a `dismissible=False` dialog, so its
+        overlay key is reported but not offered, and firing it is refused.
+        """
+
+        @st.dialog("Confirm", dismissible=False, on_dismiss="rerun")
+        def confirm() -> None:
+            st.button("OK", key="ok")
+
+        confirm()
+
+        snapshot = self._build()
+        dialog = _one(snapshot.document, "dialog")
+        assert dialog["props"]["dismissible"] is False
+        assert dialog["props"]["on_dismiss"] == "rerun"
+        assert "action" not in dialog
+        keys = {entry["key"] for entry in snapshot.document["actions"]}
+        assert dialog["key"] not in keys
+        assert "ok" in keys
+        refusal = self._refusal(None, trigger={"key": dialog["key"]}, snapshot=snapshot)
+        assert refusal.code == "unsupported_element"
+
     @parameterized.expand(
         [
             ("submit_alone", None, "save", None),
@@ -830,6 +865,29 @@ class WidgetWritesTest(SnapshotCase):
             return
         encoded = self._write(widget_state, trigger=trigger)
         assert len(encoded.widgets) == len(widget_state or {}) + 1
+
+    def test_a_missing_submit_names_the_forms_submit_keys(self) -> None:
+        """The refusal lists the form's own submit triggers, authored or generated."""
+        _render_two_forms()
+        with st.form("unkeyed"):
+            st.text_input("Note", key="note")
+            st.form_submit_button("Send")
+            st.form_submit_button("Later", disabled=True)
+
+        keyed = self._refusal({"name": "Ada"})
+        assert keyed.code == "missing_form_submit"
+        assert "'save', 'draft'" in keyed.message
+        assert "'pay'" not in keyed.message
+        generated = self._refusal({"note": "x"})
+        assert "'FormSubmitter:unkeyed-Send'" in generated.message
+        # A disabled submit button would only be refused in turn.
+        assert "Later" not in generated.message
+
+    def test_every_support_reason_has_a_refusal(self) -> None:
+        """Each `support` reason gets its own sentence in `unsupported_element`."""
+        assert set(widget_writes._SUPPORT_REFUSALS) == set(
+            get_args(agent_spec.SupportReason)
+        )
 
     def test_resolve_fragment_scopes_to_a_shared_fragment(self) -> None:
         """Keys in one fragment rerun it; anything wider, or a fragment the
