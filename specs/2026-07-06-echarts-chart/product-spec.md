@@ -160,7 +160,12 @@ dataset object **or** on every entry of a dataset list (`[{"source": df1}, {"sou
 the same spirit as `st.vega_lite_chart` accepting a `data` argument. Streamlit sends each frame
 as an Apache Arrow table next to the JSON option, and the browser turns it into ECharts `source`
 rows before rendering. Column order is preserved via `dataset.dimensions` when the user hasn't set
-it. The dataframe index is not included (use `df.reset_index()` to plot it). Cell values become:
+it. The dataframe index is not included (use `df.reset_index()` to plot it). Rows are arrays with
+one entry per dimension, because ECharts' default tooltip labels `encode.tooltip` values with
+their dimension names only for array rows. A user-set `dataset.dimensions` picks and orders the
+columns by name (a name that matches no column reads as `null`), and `sourceHeader` defaults to
+`false` so a first row of strings is not taken as column names. Like any array source,
+`seriesLayoutBy: "row"` reads each dataframe row as a series. Cell values become:
 
 - Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
 - Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
@@ -333,6 +338,13 @@ Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOpt
 `options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
 arrays aren't walked.
 
+The Streamlit theme's default `valueFormatter` and the number formats above also show the
+datetime strings of dataframe sources like [time labels](#theming): a midnight value as its date,
+others as date and time to the second. They use local time, like a time axis without `useUTC`,
+so a naive datetime keeps its wall-clock time. The formatters don't know the chart's `useUTC`,
+so with `useUTC: true` a timezone-aware value can differ from the axis label. `{@...}`
+placeholders insert values as they are.
+
 Options considered:
 
 - **Extend the ECharts keys (chosen).** No new syntax and no Python parameter, and the number
@@ -348,7 +360,7 @@ Also not included:
 - `{value}` templates in `valueFormatter` (e.g. `"{value} €"`, by analogy with
   `axisLabel.formatter`). Strings without a `%` are dropped, which leaves room to adopt them,
   or an upstream meaning, later. Use printf instead: `"%.2f €"`.
-- Per-dimension formats, date/time formats for tooltip values, number formats for axis labels,
+- Per-dimension formats, custom date/time formats for tooltip values, number formats for axis labels,
   and coordinate-system tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings
   on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
 
@@ -997,6 +1009,8 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Tooltip formatting: string `valueFormatter` number formats (named, printf, arrays, numeric
   strings, invalid strings dropped with a warning) and `{@dim}` / `{@[n]}` expansion (array and
   object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
+  An item tooltip with `encode.tooltip` over a dataframe source labels each column and shows a
+  midnight datetime as a date.
 - Time labels: midnight values show as dates in the axis tooltip header; other values keep
   their time; `useUTC` and timeline `baseOption` handled; author formatters, non-time axes, and
   `theme=None` left alone.

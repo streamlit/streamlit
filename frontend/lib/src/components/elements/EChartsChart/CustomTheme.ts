@@ -15,6 +15,7 @@
  */
 
 import { transparentize } from "color2k"
+import * as echarts from "echarts"
 import { isPlainObject, omit } from "lodash-es"
 
 import {
@@ -65,17 +66,50 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 })
 
+/** Label templates at day and second precision, matching ECharts' own. */
+const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
+const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
+
+/**
+ * The datetime strings that dataframe sources hold: ISO-8601 to the
+ * millisecond, with a trailing ``Z`` when timezone-aware.
+ */
+const DATAFRAME_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
+
+/**
+ * Format a time value as its date when it is exactly midnight, and as its
+ * date and time to the second otherwise.
+ */
+export function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
+  const date = echarts.time.parse(value)
+  // Format through ECharts so the check uses the label's UTC or local clock.
+  // Milliseconds count, so 00:00:00.250 is not midnight.
+  const isMidnight =
+    echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
+  return echarts.time.format(
+    date,
+    isMidnight ? DATE_LABEL_TEMPLATE : DATE_TIME_LABEL_TEMPLATE,
+    useUTC
+  )
+}
+
 /**
  * Format one tooltip value as plain text.
  *
- * Shortens numbers, renders blank and unsupported values as ``-``, and passes
- * other strings and booleans through.
+ * Shortens numbers, shows dataframe datetimes like time axis labels, renders
+ * blank and unsupported values as ``-``, and passes other strings and
+ * booleans through.
  */
 export function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }
   if (typeof value === "string") {
+    if (DATAFRAME_DATETIME.test(value)) {
+      // In local time, as on a time axis without ``useUTC``. ECharts reads a
+      // naive datetime as local time, so it keeps its wall-clock time.
+      return formatTimeAxisValue(value, false)
+    }
     // Blank text is missing. Other strings, including numeric ones, pass
     // through so an id or year is not grouped.
     return value.trim() === "" ? "-" : value

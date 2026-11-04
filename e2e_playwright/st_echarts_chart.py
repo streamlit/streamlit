@@ -612,6 +612,47 @@ with st.container(key="c_daily_time_tooltip"):
         height=_HEIGHT,
     )
 
+# An item tooltip that lists several dataframe columns through
+# ``encode.tooltip``. The single symbol is large enough to cover the plot
+# center, so hovering the chart opens its tooltip.
+with st.container(key="c_encode_tooltip"):
+    st.echarts_chart(
+        {
+            "dataset": {
+                "source": pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(["2026-01-02"]),
+                        "pct": [0.045],
+                        "size": [10_545_470.2],
+                        "sha": ["aaa1111"],
+                    }
+                )
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "min": 0, "max": 0.09},
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-encode-tooltip",
+                "valueFormatter": "percent",
+            },
+            "series": [
+                {
+                    "type": "scatter",
+                    "symbolSize": 150,
+                    "encode": {
+                        "x": "date",
+                        "y": "pct",
+                        "tooltip": ["pct", "date", "sha"],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="encode_tooltip",
+        height=_HEIGHT,
+        renderer="svg",
+    )
+
 # Large-data defaults. The SVG renderer makes the drawn shapes countable: large
 # mode draws a bar series as a few paths, and hidden line symbols draw nothing.
 _dense_rng = np.random.default_rng(17)

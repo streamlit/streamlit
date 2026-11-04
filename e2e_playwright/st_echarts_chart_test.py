@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 32
+_EXPECTED_CHART_COUNT = 33
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -385,6 +385,22 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(daily_tooltip).to_contain_text(re.compile(r"2026-0[78]-\d{2}"))
     # Must NOT happen: the header keeps ECharts' midnight time.
     expect(daily_tooltip).not_to_contain_text("00:00")
+
+
+def test_encode_tooltip_labels_dataframe_columns(app: Page):
+    """An item tooltip names each ``encode.tooltip`` column of a dataframe
+    source next to its value, and shows a midnight datetime as a date.
+    """
+    chart = _get_chart(app, "c_encode_tooltip")
+    expect(chart.locator("svg")).to_be_visible()
+    chart.hover()
+    tooltip = chart.locator(".echarts-encode-tooltip")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text(re.compile(r"pct\s*4\.5%"))
+    expect(tooltip).to_contain_text(re.compile(r"date\s*2026-01-02"))
+    expect(tooltip).to_contain_text(re.compile(r"sha\s*aaa1111"))
+    # Must NOT happen: the raw ISO string of the naive datetime.
+    expect(tooltip).not_to_contain_text("T00:00")
 
 
 def test_toolbar_actions(app: Page):

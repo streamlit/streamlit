@@ -723,8 +723,32 @@ describe("formatEChartsTooltipValue", () => {
   it.each([
     ["2026", "2026"],
     ["76.23801738559538", "76.23801738559538"],
+    ["2026-01-02", "2026-01-02"],
+    ["2026-01-02T10:00:00", "2026-01-02T10:00:00"],
   ])("leaves the string %s unchanged", (value, expected) => {
     expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  describe("dataframe datetimes", () => {
+    beforeEach(() => {
+      // A zone behind UTC, so local and UTC midnight differ.
+      process.env.TZ = "America/New_York"
+    })
+
+    afterEach(() => {
+      process.env.TZ = "UTC"
+    })
+
+    it.each([
+      ["a naive midnight", "2026-01-02T00:00:00.000", "2026-01-02"],
+      ["a naive time", "2026-01-02T14:30:05.250", "2026-01-02 14:30:05"],
+      ["almost midnight", "2026-01-02T00:00:00.001", "2026-01-02 00:00:00"],
+      // Timezone-aware values show in local time, like a time axis.
+      ["a UTC instant", "2026-01-02T05:00:00.000Z", "2026-01-02"],
+      ["UTC midnight", "2026-01-02T00:00:00.000Z", "2026-01-01 19:00:00"],
+    ])("formats %s like a time axis label", (_label, value, expected) => {
+      expect(formatEChartsTooltipValue(value)).toBe(expected)
+    })
   })
 
   it.each([

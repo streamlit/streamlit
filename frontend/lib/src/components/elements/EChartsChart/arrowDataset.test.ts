@@ -93,18 +93,28 @@ function expectJsonLike(value: unknown): void {
   }
 }
 
-/** Asserts that rows are plain objects of JSON-like values. */
-function expectJsonLikeRows(rows: Record<string, unknown>[]): void {
+/** Asserts that rows are plain arrays of JSON-like values. */
+function expectJsonLikeRows(rows: unknown[][]): void {
   for (const row of rows) {
-    expect(Object.getPrototypeOf(row)).toBe(Object.prototype)
-    for (const value of Object.values(row)) {
-      expectJsonLike(value)
-    }
+    expect(Object.getPrototypeOf(row)).toBe(Array.prototype)
+    row.forEach(expectJsonLike)
   }
 }
 
+/**
+ * Converts Arrow bytes to rows and checks they are JSON-like arrays. Returns
+ * each row keyed by data column name, so expectations name their columns.
+ */
 function toRows(data: Uint8Array): Record<string, unknown>[] {
-  return quiverToEChartsRows(new Quiver({ data }))
+  const quiver = new Quiver({ data })
+  const rows = quiverToEChartsRows(quiver)
+  expectJsonLikeRows(rows)
+  const names = quiver.columnTypes
+    .slice(quiver.dimensions.numIndexColumns)
+    .map(type => type.arrowField.name)
+  return rows.map(row =>
+    Object.fromEntries(names.map((name, index) => [name, row[index]]))
+  )
 }
 
 interface ArrowColumn {
@@ -274,23 +284,16 @@ describe("quiverToEChartsRows", () => {
   ])(
     "converts the $name fixture to data-column rows",
     ({ data, expected }) => {
-      const rows = toRows(data)
-
-      expect(rows).toEqual(expected)
-      expectJsonLikeRows(rows)
+      expect(toRows(data)).toEqual(expected)
     }
   )
 
   it.each([
-    { name: "NAMED_INDEX", data: NAMED_INDEX, indexKeys: ["INDEX"] },
-    {
-      name: "UNICODE",
-      data: UNICODE,
-      indexKeys: ["__index_level_0__", ""],
-    },
-    { name: "RANGE", data: RANGE, indexKeys: [""] },
-    { name: "MULTI", data: MULTI, indexKeys: ["number", "color"] },
-  ])("never emits the $name index columns", ({ data, indexKeys }) => {
+    { name: "NAMED_INDEX", data: NAMED_INDEX },
+    { name: "UNICODE", data: UNICODE },
+    { name: "RANGE", data: RANGE },
+    { name: "MULTI", data: MULTI },
+  ])("never emits the $name index columns", ({ data }) => {
     const quiver = new Quiver({ data })
     expect(quiver.dimensions.numIndexColumns).toBeGreaterThan(0)
 
@@ -298,12 +301,22 @@ describe("quiverToEChartsRows", () => {
 
     expect(rows).toHaveLength(quiver.dimensions.numDataRows)
     for (const row of rows) {
-      const keys = Object.keys(row)
-      expect(keys).toHaveLength(quiver.dimensions.numDataColumns)
-      for (const key of indexKeys) {
-        expect(keys).not.toContain(key)
-      }
+      expect(row).toHaveLength(quiver.dimensions.numDataColumns)
     }
+  })
+
+  it("reads the given data columns in order and fills null entries", () => {
+    const quiver = new Quiver({
+      data: tableBytes({
+        a: { values: ["x", "y"], type: new Utf8() },
+        b: { values: [1, 2], type: new Float64() },
+      }),
+    })
+
+    expect(quiverToEChartsRows(quiver, [1, null, 0])).toEqual([
+      [1, null, "x"],
+      [2, null, "y"],
+    ])
   })
 
   it("converts period columns to the labels st.dataframe shows", () => {
@@ -317,7 +330,6 @@ describe("quiverToEChartsRows", () => {
       "W-SUN": "2012-02-13/2012-02-19",
     })
     expect(second).toMatchObject({ M: "1970-01", D: "1970-01-01" })
-    expectJsonLikeRows([first, second])
   })
 
   it("converts period extension columns without pandas metadata to labels", () => {
@@ -331,7 +343,6 @@ describe("quiverToEChartsRows", () => {
       { month: "2020-02", month_cat: "2020-01", count: 2 },
       { month: "2020-03", month_cat: "2020-02", count: 3 },
     ])
-    expectJsonLikeRows(rows)
   })
 
   it("converts a pandas frame with mixed dtypes", () => {
@@ -384,7 +395,6 @@ describe("quiverToEChartsRows", () => {
         b: null,
       },
     ])
-    expectJsonLikeRows(rows)
   })
 
   const maxSafe = BigInt(Number.MAX_SAFE_INTEGER)
@@ -575,23 +585,6 @@ describe("quiverToEChartsRows", () => {
     const rows = toRows(tableBytes({ value: column }))
 
     expect(rows.map(row => row.value)).toEqual(expected)
-    expectJsonLikeRows(rows)
-  })
-
-  it("keeps a __proto__ column as an own key without changing the prototype", () => {
-    const rows = toRows(
-      tableBytes({
-        ["__proto__"]: { values: ["a"], type: new Utf8() },
-        constructor: { values: ["b"], type: new Utf8() },
-      })
-    )
-
-    expect(Object.getPrototypeOf(rows[0])).toBe(Object.prototype)
-    expect(Object.keys(rows[0])).toEqual(["__proto__", "constructor"])
-    expect(Object.getOwnPropertyDescriptor(rows[0], "__proto__")?.value).toBe(
-      "a"
-    )
-    expect(rows[0].constructor).toBe("b")
   })
 
   it("returns no rows for a table without rows", () => {
@@ -612,10 +605,10 @@ describe("hydrateArrowDatasetSources", () => {
     x: { values: [1, 2, 3], type: new Float64() },
   })
   const FIRST_ROWS = [
-    { product: "Matcha", sales: 43.3 },
-    { product: "Latte", sales: 83.1 },
+    ["Matcha", 43.3],
+    ["Latte", 83.1],
   ]
-  const SECOND_ROWS = [{ x: 1 }, { x: 2 }, { x: 3 }]
+  const SECOND_ROWS = [[1], [2], [3]]
 
   function namedDataset(
     name: string,
@@ -626,32 +619,83 @@ describe("hydrateArrowDatasetSources", () => {
 
   const DATASETS = [namedDataset("h1", FIRST), namedDataset("h2", SECOND)]
 
-  it("replaces a top-level placeholder with rows and keeps the app's dimensions", () => {
+  it("replaces a top-level placeholder with array rows in column order", () => {
     const option: Record<string, unknown> = {
-      dataset: { source: { name: "h1" }, dimensions: ["sales", "product"] },
+      dataset: { source: { name: "h1" } },
     }
 
     hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual({
       source: FIRST_ROWS,
-      dimensions: ["sales", "product"],
+      dimensions: ["product", "sales"],
+      sourceHeader: false,
     })
+  })
+
+  it("orders rows by the app's dimensions and keeps them", () => {
+    const dimensions = [
+      { name: "sales", type: "float" },
+      "unknown",
+      null,
+      "product",
+    ]
+    const option: Record<string, unknown> = {
+      dataset: { source: { name: "h1" }, dimensions },
+    }
+
+    hydrateArrowDatasetSources(option, DATASETS)
+
+    expect(option.dataset).toEqual({
+      source: [
+        [43.3, null, null, "Matcha"],
+        [83.1, null, null, "Latte"],
+      ],
+      dimensions,
+      sourceHeader: false,
+    })
+  })
+
+  it("reads a subset of columns, including one named __proto__", () => {
+    const data = tableBytes({
+      ["__proto__"]: { values: ["a"], type: new Utf8() },
+      constructor: { values: ["b"], type: new Utf8() },
+    })
+    const option = {
+      dataset: { source: { name: "proto" }, dimensions: ["__proto__"] },
+    }
+
+    hydrateArrowDatasetSources(option, [namedDataset("proto", data)])
+
+    expect(option.dataset.source).toEqual([["a"]])
+  })
+
+  it.each([
+    { name: "keeps the app's sourceHeader", sourceHeader: true },
+    { name: "keeps a numeric sourceHeader", sourceHeader: 0 },
+  ])("$name", ({ sourceHeader }) => {
+    const option = { dataset: { source: { name: "h1" }, sourceHeader } }
+
+    hydrateArrowDatasetSources(option, DATASETS)
+
+    expect(option.dataset.sourceHeader).toBe(sourceHeader)
   })
 
   it("sets the default dimensions to the data column names, without index columns", () => {
     const option: Record<string, unknown> = {
-      dataset: { source: { name: "indexed" } },
+      dataset: { source: { name: "indexed" }, dimensions: null },
     }
 
     hydrateArrowDatasetSources(option, [namedDataset("indexed", NAMED_INDEX)])
 
-    const { source, dimensions } = option.dataset as {
-      source: Record<string, unknown>[]
-      dimensions: string[]
-    }
-    expect(dimensions).toEqual(Object.keys(source[0]))
-    expect(dimensions).not.toContain("INDEX")
+    expect(option.dataset).toEqual({
+      source: [
+        ["foo", 1],
+        ["bar", 2],
+      ],
+      dimensions: ["c1", "c2"],
+      sourceHeader: false,
+    })
   })
 
   it("hydrates every dataset of a dataset list and leaves inline sources alone", () => {
@@ -668,9 +712,13 @@ describe("hydrateArrowDatasetSources", () => {
     hydrateArrowDatasetSources(option, DATASETS)
 
     expect(option.dataset).toEqual([
-      { source: FIRST_ROWS, dimensions: ["product", "sales"] },
+      {
+        source: FIRST_ROWS,
+        dimensions: ["product", "sales"],
+        sourceHeader: false,
+      },
       { source: inline },
-      { source: SECOND_ROWS, dimensions: ["x"] },
+      { source: SECOND_ROWS, dimensions: ["x"], sourceHeader: false },
       { transform: { type: "filter" } },
     ])
   })
@@ -716,10 +764,18 @@ describe("hydrateArrowDatasetSources", () => {
     expect(option.options[2]).toBe("not an object")
   })
 
-  it("reuses one rows array for placeholders that share a name", () => {
+  it("reuses one rows array for placeholders with the same column order", () => {
     const option = {
       baseOption: { dataset: { source: { name: "h1" } } },
-      options: [{ dataset: { source: { name: "h1" } } }],
+      options: [
+        {
+          dataset: {
+            source: { name: "h1" },
+            dimensions: ["product", "sales"],
+          },
+        },
+        { dataset: { source: { name: "h1" }, dimensions: ["sales"] } },
+      ],
     }
 
     hydrateArrowDatasetSources(option, DATASETS)
@@ -728,6 +784,7 @@ describe("hydrateArrowDatasetSources", () => {
     expect(option.options[0].dataset.source).toBe(
       option.baseOption.dataset.source
     )
+    expect(option.options[1].dataset.source).toEqual([[43.3], [83.1]])
   })
 
   it.each([
@@ -774,7 +831,7 @@ describe("hydrateArrowDatasetSources", () => {
 
   it("throws for a dataset whose data columns share a name", () => {
     // Python sends `pd.DataFrame([[1, 2]], columns=[1, "1"])` as two fields
-    // named "1", which would merge into one key of each row.
+    // named "1", which ECharts could not tell apart by name.
     const fields = [
       new Field("1", new Float64(), true),
       new Field("1", new Float64(), true),
