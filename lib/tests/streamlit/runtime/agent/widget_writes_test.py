@@ -283,7 +283,9 @@ class WidgetWritesTest(SnapshotCase):
         st.slider("Level", max_value=20)
         snapshot = self._build()
 
-        assert self._refusal({"detial": "x"}, snapshot=snapshot).code == "unknown_key"
+        unknown = self._refusal({"detial": "x"}, snapshot=snapshot)
+        assert unknown.code == "unknown_key"
+        assert "or it has left the page" in unknown.message
         unregistered = self._refusal({"$$ID-0-None": 1}, snapshot=snapshot)
         assert unregistered.code == "unknown_key"
         authored = self._refusal({"detail": "x"}, snapshot=snapshot)
@@ -308,8 +310,11 @@ class WidgetWritesTest(SnapshotCase):
 
         unsupported = self._refusal({"upload": None}, snapshot=snapshot)
         assert unsupported.code == "unsupported_element"
-        assert "action_unsupported" in unsupported.message
-        assert self._refusal({"off": True}, snapshot=snapshot).code == "disabled_widget"
+        assert "`support: action_unsupported`" in unsupported.message
+        assert "only reports that action" in unsupported.message
+        disabled = self._refusal({"off": True}, snapshot=snapshot)
+        assert disabled.code == "disabled_widget"
+        assert "then use it in the next" in disabled.message
         disabled_trigger = self._refusal(trigger={"key": "wait"}, snapshot=snapshot)
         assert disabled_trigger.code == "disabled_widget"
         for key in ["box", "docs", "get"]:
@@ -830,6 +835,20 @@ class WidgetWritesTest(SnapshotCase):
             return
         encoded = self._write(widget_state, trigger=trigger)
         assert len(encoded.widgets) == len(widget_state or {}) + 1
+
+    def test_a_missing_submit_names_the_forms_submit_keys(self) -> None:
+        """The refusal lists the form's own submit triggers, authored or generated."""
+        _render_two_forms()
+        with st.form("unkeyed"):
+            st.text_input("Note", key="note")
+            st.form_submit_button("Send")
+
+        keyed = self._refusal({"name": "Ada"})
+        assert keyed.code == "missing_form_submit"
+        assert "'save', 'draft'" in keyed.message
+        assert "'pay'" not in keyed.message
+        generated = self._refusal({"note": "x"})
+        assert "'FormSubmitter:unkeyed-Send'" in generated.message
 
     def test_resolve_fragment_scopes_to_a_shared_fragment(self) -> None:
         """Keys in one fragment rerun it; anything wider, or a fragment the
