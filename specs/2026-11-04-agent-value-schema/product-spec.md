@@ -20,7 +20,7 @@ This spec adds three things:
   also gets `writeOnly`.
 - **Dataframe selections.** A selectable `st.dataframe` gets an object schema, so an
   agent can select rows, columns, and cells.
-- **One check.** The server checks every sent value against its schema with a single
+- **One validator.** The server checks every sent value against its schema with a single
   validator and reports every invalid value at once.
 
 Option lists stay in `props`: no list is ever copied into a schema.
@@ -30,7 +30,7 @@ Option lists stay in `props`: no list is ever copied into a schema.
 ### The schema leaves out what the server enforces
 
 v1 left bounds out on purpose: "bounds would make the schema stricter than v1, which
-resets an out-of-range number rather than refusing it." The server-side constraints work
+resets an out-of-range number rather than refusing it." The server-side constraints spec
 ([#17717](https://github.com/streamlit/streamlit/pull/17717), Phase 1 in
 [#17782](https://github.com/streamlit/streamlit/pull/17782)) removes that reason. Its
 widgets refuse an out-of-range number, text past `max_chars`, or too many selections, and
@@ -52,7 +52,8 @@ Some facts are in no prop at all:
 
 ### The commonest drill-down cannot be driven
 
-Follow-up #8 of the agent spec puts dataframe selections first, because "select a row for
+[Follow-up #8](../2026-08-28-agent-app-interface/product-spec.md#follow-ups) of the agent
+spec puts dataframe selections first, because "select a row for
 details" is how many dashboards drill down. v1 marks every selectable dataframe
 `action_unsupported`, so an agent stops one step short of the detail view.
 
@@ -76,13 +77,13 @@ this case: such a value "is declared the same way", by its `value_schema`.
 
 ### What a value schema promises
 
-**Necessary, not sufficient.** Every value the server accepts from a client matches its
-element's `value_schema`. So a value that fails the schema is always refused, and a client
-can catch the mistake without a round trip.
+**Necessary, not sufficient.** Every change the server accepts from a client matches its
+element's `value_schema`. So a new value that fails the schema is always refused, and a
+client can catch the mistake without a round trip.
 
 A value that passes can still be refused, for things no schema here states:
 
-- a label the widget's options do not contain, or one several options share;
+- a label the widget's options do not contain, or a label shared by several options;
 - emptying a `required` widget;
 - text whose UTF-16 length exceeds `max_chars`;
 - a range or a list of rows out of order.
@@ -97,10 +98,11 @@ Five rules follow:
   keyword, because the schema would then refuse values the server accepts. `validate`
   and the checks of `type="email"` are examples.
 - **Reported values match.** Sending back what the snapshot reports never fails its
-  schema. The exception is a value that no client sent and that the widget does not
-  reconcile when its constraints change. Two examples: an author's color default with a
-  trailing newline, and the selection of a keyed table whose rows shrank under it. The
-  server never checks an unchanged value, so sending such a value back is still accepted.
+  schema, with one exception: a value no client sent that the widget does not reconcile
+  when its constraints change, such as an author's color default with a trailing
+  newline, or the selection of a keyed table whose rows shrank under it. Sending such a
+  value back is still accepted, because neither check applies to an unchanged value; see
+  [On the server](#on-the-server-the-schema-first-then-the-widget).
 - **No list is copied.** `enum` never appears. Options stay in `props.options` and table
   columns in `data.columns`.
 - **Standard keywords only.** The schemas use JSON Schema 2020-12, the dialect OpenAPI
@@ -119,10 +121,10 @@ refuse what the keyword rules out.
 | --- | --- | --- | --- |
 | `st.number_input` | `integer` or `number` | `minimum`, `maximum` | `min_value` and `max_value` when the author set them, which is also when `props` reports them |
 | `st.slider` over numbers | `integer` or `number`, or a range of them | `minimum` and `maximum`, on `items` for a range | the resolved `min_value` and `max_value` |
-| `st.text_input`, `st.text_area`, `st.chat_input` | `string` | `maxLength` | `max_chars` |
+| `st.text_input`, `st.text_area`, `st.chat_input` | `string` | `maxLength` | `max_chars`, when it is positive, since `0` means no limit |
 | `st.text_input(type="password")` | `string` | `writeOnly: true` | `type` |
 | `st.multiselect` | array of `string` | `maxItems` | `max_selections` |
-| `st.feedback` | `integer` | `minimum: 0`, `maximum` | the number of thumbs, faces, or stars |
+| `st.feedback` | `integer` | `minimum: 0`, `maximum` | the highest index: one less than the number of thumbs, faces, or stars, so `1` or `4` |
 | `st.pagination` | `integer` | `minimum: 1`, `maximum` | `num_pages` |
 | `st.color_picker` | `string` | `pattern: "^#(?:[0-9a-fA-F]{3}){1,2}$"` | the layout the widget accepts |
 | `st.dataframe` with selections | none | an object schema | `selection_mode` and the row count; see [Dataframe selections](#dataframe-selections) |
@@ -188,8 +190,9 @@ value_schema = agent_spec.number(
 
 - Pros: This is the pattern every description already follows, in the same function and
   from the same arguments, on the line next to the `min_value` prop it mirrors.
-- Cons: The constraint is written twice, once in the serde's `validate` and once here, so
-  only the test in [In CI](#in-ci) keeps the two in step.
+- Cons: The constraint is written twice, once in the `validate` of the widget's serde (its
+  serializer and deserializer) and once here, so only the test in [In CI](#in-ci) keeps
+  the two in step.
 
 **Option 2: The widget's serde builds the schema next to its `validate`**
 
@@ -203,7 +206,7 @@ value_schema = agent_spec.number(
 ### Temporal values
 
 `st.time_input`, `st.datetime_input`, and time and datetime sliders hold values without an
-offset. The agent path reads them in any ISO 8601 layout.
+offset. The agent API reads them in any ISO 8601 layout.
 
 **Option 1: Plain `string`, as in v1** ✅ PREFERRED
 
@@ -273,7 +276,6 @@ An `st.dataframe` with `on_select` becomes an ordinary value element. It has
           "columns": {
             "type": "array",
             "items": { "type": "string" },
-            "uniqueItems": true,
             "maxItems": 1
           },
           "cells": { "type": "array", "maxItems": 0 }
@@ -299,8 +301,9 @@ A request selects rows 0 and 2:
 
 - **The value is the session-state shape.** It is what `st.session_state["orders"]`
   holds and what assigning to it takes, so `widget_state` still reads like session state.
-  `selection` is required. A list left out is empty, so a request replaces the whole
-  selection, as a browser's message does.
+  `selection` is required.
+- **A request replaces the whole selection**, as a browser's message does. A list left
+  out is empty, so leaving out `columns` clears the selected columns.
 - **Every list is declared.** A list for a mode that is not enabled is
   `{"type": "array", "maxItems": 0}`, so the reported value, which always carries all
   three lists, matches the schema.
@@ -309,42 +312,52 @@ A request selects rows 0 and 2:
   - `single-row` and `single-row-required` add `maxItems: 1`.
   - `single-row-required` also adds `minItems: 1` when the table has rows, because the
     browser always keeps one row selected.
-  - Rows go in ascending order, as the browser sends them. Another order is refused, like
-    a reversed range.
+  - Rows go in ascending order, as the browser sends them. Another order is refused
+    rather than sorted, like a reversed range, because #17782 stops adjusting sent
+    values. The schema cannot state the order, so the error asks for ascending rows.
+  - `uniqueItems` holds, because a row is a position.
+  - A table with no rows gets `{"type": "array", "maxItems": 0}` for rows and cells, like
+    a mode that is not enabled, rather than `maximum: -1`.
   - A lazily loaded table of unknown size states no `maximum`.
 - **Columns** are names as `data.columns` spells them.
-  - Index columns cannot be selected, and the error for one lists the names that can.
+  - `data.columns` also lists index columns, an unnamed one as `__index_level_0__`.
+    They cannot be selected, and the error for one lists the names that can.
   - Names are compared as text, as the browser sends them, so a column named `0` is
     selected as `"0"`.
   - They are not enumerated in the schema, because `data.columns` already lists them.
   - `single-column` adds `maxItems: 1`.
-- **Cells** are `[row, column]` pairs, described with `prefixItems` and two items each.
+  - There is no `uniqueItems`. An Arrow table can repeat a column name, and selecting
+    both such columns sends the name twice.
+- **Cells** are `[row, column]` pairs. Each pair is
+  `{"type": "array", "prefixItems": [<the row schema>, {"type": "string"}], "minItems": 2, "maxItems": 2}`,
+  because `prefixItems` alone also lets a shorter or longer list pass.
   - `single-cell` adds `maxItems: 1`.
   - `multi-cell` takes any number of cells. A browser sends a dragged rectangle as the
     cells it covers, and in a sorted or reordered table that rectangle can be any set of
     rows crossed with any set of columns, so the shape is not checked.
-- **`uniqueItems` holds for all three lists**, because a browser never repeats an entry.
+  - There is no `uniqueItems`, for the same reason as for columns.
 - **Rows, columns, and cells combine freely**, because the browser blends selections
   additively.
 - **`null` resets the selection** to `selection_default`, or to no selection.
 
-A selection schema costs about 380 bytes, a small part of a table node.
+A selection schema costs about 360 bytes, or about 470 with every mode enabled, a small
+part of a table node.
 
-**This needs #17717 item 8.** Today only programmatic selections are validated, and that
-validation filters bad entries out rather than refusing them. A client's selection
-reaches the app unchecked. Item 8's validator has to refuse everything the schema rules
-out:
+**This needs #17717 item 8**, the server-side check of dataframe selections. Today only
+programmatic selections are validated, and that validation filters bad entries out rather
+than refusing them. A client's selection reaches the app unchecked. Item 8 names only
+`selection_mode` and bounds, so it has to grow to refuse everything the schema rules out:
 
 - an unknown key;
 - a list for a mode that is not enabled;
 - a row out of range;
 - an unknown column, or an index column;
-- too many items, or a repeated item;
+- too many items, or a repeated row;
 - empty rows in `single-row-required` mode;
 - rows out of order.
 
 It also has to compare column names as text. A browser session drops such a value, as
-item 8 already plans, and the agent API refuses it with `invalid_value`.
+#17717 does with every refused value, and the agent API refuses it with `invalid_value`.
 
 Chart selections follow the same pattern with #17717 item 12. They are harder, because a
 selected point is identified by library-specific data values rather than by position; see
@@ -354,24 +367,32 @@ selected point is identified by library-specific data values rather than by posi
 
 #### On the server: the schema first, then the widget
 
-Each `widget_state` value, and each trigger's `value`, is first normalized by v1's
-shorthands (`null`, and a one-item list for a single value). It is then checked against
-its element's `value_schema`, before it is encoded.
+Each `widget_state` value, and each trigger's `value`, is first normalized by v1's rules:
+`null`, a one-item list for a single value, and a whole float such as `1.0` read as an
+integer. It is then checked against its element's `value_schema`, before it is encoded.
 
 - **This replaces `_check_json_type`.** Nested selections get checked, and so do trigger
   payloads such as `st.chat_input` text against `maxLength`.
 - **The widget's own check from #17782 runs next.** It decides everything a schema cannot:
-  options, `required`, UTF-16 length, order, and labels several options share.
-- **The validator is written for Streamlit's own vocabulary.** It supports exactly the
-  keywords the snapshot uses: `type`, `format`, `minimum`, `maximum`, `maxLength`,
-  `pattern`, `items`, `prefixItems`, `minItems`, `maxItems`, `uniqueItems`, `properties`,
-  `required`, `additionalProperties`, and `writeOnly`. That is about 150 lines.
+  options, `required`, UTF-16 length, order, and labels shared by several options.
+- **An unchanged value skips both checks.** #17782's widget check passes a value whose
+  wire form equals the stored one, and the schema check follows the same rule. So
+  sending back an unreconciled reported value is accepted and changes nothing.
+- **The validator supports only the keywords the snapshot emits:** `type`, `format`,
+  `minimum`, `maximum`, `maxLength`, `pattern`, `items`, `prefixItems`, `minItems`,
+  `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, and
+  `writeOnly`. That is about 150 lines.
   - `format` is an annotation, as JSON Schema's default treats it. The widget checks the
     layout itself.
   - `pattern` is ECMA-262. The only pattern is the fixed color one, which reads the same
     in Python's `re` when matched in full.
 - **The test suite holds the validator to the standard.** Its verdicts are tested against
   `jsonschema`'s Draft 2020-12 validator on a shared corpus, so it cannot drift.
+  - The corpus covers where Python and JSON Schema disagree: `true` is not an integer,
+    and `1` and `1.0` are equal under `uniqueItems`.
+  - It pins one known difference to the ECMA-262 verdict. `jsonschema` applies `pattern`
+    with `re.search`, where `$` also matches before a final newline, so it accepts
+    `"#fff\n"`.
 
 The `jsonschema` package is not used at runtime, for three reasons:
 
@@ -416,8 +437,8 @@ Addressing errors such as `unknown_key`, `not_on_page`, and `disabled_widget` st
 on their own, and the first one wins. They mean the client is working from a stale
 snapshot, and listing value errors from that snapshot would not help.
 
-Every check is pure, so continuing past the first invalid value adds no risk. Nothing has
-run either way.
+No check changes state, so checking past the first invalid value is safe: nothing runs
+until every value passes.
 
 #### On the client: any 2020-12 validator
 
@@ -427,7 +448,7 @@ description tells clients how to use it:
 
 - Validate a value against its `value_schema` before sending it, and skip the check for
   `null`.
-- A value that fails is always refused.
+- A changed value that fails is always refused.
 - A value that passes may still be refused, for the reasons the `widget_state` field
   lists.
 
@@ -448,7 +469,9 @@ can pass them through.
 
 - **Reported values.** The hand-written `_matches_schema` in `widget_values_test.py` gives
   way to `jsonschema`'s Draft 2020-12 validator, which tests already use for the OpenAPI
-  document. Every reported value except `null` must validate.
+  document. Every reported value except `null` must validate. The two unreconciled cases
+  in [What a value schema promises](#what-a-value-schema-promises) are left out of that
+  assertion, and a test sends each one back and expects it accepted.
 - **Edges.** For each keyword a widget emits, the test sends the widget's own check a
   value just inside the bound, which must be accepted, and one just outside, which must
   be refused. Run at both edges, this catches a schema that is looser or stricter than the
@@ -463,7 +486,7 @@ can pass them through.
 | --- | --- | --- |
 | 1 | The schema validator in place of `_check_json_type`, trigger payloads checked, `error.violations`, the `ValueSchema` component, and the CI checks. No new keywords. | #17782 merged, since it rewrites `widget_writes.py` |
 | 2 | The keywords in [Keywords per widget](#keywords-per-widget), through new `agent_spec` builder parameters. | #17782, so the widgets refuse what the keywords rule out |
-| 3 | Dataframe selections: the description, the codec (the value travels as JSON text in `string_value`), and the snapshot changes. | #17717 item 8, in the same PR or before it |
+| 3 | Dataframe selections: the description, the codec (the value travels as JSON text in `string_value`), and the snapshot changes. The schema needs the row count, so it is built only while recording, like `data`. | #17717 item 8, in the same PR or before it |
 
 When these land, the agent spec needs these edits:
 
@@ -478,8 +501,8 @@ When these land, the agent spec needs these edits:
 - [What v1 does not support](../2026-08-28-agent-app-interface/product-spec.md#what-v1-does-not-support):
   dataframe selections leave the selections row, while chart selections, data editor
   edits, and button columns stay.
-- Follow-up #8 starts with chart selections, and the smaller follow-up "Values" item is
-  done.
+- Follow-up #8 starts with chart selections. The smaller follow-up "Values" item drops
+  the `value_schema` keywords and keeps the per-key note and the large integers.
 - The success criterion on reported values gains the exception for unreconciled values.
 
 ## Alternatives considered
@@ -489,7 +512,7 @@ When these land, the agent spec needs these edits:
   - It copies the largest part of many snapshots, and options are already in `props`
     under the name models know.
   - It hits provider limits: OpenAI caps an `enum` at 1,000 values.
-  - It cannot say that a label several options share is ambiguous.
+  - It cannot say that a label shared by several options is ambiguous.
   - It is wrong for `accept_new_options`.
 
   A client that needs an `enum` builds it from `props.options` in one line.
