@@ -60,6 +60,56 @@ class CacheResourceTest(unittest.TestCase):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
 
+    def test_concurrent_get_cache_creates_one_cache(self) -> None:
+        """Threads racing to look up a new cache all get the same instance."""
+        common = {
+            "key": "concurrent",
+            "display_name": "concurrent",
+            "max_entries": None,
+            "ttl": None,
+            "validate": None,
+            "on_release": lambda _: None,
+        }
+        threads = 16
+        start = threading.Barrier(threads)
+        caches: list[ResourceCache] = []
+
+        def get_cache() -> None:
+            start.wait()
+            caches.extend(_resource_caches.get_cache(**common) for _ in range(200))
+
+        workers = [threading.Thread(target=get_cache) for _ in range(threads)]
+        for worker in workers:
+            worker.start()
+        for worker in workers:
+            worker.join()
+
+        assert len({id(cache) for cache in caches}) == 1
+        assert caches[0] is _resource_caches.get_cache(**common)
+
+    def test_reused_cache_is_replaced_on_param_change_and_clear_all(self) -> None:
+        """A reused cache is never returned once it has been replaced or cleared."""
+        common = {
+            "key": "replace",
+            "display_name": "replace",
+            "max_entries": None,
+            "validate": None,
+            "on_release": lambda _: None,
+        }
+        original = _resource_caches.get_cache(ttl=10, **common)
+        assert _resource_caches.get_cache(ttl=10, **common) is original
+
+        replacement = _resource_caches.get_cache(ttl=20, **common)
+        assert replacement is not original
+        assert not original.is_active
+        assert _resource_caches.get_cache(ttl=20, **common) is replacement
+
+        _resource_caches.clear_all()
+        after_clear = _resource_caches.get_cache(ttl=20, **common)
+        assert after_clear is not replacement
+        assert not replacement.is_active
+        assert after_clear.is_active
+
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
         """Mutating a cache_resource return value is legal, and *will* affect
