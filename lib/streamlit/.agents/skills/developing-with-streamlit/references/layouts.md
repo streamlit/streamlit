@@ -33,7 +33,7 @@ By default, the app script enters every tab, expander, and popover body on every
 | Item count          | Fixed when you call it                                | Any; each child becomes a cell                                              | Any                                           |
 | Best for            | A known split: main + aside, a comparison, a form row | Repeated tiles: metric walls, galleries, card walls                         | Toolbars, button groups, badges, chips        |
 
-All three take `wrap=False` to keep one row that scrolls horizontally instead.
+All three take `wrap=False` to scroll horizontally instead of wrapping. Columns and horizontal containers then stay on one row. A grid keeps its column count, so extra cells still start new rows.
 
 ## Sidebar: navigation + global filters only
 
