@@ -166,13 +166,15 @@ function useTableSizer(
     measuredContainerHeight > 0
   ) {
     // height="stretch": the table fills its parent through CSS.
-    // - Definite parent height: the parent caps how far the table can be
-    //   dragged. Fullscreen re-measures the parent only after expanding, so
-    //   the fullscreen cap below applies instead.
-    // - Otherwise: dragging grows the parent, as with height="auto".
+    // - Definite parent height: the parent height caps the drag.
+    // - No definite parent height: dragging grows the parent, as with
+    //   height="auto", so the cap is the content height.
+    // - Fullscreen: the measured height is still the pre-expand height, so use
+    //   the content height and let the fullscreen cap below apply.
+    const capsAtParentHeight = !hasFallbackHeight && !isFullScreen
     maxHeight = Math.max(
       measuredContainerHeight,
-      hasFallbackHeight || isFullScreen ? maxHeight : minHeight
+      capsAtParentHeight ? minHeight : maxHeight
     )
   } else if (useContentHeight) {
     // height="content" - show all rows, but cap at MAX_CONTENT_HEIGHT (10,000px)
@@ -251,15 +253,16 @@ function useTableSizer(
     initialWidth = undefined
   }
 
-  // Stretch tables fill their parent through CSS instead of a pixel height.
-  const defaultHeight = useStretchHeight ? "100%" : initialHeight
+  // The height before the user drags the table. Stretch tables fill their
+  // parent through CSS instead of a pixel height.
+  const unresizedHeight = useStretchHeight ? "100%" : initialHeight
 
   const [resizableSize, setResizableSize] = useState<ResizableSize>({
     // If user hasn't specified a width via `width` or `use_container_width`,
     // we configure the table to 100%. Which will cause the data grid to
     // calculate the best size on the content and use that.
     width: initialWidth ?? "100%",
-    height: defaultHeight,
+    height: unresizedHeight,
   })
 
   useLayoutEffect(() => {
@@ -281,20 +284,18 @@ function useTableSizer(
     }))
   }, [initialWidth])
 
-  // A stretch table refills a definite-height parent when that height changes.
-  // Without a definite parent height, the measured height follows the table
-  // itself, so resetting on it would undo the height the user dragged it to.
+  // Reset when the height setting, row count, or definite parent height
+  // changes. With no definite parent height, the measured height follows the
+  // table, so resetting on it would undo the height the user dragged to.
   const parentHeightToFill =
     useStretchHeight && !hasFallbackHeight
       ? measuredContainerHeight
       : undefined
 
-  // Reset the height if the element height parameter, the number of rows, or
-  // the definite parent height changes:
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,
-      height: defaultHeight,
+      height: unresizedHeight,
     }))
   }, [initialHeight, numRows, parentHeightToFill, useStretchHeight])
 
@@ -311,7 +312,7 @@ function useTableSizer(
     } else {
       setResizableSize({
         width: initialWidth ?? "100%",
-        height: defaultHeight,
+        height: unresizedHeight,
       })
     }
   }, [isFullScreen])

@@ -1151,10 +1151,9 @@ function DataFrame({
         grid={[1, rowHeight]}
         snapGap={rowHeight / 3}
         onResizeStart={() => {
-          // Switch a percentage height ("100%" for stretch) to the current
-          // pixel height before the drag starts. Otherwise, re-resizable keeps
-          // resizing in percent, which can't grow the parent, so the table
-          // overflows it during the drag.
+          // Start the drag in pixels. re-resizable resizes in the unit of the
+          // size prop, and a percentage height ("100%" for stretch) can't grow
+          // the parent, so the table would overflow it during the drag.
           if (
             resizableRef.current &&
             typeof resizableSize.height === "string"
@@ -1162,8 +1161,8 @@ function DataFrame({
             const { height } = resizableRef.current.size
             /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
              * re-resizable reads the size prop right after this callback
-             * returns to pick the unit for the drag, so the pixel height must
-             * be rendered synchronously. This runs once per drag. */
+             * returns and uses that unit for the drag. Render the pixel height
+             * before returning. This runs once per drag. */
             flushSync(() => {
               setResizableSize(prev => ({ ...prev, height }))
             })

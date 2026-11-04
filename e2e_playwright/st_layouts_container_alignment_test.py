@@ -270,10 +270,11 @@ def test_stretch_dataframe_default_height(app: Page):
     wait_until(app, _dataframe_fits)
 
 
-def _start_dragging_dataframe_taller(
-    app: Page, dataframe: Locator, delta_px: int
-) -> None:
-    """Drag the dataframe's bottom-right resize handle down, without releasing it."""
+def _start_dragging_dataframe(app: Page, dataframe: Locator, delta_px: int) -> None:
+    """Drag the dataframe's bottom-right resize handle, without releasing it.
+
+    A positive ``delta_px`` drags the table taller, a negative one shorter.
+    """
     # Center the dataframe so the handle stays in the viewport while dragging.
     dataframe.evaluate("el => el.scrollIntoView({block: 'center'})")
     box = dataframe.get_by_test_id("stDataFrameResizable").bounding_box()
@@ -305,7 +306,7 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
     )
     initial_card_height = _height(dataframe_card) or 0
 
-    _start_dragging_dataframe_taller(app, card_dataframe, 140)
+    _start_dragging_dataframe(app, card_dataframe, 140)
 
     def _card_grew_with_dataframe() -> bool:
         resizable = card_dataframe.get_by_test_id("stDataFrameResizable")
@@ -313,8 +314,8 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
             _bottom(resizable) <= _bottom(dataframe_card)
         )
 
-    # Check mid-drag: a percentage-height drag overflows the card here. The
-    # useTableSizer unit tests guard against snapping back after release.
+    # Check mid-drag, where a percentage-height drag would overflow the card.
+    # The useTableSizer unit tests cover the snap-back after release.
     wait_until(app, _card_grew_with_dataframe)
     app.mouse.up()
     wait_until(app, _card_grew_with_dataframe)
@@ -324,18 +325,22 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
     fixed_card = get_element_by_key(app, "fixed-card-title-and-dataframe")
     fixed_dataframe = fixed_card.get_by_test_id("stDataFrame")
     wait_until(app, lambda: _content_fits(fixed_card))
-    fixed_dataframe_height = _height(fixed_dataframe)
-
-    _start_dragging_dataframe_taller(app, fixed_dataframe, 140)
-    app.mouse.up()
-
+    fixed_dataframe_height = _height(fixed_dataframe) or 0
     resizable = fixed_dataframe.get_by_test_id("stDataFrameResizable")
+
+    # Dragging shorter first proves that the handle engages in this card.
+    _start_dragging_dataframe(app, fixed_dataframe, -70)
+    app.mouse.up()
+    wait_until(app, lambda: (_height(resizable) or 0) < fixed_dataframe_height - 30)
+
+    _start_dragging_dataframe(app, fixed_dataframe, 140)
+    app.mouse.up()
 
     def _dataframe_stays_in_fixed_card() -> bool:
         # Allow 1px because the heights round fractional sizes differently.
-        return abs(
-            (_height(resizable) or 0) - (fixed_dataframe_height or 0)
-        ) <= 1 and _content_fits(fixed_card)
+        return abs((_height(resizable) or 0) - fixed_dataframe_height) <= 1 and (
+            _content_fits(fixed_card)
+        )
 
     wait_until(app, _dataframe_stays_in_fixed_card)
 

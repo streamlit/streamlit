@@ -806,7 +806,36 @@ describe("useTableSizer hook", () => {
       expect(result.current.resizableSize.height).toEqual(400)
     })
 
-    it("lets the table grow past its parent without a definite parent height", () => {
+    it("keeps the dragged height of an auto-height table when its measured height changes", () => {
+      const { result, rerender } = renderHook(
+        ({ measuredContainerHeight }: { measuredContainerHeight: number }) =>
+          useTableSizer(
+            DataframeProto.create({
+              arrowData: { data: TEN_BY_TEN },
+            }),
+            mockTheme,
+            40,
+            false,
+            700,
+            undefined,
+            false,
+            undefined,
+            undefined,
+            measuredContainerHeight
+          ),
+        { initialProps: { measuredContainerHeight: 400 } }
+      )
+
+      act(() => {
+        result.current.setResizableSize({ width: "100%", height: 600 })
+      })
+
+      // The wrapper grows with the dragged table.
+      rerender({ measuredContainerHeight: 600 })
+      expect(result.current.resizableSize.height).toEqual(600)
+    })
+
+    it("allows dragging to the full content height without a definite parent height", () => {
       const heightConfig = new streamlit.HeightConfig({ useStretch: true })
 
       const { result } = renderHook(() =>
