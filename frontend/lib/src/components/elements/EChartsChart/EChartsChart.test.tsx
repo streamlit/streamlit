@@ -1814,6 +1814,63 @@ describe("EChartsChart", () => {
       expect(stopped).not.toHaveBeenCalled()
     })
 
+    const renderRoamChart = (series: Record<string, unknown>): HTMLElement => {
+      render(
+        <Wrapper
+          element={createElement({
+            spec: JSON.stringify({ series: [series] }),
+          })}
+        />
+      )
+      return screen.getByTestId("stEChartsChart")
+    }
+
+    it("guards a default treemap without a dataZoom", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart)).toHaveBeenCalled()
+
+      now += 1_000
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
+    it("lets a pinch roam a treemap before the pointer has rested", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart, { ctrlKey: true })).not.toHaveBeenCalled()
+    })
+
+    it("guards a graph with wheel roam", () => {
+      const chart = renderRoamChart({ type: "graph", roam: true, data: [] })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart)).toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when a treemap turns roam off", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        roam: false,
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when graph roam is drag-only", () => {
+      const chart = renderRoamChart({ type: "graph", roam: "move", data: [] })
+      chart.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
     it("waits again after the pointer leaves and re-enters", () => {
       const chart = renderChart([{ type: "inside" }])
       chart.dispatchEvent(new Event("pointerenter"))

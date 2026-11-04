@@ -1650,6 +1650,40 @@ describe("optionHasWheelRoam", () => {
     ).toBe(true)
   })
 
+  it("counts a treemap's default roam and explicit wheel roam", () => {
+    expect(optionHasWheelRoam({ series: [{ type: "treemap" }] })).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "scale" }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: false }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "move" }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "pan" }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ baseOption: { series: [{ type: "treemap" }] } })
+    ).toBe(true)
+  })
+
+  it("counts tree and sankey only when they opt into wheel roam", () => {
+    expect(optionHasWheelRoam({ series: [{ type: "tree" }] })).toBe(false)
+    expect(optionHasWheelRoam({ series: [{ type: "sankey" }] })).toBe(false)
+    expect(optionHasWheelRoam({ series: [{ type: "graph" }] })).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "tree", roam: "zoom" }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "sankey", roam: true }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "sankey", roam: "move" }] })
+    ).toBe(false)
+  })
+
   it("ignores drag-only roam and charts without it", () => {
     expect(optionHasWheelRoam(null)).toBe(false)
     expect(optionHasWheelRoam({ geo: { roam: false } })).toBe(false)
@@ -1675,6 +1709,9 @@ describe("optionHasWheelRoam", () => {
     expect(wheelRoamSkipsSettle(roam, pinch)).toBe(true)
     expect(wheelRoamSkipsSettle(roam, plain)).toBe(false)
     expect(wheelRoamSkipsSettle({ geo: { roam: "move" } }, pinch)).toBe(false)
+    expect(
+      wheelRoamSkipsSettle({ series: [{ type: "treemap" }] }, pinch)
+    ).toBe(true)
     expect(wheelRoamSkipsSettle(null, pinch)).toBe(false)
   })
 })
