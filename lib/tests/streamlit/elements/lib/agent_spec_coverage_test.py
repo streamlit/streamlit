@@ -193,6 +193,7 @@ _DERIVED_PROPS: dict[str, dict[str, str]] = {
     "page_link": {"external": "whether `page` leaves the app"},
     "popover": {"open": "whether the popover is open in this run"},
     "pyplot": {"url": _MEDIA_URL},
+    "table": {"caption": "read from a pandas Styler's `set_caption`"},
     "video": {"url": _MEDIA_URL},
 }
 
