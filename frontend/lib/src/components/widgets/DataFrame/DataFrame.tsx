@@ -45,7 +45,7 @@ import {
   type Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
-import { createPortal } from "react-dom"
+import { createPortal, flushSync } from "react-dom"
 
 import {
   Dataframe as DataframeProto,
@@ -1150,6 +1150,25 @@ function DataFrame({
         }}
         grid={[1, rowHeight]}
         snapGap={rowHeight / 3}
+        onResizeStart={() => {
+          // Switch a percentage height ("100%" for stretch) to the current
+          // pixel height before the drag starts. Otherwise, re-resizable keeps
+          // resizing in percent, which can't grow the parent, so the table
+          // overflows it during the drag.
+          if (
+            resizableRef.current &&
+            typeof resizableSize.height === "string"
+          ) {
+            const { height } = resizableRef.current.size
+            /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+             * re-resizable reads the size prop right after this callback
+             * returns to pick the unit for the drag, so the pixel height must
+             * be rendered synchronously. This runs once per drag. */
+            flushSync(() => {
+              setResizableSize(prev => ({ ...prev, height }))
+            })
+          }
+        }}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             const borderThreshold = 2 * gridTheme.tableBorderWidth
