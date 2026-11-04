@@ -215,13 +215,15 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
    * that ID already rendered. It does not advance the positional index, so
    * the index-based keys of unkeyed siblings stay the same.
    */
-  private visitRetainedElement({ node, id }: RetainedElement): void {
+  visitRetainedElement({ node, id }: RetainedElement): ReactElement | null {
     if (this.renderedKeySet.has(id)) {
-      return
+      return null
     }
     this.renderedKeySet.add(id)
-    this.reactElements.push(
+    const renderer = (
       <ElementNodeRenderer key={id} {...this.props} node={node} isRetained />
     )
+    this.reactElements.push(renderer)
+    return renderer
   }
 }
