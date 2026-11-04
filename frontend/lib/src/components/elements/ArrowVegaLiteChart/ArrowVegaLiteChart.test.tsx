@@ -21,12 +21,22 @@ import userEvent from "@testing-library/user-event"
 
 import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
 
-const vegaEmbedMock = vi.hoisted(() => ({
-  exportToPng: vi.fn(),
-  isViewReady: false,
-  lastSpec: undefined as { height?: number } | undefined,
-  createdHeights: [] as Array<number | undefined>,
-}))
+const vegaEmbedMock = vi.hoisted(() => {
+  const createdHeights: Array<number | undefined> = []
+  return {
+    exportToPng: vi.fn(),
+    isViewReady: false,
+    lastSpec: undefined as { height?: number } | undefined,
+    createdHeights,
+    // Keep these callbacks stable, like the real hook's, so the chart's
+    // effects don't rerun and createdHeights counts only real view rebuilds.
+    createView: (_container: unknown, spec: { height?: number }) => {
+      createdHeights.push(spec?.height)
+      return Promise.resolve(null)
+    },
+    finalizeView: () => {},
+  }
+})
 const mockWriteText = vi.fn()
 
 // Avoid real Vega embedding side-effects in tests
@@ -36,12 +46,9 @@ vi.mock("./useVegaEmbed", () => ({
     // Satisfy hooks rule by calling a React hook in this mock
     const _memo = useMemo(() => null, [])
     return {
-      createView: (_container: unknown, spec: { height?: number }) => {
-        vegaEmbedMock.createdHeights.push(spec?.height)
-        return Promise.resolve(null)
-      },
+      createView: vegaEmbedMock.createView,
       updateView: () => Promise.resolve(null),
-      finalizeView: () => {},
+      finalizeView: vegaEmbedMock.finalizeView,
       resizeView: () => Promise.resolve(false),
       exportToPng: vegaEmbedMock.exportToPng,
       isViewReady: vegaEmbedMock.isViewReady,
@@ -111,11 +118,17 @@ const getProps = (
 })
 
 describe("ArrowVegaLiteChart", () => {
+  // Load the grid's DataFrame module up front, so the first "Show data"
+  // click doesn't spend the `findBy*` timeout on importing it.
+  beforeAll(async () => {
+    await import("~lib/components/widgets/DataFrame/ReadOnlyGrid")
+  })
+
   beforeEach(() => {
     mockWindowLocation("localhost")
     vegaEmbedMock.exportToPng.mockResolvedValue("data:image/png;base64,mock")
     vegaEmbedMock.isViewReady = false
-    vegaEmbedMock.createdHeights = []
+    vegaEmbedMock.createdHeights.length = 0
     mockWriteText.mockReset()
     mockWriteText.mockResolvedValue(undefined)
     Object.defineProperty(navigator, "clipboard", {
@@ -157,6 +170,7 @@ describe("ArrowVegaLiteChart", () => {
 
     // Initially, the chart container should be present
     expect(screen.getByTestId("stVegaLiteChart")).toBeVisible()
+    expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
 
     // The toolbar action should be present when data exists
     const showDataButton = screen.getByRole("button", { name: "Show data" })
@@ -165,6 +179,7 @@ describe("ArrowVegaLiteChart", () => {
     await user.click(showDataButton)
 
     // Should switch to grid view (Show chart action appears) and chart container hidden
+    expect(await screen.findByTestId("stDataFrame")).toBeVisible()
     await screen.findByRole("button", { name: "Show chart" })
     expect(screen.queryByTestId("stVegaLiteChart")).toBeNull()
 
@@ -202,6 +217,35 @@ describe("ArrowVegaLiteChart", () => {
     expect(
       screen.queryByRole("button", { name: "Show data" })
     ).toBeInTheDocument()
+  })
+
+  it("keeps the view when new data only renames the datasets", () => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: document.createElement("div") },
+      values: [250],
+    })
+    // Altair names each dataset by a hash of its contents.
+    const altairProps = (name: string, mark = "bar"): Props =>
+      getProps({
+        spec: JSON.stringify({
+          data: { name },
+          mark,
+          encoding: { x: { field: "c1" } },
+        }),
+        datasets: [{ name, hasName: true, data: { data: UNICODE } }],
+      })
+
+    const { rerender } = render(
+      <ArrowVegaLiteChart {...altairProps("3f2a")} />
+    )
+    expect(vegaEmbedMock.createdHeights).toHaveLength(1)
+
+    rerender(<ArrowVegaLiteChart {...altairProps("7d4e")} />)
+    expect(vegaEmbedMock.createdHeights).toHaveLength(1)
+
+    // A spec change along with the data still rebuilds the view.
+    rerender(<ArrowVegaLiteChart {...altairProps("9c1b", "point")} />)
+    expect(vegaEmbedMock.createdHeights).toHaveLength(2)
   })
 
   describe("stretch height sizing", () => {

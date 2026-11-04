@@ -1275,7 +1275,11 @@ class ButtonMixin:
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
+            this is ``None`` (default), the tooltip is the ``help`` of the
+            linked page when ``page`` is a ``Page`` object or the path of a
+            page passed to ``st.navigation``. Otherwise, no tooltip is
+            displayed. Pass ``help=""`` to show no tooltip even when the page
+            has help.
 
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
@@ -1706,6 +1710,9 @@ class ButtonMixin:
                 page_link_proto.icon = page.icon
                 # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+            if help is None:
+                # st.Page already dedented its help.
+                page_link_proto.help = page.help
 
             if page.is_external:
                 page_link_proto.page = page.external_url or ""
@@ -1761,8 +1768,12 @@ class ButtonMixin:
                 # registers pages.
                 url_pathname = page_data.get("url_pathname")
                 if requested_page == full_path:
+                    # Label and help come from the same (first registered) page
+                    # when several pages share this script.
                     if label is None:
                         page_link_proto.label = page_name
+                    if help is None:
+                        page_link_proto.help = page_data.get("help", "")
                     page_link_proto.page_script_hash = page_data["page_script_hash"]
                     # Click navigation uses page_script_hash. Do not fall back
                     # to page_name (a display title) as the href.

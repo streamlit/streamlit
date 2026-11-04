@@ -41,7 +41,7 @@ import type {
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
-import { isLocalhost } from "@streamlit/utils"
+import { isLocalhost, isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   FlexContext,
@@ -55,7 +55,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
@@ -407,7 +407,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const handleDownloadPng = useCallback(() => {
     void (async () => {
       const pngUrl = await exportToPng()
-      if (!pngUrl) {
+      if (pngUrl === null) {
         return
       }
 
@@ -607,8 +607,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     }
   }, [data, datasets])
 
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const labelContext = inputElement.alt?.trim() || undefined
+  const trimmedAlt = inputElement.alt?.trim()
+  const labelContext = isNullOrEmptyString(trimmedAlt) ? undefined : trimmedAlt
 
   if (showData) {
     const derivedHeight =
@@ -616,7 +616,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       (chartContainerHeight > 0 ? chartContainerHeight : undefined)
 
     return (
-      <ReadOnlyGrid
+      <LazyReadOnlyGrid
         data={data ?? datasets[0]?.data}
         height={derivedHeight}
         width={widthConfig ?? undefined}

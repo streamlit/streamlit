@@ -139,13 +139,20 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     ),
     "disabled_widget": (
         409,
-        "The element is on the page but disabled; it accepts nothing until the app enables it.",
+        (
+            "The element is on the page but disabled; it accepts nothing until "
+            "the app enables it. Send what enables it in one request, then use "
+            "it in the next: each request is checked against the snapshot before "
+            "it."
+        ),
     ),
     "session_busy": (
         409,
         (
-            "The session already has an interaction in flight, or a timed-out "
-            "run is still going. Collect that run by sending only `session_id`."
+            "The session already has an interaction in flight, or a run whose "
+            "client timed out or disconnected is still going. Wait for the "
+            "request in flight; once its client has gone, send only "
+            "`session_id` to collect the run."
         ),
     ),
     # 202 rather than 504: the request was accepted and its run is still going,
@@ -178,7 +185,10 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         403,
         (
             "Sent by a web page whose `Origin` is not in "
-            "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`."
+            "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`. "
+            "Responses carry no CORS headers, so listing an origin only admits "
+            "callers that CORS does not restrict, such as the app's own page. A "
+            "page on another origin is stopped at its preflight."
         ),
     ),
     "too_many_sessions": (
@@ -189,6 +199,54 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         ),
     ),
 }
+
+
+# Codes only the MCP endpoint's `get_data` tool returns, as code -> meaning. No
+# HTTP route answers with them, so unlike `ERROR_CATALOG` they have no status,
+# and the OpenAPI document lists them apart from the `Error` schema's `code`
+# enum. A refused read also reuses `invalid_request`, `unknown_session`, and
+# `internal_error`.
+McpErrorCode: TypeAlias = Literal[
+    "unknown_file", "result_too_large", "read_unsupported"
+]
+
+MCP_ERROR_CATALOG: Final[dict[McpErrorCode, str]] = {
+    "unknown_file": (
+        "`url` reads no file the app still stores: a later run replaced it, a "
+        "run in progress has not re-created it yet, or `url` is not a media "
+        "file at all."
+    ),
+    "result_too_large": (
+        "The file, or the table row at `offset`, makes a result past 5 MB. "
+        "Neither a retry nor a smaller `limit` helps; on a table, read on from "
+        "the next offset."
+    ),
+    "read_unsupported": (
+        "This app's media storage cannot return files, so no retry helps."
+    ),
+}
+
+
+def error_body(
+    code: AgentErrorCode | McpErrorCode,
+    message: str,
+    *,
+    session_id: str | None = None,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The JSON body of a refusal, in the shape of the `Error` schema.
+
+    The HTTP route answers with it, and the MCP endpoint's tools return it as
+    the text of a refused call.
+    """
+    body: dict[str, Any] = {"error": {"code": code, "message": message}}
+    if details:
+        body["error"].update(details)
+    if session_id is not None:
+        # Set when the remedy is a request on a session: a creating call that
+        # already produced one, or a run still going after the timeout.
+        body["session_id"] = session_id
+    return body
 
 
 def error_status(code: AgentErrorCode) -> int:

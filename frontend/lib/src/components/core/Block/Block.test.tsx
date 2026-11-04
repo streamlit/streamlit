@@ -16,28 +16,41 @@
 
 import { type ReactElement, useContext } from "react"
 
-import { screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import type * as ReactAriaComponents from "react-aria-components"
 
 import {
   Block as BlockProto,
   Button as ButtonProto,
+  Delta as DeltaProto,
   type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { type AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
-import { text } from "~lib/render-tree/test-utils"
+import {
+  forwardMsgMetadata,
+  makeProto,
+  text,
+  textInput,
+} from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
+import { gridCellJustifyContent } from "./styled-components"
 
 // SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
@@ -143,6 +156,22 @@ const DefiniteHeightProbe = (): ReactElement => (
     {String(useContext(FlexContext)?.hasDefiniteHeight)}
   </div>
 )
+
+/** The top-level declarations of an element's emotion `@media print` rule. */
+function printDeclarations(element: HTMLElement): string {
+  const css = [...document.querySelectorAll("style")]
+    .map(style => style.textContent ?? "")
+    .join("\n")
+  return [...element.classList]
+    .filter(className => className.startsWith("css-"))
+    .map(
+      className =>
+        new RegExp(`@media print\\{\\.${className}\\{([^}]*)\\}`).exec(
+          css
+        )?.[1] ?? ""
+    )
+    .join(";")
+}
 
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
@@ -518,6 +547,46 @@ describe("FlexBoxContainer layout props", () => {
     expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
   })
 
+  describe("print layout", () => {
+    const stretchChild = (): BlockNode =>
+      makeVerticalBlock([], {
+        heightConfig: { useStretch: true },
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        },
+      })
+
+    it("keeps flex for a stretch-height container in a fixed-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([stretchChild()], {
+            heightConfig: { pixelHeight: 400 },
+            flexContainer: {
+              direction: BlockProto.FlexContainer.Direction.VERTICAL,
+            },
+          })
+        )
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).not.toContain("display:block")
+      expect(printDeclarations(innerBlock)).not.toContain("display:block")
+    })
+
+    it("uses block layout for a stretch-height container in a content-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(makeVerticalBlock([stretchChild()]))
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).toContain("display:block")
+      expect(printDeclarations(innerBlock)).toContain("display:block")
+    })
+  })
+
   it("does not apply the stretch overrides to a content-height container", () => {
     const contentChild = makeVerticalBlock([], {
       heightConfig: { useContent: true },
@@ -890,6 +959,70 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
   })
 })
 
+describe("BlockNodeRenderer direct grid cell wrapping context", () => {
+  mockEllipsizedLabels()
+  const label = "Regenerate the complete quarterly report now"
+
+  function makeGridCellBlock(children: AppNode[]): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+  }
+
+  function makeGridBlockWithChildren(children: AppNode[]): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          columns: 3,
+          wrap: true,
+        },
+      })
+    )
+  }
+
+  async function renderGridChildren(children: AppNode[]): Promise<void> {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeGridBlockWithChildren(children)])
+      )
+    )
+    expect(await screen.findByRole("button", { name: label })).toBeVisible()
+  }
+
+  it("resolves auto wrap to false for a button in grid.cell()", async () => {
+    await renderGridChildren([makeGridCellBlock([makeButton(label)])])
+
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("resolves auto wrap to false for a button as a direct grid child", async () => {
+    await renderGridChildren([makeButton(label)])
+
+    expect(await screen.findByTitle(label)).toBeVisible()
+  })
+
+  it("resets wrap in a nested layout container inside a grid cell", async () => {
+    const nestedContainer = makeVerticalBlock([makeButton(label)], {
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        wrap: true,
+      },
+    })
+    await renderGridChildren([makeGridCellBlock([nestedContainer])])
+
+    expect(screen.queryByTitle(label)).not.toBeInTheDocument()
+  })
+})
+
 describe("BlockNodeRenderer container types", () => {
   const widgetMgr = new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
@@ -1208,5 +1341,1632 @@ describe("BlockNodeRenderer container types", () => {
     expect(tabs).toHaveStyle("align-self: stretch;")
     expect(tabs).toHaveStyle("max-height: 100%;")
     expect(tabs).not.toHaveStyle("height: 100%;")
+  })
+})
+
+describe("GridContainer Component", () => {
+  function makeGridBlock(
+    gridContainerProps: Partial<BlockProto.GridContainer.$Properties> = {},
+    children: AppNode[] = []
+  ): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+          ...gridContainerProps,
+        },
+      })
+    )
+  }
+
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeGridNodeRendererComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("reuses one justify object per alignment", () => {
+    const { VerticalAlignment } = BlockProto.GridContainer
+    expect(gridCellJustifyContent(VerticalAlignment.CENTER)).toBe(
+      gridCellJustifyContent(VerticalAlignment.CENTER)
+    )
+    expect(gridCellJustifyContent(VerticalAlignment.BOTTOM)).toBe(
+      gridCellJustifyContent(VerticalAlignment.BOTTOM)
+    )
+    expect(gridCellJustifyContent(VerticalAlignment.TOP)).toBe(
+      gridCellJustifyContent(VerticalAlignment.TOP)
+    )
+  })
+
+  it("should render a grid container", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toBeVisible()
+    expect(gridContainer).toHaveClass("stGrid")
+    expect(gridContainer).toHaveAttribute("data-test-wrap", "true")
+  })
+
+  it("should apply display: grid style", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle("display: grid")
+  })
+
+  it("should apply an explicit column count from the default content width", () => {
+    const block = makeGridBlock({
+      minColumnWidthPx: 200,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // Unmeasured first paint uses the padded content box (704px):
+    // (704+16)/(200+16) = 3
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "3")
+  })
+
+  it("uses the padded content box rather than raw contentMaxWidth", () => {
+    const block = makeGridBlock({
+      minColumnWidthPx: 170,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // 736px would fit 4 columns; 704px fits 3.
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "3")
+  })
+
+  it("should cap integer columns at the declared count", () => {
+    // Three 200px tracks fit the 704px fallback, so only the cap gives 2.
+    const block = makeGridBlock({
+      columns: 2,
+      minColumnWidthPx: 200,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "2")
+  })
+
+  it("resolves the column count from the column gap, not the row gap", () => {
+    // A 4rem column gap fits two 200px tracks in 704px. The zero row gap
+    // would fit three.
+    const block = makeGridBlock({
+      minColumnWidthPx: 200,
+      rowGapConfig: { gapSize: streamlit.GapSize.NONE },
+      columnGapConfig: { gapSize: streamlit.GapSize.LARGE },
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveAttribute(
+      "data-test-column-count",
+      "2"
+    )
+  })
+
+  it("should keep the declared count and scroll when wrap is false", () => {
+    const block = makeGridBlock({
+      columns: 4,
+      minColumnWidthPx: 200,
+      wrap: false,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(4, minmax(200px, 1fr))"
+    )
+    expect(gridContainer).toHaveStyle("overflow-x: auto;")
+    expect(gridContainer).toHaveStyle("overflow-y: hidden;")
+    // Clearance for the hover toolbar, inside the cross-axis clip. Bottom
+    // padding is the focus ring. No negative margin, so this does not cover
+    // the element above.
+    expect(gridContainer).toHaveStyle(
+      "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+    )
+    expect(gridContainer).toHaveStyle("padding-bottom: 0.2rem")
+    expect(gridContainer).not.toHaveStyle("margin-block: -0.2rem")
+    expect(gridContainer).toHaveAttribute("data-test-wrap", "false")
+  })
+
+  it("does not scroll a no-wrap grid whose tracks fit", () => {
+    const block = makeGridBlock({
+      columns: 2,
+      minColumnWidthPx: 100,
+      wrap: false,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).not.toHaveStyle("overflow-x: auto")
+    expect(getComputedStyle(gridContainer).paddingTop).toBe("")
+  })
+
+  it("scrolls a text-only no-wrap grid without adding a tab stop", () => {
+    const block = makeGridBlock(
+      {
+        columns: 4,
+        minColumnWidthPx: 200,
+        wrap: false,
+      },
+      [makeTextElement("Note")]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    // Like st.container(height=...), a scrolling grid is not a tab stop.
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle("overflow-x: auto")
+    expect(gridContainer).not.toHaveAttribute("tabindex")
+  })
+
+  it("grows a stretch-height grid with its content instead of scrolling", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { useStretch: true },
+        gridContainer: {
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    // Same rule as st.container: fill a bounded parent via flex basis, and
+    // grow past it when the content is taller. Not an inner scrollport.
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
+    expect(layoutWrapper).toHaveStyle("height: auto;")
+    expect(layoutWrapper).not.toHaveStyle("height: 100%;")
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "display: contents"
+    )
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
+  })
+
+  it("uses dense packing only when dense is set", () => {
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock())
+    )
+    expect(screen.getByTestId("stGrid")).not.toHaveStyle(
+      "grid-auto-flow: dense"
+    )
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({ dense: true }))
+    )
+    expect(screen.getByTestId("stGrid")).toHaveStyle("grid-auto-flow: dense")
+  })
+
+  it("does not clip a pixel-height grid until in-flow tracks overflow", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          columns: 2,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const scrollBody = screen.getByTestId("stGridScrollBody")
+    expect(scrollBody).toHaveStyle("height: 100%")
+    expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+    expect(screen.getByTestId("stGrid")).not.toHaveStyle("overflow-y: auto")
+  })
+
+  it("lets a bounded no-wrap grid grow to its track floor so the port can scroll", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          columns: 4,
+          minColumnWidthPx: 200,
+          wrap: false,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    // 4 * 200px tracks + 3 * 1rem gaps. The measure box must be at least
+    // this wide or the scrollport's scrollWidth stays at the port width.
+    expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+      "min-width: 848px"
+    )
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "overflow-x: auto"
+    )
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "overflow-y: hidden"
+    )
+    // The port is a fixed height, so the toolbar room lives on the grid
+    // inside it rather than growing the port.
+    expect(screen.getByTestId("stGrid")).toHaveStyle(
+      "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+    )
+  })
+
+  function mockGridAndPortWidths(
+    gridWidth: number,
+    portWidth: number,
+    portClientWidth = portWidth
+  ): () => void {
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const width =
+          this.dataset.testid === "stGridScrollBody" ? portWidth : gridWidth
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: 160,
+          right: width,
+          width,
+          height: 160,
+          toJSON: () => ({}),
+        }
+      })
+    const clientSpy = vi
+      .spyOn(HTMLElement.prototype, "clientWidth", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === "stGridScrollBody"
+          ? portClientWidth
+          : gridWidth
+      })
+    return () => {
+      rectSpy.mockRestore()
+      clientSpy.mockRestore()
+    }
+  }
+
+  function renderBoundedNoWrapGrid(): void {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 160 },
+        gridContainer: {
+          columns: 4,
+          minColumnWidthPx: 200,
+          wrap: false,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+  }
+
+  it("scrolls a bounded no-wrap grid from the scrollport, not the expanded grid", async () => {
+    // The grid element is already at the track floor. Deciding from that
+    // width would clear the scrollbar. The port is still narrower.
+    const restore = mockGridAndPortWidths(900, 400)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+          "overflow-x: auto"
+        )
+      })
+      expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+        "min-width: 848px"
+      )
+      // Tracks that fit the port with no scrollbar gutter stay unscrolled
+      // vertically.
+      expect(screen.getByTestId("stGridScrollBody")).toHaveAttribute(
+        "data-test-scroll",
+        "false"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it("does not scroll a bounded no-wrap grid when the scrollport fits the tracks", async () => {
+    // A narrow grid measurement must not turn scrolling on once the port
+    // is wide enough for every track.
+    const restore = mockGridAndPortWidths(400, 900)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridContentMeasure")).not.toHaveStyle(
+          "min-width: 848px"
+        )
+      })
+      expect(screen.getByTestId("stGridScrollBody")).not.toHaveStyle(
+        "overflow-x: auto"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it("scrolls a bounded no-wrap grid when a vertical scrollbar narrows the port", async () => {
+    // The border box fits the 848px tracks. The content box beside a classic
+    // scrollbar does not, so the right edge must scroll instead of clipping.
+    const restore = mockGridAndPortWidths(900, 900, 820)
+    try {
+      renderBoundedNoWrapGrid()
+      await waitFor(() => {
+        expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+          "overflow-x: auto"
+        )
+      })
+      expect(screen.getByTestId("stGridContentMeasure")).toHaveStyle(
+        "min-width: 848px"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  it("scrolls a bounded no-wrap grid vertically when a horizontal scrollbar shortens the port", async () => {
+    // The 160px tracks fit the 160px border box. A classic horizontal
+    // scrollbar leaves 150px above it, so the bottom must scroll instead of
+    // being clipped by the cross-axis overflow.
+    const restoreWidths = mockGridAndPortWidths(900, 400)
+    const offsetSpy = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(160)
+    const clientSpy = vi
+      .spyOn(HTMLElement.prototype, "clientHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === "stGridScrollBody" ? 150 : 160
+      })
+    try {
+      renderBoundedNoWrapGrid()
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      await waitFor(() => {
+        expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+      expect(scrollBody).toHaveStyle("overflow-x: auto")
+      // The horizontally scrolling grid already holds the toolbar room, so
+      // the port does not add a second copy.
+      expect(getComputedStyle(scrollBody).paddingTop).toBe("")
+    } finally {
+      clientSpy.mockRestore()
+      offsetSpy.mockRestore()
+      restoreWidths()
+    }
+  })
+
+  it("reserves toolbar room at the top once a bounded grid scrolls vertically", async () => {
+    // Rows of 400px in a 160px port. A chart toolbar above the first row
+    // would sit outside the port's top edge without the padding.
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height =
+          this.dataset.testid === "stGridContentMeasure" ? 400 : 160
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: 704,
+          width: 704,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [makeTextElement("Tall content")],
+            new BlockProto({
+              allowEmpty: true,
+              heightConfig: { pixelHeight: 160 },
+              gridContainer: {
+                minColumnWidthPx: 220,
+                rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                verticalAlignment:
+                  BlockProto.GridContainer.VerticalAlignment.TOP,
+                border: false,
+                rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+              },
+            })
+          )
+        )
+      )
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      await waitFor(() => {
+        expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+      expect(scrollBody).toHaveStyle(
+        "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+      )
+      // A wrapping grid does not scroll horizontally, so the grid itself
+      // stays unpadded.
+      expect(getComputedStyle(screen.getByTestId("stGrid")).paddingTop).toBe(
+        ""
+      )
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("keeps content-height grids auto-sized", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveStyle("height: auto")
+    // The port stays mounted so a later bounded height does not remount
+    // the grid. It does not participate in layout.
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle(
+      "display: contents"
+    )
+  })
+
+  it("keeps the grid element mounted when height becomes bounded", () => {
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock())
+    )
+    const grid = screen.getByTestId("stGrid")
+    const bounded = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        heightConfig: { pixelHeight: 400 },
+        gridContainer: {
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    rerenderWithContexts(makeGridNodeRendererComponent(bounded))
+
+    expect(screen.getByTestId("stGrid")).toBe(grid)
+    expect(screen.getByTestId("stGridScrollBody")).toHaveStyle("height: 100%")
+  })
+
+  it("does not clip cell content until in-flow overflow is measured", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("overflow: visible")
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("height: 100%")
+    const body = screen.getByTestId("stGridCellBody")
+    expect(body).toHaveAttribute("data-test-scroll", "false")
+    // Toolbar room is only reserved once the cell scrolls.
+    expect(getComputedStyle(body).paddingTop).toBe("")
+  })
+
+  function makeTextElement(body: string, stretch = false): ElementNode {
+    const element = {
+      type: "text",
+      text: { body },
+      ...(stretch ? { heightConfig: { useStretch: true } } : {}),
+    } as unknown as Element
+
+    return new ElementNode(
+      element,
+      ForwardMsgMetadata.create(),
+      "",
+      FAKE_SCRIPT_HASH
+    )
+  }
+
+  it("fills a grid.cell() block in a definite-height row so stretch children grow", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Revenue"), makeTextElement("chart", true)],
+      new BlockProto({
+        allowEmpty: true,
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          wrap: false,
+          border: false,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_START,
+          align: BlockProto.FlexContainer.Align.ALIGN_START,
+          gapConfig: { gapSize: streamlit.GapSize.SMALL },
+        },
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      {
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+        verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
+        rowHeightConfig: { pixelHeight: 240 },
+      },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridCell = screen.getByTestId("stGridCell")
+    expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
+      height: "100%",
+      flex: "1 1 auto",
+    })
+    const cellBlock = within(gridCell).getByTestId("stVerticalBlock")
+    expect(cellBlock).toHaveStyle({
+      height: "100%",
+      justifyContent: "safe center",
+    })
+    // The row height is definite, so print keeps the flex alignment.
+    expect(printDeclarations(cellBlock)).not.toContain("display:block")
+
+    const containers = within(gridCell).getAllByTestId("stElementContainer")
+    const stretch = containers.find(container =>
+      container.textContent?.includes("chart")
+    )
+    expect(stretch).toHaveStyle({ flex: "1 1 0%", height: "100%" })
+    const label = containers.find(container =>
+      container.textContent?.includes("Revenue")
+    )
+    expect(label).not.toHaveStyle({ flex: "1 1 0%" })
+  })
+
+  function mockMeasuredHeights(): () => void {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height = this.dataset.testid === "stGridCellContent" ? 400 : 120
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: 200,
+          width: 200,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    return () => spy.mockRestore()
+  }
+
+  function renderFixedHeightCell(children: AppNode[]): void {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          {
+            rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+            rowHeightConfig: { pixelHeight: 240 },
+          },
+          [cell]
+        )
+      )
+    )
+  }
+
+  it("scrolls a text-only fixed-height cell without adding a tab stop", async () => {
+    const restore = mockMeasuredHeights()
+    try {
+      renderFixedHeightCell([makeTextElement("A long note")])
+      const body = screen.getByTestId("stGridCellBody")
+      await waitFor(() => {
+        expect(body).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(body).not.toHaveAttribute("tabindex")
+    } finally {
+      restore()
+    }
+  })
+
+  it("reserves toolbar room at the top of a scrolling fixed-height cell", async () => {
+    const restore = mockMeasuredHeights()
+    try {
+      renderFixedHeightCell([makeTextElement("A long note")])
+      const body = screen.getByTestId("stGridCellBody")
+      await waitFor(() => {
+        expect(body).toHaveAttribute("data-test-scroll", "true")
+      })
+      expect(body).toHaveStyle(
+        "padding-top: calc(0.25rem + 0.25rem + 0.25rem + 0.1rem + max(1.5rem, 24px))"
+      )
+    } finally {
+      restore()
+    }
+  })
+
+  /**
+   * Swaps in a ResizeObserver whose callbacks a test can fire, and runs
+   * animation frames right away so the observer updates apply in `act`.
+   */
+  function captureResizeObservers(): {
+    fireResize: () => void
+    restore: () => void
+  } {
+    const callbacks = new Set<ResizeObserverCallback>()
+    const original = globalThis.ResizeObserver
+    globalThis.ResizeObserver = class {
+      private readonly callback: ResizeObserverCallback
+
+      public unobserve = vi.fn()
+
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback
+      }
+
+      public observe(): void {
+        callbacks.add(this.callback)
+      }
+
+      public disconnect(): void {
+        callbacks.delete(this.callback)
+      }
+    }
+    const rafSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation(callback => {
+        callback(0)
+        return 0
+      })
+    return {
+      fireResize: () => {
+        act(() => {
+          callbacks.forEach(callback => callback([], {} as ResizeObserver))
+        })
+      },
+      restore: () => {
+        globalThis.ResizeObserver = original
+        rafSpy.mockRestore()
+      },
+    }
+  }
+
+  /** Mocks element boxes: `height` for the given test id, 160px otherwise. */
+  function mockBoxes(
+    measuredTestId: string,
+    size: { width: number; height: number }
+  ): () => void {
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const height =
+          this.dataset.testid === measuredTestId ? size.height : 160
+        return {
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: height,
+          right: size.width,
+          width: size.width,
+          height,
+          toJSON: () => ({}),
+        }
+      })
+    return () => spy.mockRestore()
+  }
+
+  it("reflows the column count when the grid resizes, keeping cells mounted", () => {
+    const size = { width: 704, height: 40 }
+    const restoreBoxes = mockBoxes("stGrid", size)
+    const observers = captureResizeObservers()
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          makeGridBlock({ minColumnWidthPx: 200 }, [
+            textInput("Name", "grid-resize-name"),
+            text("Second"),
+          ])
+        )
+      )
+      const grid = screen.getByTestId("stGrid")
+      expect(grid).toHaveAttribute("data-test-column-count", "3")
+      const [inputCell] = screen.getAllByTestId("stGridCell")
+      const inputContainer = within(inputCell).getByTestId(
+        "stElementContainer"
+      )
+
+      size.width = 260
+      observers.fireResize()
+      expect(grid).toHaveAttribute("data-test-column-count", "1")
+
+      size.width = 704
+      observers.fireResize()
+      expect(grid).toHaveAttribute("data-test-column-count", "3")
+      expect(screen.getAllByTestId("stGridCell")[0]).toBe(inputCell)
+      expect(within(inputCell).getByTestId("stElementContainer")).toBe(
+        inputContainer
+      )
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
+  it("scrolls a measured fixed-height cell only once its content outgrows it", () => {
+    const size = { width: 200, height: 100 }
+    const restoreBoxes = mockBoxes("stGridCellContent", size)
+    const observers = captureResizeObservers()
+    try {
+      renderFixedHeightCell([makeTextElement("A note")])
+      const body = screen.getByTestId("stGridCellBody")
+      // 100px of content in a 160px cell fits.
+      expect(body).toHaveAttribute("data-test-scroll", "false")
+      expect(body).not.toHaveStyle("overflow-y: auto")
+
+      size.height = 400
+      observers.fireResize()
+      expect(body).toHaveAttribute("data-test-scroll", "true")
+      expect(body).toHaveStyle("overflow-y: auto")
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
+  it("scrolls a measured pixel-height grid only once its rows outgrow it", () => {
+    const size = { width: 704, height: 100 }
+    const restoreBoxes = mockBoxes("stGridContentMeasure", size)
+    const observers = captureResizeObservers()
+    try {
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          new BlockNode(
+            FAKE_SCRIPT_HASH,
+            [makeTextElement("Rows")],
+            new BlockProto({
+              allowEmpty: true,
+              heightConfig: { pixelHeight: 160 },
+              gridContainer: {
+                minColumnWidthPx: 220,
+                rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+                rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+              },
+            })
+          )
+        )
+      )
+      const scrollBody = screen.getByTestId("stGridScrollBody")
+      // 100px of rows in a 160px port fit.
+      expect(scrollBody).toHaveAttribute("data-test-scroll", "false")
+
+      size.height = 400
+      observers.fireResize()
+      expect(scrollBody).toHaveAttribute("data-test-scroll", "true")
+      expect(scrollBody).toHaveStyle("overflow-y: auto")
+    } finally {
+      observers.restore()
+      restoreBoxes()
+    }
+  })
+
+  it("keeps a grid.cell() block content-sized when the row height is content", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Short")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      {
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
+      },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridCell = screen.getByTestId("stGridCell")
+    expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
+      height: "auto",
+    })
+    const cellBlock = within(gridCell).getByTestId("stVerticalBlock")
+    expect(cellBlock).not.toHaveStyle({
+      height: "100%",
+    })
+    // A content-height block prints as normal flow.
+    expect(printDeclarations(cellBlock)).toContain("display:block")
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
+      "display: contents"
+    )
+  })
+
+  it("leaves a direct stretch child on height 100% without flex-grow", () => {
+    const block = makeGridBlock(
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED },
+      [makeTextElement("direct", true)]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const container = within(screen.getByTestId("stGridCell")).getByTestId(
+      "stElementContainer"
+    )
+    expect(container).toHaveStyle({ height: "100%" })
+    expect(container).not.toHaveStyle({ flex: "1 1 0%" })
+    expect(
+      within(screen.getByTestId("stGridCell")).queryByTestId("stLayoutWrapper")
+    ).not.toBeInTheDocument()
+  })
+
+  it("resolves columns from the laid-out width instead of the 704px fallback", () => {
+    const rect = {
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 40,
+      right: 260,
+      width: 260,
+      height: 40,
+      toJSON: () => ({}),
+    } as DOMRect
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue(rect)
+    try {
+      const block = makeGridBlock({
+        minColumnWidthPx: 200,
+      })
+      renderWithContexts(makeGridNodeRendererComponent(block))
+      // (260 + 16) / (200 + 16) = 1 column, not the 704px fallback's 3.
+      expect(screen.getByTestId("stGrid")).toHaveAttribute(
+        "data-test-column-count",
+        "1"
+      )
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("does not add a cell scrollport in content-height mode", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const block = makeGridBlock(
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
+      [cell]
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
+      "display: contents"
+    )
+    expect(screen.getByTestId("stGridCellBody")).toHaveAttribute(
+      "data-test-scroll",
+      "false"
+    )
+  })
+
+  it("keeps a cell mounted when row height becomes fixed", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [makeTextElement("Short")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
+          [cell]
+        )
+      )
+    )
+    const gridCell = screen.getByTestId("stGridCell")
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock(
+          {
+            rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+            rowHeightConfig: { pixelHeight: 240 },
+          },
+          [cell]
+        )
+      )
+    )
+
+    expect(screen.getByTestId("stGridCell")).toBe(gridCell)
+    expect(screen.getByTestId("stGridCellBody")).toHaveStyle("height: 100%")
+  })
+
+  it("should span all columns when columnSpanAll is set", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: { columnSpanAll: true },
+      })
+    )
+    const block = makeGridBlock({ columns: 4 }, [cell])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
+  })
+
+  it.each([
+    [
+      "clamps a column span to the resolved column count",
+      { columnSpan: 4 },
+      { gridColumn: "span 3" },
+    ],
+    ["applies a column span", { columnSpan: 2 }, { gridColumn: "span 2" }],
+    ["applies a row span", { rowSpan: 2 }, { gridRow: "span 2" }],
+  ])("%s", (_desc, gridCell, expectedStyle) => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell })
+    )
+    // st.grid(4) wraps to 3 columns at the 704px fallback.
+    const block = makeGridBlock({ columns: 4 }, [cell])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGrid")).toHaveAttribute(
+      "data-test-column-count",
+      "3"
+    )
+    const cellElement = screen.getByTestId("stGridCell")
+    expect(cellElement).toHaveStyle(expectedStyle)
+    // A span on one axis leaves the other axis at a single track.
+    const otherAxis = "gridColumn" in expectedStyle ? "gridRow" : "gridColumn"
+    expect(getComputedStyle(cellElement)[otherAxis]).toBe("")
+  })
+
+  it.each([
+    [
+      "row gap: small, column gap: small",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+        columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+      },
+      "gap: 1rem 1rem;",
+    ],
+    [
+      "row gap: medium, column gap: large",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.MEDIUM },
+        columnGapConfig: { gapSize: streamlit.GapSize.LARGE },
+      },
+      "gap: 2rem 4rem;",
+    ],
+    [
+      "row gap: none, column gap: none",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.NONE },
+        columnGapConfig: { gapSize: streamlit.GapSize.NONE },
+      },
+      "gap: 0 0;",
+    ],
+  ])("should apply %s", (_desc, gapConfig, expectedStyle) => {
+    const block = makeGridBlock(gapConfig)
+    renderWithContexts(makeGridNodeRendererComponent(block))
+    expect(screen.getByTestId("stGrid")).toHaveStyle(expectedStyle)
+  })
+
+  it.each([
+    [
+      "auto rows: auto for content mode",
+      { rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT },
+      "grid-auto-rows: auto;",
+    ],
+    [
+      "auto rows: fixed px for fixed mode",
+      {
+        rowHeightMode: BlockProto.GridContainer.RowHeightMode.FIXED,
+        rowHeightConfig: { pixelHeight: 100 },
+      },
+      "grid-auto-rows: 100px;",
+    ],
+  ])("should apply %s", (_desc, cellConfig, expectedStyle) => {
+    const block = makeGridBlock(cellConfig)
+    renderWithContexts(makeGridNodeRendererComponent(block))
+    expect(screen.getByTestId("stGrid")).toHaveStyle(expectedStyle)
+  })
+
+  it("should apply user key as CSS class", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          minColumnWidthPx: 220,
+        },
+        id: "$$ID-abc123-my_grid",
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveClass("st-key-my_grid")
+  })
+
+  it("renders element children as cells with a public stGridCell class", () => {
+    const block = makeGridBlock({}, [
+      textInput("First", "grid-cell-a"),
+      textInput("Second", "grid-cell-b"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveClass("stGridCell")
+    expect(cells[1]).toHaveClass("stGridCell")
+    expect(cells[0]).not.toBe(cells[1])
+  })
+
+  it("does not create a cell for a duplicate widget id", () => {
+    const block = makeGridBlock({}, [
+      textInput("First", "same-id"),
+      textInput("Second", "same-id"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
+  })
+
+  it("places each child of a transparent wrapper in its own cell", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("First card"), text("Second card")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("First card")
+    expect(cells[1]).toHaveTextContent("Second card")
+  })
+
+  it("keeps grid.cell output inside a transparent wrapper as one cell", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Grouped"), text("Together")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [cell],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(1)
+    expect(cells[0]).toHaveTextContent("Grouped")
+    expect(cells[0]).toHaveTextContent("Together")
+  })
+
+  it("flattens nested transparent wrappers into cells", () => {
+    const inner = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Inner")],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const outer = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Outer"), inner],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [outer])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("Outer")
+    expect(cells[1]).toHaveTextContent("Inner")
+  })
+
+  it("does not create a cell for an empty transparent wrapper", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const block = makeGridBlock({}, [fragment, text("Kept")])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getByText("Kept")).toBeVisible()
+  })
+
+  it("keeps a non-transparent block as one cell", () => {
+    const group = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("A"), text("B")],
+      new BlockProto({ allowEmpty: true, vertical: {} })
+    )
+    const block = makeGridBlock({}, [group])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+    expect(screen.getByTestId("stGridCell")).toHaveTextContent("A")
+    expect(screen.getByTestId("stGridCell")).toHaveTextContent("B")
+  })
+
+  it("does not create a cell for an empty block that does not allow empty", () => {
+    // A `grid.container()` that is never written to renders nothing in a
+    // vertical layout. An empty `grid.cell()` allows empty and keeps its cell.
+    const unwrittenContainer = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: false, vertical: {} })
+    )
+    const reservedCell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell: {} })
+    )
+    const block = makeGridBlock({ border: true }, [
+      unwrittenContainer,
+      reservedCell,
+      text("Kept"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).not.toHaveTextContent("Kept")
+    expect(cells[1]).toHaveTextContent("Kept")
+  })
+
+  it("keeps a later cell's controls mounted when an earlier empty container fills in", () => {
+    // `placeholder = grid.container()`, a text input in the next
+    // `grid.cell()`, then a write into `placeholder`.
+    const placeholder = (children: AppNode[]): BlockNode =>
+      new BlockNode(
+        FAKE_SCRIPT_HASH,
+        children,
+        new BlockProto({ allowEmpty: false, vertical: {} })
+      )
+    const queryCell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [textInput("Query", "grid-later-query")],
+      new BlockProto({ allowEmpty: true, vertical: {}, gridCell: {} })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [placeholder([]), queryCell])
+      )
+    )
+    // The input container is a new node whenever the input remounts.
+    const inputContainer = within(
+      screen.getByTestId("stGridCell")
+    ).getByTestId("stElementContainer")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [placeholder([text("Results")]), queryCell])
+      )
+    )
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(2)
+    expect(cells[0]).toHaveTextContent("Results")
+    expect(within(cells[1]).getByTestId("stElementContainer")).toBe(
+      inputContainer
+    )
+  })
+
+  it("does not create a cell for an empty transient child", () => {
+    const block = makeGridBlock({}, [
+      new TransientNode(FAKE_SCRIPT_HASH),
+      textInput("Kept", "grid-cell-kept"),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
+  })
+
+  it("keeps a direct widget cell mounted when a spinner wraps it", () => {
+    const widget = textInput("Name", "grid-spinner-widget")
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({}, [widget]))
+    )
+    const cell = screen.getByTestId("stGridCell")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [
+          new TransientNode(FAKE_SCRIPT_HASH, widget, [text("Loading")]),
+        ])
+      )
+    )
+
+    expect(screen.getByTestId("stGridCell")).toBe(cell)
+    expect(screen.getByText("Loading")).toBeVisible()
+    expect(within(cell).getByTestId("stSkeleton")).toBeVisible()
+  })
+
+  it("keeps fragment cells separate and mounted when a spinner wraps their wrapper", () => {
+    const fragment = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [
+        textInput("First", "grid-spinner-first"),
+        textInput("Second", "grid-spinner-second"),
+      ],
+      new BlockProto({ allowEmpty: true, transparent: {} })
+    )
+    const { rerenderWithContexts } = renderWithContexts(
+      makeGridNodeRendererComponent(makeGridBlock({}, [fragment]))
+    )
+    const [firstCell, secondCell] = screen.getAllByTestId("stGridCell")
+
+    rerenderWithContexts(
+      makeGridNodeRendererComponent(
+        makeGridBlock({}, [
+          new TransientNode(FAKE_SCRIPT_HASH, fragment, [text("Loading")]),
+        ])
+      )
+    )
+
+    const cells = screen.getAllByTestId("stGridCell")
+    expect(cells).toHaveLength(3)
+    expect(cells[0]).toHaveTextContent("Loading")
+    expect(cells[0]).not.toHaveTextContent("First")
+    expect(cells[1]).toBe(firstCell)
+    expect(cells[2]).toBe(secondCell)
+  })
+
+  it("keeps column span when a spinner wraps the cell", () => {
+    const cell = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("Featured")],
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: { columnSpanAll: true },
+      })
+    )
+    const block = makeGridBlock({ columns: 4 }, [
+      new TransientNode(FAKE_SCRIPT_HASH, cell, [text("Loading")]),
+    ])
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    expect(screen.getByTestId("stGridCell")).toHaveStyle("grid-column: 1/-1")
+    expect(screen.getByText("Featured")).toBeVisible()
+    expect(screen.getByText("Loading")).toBeVisible()
+  })
+
+  it("uses the grid pixel width for first-paint column count", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        widthConfig: { pixelWidth: 416 },
+        gridContainer: {
+          minColumnWidthPx: 200,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          border: false,
+          rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
+        },
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // Unmeasured first paint uses pixelWidth 416: (416+16)/(200+16) = 2
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(2, minmax(0, 1fr))"
+    )
+    expect(gridContainer).toHaveAttribute("data-test-column-count", "2")
+  })
+})
+
+describe("element retention", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  // ElementNodeRenderer lazy-loads TextInput. Load it up front so the first
+  // render doesn't depend on how fast a cold dynamic import resolves.
+  beforeAll(async () => {
+    await import("~lib/components/widgets/TextInput/TextInput")
+  }, 30_000)
+
+  function writeElement(
+    root: AppRoot,
+    scriptRunId: string,
+    index: number,
+    element: Element.$Properties
+  ): AppRoot {
+    return root.applyDelta(
+      scriptRunId,
+      makeProto(DeltaProto, { newElement: element }),
+      forwardMsgMetadata([0, index])
+    )
+  }
+
+  function renderMain(root: AppRoot): ReactElement {
+    return (
+      <FlexBoxContainer
+        node={root.main}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  const nameInput = {
+    textInput: { id: "$$ID-name-key", label: "Name", default: "" },
+  }
+
+  it("keeps a displaced widget mounted until the run re-emits it", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, { text: { body: "first" } })
+    root = writeElement(root, "run0", 1, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const input = await screen.findByRole("textbox", { name: "Name" })
+
+    // A notice is inserted above the input and overwrites its delta path.
+    const running = {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    }
+    root = writeElement(root, "run1", 0, { text: { body: "first" } })
+    root = writeElement(root, "run1", 1, { text: { body: "notice" } })
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(await screen.findByText("notice")).toBeVisible()
+    expect(input).toBeInTheDocument()
+    expect(input).not.toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).toHaveAttribute("data-retained", "true")
+
+    // The input arrives one slot later and reclaims the mounted instance.
+    root = writeElement(root, "run1", 2, nameInput)
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(input)
+    expect(input).toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).not.toHaveAttribute("data-retained")
+  })
+
+  it("keeps a displaced widget in a grid cell mounted until the run re-emits it", async () => {
+    const writeGrid = (root: AppRoot, scriptRunId: string): AppRoot =>
+      root.applyDelta(
+        scriptRunId,
+        makeProto(DeltaProto, {
+          addBlock: {
+            allowEmpty: true,
+            gridContainer: {
+              minColumnWidthPx: 220,
+              rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+              columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+            },
+          },
+        }),
+        forwardMsgMetadata([0, 0])
+      )
+    const writeGridElement = (
+      root: AppRoot,
+      scriptRunId: string,
+      index: number,
+      element: Element.$Properties
+    ): AppRoot =>
+      root.applyDelta(
+        scriptRunId,
+        makeProto(DeltaProto, { newElement: element }),
+        forwardMsgMetadata([0, 0, index])
+      )
+    const cellOf = (element: HTMLElement): HTMLElement | null =>
+      element.closest<HTMLElement>("[data-testid='stGridCell']")
+
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeGrid(root, "run0")
+    root = writeGridElement(root, "run0", 0, { text: { body: "first" } })
+    root = writeGridElement(root, "run0", 1, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const input = await screen.findByRole("textbox", { name: "Name" })
+
+    // A notice is inserted above the input and overwrites its grid slot.
+    const running = {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    }
+    root = writeGrid(root, "run1")
+    root = writeGridElement(root, "run1", 0, { text: { body: "first" } })
+    root = writeGridElement(root, "run1", 1, { text: { body: "notice" } })
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(await screen.findByText("notice")).toBeVisible()
+    expect(input).toBeInTheDocument()
+    expect(cellOf(input)).not.toBeVisible()
+
+    // The input arrives one slot later and reclaims the mounted cell.
+    root = writeGridElement(root, "run1", 2, nameInput)
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(input)
+    expect(cellOf(input)).toBeVisible()
+    expect(screen.getAllByTestId("stGridCell")).toHaveLength(3)
+  })
+
+  it("unmounts a displaced widget that the run never re-emits", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root))
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeVisible()
+
+    root = writeElement(root, "run1", 0, { text: { body: "replacement" } })
+    rerenderWithContexts(renderMain(root))
+    expect(await screen.findByText("replacement")).toBeVisible()
+    expect(
+      screen.getByRole("textbox", { name: "Name", hidden: true })
+    ).not.toBeVisible()
+
+    root = root.clearStaleNodes("run1")
+    rerenderWithContexts(renderMain(root))
+
+    expect(screen.getByText("replacement")).toBeVisible()
+    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull()
   })
 })

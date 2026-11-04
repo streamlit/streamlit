@@ -114,7 +114,9 @@ _GL_SERIES_TYPES: Final = frozenset(
 
 # Components from the same ECharts GL extension. Unlike the series types above
 # these are top-level option keys, so they are matched per option variant.
-_GL_COMPONENT_KEYS: Final = frozenset({"geo3D", "globe", "grid3D"})
+_GL_COMPONENT_KEYS: Final = frozenset(
+    {"geo3D", "globe", "grid3D", "mapbox3D", "maptalks3D"}
+)
 
 # Series types from other ECharts extensions that Streamlit doesn't bundle,
 # mapped to the package that provides them. This list is best-effort: any other
@@ -799,9 +801,11 @@ def _serialize_option(option: dict[str, Any]) -> str:
             "The provided ECharts spec is not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects: "
             "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Dataframes are converted "
-            "automatically only inside `dataset.source`; anywhere else (for "
-            "example `series.data`) convert them to plain lists first.",
+            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
+            "dataframe in `dataset.source`, which converts datetimes, NumPy "
+            "values, and missing values automatically; values anywhere else "
+            "(for example `series.data`) must already be plain Python values "
+            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -975,6 +979,10 @@ class EChartsMixin:
         dictionary (the same JSON you would pass to ``setOption`` in JavaScript),
         a JSON string, or a ``pyecharts`` chart instance.
 
+        To chart a dataframe, pass it as ``dataset.source`` instead of
+        converting it to lists. Always do this for more than about 1,000 rows.
+        For the advantages, see the ``spec`` parameter.
+
         .. note::
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
@@ -1000,31 +1008,58 @@ class EChartsMixin:
         .. note::
             Streamlit extends two tooltip options so you can format tooltips
             without JavaScript. Both work in ``tooltip`` and
-            ``series[i].tooltip``. Per-item tooltips inside ``series[i].data``
-            support neither, so set these options on the series instead:
+            ``series[i].tooltip``, but not in per-item tooltips inside
+            ``series[i].data``:
 
-            - ``valueFormatter`` accepts a number format string, which formats
-              each value in the default tooltip. Use a named format
-              (``"plain"``, ``"localized"``, ``"dollar"``, ``"euro"``,
-              ``"yen"``, ``"percent"``, ``"compact"``, ``"scientific"``,
+            - ``valueFormatter`` accepts a number format, which formats each
+              value in the default tooltip: a named format (``"plain"``,
+              ``"localized"``, ``"dollar"``, ``"euro"``, ``"yen"``,
+              ``"percent"``, ``"compact"``, ``"scientific"``,
               ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
-              printf-style format string (e.g. ``"%,d sessions"``). These are
-              the same formats as in |st.metric|_. ``"percent"`` multiplies
-              values by 100. One format applies to every value of a series, so
-              use ``encode.tooltip`` to choose which dimensions the tooltip
-              shows. Streamlit ignores any other value, including a malformed
-              printf-style string, and the tooltip keeps its default
-              formatting.
+              printf-style string (e.g. ``"%,d sessions"``), as in
+              |st.metric|_. ``"percent"`` multiplies values by 100. One format
+              applies to every value of a series, so use ``encode.tooltip`` to
+              choose which dimensions the tooltip shows. Any other value,
+              including a malformed printf-style string, is ignored, and the
+              tooltip keeps its default formatting.
             - String ``formatter`` templates in tooltips expand the
               ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
               otherwise supports only in series labels (e.g.
               ``"{b}: {@[2]} sessions"``). In an axis tooltip, they read the
-              first series. Template values are inserted as escaped text,
-              without a number format. The template itself is HTML, as in any
+              first series. Values are inserted as escaped text without a
+              number format, while the template itself is HTML, as in any
               other ECharts tooltip string.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
+
+        .. note::
+            To keep large charts fast, Streamlit fills in two ECharts options
+            that your ``spec`` doesn't set, counting the items in each series'
+            ``data`` or its dataset's ``source``:
+
+            - ``"large": True`` on ``scatter`` series with more than 20,000
+              points and ``bar`` series with more than 2,000 bars. ECharts
+              then draws each series as a few batched paths, which loads much
+              faster. Tooltips still work, but hovering doesn't highlight an
+              item and labels aren't drawn. ECharts skips animations at these
+              sizes anyway.
+            - ``"showSymbol": False`` on ``line`` series with more than 2,000
+              points on a value or time axis, where symbols would merge into a
+              solid band. An axis tooltip (``"trigger": "axis"``) still marks
+              the hovered point.
+
+            Neither applies to charts with selections (``on_select``,
+            ``selectedMode``, or a ``brush``) or to series whose ``data`` items
+            are objects with their own settings. Large mode also skips charts
+            with a ``visualMap`` and series with ``"colorBy": "data"``, and
+            ``line`` series keep their symbols with an item tooltip or empty
+            values. To opt out, set the option yourself, for example
+            ``"large": False``. pyecharts charts always set both, so pass
+            ``is_large=True`` or ``is_symbol_show=False`` yourself. For even
+            denser lines, ``"sampling": "lttb"`` draws a subset of points that
+            keeps the line's shape. Streamlit doesn't set it because it changes
+            which points are drawn and shown in tooltips.
 
         Parameters
         ----------
@@ -1038,14 +1073,27 @@ class EChartsMixin:
               typing (the presence of a ``dump_options`` method) and converted
               automatically. ``pyecharts`` is not a Streamlit dependency.
 
-            If your option object includes a ``dataset`` with a dataframe-like
-            ``source`` (pandas, Polars, PyArrow, and others), Streamlit passes
-            its rows to ECharts and keeps the column order through
+            Put chart data in ``dataset.source`` as a dataframe-like object
+            (pandas, Polars, PyArrow, and others) rather than as lists in
+            ``series.data`` or ``xAxis.data``. Always do this for more than
+            about 1,000 rows. Graph, sankey, tree, treemap, sunburst, and other
+            series that don't read ``dataset`` take their data in
+            ``series.data`` instead. A dataframe source has these advantages:
+
+            - Performance: Streamlit sends the dataframe to the browser as
+              Arrow, which is smaller and faster than inline values.
+            - Value types: Datetimes become ISO-8601 strings (in UTC if
+              timezone-aware), durations become milliseconds, and missing
+              values become ``null``. Other non-numeric values use the text
+              ``st.dataframe`` shows. Values elsewhere in the option, such as
+              ``series.data``, must already be JSON-compatible, so datetimes,
+              NumPy integers, and ``NaN`` in them raise an error.
+            - Show data: The chart's hover toolbar has a **Show data** button
+              that displays the dataframe as a table.
+
+            Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
-            isn't included, so use ``df.reset_index()`` to plot it. Datetimes
-            become ISO-8601 strings (in UTC if timezone-aware), durations become
-            milliseconds, and missing values become ``null``. Other non-numeric
-            values use the text ``st.dataframe`` shows.
+            isn't included, so use ``df.reset_index()`` to plot it.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -1084,24 +1132,29 @@ class EChartsMixin:
             The theme of the chart. If ``theme`` is ``"streamlit"`` (default),
             Streamlit applies its own colors, fonts, and plot layout. If
             ``theme`` is ``None``, Streamlit leaves your ``spec``'s styling
-            untouched and uses ECharts' built-in default theme.
-
-            Two defaults still apply when ``theme`` is ``None``:
-
-            - Accessibility: ``aria.enabled`` stays on so the chart keeps a
-              screen-reader description unless you set ``aria`` yourself.
-            - Display-only cursor: for charts with ``on_select="ignore"``, a
-              missing ``series.cursor`` is set to ``"default"`` so the chart
-              does not look clickable. Set ``series.cursor`` yourself to
-              override it.
+            untouched and uses ECharts' built-in default theme. Two defaults
+            still apply: ``aria.enabled`` stays on unless you set ``aria``, so
+            the chart keeps a screen-reader description, and a display-only
+            chart (``on_select="ignore"``) with no ``series.cursor`` gets the
+            ``"default"`` cursor so it doesn't look clickable.
 
             The ``"streamlit"`` theme can be partially customized through the
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
-            also applied, and long tooltip numbers are shortened. Set
-            ``tooltip.valueFormatter`` to a number format (for example
-            ``"dollar"``) or ``tooltip.formatter`` to a string template (for
-            example ``"{b}: {c}"``) to use your own formatting.
+            also applied, and long tooltip numbers are shortened unless you set
+            ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
+            note above). Time, value, and log axes hide tick labels that would
+            overlap. To show every label on an axis, add
+            ``"hideOverlap": False`` to its ``axisLabel``.
+
+            On a time ``xAxis`` or ``yAxis``, the axis tooltip header and axis
+            pointer label show a midnight value as a date (for example
+            ``2026-08-18``) and any other value as a date and time to the
+            second, so an hourly point at midnight shows only its date. An
+            ``axisPointer.label.formatter`` replaces this, whether it's set on
+            the axis, ``tooltip``, ``grid.tooltip``, the top-level
+            ``axisPointer``, a timeline tick, or a ``media`` override.
+            ``"{value}"`` restores ECharts' default label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
@@ -1252,27 +1305,35 @@ class EChartsMixin:
         **Example 3: Zoom slider, toolbox, and legend**
 
         In-chart controls such as ``dataZoom`` and ``toolbox`` are configured
-        in the spec. Streamlit's hover toolbar (Show data for dataframe-backed
-        charts, download, and fullscreen) is separate from ECharts'
-        ``toolbox``: omit ``saveAsImage`` if you only want Streamlit's
-        download, or set ``toolbox.left`` so the two don't stack in the
-        top-right corner. Place ``legend`` at the top so it doesn't share the
-        footer with a bottom ``dataZoom`` slider.
+        in the spec. ECharts' ``toolbox`` is separate from Streamlit's hover
+        toolbar (Show data, download, and fullscreen), so set ``toolbox.left``
+        to keep the two from stacking in the top-right corner, and omit
+        ``saveAsImage`` if Streamlit's download is enough. Place ``legend`` at
+        the top so it doesn't share the footer with a bottom ``dataZoom``
+        slider. Each series takes its legend name from its dataframe column.
 
         With an inside ``dataZoom``, the wheel scrolls the page until the
-        pointer has rested on the chart, then it zooms or pans. Pinch, or the
-        modifier set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, does that
-        on the first wheel of a new flick. A flick that already started as a
-        page scroll keeps scrolling.
+        pointer rests on the chart, then zooms or pans. Pinch, or the modifier
+        set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first
+        wheel of a new flick, unless that flick started as a page scroll.
 
         .. code-block:: python
            :filename: streamlit_app.py
 
+           import pandas as pd
            import streamlit as st
+
+           df = pd.DataFrame(
+               {
+                   "quarter": ["Q1", "Q2", "Q3", "Q4"],
+                   "Revenue": [820, 932, 901, 934],
+                   "Cost": [500, 610, 550, 700],
+               }
+           )
 
            st.echarts_chart(
                {
-                   "legend": {"data": ["Revenue", "Cost"], "top": 28},
+                   "legend": {"top": 28},
                    "tooltip": {"trigger": "axis"},
                    "toolbox": {
                        "left": 0,
@@ -1281,27 +1342,11 @@ class EChartsMixin:
                            "restore": {},
                        },
                    },
-                   "dataZoom": [
-                       {"type": "inside"},
-                       {"type": "slider"},
-                   ],
-                   "xAxis": {
-                       "type": "category",
-                       "data": ["Q1", "Q2", "Q3", "Q4"],
-                   },
+                   "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+                   "dataset": {"source": df},
+                   "xAxis": {"type": "category"},
                    "yAxis": {"type": "value"},
-                   "series": [
-                       {
-                           "name": "Revenue",
-                           "type": "line",
-                           "data": [820, 932, 901, 934],
-                       },
-                       {
-                           "name": "Cost",
-                           "type": "bar",
-                           "data": [500, 610, 550, 700],
-                       },
-                   ],
+                   "series": [{"type": "line"}, {"type": "bar"}],
                }
            )
 
@@ -1314,36 +1359,37 @@ class EChartsMixin:
         Set ``on_select="rerun"`` to make the chart behave like an input widget,
         and enable point selection in your ``spec`` by setting
         ``selectedMode`` on the series. Streamlit returns selected indices grouped
-        by series and data type.
+        by series and data type. For a dataset without transforms, the indices
+        address the dataframe's rows.
 
         .. code-block:: python
            :filename: streamlit_app.py
 
+           import pandas as pd
            import streamlit as st
 
-           spec = {
-               "xAxis": {
-                   "type": "category",
-                   "data": ["Mon", "Tue", "Wed", "Thu", "Fri"],
-               },
-               "yAxis": {"type": "value"},
-               "series": [
-                   {
-                       "type": "bar",
-                       "selectedMode": "multiple",
-                       "data": [120, 200, 150, 80, 70],
-                   }
-               ],
-           }
-
-           event = st.echarts_chart(spec, key="sales", on_select="rerun")
-
-           rows = (
-               event.selection.selected[0]["data_indices"]
-               if event.selection.selected
-               else []
+           df = pd.DataFrame(
+               {
+                   "day": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                   "sales": [120, 200, 150, 80, 70],
+               }
            )
-           st.write("You selected:", [spec["series"][0]["data"][i] for i in rows])
+
+           event = st.echarts_chart(
+               {
+                   "dataset": {"source": df},
+                   "xAxis": {"type": "category"},
+                   "yAxis": {"type": "value"},
+                   "series": [{"type": "bar", "selectedMode": "multiple"}],
+               },
+               key="sales",
+               on_select="rerun",
+           )
+
+           rows = [
+               i for group in event.selection.selected for i in group["data_indices"]
+           ]
+           st.dataframe(df.iloc[rows])
 
         .. output::
            https://doc-echarts-chart-selection.streamlit.app/

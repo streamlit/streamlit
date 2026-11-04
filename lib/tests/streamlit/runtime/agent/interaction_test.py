@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, get_args
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +25,7 @@ import pytest
 from streamlit.elements.lib import agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.WidgetStates_pb2 import WidgetStates
-from streamlit.runtime.agent import interaction, tree
+from streamlit.runtime.agent import interaction, tree, usage
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.query_params import (
     CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
@@ -33,6 +33,8 @@ from streamlit.runtime.state.query_params import (
     QueryParams,
     sanitize_query_string,
 )
+from tests.streamlit.runtime.agent import usage_counts
+from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
     from streamlit.source_util import PageInfo
@@ -40,8 +42,9 @@ if TYPE_CHECKING:
 
 def _new_session(run_id: str, fragment_ids: list[str] | None = None) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.new_session.script_run_id = run_id
-    msg.new_session.fragment_ids_this_run.extend(fragment_ids or [])
+    msg.new_session.SetInParent()
+    msg.metadata.run.script_run_id = run_id
+    msg.metadata.run.fragment_ids.extend(fragment_ids or [])
     return msg
 
 
@@ -309,7 +312,7 @@ def test_client_keeps_the_latest_message_per_type_and_session_event() -> None:
     new_sessions = [msg for msg in messages if msg.HasField("new_session")]
     finishes = [msg for msg in messages if msg.HasField("script_finished")]
     events = [msg for msg in messages if msg.HasField("session_event")]
-    assert [msg.new_session.script_run_id for msg in new_sessions] == ["r2"]
+    assert [msg.metadata.run.script_run_id for msg in new_sessions] == ["r2"]
     assert [msg.script_finished for msg in finishes] == [
         ForwardMsg.FINISHED_WITH_COMPILE_ERROR
     ]
@@ -362,6 +365,39 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
         client.write_forward_msg(_new_session("r1"))
 
     log_exception.assert_called_once()
+
+
+def test_client_new_session_without_run_identity_starts_full_run_with_empty_id() -> (
+    None
+):
+    """A `new_session` missing its run identity logs a warning and starts a
+    full run with an empty run ID, so the previous run's deltas go stale.
+    """
+    client = interaction.AgentSessionClient()
+    no_identity = ForwardMsg()
+    no_identity.new_session.SetInParent()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "first"),
+    )
+
+    with (
+        patch.object(interaction._LOGGER, "warning") as log_warning,
+        patch.object(interaction._LOGGER, "exception") as log_exception,
+    ):
+        client.write_forward_msg(no_identity)
+
+    log_warning.assert_called_once()
+    log_exception.assert_not_called()
+    _write_all(
+        client,
+        _markdown([0, 1], "second"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+    )
+    new_sessions = [msg for msg in client.messages if msg.HasField("new_session")]
+    assert [msg.HasField("metadata") for msg in new_sessions] == [False]
+    assert _bodies(client) == ["second"]
 
 
 def test_request_context_withholds_credentials_and_cookies() -> None:
@@ -467,7 +503,10 @@ def test_validate_refuses_navigation_with_widget_changes(
         ({"context": "Europe/Berlin"}, "`context` must be an object"),
         ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
         ({"session_id": "s_1", "widget_state": []}, "`widget_state` must be an object"),
-        ({"session_id": "s_1", "trigger": "x"}, "`trigger` must be an object"),
+        (
+            {"session_id": "s_1", "trigger": "x"},
+            "`trigger` must be an object, `{key, value?}`",
+        ),
         ({"session_id": "s_1", "trigger": {}}, "string `key`"),
         ({"session_id": "s_1", "trigger": {"key": 1}}, "string `key`"),
         (
@@ -637,7 +676,12 @@ def test_parse_context_accepts_only_language_tags(locale: str, accepted: bool) -
             interaction._parse_context({"locale": locale})
 
 
-def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
+def _page(
+    url_pathname: str | None,
+    name: str = "",
+    icon: str = "",
+    help: str | None = None,
+) -> PageInfo:
     info: PageInfo = {
         "script_path": f"{url_pathname or 'main'}.py",
         "page_script_hash": "h",
@@ -648,12 +692,15 @@ def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
         info["page_name"] = name
     if icon:
         info["icon"] = icon
+    if help is not None:
+        info["help"] = help
     return info
 
 
 _NAVIGATION_PAGES: Final[dict[str, PageInfo]] = {
-    "home_hash": _page("", "Home"),
-    "report_hash": _page("report", "Report", ":material/table:"),
+    # st.navigation registers help for every page, "" when the page has none.
+    "home_hash": _page("", "Home", help=""),
+    "report_hash": _page("report", "Report", ":material/table:", "Quarterly sales."),
 }
 
 
@@ -702,7 +749,12 @@ def test_resolve_page_refuses_an_unknown_page_once_pages_are_declared() -> None:
     assert raised.value.details == {
         "pages": [
             {"url_path": "", "title": "Home"},
-            {"url_path": "report", "title": "Report", "icon": ":material/table:"},
+            {
+                "url_path": "report",
+                "title": "Report",
+                "icon": ":material/table:",
+                "help": "Quarterly sales.",
+            },
         ]
     }
 
@@ -854,7 +906,7 @@ def test_duration_phrases_whole_minutes_and_singulars(
     seconds: float, expected: str
 ) -> None:
     """Error messages name a limit in whole minutes where it is one."""
-    assert interaction._duration(seconds) == expected
+    assert interaction.format_duration(seconds) == expected
 
 
 def test_a_session_the_runtime_closed_frees_its_slot() -> None:
@@ -877,3 +929,56 @@ def test_a_session_the_runtime_closed_frees_its_slot() -> None:
         runtime.close_session.assert_not_called()
     finally:
         agent_spec.forget_agent_session(session.app_session_id)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("transport", get_args(usage.Transport))
+async def test_interact_counts_a_refused_call_on_its_own_transport(
+    transport: usage.Transport,
+) -> None:
+    """A call counts once on its transport, even one refused before any session
+    is found or created.
+    """
+    registry = MagicMock()
+    with usage_counts.fresh(), patch_config_options(usage_counts.USAGE_STATS_ON):
+        with pytest.raises(AgentRequestError) as raised:
+            await interaction.interact(
+                registry,
+                {"bogus": 1},
+                transport=transport,
+                user_info={},
+                headers=[],
+                encode=MagicMock(),
+            )
+        counts = usage_counts.reported()
+
+    assert raised.value.code == "invalid_request"
+    registry.create.assert_not_called()
+    assert counts == {**usage_counts.ZERO_COUNTS, f"{transport}_interactions": 1}
+
+
+@pytest.mark.parametrize(
+    ("max_sessions", "failure", "message"),
+    [
+        (0, AgentRequestError, "already holds 0 agent sessions"),
+        (1, RuntimeError, "setup failed"),
+    ],
+    ids=["too_many_sessions", "setup_failed"],
+)
+def test_a_creation_that_fails_counts_no_session(
+    max_sessions: int, failure: type[Exception], message: str
+) -> None:
+    """`create` counts only a session it returns: not one refused at the cap,
+    nor one whose setup failed.
+    """
+    runtime = MagicMock()
+    runtime.connect_session.return_value = "internal"
+    runtime.mark_session_nonresumable.side_effect = RuntimeError("setup failed")
+    registry = interaction.AgentSessionRegistry(runtime)
+    options = {**usage_counts.USAGE_STATS_ON, "server.agentMaxSessions": max_sessions}
+    with usage_counts.fresh(), patch_config_options(options):
+        with pytest.raises(failure, match=message):
+            registry.create({})
+        counts = usage_counts.reported()
+
+    assert counts == {}

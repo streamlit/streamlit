@@ -23,6 +23,7 @@ import type {
   GraphVizChart as GraphVizChartProto,
   streamlit,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   shouldHeightStretch,
@@ -132,8 +133,10 @@ function GraphVizChart({
   // computes to an empty accessible name, which is worse than none.
   // Use role="figure" rather than "img" so GraphViz SVG links stay in the
   // accessibility tree.
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-  const accessibleName = element.alt?.trim() || undefined
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   return (
     <StyledToolbarElementContainer
@@ -160,7 +163,7 @@ function GraphVizChart({
         id={chartId}
         shouldUseFullWidth={isFullScreen || shouldUseContainerWidth}
         shouldUseFullHeight={isFullScreen || shouldUseContainerHeight}
-        role={accessibleName ? "figure" : undefined}
+        role={accessibleName !== undefined ? "figure" : undefined}
         aria-label={accessibleName}
       />
     </StyledToolbarElementContainer>

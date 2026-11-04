@@ -15,7 +15,8 @@
  */
 
 import { act, renderHook } from "@testing-library/react"
-import type { View as VegaView } from "vega"
+import { parse, type View as VegaView, View } from "vega"
+import { compile, type TopLevelSpec } from "vega-lite"
 import type { Mock, Mocked } from "vitest"
 
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -36,6 +37,7 @@ describe("useVegaLiteSelections", () => {
     mockWidgetMgr = {
       getElementState: vi.fn(),
       setElementState: vi.fn(),
+      deleteElementState: vi.fn(),
       setStringValue: vi.fn(),
       getStringValue: vi.fn(),
       addFormClearedListener: vi.fn().mockReturnValue({ disconnect: vi.fn() }),
@@ -317,6 +319,10 @@ describe("useVegaLiteSelections", () => {
         },
       }),
       { formId: "formId", fragmentId: undefined, fromUser: true }
+    )
+    expect(mockWidgetMgr.deleteElementState).toHaveBeenCalledWith(
+      "chartId",
+      "viewState"
     )
   })
 
@@ -951,6 +957,435 @@ describe("useVegaLiteSelections", () => {
 
       advanceTimers(DEBOUNCE_TIME_MS)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe("interval brush restore with compiled Vega-Lite views", () => {
+    const VALUES = [
+      {
+        a: 0,
+        b: 0,
+        c: "A",
+        x: 0,
+        init: 0,
+        "Miles per Gallon": 0,
+        t: "2020-01-01",
+      },
+      {
+        a: 100,
+        b: 100,
+        c: "B",
+        x: 100,
+        init: 100,
+        "Miles per Gallon": 100,
+        t: "2022-01-01",
+      },
+    ]
+
+    const cleanups: Array<() => void> = []
+
+    const intervalSpec = ({
+      width = 300,
+      xField = "a",
+      xType = "quantitative",
+      encodings = ["x", "y"],
+      extraParams = [],
+      bindScales = false,
+      params,
+      opacityParam = "brush",
+    }: {
+      width?: number
+      xField?: string
+      xType?: "quantitative" | "nominal" | "temporal"
+      encodings?: ReadonlyArray<"x" | "y">
+      extraParams?: readonly object[]
+      bindScales?: boolean
+      params?: readonly object[]
+      opacityParam?: string
+    } = {}): TopLevelSpec =>
+      ({
+        data: { values: VALUES },
+        mark: "point",
+        width,
+        height: 200,
+        params: params ?? [
+          {
+            name: "brush",
+            select: { type: "interval", encodings },
+            ...(bindScales ? { bind: "scales" } : {}),
+          },
+          ...extraParams,
+        ],
+        encoding: {
+          x: {
+            field: xField,
+            type: xType,
+            ...(xType === "temporal" ? { timeUnit: "yearmonth" } : {}),
+          },
+          y: { field: "b", type: "quantitative" },
+          // Evaluating the selection test caches a getter on each stored
+          // field, as in Streamlit's selection-aware charts.
+          opacity: {
+            condition: { param: opacityParam, value: 1 },
+            value: 0.3,
+          },
+        },
+      }) as TopLevelSpec
+
+    const createView = async (spec: TopLevelSpec): Promise<VegaView> => {
+      const view = new View(parse(compile(spec).spec), { renderer: "none" })
+      await view.runAsync()
+      cleanups.push(() => view.finalize())
+      return view
+    }
+
+    const configure = (
+      view: VegaView,
+      selectionMode: string[] = ["brush"]
+    ): { current: ReturnType<typeof useVegaLiteSelections> } => {
+      const { result, unmount } = renderHook(() =>
+        useVegaLiteSelections(
+          {
+            id: "chartId",
+            formId: "formId",
+            selectionMode,
+          } as VegaLiteChartElement,
+          mockWidgetMgr
+        )
+      )
+      act(() => {
+        result.current.maybeConfigureSelections(view)
+      })
+      cleanups.push(() => {
+        act(() => result.current.teardownSelections())
+        unmount()
+      })
+      return result
+    }
+
+    /** Draws a brush through its pixel signals and returns the saved view state. */
+    const brushAndCapture = async (
+      view: VegaView,
+      pixels: Readonly<Partial<Record<string, readonly number[]>>>
+    ): Promise<{ data?: Record<string, unknown> }> => {
+      Object.entries(pixels).forEach(([name, value]) => {
+        if (value) {
+          view.signal(name, [...value])
+        }
+      })
+      await view.runAsync()
+      const calls = mockWidgetMgr.setElementState.mock.calls
+      expect(calls.length).toBeGreaterThan(0)
+      return calls.at(-1)?.[2] as { data?: Record<string, unknown> }
+    }
+
+    /** Restores a snapshot into `view` and settles it like useVegaEmbed does. */
+    const restoreInto = async (
+      view: VegaView,
+      viewState: unknown,
+      selectionMode: string[] = ["brush"]
+    ): Promise<{
+      result: { current: ReturnType<typeof useVegaLiteSelections> }
+      restoredSignals: Record<string, unknown> | undefined
+    }> => {
+      mockWidgetMgr.getElementState.mockReturnValue(viewState)
+      mockWidgetMgr.setStringValue.mockClear()
+      const setStateSpy = vi.spyOn(view, "setState")
+      const result = configure(view, selectionMode)
+      await view.resize().runAsync()
+      const restoredState = setStateSpy.mock.calls[0]?.[0] as
+        | { signals?: Record<string, unknown> }
+        | undefined
+      return { result, restoredSignals: restoredState?.signals }
+    }
+
+    afterEach(() => {
+      cleanups.splice(0).forEach(cleanup => cleanup())
+    })
+
+    it("persists only selection stores, never Vega signals", async () => {
+      const view = await createView(intervalSpec())
+      configure(view)
+      const viewState = await brushAndCapture(view, {
+        brush_x: [60, 120],
+        brush_y: [150, 50],
+      })
+
+      expect(viewState).not.toHaveProperty("signals")
+      expect(Object.keys(viewState.data ?? {})).toEqual(["brush_store"])
+    })
+
+    it.each([
+      {
+        label: "a 2D brush",
+        spec: {},
+        pixels: { brush_x: [60, 120], brush_y: [150, 50] },
+        extents: [
+          { data: "brush_a", pixel: "brush_x", channel: "x" },
+          { data: "brush_b", pixel: "brush_y", channel: "y" },
+        ],
+      },
+      {
+        label: "an x-only brush",
+        spec: { encodings: ["x"] },
+        pixels: { brush_x: [60, 120] },
+        extents: [{ data: "brush_a", pixel: "brush_x", channel: "x" }],
+      },
+      {
+        label: "a y-only brush",
+        spec: { encodings: ["y"] },
+        pixels: { brush_y: [150, 50] },
+        extents: [{ data: "brush_b", pixel: "brush_y", channel: "y" }],
+      },
+      {
+        label: "a field named like its channel",
+        spec: { encodings: ["x"], xField: "x" },
+        pixels: { brush_x_1: [60, 120] },
+        extents: [{ data: "brush_x", pixel: "brush_x_1", channel: "x" }],
+      },
+      {
+        label: "a field named like a Vega-Lite signal suffix",
+        spec: { encodings: ["x"], xField: "init" },
+        pixels: { brush_x: [60, 120] },
+        extents: [{ data: "brush_init", pixel: "brush_x", channel: "x" }],
+      },
+      {
+        label: "a field name Vega-Lite sanitizes",
+        spec: { encodings: ["x"], xField: "Miles per Gallon" },
+        pixels: { brush_x: [60, 120] },
+        extents: [
+          { data: "brush_Miles_per_Gallon", pixel: "brush_x", channel: "x" },
+        ],
+      },
+      {
+        label: "a temporal field with a time unit",
+        spec: { encodings: ["x"], xField: "t", xType: "temporal" },
+        pixels: { brush_x: [60, 120] },
+        extents: [
+          { data: "brush_yearmonth_t", pixel: "brush_x", channel: "x" },
+        ],
+      },
+    ] as const)(
+      "rebuilds $label at the new view's size without a widget update",
+      async ({ spec, pixels, extents }) => {
+        const source = await createView(intervalSpec({ ...spec, width: 300 }))
+        configure(source)
+        const viewState = await brushAndCapture(source, pixels)
+
+        const target = await createView(intervalSpec({ ...spec, width: 600 }))
+        const { result, restoredSignals } = await restoreInto(
+          target,
+          viewState
+        )
+
+        expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual(
+          extents.flatMap(({ data, pixel }) => [data, pixel]).toSorted()
+        )
+        extents.forEach(({ data, pixel, channel }) => {
+          const scale = target.scale(channel)
+          // Vega's selection test converts stored dates to timestamps.
+          expect((target.signal(data) as unknown[]).map(Number)).toEqual(
+            (source.signal(data) as unknown[]).map(Number)
+          )
+          expect(target.signal(pixel)).toEqual(
+            (target.signal(data) as unknown[]).map(value => scale(value))
+          )
+        })
+        expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+        // Restoring the store fires the `brush` listener; it must not reach Python.
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+
+        act(() => result.current.endSelectionRestore())
+        target.signal(extents[0].pixel, [0, 30])
+        await target.runAsync()
+        expect(mockWidgetMgr.setStringValue).toHaveBeenCalledOnce()
+      }
+    )
+
+    it("doubles the pixel extent when the restored view is twice as wide", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
+
+      const target = await createView(
+        intervalSpec({ encodings: ["x"], width: 600 })
+      )
+      await restoreInto(target, viewState)
+
+      expect(target.signal("brush_x")).toEqual([120, 240])
+    })
+
+    it.each([
+      {
+        label: "a band-scale interval",
+        source: { encodings: ["x"], xField: "c", xType: "nominal" },
+        target: { encodings: ["x"], xField: "c", xType: "nominal" },
+      },
+      {
+        label: "an interval whose encoded field changed",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x"], xField: "init" },
+      },
+      {
+        label: "an interval that now projects another channel",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x", "y"] },
+      },
+      {
+        label: "an interval now bound to scales",
+        source: { encodings: ["x"] },
+        target: { encodings: ["x"], bindScales: true },
+      },
+    ] as const)(
+      "restores only the store for $label",
+      async ({ source: sourceSpec, target: targetSpec }) => {
+        const source = await createView(intervalSpec(sourceSpec))
+        configure(source)
+        const viewState = await brushAndCapture(source, { brush_x: [10, 250] })
+
+        const target = await createView(
+          intervalSpec({ ...targetSpec, width: 600 })
+        )
+        const { restoredSignals } = await restoreInto(target, viewState)
+
+        expect(restoredSignals).toBeUndefined()
+        expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+        expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      }
+    )
+
+    it("does not restore extents for a layered chart with independent scales", async () => {
+      const layer = (field: string): object => ({
+        mark: "point",
+        encoding: {
+          x: { field, type: "quantitative" },
+          y: { field: "b", type: "quantitative" },
+        },
+      })
+      const spec = (width: number): TopLevelSpec =>
+        ({
+          data: { values: VALUES },
+          width,
+          height: 200,
+          resolve: { scale: { x: "independent" } },
+          layer: [
+            {
+              ...layer("a"),
+              params: [
+                {
+                  name: "brush",
+                  select: { type: "interval", encodings: ["x"] },
+                },
+              ],
+            },
+            layer("x"),
+          ],
+        }) as TopLevelSpec
+      const source = await createView(spec(300))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
+
+      const target = await createView(spec(600))
+      const { restoredSignals } = await restoreInto(target, viewState)
+
+      expect(restoredSignals).toBeUndefined()
+      expect(target.data("brush_store")).toEqual(source.data("brush_store"))
+    })
+
+    it("restores a cleared brush as empty", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      await brushAndCapture(source, { brush_x: [60, 120] })
+      const viewState = await brushAndCapture(source, { brush_x: [0, 0] })
+      expect(viewState.data).toEqual({ brush_store: [] })
+
+      const target = await createView(intervalSpec({ encodings: ["x"] }))
+      const { restoredSignals } = await restoreInto(target, viewState)
+
+      expect(restoredSignals).toBeUndefined()
+      expect(target.signal("brush_x")).toEqual([])
+      expect(target.data("brush_store")).toEqual([])
+    })
+
+    it("restores an interval and a point param whose name extends it", async () => {
+      const extraParams = [
+        { name: "brush_point", select: { type: "point", fields: ["a"] } },
+      ]
+      const selectionMode = ["brush", "brush_point"]
+      const source = await createView(intervalSpec({ extraParams }))
+      configure(source, selectionMode)
+      const viewState = await brushAndCapture(source, {
+        brush_x: [60, 120],
+        brush_y: [150, 50],
+      })
+
+      const target = await createView(
+        intervalSpec({ extraParams, width: 600 })
+      )
+      const { restoredSignals } = await restoreInto(
+        target,
+        viewState,
+        selectionMode
+      )
+
+      expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual([
+        "brush_a",
+        "brush_b",
+        "brush_x",
+        "brush_y",
+      ])
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("restores each interval param of a chart independently", async () => {
+      const spec = (width: number): TopLevelSpec =>
+        intervalSpec({
+          width,
+          params: [
+            { name: "xsel", select: { type: "interval", encodings: ["x"] } },
+            { name: "ysel", select: { type: "interval", encodings: ["y"] } },
+          ],
+          opacityParam: "xsel",
+        })
+      const selectionMode = ["xsel", "ysel"]
+      const source = await createView(spec(300))
+      configure(source, selectionMode)
+      const viewState = await brushAndCapture(source, {
+        xsel_x: [60, 120],
+        ysel_y: [150, 50],
+      })
+
+      const target = await createView(spec(600))
+      const { restoredSignals } = await restoreInto(
+        target,
+        viewState,
+        selectionMode
+      )
+
+      expect(Object.keys(restoredSignals ?? {}).toSorted()).toEqual([
+        "xsel_a",
+        "xsel_x",
+        "ysel_b",
+        "ysel_y",
+      ])
+      expect(target.signal("xsel_x")).toEqual([120, 240])
+    })
+
+    it("ignores signals saved in a snapshot", async () => {
+      const source = await createView(intervalSpec({ encodings: ["x"] }))
+      configure(source)
+      const viewState = await brushAndCapture(source, { brush_x: [60, 120] })
+
+      const target = await createView(intervalSpec({ encodings: ["x"] }))
+      const { restoredSignals } = await restoreInto(target, {
+        ...viewState,
+        signals: { brush_x: [1, 2], brush_tuple: null, brush_zoom_delta: 4 },
+      })
+
+      expect(restoredSignals).toEqual({
+        brush_a: [20, 40],
+        brush_x: [60, 120],
+      })
     })
   })
 })

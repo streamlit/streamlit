@@ -19,7 +19,8 @@ their JSON form. A list, tuple, or set becomes a JSON array, and so does any
 other sequence except ``str``, ``bytes``, and mappings. Anything else,
 including a dataframe or a mapping that is not a dict, becomes ``str(value)``,
 so one odd cell does not fail the whole description. A value that contains
-itself becomes text instead of recursing.
+itself becomes text instead of recursing. ``dumps`` renders the result as the
+JSON text of a response, and ``response_body`` as the bytes a route sends.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ import collections.abc
 import datetime as dt
 import decimal
 import enum
+import json
 import math
 from typing import Any
 
@@ -52,6 +54,25 @@ def to_json_value(value: Any) -> Any:
     becomes text instead of recursing.
     """
     return _to_json_value(value, set())
+
+
+def dumps(content: Any) -> str:
+    """Render JSON-compatible ``content`` as the agent API's responses do.
+
+    Compact, as Starlette's ``JSONResponse`` renders it, with non-ASCII text
+    kept as is, and strict: NaN or Infinity raises rather than producing
+    invalid JSON.
+    """
+    return json.dumps(
+        content, ensure_ascii=False, allow_nan=False, separators=(",", ":")
+    )
+
+
+def response_body(content: Any) -> bytes:
+    """Render JSON-compatible ``content`` as the body of a response: the
+    UTF-8 bytes of ``dumps``, as Starlette's ``JSONResponse`` sends them.
+    """
+    return dumps(content).encode("utf-8")
 
 
 def _to_json_value(value: Any, seen: set[int]) -> Any:

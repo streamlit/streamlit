@@ -392,3 +392,109 @@ describe("on_change='ignore' mode", () => {
     expect(setStringValueSpy).not.toHaveBeenCalled()
   })
 })
+
+describe("ColorPicker no-op interactions", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  async function flushScheduledRerun(): Promise<void> {
+    await act(async () => {
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+  }
+
+  function renderWithRerunSpy(elementProps: Partial<ColorPickerProto> = {}): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    setStringValueSpy: ReturnType<typeof vi.spyOn>
+  } {
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps(elementProps, { widgetMgr })
+    const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+    render(
+      <div>
+        <span>outside</span>
+        <ColorPicker {...props} />
+      </div>
+    )
+    setStringValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+    return { sendRerunBackMsg, setStringValueSpy }
+  }
+
+  it.each(["swatch", "escape", "outside"] as const)(
+    "does not commit or rerun when closed via %s without a change",
+    async closeWith => {
+      const user = userEvent.setup()
+      const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy()
+
+      const colorBlock = screen.getByTestId("stColorPickerBlock")
+      await user.click(colorBlock)
+      expect(screen.getByTestId("stColorPickerPopover")).toBeVisible()
+
+      if (closeWith === "escape") {
+        await user.keyboard("{Escape}")
+      } else if (closeWith === "outside") {
+        // Advance Date.now() past the 50ms guard that keeps the opening click
+        // from also closing the popover.
+        vi.spyOn(Date, "now").mockReturnValue(Date.now() + 100)
+        await user.click(screen.getByText("outside"))
+      } else {
+        await user.click(colorBlock)
+      }
+      await flushScheduledRerun()
+
+      expect(
+        screen.queryByTestId("stColorPickerPopover")
+      ).not.toBeInTheDocument()
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    }
+  )
+
+  it("treats a hex value differing only in case as unchanged", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy({
+      default: "#E91E63",
+    })
+
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
+    await user.click(colorBlock)
+    const colorInput = screen.getByRole("textbox")
+    await user.tripleClick(colorInput)
+    await user.keyboard("{backspace}")
+    await user.type(colorInput, "#e91e63")
+    await user.click(colorBlock)
+    await flushScheduledRerun()
+
+    expect(setStringValueSpy).not.toHaveBeenCalled()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("still commits and reruns when the color changes", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, setStringValueSpy } = renderWithRerunSpy()
+
+    const colorBlock = screen.getByTestId("stColorPickerBlock")
+    await user.click(colorBlock)
+    const colorInput = screen.getByRole("textbox")
+    await user.tripleClick(colorInput)
+    await user.keyboard("{backspace}")
+    await user.type(colorInput, "#e91e63")
+    await user.keyboard("{Escape}")
+    await flushScheduledRerun()
+
+    expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+      "1",
+      "#e91e63",
+      expect.objectContaining({ fromUser: true })
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledOnce()
+  })
+})

@@ -15,7 +15,7 @@
  */
 
 import * as echarts from "echarts"
-import { isPlainObject, omit } from "lodash-es"
+import { get, isPlainObject, omit } from "lodash-es"
 import { getLogger } from "loglevel"
 
 import {
@@ -25,7 +25,12 @@ import {
 } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { type EChartsOptionObject, formatTooltipItem } from "./CustomTheme"
+import {
+  type EChartsOptionObject,
+  formatTooltipItem,
+  STREAMLIT_THEME,
+  toComponentList,
+} from "./CustomTheme"
 
 const LOG = getLogger("EChartsChart")
 
@@ -363,4 +368,137 @@ export function applyTooltipFormatters(
     )
   }
   return result
+}
+
+/** The cartesian axis keys whose ``type: "time"`` axes get date labels. */
+const CARTESIAN_AXIS_KEYS = ["xAxis", "yAxis"] as const
+
+/** Label templates at day and second precision, matching ECharts' own. */
+const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
+const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
+
+/**
+ * Format a time axis value as its date when it is exactly midnight, and as its
+ * date and time to the second otherwise.
+ */
+function formatTimeAxisValue(value: unknown, useUTC: boolean): string {
+  const date = echarts.time.parse(value)
+  // Format through ECharts so the check uses the label's UTC or local clock.
+  // Milliseconds count, so 00:00:00.250 is not midnight.
+  const isMidnight =
+    echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
+  return echarts.time.format(
+    date,
+    isMidnight ? DATE_LABEL_TEMPLATE : DATE_TIME_LABEL_TEMPLATE,
+    useUTC
+  )
+}
+
+/** Whether ``target`` has a non-null ``label.formatter``. */
+function hasLabelFormatter(target: unknown): boolean {
+  return !isNullOrUndefined(get(target, "label.formatter"))
+}
+
+/**
+ * Show midnight values on time axes as dates under the Streamlit theme.
+ *
+ * ECharts picks one label precision per time axis, so the axis tooltip header
+ * of daily data spanning less than about five months reads
+ * "2026-08-18 00:00:00". This sets a plain-text ``axisPointer.label.formatter``
+ * (ECharts escapes it), which drives the tooltip header and axis pointer
+ * labels, on each ``type: "time"`` ``xAxis`` and ``yAxis``.
+ *
+ * - The midnight check runs per value, so it needs no scan of the axis data.
+ *   An hourly series shows its midnight points without a time, and other
+ *   values show their time to the second, without milliseconds.
+ * - A label formatter on the axis, ``tooltip.axisPointer``,
+ *   ``grid.tooltip.axisPointer``, or the top-level ``axisPointer`` wins,
+ *   including one set in a timeline tick or ``media`` override. If any shared
+ *   one is set, no axis gets Streamlit's formatter, because an axis-level
+ *   formatter would override it.
+ * - On a timeline, only ``baseOption`` is converted, and ``useUTC`` comes from
+ *   there too. Timeline ticks and ``media`` overrides stay as given; they
+ *   merge over the base axis, so an axis formatter set in one still wins.
+ * - Only the Streamlit theme adds these formatters, so ``theme=None`` keeps
+ *   ECharts' labels.
+ *
+ * @param option The option object to convert.
+ * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
+ * @returns The option with time axis formatters, or the input when no axis
+ * needs one.
+ */
+export function applyTimeLabelFormatters(
+  option: EChartsOptionObject,
+  themeStr: string
+): EChartsOptionObject {
+  if (themeStr !== STREAMLIT_THEME) {
+    return option
+  }
+  const hasBaseOption = isPlainObject(option.baseOption)
+  const chartOption = hasBaseOption
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  // Look for shared formatters in every variant. Ticks and media overrides
+  // merge over the chart, so Streamlit's axis-level formatter would beat a
+  // shared one they set. ECharts reads ``media`` only on the root;
+  // ``baseOption.media`` is included so a formatter written there still opts
+  // the chart out.
+  const mediaLists = hasBaseOption
+    ? [option.media, chartOption.media]
+    : [option.media]
+  const variants = [
+    chartOption,
+    ...toComponentList(option.options),
+    ...mediaLists.flatMap(media =>
+      toComponentList(media).map(entry => entry.option)
+    ),
+  ]
+  const sharedAxisPointers = variants.flatMap(variant => [
+    ...toComponentList(get(variant, "tooltip")).map(
+      ({ axisPointer }) => axisPointer
+    ),
+    ...toComponentList(get(variant, "grid")).map(grid =>
+      get(grid, "tooltip.axisPointer")
+    ),
+    ...toComponentList(get(variant, "axisPointer")),
+  ])
+  if (sharedAxisPointers.some(hasLabelFormatter)) {
+    return option
+  }
+
+  const useUTC = chartOption.useUTC === true
+  const formatter = (params: unknown): string =>
+    formatTimeAxisValue(get(params, "value"), useUTC)
+  const withTimeLabelFormatter = (axis: unknown): unknown => {
+    if (!isPlainObject(axis)) {
+      return axis
+    }
+    const axisObject = axis as Record<string, unknown>
+    const axisPointer = isPlainObject(axisObject.axisPointer)
+      ? (axisObject.axisPointer as Record<string, unknown>)
+      : {}
+    if (axisObject.type !== "time" || hasLabelFormatter(axisPointer)) {
+      return axis
+    }
+    const label = isPlainObject(axisPointer.label)
+      ? (axisPointer.label as Record<string, unknown>)
+      : {}
+    return {
+      ...axisObject,
+      axisPointer: { ...axisPointer, label: { ...label, formatter } },
+    }
+  }
+
+  let result = chartOption
+  for (const key of CARTESIAN_AXIS_KEYS) {
+    const axes = result[key]
+    result = withProperty(
+      result,
+      key,
+      Array.isArray(axes)
+        ? mapPreservingIdentity(axes, withTimeLabelFormatter)
+        : withTimeLabelFormatter(axes)
+    )
+  }
+  return hasBaseOption ? withProperty(option, "baseOption", result) : result
 }

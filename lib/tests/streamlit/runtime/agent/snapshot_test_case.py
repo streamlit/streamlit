@@ -27,8 +27,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent.snapshot import (
     ElementState,
     Snapshot,
-    _public_key,
     build_snapshot,
+    public_key,
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -157,7 +157,7 @@ def _state(snapshot: Snapshot, command: str, key: str) -> ElementState:
     matches = [
         state
         for element_id, state in snapshot.element_states.items()
-        if state.command == command and _public_key(element_id) == key
+        if state.command == command and public_key(element_id) == key
     ]
     assert len(matches) == 1, matches
     return matches[0]
@@ -183,7 +183,7 @@ class SnapshotCase(DeltaGeneratorTestCase):
         element_id = next(
             widget_id
             for widget_id in state._new_widget_state.widget_metadata
-            if _public_key(widget_id) == key
+            if public_key(widget_id) == key
         )
         state._new_widget_state.set_from_value(element_id, value)
 

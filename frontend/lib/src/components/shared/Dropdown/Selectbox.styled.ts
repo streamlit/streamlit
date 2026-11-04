@@ -50,6 +50,8 @@ function getRightInset(theme: EmotionTheme): string {
  * the ComboBox's `isInvalid`) shows the invalid-input chrome.
  */
 export const StyledGroup = styled(Group)(({ theme }) => ({
+  // Positioning context for the absolutely positioned StyledStartEnhancer.
+  position: "relative",
   display: "flex",
   flexDirection: "row",
   alignItems: "stretch",
@@ -91,21 +93,58 @@ export const StyledErrorIcon = styled.div(({ theme }) => ({
 export const StyledVisuallyHidden = styled.span(VISUALLY_HIDDEN_STYLES)
 
 /**
+ * Decorative start icon drawn over the input's left padding (see `$hasIcon`
+ * on StyledInput). It ignores pointer events, so clicks reach the input and
+ * open the dropdown. Size, inset, and color match the st.text_input and
+ * st.number_input start icon.
+ */
+export const StyledStartEnhancer = styled.div<{ $isMaterialIcon: boolean }>(
+  ({ theme, $isMaterialIcon }) => ({
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: theme.spacing.sm,
+    display: "flex",
+    alignItems: "center",
+    minWidth: theme.iconSizes.base,
+    pointerEvents: "none",
+    // Fade Material icons so they read as decoration, not a control.
+    color: $isMaterialIcon ? theme.colors.fadedText60 : "inherit",
+  })
+)
+
+/**
  * The text input inside the ComboBox. Grows to fill available space and
  * shows `$placeholderColor` when disabled (faded vs. normal faded text).
  *
  * `$typingDisabled` (FILTER_MODE_NONE) hides the text caret and shows a pointer
  * cursor so the input looks non-editable — like a plain select — even though it
  * stays focusable for keyboard navigation.
+ *
+ * `$hasIcon` widens the left padding to make room for StyledStartEnhancer, so
+ * the text starts where it does in st.text_input and st.number_input with an
+ * icon.
  */
 export const StyledInput = styled(Input, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
-})<{ $placeholderColor?: string; $typingDisabled?: boolean }>(
-  ({ theme, $placeholderColor, $typingDisabled = false }) => ({
+})<{
+  $placeholderColor?: string
+  $typingDisabled?: boolean
+  $hasIcon?: boolean
+}>(
+  ({
+    theme,
+    $placeholderColor,
+    $typingDisabled = false,
+    $hasIcon = false,
+  }) => ({
     flexGrow: 1,
     flexShrink: 1,
     minWidth: theme.spacing.threeXS,
     padding: theme.spacing.sm,
+    ...($hasIcon && {
+      paddingLeft: `calc(${theme.spacing.sm} + ${theme.iconSizes.base} + ${theme.spacing.md})`,
+    }),
     border: "none",
     outline: "none",
     background: "transparent",
@@ -119,7 +158,7 @@ export const StyledInput = styled(Input, {
     userSelect: $typingDisabled ? "none" : undefined,
     boxSizing: "border-box",
     "&::placeholder": {
-      color: $placeholderColor ?? theme.colors.fadedText60,
+      color: $placeholderColor ?? theme.colors.fadedText70,
     },
     "&[data-disabled]": {
       cursor: "not-allowed",
@@ -227,7 +266,7 @@ export const StyledEmptyState = styled.span(({ theme }) => ({
   width: "100%",
   height: theme.sizes.emptyDropdownHeight,
   padding: theme.spacing.sm,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.base,

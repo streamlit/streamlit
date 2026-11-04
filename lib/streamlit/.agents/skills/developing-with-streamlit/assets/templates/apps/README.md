@@ -11,7 +11,7 @@ These templates are based on official Streamlit demo apps and work out of the bo
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-seattle-weather** | Weather data exploration dashboard | `st.metric`, `st.pills`, `st.altair_chart`, year comparison |
-| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized charts, peer average calculation |
+| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized `st.echarts_chart` lines with a zoom slider, peer average calculation |
 
 ### Analytics Dashboard Templates
 
@@ -19,10 +19,10 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
+| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
 | **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, `st.skeleton` on quick cards with `st.spinner` for the slow report |
 
 ## Quick Start
@@ -188,5 +188,5 @@ reference data → `ttl="1h"` or more; static data → no TTL.
 All templates require Python >=3.11 and use:
 - `streamlit`
 - `pandas>=2.2.3`
-- `altair>=5.5.0` (most templates)
+- `altair>=5.5.0` (templates that chart with `st.altair_chart`)
 - `numpy>=1.26.0` (most templates)

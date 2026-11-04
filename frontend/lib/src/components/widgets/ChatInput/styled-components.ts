@@ -133,7 +133,7 @@ export const StyledToolbarRow = styled.div(({ theme }) => ({
 
 // Character count indicator - displayed inline with buttons
 export const StyledInputInstructions = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
@@ -298,7 +298,7 @@ export const StyledChatInputTextArea = styled.textarea<{
   boxSizing: "border-box",
   resize: "none",
   display: "block",
-  "&::placeholder": { color: theme.colors.fadedText60 },
+  "&::placeholder": { color: theme.colors.fadedText70 },
   "&:disabled": {
     color: theme.colors.fadedText40,
     WebkitTextFillColor: theme.colors.fadedText40,

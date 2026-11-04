@@ -19,8 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-import textwrap
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import AsyncMock, MagicMock, patch
 from urllib.parse import urljoin
@@ -31,33 +30,23 @@ from starlette.applications import Starlette
 from starlette.requests import ClientDisconnect, Request
 from starlette.testclient import TestClient
 
-from streamlit.elements.lib import agent_spec
-from streamlit.runtime import Runtime, RuntimeConfig, runtime_util
+from streamlit.runtime import runtime_util
 from streamlit.runtime.agent.errors import (
     ERROR_CATALOG,
     AgentErrorCode,
     AgentRequestError,
     error_status,
 )
-from streamlit.runtime.caching.storage.dummy_cache_storage import (
-    MemoryCacheStorageManager,
-)
-from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
-from streamlit.runtime.memory_session_storage import MemorySessionStorage
-from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.web.server.starlette import (
     starlette_agent_routes,
     starlette_app_utils,
 )
-from streamlit.web.server.starlette.starlette_routes import (
-    create_app_static_serving_routes,
-    create_media_routes,
-)
-from tests.streamlit.runtime.agent import openapi_validation, run_gate
+from tests.streamlit.runtime.agent import openapi_validation, run_gate, usage_counts
+from tests.streamlit.web.server.starlette import agent_served_app
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator, Iterator
+    from collections.abc import Generator, Iterator
     from pathlib import Path
 
 _PATH: Final = "/_stcore/agent/interact"
@@ -117,6 +106,82 @@ def test_off_answers_not_available(runtime: MagicMock, interact: AsyncMock) -> N
     assert response.json()["error"]["code"] == "not_available"
     interact.assert_not_awaited()
     runtime.connect_session.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"{}", b"{", b"[]", b""],
+    ids=["object", "invalid_json", "not_an_object", "empty"],
+)
+def test_off_counts_a_post_whatever_its_body(runtime: MagicMock, body: bytes) -> None:
+    """With the API off, a POST counts as an agent's attempt; its body is never
+    read, so it counts even when the API would refuse it.
+    """
+    with (
+        usage_counts.fresh(),
+        # A limit the body exceeds, which the off path never checks.
+        patch.object(runtime_util, "get_max_widget_state_size_bytes", return_value=1),
+        _client(runtime, enabled=False, **usage_counts.USAGE_STATS_ON) as client,
+    ):
+        response = client.post(_PATH, content=body)
+        counts = usage_counts.reported()
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "not_available"
+    assert counts == {"http_interactions": 1, "mcp_interactions": 0, "sessions": 0}
+
+
+@pytest.mark.parametrize(
+    ("headers", "overrides"),
+    [
+        ({"Host": "evil.example"}, {"server.allowedHosts": ["app.example"]}),
+        ({"Origin": "https://evil.example"}, {}),
+        (
+            {"Origin": "https://app.example", "Content-Type": "text/plain"},
+            {"server.corsAllowedOrigins": ["https://app.example"]},
+        ),
+    ],
+    ids=["refused_host", "refused_origin", "listed_page_without_json"],
+)
+def test_off_counts_nothing_the_route_would_refuse(
+    runtime: MagicMock, headers: dict[str, str], overrides: dict[str, Any]
+) -> None:
+    """With the API off, a request the checks refuse is not an agent, so the
+    route counts nothing and still answers only that the API is off.
+    """
+    with (
+        usage_counts.fresh(),
+        _client(
+            runtime, enabled=False, **usage_counts.USAGE_STATS_ON, **overrides
+        ) as client,
+    ):
+        response = client.post(_PATH, content=b"{}", headers=headers)
+        counts = usage_counts.reported()
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "not_available"
+    assert counts == {}
+
+
+def test_route_with_api_on_counts_nothing_itself(
+    runtime: MagicMock, interact: AsyncMock
+) -> None:
+    """With the API on, the route counts nothing itself, neither a request it
+    passes on nor one it refuses, so no request is counted twice.
+    """
+    hosts = {"server.allowedHosts": ["app.example"]}
+    with (
+        usage_counts.fresh(),
+        _client(runtime, **usage_counts.USAGE_STATS_ON, **hosts) as client,
+    ):
+        passed = client.post(_PATH, json={}, headers={"Host": "app.example"})
+        refused = client.post(_PATH, json={}, headers={"Host": "evil.example"})
+        counts = usage_counts.reported()
+
+    assert passed.status_code == 200
+    assert refused.json()["error"]["code"] == "host_not_allowed"
+    assert counts == {}
+    interact.assert_awaited_once()
 
 
 def test_disallowed_host_is_refused(runtime: MagicMock, interact: AsyncMock) -> None:
@@ -212,6 +277,7 @@ def test_a_body_over_the_limit_is_refused(
 
     assert declared.status_code == 413
     assert declared.json()["error"]["code"] == "request_too_large"
+    assert "`server.maxWidgetStateSize`" in declared.json()["error"]["message"]
     assert streamed.status_code == 413
     assert within.status_code == 200
     interact.assert_awaited_once()
@@ -326,6 +392,7 @@ def test_interact_gets_the_request_headers_and_trusted_identity(
         client.post(_PATH, json={"page": "x"}, headers={"X-Email": "a@example.com"})
 
     assert interact.await_args is not None
+    assert interact.await_args.kwargs["transport"] == "http"
     assert interact.await_args.kwargs["user_info"] == {"email": "a@example.com"}
     assert ("x-email", "a@example.com") in interact.await_args.kwargs["headers"]
 
@@ -517,7 +584,9 @@ def test_the_documented_server_and_paths_reach_the_routes(
         document = client.get(schema_url).json()
         server = document["servers"][0]["url"]
         [interact_path] = [
-            path for path, item in document["paths"].items() if "post" in item
+            path
+            for path, item in document["paths"].items()
+            if item.get("post", {}).get("operationId") == "interact"
         ]
         posted = client.post(
             urljoin(schema_url, server) + interact_path.lstrip("/"), json={}
@@ -537,69 +606,6 @@ def test_the_documented_server_and_paths_reach_the_routes(
     assert urljoin(hosted_url, interact_path) == f"https://host.example{interact_path}"
 
 
-@asynccontextmanager
-async def _lifespan_with(runtime: Runtime) -> AsyncGenerator[None, None]:
-    await runtime.start()
-    try:
-        yield
-    finally:
-        run_gate.opened.set()
-        runtime.stop()
-        await runtime.stopped
-
-
-@contextmanager
-def _served_app(
-    tmp_path: Path, script: str, overrides: dict[str, Any], *, base_url: str = ""
-) -> Generator[TestClient, None, None]:
-    """A real Runtime on ``script``, behind the agent, media, and app static routes.
-
-    ``overrides`` is read at every lookup, so a test can change an option while
-    the app runs.
-    """
-    main_script = tmp_path / "app.py"
-    main_script.write_text(textwrap.dedent(script))
-    media_storage = MemoryMediaFileStorage("/media")
-    registered = agent_spec._agent_session_ids
-    run_gate.reset()
-    Runtime._instance = None
-    defaults = {
-        "server.enableAgentApi": True,
-        "server.fileWatcherType": "none",
-        "server.baseUrlPath": base_url,
-        "server.agentWaitTimeout": 10,
-    }
-    for name, value in defaults.items():
-        overrides.setdefault(name, value)
-    try:
-        with patch_config_options(overrides):
-            runtime = Runtime(
-                RuntimeConfig(
-                    script_path=str(main_script),
-                    media_file_storage=media_storage,
-                    uploaded_file_manager=MemoryUploadedFileManager(
-                        "/_stcore/upload_file"
-                    ),
-                    cache_storage_manager=MemoryCacheStorageManager(),
-                    session_storage=MemorySessionStorage(),
-                )
-            )
-            app = Starlette(
-                routes=[
-                    *starlette_agent_routes.create_agent_routes(runtime, base_url),
-                    *create_media_routes(media_storage, base_url),
-                    *create_app_static_serving_routes(str(main_script), base_url),
-                ],
-                lifespan=lambda _app: _lifespan_with(runtime),
-            )
-            with TestClient(app) as client:
-                yield client
-    finally:
-        run_gate.opened.set()
-        Runtime._instance = None
-        agent_spec._agent_session_ids = registered
-
-
 _GATED_SCRIPT: Final = """
 import streamlit as st
 from tests.streamlit.runtime.agent import run_gate
@@ -612,7 +618,7 @@ st.text(f"runs={run_gate.count('runs')}")
 def test_statuses_end_to_end(tmp_path: Path) -> None:
     """A real runtime answers 200, 202, 404, 409, and 429 as the catalog says."""
     overrides = {"server.agentMaxSessions": 1, "server.agentWaitTimeout": 0.2}
-    with _served_app(tmp_path, _GATED_SCRIPT, overrides) as client:
+    with agent_served_app.served_app(tmp_path, _GATED_SCRIPT, overrides) as client:
         run_gate.close()
         timed_out = client.post(_PATH, json={})
         handle = timed_out.json()["session_id"]
@@ -646,19 +652,25 @@ import streamlit as st
 from tests.streamlit.runtime.agent import run_gate
 
 run_gate.wait()
-st.selectbox("Region", ["EMEA", "APAC"], key="region")
-st.selectbox("Team", ["Ops", "Sales"], index=None, key="team")
-st.slider("Range", 0, 10, (2, 8), key="range")
-with st.form("ticket"):
-    st.text_input("Title", key="title")
-    st.form_submit_button("Submit", key="submit")
-st.text_input("Password", type="password", key="password")
-st.file_uploader("Upload", key="upload")
-st.image(np.zeros((2, 2, 3), dtype=np.uint8))
-st.dataframe(pd.DataFrame({"n": range(150)}))
-st.line_chart(pd.DataFrame({"y": [1, 3, 2]}))
-st.plotly_chart(go.Figure(go.Bar(y=[1, 2]), layout={"template": "plotly"}))
-st.chat_input("Ask", key="chat")
+
+def elements():
+    st.selectbox("Region", ["EMEA", "APAC"], key="region")
+    st.selectbox("Team", ["Ops", "Sales"], index=None, key="team")
+    st.slider("Range", 0, 10, (2, 8), key="range")
+    with st.form("ticket"):
+        st.text_input("Title", key="title")
+        st.form_submit_button("Submit", key="submit")
+    st.text_input("Password", type="password", key="password")
+    st.file_uploader("Upload", key="upload")
+    st.image(np.zeros((2, 2, 3), dtype=np.uint8))
+    st.dataframe(pd.DataFrame({"n": range(150)}))
+    st.line_chart(pd.DataFrame({"y": [1, 3, 2]}))
+    st.plotly_chart(go.Figure(go.Bar(y=[1, 2]), layout={"template": "plotly"}))
+    st.chat_input("Ask", key="chat")
+
+st.navigation(
+    [st.Page(elements, icon=":material/widgets:", help="Every **element** type.")]
+).run()
 """
 
 
@@ -677,7 +689,9 @@ def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
     the document it serves, and carry no field the document does not name.
     """
     overrides: dict[str, Any] = {}
-    with _served_app(tmp_path, _CONFORMANCE_SCRIPT, overrides) as client:
+    with agent_served_app.served_app(
+        tmp_path, _CONFORMANCE_SCRIPT, overrides
+    ) as client:
         document = client.get(_SCHEMA_PATH).json()
         created = client.post(_PATH, json={})
         handle = created.json()["session_id"]
@@ -735,6 +749,8 @@ def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
             assert set(node.get("data", {})) <= documented("ElementData"), node
         for action in body["actions"]:
             assert set(action) <= documented("Action"), action
+        for page in [body["page"], *body["pages"]]:
+            assert set(page) <= documented("Page"), page
     for code, response in refused.items():
         assert response.status_code == error_status(code), response.text
         body = response.json()
@@ -760,6 +776,7 @@ def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
     blocks = [node["data"] for node in nodes if "data" in node]
     assert any("url" in data and "preview" in data for data in blocks)
     assert any("spec_omitted" in data for data in blocks)
+    assert {"icon", "help"} <= set(created.json()["page"])
     [chat_action] = [a for a in created.json()["actions"] if a["key"] == "chat"]
     assert "label" not in chat_action
     [chat] = [
@@ -783,7 +800,7 @@ def test_write_refusals_end_to_end(tmp_path: Path) -> None:
     st.selectbox("Region", ["EMEA", "APAC"], key="region")
     """
     overrides = {"server.agentMaxSessions": 1}
-    with _served_app(tmp_path, script, overrides) as client:
+    with agent_served_app.served_app(tmp_path, script, overrides) as client:
         creating = client.post(_PATH, json={"widget_state": {"region": "APAC"}})
         created = client.post(_PATH, json={})
         handle = created.json()["session_id"]
@@ -841,7 +858,7 @@ def test_media_urls_resolve_against_the_request_under_a_base_path(
     static_dir = tmp_path / "static"
     static_dir.mkdir()
     (static_dir / "cat.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-    with _served_app(tmp_path, script, {}, base_url="base") as client:
+    with agent_served_app.served_app(tmp_path, script, {}, base_url="base") as client:
         unprefixed = client.post(_PATH, json={})
         response = client.post(f"/base{_PATH}", json={})
         children = response.json()["tree"]["children"][0]["children"]
@@ -880,7 +897,7 @@ def test_a_tables_data_url_resolves_against_the_request(tmp_path: Path) -> None:
     )
     st.dataframe(orders.set_index("order"))
     """
-    with _served_app(tmp_path, script, {}, base_url="base") as client:
+    with agent_served_app.served_app(tmp_path, script, {}, base_url="base") as client:
         response = client.post(f"/base{_PATH}", json={})
         [data] = [
             child["data"]
@@ -922,7 +939,7 @@ def test_a_login_cookie_does_not_authenticate(tmp_path: Path) -> None:
             }
         ),
     )
-    with _served_app(
+    with agent_served_app.served_app(
         tmp_path, script, {"server.cookieSecret": "test-secret"}
     ) as client:
         client.cookies.set("_streamlit_user", login.decode())
@@ -1130,7 +1147,7 @@ def test_the_specs_worked_example_end_to_end(tmp_path: Path) -> None:
     """The app the spec's worked example describes gets that snapshot from the
     route, apart from what differs per run.
     """
-    with _served_app(tmp_path, _SPEC_EXAMPLE_SCRIPT, {}) as client:
+    with agent_served_app.served_app(tmp_path, _SPEC_EXAMPLE_SCRIPT, {}) as client:
         response = client.post(_PATH, json={})
 
     assert response.status_code == 200

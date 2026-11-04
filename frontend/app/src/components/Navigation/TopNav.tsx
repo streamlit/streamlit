@@ -144,6 +144,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
             widgetsDisabled={widgetsDisabled}
             isExternal={isExternal}
             externalUrl={getExternalPageUrl(item)}
+            help={item.help}
           >
             {String(item.pageName)}
           </SidebarNavLink>

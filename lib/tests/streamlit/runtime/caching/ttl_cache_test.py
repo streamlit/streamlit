@@ -618,3 +618,77 @@ def test_byte_size_is_updated_by_all_removal_paths() -> None:
     assert cache.currsize == 0
     assert cache.curr_total_size == 0
     assert removed[-2:] == ["c", "d"]
+
+
+def _recording_cache(
+    *,
+    clock: _FakeClock,
+    maxsize: float = math.inf,
+    ttl: float = math.inf,
+    max_total_size: float | None = None,
+) -> tuple[TTLCache[str, bytes], list[tuple[str, int]]]:
+    evictions: list[tuple[str, int]] = []
+    cache: TTLCache[str, bytes] = TTLCache(
+        maxsize=maxsize,
+        ttl=ttl,
+        timer=clock,
+        max_total_size=max_total_size,
+        getsizeof=None if max_total_size is None else len,
+        on_evict=lambda reason, count: evictions.append((reason, count)),
+    )
+    return cache, evictions
+
+
+def test_on_evict_reports_expired_entries_when_reaped() -> None:
+    """Expired entries are reported once, as a batch, when they are reaped."""
+    clock = _FakeClock()
+    cache, evictions = _recording_cache(clock=clock, ttl=10)
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+
+    clock.now = 11
+    assert "a" not in cache
+    # Reads treat expired entries as absent without reaping them.
+    assert evictions == []
+
+    cache["c"] = b"c"
+    assert evictions == [("ttl", 2)]
+
+
+def test_on_evict_reports_max_entries_evictions() -> None:
+    """Each least-recently-used entry dropped to honor maxsize is reported."""
+    cache, evictions = _recording_cache(clock=_FakeClock(), maxsize=2)
+    cache["a"] = b"a"
+    cache["b"] = b"b"
+    cache["a"] = b"A"
+    assert evictions == []
+
+    cache["c"] = b"c"
+    assert evictions == [("max_entries", 1)]
+    assert list(cache) == ["a", "c"]
+
+
+def test_on_evict_reports_max_size_evictions() -> None:
+    """Entries dropped to honor max_total_size are reported as max_size."""
+    cache, evictions = _recording_cache(clock=_FakeClock(), max_total_size=4)
+    cache["a"] = b"aa"
+    cache["b"] = b"bb"
+    cache["c"] = b"cccc"
+
+    assert evictions == [("max_size", 1), ("max_size", 1)]
+    assert list(cache) == ["c"]
+
+
+def test_on_evict_ignores_explicit_removals() -> None:
+    """del, pop, popitem, and clear are explicit and are not reported."""
+    cache, evictions = _recording_cache(clock=_FakeClock())
+    for key in "abcd":
+        cache[key] = key.encode()
+
+    del cache["a"]
+    cache.pop("b")
+    cache.popitem()
+    cache.clear()
+
+    assert evictions == []
+    assert len(cache) == 0

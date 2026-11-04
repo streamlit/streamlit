@@ -29,7 +29,10 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.errors import StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    enqueue_message,
+    get_script_run_ctx,
+)
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -225,6 +228,12 @@ class StatusContainer(DeltaGenerator):
             msg.metadata.agent_props = agent_props
 
         self._current_proto = msg.delta.add_block
+        # Without a script run context (for example, `python app.py`) there
+        # is no session to enqueue to. enqueue_message would raise
+        # NoSessionContext from __exit__ and hide an exception from the
+        # with-block body.
+        if get_script_run_ctx(suppress_warning=True) is None:
+            return
         enqueue_message(msg)
 
     def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]

@@ -202,7 +202,24 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
+  // The run that this message starts (new_session) or ends (script_finished).
+  // - Deltas never set it: a delta belongs to the most recent new_session
+  //   before it.
+  // - A script_finished omits it when the backend doesn't know which run
+  //   finished.
+  RunIdentity run = 6;
+
   reserved 3;
+}
+
+// Identifies one script run: a full-app rerun, or a rerun of one or more
+// fragments. The frontend uses it to tell which elements are stale after a run.
+message RunIdentity {
+  string script_run_id = 1;
+
+  // Fragments this run reruns, with parent fragments before nested ones. Empty
+  // for a full-app run.
+  repeated string fragment_ids = 2;
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message

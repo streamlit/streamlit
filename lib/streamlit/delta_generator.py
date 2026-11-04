@@ -347,13 +347,6 @@ class DeltaGenerator(
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
 
-        # Change the module of all mixin'ed functions to be st.delta_generator,
-        # instead of the original module (e.g. st.elements.markdown)
-        for mixin in self.__class__.__bases__:
-            for func in mixin.__dict__.values():
-                if callable(func):
-                    func.__module__ = self.__module__
-
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -690,6 +683,19 @@ class DeltaGenerator(
         block_type = block_proto.WhichOneof("type")
 
         if dg._root_container is None or dg._cursor is None:
+            # Without a script run context (for example, python app.py),
+            # return a fresh dg_type instance so subclass methods such as
+            # GridContainer.cell() work and nested containers don't share state.
+            if dg_type is not None:
+                return cast(
+                    "DeltaGenerator",
+                    dg_type(
+                        root_container=None,
+                        cursor=None,
+                        parent=dg,
+                        block_type=block_type,
+                    ),
+                )
             return dg
 
         ctx = get_script_run_ctx()

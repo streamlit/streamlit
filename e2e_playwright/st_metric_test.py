@@ -13,7 +13,7 @@
 # limitations under the License.
 import re
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
@@ -86,16 +86,27 @@ def test_zero_delta_has_no_arrow(
     assert_snapshot(metric, name="st_metric-zero_delta")
 
 
+def _get_metric_after_sparkline_draws(page: Page, label: str) -> Locator:
+    """Return the metric after its sparkline's Vega SVG is visible.
+
+    The frontend draws the sparkline only after loading the Vega chunk, which
+    can finish after the app run.
+    """
+    metric = get_metric(page, label)
+    expect(metric.get_by_test_id("stMetricChart").locator("svg")).to_be_visible()
+    return metric
+
+
 def test_green_up_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
-        get_metric(themed_app, "User growth"),
+        _get_metric_after_sparkline_draws(themed_app, "User growth"),
         name="st_metric-green",
     )
 
 
 def test_red_down_arrow_render(themed_app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(
-        get_metric(themed_app, "S&P 500"),
+        _get_metric_after_sparkline_draws(themed_app, "S&P 500"),
         name="st_metric-red",
     )
 
@@ -104,7 +115,7 @@ def test_gray_down_arrow_render(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     assert_snapshot(
-        get_metric(themed_app, "Apples I've eaten"),
+        _get_metric_after_sparkline_draws(themed_app, "Apples I've eaten"),
         name="st_metric-gray",
     )
 
@@ -332,7 +343,7 @@ def test_custom_delta_color_render(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that custom delta colors render correctly."""
-    yellow_metric = get_metric(themed_app, "Yellow delta")
+    yellow_metric = _get_metric_after_sparkline_draws(themed_app, "Yellow delta")
     # Also tests delta_description rendering
     expect(yellow_metric.get_by_test_id("stMetricDeltaDescription")).to_have_text(
         "month over month"
@@ -342,7 +353,7 @@ def test_custom_delta_color_render(
         name="st_metric-yellow_delta",
     )
     assert_snapshot(
-        get_metric(themed_app, "Primary delta"),
+        _get_metric_after_sparkline_draws(themed_app, "Primary delta"),
         name="st_metric-primary_delta",
     )
 

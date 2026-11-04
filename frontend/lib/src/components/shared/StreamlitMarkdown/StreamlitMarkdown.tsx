@@ -53,6 +53,8 @@ import type { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
@@ -321,7 +323,7 @@ function rehypeSetCodeInlineProperty() {
  * createAnchorFromText(null) // Returns ""
  */
 export function createAnchorFromText(text: string | null): string {
-  if (!text) {
+  if (isNullOrEmptyString(text)) {
     return ""
   }
 
@@ -375,14 +377,14 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
   hideAnchor = false,
 }) => {
   const theme = useEmotionTheme()
-  if (!help && hideAnchor) {
+  if (isNullOrEmptyString(help) && hideAnchor) {
     return null
   }
 
   return (
     <StyledHeadingActionElements data-testid="stHeaderActionElements">
-      {help && <InlineTooltipIcon content={help} />}
-      {elementId && !hideAnchor && (
+      {!isNullOrEmptyString(help) && <InlineTooltipIcon content={help} />}
+      {!isNullOrEmptyString(elementId) && !hideAnchor && (
         <StyledLinkIcon href={`#${elementId}`} aria-label="Link to heading">
           <LinkIcon
             // Convert size to px because using rem works but logs a console
@@ -439,9 +441,10 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   const applyAnchor = useCallback(
     (node: HTMLElement): void => {
       const textSource = node.querySelector<HTMLElement>(HEADING_TEXT_SELECTOR)
-      const anchor =
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank anchor is unset and is generated from the heading text
-        propsAnchor || createAnchorFromText(textSource?.textContent ?? null)
+      // When the anchor is missing or empty, generate it from the heading text.
+      const anchor = isNullOrEmptyString(propsAnchor)
+        ? createAnchorFromText(textSource?.textContent ?? null)
+        : propsAnchor
       setElementId(anchor)
       const windowHash = window.location.hash.slice(1)
       if (windowHash && windowHash === anchor) {
@@ -472,7 +475,7 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // paint; otherwise a frame can render with the previous hash link.
   useLayoutEffect(() => {
     const node = nodeRef.current
-    if (!node || propsAnchor) {
+    if (!node || !isNullOrEmptyString(propsAnchor)) {
       return
     }
     applyAnchor(node)
@@ -513,14 +516,14 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
   // - anchor icon: only when we have an elementId and it's not hidden
   const rawHeadingTextId = useId()
   const headingTextId =
-    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
+    !isNullOrEmptyString(help) ||
+    (!isNullOrEmptyString(elementId) && !hideAnchor && !isInSidebarOrDialog)
       ? rawHeadingTextId
       : undefined
 
-  const idAttribute = elementId ? { id: elementId } : {}
-  const ariaLabelledbyAttribute = headingTextId
-    ? { "aria-labelledby": headingTextId }
-    : {}
+  const idAttribute = isNullOrEmptyString(elementId) ? {} : { id: elementId }
+  const ariaLabelledbyAttribute =
+    headingTextId !== undefined ? { "aria-labelledby": headingTextId } : {}
   const mergedAttributes = {
     ...(isInSidebarOrDialog ? {} : { ref, ...idAttribute }),
     ...ariaLabelledbyAttribute,
@@ -781,11 +784,13 @@ interface CustomHelpIconProps {
  *   which passes content via context and avoids directive label limitations.
  */
 const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Prefer context (from help parameter) over children (from directive label)
+  // Prefer the help parameter (context); fall back to the directive label
+  // when it is unset or empty.
   const contextHelpText = useContext(HelpTextContext)
-  const tooltipContent =
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help text falls back to the directive label
-    contextHelpText || (typeof children === "string" ? children : "")
+  const directiveLabel = typeof children === "string" ? children : ""
+  const tooltipContent = isNullOrEmptyString(contextHelpText)
+    ? directiveLabel
+    : contextHelpText
 
   return (
     <StyledHelpIconWrapper>
@@ -982,7 +987,7 @@ function createRemarkColoringAndSmall(
         const textColor = colorMapping.get(color)
         const bgColor = colorMapping.get(`${color}-background`)
 
-        if (textColor && bgColor) {
+        if (textColor !== undefined && bgColor !== undefined) {
           const data = (node.data ??= {})
           data.hName = "span"
           data.hProperties ??= {}
@@ -1004,7 +1009,7 @@ function createRemarkColoringAndSmall(
         data.hProperties.className = ["stMarkdownColoredText"]
         // Add class for background color for custom styling
         if (
-          style &&
+          style !== undefined &&
           (/background-color:/.test(style) || /background:/.test(style))
         ) {
           data.hProperties.className = ["stMarkdownColoredBackground"]
@@ -1030,7 +1035,11 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
-      if (!node.data?.hName && parent && index !== undefined) {
+      if (
+        isNullOrEmptyString(node.data?.hName) &&
+        parent &&
+        index !== undefined
+      ) {
         const textNode: Text = {
           type: "text",
           value: `:${node.name}`,
@@ -1299,10 +1308,8 @@ export function LinkWithTargetBlank(props: LinkProps): ReactElement {
     <a
       href={href}
       title={title}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank target still opens in a new tab
-      target={target || "_blank"}
-      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank rel still sets noopener noreferrer
-      rel={rel || "noopener noreferrer"}
+      target={isNullOrEmptyString(target) ? "_blank" : target}
+      rel={isNullOrEmptyString(rel) ? "noopener noreferrer" : rel}
       {...omit(rest, "node")}
     >
       {children}

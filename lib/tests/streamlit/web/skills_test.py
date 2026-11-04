@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import errno
+import io
 import os
 import subprocess
 import sys
@@ -30,6 +31,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from streamlit.errors import NoSessionContext
 from streamlit.web import cli, skills
 
 if TYPE_CHECKING:
@@ -155,6 +157,25 @@ def mock_meta_skill_dir(tmp_path: Path) -> Path:
         "print('discover')\n", encoding="utf-8"
     )
     return meta_dir
+
+
+@contextmanager
+def _cp1252_stdout() -> Generator[io.BytesIO, None, None]:
+    """Replace stdout with one like a Windows pipe's, yielding its bytes.
+
+    A pipe on Windows encodes in the ANSI code page (cp1252 for Western locales)
+    with strict errors, so it cannot encode the install output's ✓/⚠/→ glyphs.
+    A context manager rather than a fixture: pytest's output capture reinstalls
+    its own ``sys.stdout`` between a fixture's setup and the test body.
+    """
+    raw = io.BytesIO()
+    stdout = io.TextIOWrapper(raw, encoding="cp1252", newline="\n", write_through=True)
+    try:
+        with patch.object(sys, "stdout", stdout):
+            yield raw
+    finally:
+        # Detach so the wrapper's finalizer leaves ``raw`` open for the caller.
+        stdout.detach()
 
 
 class TestGetSourceSkillsDir:
@@ -2899,6 +2920,97 @@ class TestInstallSkillsReturnsResult:
         assert result.skipped == []
 
 
+class TestInstallOutputCannotFailInstall:
+    """Printing install output never fails the install it describes."""
+
+    def test_unencodable_glyph_is_replaced_and_encodable_text_is_kept(self) -> None:
+        """A glyph the stream cannot encode is replaced; text it can encode is kept."""
+        # € is in cp1252 but not in Latin-1, the "charmap" codec the error reports.
+        with _cp1252_stdout() as stdout:
+            skills._safe_echo("✓ C:\\Users\\José\\€ budget", fg="green")
+
+        assert stdout.getvalue().decode("cp1252") == "? C:\\Users\\José\\€ budget\n"
+
+    def test_project_install_completes_on_a_cp1252_stdout(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """The install lays the symlinks and reports them as installed."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            _cp1252_stdout() as stdout,
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert result.installed
+        assert (
+            project_dir / ".agents" / "skills" / "developing-with-streamlit"
+        ).is_symlink()
+        assert "? Installed:" in stdout.getvalue().decode("cp1252")
+
+    def test_global_fallback_completes_on_a_cp1252_stdout(
+        self, tmp_path: Path, mock_source_skills_dir: Path, mock_meta_skill_dir: Path
+    ) -> None:
+        """The "symlinks not supported" warning does not stop the fallback copy."""
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        home = tmp_path / "home"
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch.object(
+                skills, "_symlink_blocker", return_value="symlinks_no_privilege"
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=home),
+            _cp1252_stdout() as stdout,
+        ):
+            result = skills.install_skills(yes=True)
+
+        assert result.fallback_reason == "symlinks_no_privilege"
+        assert (
+            home / ".agents" / "skills" / "developing-with-streamlit" / "SKILL.md"
+        ).is_file()
+        assert "? Symlinks not supported" in stdout.getvalue().decode("cp1252")
+
+    @pytest.mark.parametrize(
+        "error",
+        [BrokenPipeError(errno.EPIPE, "Broken pipe"), NoSessionContext()],
+        ids=["launcher_exited", "stdout_redirected_into_an_element"],
+    )
+    def test_install_completes_when_stdout_raises(
+        self, tmp_path: Path, mock_meta_skill_dir: Path, error: Exception
+    ) -> None:
+        """The install succeeds even when every write to stdout raises."""
+        home = tmp_path / "home"
+
+        with (
+            patch.object(
+                skills, "_get_meta_skill_dir", return_value=mock_meta_skill_dir
+            ),
+            patch("pathlib.Path.home", return_value=home),
+            patch("click.echo", side_effect=error),
+        ):
+            result = skills.install_skills(global_mode=True, yes=True)
+
+        assert result.installed
+        assert (
+            home / ".agents" / "skills" / "developing-with-streamlit" / "SKILL.md"
+        ).is_file()
+
+
 class TestInstallDetectRoundtrip:
     """A successful one-click install must land where the nudge's skill
     detection scans, so ``should_show_skills_nudge`` returns ``False``
@@ -4430,20 +4542,18 @@ class TestVendoredMetaSkillDiscovery:
                 "vendored meta-skill or bundled content not present in this install"
             )
 
-        # Pin discover.py's interpreter detection to this test's own interpreter
-        # (which has Streamlit) by pointing VIRTUAL_ENV at its venv root. discover.py
-        # re-detects the project interpreter from VIRTUAL_ENV/PATH rather than
-        # reusing the launching sys.executable, so without this the test would fail
-        # (not skip) whenever the first python on PATH lacks Streamlit — e.g. when
-        # run outside ``uv``.
-        venv_root = os.path.dirname(os.path.dirname(sys.executable))
+        # With no project environment and nothing activated, discover.py falls
+        # back to the interpreter running it, which has Streamlit. An inherited
+        # PYTHONPATH could point that lookup at another Streamlit copy.
+        unset = {"VIRTUAL_ENV", "CONDA_PREFIX", "UV_PROJECT_ENVIRONMENT", "PYTHONPATH"}
+        env = {key: value for key, value in os.environ.items() if key not in unset}
         result = subprocess.run(
             [sys.executable, str(discover_py), "--project-dir", str(tmp_path)],
             capture_output=True,
             text=True,
             timeout=60,
             check=False,
-            env={**os.environ, "VIRTUAL_ENV": venv_root},
+            env=env,
         )
 
         assert result.returncode == 0, result.stderr

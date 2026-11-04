@@ -131,6 +131,12 @@ _OMITTED: dict[str, dict[str, str]] = {
         "theme": _PRESENTATION,
     },
     "exception": {"exception": _CONTENT},
+    "grid": {
+        "columns": _PRESENTATION,
+        "min_column_width": _PRESENTATION,
+        "row_height": _PRESENTATION,
+        "dense": _PRESENTATION,
+    },
     "header": {"divider": _PRESENTATION},
     "help": {"obj": _CONTENT},
     "iframe": {"tab_index": _BROWSER_AFFORDANCE},
@@ -193,6 +199,7 @@ _DERIVED_PROPS: dict[str, dict[str, str]] = {
     "page_link": {"external": "whether `page` leaves the app"},
     "popover": {"open": "whether the popover is open in this run"},
     "pyplot": {"url": _MEDIA_URL},
+    "table": {"caption": "read from a pandas Styler's `set_caption`"},
     "video": {"url": _MEDIA_URL},
 }
 
@@ -301,6 +308,7 @@ _RESERVED_FIELDS: dict[
     "form": frozenset({(None, True, None, None)}),
     "form_submit_button": frozenset({("trigger", True, None, None)}),
     "graphviz_chart": frozenset({(None, False, None, None)}),
+    "grid": frozenset({(None, False, None, None)}),
     "header": frozenset({(None, False, None, None)}),
     "help": frozenset({(None, False, None, None)}),
     "html": frozenset(

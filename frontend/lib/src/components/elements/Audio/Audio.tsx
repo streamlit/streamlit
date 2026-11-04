@@ -19,6 +19,7 @@ import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 import { getLogger } from "loglevel"
 
 import type { Audio as AudioProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import type { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
@@ -41,6 +42,10 @@ function Audio({
   const audioRef = useRef<HTMLAudioElement>(null)
 
   const { startTime, endTime, loop, autoplay, alt } = element
+  const trimmedAlt = alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
 
   const preventAutoplay = useMemo<boolean>(() => {
     if (!element.id) {
@@ -175,8 +180,7 @@ function Audio({
         // Only set an accessible name when the author provided one. Blank input
         // is treated as absent: aria-label=" " computes to an empty accessible
         // name, which is worse than having no aria-label at all.
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank alt is absent
-        aria-label={alt?.trim() || undefined}
+        aria-label={accessibleName}
         autoPlay={autoplay && !preventAutoplay}
         src={uri}
         onError={handleAudioError}

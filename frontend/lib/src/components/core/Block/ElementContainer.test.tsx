@@ -28,7 +28,8 @@ import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 
 // Helper to create a mock element node
 const createMockElementNode = (
@@ -91,7 +92,26 @@ describe("ElementContainer", () => {
     const container = screen.getByTestId("stElementContainer")
     expect(container).toHaveClass("stElementContainer")
     expect(container).toHaveClass("element-container")
+    expect(container).not.toHaveClass(PrintLayout.FIXED_WIDTH)
+    expect(container).not.toHaveClass(PrintLayout.GRAPHIC)
   })
+
+  it.each([PrintLayout.FIXED_WIDTH, PrintLayout.GRAPHIC])(
+    "adds the %s class from the config's print layout",
+    printLayout => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={new ElementContainerConfig({ printLayout })}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveClass(printLayout)
+    }
+  )
 
   describe("user key handling", () => {
     it("applies user-provided key as CSS class for custom styling", () => {
@@ -163,6 +183,43 @@ describe("ElementContainer", () => {
       expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
         "data-stale",
         "false"
+      )
+    })
+  })
+
+  describe("retained state", () => {
+    it("marks the container as retained inside a retained element", () => {
+      render(
+        <RetainedElementContext.Provider value={true}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={true}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </RetainedElementContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-retained",
+        "true"
+      )
+    })
+
+    it("does not mark the container as retained by default", () => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).not.toHaveAttribute(
+        "data-retained"
       )
     })
   })

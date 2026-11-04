@@ -12,19 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""E2E tests for the agent API's interact route and its OpenAPI document.
+"""E2E tests for the agent API's interact route, its OpenAPI document, and
+its MCP server.
 
 `POST /_stcore/agent/interact` drives the app, and the app's HTML links
 `GET /_stcore/agent/openapi.json`, which describes it.
+`POST /_stcore/agent/mcp` serves the same protocol as JSON-RPC to MCP clients.
 
 The tests call the routes over HTTP with `page.request`, which sends no
-`Origin` header, like the programmatic clients the route serves. Externally
-marked tests also run against a hosted deployment of `agent_api_interact.py`
-with `server.enableAgentApi` on, so they derive every URL from `app_base_url`
-and tolerate headers a hosting platform adds. They open the app before calling
-the route, because a host that guards the app's origin with a login cookie,
-as Snowflake does, sets it while the app loads, and `page.request` sends the
-browser context's cookies.
+`Origin` header, like the programmatic clients the route serves.
 """
 
 from __future__ import annotations
@@ -47,6 +43,7 @@ if TYPE_CHECKING:
 
 _INTERACT_PATH: Final = "/_stcore/agent/interact"
 _SCHEMA_PATH: Final = "/_stcore/agent/openapi.json"
+_MCP_PATH: Final = "/_stcore/agent/mcp"
 _ARROW_MIMETYPE: Final = "application/vnd.apache.arrow.stream"
 _SESSION_ID: Final = re.compile(r"s_[0-9a-f]{32}")
 _TOKEN_HEADER: Final = "Sf-Context-Current-User-Token"
@@ -70,6 +67,53 @@ def app_page(app_target: AppTarget) -> Page:
     login cookie the host sets.
     """
     return app_target.page
+
+
+def _configured_backend_base_url(app_target: AppTarget) -> str | None:
+    """Return ``window.__streamlit.BACKEND_BASE_URL`` when the host set one."""
+    backend = app_target.locator("html").evaluate(
+        "() => window.__streamlit?.BACKEND_BASE_URL || null"
+    )
+    if isinstance(backend, str) and backend.strip():
+        return backend.strip()
+    return None
+
+
+@pytest.fixture
+def agent_api_base_url(app_target: AppTarget, app_base_url: str) -> str:
+    """Return the base URL for agent API HTTP calls.
+
+    Some hosts, such as Streamlit in Snowflake, serve the app's HTML from one
+    origin (an iframe) and the Streamlit server from another (a Snowpark
+    Container Services container). The host points the app at the server
+    through ``window.__streamlit.BACKEND_BASE_URL``, and agent API requests
+    must go there. When the value is unset (locally, or when one origin serves
+    both), this returns ``app_base_url``.
+    """
+    return _configured_backend_base_url(app_target) or app_base_url
+
+
+def _advertised_schema_url(app_target: AppTarget, agent_api_base_url: str) -> str:
+    """Check the description link and return the schema URL it points to.
+
+    The page Streamlit ships links the schema with a relative href, which
+    resolves against ``agent_api_base_url`` when one origin serves both. A host
+    that sets ``BACKEND_BASE_URL`` serves its own page, whose link is an
+    absolute URL on that backend, so it does not resolve against the iframe.
+    """
+    link = app_target.locator("link[rel='service-desc']")
+    backend_base_url = _configured_backend_base_url(app_target)
+    if backend_base_url is None:
+        expect(link).to_have_attribute("href", f".{_SCHEMA_PATH}")
+        return build_app_url(agent_api_base_url, path=_SCHEMA_PATH)
+    href = link.get_attribute("href") or ""
+    advertised, backend = urlsplit(href), urlsplit(backend_base_url)
+    assert (advertised.scheme, advertised.netloc.lower()) == (
+        backend.scheme,
+        backend.netloc.lower(),
+    ), href
+    assert advertised.path.endswith(_SCHEMA_PATH), href
+    return href
 
 
 def _interact_url(app_base_url: str) -> str:
@@ -179,6 +223,11 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     assert isinstance(created["schema_version"], int)
     assert created["page"]["url_path"] == _home_path(created)
     assert {"report", "slow"} <= set(_url_paths(created["pages"]))
+    # The snapshot includes a page's help before the agent opens the page, and
+    # omits the `help` key when the page has none.
+    pages_by_path = {entry["url_path"]: entry for entry in created["pages"]}
+    assert pages_by_path["report"]["help"] == "Quarterly figures for one **region**."
+    assert "help" not in pages_by_path[_home_path(created)]
     region_action = next(
         action for action in created["actions"] if action["key"] == "region"
     )
@@ -194,6 +243,7 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
         _interact(page, app_base_url, {"session_id": session_id, "page": "report"})
     )
     assert report["page"]["url_path"] == "report"
+    assert report["page"]["help"] == "Quarterly figures for one **region**."
     assert _keyed(report, "quarter")["value"] == "Q1"
     assert _lines(report)["runs"] == "3"
 
@@ -348,9 +398,8 @@ def test_data_urls_serve_every_row_the_snapshot_counts(
     assert small_table["url"] != table["url"]
 
 
-@pytest.mark.external_test
 def test_snapshot_urls_context_and_headers_follow_the_request(
-    app_page: Page, app_base_url: str
+    app_page: Page, agent_api_base_url: str
 ) -> None:
     """Media URLs resolve against the request's URL, `context` reaches the
     app's `st.context`, and every interaction's run sees that request's
@@ -362,7 +411,7 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     token_header = {_TOKEN_HEADER: _TOKEN_VALUE}
     response = _interact(
         app_page,
-        app_base_url,
+        agent_api_base_url,
         {"context": {"timezone": "Asia/Kolkata", "locale": "de-DE"}},
         headers=token_header,
     )
@@ -380,14 +429,14 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     )
     # Relative to the request, the one base a path-stripping proxy cannot hide.
     assert image_url.startswith("../../media/")
-    image = app_page.request.get(urljoin(_interact_url(app_base_url), image_url))
+    image = app_page.request.get(urljoin(_interact_url(agent_api_base_url), image_url))
     assert image.status == 200
     assert image.headers["content-type"].startswith("image/")
 
     rerun = _snapshot(
         _interact(
             app_page,
-            app_base_url,
+            agent_api_base_url,
             {"session_id": created["session_id"]},
             headers=token_header,
         )
@@ -398,9 +447,8 @@ def test_snapshot_urls_context_and_headers_follow_the_request(
     assert lines["timezone"] == "Asia/Kolkata"
 
 
-@pytest.mark.external_test
 def test_refuses_web_pages_and_ignores_client_identity(
-    app_page: Page, app_base_url: str
+    app_page: Page, app_base_url: str, agent_api_base_url: str
 ) -> None:
     """A web page's request and other methods than POST are refused without
     the app's HTML, and neither made-up identity headers nor cookies, a forged
@@ -408,26 +456,33 @@ def test_refuses_web_pages_and_ignores_client_identity(
     """
     _refusal(
         _interact(
-            app_page, app_base_url, {}, headers={"Origin": "https://e2e.invalid"}
+            app_page,
+            agent_api_base_url,
+            {},
+            headers={"Origin": "https://e2e.invalid"},
         ),
         403,
         "origin_not_allowed",
     )
     for method in ["GET", "PUT"]:
         response = app_page.request.fetch(
-            _interact_url(app_base_url), method=method, max_redirects=0
+            _interact_url(agent_api_base_url), method=method, max_redirects=0
         )
         assert response.status == 405, f"{method}: {_describe(response)}"
         assert "text/html" not in response.headers.get("content-type", "")
 
     forged_login = json.dumps({"is_logged_in": True, "email": _SPOOFED_IDENTITY})
+    # Forge the cookie for the API's host, where the request goes, and for the
+    # document's host, in case the server reads cookies there. On hosts that
+    # set BACKEND_BASE_URL the two differ.
     app_page.context.add_cookies(
         [
             {
                 "name": "_streamlit_user",
                 "value": quote(forged_login),
-                "url": build_app_url(app_base_url, path="/"),
+                "url": build_app_url(base_url, path="/"),
             }
+            for base_url in {app_base_url, agent_api_base_url}
         ]
     )
     identity_headers = [
@@ -438,7 +493,7 @@ def test_refuses_web_pages_and_ignores_client_identity(
     ]
     response = _interact(
         app_page,
-        app_base_url,
+        agent_api_base_url,
         {},
         headers=dict.fromkeys(identity_headers, _SPOOFED_IDENTITY),
     )
@@ -448,27 +503,27 @@ def test_refuses_web_pages_and_ignores_client_identity(
     assert _SPOOFED_IDENTITY not in response.text()
 
 
-@pytest.mark.external_test
 def test_the_app_links_a_description_that_reaches_the_api(
-    app_target: AppTarget, app_base_url: str
+    app_target: AppTarget, agent_api_base_url: str
 ) -> None:
     """The loaded app's HTML links the OpenAPI document, in its head and in the
-    text a reader without JavaScript gets. The document says the API is on,
-    and its server, resolved against the document's URL, reaches the interact
-    route through `server.baseUrlPath` and any prefix a host adds.
+    text a reader without JavaScript gets. The link is relative to the page,
+    unless the host set ``BACKEND_BASE_URL``, in which case it is an absolute
+    URL on that backend. The schema is fetched from the URL the link points
+    to. The document says the API is on, and its server, resolved against
+    that schema URL, reaches the interact route through `server.baseUrlPath`
+    and any prefix a host adds.
 
     The `Link` header is not checked, because hosts may strip it.
     """
-    relative_link = f".{_SCHEMA_PATH}"
-    expect(app_target.locator("link[rel='service-desc']")).to_have_attribute(
-        "href", relative_link
-    )
+    schema_url = _advertised_schema_url(app_target, agent_api_base_url)
     # Read from the DOM, since Playwright's text matching skips `<noscript>`.
     noscript = app_target.locator("noscript").text_content() or ""
     assert _SCHEMA_PATH.lstrip("/") in noscript
 
     page = app_target.page
-    schema_url = build_app_url(app_base_url, path=_SCHEMA_PATH)
+    # Fetch the schema from the backend, which on split-origin hosts is not
+    # the origin that served the HTML.
     response = page.request.get(schema_url, max_redirects=0)
     assert response.status == 200, _describe(response)
     assert response.headers["content-type"].startswith("application/json")
@@ -476,11 +531,149 @@ def test_the_app_links_a_description_that_reaches_the_api(
     assert document["openapi"].startswith("3.1")
     assert document["info"]["x-streamlit-agent-api"] == "available"
 
-    [interact_path] = [
-        path for path, item in document["paths"].items() if "post" in item
-    ]
+    operations = {
+        item["post"]["operationId"]: path
+        for path, item in document["paths"].items()
+        if "post" in item
+    }
+    assert set(operations) == {"interact", "mcp"}
+    interact_path = operations["interact"]
+    assert urlsplit(operations["mcp"]).path.endswith(_MCP_PATH)
+    assert _MCP_PATH.lstrip("/") in noscript
     root = urljoin(schema_url, document["servers"][0]["url"])
     interact_url = root + interact_path.lstrip("/")
-    assert urlsplit(interact_url).path == urlsplit(_interact_url(app_base_url)).path
+    assert (
+        urlsplit(interact_url).path == urlsplit(_interact_url(agent_api_base_url)).path
+    )
     created = _snapshot(page.request.post(interact_url, data={}, max_redirects=0))
     assert _SESSION_ID.fullmatch(created["session_id"])
+
+
+def _mcp(page: Page, app_base_url: str, message: dict[str, Any]) -> APIResponse:
+    return page.request.post(
+        build_app_url(app_base_url, path=_MCP_PATH), data=message, max_redirects=0
+    )
+
+
+def _rpc_result(
+    page: Page, app_base_url: str, method: str, params: dict[str, Any]
+) -> dict[str, Any]:
+    """Send a JSON-RPC request to the MCP server and return its result."""
+    response = _mcp(
+        page,
+        app_base_url,
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params},
+    )
+    assert response.status == 200, _describe(response)
+    body: dict[str, Any] = response.json()
+    assert body["id"] == 1, body
+    result: dict[str, Any] = body["result"]
+    return result
+
+
+def _tool(
+    page: Page, app_base_url: str, name: str, arguments: dict[str, Any]
+) -> tuple[bool, Any]:
+    """Call an MCP tool and return whether it failed and its content."""
+    result = _rpc_result(
+        page, app_base_url, "tools/call", {"name": name, "arguments": arguments}
+    )
+    [content] = result["content"]
+    if content["type"] == "text":
+        return result["isError"], json.loads(content["text"])
+    return result["isError"], content
+
+
+def test_mcp_clients_drive_the_app_and_read_its_data(
+    app_page: Page, agent_api_base_url: str
+) -> None:
+    """An MCP client initializes, lists the two tools, drives the app with
+    `interact`, and reads a table past its preview and an image with
+    `get_data`, which runs nothing. A `2026-07-28` probe and methods other
+    than POST are refused without the app's HTML.
+    """
+    initialized = _rpc_result(
+        app_page,
+        agent_api_base_url,
+        "initialize",
+        {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {"name": "e2e", "version": "1"},
+        },
+    )
+    assert initialized["protocolVersion"] == "2025-11-25"
+    assert initialized["serverInfo"]["name"] == "streamlit"
+    notified = _mcp(
+        app_page,
+        agent_api_base_url,
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+    )
+    assert notified.status == 202, _describe(notified)
+    assert notified.body() == b""
+    tools = _rpc_result(app_page, agent_api_base_url, "tools/list", {})["tools"]
+    assert [tool["name"] for tool in tools] == ["interact", "get_data"]
+
+    is_error, data_page = _tool(
+        app_page, agent_api_base_url, "interact", {"page": "data"}
+    )
+    assert is_error is False
+    session_id = data_page["session_id"]
+    table = _keyed(data_page, "orders")["data"]
+    assert (table["row_count"], len(table["preview"]["rows"])) == (250, 100)
+    is_error, rows = _tool(
+        app_page,
+        agent_api_base_url,
+        "get_data",
+        {"session_id": session_id, "url": table["url"], "offset": 100},
+    )
+    assert is_error is False
+    assert (len(rows["rows"]), rows["next_offset"]) == (150, None)
+    assert rows["rows"][0] == [100, 150.0]
+
+    is_error, home = _tool(
+        app_page,
+        agent_api_base_url,
+        "interact",
+        {"session_id": session_id, "page": _home_path(data_page)},
+    )
+    assert is_error is False
+    runs = _lines(home)["runs"]
+    image_url = next(
+        node["props"]["url"] for node in _nodes(home) if node["type"] == "image"
+    )
+    is_error, image = _tool(
+        app_page,
+        agent_api_base_url,
+        "get_data",
+        {"session_id": session_id, "url": image_url},
+    )
+    assert is_error is False
+    assert image["type"] == "image"
+    assert image["mimeType"].startswith("image/")
+    is_error, refused = _tool(
+        app_page,
+        agent_api_base_url,
+        "get_data",
+        {"session_id": session_id, "url": "logo.png"},
+    )
+    assert is_error is True
+    assert refused["error"]["code"] == "unknown_file"
+    # Neither read ran the app: the next rerun is the only one since `home`.
+    _, rerun = _tool(
+        app_page, agent_api_base_url, "interact", {"session_id": session_id}
+    )
+    assert int(_lines(rerun)["runs"]) == int(runs) + 1
+
+    probe = _mcp(
+        app_page,
+        agent_api_base_url,
+        {"jsonrpc": "2.0", "id": 2, "method": "server/discover"},
+    )
+    assert probe.status == 400, _describe(probe)
+    assert probe.json()["error"]["code"] == -32600
+    fetched = app_page.request.get(
+        build_app_url(agent_api_base_url, path=_MCP_PATH), max_redirects=0
+    )
+    assert fetched.status == 405, _describe(fetched)
+    assert "text/html" not in fetched.headers.get("content-type", "")

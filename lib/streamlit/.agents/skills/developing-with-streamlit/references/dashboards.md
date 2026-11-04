@@ -5,7 +5,7 @@ Compose metrics, charts, and data into clean dashboard layouts.
 
 ## Cards with borders
 
-Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, and `st.form`:
+Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, `st.grid`, and `st.form`:
 
 ```python
 # Container card
@@ -49,7 +49,20 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
+
+Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
+
+```python
+# A pixel row height also gives every row the same height.
+with st.grid(4, row_height=160, gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%", border=True, height="stretch")
+    st.metric("Users", "762k", "+12%", border=True, height="stretch")
+    st.metric("Orders", "1.4k", border=True, height="stretch")
+    st.metric("Conversion", "3.2%", "+0.1%", border=True, height="stretch")
+```
+
+For a side-by-side comparison of `st.columns`, `st.grid`, and horizontal containers, see "Side by side: columns vs grid vs horizontal container" in `layouts.md`.
 
 Keep a horizontal metric row to about five metrics. With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest. Chunk larger sets into rows of four `st.columns`, which `layouts.md` recommends for up to four KPI cards. Keep `st.columns(4)` for a short last row so its cards stay as wide as the others:
 
@@ -123,6 +136,30 @@ with st.container(border=True):
     st.dataframe(orders_df, hide_index=True, alt="Recent orders")
 ```
 
+## Choosing charts for a dashboard
+
+Prefer one chart engine per page (see [charts.md](charts.md)), and combine engines when a chart needs a type or feature the main one lacks:
+
+- **Operational dashboards** (KPIs, monitoring, several charts driven by the same filters): prefer `st.echarts_chart` for every chart. Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and dense series stay fast with `sampling` and `large`.
+- **Analytical dashboards** (aggregation, binning, faceting, brushing one chart to filter others): prefer `st.altair_chart`, with the simple charts for quick views.
+- Metric sparklines (`chart_data`) work next to either engine.
+
+```python
+st.echarts_chart(
+    {
+        "tooltip": {"trigger": "axis", "valueFormatter": "dollar"},
+        "dataset": {"source": daily_revenue},  # Columns: date, revenue
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [{"type": "line", "showSymbol": False}],
+    },
+    alt="Daily revenue, rising since March",
+)
+```
+
+The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
+
 ## Smooth loading with parallel fragments + skeletons
 
 When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
@@ -195,12 +232,12 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, time-series charts, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters |
-| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander |
-| `dashboard-seattle-weather` | Weather data visualization |
-| `dashboard-stock-peers` | Stock peer comparison |
+| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
+| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
+| `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
+| `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
 | `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
@@ -208,9 +245,11 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 ## References
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
-- `layouts.md` — Columns, containers, tabs, dialogs
-- `data-display.md` — Charts, dataframes, column configuration
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
+- `charts.md` — Choosing chart commands, consistent charts, chart selections
+- `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)

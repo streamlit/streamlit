@@ -25,6 +25,7 @@ import {
 } from "react"
 
 import type { DownloadButton as DownloadButtonProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -92,7 +93,7 @@ function DownloadButton(props: Props): ReactElement {
   }, [downloadUrl, endpoints, deferredFileId, url])
 
   const handleDeferredDownload = useCallback(async (): Promise<void> => {
-    if (!backendOperationClient || !deferredFileId) {
+    if (!backendOperationClient || isNullOrEmptyString(deferredFileId)) {
       setError("Deferred download not properly configured")
       return
     }
@@ -190,7 +191,7 @@ function DownloadButton(props: Props): ReactElement {
 
   // Clear error after 5 seconds
   useEffect(() => {
-    if (error) {
+    if (!isNullOrEmptyString(error)) {
       restartErrorTimeout()
     } else {
       clearErrorTimeout()
@@ -217,7 +218,7 @@ function DownloadButton(props: Props): ReactElement {
           />
         </BaseButton>
       </BaseButtonTooltip>
-      {error && (
+      {!isNullOrEmptyString(error) && (
         <StyledErrorMessage data-testid="stDownloadButtonError">
           {error}
         </StyledErrorMessage>

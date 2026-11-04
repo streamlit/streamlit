@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import itertools
 import re
 
 import pytest
@@ -31,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 25
+_EXPECTED_CHART_COUNT = 32
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -175,7 +176,8 @@ def test_point_selection_persists_and_toggles(
 
     Point selection uses ECharts' native ``selectedMode``, so the clicked point
     keeps a visible selected state that is re-applied after a rerun. Clicking the
-    same point again deselects it.
+    same point again deselects it. On a ``dataset.source`` DataFrame, the
+    returned indices address that DataFrame's rows.
     """
     # Initially nothing is selected.
     expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
@@ -209,6 +211,18 @@ def test_point_selection_persists_and_toggles(
     # Visual counterpart to the count: a leftover highlight would still match
     # ``point_selected`` if only widget state were cleared.
     assert_snapshot(chart, name="st_echarts_chart-point_unselected")
+
+    # The second bar's index selects the DataFrame's second row.
+    expect(app.get_by_text("echarts dataset selection: none")).to_be_visible()
+    dataset_chart = _get_chart(app, "dataset_selection_chart")
+    expect(dataset_chart.locator("canvas")).to_be_visible()
+    box = dataset_chart.bounding_box()
+    assert box is not None
+    dataset_chart.click(position={"x": box["width"] * 0.75, "y": box["height"] / 2})
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts dataset selection: Tue")).to_be_visible()
+    # Must NOT happen: the index resolves to the other row.
+    expect(app.get_by_text("echarts dataset selection: Mon")).to_have_count(0)
 
 
 @pytest.mark.only_browser("chromium")
@@ -342,7 +356,9 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
 
 
 def test_tooltip_formatting_without_javascript(app: Page):
-    """Tooltip templates expand ``{@[n]}``, and ``valueFormatter`` formats numbers."""
+    """Tooltip templates expand ``{@[n]}``, ``valueFormatter`` formats numbers,
+    and a daily time axis heads its tooltip with a plain date.
+    """
     template_chart = _get_chart(app, "c_tooltip_template")
     # Heatmaps draw on two canvas layers.
     expect(template_chart.locator("canvas").first).to_be_visible()
@@ -361,6 +377,14 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(format_tooltip).to_contain_text("$1,234.57")
     # Dollar format rounds to cents, so the unrounded grouped value must not remain.
     expect(format_tooltip).not_to_contain_text("1,234.567")
+
+    daily_chart = _get_chart(app, "c_daily_time_tooltip")
+    expect(daily_chart.locator("canvas")).to_be_visible()
+    daily_chart.hover()
+    daily_tooltip = daily_chart.locator(".echarts-daily-tooltip")
+    expect(daily_tooltip).to_contain_text(re.compile(r"2026-0[78]-\d{2}"))
+    # Must NOT happen: the header keeps ECharts' midnight time.
+    expect(daily_tooltip).not_to_contain_text("00:00")
 
 
 def test_toolbar_actions(app: Page):
@@ -436,6 +460,7 @@ def test_arrow_dataset_chart_and_show_data(
     assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
 
     chart_handle = chart.element_handle()
+    chart_height = container.evaluate("el => getComputedStyle(el).height")
 
     # The hover-revealed toolbar overlaps the neighboring chart, so dispatch
     # the clicks directly on the buttons (see test_toolbar_actions).
@@ -443,6 +468,8 @@ def test_arrow_dataset_chart_and_show_data(
     dataframe = container.get_by_test_id("stDataFrame")
     expect(dataframe).to_be_visible()
     expect(chart).to_be_hidden()
+    # The table takes the chart's place at the chart's height.
+    expect(container).to_have_css("height", chart_height)
     # The grid draws its cells on a canvas and mirrors the visible ones in an
     # accessibility table, so check a value of the chart's dataframe there.
     # Column 0 is the pandas index, so column 1 is "day".
@@ -513,3 +540,65 @@ def test_echarts_chart_alt_sets_accessible_name(app: Page):
     overridden = _get_chart(app, "c_echarts_alt_overrides_description")
     expect(overridden).to_have_accessible_name("Streamlit alt overrides description")
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def test_large_data_defaults(app: Page):
+    """Dense bar and line series get large-data settings unless the spec sets them.
+
+    The charts use the SVG renderer, so every drawn shape is a ``path``.
+    """
+    shapes = {
+        key: _get_chart(app, key).locator("svg path")
+        for key in (
+            "c_dense_bar",
+            "c_dense_bar_opt_out",
+            "c_dense_line",
+            "c_dense_line_opt_out",
+        )
+    }
+    # An explicit setting wins: one shape per bar and per line point.
+    wait_until(app, lambda: shapes["c_dense_bar_opt_out"].count() >= 2001)
+    wait_until(app, lambda: shapes["c_dense_line_opt_out"].count() >= 2001)
+
+    # Large mode draws the bars as a few paths, and the line draws no symbols,
+    # so only the axes, grid, and series paths remain.
+    for key in ("c_dense_bar", "c_dense_line"):
+        expect(_get_chart(app, key)).to_have_attribute("aria-busy", "false")
+    wait_until(app, lambda: 0 < shapes["c_dense_bar"].count() < 100)
+    wait_until(app, lambda: 0 < shapes["c_dense_line"].count() < 100)
+
+    # The axis tooltip still shows the hovered point and marks it with a symbol.
+    tooltip = app.locator(".echarts-dense-tooltip")
+    expect(tooltip).not_to_be_visible()
+    line_shape_count = shapes["c_dense_line"].count()
+    _get_chart(app, "c_dense_line").hover()
+    expect(tooltip).to_be_visible()
+    wait_until(app, lambda: shapes["c_dense_line"].count() > line_shape_count)
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def test_narrow_time_axis_hides_overlapping_labels(app: Page):
+    """A per-minute time axis in a narrow chart drops labels that would overlap.
+
+    ECharts places time ticks by the data range, not the chart width, so at
+    320px each label would otherwise run into its neighbor.
+    """
+    chart = _get_chart(app, "c_narrow_time_axis")
+    expect(chart).to_have_attribute("aria-busy", "false")
+    # Only the x axis prints "HH:mm"; the y axis prints plain numbers.
+    labels = chart.locator("svg text").filter(has_text=re.compile(r"^\d{1,2}:\d{2}$"))
+    # Must NOT happen: hiding overlaps removes every label.
+    wait_until(app, lambda: labels.count() >= 2)
+
+    spans = labels.evaluate_all(
+        "elements => elements.map(element => {"
+        " const box = element.getBoundingClientRect();"
+        " return {text: element.textContent, left: box.left, right: box.right};"
+        " }).sort((a, b) => a.left - b.left)"
+    )
+    overlapping = [
+        (left["text"], right["text"])
+        for left, right in itertools.pairwise(spans)
+        if left["right"] > right["left"]
+    ]
+    assert overlapping == [], f"Overlapping time axis labels: {overlapping}"

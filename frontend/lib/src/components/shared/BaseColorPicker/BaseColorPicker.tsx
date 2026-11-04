@@ -20,6 +20,8 @@ import { FloatingFocusManager, FloatingPortal } from "@floating-ui/react"
 import { ChromePicker, type ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
@@ -257,7 +259,7 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         disabled={disabled}
         labelVisibility={labelVisibility}
       >
-        {help && (
+        {!isNullOrEmptyString(help) && (
           <WidgetLabelHelpIconInline
             content={help}
             placement={Placement.TOP_RIGHT}

@@ -1,6 +1,6 @@
 # Streamlit WCAG theme & shell chrome inventory
 
-Last updated: 2026-10-16. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
+Last updated: 2026-10-30. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
@@ -48,12 +48,12 @@ AA floors for **any** default light/dark palette Streamlit ships. Soft or derive
 
 **2.5.8** is chrome sizing, not a color floor — see [2.5.8](#258-target-size-minimum).
 
-Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (`bodyText`, `fadedText60`) when both refer to the same role. `bgMix` is `mix(backgroundColor, secondaryBackgroundColor, 0.5)` from `computeDerivedColors` — not a public config key.
+Use `fadedText70` (70% `bodyText`) for secondary or muted **text** and `fadedText60` (60%) for muted **icon** strokes. Names mix public config keys (`textColor`, `primaryColor`) and internal tokens (`bodyText`, `fadedText70`, `fadedText60`) when both refer to the same role. `bgMix` is `mix(backgroundColor, secondaryBackgroundColor, 0.5)` from `computeDerivedColors` — not a public config key.
 
 | Role | Typical tokens / config | Criterion | Floor | Required surfaces |
 | ---- | ----------------------- | --------- | ----- | ----------------- |
 | Body text | `textColor` / `bodyText` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
-| Secondary / muted UI text | `fadedText60`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, dataframe header (stock fill when unset) |
+| Secondary / muted UI text | `fadedText70`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, dataframe header (stock fill when unset) |
 | Link text | `linkColor` / `blueTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
 | Code text on code fill | Inline `codeTextColor` on `codeBackgroundColor` | 1.4.3 | ≥ 4.5:1 | Code background |
 | Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
@@ -74,7 +74,6 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 
 ### Level AA
 
-- **1.4.3 Light-theme secondary text is below 4.5:1.** `fadedText60` / `grayTextColor` / default dataframe header text on default light page, secondary, and mixed backgrounds. Shared by placeholders, file-uploader hints, character counts, tabs, and similar (related issues [#8249](https://github.com/streamlit/streamlit/issues/8249), [#8276](https://github.com/streamlit/streamlit/issues/8276), [#8288](https://github.com/streamlit/streamlit/issues/8288), [#8289](https://github.com/streamlit/streamlit/issues/8289)). Dark-theme muted text **meets** 1.4.3. Ratios: [1.4.3 scorecard](#143-contrast-minimum).
 - **1.4.3 Status text on translucent status fills fails on the page and/or default sidebar.** Fills are translucent: 10% opacity in light and 20% in dark (`primarybg`: 10% / 30%). See the [1.4.3 scorecard](#143-contrast-minimum) for per-color results. Call sites: markdown badges, metric deltas (`getMetricTextColor` / `getMetricBackgroundColor`), and `AlertContainer`.
 - **1.4.3 `primary` as text fails 4.5:1 on the dark page and on dark secondary / default sidebar.** Light primary on the light page and light secondary meets 1.4.3. Includes the file-uploader drag overlay. See the [1.4.3 scorecard](#143-contrast-minimum). Separate from primary-on-`primarybg` status fills.
 - **1.4.3 Named markdown text colors can fail 4.5:1 as plain text** (for example `:orange[…]` on the light page / sidebar). Distinct from text-on-status-fill. See the [1.4.3 scorecard](#143-contrast-minimum).
@@ -92,7 +91,7 @@ Live scorecard for today’s default light and dark themes. Floors above are the
 
 | Role | Light | Dark | Bucket | Note |
 | ---- | ----- | ---- | ------ | ---- |
-| Secondary / muted UI text (`fadedText60`, `grayTextColor`, dataframe header) | Fail (~3.5–3.7) | Pass (~6.1–7.0) | Library blocks | Light only; includes default `dataframeHeaderTextColor` |
+| Secondary / muted UI text (`fadedText70`, dataframe header) | Pass (~5.24 page / ~5.08 secondary / ~5.05 header) | Pass (~6.6–7.9) | Library meets | Includes default `dataframeHeaderTextColor`. `grayTextColor` is opaque and also passes on stock themes |
 | White label on primary fill | Pass (~5.18) | Pass (~4.62) | Library meets | `StyledPrimaryButton` and similar (`#C53948` / `#CF4250`) |
 | `primary` as **text** | Pass page ~5.18; pass secondary ~4.88 | Fail page ~3.92; fail secondary ~3.06 | Library blocks (dark) | File-uploader drag overlay is primary on `secondaryBg`. Not primary-on-`primarybg` |
 | Status text on status fill — **page** | Fail (see per-color table) | Fail (see per-color table) | Library blocks | Translucent fills on page bg; badges, metrics, `AlertContainer` |
@@ -129,7 +128,7 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 | Primary as control on default sidebar | Pass (~4.88) | Pass (~3.53) | Library meets | Sidebar page background is `#F8F8F7` / `#21201D` (Pass ~4.88 / ~3.53) |
 | Input boundary with `showWidgetBorder = false` | Fail (~1.12) | Fail (~1.27) | Library blocks | Opt-out: resting outline is `secondaryBg` on page (`getBorderColor`). Default (flag unset/true) uses `borderColor` (row above) |
 | Enabled close icon (`fadedText40`) | Fail (~2.2) | Pass (~3.7) | Library blocks | `StyledCloseButton` (toast) and `StyledSkillsNudgeClose` on toast / nudge card (`bgColor`) |
-| Muted icon stroke (`fadedText60`) | Pass (~3.5–3.7) | Pass (~6.1–7.0) | Library meets | Header, toolbar, and link/help icons that use this token only (page ~3.69, secondary ~3.56). [#16149](https://github.com/streamlit/streamlit/issues/16149) is **not** a default 1.4.11 fail for this token |
+| Muted icon stroke (`fadedText60`) | Pass (~3.8–3.9) | Pass (~5.3–6.1) | Library meets | Header, toolbar, and link/help icons (page ~3.89, secondary ~3.81). Heading link (`StyledLinkIcon`) stays at `opacity: 0` until hover/focus; the reported ~1.16:1 in [#16149](https://github.com/streamlit/streamlit/issues/16149) matches that hidden state. When shown, the stroke is ~3.9:1 light / ~6.1:1 dark — not a default 1.4.11 fail |
 | Primary as control / solid focus outline on page | Pass (~5.18) | Pass (~3.92) | Library meets | Page background only |
 
 ### 2.5.8 Target Size (Minimum)
@@ -165,12 +164,10 @@ Core color keys (`primaryColor`, `textColor`, `linkColor`, `borderColor`, status
 
 When unset:
 
-- `dataframeHeaderTextColor` → faded `textColor` (`fadedText60`) — same light **1.4.3** muted-text Library blocks gap
+- `dataframeHeaderTextColor` → faded `textColor` (`fadedText70`) — meets **1.4.3** on default light/dark with other secondary/muted UI text
 - `dataframeHeaderBackgroundColor` → stock chrome hex (light `#F7F7F6`, dark `#2D2B27`) while surfaces and `primaryColor` stay on the built-in palette. If any of those differ and this key is unset, the header fill is `bgMix`
 - `dataframeBorderColor` → stock chrome hex (light `#E8E5E2`, dark `#3A3834`). When the author sets `theme.borderColor` and leaves `dataframeBorderColor` unset, dataframe borders follow `borderColorLight` (`transparentize(borderColor, 0.55)`)
 - Off `st.toggle` track uses `fadedText10` via `getToggleTrackColor`, not `borderColor`. A custom `theme.borderColor` does not restyle it. Selected tracks use `primary` (sidebar 1.4.11 row).
-
-Raising muted text (or shipping a stronger default header text color) clears the header text gap together with placeholders and related chrome.
 
 ### `showWidgetBorder`
 

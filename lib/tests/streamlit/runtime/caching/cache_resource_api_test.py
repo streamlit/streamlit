@@ -568,6 +568,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
 
     def tearDown(self):
         st.cache_resource.clear()
+        super().tearDown()
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_shows_cached_widget_replay_warning(

@@ -91,7 +91,9 @@ import { ElementContainer } from "./ElementContainer"
 import {
   ElementContainerConfig,
   MinStretchWidth,
+  PrintLayout,
 } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 import { StyledSpace } from "./styled-components"
 import {
   type BaseBlockProps,
@@ -217,8 +219,17 @@ const BidiComponent = lazy(
   () => import("~lib/components/widgets/BidiComponent/BidiComponent")
 )
 
+const CHART_CONFIG = ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.with({
+  printLayout: PrintLayout.GRAPHIC,
+})
+
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
+  /**
+   * Whether this renders a retained copy of a displaced prior-run element.
+   * Retained elements are hidden unless they hold focus.
+   */
+  isRetained?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
@@ -278,7 +289,9 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          config={ElementContainerConfig.LARGE_ELEMENT.with({
+            printLayout: PrintLayout.FIXED_WIDTH,
+          })}
           isStale={isStale}
         >
           <Table
@@ -342,11 +355,7 @@ const RawElementNodeRenderer = (
     case "deckGlJsonChart": {
       const deckGlProto = node.element.deckGlJsonChart as DeckGlJsonChartProto
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={CHART_CONFIG} isStale={isStale}>
           <DeckGlJsonChart
             element={deckGlProto}
             // DeckGL chart can be used as a widget (when selections are activated) or
@@ -401,11 +410,7 @@ const RawElementNodeRenderer = (
 
     case "graphvizChart":
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={CHART_CONFIG} isStale={isStale}>
           <GraphVizChart
             element={node.element.graphvizChart as GraphVizChartProto}
             {...elementProps}
@@ -710,8 +715,11 @@ const RawElementNodeRenderer = (
         ? new ElementContainerConfig({
             minStretchWidth: MinStretchWidth.LARGE,
             styleOverrides: { overflow: "visible", width: "100%" },
+            printLayout: PrintLayout.FIXED_WIDTH,
           })
-        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.with({
+            printLayout: PrintLayout.FIXED_WIDTH,
+          })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -748,8 +756,9 @@ const RawElementNodeRenderer = (
                 ...(needsFullWidth && { width: "100%" }),
                 ...(needsFlex && { flex: "1 1 14rem" }),
               },
+              printLayout: PrintLayout.GRAPHIC,
             })
-          : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+          : CHART_CONFIG
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -1110,7 +1119,7 @@ const RawElementNodeRenderer = (
           // Use overflow-visible (like other charts) so the hover toolbar, which
           // floats above the chart, and tooltips aren't clipped by the
           // overflow:auto that a pixel `height` otherwise applies.
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          config={CHART_CONFIG}
           isStale={isStale}
         >
           <EChartsChart
@@ -1130,7 +1139,9 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          config={ElementContainerConfig.LARGE_ELEMENT.with({
+            printLayout: PrintLayout.GRAPHIC,
+          })}
           isStale={isStale}
         >
           <PlotlyChart
@@ -1327,9 +1338,11 @@ const ElementNodeRenderer = (
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
   return (
-    <Maybe enable={enable}>
-      <RawElementNodeRenderer {...props} isStale={isStale} />
-    </Maybe>
+    <RetainedElementContext.Provider value={props.isRetained === true}>
+      <Maybe enable={enable}>
+        <RawElementNodeRenderer {...props} isStale={isStale} />
+      </Maybe>
+    </RetainedElementContext.Provider>
   )
 }
 

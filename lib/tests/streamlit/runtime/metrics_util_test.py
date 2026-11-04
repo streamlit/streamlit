@@ -50,6 +50,7 @@ from streamlit.errors import (
 )
 from streamlit.navigation.page import _create_page
 from streamlit.runtime import metrics_util
+from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.scriptrunner import (
@@ -67,6 +68,7 @@ from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web import skills
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.runtime.agent import usage_counts
 from tests.testutil import create_mock_script_run_ctx, create_pep649_function
 
 if TYPE_CHECKING:
@@ -307,6 +309,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             url_path="foo",
             default=False,
             visibility="hidden",
+            help="Secret text",
         )
 
         ctx = get_script_run_ctx()
@@ -314,7 +317,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert len(ctx.shared.tracked_commands) == 1
         command = ctx.shared.tracked_commands[0]
         assert command.name == "Page"
-        assert len(command.args) == 6
+        assert len(command.args) == 7
         assert str(command.args[0]).strip() == 'k: "page"\nt: "str"\nm: "len:6"'
         # ``_positional_arg_offset=1`` must place the first real argument at
         # position 0 (like a plain function), not 1 (shifted by ``self``).
@@ -325,6 +328,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert str(command.args[3]).strip() == 'k: "url_path"\nt: "str"\nm: "len:3"'
         assert str(command.args[4]).strip() == 'k: "default"\nt: "bool"\nm: "val:False"'
         assert str(command.args[5]).strip() == 'k: "visibility"\nt: "str"\nm: "len:6"'
+        # Help is recorded by length only, never by content.
+        assert str(command.args[6]).strip() == 'k: "help"\nt: "str"\nm: "len:11"'
+        assert "Secret" not in str(command)
 
     def test_page_constructor_exception_is_tracked(self) -> None:
         """Page constructor failures retain the existing telemetry event."""
@@ -1365,6 +1371,24 @@ def test_create_page_profile_message_sets_uncaught_exception() -> None:
         [], 0, 0, uncaught_exception=exc_text
     )
     assert msg.page_profile.uncaught_exception == exc_text
+
+
+def test_create_page_profile_message_reports_agent_api_usage() -> None:
+    """``agent_api_usage`` carries the process's agent API counts, and is unset
+    while nothing has been counted.
+    """
+    with usage_counts.fresh(), patch_config_options(usage_counts.USAGE_STATS_ON):
+        before = metrics_util.create_page_profile_message([], 0, 0)
+        agent_usage.record_interaction("http")
+        agent_usage.record("sessions")
+        after = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not before.page_profile.HasField("agent_api_usage")
+    reported = after.page_profile.agent_api_usage
+    assert reported.http_interactions == 1
+    assert reported.mcp_interactions == 0
+    assert reported.sessions == 1
+    assert reported.instance_id
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
