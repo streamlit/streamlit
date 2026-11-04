@@ -18,6 +18,8 @@ import json
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -787,25 +789,70 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
     return option, arrow_datasets
 
 
+def _to_json_value(value: object) -> object:
+    """Convert a scalar ``json`` can't encode the way ``dataset.source`` does.
+
+    Used as the ``json.dumps`` ``default`` hook, so it only runs for values that
+    are not already JSON types. Naive datetimes keep their wall-clock time,
+    timezone-aware ones become UTC with a trailing ``Z``, and durations become
+    milliseconds, matching the frontend's Arrow dataset conversion. Missing
+    values, arrays, and other objects raise.
+    """
+    import numpy as np
+    import pandas as pd
+
+    # pd.NaT subclasses datetime, and its isoformat() returns "NaT".
+    if value is pd.NaT or (
+        isinstance(value, (np.datetime64, np.timedelta64)) and np.isnat(value)
+    ):
+        raise ValueError("NaT is not JSON-serializable.")
+    if isinstance(value, np.datetime64):
+        return np.datetime_as_string(value, unit="ms")
+    if isinstance(value, np.timedelta64):
+        return float(value / np.timedelta64(1, "ms"))
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, datetime):
+        if value.utcoffset() is None:
+            return value.isoformat(timespec="milliseconds")
+        utc_value = value.astimezone(UTC).replace(tzinfo=None)
+        return f"{utc_value.isoformat(timespec='milliseconds')}Z"
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        text = value.replace(tzinfo=None).isoformat(timespec="milliseconds")
+        return text.removesuffix(".000")
+    if isinstance(value, timedelta):
+        return value / timedelta(milliseconds=1)
+    if isinstance(value, Decimal):
+        return float(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON-serializable.")
+
+
 def _serialize_option(option: dict[str, Any]) -> str:
     """Strictly serialize the option dict to JSON for ``proto.spec``.
 
-    ``allow_nan=False`` and the absence of a ``default`` fallback ensure that JS
-    callbacks, arbitrary Python objects, and non-finite numbers surface a helpful
-    error instead of being silently stringified.
+    NumPy and pandas scalars, datetimes, durations, and ``Decimal`` values are
+    converted (see ``_to_json_value``). ``allow_nan=False`` also applies to the
+    converted values, so JS callbacks, arbitrary Python objects, arrays, and
+    missing or non-finite values surface a helpful error instead of being
+    silently stringified.
     """
     try:
-        return json.dumps(option, allow_nan=False, separators=(",", ":"))
+        return json.dumps(
+            option, allow_nan=False, separators=(",", ":"), default=_to_json_value
+        )
     except (TypeError, ValueError) as ex:
         raise StreamlitAPIException(
             "The provided ECharts spec is not JSON-serializable. "
             "`st.echarts_chart` only supports JSON-compatible option objects: "
             "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
-            "dataframe in `dataset.source`, which converts datetimes, NumPy "
-            "values, and missing values automatically; values anywhere else "
-            "(for example `series.data`) must already be plain Python values "
-            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
+            "numbers (NaN/Infinity) are not supported. NumPy and pandas "
+            "scalars, datetimes, and durations are converted anywhere in the "
+            "option, but arrays, Series, dataframes, and missing values (NaN, "
+            "`pd.NaT`, `pd.NA`) are only converted in `dataset.source`. Pass "
+            "chart data there as a dataframe; elsewhere (for example "
+            "`series.data`), use plain Python lists and `None`.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -1085,9 +1132,10 @@ class EChartsMixin:
             - Value types: Datetimes become ISO-8601 strings (in UTC if
               timezone-aware), durations become milliseconds, and missing
               values become ``null``. Other non-numeric values use the text
-              ``st.dataframe`` shows. Values elsewhere in the option, such as
-              ``series.data``, must already be JSON-compatible, so datetimes,
-              NumPy integers, and ``NaN`` in them raise an error.
+              ``st.dataframe`` shows. Elsewhere in the option, such as in
+              ``series.data``, NumPy and pandas scalars, datetimes, and
+              durations are converted the same way, but arrays and missing
+              values like ``NaN`` raise an error.
             - Show data: The chart's hover toolbar has a **Show data** button
               that displays the dataframe as a table.
 

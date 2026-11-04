@@ -20,6 +20,7 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
@@ -412,7 +413,7 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         message = str(exc.value)
         assert "dataset.source" in message
-        assert "plain Python values" in message
+        assert "plain Python lists" in message
         # Must not steer users to converting dataframes into inline lists.
         assert "convert them to plain lists" not in message
         assert exc.value.error_id == "echarts-spec-not-json-serializable"
@@ -623,6 +624,47 @@ class EChartsChartTest(DeltaGeneratorTestCase):
         """NaN/Infinity values are rejected (allow_nan=False)."""
         with pytest.raises(StreamlitAPIException):
             st.echarts_chart({"series": [{"data": [value]}]})
+
+    def test_scalars_outside_dataset_are_converted(self):
+        """NumPy and pandas scalars convert in nested option locations."""
+        gauge_value = np.int64(42)
+        option = {
+            "baseOption": {
+                "xAxis": {
+                    "type": "time",
+                    "data": [pd.Timestamp("2024-01-01"), dt.date(2024, 1, 2)],
+                },
+                "tooltip": {"show": np.bool_(True)},
+                "series": [
+                    {
+                        "type": "line",
+                        "markLine": {
+                            "data": [
+                                {"yAxis": np.float32(1.5)},
+                                {"xAxis": pd.Timestamp("2024-01-01 12:00", tz="UTC")},
+                            ]
+                        },
+                    },
+                    {"type": "gauge", "data": [{"value": gauge_value}]},
+                ],
+            },
+            "options": [{"series": [{"markLine": {"data": [{"yAxis": np.int8(3)}]}}]}],
+        }
+
+        st.echarts_chart(option)
+
+        spec = json.loads(self.get_delta_from_queue().new_element.echarts_chart.spec)
+        base = spec["baseOption"]
+        assert base["xAxis"]["data"] == ["2024-01-01T00:00:00.000", "2024-01-02"]
+        assert base["tooltip"]["show"] is True
+        assert base["series"][0]["markLine"]["data"] == [
+            {"yAxis": 1.5},
+            {"xAxis": "2024-01-01T12:00:00.000Z"},
+        ]
+        assert base["series"][1]["data"] == [{"value": 42}]
+        assert spec["options"][0]["series"][0]["markLine"]["data"] == [{"yAxis": 3}]
+        # The user's option keeps its original values.
+        assert option["baseOption"]["series"][1]["data"][0]["value"] is gauge_value
 
     def test_no_id_for_display_only(self):
         """Display-only charts without a key have no element ID."""
@@ -1330,6 +1372,72 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
 
     with pytest.raises(StreamlitAPIException) as exc:
         _serialize_option({"series": _Custom()})
+
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (np.int64(3), 3),
+        (np.uint32(7), 7),
+        (np.float32(1.5), 1.5),
+        (np.bool_(False), False),
+        (np.str_("a"), "a"),
+        (decimal.Decimal("1.25"), 1.25),
+        # Naive datetimes keep their wall-clock time without an offset.
+        (dt.datetime(2024, 1, 2, 3, 4, 5, 678901), "2024-01-02T03:04:05.678"),
+        (pd.Timestamp("2024-01-02 03:04:05.123456789"), "2024-01-02T03:04:05.123"),
+        (np.datetime64("2024-01-02T03:04:05.123456"), "2024-01-02T03:04:05.123"),
+        (np.datetime64("2024-01-02"), "2024-01-02T00:00:00.000"),
+        # Timezone-aware datetimes convert to UTC.
+        (
+            pd.Timestamp("2024-01-02 03:04:05", tz="Europe/Berlin"),
+            "2024-01-02T02:04:05.000Z",
+        ),
+        (
+            dt.datetime(2024, 1, 2, 3, tzinfo=dt.timezone(dt.timedelta(hours=-5))),
+            "2024-01-02T08:00:00.000Z",
+        ),
+        (dt.date(2024, 1, 2), "2024-01-02"),
+        (dt.time(3, 4, 5), "03:04:05"),
+        (dt.time(3, 4, 5, 250000), "03:04:05.250"),
+        # Durations become milliseconds.
+        (dt.timedelta(seconds=1.5), 1500.0),
+        (pd.Timedelta(minutes=1), 60000.0),
+        (np.timedelta64(250, "ms"), 250.0),
+    ],
+)
+def test_serialize_option_converts_scalars(value: Any, expected: Any) -> None:
+    """Scalars outside ``dataset.source`` convert like dataset values."""
+    converted = json.loads(_serialize_option({"value": value}))["value"]
+
+    assert converted == expected
+    assert type(converted) is type(expected)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        float("nan"),
+        float("inf"),
+        np.float64("nan"),
+        np.float32("nan"),
+        decimal.Decimal("NaN"),
+        pd.NaT,
+        pd.NA,
+        np.datetime64("NaT", "ms"),
+        np.timedelta64("NaT", "ms"),
+        np.array([1, 2]),
+        pd.Series([1, 2]),
+        pd.Index([1, 2]),
+        pd.DataFrame({"x": [1, 2]}),
+    ],
+)
+def test_serialize_option_rejects_missing_values_and_arrays(value: Any) -> None:
+    """Missing values and array-likes outside ``dataset.source`` still raise."""
+    with pytest.raises(StreamlitAPIException) as exc:
+        _serialize_option({"series": [{"markLine": {"data": [{"yAxis": value}]}}]})
 
     assert exc.value.error_id == "echarts-spec-not-json-serializable"
 
