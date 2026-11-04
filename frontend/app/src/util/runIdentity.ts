@@ -42,3 +42,46 @@ export function getRunIdentity(
     fragmentIds: run.fragmentIds ?? [],
   }
 }
+
+/** A finished run's identity and which of its fragments' output was delivered. */
+export interface FinishedRun extends RunIdentity {
+  /**
+   * Fragments of the run whose output the server discarded before delivery,
+   * because those fragments rerun next.
+   */
+  droppedFragmentIds: ReadonlySet<string>
+  /**
+   * Fragments whose stale nodes this finish clears: fragmentIds minus
+   * droppedFragmentIds. Empty for a full-app run. Undefined when every
+   * fragment's output was dropped, because an empty list would mean a
+   * full-app run.
+   */
+  cleanupFragmentIds?: string[]
+}
+
+/**
+ * Reads a finished run from script_finished metadata: its identity from
+ * metadata.run and its delivered output from metadata.delivery. Returns
+ * undefined when there is no run identity.
+ */
+export function getFinishedRun(
+  metadata?: ForwardMsgMetadata | null
+): FinishedRun | undefined {
+  const runIdentity = getRunIdentity(metadata)
+  if (!runIdentity) {
+    return undefined
+  }
+  const droppedFragmentIds = new Set(metadata?.delivery?.droppedFragmentIds)
+  const cleanupFragmentIds = runIdentity.fragmentIds.filter(
+    fragmentId => !droppedFragmentIds.has(fragmentId)
+  )
+  const isEveryFragmentDropped =
+    runIdentity.fragmentIds.length > 0 && cleanupFragmentIds.length === 0
+  return {
+    ...runIdentity,
+    droppedFragmentIds,
+    cleanupFragmentIds: isEveryFragmentDropped
+      ? undefined
+      : cleanupFragmentIds,
+  }
+}

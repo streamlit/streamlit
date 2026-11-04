@@ -22,7 +22,7 @@ import {
   RunIdentity as RunIdentityProto,
 } from "@streamlit/protobuf"
 
-import { getRunIdentity } from "./runIdentity"
+import { getFinishedRun, getRunIdentity } from "./runIdentity"
 
 describe("getRunIdentity", () => {
   it("returns the identity of a full-app run", () => {
@@ -67,5 +67,69 @@ describe("getRunIdentity", () => {
     ],
   ])("returns undefined when %s", (_description, metadata) => {
     expect(getRunIdentity(metadata)).toBeUndefined()
+  })
+})
+
+describe("getFinishedRun", () => {
+  it("cleans up every fragment when all output was delivered", () => {
+    const metadata = new ForwardMsgMetadata({
+      run: { scriptRunId: "run_id", fragmentIds: ["outer", "inner"] },
+    })
+
+    expect(getFinishedRun(metadata)).toEqual({
+      scriptRunId: "run_id",
+      fragmentIds: ["outer", "inner"],
+      droppedFragmentIds: new Set(),
+      cleanupFragmentIds: ["outer", "inner"],
+    })
+  })
+
+  it("cleans up a full-app run with an empty fragment list", () => {
+    const metadata = new ForwardMsgMetadata({
+      run: { scriptRunId: "run_id" },
+    })
+
+    expect(getFinishedRun(metadata)?.cleanupFragmentIds).toEqual([])
+  })
+
+  it("leaves dropped fragments out of cleanup after a wire round trip", () => {
+    const encoded = ForwardMsg.encode(
+      new ForwardMsg({
+        scriptFinished:
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        metadata: {
+          run: { scriptRunId: "run_id", fragmentIds: ["outer", "inner"] },
+          delivery: { droppedFragmentIds: ["inner"] },
+        },
+      })
+    ).finish()
+    const { metadata } = ForwardMsg.decode(encoded)
+
+    expect(getFinishedRun(metadata as ForwardMsgMetadata)).toEqual({
+      scriptRunId: "run_id",
+      fragmentIds: ["outer", "inner"],
+      droppedFragmentIds: new Set(["inner"]),
+      cleanupFragmentIds: ["outer"],
+    })
+  })
+
+  it("has no cleanup scope when every fragment's output was dropped", () => {
+    const metadata = new ForwardMsgMetadata({
+      run: { scriptRunId: "run_id", fragmentIds: ["frag"] },
+      delivery: { droppedFragmentIds: ["frag"] },
+    })
+
+    const finishedRun = getFinishedRun(metadata)
+
+    expect(finishedRun?.fragmentIds).toEqual(["frag"])
+    expect(finishedRun?.cleanupFragmentIds).toBeUndefined()
+  })
+
+  it("returns undefined without run identity, even with a delivery", () => {
+    const metadata = new ForwardMsgMetadata({
+      delivery: { droppedFragmentIds: ["frag"] },
+    })
+
+    expect(getFinishedRun(metadata)).toBeUndefined()
   })
 })

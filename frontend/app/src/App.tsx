@@ -168,7 +168,11 @@ import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
-import { getRunIdentity, type RunIdentity } from "./util/runIdentity"
+import {
+  getFinishedRun,
+  getRunIdentity,
+  type RunIdentity,
+} from "./util/runIdentity"
 import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -2068,8 +2072,9 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
    * @param metadata the ForwardMsg metadata, which carries the identity of the
-   * run that finished. A later run may already have started by the time this
-   * message is handled, so React state can't be used to name the finished run.
+   * run that finished and which of its fragments' output was delivered. A
+   * later run may already have started by the time this message is handled,
+   * so React state can't be used to name the finished run.
    */
   handleScriptFinished(
     status: ForwardMsg.ScriptFinishedStatus,
@@ -2081,7 +2086,7 @@ export class App extends PureComponent<Props, State> {
     // work. Widget completion, stale-node cleanup, and cache aging need the
     // finished run, so they are skipped here rather than guessed from React
     // state.
-    const finishedRun = getRunIdentity(metadata)
+    const finishedRun = getFinishedRun(metadata)
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
@@ -2092,7 +2097,9 @@ export class App extends PureComponent<Props, State> {
     if (finishedRun) {
       this.setState(prevState => ({
         scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-        scriptRunFinishedFragmentIds: finishedRun.fragmentIds,
+        // A fragment whose output was dropped is acked when its rerun finishes.
+        scriptRunFinishedFragmentIds:
+          finishedRun.cleanupFragmentIds ?? finishedRun.fragmentIds,
       }))
     }
 
@@ -2127,8 +2134,10 @@ export class App extends PureComponent<Props, State> {
         })
       })
 
+      const cleanupFragmentIds = finishedRun?.cleanupFragmentIds
       if (
         finishedRun &&
+        cleanupFragmentIds &&
         (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
           status ===
             ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
@@ -2155,7 +2164,7 @@ export class App extends PureComponent<Props, State> {
             return {
               elements: elements.clearStaleNodes(
                 finishedRun.scriptRunId,
-                finishedRun.fragmentIds
+                cleanupFragmentIds
               ),
             }
           },
@@ -2172,7 +2181,7 @@ export class App extends PureComponent<Props, State> {
       // before a NewSession message is processed. This issue should not
       // disrupt users and is not a critical need for the message cache
       if (
-        finishedRun &&
+        cleanupFragmentIds &&
         this.connectionManager !== null &&
         status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
         this.sessionInfo.isSet &&
@@ -2186,7 +2195,7 @@ export class App extends PureComponent<Props, State> {
       ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge,
-          finishedRun.fragmentIds
+          cleanupFragmentIds
         )
       }
     }
