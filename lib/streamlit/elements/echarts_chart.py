@@ -1312,8 +1312,9 @@ class EChartsMixin:
         the top so it doesn't share the footer with a bottom ``dataZoom``
         slider. Each series takes its legend name from its dataframe column.
 
-        With an inside ``dataZoom``, the wheel scrolls the page until the
-        pointer rests on the chart, then zooms or pans. Pinch, or the modifier
+        With an inside ``dataZoom`` or wheel ``roam`` (on by default for
+        treemaps), the wheel scrolls the page until the pointer rests on the
+        chart, then zooms or pans. Pinch, or the modifier
         set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first
         wheel of a new flick, unless that flick started as a page scroll.
 

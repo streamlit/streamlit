@@ -928,6 +928,25 @@ function roamInstallsWheelListener(roam: unknown): boolean {
   return roam === true || roam === "scale" || roam === "zoom"
 }
 
+/** Series whose ``roam`` defaults to ``false`` but can install wheel roam. */
+const OPT_IN_ROAM_SERIES_TYPES: ReadonlySet<unknown> = new Set([
+  "map",
+  "graph",
+  "tree",
+  "sankey",
+])
+
+function seriesHasWheelRoam(series: Record<string, unknown>): boolean {
+  if (series.type === "treemap") {
+    // ECharts' treemap defaults to ``roam: true``.
+    return roamInstallsWheelListener(series.roam ?? true)
+  }
+  return (
+    OPT_IN_ROAM_SERIES_TYPES.has(series.type) &&
+    roamInstallsWheelListener(series.roam)
+  )
+}
+
 function targetHasWheelRoam(option: EChartsOptionObject): boolean {
   if (
     toComponentList(option.geo).some(geo =>
@@ -936,15 +955,13 @@ function targetHasWheelRoam(option: EChartsOptionObject): boolean {
   ) {
     return true
   }
-  return toComponentList(option.series).some(
-    series =>
-      (series.type === "map" || series.type === "graph") &&
-      roamInstallsWheelListener(series.roam)
-  )
+  return toComponentList(option.series).some(seriesHasWheelRoam)
 }
 
 /**
- * True when ``geo``, a map series, or a graph series turns on wheel roam.
+ * True when ``geo`` or a series turns on wheel roam: any treemap that keeps
+ * its default ``roam: true``, or a map, graph, tree, or sankey series that
+ * opts in.
  *
  * ``RoamController`` registers a mousewheel listener for ``roam: true``,
  * ``"scale"``, and ``"zoom"``. ``"move"`` and ``"pan"`` are drag-only.
