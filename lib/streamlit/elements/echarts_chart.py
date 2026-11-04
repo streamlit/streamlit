@@ -1314,9 +1314,9 @@ class EChartsMixin:
 
         With an inside ``dataZoom`` or wheel ``roam`` (on by default for
         treemaps), the wheel scrolls the page until the pointer rests on the
-        chart, then zooms or pans. Pinch, or the modifier
-        set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first
-        wheel of a new flick, unless that flick started as a page scroll.
+        chart, then zooms or pans. A pinch, or the ``dataZoom`` modifier set in
+        ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first wheel
+        of a new flick, unless that flick started as a page scroll.
 
         .. code-block:: python
            :filename: streamlit_app.py

@@ -965,9 +965,9 @@ function targetHasWheelRoam(option: EChartsOptionObject): boolean {
  *
  * ``RoamController`` registers a mousewheel listener for ``roam: true``,
  * ``"scale"``, and ``"zoom"``. ``"move"`` and ``"pan"`` are drag-only.
- * That listener is separate from inside ``dataZoom``, so a wheel the zoom
- * would ignore must still count as consumed and reach ECharts after the
- * pointer rests.
+ * That listener is separate from inside ``dataZoom``. After the pointer
+ * rests, the guard still delivers a wheel that ``dataZoom`` would ignore so
+ * this listener can zoom.
  */
 export function optionHasWheelRoam(
   option: EChartsOptionObject | null
@@ -987,8 +987,9 @@ export function optionHasWheelRoam(
 /**
  * True when a pinch should roam immediately.
  *
- * Wheel roam defaults ``zoomOnMouseWheel`` to ``true``, so a pinch
- * (``ctrlKey``) skips the rest timer. An ordinary wheel still waits.
+ * ``RoamController`` defaults ``zoomOnMouseWheel`` to ``true`` (series
+ * options do not set it), so a pinch (``ctrlKey``) skips the rest timer. An
+ * ordinary wheel still waits.
  */
 export function wheelRoamSkipsSettle(
   option: EChartsOptionObject | null,
