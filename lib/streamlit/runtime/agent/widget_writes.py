@@ -54,6 +54,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.agent import snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.common import (
     is_array_value_field_name,
@@ -76,6 +77,18 @@ _UNSETTABLE_VALUE_TYPES: Final[frozenset[str]] = frozenset(
 )
 
 _MAX_LISTED_OPTIONS: Final = 20
+
+# Why an element with a `support` reason cannot be set or fired, worded for the
+# `unsupported_element` refusal.
+_SUPPORT_REFUSALS: Final[dict[str, str]] = {
+    "browser_required": (
+        "it renders through JavaScript that this interface does not run"
+    ),
+    "action_unsupported": (
+        "a browser user can act on it, and this interface only reports that "
+        "action, such as an edit, an upload, a selection, or a deferred download"
+    ),
+}
 
 # Inputs whose wire form is ISO text in one fixed layout, and the type their
 # value parses as.
@@ -161,8 +174,8 @@ def resolve_element_id(
 def _unknown_key(key: str) -> AgentRequestError:
     return AgentRequestError(
         "unknown_key",
-        f"No element with key {key!r} is registered in this session. Read the "
-        "keys from the latest snapshot.",
+        f"No element with key {key!r} is registered in this session, or it "
+        "has left the page. Read the keys from the latest snapshot.",
     )
 
 
@@ -224,7 +237,9 @@ def _require_actionable(
         raise AgentRequestError(
             "unsupported_element",
             f"The element with key {key!r} is on the page, but this interface "
-            f"cannot set or fire it ({state.support}).",
+            "cannot set or fire it: "
+            f"{_SUPPORT_REFUSALS.get(state.support, 'its `support` says why')} "
+            f"(`support: {state.support}`).",
         )
     # Checked before `disabled` for the same reason: enabling the element
     # would not make it usable.
@@ -234,7 +249,8 @@ def _require_actionable(
         raise AgentRequestError(
             "disabled_widget",
             f"The element with key {key!r} is on the page but disabled. It "
-            "accepts nothing until the app enables it.",
+            "accepts nothing until the app enables it, so send what enables it "
+            "in one request, then use it in the next.",
         )
     # Some elements with no action still register a widget, such as
     # `st.download_button(on_click="ignore")`, so the description decides.
@@ -438,11 +454,21 @@ def build_widget_states(
     # worked while the form stays uncommitted.
     form = next(iter(touched_forms), "")
     if form and submitted_form != form:
+        submit_keys = [
+            snapshot.public_key(element_id)
+            for element_id, state in element_states.items()
+            if state.form_id == form and state.action == "trigger" and state.actionable
+        ]
+        listed = (
+            f": {', '.join(repr(submit_key) for submit_key in submit_keys)}"
+            if submit_keys
+            else ""
+        )
         raise AgentRequestError(
             "missing_form_submit",
             f"These fields belong to the form {form!r}, which defers its "
             "values until submitted. Send them together with one of that "
-            "form's submit triggers.",
+            f"form's submit triggers{listed}.",
         )
 
     return states

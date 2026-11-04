@@ -3661,7 +3661,7 @@ __metadata:
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    hotkeys-js: "npm:^4.0.8"
+    hotkeys-js: "npm:^4.0.9"
     immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
@@ -9267,10 +9267,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.0.8":
-  version: 4.0.8
-  resolution: "hotkeys-js@npm:4.0.8"
-  checksum: 10c0/a9cff7d76e4c4db7a1377b9f96d285ab71c8216bfb4b9526b736c09b5ca96556eb71dc697fc4cf31f5e90b0c9ee35bde760c0bd7d9571842d1c52849577f5dcb
+"hotkeys-js@npm:^4.0.9":
+  version: 4.0.9
+  resolution: "hotkeys-js@npm:4.0.9"
+  checksum: 10c0/0376cec403cc5be513aab23a8c444ada5159d81eea562347fce1319f35a3411dfde8ec2a023f930f7d60c6f038ae8cf4f818ff9a91ab430e501fea75a6c10290
   languageName: node
   linkType: hard
 
@@ -10073,9 +10073,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.43.0":
-  version: 6.43.0
-  resolution: "knip@npm:6.43.0"
+"knip@npm:^6.44.0":
+  version: 6.44.0
+  resolution: "knip@npm:6.44.0"
   dependencies:
     formatly: "npm:^0.11.4"
     get-tsconfig: "npm:4.14.3"
@@ -10092,7 +10092,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/f9a9935af721f4f2af13a0a7b7c24f9f10ba8f6365a302aa6074458fa7c592442cd85cda3dd626abed40b67adc3a27150add26754122074ff1f95f3e95cbed2f
+  checksum: 10c0/786d294307ed2dde126852c06993f96a517ed3c8a3277281f4eb5b69773eba6b5f0d4ff875923c58a667cdff200299f8bd7bcfad13dd0add08b4cc45fac22ce0
   languageName: node
   linkType: hard
 
@@ -14236,7 +14236,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.13.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.43.0"
+    knip: "npm:^6.44.0"
     oxfmt: "npm:^0.75.0"
     oxlint: "npm:^1.90.0"
     react: "npm:^18.2.0"

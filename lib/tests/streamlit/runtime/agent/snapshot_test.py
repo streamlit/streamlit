@@ -654,9 +654,37 @@ class SnapshotBuilderTest(SnapshotCase):
         assert document["pages"] == [
             {"url_path": "", "title": "Home", "help": "Net revenue by **region**."},
             {"url_path": "reports", "title": "Reports"},
-            {"url_path": "archive", "title": "Archive", "help": "Closed periods."},
+            {
+                "url_path": "archive",
+                "title": "Archive",
+                "help": "Closed periods.",
+                "hidden": True,
+            },
         ]
         assert document["page"] == document["pages"][0]
+
+    def test_hidden_pages_are_listed_and_marked(self) -> None:
+        """A page hidden from the menu still opens by its URL, so it is listed,
+        marked `hidden`. A page in the menu has no `hidden` key."""
+        navigation = ForwardMsg()
+        navigation.navigation.page_script_hash = "admin"
+        home = navigation.navigation.app_pages.add()
+        home.page_script_hash = "main"
+        home.page_name = "Home"
+        home.url_pathname = ""
+        admin = navigation.navigation.app_pages.add()
+        admin.page_script_hash = "admin"
+        admin.page_name = "Admin"
+        admin.url_pathname = "admin"
+        admin.is_hidden = True
+
+        document = self._build(navigation).document
+
+        assert document["pages"] == [
+            {"url_path": "", "title": "Home"},
+            {"url_path": "admin", "title": "Admin", "hidden": True},
+        ]
+        assert document["page"] == document["pages"][1]
 
     def test_external_navigation_links_are_not_pages(self) -> None:
         """An external link is not a destination the app can switch to."""

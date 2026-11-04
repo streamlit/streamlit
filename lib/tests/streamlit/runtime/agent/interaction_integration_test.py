@@ -459,6 +459,7 @@ async def test_a_timed_out_run_is_collected_and_never_restarted(
 
         busy = await app.refused({"session_id": handle, "query_params": {"q": ["1"]}})
         assert busy.code == "session_busy"
+        assert "timed out or whose client disconnected" in busy.message
 
         # A run longer than two timeouts finishes on the third call, as one run.
         again = await app.refused({"session_id": handle}, run_timeout=_SHORT_TIMEOUT)
@@ -588,6 +589,7 @@ async def test_a_client_leaving_during_the_build_hands_its_result_to_the_retry(
                     {"session_id": handle, "query_params": {"q": ["other"]}}
                 )
                 assert busy.code == "session_busy"
+                assert "Wait for its response" in busy.message
                 assert not left.done()
                 assert not retry.done()
             finally:
