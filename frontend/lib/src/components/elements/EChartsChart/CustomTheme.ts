@@ -72,7 +72,8 @@ const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
 
 /**
  * The datetime strings that dataframe sources hold: ISO-8601 to the
- * millisecond, with a trailing ``Z`` when timezone-aware.
+ * millisecond, with a trailing ``Z`` when timezone-aware. Any tooltip string
+ * of this shape is formatted, including one written inline in the option.
  */
 const DATAFRAME_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
 

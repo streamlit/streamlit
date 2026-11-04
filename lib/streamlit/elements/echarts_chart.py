@@ -1020,7 +1020,8 @@ class EChartsMixin:
               |st.metric|_. ``"percent"`` multiplies values by 100. One format
               applies to every value of a series, so use ``encode.tooltip`` to
               choose which dimensions the tooltip shows. For a dataframe
-              source, each one gets a row labeled with its column name. Any
+              source, each of those dimensions is a row labeled with its
+              column name. Any
               other value, including a malformed printf-style string, is
               ignored, and the tooltip keeps its default formatting.
             - String ``formatter`` templates in tooltips expand the
@@ -1157,7 +1158,8 @@ class EChartsMixin:
             ``axisPointer``, a timeline tick, or a ``media`` override.
             ``"{value}"`` restores ECharts' default label. Tooltip values
             show the datetimes of a dataframe source the same way, in the
-            browser's local time.
+            browser's local time even with ``"useUTC": True``, so a
+            timezone-aware value can differ from its axis label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this

@@ -436,15 +436,21 @@ function getPlaceholderName(source: unknown): string | null {
   return typeof name === "string" ? name : null
 }
 
-/** Returns the name of a `dataset.dimensions` entry: a string or `{name}`. */
+/**
+ * Returns the name of a `dataset.dimensions` entry: a string or `{name}`.
+ * Numeric names (e.g. integer column labels like `2015`) become strings, as
+ * in ECharts, because Arrow field names are always strings.
+ */
 function getDimensionName(dimension: unknown): string | undefined {
-  if (typeof dimension === "string") {
-    return dimension
-  }
   const name: unknown = isPlainObject(dimension)
     ? (dimension as { name?: unknown }).name
+    : dimension
+  if (typeof name === "string") {
+    return name
+  }
+  return typeof name === "number" && Number.isFinite(name)
+    ? String(name)
     : undefined
-  return typeof name === "string" ? name : undefined
 }
 
 /**

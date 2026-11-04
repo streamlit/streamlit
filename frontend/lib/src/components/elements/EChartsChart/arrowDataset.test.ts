@@ -656,6 +656,23 @@ describe("hydrateArrowDatasetSources", () => {
     })
   })
 
+  it("matches numeric dimension names to integer column labels", () => {
+    const data = tableBytes({
+      "2015": { values: [1], type: new Float64() },
+      "2016": { values: [2], type: new Float64() },
+    })
+    const option = {
+      dataset: {
+        source: { name: "years" },
+        dimensions: [2016, { name: 2015 }, Number.NaN],
+      },
+    }
+
+    hydrateArrowDatasetSources(option, [namedDataset("years", data)])
+
+    expect(option.dataset.source).toEqual([[2, 1, null]])
+  })
+
   it("reads a subset of columns, including one named __proto__", () => {
     const data = tableBytes({
       ["__proto__"]: { values: ["a"], type: new Utf8() },

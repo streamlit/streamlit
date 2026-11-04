@@ -163,9 +163,13 @@ rows before rendering. Column order is preserved via `dataset.dimensions` when t
 it. The dataframe index is not included (use `df.reset_index()` to plot it). Rows are arrays with
 one entry per dimension, because ECharts' default tooltip labels `encode.tooltip` values with
 their dimension names only for array rows. A user-set `dataset.dimensions` picks and orders the
-columns by name (a name that matches no column reads as `null`), and `sourceHeader` defaults to
-`false` so a first row of strings is not taken as column names. Like any array source,
-`seriesLayoutBy: "row"` reads each dataframe row as a series. Cell values become:
+columns by name (a numeric name matches the column of that integer label; a name that matches no
+column reads as `null`). Because rows are positional, `series[i].dimensions` and a timeline
+`options[i].dataset.dimensions` without `source` must list the columns in the dataset's order;
+reorder columns with `dataset.dimensions` instead. `sourceHeader` defaults to `false` so a first
+row of strings is not taken as column names; leave it unset for dataframe sources, since
+`"auto"` drops a first all-string row. `seriesLayoutBy` is passed to ECharts as for any array
+source. Cell values become:
 
 - Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
 - Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
