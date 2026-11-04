@@ -503,7 +503,10 @@ def test_validate_refuses_navigation_with_widget_changes(
         ({"context": "Europe/Berlin"}, "`context` must be an object"),
         ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
         ({"session_id": "s_1", "widget_state": []}, "`widget_state` must be an object"),
-        ({"session_id": "s_1", "trigger": "x"}, "`trigger` must be an object"),
+        (
+            {"session_id": "s_1", "trigger": "x"},
+            "`trigger` must be an object, `{key, value?}`",
+        ),
         ({"session_id": "s_1", "trigger": {}}, "string `key`"),
         ({"session_id": "s_1", "trigger": {"key": 1}}, "string `key`"),
         (

@@ -277,6 +277,7 @@ def test_a_body_over_the_limit_is_refused(
 
     assert declared.status_code == 413
     assert declared.json()["error"]["code"] == "request_too_large"
+    assert "`server.maxWidgetStateSize`" in declared.json()["error"]["message"]
     assert streamed.status_code == 413
     assert within.status_code == 200
     interact.assert_awaited_once()
