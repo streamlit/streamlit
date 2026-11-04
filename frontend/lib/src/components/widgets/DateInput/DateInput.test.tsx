@@ -1793,6 +1793,47 @@ describe("DateInput", () => {
       )
     })
 
+    it("starts a new range when the day of a single-day range is clicked", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2024-05-10", "2024-05-10"],
+        min: "2024-01-01",
+        max: "2024-12-31",
+      })
+      render(<DateInput {...props} />)
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+      const region = screen.getByTestId("stDateInput")
+      await user.click(getRangeDateSegments(region, "start").year)
+      await user.click(
+        await screen.findByLabelText(/Friday, May 10, 2024 selected$/)
+      )
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
+          props.element.id,
+          ["2024-05-10"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      expect(getRangeDateSegments(region, "end").day).toHaveAttribute(
+        "data-placeholder",
+        "true"
+      )
+
+      await user.click(screen.getByLabelText(/Monday, May 20, 2024/))
+
+      await waitFor(() => {
+        expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+          props.element.id,
+          ["2024-05-10", "2024-05-20"],
+          expect.objectContaining({ fromUser: true })
+        )
+      })
+    })
+
     it("clicking a new date in an existing complete range starts a new selection", async () => {
       const user = userEvent.setup()
       vi.setSystemTime(new Date(2019, 6, 15))
@@ -2069,6 +2110,29 @@ describe("DateInput", () => {
         [],
         { formId: props.element.formId, fragmentId: undefined, fromUser: true }
       )
+    })
+
+    it("does not open the calendar when the clear button receives focus", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: [],
+        value: ["2020-01-01", "2020-01-10"],
+        setValue: true,
+      })
+      render(<DateInput {...props} />)
+
+      act(() => {
+        screen.getByRole("button", { name: "Clear dates" }).focus()
+      })
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+
+      await user.click(
+        getRangeDateSegments(screen.getByTestId("stDateInput"), "start").year
+      )
+      expect(await screen.findByTestId("stDateInputCalendar")).toBeVisible()
     })
 
     it("commits a one-element array when only the start field is typed", async () => {
@@ -3157,6 +3221,44 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     })
   })
 
+  it("discards an end-only date when the calendar button closes the dialog", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: [],
+      min: "1970-01-01",
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const end = getRangeDateSegments(screen.getByTestId("stDateInput"), "end")
+    await typeIntoSegment(user, end.year, "2020")
+    await typeIntoSegment(user, end.month, "01")
+    await typeIntoSegment(user, end.day, "10")
+    expect(end.day).toHaveTextContent("10")
+
+    const calendarButton = screen.getByTestId("stDateInputCalendarButton")
+    await user.click(calendarButton)
+    await waitFor(() => {
+      expect(screen.getByTestId("stDateInputCalendar")).toHaveAttribute(
+        "role",
+        "dialog"
+      )
+    })
+    await user.click(calendarButton)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(end.year).toHaveAttribute("data-placeholder", "true")
+    expect(end.month).toHaveAttribute("data-placeholder", "true")
+    expect(end.day).toHaveAttribute("data-placeholder", "true")
+    expect(spy).not.toHaveBeenCalled()
+  })
+
   it("Escape on the focused calendar button keeps focus on the toggle", async () => {
     const user = userEvent.setup()
     render(
@@ -3347,6 +3449,23 @@ describe("DateInput range-mode active calendar (Alt+ArrowDown)", () => {
     ).toHaveFocus()
     expect(year).not.toHaveFocus()
     expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+  })
+
+  it("Shift+Tab from the last calendar control moves focus to the previous one", async () => {
+    const user = userEvent.setup()
+    await enterActiveCalendarFromStartYear(user)
+
+    const calendar = screen.getByTestId("stDateInputCalendar")
+    const quickSelect = within(calendar).getByLabelText(
+      "Quick select a date range"
+    )
+    act(() => quickSelect.focus())
+
+    await user.tab({ shift: true })
+
+    expect(screen.getByRole("button", { name: /July 6, 2019/ })).toHaveFocus()
+    expect(quickSelect).not.toHaveFocus()
+    expect(calendar).toBeVisible()
   })
 
   it("arrow keys move focus between days in the active range calendar", async () => {
@@ -3633,6 +3752,32 @@ describe("DateInput range-mode paste handling", () => {
     expect(callsAfter).toBe(callsBefore)
   })
 
+  it("ignores a paste into a focused segment once the range widget is disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      isRange: true,
+      default: ["2019-07-06", "2019-07-08"],
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { rerender } = render(<DateInput {...props} />)
+
+    const start = getRangeDateSegments(
+      screen.getByTestId("stDateInput"),
+      "start"
+    )
+    await user.click(start.year)
+    rerender(<DateInput {...props} disabled />)
+    expect(start.year).toHaveFocus()
+    spy.mockClear()
+
+    await user.paste("2024/03/15")
+
+    expect(spy).not.toHaveBeenCalled()
+    expect(start.year).toHaveTextContent("2019")
+    expect(start.month).toHaveTextContent("07")
+    expect(start.day).toHaveTextContent("06")
+  })
+
   it("pasting an invalid date into a range field is rejected", async () => {
     const user = userEvent.setup()
     const props = getProps({
@@ -3728,6 +3873,35 @@ describe("DateInput range-mode paste handling", () => {
     expect(end.year).toHaveTextContent("2019")
     expect(end.month).toHaveTextContent("07")
     expect(end.day).toHaveTextContent("20")
+  })
+
+  it("fills an empty start date from the min date when a day segment is pasted", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ isRange: true, default: [], min: "2019-07-01" })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    render(<DateInput {...props} />)
+    spy.mockClear()
+
+    const region = screen.getByTestId("stDateInput")
+    const start = getRangeDateSegments(region, "start")
+    expect(start.day).toHaveAttribute("data-placeholder", "true")
+    await user.click(start.day)
+    await user.paste("20")
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2019-07-20"],
+        expect.objectContaining({ fromUser: true })
+      )
+    })
+    expect(start.year).toHaveTextContent("2019")
+    expect(start.month).toHaveTextContent("07")
+    expect(start.day).toHaveTextContent("20")
+    expect(getRangeDateSegments(region, "end").day).toHaveAttribute(
+      "data-placeholder",
+      "true"
+    )
   })
 
   it.each([
