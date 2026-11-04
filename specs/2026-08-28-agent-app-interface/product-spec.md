@@ -925,7 +925,8 @@ landed is a potential follow-up.
   firing it closes the dialog deliberately. With the default `on_dismiss="ignore"` the
   overlay carries no key, and closing is any full rerun, such as an interaction with no
   changes. The dialog reports `on_dismiss` as `"ignore"` or `"rerun"`, so a client can
-  tell which applies.
+  tell which applies. A `dismissible=False` dialog shows a browser user no way to close
+  it, so its overlay key has no `action` and firing it is `unsupported_element`.
 - **A scoped rerun still returns the whole page, with nothing marked stale.** The rest of
   the tree is as the last run left it, which is where a browser is too: keeping fragments
   coherent is the app's job, and `st.rerun("<key>")` is how one fragment refreshes
@@ -1048,7 +1049,7 @@ back to a browser rather than mistake it for missing content:
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Rendering that depends on JavaScript                                       | Custom components, `components.html`, inline iframe HTML, and `st.html` with scripts allowed report their source or arguments with `support: browser_required`, because what renders may differ from it, and cannot be driven. See [Data, charts, and media](#data-charts-and-media-in-v1). |
 | `st.file_uploader`, `st.camera_input`, `st.audio_input`                    | Interactive in the app. `support: action_unsupported`: this API reports the widget and cannot deliver the captured bytes.                                                                |
-| `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio.                                                                         |
+| `st.chat_input` attachments                                                | Text only. `accept_file` and `accept_audio` are reported, but a request cannot attach files or audio. Empty text is refused; the browser sends it only with files or audio.   |
 | `st.data_editor` edits, dataframe and chart selections, dataframe button columns | `support: action_unsupported`: the app can edit or select, and this API only reports that. On every data editor, and on a dataframe or chart only when the app enabled selections or added a button column. A display-only table or chart has no `support` field. |
 | Deferred downloads                                                         | `support: action_unsupported`: the browser generates the file on click, and this API has no URL to report until then. An eager download is fully supported.                       |
 | Lazy dataframe continuation                                                | `complete: false` with `unavailable: "lazy_loading"`; the preview is the first `server.agentPreviewRows` rows of the loaded chunk.                                            |

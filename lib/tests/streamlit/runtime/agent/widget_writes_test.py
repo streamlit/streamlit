@@ -756,7 +756,14 @@ class WidgetWritesTest(SnapshotCase):
                 _Refused("no trigger"),
             ),
             ("chat_text", {"key": "prompt", "value": "hi"}, "hi"),
-            ("chat_empty_text_is_fired", {"key": "prompt", "value": ""}, ""),
+            # The browser keeps send disabled for an empty field, but sends
+            # text of only whitespace.
+            (
+                "chat_empty_text",
+                {"key": "prompt", "value": ""},
+                _Refused("cannot be fired with empty text"),
+            ),
+            ("chat_whitespace_is_fired", {"key": "prompt", "value": "  "}, "  "),
             ("chat_without_text", {"key": "prompt"}, _Refused("string `value`")),
             ("chat_number", {"key": "prompt", "value": 5}, _Refused("string `value`")),
             # The widget cuts text past `max_chars`, as a text input does.
@@ -798,6 +805,28 @@ class WidgetWritesTest(SnapshotCase):
         dialog = _one(self._build().document, "dialog")
         assert "key" not in dialog
         assert dialog["props"]["on_dismiss"] == "ignore"
+
+    def test_a_non_dismissible_dialog_cannot_be_dismissed(self) -> None:
+        """A browser user cannot close a `dismissible=False` dialog, so its
+        overlay key is reported but not offered, and firing it is refused.
+        """
+
+        @st.dialog("Confirm", dismissible=False, on_dismiss="rerun")
+        def confirm() -> None:
+            st.button("OK", key="ok")
+
+        confirm()
+
+        snapshot = self._build()
+        dialog = _one(snapshot.document, "dialog")
+        assert dialog["props"]["dismissible"] is False
+        assert dialog["props"]["on_dismiss"] == "rerun"
+        assert "action" not in dialog
+        keys = {entry["key"] for entry in snapshot.document["actions"]}
+        assert dialog["key"] not in keys
+        assert "ok" in keys
+        refusal = self._refusal(None, trigger={"key": dialog["key"]}, snapshot=snapshot)
+        assert refusal.code == "unsupported_element"
 
     @parameterized.expand(
         [

@@ -980,8 +980,15 @@ def _encode_trigger(
                 f"The element with key {key!r} is fired with a string `value`, "
                 "the text to submit.",
             )
-        # Empty text is accepted although the browser keeps send disabled
-        # without it: browser-only gates such as `required` are not enforced.
+        # The browser sends an empty prompt only with attachments, which a
+        # request cannot carry, so empty text is refused. Whitespace-only text
+        # is sendable in the browser, so it is accepted.
+        if not payload:
+            raise AgentRequestError(
+                "invalid_value",
+                f"The element with key {key!r} cannot be fired with empty text: "
+                "send the text to submit.",
+            )
         state.chat_input_value.data = payload
     else:  # pragma: no cover - a trigger's description matches its wire type
         raise AgentRequestError("not_a_trigger", f"{key!r} is not a trigger.")

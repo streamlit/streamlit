@@ -53,6 +53,11 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = (
     "_stcore/agent/mcp",
 )
 
+# Every other path under the agent API's prefix is reserved too, so a path the
+# API does not serve, such as `/_stcore/agent/foo`, is a 404 for every method
+# instead of the app's HTML.
+_RESERVED_STATIC_PATH_SEGMENT: Final = "/_stcore/agent/"
+
 
 def create_streamlit_static_handler(
     directory: str, base_url: str | None
@@ -152,17 +157,21 @@ def create_streamlit_static_handler(
             try:
                 response = await super().get_response(path, scope)
             except HTTPException as exc:
-                if self._is_reserved(scope["path"]):
+                if self._is_reserved(scope["path"], path):
                     if path.replace("\\", "/") in _RESERVED_STATIC_PATH_SUFFIXES:
                         # `path` is relative to the static mount, so an exact
                         # match is a reserved path at the app's root. There
                         # the static files' own answer stands, such as a 405
                         # for a `POST` to the health check.
                         raise
-                    # Appended to a page's URL, a reserved path is never a
-                    # static file, so it is a 404 for every method: a `POST`
-                    # from an MCP client would otherwise get the 405 that
-                    # static files answer to methods other than GET.
+                    # Otherwise a reserved path is never a static file, so it
+                    # is a 404 for every method:
+                    # - a route's path appended to a page's URL, such as
+                    #   `/page2/_stcore/agent/mcp`
+                    # - an unknown path under the agent prefix, such as
+                    #   `/_stcore/agent/foo`
+                    # Without this, a `POST` from an MCP client gets the static
+                    # files' 405.
                     raise HTTPException(status_code=404) from exc
                 if exc.status_code != 404:
                     raise
@@ -173,11 +182,16 @@ def create_streamlit_static_handler(
             self._apply_cache_headers(response, served_path)
             return response
 
-        def _is_reserved(self, request_path: str) -> bool:
+        def _is_reserved(self, request_path: str, relative_path: str) -> bool:
             """Check if the request path is reserved and should not fallback."""
-            # Use simple endswith check on the URL path.
-            # TODO: Consider making this path-segment-aware in the future to avoid
-            # false positives like "/my_stcore/health" matching "_stcore/health".
+            # Anything under the agent prefix is reserved, matched by path
+            # segment. It is checked on the mount-relative path, so a base URL
+            # that contains the prefix does not reserve every page. The other
+            # reserved paths match by suffix, so "/my_stcore/health" also
+            # matches "_stcore/health" (TODO: make that path-segment-aware too).
+            relative_url_path = relative_path.replace("\\", "/").strip("/")
+            if _RESERVED_STATIC_PATH_SEGMENT in f"/{relative_url_path}/":
+                return True
             url_path = request_path.split("?", 1)[0]
             return any(url_path.endswith(x) for x in _RESERVED_STATIC_PATH_SUFFIXES)
 

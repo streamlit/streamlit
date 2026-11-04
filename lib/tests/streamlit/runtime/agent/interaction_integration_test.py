@@ -1891,13 +1891,13 @@ async def test_chat_input_payload_reaches_the_app(
             await app.call(
                 {"session_id": handle, "trigger": {"key": "prompt", "value": text}}
             )
-            for text in ("hi", "")
+            for text in ("hi", " ")
         ]
         rerun = await app.call({"session_id": handle})
 
     assert _line(turns[0], "said") == "['hi']"
-    assert _line(turns[1], "said") == "['hi', '']"
-    assert _line(rerun, "said") == "['hi', '']"
+    assert _line(turns[1], "said") == "['hi', ' ']"
+    assert _line(rerun, "said") == "['hi', ' ']"
     # The payload is reset when the run finishes, before the snapshot is read.
     assert "value" not in _keyed(turns[1], "prompt")
 

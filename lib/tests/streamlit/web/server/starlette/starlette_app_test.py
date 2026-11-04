@@ -1580,6 +1580,25 @@ def test_a_reserved_path_refuses_other_methods_by_where_it_is(
     assert "<html>" not in under_a_page.text
 
 
+def test_an_unknown_agent_path_is_a_404_beside_the_agent_routes(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """A path under the agent prefix that no route serves is a 404 for every
+    method, while the agent routes beside it keep answering themselves.
+    """
+    client, _ = starlette_client
+
+    fetched = client.get("/_stcore/agent/foo")
+    posted = client.post("/_stcore/agent/foo", json={})
+    route = client.get("/_stcore/agent/interact")
+
+    assert fetched.status_code == HTTPStatus.NOT_FOUND
+    assert "<html>" not in fetched.text
+    assert posted.status_code == HTTPStatus.NOT_FOUND
+    assert route.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert route.headers["Allow"] == "POST"
+
+
 @pytest.mark.parametrize(
     ("base_url", "mcp_path"),
     [("", "/_stcore/agent/mcp"), ("app", "/app/_stcore/agent/mcp")],
