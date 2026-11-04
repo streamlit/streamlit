@@ -31,8 +31,8 @@ from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
     get_resource_cache_stats_provider,
 )
+from streamlit.runtime.caching.cache_metrics import get_cache_metrics
 from streamlit.runtime.caching.global_cache_budget import (
-    get_global_cache_budget,
     reconfigure_global_cache_budget_from_config,
 )
 from streamlit.runtime.caching.storage.local_disk_cache_storage import (
@@ -246,8 +246,8 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
+        self._stats_mgr.register_provider(get_cache_metrics())
         reconfigure_global_cache_budget_from_config()
-        self._stats_mgr.register_provider(get_global_cache_budget())
         if self._uploaded_file_mgr is not None:
             self._stats_mgr.register_provider(self._uploaded_file_mgr)
         # Register media file storage for stats if it implements StatsProvider

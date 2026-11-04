@@ -28,6 +28,7 @@ import type { BlockNode } from "~lib/AppNode"
 import {
   FlexContext,
   FlexContextProvider,
+  getHasDefiniteHeight,
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
@@ -55,6 +56,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import { GridContainer } from "./GridContainer"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
+  PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
   StyledDialogContentEndPad,
   StyledFlexContainerBlock,
@@ -183,12 +185,24 @@ export const ContainerContentsWrapper = (
 ): ReactElement => {
   const parentContext = useContext(FlexContext)
   const columnAlignment = props.node.deltaBlock.column?.verticalAlignment
+  const isColumn = notNullOrUndefined(props.node.deltaBlock.column)
+  const heightContextProps = getHeightContextProps(
+    props.heightConfig ?? props.node.deltaBlock.heightConfig
+  )
 
   const defaultStyles: StyledFlexContainerBlockProps = {
     direction: Direction.VERTICAL,
     flex: 1,
     gap: { gapSize: streamlit.GapSize.SMALL },
     height: props.height,
+    // Print keeps flex only when this block's `height: 100%` is definite:
+    // - A side-by-side row stretches its columns, so a column's height is
+    //   definite. A row that stacks in print overrides this with its own rules.
+    // - Forms, expanders, and chat messages have a definite height only when
+    //   their own height config sets one.
+    hasDefiniteHeight:
+      isColumn ||
+      getHasDefiniteHeight({ ...heightContextProps, parentContext }),
     // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
     border: false,
     justify: notNullOrUndefined(columnAlignment)
@@ -206,10 +220,8 @@ export const ContainerContentsWrapper = (
       // tabs, …) are not columns, so the flag resets to false. Nested st.container
       // resets the same way because FlexBoxContainer only sets this prop when the
       // node is a column or grid cell.
-      isDirectlyInColumn={notNullOrUndefined(props.node.deltaBlock.column)}
-      {...getHeightContextProps(
-        props.heightConfig ?? props.node.deltaBlock.heightConfig
-      )}
+      isDirectlyInColumn={isColumn}
+      {...heightContextProps}
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -296,6 +308,14 @@ export const FlexBoxContainer = (
         ? "auto"
         : layout_styles.height,
     minHeight: fillGridCell ? 0 : undefined,
+    // A filling grid cell, and a stretch block in a definite-height parent,
+    // fill a definite height through flex, so print keeps flex for them
+    // despite their percentage or auto height.
+    hasDefiniteHeight:
+      fillGridCell ||
+      (props.node.deltaBlock.heightConfig?.useStretch === true
+        ? parentContext?.hasDefiniteHeight === true
+        : undefined),
     // Flex properties are set on the LayoutWrapper.
     flex: "1",
     align: props.node.deltaBlock.flexContainer?.align,
@@ -598,7 +618,14 @@ export const BlockNodeRenderer = (
         showBorder={node.deltaBlock.column.showBorder ?? false}
         // Inherit parent row wrap; default true when FlexContext is absent.
         $wrap={flexContext?.wrap ?? true}
-        className="stColumn"
+        className={[
+          "stColumn",
+          node.deltaBlock.column.showBorder === true
+            ? PRINT_BORDERED_COLUMN_CLASS
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         data-testid="stColumn"
       >
         {child}
@@ -655,6 +682,9 @@ export const BlockNodeRenderer = (
           keyClassOnWrapper ? userKey : undefined
         )}
         {...layoutWrapperStyles}
+        hasDefiniteHeight={
+          isStretchHeight && flexContext?.hasDefiniteHeight === true
+        }
       >
         {containerElement}
       </StyledLayoutWrapper>

@@ -57,6 +57,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -1204,10 +1205,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             }
         ),
     )
-    @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
-        MagicMock(return_value="mock_scriptrun_id"),
-    )
     async def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
         session = _create_test_session(asyncio.get_running_loop())
@@ -1230,11 +1227,14 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         session._scriptrunner = mock_scriptrunner
         session._clear_queue = MagicMock()
 
+        run_descriptor = RunDescriptor(script_run_id="mock_scriptrun_id")
+
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=run_descriptor,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1244,11 +1244,12 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         assert len(sent_messages) == 2  # NewApp and SessionState messages
         session._clear_queue.assert_called_once()
 
+        assert RunDescriptor.from_metadata(sent_messages[0].metadata) == run_descriptor
+
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_session_msg = sent_messages[0].new_session
-        assert new_session_msg.script_run_id == "mock_scriptrun_id"
 
         assert new_session_msg.HasField("config")
         assert (
@@ -1279,10 +1280,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
-    @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
-        MagicMock(return_value="mock_scriptrun_id"),
-    )
     async def test_new_session_message_includes_fragment_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
 
@@ -1304,12 +1301,16 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         session._scriptrunner = mock_scriptrunner
         session._clear_queue = MagicMock()
 
+        fragment_ids = ["first_fragment_id", "second_fragment_id"]
+        run_descriptor = RunDescriptor.create(fragment_ids)
+
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_ids_this_run=["my_fragment_id"],
+            fragment_ids_this_run=fragment_ids,
+            run_descriptor=run_descriptor,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1317,10 +1318,12 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         assert len(sent_messages) == 2  # NewApp and SessionState messages
-        session._clear_queue.assert_called_once()
+        session._clear_queue.assert_called_once_with(fragment_ids)
 
-        new_session_msg = sent_messages[0].new_session
-        assert new_session_msg.fragment_ids_this_run == ["my_fragment_id"]
+        run_identity = sent_messages[0].metadata.run
+        assert run_identity.script_run_id == run_descriptor.script_run_id
+        assert list(run_identity.fragment_ids) == fragment_ids
+        assert RunDescriptor.from_metadata(sent_messages[0].metadata) == run_descriptor
 
         add_script_run_ctx(ctx=orig_ctx)
 
@@ -1338,6 +1341,7 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="some_other_page_script_hash",
             fragment_ids_this_run=None,
+            run_descriptor=RunDescriptor.create(),
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1441,7 +1445,7 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         MagicMock(side_effect=_mock_get_options_for_section()),
     )
     @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
+        "streamlit.runtime.scriptrunner_utils.run_descriptor._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     async def test_handle_backmsg_exception(self):
@@ -1490,7 +1494,10 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
                     CLEAR_QUEUE,
-                    session._create_new_session_message(page_script_hash=""),
+                    session._create_new_session_message(
+                        page_script_hash="",
+                        run_descriptor=RunDescriptor(script_run_id="mock_scriptrun_id"),
+                    ),
                     session._create_session_status_changed_message(),
                 ]
             )
@@ -1499,7 +1506,8 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             expected_events.extend(
                 [
                     session._create_script_finished_message(
-                        ForwardMsg.FINISHED_SUCCESSFULLY
+                        ForwardMsg.FINISHED_SUCCESSFULLY,
+                        RunDescriptor(script_run_id="mock_scriptrun_id"),
                     ),
                     session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
@@ -1507,6 +1515,108 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             )
 
         assert expected_events == forward_msg_queue_events
+
+    async def test_handle_backmsg_exception_run_identity(self):
+        """The synthetic run's new_session and script_finished share one identity.
+
+        The first script_finished ends whatever run was in progress, which
+        AppSession cannot attribute, so it carries no run identity.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        session._clear_queue = MagicMock()
+
+        session.handle_backmsg_exception(RuntimeError("I am error"))
+        await asyncio.sleep(0)
+
+        msgs = session._browser_queue._queue
+        finished_msgs = [m for m in msgs if m.WhichOneof("type") == "script_finished"]
+        new_session_msgs = [m for m in msgs if m.WhichOneof("type") == "new_session"]
+        assert len(finished_msgs) == 2
+        assert len(new_session_msgs) == 1
+
+        assert not finished_msgs[0].metadata.HasField("run")
+        new_session_run = RunDescriptor.from_metadata(new_session_msgs[0].metadata)
+        assert new_session_run is not None
+        assert RunDescriptor.from_metadata(finished_msgs[1].metadata) == new_session_run
+
+    @parameterized.expand(
+        [
+            (
+                "success",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_SUCCESSFULLY,
+                (),
+            ),
+            (
+                "fragment_success",
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+                ("outer", "inner"),
+            ),
+            (
+                "compile_error",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ForwardMsg.FINISHED_WITH_COMPILE_ERROR,
+                (),
+            ),
+            (
+                "stopped_for_rerun",
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ForwardMsg.FINISHED_EARLY_FOR_RERUN,
+                (),
+            ),
+        ]
+    )
+    async def test_script_finished_carries_run_identity(
+        self,
+        _name: str,
+        event: ScriptRunnerEvent,
+        expected_status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        fragment_ids: tuple[str, ...],
+    ):
+        """script_finished's metadata.run is the finish event's run descriptor."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        run_descriptor = RunDescriptor.create(fragment_ids)
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=event,
+            exception=RuntimeError("compile error"),
+            run_descriptor=run_descriptor,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == expected_status
+        assert RunDescriptor.from_metadata(finished_msgs[0].metadata) == run_descriptor
+
+    async def test_script_finished_without_run_descriptor_has_no_run_identity(self):
+        """A finish event without a descriptor yields script_finished without run."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+        assert not finished_msgs[0].metadata.HasField("run")
 
     async def test_handle_backmsg_handles_exceptions(self):
         """Exceptions raised in handle_backmsg should be sent to
@@ -1646,6 +1756,31 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=None,  # This is the condition we're testing
             )
+
+    async def test_event_handler_raises_error_if_run_descriptor_none_on_script_started(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if run_descriptor is None when event is SCRIPT_STARTED.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        with pytest.raises(
+            RuntimeError,
+            match=r"run_descriptor must be set for the SCRIPT_STARTED event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STARTED,
+                page_script_hash="",
+                run_descriptor=None,  # This is the condition we're testing
+            )
+
+        session._clear_queue.assert_not_called()
+        assert len(session._browser_queue._queue) == 0
 
     async def test_event_handler_raises_error_if_exception_none_on_compile_error(
         self,
@@ -2869,7 +3004,9 @@ def test_create_new_session_message_recommends_skills_install() -> None:
             return_value="loopback",
         ),
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is True
     # No suppression telemetry when the nudge is actually recommended.
@@ -2885,7 +3022,9 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     with patch(
         "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # "installed" is an uninteresting reason, so it is not reported.
@@ -2905,7 +3044,9 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
             return_value="private",
         ),
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert (
@@ -2925,7 +3066,9 @@ def test_create_new_session_message_reports_informative_suppression(
     session = _create_test_session()
 
     with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
@@ -2943,7 +3086,9 @@ def test_create_new_session_message_drops_high_volume_suppression(
     session = _create_test_session()
 
     with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
@@ -2970,8 +3115,12 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
             return_value="loopback",
         ),
     ):
-        first = session._create_new_session_message(page_script_hash="")
-        second = session._create_new_session_message(page_script_hash="")
+        first = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
+        second = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert mock_reason.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
@@ -2990,7 +3139,9 @@ def test_create_new_session_message_skips_skills_install_for_hello_app() -> None
     with patch(
         "streamlit.web.skills.nudge_suppression_reason", return_value=""
     ) as mock_reason:
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # Short-circuited on is_hello before the (would-recommend) detection ran.
@@ -3802,6 +3953,7 @@ async def test_page_script_hash_follows_script_started() -> None:
         sender=runner,
         event=ScriptRunnerEvent.SCRIPT_STARTED,
         page_script_hash="other_page_hash",
+        run_descriptor=RunDescriptor.create(),
     )
 
     assert session.page_script_hash == "other_page_hash"

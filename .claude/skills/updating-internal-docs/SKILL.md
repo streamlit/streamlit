@@ -30,8 +30,6 @@ Priority files (most likely to contain codebase-specific instructions):
 
 **Files to skip** (synced copies, updated separately):
 
-- `.github/copilot-instructions.md`
-- `.github/instructions/*.md`
 - `.cursor/rules/*.mdc`
 - `.claude/agents/reviewing-local-changes.md` from `## Review Checklist` onward (generated from `scripts/assets/code-review-instructions.md`)
 

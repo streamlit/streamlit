@@ -34,7 +34,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import type * as ReadOnlyGridModule from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import type * as LazyReadOnlyGridModule from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import type * as FormClearHelperModule from "~lib/components/widgets/Form/FormClearHelper"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
@@ -93,16 +93,16 @@ const { gridPropsHolder } = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  "~lib/components/widgets/DataFrame/ReadOnlyGrid",
+  "~lib/components/widgets/DataFrame/LazyReadOnlyGrid",
   async importOriginal => {
-    const actual = await importOriginal<typeof ReadOnlyGridModule>()
+    const actual = await importOriginal<typeof LazyReadOnlyGridModule>()
     return {
       ...actual,
-      ReadOnlyGrid: (
-        props: Parameters<typeof actual.ReadOnlyGrid>[0]
+      LazyReadOnlyGrid: (
+        props: Parameters<typeof actual.LazyReadOnlyGrid>[0]
       ): ReactElement => {
         gridPropsHolder.last = props
-        return <actual.ReadOnlyGrid {...props} />
+        return <actual.LazyReadOnlyGrid {...props} />
       },
     }
   }
@@ -1223,6 +1223,12 @@ describe("EChartsChart", () => {
   })
 
   describe("Arrow datasets", () => {
+    // Load the grid's DataFrame module up front, so the first "Show data"
+    // click doesn't spend the `findBy*` timeout on importing it.
+    beforeAll(async () => {
+      await import("~lib/components/widgets/DataFrame/ReadOnlyGrid")
+    })
+
     const SALES_BYTES = tableToIPC(
       new Table({
         product: vectorFromArray(["Matcha", "Latte"], new Utf8()),
@@ -1430,6 +1436,8 @@ describe("EChartsChart", () => {
       const chart = screen.getByTestId("stEChartsChart")
       expect(mockInit).toHaveBeenCalledTimes(1)
       expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+      expect(screen.queryByTestId("stDataFrame")).not.toBeInTheDocument()
+      expect(gridPropsHolder.last).toBeUndefined()
 
       await user.click(screen.getByRole("button", { name: "Show data" }))
 

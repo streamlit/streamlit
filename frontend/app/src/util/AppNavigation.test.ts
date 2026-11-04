@@ -75,8 +75,6 @@ function generateNewSession(changes = {}): NewSession {
     pageScriptHash: "page_script_hash",
     mainScriptHash: "main_script_hash",
     mainScriptPath: "path/to/file.py",
-    scriptRunId: "script_run_id",
-    fragmentIdsThisRun: [],
     ...changes,
   })
 }
@@ -488,6 +486,8 @@ describe("AppNavigation", () => {
         isDefault: true,
         sectionHeader: "section1",
         icon: "icon1",
+        // Hosts receive the page list unchanged, including page help.
+        help: "The app's start page.",
       }),
       new AppPage({
         pageName: "streamlit_app2",

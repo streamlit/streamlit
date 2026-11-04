@@ -34,6 +34,7 @@ class PageInfo(TypedDict):
     icon: NotRequired[Icon]
     page_name: NotRequired[PageName]
     url_pathname: NotRequired[str]
+    help: NotRequired[str]
 
 
 def open_python_file(filename: str) -> TextIO:

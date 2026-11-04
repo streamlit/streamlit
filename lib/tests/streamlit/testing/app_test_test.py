@@ -22,7 +22,7 @@ import pytest
 
 from streamlit.runtime import Runtime
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner import ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import RunDescriptor, ScriptRunnerEvent
 from streamlit.runtime.state.common import TESTING_KEY
 from streamlit.testing.v1 import AppTest, AppTestError, local_script_runner
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
@@ -136,6 +136,7 @@ def test_local_script_runner_skips_orphan_cleanup_when_runtime_missing() -> None
                 ctx,
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
                 premature_stop=False,
+                run_descriptor=RunDescriptor.create(),
             )
         mock_get_instance.assert_not_called()
     finally:

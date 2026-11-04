@@ -34,6 +34,7 @@ alwaysApply: false
 - Leverage all of best practices of React 18.
 - Follow the [Rules of React](https://react.dev/reference/rules): pure components and hooks, immutable props and state, and call hooks at the top level of React functions.
 - Write performant frontend code.
+- **Lazy-load large dependencies**: When a component needs a large library (roughly 100 kB or more) only in some cases, such as an optional chart or an overlay opened on click, load it with `React.lazy` or a dynamic `import()` at that point instead of a static import. Otherwise every page that renders the component downloads it. Reserve the content's space while it loads, and skip the work if the component unmounts first. See `ArrowVegaLiteChart/loadVegaEmbed.ts` and `StreamlitMarkdown/MermaidChart.tsx`.
 - Ensure referential stability by leveraging React Hooks.
 - Name refs with a `Ref` suffix: Variables assigned from `useRef(...)` must end with `Ref`.
   - ✅ `const inputRef = useRef<HTMLInputElement>(null)`

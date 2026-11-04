@@ -157,6 +157,22 @@ const DefiniteHeightProbe = (): ReactElement => (
   </div>
 )
 
+/** The top-level declarations of an element's emotion `@media print` rule. */
+function printDeclarations(element: HTMLElement): string {
+  const css = [...document.querySelectorAll("style")]
+    .map(style => style.textContent ?? "")
+    .join("\n")
+  return [...element.classList]
+    .filter(className => className.startsWith("css-"))
+    .map(
+      className =>
+        new RegExp(`@media print\\{\\.${className}\\{([^}]*)\\}`).exec(
+          css
+        )?.[1] ?? ""
+    )
+    .join(";")
+}
+
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
     <FlexBoxContainer
@@ -529,6 +545,46 @@ describe("FlexBoxContainer layout props", () => {
     expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
     expect(layoutWrapper).toHaveStyle("height: auto;")
     expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
+  })
+
+  describe("print layout", () => {
+    const stretchChild = (): BlockNode =>
+      makeVerticalBlock([], {
+        heightConfig: { useStretch: true },
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        },
+      })
+
+    it("keeps flex for a stretch-height container in a fixed-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([stretchChild()], {
+            heightConfig: { pixelHeight: 400 },
+            flexContainer: {
+              direction: BlockProto.FlexContainer.Direction.VERTICAL,
+            },
+          })
+        )
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).not.toContain("display:block")
+      expect(printDeclarations(innerBlock)).not.toContain("display:block")
+    })
+
+    it("uses block layout for a stretch-height container in a content-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(makeVerticalBlock([stretchChild()]))
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).toContain("display:block")
+      expect(printDeclarations(innerBlock)).toContain("display:block")
+    })
   })
 
   it("does not apply the stretch overrides to a content-height container", () => {
@@ -1888,10 +1944,13 @@ describe("GridContainer Component", () => {
       height: "100%",
       flex: "1 1 auto",
     })
-    expect(within(gridCell).getByTestId("stVerticalBlock")).toHaveStyle({
+    const cellBlock = within(gridCell).getByTestId("stVerticalBlock")
+    expect(cellBlock).toHaveStyle({
       height: "100%",
       justifyContent: "safe center",
     })
+    // The row height is definite, so print keeps the flex alignment.
+    expect(printDeclarations(cellBlock)).not.toContain("display:block")
 
     const containers = within(gridCell).getAllByTestId("stElementContainer")
     const stretch = containers.find(container =>
@@ -2000,9 +2059,12 @@ describe("GridContainer Component", () => {
     expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
       height: "auto",
     })
-    expect(within(gridCell).getByTestId("stVerticalBlock")).not.toHaveStyle({
+    const cellBlock = within(gridCell).getByTestId("stVerticalBlock")
+    expect(cellBlock).not.toHaveStyle({
       height: "100%",
     })
+    // A content-height block prints as normal flow.
+    expect(printDeclarations(cellBlock)).toContain("display:block")
     expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
       "display: contents"
     )

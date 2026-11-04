@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         ScriptRunContext,
         UserInfoType,
@@ -206,7 +207,11 @@ class LocalScriptRunner(ScriptRunner):
         return any(e == ScriptRunnerEvent.SHUTDOWN for e in self.events)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor,
     ) -> None:
         # Do not drop unseen widgets when the script stopped for a rerun
         # (later widgets never registered). Keep this gate in sync with
@@ -222,7 +227,7 @@ class LocalScriptRunner(ScriptRunner):
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
         # Skip orphan cleanup when:
         # - The body never ran (nothing was re-registered, so everything
