@@ -135,9 +135,9 @@ _FILE_GONE_MESSAGE: Final = (
     "No stored file has this id: a later run may have replaced it, or a run "
     "in progress has not re-created it yet. Pass `url` as the latest result "
     "shows it. If a run is still in progress, call `interact` with only "
-    "`session_id` to collect it first. Do not rerun just to retry: an earlier "
-    "result's file returns only once the app is back in the state that "
-    "showed it, such as its page and filters."
+    "`session_id` to collect it first. Do not rerun with no changes to "
+    "retry the read: an earlier result's file returns only once the app is "
+    "back in the state that showed it, such as its page and filters."
 )
 _FILE_TOO_LARGE_MESSAGE: Final = (
     f"This file makes a result past {MAX_RESULT_BYTES // 1_000_000} MB, which "

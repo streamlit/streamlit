@@ -1329,8 +1329,8 @@ than ranked, and say where one builds on another.
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
-   `wait_timed_out`, as a browser interaction would. That last one comes first: a page
-   that runs for minutes, such as one whose first load fills a cold cache, answers every
+   `wait_timed_out`, as a browser interaction would. Replacing a run still going comes
+   first: a page that runs for minutes, such as one whose first load fills a cold cache, answers every
    other request on its session with `session_busy` until it finishes, so a client that
    wants to leave it can only start a new session.
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
@@ -1390,10 +1390,11 @@ than ranked, and say where one builds on another.
    those bytes lands in a model's context, and a response over a client's tool-result
    limit is lost to the model, which makes this, with #6, the first follow-up to take
    after v1. Measured across a 21-page dashboard app, table previews are the largest
-   part of most snapshots (35 of 44 KB for one 15-column table), and option lists of
-   most of the rest, so the preview's byte budget and a lower default row count, around
-   20, come first. The `pages` list, about 2 KB, is sent only when it differs from the
-   session's previous result, since `unknown_page` already returns it. Repeated
+   part of most snapshots (35 of 44 KB for one 15-column table), and option lists make
+   up most of the rest, so the preview's byte budget and a lower default row count,
+   around 20, come first. The `pages` list, about 2 KB, would then be sent only when it
+   differs from the session's previous result, since `unknown_page` already returns it.
+   Repeated
    annotations shrink too: `fragment` only on keyed nodes and on the fragment's own
    container, and documented defaults such as `label_visibility: "visible"` left out.
    Leaving Plotly's base64 `bdata` arrays unexpanded saves less, since only numeric
@@ -1413,13 +1414,15 @@ than ranked, and say where one builds on another.
     exactly as `st.login` does, fronting the provider as a thin OAuth proxy where it
     cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
     API keys are what to avoid: they would be a second identity system.
-11. **Say what became of each sent value.** A value can be dropped with a `200`: a
-    widget resets an out-of-range number or a malformed date to its default, and a key
-    the same run removes or re-keys loses its value, as when one value in a batch moves
-    the bounds of a slider whose generated key then changes. Agents evaluating v1 hit
-    this on real pages and noticed only from the page's own text. A result lists each
-    sent key that did not land as sent, with its reason (`reset`, `adjusted`,
-    `removed`), and stays silent when every value landed. #16203 then turns most resets
+11. **Say what became of each sent value.** A value can be changed or dropped with a
+    `200`: a widget resets an out-of-range number or a malformed date to its default,
+    truncates a fraction sent to an integer input, and a key the same run removes or
+    re-keys loses its value, as when one value in a batch moves the bounds of a slider
+    whose generated key then changes. Agents evaluating v1 hit this on real pages and
+    noticed only from the page's own text. A result lists each sent key that did not
+    land as sent, with its reason (`reset`, `adjusted`, or `removed`, which also covers
+    a re-keyed key), and stays silent when every value landed.
+    [#16203](https://github.com/streamlit/streamlit/issues/16203) then turns most resets
     into `invalid_value` refusals, leaving the removed and re-keyed cases for this list.
 
 Smaller potential follow-ups and alternatives considered:

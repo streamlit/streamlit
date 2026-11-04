@@ -418,7 +418,7 @@ def test_interact_is_never_read_only_and_get_data_is() -> None:
 
 def test_the_tool_list_stays_small() -> None:
     """The tool list is spent in every conversation the server is enabled in,
-    so it stays near its 11 KB estimate.
+    so it stays under 12 KB.
     """
     assert len(json.dumps(list(_tools().values()))) < 12_000
 
@@ -460,8 +460,8 @@ def _property_names(node: Any) -> set[str]:
 def test_tool_descriptions_name_only_what_exists() -> None:
     """Every code, field, and value the hand-written tool descriptions name in
     backticks is defined, as the element descriptions' coverage test holds
-    them to their commands. `interact` lists every `unavailable` reason, and
-    `get_data` every code only it returns.
+    them to their commands. `interact` lists every `unavailable` and
+    `support` reason, and `get_data` every code only it returns.
     """
     tools = _tools()
     defined = (
@@ -487,6 +487,8 @@ def test_tool_descriptions_name_only_what_exists() -> None:
             for part in path.split("."):
                 assert part in defined, f"{name} names `{part}`"
     for reason in get_args(agent_data.UnavailableReason):
+        assert f"`{reason}`" in tools["interact"]["description"]
+    for reason in get_args(agent_spec.SupportReason):
         assert f"`{reason}`" in tools["interact"]["description"]
     for code in errors.MCP_ERROR_CATALOG:
         assert f"- `{code}`: " in tools["get_data"]["description"]
