@@ -418,7 +418,7 @@ def test_interact_is_never_read_only_and_get_data_is() -> None:
 
 def test_the_tool_list_stays_small() -> None:
     """The tool list is spent in every conversation the server is enabled in,
-    so it stays near its 9 KB estimate.
+    so it stays near its 11 KB estimate.
     """
     assert len(json.dumps(list(_tools().values()))) < 12_000
 
@@ -470,6 +470,7 @@ def test_tool_descriptions_name_only_what_exists() -> None:
         | set(errors.ERROR_CATALOG)
         | set(errors.MCP_ERROR_CATALOG)
         | set(get_args(agent_data.UnavailableReason))
+        | set(get_args(agent_spec.SupportReason))
         | set(get_args(snapshot.SnapshotStatus))
         | set(mcp.TOOL_NAMES)
         | set(mcp.PAGE_FIELDS)

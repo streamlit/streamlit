@@ -217,7 +217,14 @@ with that `key` in `tree`: its `value_schema` gives the JSON shape, and its \
 or the URL parameters with `query_params`, in a call without widget changes. \
 A call with only `session_id` reruns the app; a trigger never fires twice. \
 Send such a call to close a dialog or to refresh a fragment that reruns on \
-a timer.
+a timer. After a call, check each key you set is still there with your value: \
+a run that removes or re-keys a widget drops what you sent without an error.
+
+An element with `support` is shown but not fully usable: \
+`action_unsupported` means a browser user can act on it, such as selecting a \
+table row, and you cannot; `browser_required` means the page may render \
+differently. Nodes inside a fragment carry its `fragment` id: keys all in \
+one fragment rerun only it.
 
 Tables and charts carry `data`. `complete: true` means everything is there. \
 `complete: false` with a `url` means there is more: read it with `get_data`, \
@@ -266,8 +273,9 @@ A refused read returns `isError: true` with an `error` whose `code` says what \
 to do:
 - `unknown_file`: `url` reads no stored file. For a media URL from a result, \
 pass `url` as the latest result shows it; if a run is still in progress, call \
-`interact` with only `session_id` first. Do not call `interact` just to \
-re-create a file. Anything else is not a media file: do not call this tool \
+`interact` with only `session_id` first. Do not rerun just to retry: an \
+earlier result's file returns only once the app is back in the state that \
+showed it, such as its page and filters. Anything else is not a media file: do not call this tool \
 for it again.
 - `result_too_large`: the file, or the table row at `offset`, makes a result \
 past {megabytes} MB; on a table, read on from the next offset.
@@ -826,8 +834,11 @@ def _widget_state_schema() -> dict[str, Any]:
             "Checks only a browser runs, `required` and `validate`, are not "
             "applied.\n\n"
             "One request is one rerun, so a widget it removes, such as a field "
-            "of a mode it switches away from, is gone afterwards: check each key "
-            "you set is still there. A form's fields go with one of its submit "
+            "of a mode it switches away from, is gone afterwards, and one whose "
+            "generated key it changes, such as a slider whose bounds another "
+            "value moved, drops the value sent for it without an error: check "
+            "each key you set is still there with that value. A form's fields "
+            "go with one of its submit "
             "triggers; with `clear_on_submit`, send every field each time, since "
             "fields keep their values here. Keys in an open `st.dialog` go on "
             "their own. Controls outside an open dialog stay usable. Any full "
