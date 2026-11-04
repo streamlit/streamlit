@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
+import math
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
@@ -148,6 +150,13 @@ _PRINTF_TOKEN: Final = re.compile(
     r"[^%]+|%%|(?P<placeholder>%(?:[1-9][0-9]*\$|\([^)]+\))?\+?(?:0|'[^$])?-?"
     r"[,_]?[0-9]*(?:\.[0-9]+)?[b-gijostTuvxX])"
 )
+
+# Series components whose ``data`` entries can place a marker at an ``xAxis`` or
+# ``yAxis`` value.
+_MARKER_KEYS: Final = ("markLine", "markPoint", "markArea")
+
+# How many dataset dimension names an unknown-``encode`` warning lists.
+_MAX_LISTED_DIMENSIONS: Final = 10
 
 
 class EChartsCompatible(Protocol):
@@ -725,6 +734,304 @@ def _convert_dataset_sources(option: dict[str, Any]) -> dict[str, bytes]:
     return arrow_datasets
 
 
+def _iter_checked_variants(
+    option: dict[str, Any],
+) -> Iterator[tuple[str, dict[str, Any]]]:
+    """Yield the path prefix and option of the variants that hold a whole chart.
+
+    Timeline ticks and ``media`` overrides are merged into these when the chart
+    renders, so checking them on their own would guess at the merged result.
+    """
+    yield "", option
+    base_option = option.get("baseOption")
+    if isinstance(base_option, dict):
+        yield "baseOption.", base_option
+
+
+def _iter_series_with_paths(
+    variant: dict[str, Any], prefix: str
+) -> Iterator[tuple[str, dict[str, Any]]]:
+    """Yield each series config of one option variant with its option path."""
+    series = variant.get("series")
+    if isinstance(series, dict):
+        yield f"{prefix}series", series
+    elif isinstance(series, (list, tuple)):
+        for index, entry in enumerate(series):
+            if isinstance(entry, dict):
+                yield f"{prefix}series[{index}]", entry
+
+
+def _resolve_series_dataset(
+    series: dict[str, Any], variant: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Return the dataset a series reads, mirroring ECharts' lookup.
+
+    A series with its own ``data`` ignores the dataset. Otherwise
+    ``datasetIndex`` takes precedence over ``datasetId``, and the first dataset
+    is the default.
+    """
+    if series.get("data") is not None:
+        return None
+    dataset = variant.get("dataset")
+    datasets = [dataset] if isinstance(dataset, dict) else dataset
+    if not isinstance(datasets, (list, tuple)):
+        return None
+
+    index = series.get("datasetIndex")
+    dataset_id = series.get("datasetId")
+    if index is None and dataset_id is not None:
+        return next(
+            (
+                entry
+                for entry in datasets
+                if isinstance(entry, dict)
+                and entry.get("id") is not None
+                and str(entry["id"]) == str(dataset_id)
+            ),
+            None,
+        )
+    index = 0 if index is None else index
+    if (
+        isinstance(index, int)
+        and not isinstance(index, bool)
+        and 0 <= index < len(datasets)
+    ):
+        entry = datasets[index]
+        return entry if isinstance(entry, dict) else None
+    return None
+
+
+def _arrow_dataset_bytes(
+    dataset: dict[str, Any], arrow_datasets: dict[str, bytes]
+) -> bytes | None:
+    """Return the Arrow bytes of a dataset whose dataframe source was converted.
+
+    ``None`` for transform outputs and inline sources, including an inline
+    one-row source such as ``{"name": "Matcha"}``.
+    """
+    if "transform" in dataset:
+        return None
+    source = dataset.get("source")
+    if isinstance(source, dict) and len(source) == 1:
+        name = source.get("name")
+        if isinstance(name, str):
+            return arrow_datasets.get(name)
+    return None
+
+
+def _dataset_dimension_names(dataset: dict[str, Any], data_bytes: bytes) -> list[str]:
+    """Return the dimension names ECharts gives a converted dataset.
+
+    Author ``dimensions`` win. Otherwise the frontend uses the Arrow field
+    names without the pandas index columns.
+    """
+    dimensions = dataset.get("dimensions")
+    if isinstance(dimensions, (list, tuple)):
+        names: list[str] = []
+        for dimension in dimensions:
+            name = dimension.get("name") if isinstance(dimension, dict) else dimension
+            if isinstance(name, str):
+                names.append(name)
+        return names
+
+    import pyarrow as pa
+
+    schema = pa.ipc.open_stream(data_bytes).schema
+    index_columns = (schema.pandas_metadata or {}).get("index_columns", [])
+    return [name for name in schema.names if name not in index_columns]
+
+
+def _unknown_encode_names(series: dict[str, Any], names: list[str]) -> list[str]:
+    """Return the string ``encode`` values of a series that aren't in ``names``.
+
+    Integer values are dimension indices and are not checked.
+    """
+    encode = series.get("encode")
+    if not isinstance(encode, dict):
+        return []
+    unknown: list[str] = []
+    for value in encode.values():
+        for item in value if isinstance(value, (list, tuple)) else [value]:
+            if isinstance(item, str) and item not in names and item not in unknown:
+                unknown.append(item)
+    return unknown
+
+
+def _warn_on_unknown_encode_dimensions(
+    option: dict[str, Any], arrow_datasets: dict[str, bytes]
+) -> None:
+    """Log ``encode`` names that the series' dataframe dataset doesn't have.
+
+    ECharts ignores an unknown name and silently falls back to its default
+    column mapping. Only datasets with a dataframe source are checked, because
+    only their dimension names are known in Python.
+    """
+    if not arrow_datasets:
+        return
+    problems: list[str] = []
+    for prefix, variant in _iter_checked_variants(option):
+        for path, series in _iter_series_with_paths(variant, prefix):
+            if not isinstance(series.get("encode"), dict):
+                continue
+            dataset = _resolve_series_dataset(series, variant)
+            if dataset is None:
+                continue
+            data_bytes = _arrow_dataset_bytes(dataset, arrow_datasets)
+            if data_bytes is None:
+                continue
+            names = _dataset_dimension_names(dataset, data_bytes)
+            unknown = _unknown_encode_names(series, names)
+            if unknown:
+                listed = ", ".join(
+                    repr(name) for name in names[:_MAX_LISTED_DIMENSIONS]
+                )
+                if len(names) > _MAX_LISTED_DIMENSIONS:
+                    listed += ", ..."
+                problems.append(
+                    f"`{path}.encode` uses {', '.join(map(repr, unknown))} "
+                    f"(the dataset has {listed})"
+                )
+    if problems:
+        message = (
+            "The provided ECharts spec maps `encode` to dimensions that the "
+            "series' dataset doesn't have, so ECharts ignores them and falls back "
+            f"to its default mapping: {'; '.join(problems)}. Use the dataframe's "
+            "column names, or the names in `dataset.dimensions` if you set it."
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
+def _iter_numeric_marker_coordinates(
+    series: dict[str, Any], series_path: str
+) -> Iterator[tuple[str, Literal["xAxis", "yAxis"], int | float]]:
+    """Yield the path, axis key, and value of numeric marker ``xAxis``/``yAxis``.
+
+    ``markLine`` entries are one point or a two-point list, ``markArea`` entries
+    are two-point lists, and ``markPoint`` entries are single points.
+    """
+    for marker_key in _MARKER_KEYS:
+        marker = series.get(marker_key)
+        data = marker.get("data") if isinstance(marker, dict) else None
+        if not isinstance(data, (list, tuple)):
+            continue
+        for index, entry in enumerate(data):
+            points: list[tuple[str, Any]]
+            if isinstance(entry, dict):
+                points = [(f"[{index}]", entry)]
+            elif isinstance(entry, (list, tuple)):
+                points = [(f"[{index}][{i}]", point) for i, point in enumerate(entry)]
+            else:
+                continue
+            for suffix, point in points:
+                if not isinstance(point, dict):
+                    continue
+                for axis_key in ("xAxis", "yAxis"):
+                    value = point.get(axis_key)
+                    if isinstance(value, (int, float)) and not isinstance(value, bool):
+                        yield (
+                            f"{series_path}.{marker_key}.data{suffix}.{axis_key}",
+                            axis_key,
+                            value,
+                        )
+
+
+def _series_axis(
+    variant: dict[str, Any], series: dict[str, Any], axis_key: str
+) -> dict[str, Any] | None:
+    """Return the ``xAxis`` or ``yAxis`` config a cartesian series is drawn on."""
+    axes = variant.get(axis_key)
+    axes = [axes] if isinstance(axes, dict) else axes
+    index = series.get(f"{axis_key}Index", 0)
+    if (
+        not isinstance(axes, (list, tuple))
+        or not isinstance(index, int)
+        or isinstance(index, bool)
+        or not 0 <= index < len(axes)
+    ):
+        return None
+    axis = axes[index]
+    return axis if isinstance(axis, dict) else None
+
+
+def _is_category_axis(axis: dict[str, Any]) -> bool:
+    """Whether ECharts treats the axis as a category axis.
+
+    Without a ``type``, ECharts makes an axis with ``data`` a category axis.
+    """
+    axis_type = axis.get("type")
+    return axis_type == "category" or (
+        axis_type is None and axis.get("data") is not None
+    )
+
+
+def _category_count(
+    axis: dict[str, Any],
+    series: dict[str, Any],
+    variant: dict[str, Any],
+    arrow_datasets: dict[str, bytes],
+) -> int | None:
+    """Return an upper bound for the number of categories, or ``None`` if unknown.
+
+    Categories come from the axis ``data``, else from the series' rows.
+    """
+    for values in (axis.get("data"), series.get("data")):
+        if isinstance(values, (list, tuple)):
+            return len(values)
+    dataset = _resolve_series_dataset(series, variant)
+    if dataset is None:
+        return None
+    source = dataset.get("source")
+    if isinstance(source, (list, tuple)):
+        return len(source)
+    data_bytes = _arrow_dataset_bytes(dataset, arrow_datasets)
+    if data_bytes is None:
+        return None
+
+    import pyarrow as pa
+
+    return int(pa.ipc.open_stream(data_bytes).read_all().num_rows)
+
+
+def _warn_on_numeric_category_markers(
+    option: dict[str, Any], arrow_datasets: dict[str, bytes]
+) -> None:
+    """Log numeric marker coordinates that miss every category of their axis.
+
+    On a category axis, ECharts reads a number as a 0-based category position,
+    so a label such as the year ``2023`` places the marker past the last
+    category, and ECharts silently drops it. Numbers within the category range
+    are valid positions and are not logged.
+    """
+    problems: list[tuple[str, int | float]] = []
+    for prefix, variant in _iter_checked_variants(option):
+        for series_path, series in _iter_series_with_paths(variant, prefix):
+            if series.get("coordinateSystem", "cartesian2d") != "cartesian2d":
+                continue
+            for path, axis_key, value in _iter_numeric_marker_coordinates(
+                series, series_path
+            ):
+                axis = _series_axis(variant, series, axis_key)
+                if axis is None or not _is_category_axis(axis):
+                    continue
+                count = _category_count(axis, series, variant, arrow_datasets)
+                if count is None or not 0 <= value < count:
+                    problems.append((path, value))
+    if problems:
+        listed = ", ".join(f"`{path}` is {value!r}" for path, value in problems)
+        example = json.dumps(str(problems[0][1]))
+        message = (
+            "The provided ECharts spec places markers on a category axis with "
+            f"numbers outside its category range: {listed}. On a "
+            "category axis, ECharts reads numbers as 0-based category positions, "
+            "not labels, so it doesn't draw these markers. Pass the category "
+            f"label as a string instead (for example, {example}). If "
+            "the categories come from a numeric dataframe column, such as years, "
+            "also cast that column with `.astype(str)`, because ECharts doesn't "
+            "match string labels to numeric categories."
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
 def _copy_option_for_normalization(value: Any) -> Any:
     """Copy option dicts we may mutate, leaving dataframe sources in place.
 
@@ -784,7 +1091,64 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
     _validate_supported_features(option)
     _warn_on_unsupported_value_formatters(option)
     arrow_datasets = _convert_dataset_sources(option)
+    _warn_on_unknown_encode_dimensions(option, arrow_datasets)
+    _warn_on_numeric_category_markers(option, arrow_datasets)
     return option, arrow_datasets
+
+
+def _find_unserializable_value(value: Any, path: str) -> tuple[str, Any] | None:
+    """Return the option path and value of the first value JSON rejects."""
+    if isinstance(value, float):
+        return None if math.isfinite(value) else (path, value)
+    if value is None or isinstance(value, (str, int)):
+        return None
+    if isinstance(value, dict):
+        for key, item in value.items():
+            found = _find_unserializable_value(
+                item, f"{path}.{key}" if path else str(key)
+            )
+            if found is not None:
+                return found
+        return None
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            found = _find_unserializable_value(item, f"{path}[{index}]")
+            if found is not None:
+                return found
+        return None
+    return path, value
+
+
+def _describe_unserializable_value(value: Any) -> str:
+    """Name an unserializable value and suggest the fix."""
+    import numpy as np
+
+    if isinstance(value, float):
+        name = "NaN" if math.isnan(value) else repr(value)
+        return f"`{name}`. Use `None` for missing values"
+    value_type = type(value)
+    module = value_type.__module__.split(".")[0]
+    type_name = (
+        value_type.__qualname__
+        if module == "builtins"
+        else f"{module}.{value_type.__qualname__}"
+    )
+    description = f"a `{type_name}`"
+    if isinstance(value, (np.bool_, np.number)):
+        return f"{description}. Convert it with `int()`, `float()`, or `bool()`"
+    if isinstance(value, (dt.date, dt.time)):
+        return f"{description}. Convert it with `.isoformat()`"
+    if dataframe_util.is_dataframe_like(value):
+        return (
+            f"{description}. Only `dataset.source` accepts dataframes and "
+            "arrays, so pass the data there"
+        )
+    if callable(value):
+        return (
+            f"{description}. Use an ECharts string template such as "
+            '`"{b}: {c}"` instead of a callback'
+        )
+    return f"{description}. Convert it to a plain Python value"
 
 
 def _serialize_option(option: dict[str, Any]) -> str:
@@ -797,15 +1161,23 @@ def _serialize_option(option: dict[str, Any]) -> str:
     try:
         return json.dumps(option, allow_nan=False, separators=(",", ":"))
     except (TypeError, ValueError) as ex:
+        try:
+            unserializable = _find_unserializable_value(option, "")
+        except RecursionError:
+            # A circular reference has no single offending value to name.
+            unserializable = None
+        detail = ""
+        if unserializable is not None:
+            path, value = unserializable
+            detail = f" `{path}` is {_describe_unserializable_value(value)}."
         raise StreamlitAPIException(
-            "The provided ECharts spec is not JSON-serializable. "
-            "`st.echarts_chart` only supports JSON-compatible option objects: "
-            "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
-            "dataframe in `dataset.source`, which converts datetimes, NumPy "
-            "values, and missing values automatically; values anywhere else "
-            "(for example `series.data`) must already be plain Python values "
-            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
+            f"The provided ECharts spec is not JSON-serializable.{detail} "
+            "`st.echarts_chart` only supports JSON-compatible option objects. "
+            "Pass chart data as a dataframe in `dataset.source`, which converts "
+            "datetimes, NumPy values, and missing values automatically. Values "
+            "anywhere else (for example `series.data`) must already be plain "
+            "Python values such as `int`, `float`, `str`, `None`, lists, and "
+            "dicts.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -1094,6 +1466,11 @@ class EChartsMixin:
             Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
             isn't included, so use ``df.reset_index()`` to plot it.
+
+            On a category axis, ECharts reads numbers as 0-based category
+            positions, so ``{"xAxis": 2023}`` in ``markLine.data`` doesn't mark
+            the 2023 category. Pass the label as a string, and cast numeric
+            category columns, such as years, with ``.astype(str)``.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:

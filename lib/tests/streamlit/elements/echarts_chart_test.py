@@ -20,6 +20,7 @@ import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pytest
@@ -1016,6 +1017,32 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    def test_silent_misconfigurations_are_logged_and_still_render(self) -> None:
+        """Unknown encode names and year markers log, and the chart still renders."""
+        df = pd.DataFrame({"year": [2021, 2022, 2023], "sales": [1, 2, 3]})
+        spec = {
+            "dataset": {"source": df},
+            "xAxis": {"type": "category"},
+            "yAxis": {"type": "value"},
+            "series": [
+                {
+                    "type": "bar",
+                    "encode": {"x": "year", "y": "salse"},
+                    "markLine": {"data": [{"xAxis": 2023}]},
+                }
+            ],
+        }
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 2
+        assert "uses 'salse'" in logs.output[0]
+        assert "`series[0].markLine.data[0].xAxis` is 2023" in logs.output[1]
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec["series"] == spec["series"]
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""
@@ -1337,6 +1364,447 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
 def test_serialize_option_uses_compact_separators() -> None:
     """The wire payload omits insignificant JSON whitespace."""
     assert _serialize_option({"a": 1, "b": [2]}) == '{"a":1,"b":[2]}'
+
+
+@pytest.mark.parametrize(
+    ("option", "expected"),
+    [
+        pytest.param(
+            {"series": [{"type": "gauge", "data": [{"value": np.int64(3)}]}]},
+            ["`series[0].data[0].value` is a `numpy.int64`", "`int()`"],
+            id="numpy_int_in_gauge_value",
+        ),
+        pytest.param(
+            {"series": [{"label": {"show": np.bool_(True)}}]},
+            ["`series[0].label.show` is a `numpy.bool", "`bool()`"],
+            id="numpy_bool",
+        ),
+        pytest.param(
+            {"xAxis": {"data": np.array([1, 2])}},
+            ["`xAxis.data` is a `numpy.ndarray`", "Only `dataset.source` accepts"],
+            id="numpy_array",
+        ),
+        pytest.param(
+            {"series": [{"data": [1]}, {"data": pd.Series([1, 2])}]},
+            ["`series[1].data` is a `pandas.Series`", "Only `dataset.source` accepts"],
+            id="pandas_series",
+        ),
+        pytest.param(
+            {"xAxis": {"data": ["a", pd.Timestamp("2024-01-01")]}},
+            ["`xAxis.data[1]` is a `pandas.Timestamp`", "`.isoformat()`"],
+            id="pandas_timestamp",
+        ),
+        pytest.param(
+            {"series": [{"markLine": {"data": [{"yAxis": float("nan")}]}}]},
+            ["`series[0].markLine.data[0].yAxis` is `NaN`", "Use `None`"],
+            id="nan_in_mark_line",
+        ),
+        pytest.param(
+            {"series": [{"data": [np.float64("nan")]}]},
+            ["`series[0].data[0]` is `NaN`"],
+            id="numpy_nan",
+        ),
+        pytest.param(
+            {"series": [{"data": [float("inf")]}]},
+            ["`series[0].data[0]` is `inf`"],
+            id="infinity",
+        ),
+        pytest.param(
+            {"series": ({"data": (1, decimal.Decimal("2.5"))},)},
+            ["`series[0].data[1]` is a `decimal.Decimal`", "plain Python value"],
+            id="decimal_in_tuples",
+        ),
+        pytest.param(
+            {"tooltip": {"formatter": lambda params: params}},
+            ["`tooltip.formatter` is a `function`", "string template"],
+            id="python_callback",
+        ),
+    ],
+)
+def test_serialize_option_error_names_the_offending_value(
+    option: dict[str, Any], expected: list[str]
+) -> None:
+    """The error names the option path and type of the value and how to fix it."""
+    with pytest.raises(StreamlitAPIException) as exc:
+        _serialize_option(option)
+
+    message = str(exc.value)
+    for snippet in expected:
+        assert snippet in message
+    assert "dataset.source" in message
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+def test_serialize_option_circular_reference_raises_generic_error() -> None:
+    """A circular option has no single offending value, so the error stays generic."""
+    option: dict[str, Any] = {"series": [{"type": "bar"}]}
+    option["series"][0]["self"] = option
+
+    with pytest.raises(StreamlitAPIException) as exc:
+        _serialize_option(option)
+
+    assert str(exc.value).startswith(
+        "The provided ECharts spec is not JSON-serializable. `st.echarts_chart`"
+    )
+    assert exc.value.error_id == "echarts-spec-not-json-serializable"
+
+
+def test_serialize_option_accepts_finite_numpy_floats() -> None:
+    """``numpy.float64`` subclasses ``float``, so finite values serialize as-is."""
+    assert _serialize_option({"v": np.float64(1.5)}) == '{"v":1.5}'
+
+
+def _normalize_and_collect_warnings(spec: dict[str, Any]) -> list[str]:
+    """Normalize ``spec`` and return the formatted messages it logged."""
+    with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+        _normalize_spec(spec)
+    for call in mock_warning.call_args_list:
+        assert call.kwargs["stack_info"] is True
+    return [call.args[0] % call.args[1:] for call in mock_warning.call_args_list]
+
+
+_SALES_DF = pd.DataFrame(
+    {"product": ["Matcha", "Milk Tea", "Cocoa"], "sales": [43, 83, 86]}
+)
+
+
+@pytest.mark.parametrize(
+    ("series", "expected"),
+    [
+        pytest.param(
+            {"type": "bar", "encode": {"x": "product", "y": "salse"}},
+            "`series[0].encode` uses 'salse' (the dataset has 'product', 'sales')",
+            id="string_value",
+        ),
+        pytest.param(
+            {"type": "bar", "encode": {"tooltip": ["shaa", 1, "sales", "shaa"]}},
+            "`series[0].encode` uses 'shaa' (",
+            id="list_value_with_index",
+        ),
+    ],
+)
+def test_warns_on_unknown_encode_dimension(
+    series: dict[str, Any], expected: str
+) -> None:
+    """An ``encode`` name missing from the dataframe columns is logged."""
+    warnings = _normalize_and_collect_warnings(
+        {"dataset": {"source": _SALES_DF}, "series": [series]}
+    )
+
+    assert len(warnings) == 1
+    assert expected in warnings[0]
+    assert "falls back to its default mapping" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    "spec",
+    [
+        pytest.param(
+            {
+                "dataset": {"source": _SALES_DF},
+                "series": [{"encode": {"x": "product", "y": ["sales", 1]}}],
+            },
+            id="valid_names_and_indices",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": _SALES_DF, "dimensions": ["a", {"name": "b"}]},
+                "series": [{"encode": {"x": "a", "y": "b"}}],
+            },
+            id="author_dimensions",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": pd.DataFrame({"a": [1]})},
+                    {"source": _SALES_DF},
+                ],
+                "series": [{"datasetIndex": 1, "encode": {"y": "sales"}}],
+            },
+            id="dataset_index",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": pd.DataFrame({"a": [1]})},
+                    {"id": "sales", "source": _SALES_DF},
+                ],
+                "series": [{"datasetId": "sales", "encode": {"y": "sales"}}],
+            },
+            id="dataset_id",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": _SALES_DF},
+                    {"transform": {"type": "sort", "config": {"dimension": "sales"}}},
+                ],
+                "series": [{"datasetIndex": 1, "encode": {"y": "unknown"}}],
+            },
+            id="transform_output",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": _SALES_DF},
+                "series": [{"data": [1, 2], "encode": {"y": "unknown"}}],
+            },
+            id="series_with_own_data",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": [["x", "y"], ["a", 1]]},
+                "series": [{"encode": {"y": "unknown"}}],
+            },
+            id="inline_source",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": {"name": "Matcha"}},
+                "series": [{"encode": {"y": "unknown"}}],
+            },
+            id="inline_one_row_source",
+        ),
+    ],
+)
+def test_no_warning_for_known_or_unchecked_encode_dimensions(
+    spec: dict[str, Any],
+) -> None:
+    """Valid names, integer indices, and non-dataframe datasets don't log."""
+    assert _normalize_and_collect_warnings(spec) == []
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        pytest.param(
+            {
+                "dataset": {"source": _SALES_DF, "dimensions": ["a", "b"]},
+                "series": [{"encode": {"y": "sales"}}],
+            },
+            "uses 'sales' (the dataset has 'a', 'b')",
+            id="column_name_with_author_dimensions",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": _SALES_DF},
+                    {"source": pd.DataFrame({"a": [1]})},
+                ],
+                "series": [{"datasetIndex": 1, "encode": {"y": "sales"}}],
+            },
+            "uses 'sales' (the dataset has 'a')",
+            id="name_from_other_dataset_index",
+        ),
+        pytest.param(
+            {
+                "dataset": [
+                    {"source": _SALES_DF},
+                    {"id": "other", "source": pd.DataFrame({"a": [1]})},
+                ],
+                "series": [{"datasetId": "other", "encode": {"y": "sales"}}],
+            },
+            "uses 'sales' (the dataset has 'a')",
+            id="name_from_other_dataset_id",
+        ),
+        pytest.param(
+            {
+                "dataset": {
+                    "source": pd.DataFrame(
+                        {"v": [1]}, index=pd.Index(["a"], name="label")
+                    )
+                },
+                "series": [{"encode": {"x": "label"}}],
+            },
+            "uses 'label' (the dataset has 'v')",
+            id="pandas_index_is_not_a_dimension",
+        ),
+        pytest.param(
+            {
+                "baseOption": {
+                    "dataset": {"source": _SALES_DF},
+                    "series": {"encode": {"y": "salse"}},
+                }
+            },
+            "`baseOption.series.encode` uses 'salse'",
+            id="timeline_base_option",
+        ),
+        pytest.param(
+            {
+                "dataset": {"source": pd.DataFrame({f"c{i}": [i] for i in range(12)})},
+                "series": [{"encode": {"y": "unknown"}}],
+            },
+            "'c8', 'c9', ...)",
+            id="long_column_list_is_truncated",
+        ),
+    ],
+)
+def test_warns_on_unknown_encode_dimension_for_resolved_dataset(
+    spec: dict[str, Any], expected: str
+) -> None:
+    """The names come from the series' own dataset and its author dimensions."""
+    warnings = _normalize_and_collect_warnings(spec)
+
+    assert len(warnings) == 1
+    assert expected in warnings[0]
+
+
+def test_unknown_encode_dimensions_are_logged_once_per_chart() -> None:
+    """Several series with unknown names produce one summarized warning."""
+    warnings = _normalize_and_collect_warnings(
+        {
+            "dataset": {"source": _SALES_DF},
+            "series": [
+                {"encode": {"y": "salse"}},
+                {"encode": {"y": "sales"}},
+                {"encode": {"tooltip": ["prodct"]}},
+            ],
+        }
+    )
+
+    assert len(warnings) == 1
+    assert "`series[0].encode` uses 'salse'" in warnings[0]
+    assert "`series[2].encode` uses 'prodct'" in warnings[0]
+    assert "series[1]" not in warnings[0]
+
+
+_YEARS_DF = pd.DataFrame({"year": [2021, 2022, 2023], "sales": [1, 2, 3]})
+
+
+def _marker_spec(series: dict[str, Any], **axes: Any) -> dict[str, Any]:
+    """Build a dataset chart with a category x axis unless ``axes`` override it."""
+    return {
+        "dataset": {"source": _YEARS_DF},
+        "xAxis": {"type": "category"},
+        "yAxis": {"type": "value"},
+        **axes,
+        "series": [{"type": "line", **series}],
+    }
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected_paths"),
+    [
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": 2023}]}}),
+            ["`series[0].markLine.data[0].xAxis` is 2023"],
+            id="mark_line_year",
+        ),
+        pytest.param(
+            _marker_spec({"markPoint": {"data": [{"xAxis": 2.5e3, "yAxis": 2}]}}),
+            ["`series[0].markPoint.data[0].xAxis` is 2500.0"],
+            id="mark_point_float",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": -1}]}}),
+            ["`series[0].markLine.data[0].xAxis` is -1"],
+            id="negative_position",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [[{"xAxis": 0}, {"xAxis": 2023}]]}}),
+            ["`series[0].markLine.data[0][1].xAxis` is 2023"],
+            id="mark_line_pair",
+        ),
+        pytest.param(
+            _marker_spec({"markArea": {"data": [[{"xAxis": 2021}, {"xAxis": 2023}]]}}),
+            [
+                "`series[0].markArea.data[0][0].xAxis` is 2021",
+                "`series[0].markArea.data[0][1].xAxis` is 2023",
+            ],
+            id="mark_area_pair",
+        ),
+        pytest.param(
+            {
+                "xAxis": {"type": "value"},
+                "yAxis": {"type": "category", "data": ["a", "b"]},
+                "series": [{"type": "bar", "markPoint": {"data": [{"yAxis": 5}]}}],
+            },
+            ["`series[0].markPoint.data[0].yAxis` is 5"],
+            id="horizontal_category_y_axis",
+        ),
+        pytest.param(
+            _marker_spec(
+                {"xAxisIndex": 1, "markLine": {"data": [{"xAxis": 5}]}},
+                xAxis=[{"type": "value"}, {"data": ["a", "b"]}],
+            ),
+            ["`series[0].markLine.data[0].xAxis` is 5"],
+            id="axis_index_into_untyped_axis_with_data",
+        ),
+    ],
+)
+def test_warns_on_numeric_marker_outside_category_range(
+    spec: dict[str, Any], expected_paths: list[str]
+) -> None:
+    """Numbers that miss every category of their axis are logged once."""
+    warnings = _normalize_and_collect_warnings(spec)
+
+    assert len(warnings) == 1
+    for path in expected_paths:
+        assert path in warnings[0]
+    assert "0-based category positions" in warnings[0]
+    assert ".astype(str)" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    "spec",
+    [
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": "2023"}]}}),
+            id="string_label",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": 2}, {"xAxis": 1.5}]}}),
+            id="positions_within_dataset_rows",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": True}]}}),
+            id="bool",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"yAxis": 2023}]}}),
+            id="value_y_axis",
+        ),
+        pytest.param(
+            _marker_spec(
+                {"markLine": {"data": [{"xAxis": 2023}]}}, xAxis={"type": "value"}
+            ),
+            id="value_x_axis",
+        ),
+        pytest.param(
+            _marker_spec(
+                {"markLine": {"data": [{"xAxis": 1.7e12}]}}, xAxis={"type": "time"}
+            ),
+            id="time_x_axis",
+        ),
+        pytest.param(
+            _marker_spec({"markLine": {"data": [{"xAxis": 2023}]}}, xAxis={}),
+            id="untyped_axis_without_data_is_value",
+        ),
+        pytest.param(
+            _marker_spec(
+                {"markLine": {"data": [{"xAxis": 2023}]}},
+                xAxis=[{"type": "value"}, {"type": "category"}],
+            ),
+            id="first_axis_of_list_is_value",
+        ),
+        pytest.param(
+            {
+                "xAxis": {"type": "category", "data": ["a", "b", "c"]},
+                "yAxis": {"type": "value"},
+                "series": [
+                    {
+                        "type": "bar",
+                        "data": [1, 2, 3],
+                        "markLine": {"data": [{"xAxis": 2}]},
+                    }
+                ],
+            },
+            id="position_within_axis_data",
+        ),
+    ],
+)
+def test_no_warning_for_valid_marker_coordinates(spec: dict[str, Any]) -> None:
+    """Labels, in-range positions, and non-category axes don't log."""
+    assert _normalize_and_collect_warnings(spec) == []
 
 
 def test_serde_deserialize_none_returns_empty_selection() -> None:
