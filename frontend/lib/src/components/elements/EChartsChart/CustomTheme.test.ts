@@ -1241,7 +1241,7 @@ describe("applyStreamlitOptionDefaults", () => {
     expect((result.grid as Record<string, unknown>).top).toBeUndefined()
   })
 
-  it("keeps a top legend in place without a top title, a set grid.top, or theme None", () => {
+  it("keeps a top legend in place without a top title or cartesian axes, or with a set grid.top or theme None", () => {
     const noTitle = applyDefaults({
       xAxis: {},
       yAxis: {},
@@ -1259,6 +1259,14 @@ describe("applyStreamlitOptionDefaults", () => {
       series: [],
     })
     expect(bottomTitle.legend).toEqual({ top: 0 })
+
+    // Pie and funnel series don't move down to clear a moved legend.
+    const pie = applyDefaults({
+      title: { text: "Share" },
+      legend: { top: 0 },
+      series: [{ type: "pie", data: [] }],
+    })
+    expect(pie.legend).toEqual({ top: 0 })
 
     // The legend still moves, but the spec's grid.top wins.
     const userGridTop = applyDefaults({
@@ -1576,6 +1584,43 @@ describe("applyStreamlitOptionDefaults", () => {
 
     const unthemed = applyDefaults({ series: [hidden] }, "")
     expect((unthemed.series as unknown[])[0]).toBe(hidden)
+  })
+
+  it("moves a treemap's top inset below a top title or breadcrumb", () => {
+    const inset = convertRemToPx(theme.spacing.sm)
+    const breadcrumbRoom = inset + 22 + inset
+    const plain = { type: "treemap", data: [] }
+    const topBreadcrumb = { type: "treemap", breadcrumb: { top: 0 }, data: [] }
+    const pinnedTop = { type: "treemap", top: 30, data: [] }
+
+    const titled = applyDefaults({
+      title: { text: "Files" },
+      series: [plain, topBreadcrumb, pinnedTop],
+    })
+    const titledSeries = titled.series as Array<Record<string, unknown>>
+    expect(titledSeries[0]).toEqual({ ...plain, top: legendBelowTitle })
+    // A top breadcrumb takes the breadcrumb room from the bottom to the top.
+    expect(titledSeries[1]).toEqual({
+      ...topBreadcrumb,
+      top: breadcrumbRoom,
+      bottom: inset,
+    })
+    // Must NOT happen: a spec top is rewritten.
+    expect(titledSeries[2]).toBe(pinnedTop)
+
+    const timeline = applyDefaults({
+      baseOption: { title: { text: "Files" }, timeline: {} },
+      options: [{ series: [plain] }],
+    })
+    expect(
+      (timeline.options as Array<{ series: unknown[] }>)[0].series
+    ).toEqual([{ ...plain, top: legendBelowTitle }])
+
+    const bottomTitle = applyDefaults({
+      title: { text: "Files", bottom: 0 },
+      series: [plain],
+    })
+    expect((bottomTitle.series as unknown[])[0]).toBe(plain)
   })
 
   describe("markLine labels", () => {

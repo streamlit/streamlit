@@ -273,13 +273,13 @@ function buildTreemapInsets(theme: EmotionTheme): {
 }
 
 /**
- * Vertical offset for a legend placed under a top title.
+ * Vertical offset that clears a top title, for a legend or treemap under it.
  *
- * Legend ``top`` is measured from the container, not the title box, so this
- * covers ECharts' title inset (~``spacing.lg``), the title font, a subtext
- * line when a top title has one, and the title's bottom padding.
+ * Legend and treemap ``top`` are measured from the container, not the title
+ * box, so this covers ECharts' title inset (~``spacing.lg``), the title font,
+ * a subtext line when a top title has one, and the title's bottom padding.
  */
-function legendTopBelowTitlePx(
+function belowTopTitlePx(
   option: EChartsOptionObject,
   theme: EmotionTheme
 ): number {
@@ -596,8 +596,8 @@ export function buildStreamlitEChartsTheme(
     },
     // Treemap: tighten the layout insets, and theme the breadcrumb trail and
     // the parent-node header band (their default light-gray surfaces clash
-    // with the app background). A series that hides its breadcrumb drops the
-    // breadcrumb room (see `withTreemapBottomInset`).
+    // with the app background). A top title, a top-anchored breadcrumb, or a
+    // hidden breadcrumb adjusts the insets per series (see `withTreemapInsets`).
     treemap: {
       left: treemapInsets.inset,
       right: treemapInsets.inset,
@@ -1307,10 +1307,11 @@ function stackBottomAnchoredControls(
  * Lay out the legend and chart controls around the plot.
  *
  * A default-bottom legend moves off the footer when bottom-anchored controls
- * are present, and a legend in the top title strip moves below the title.
- * When either places a legend under a title, ``stackedTop`` is the height of
- * that title and legend stack, used as ``grid.top``. Bottom-anchored controls
- * are then stacked if more than one shares the strip.
+ * are present. In a cartesian chart, a legend in the top title strip also
+ * moves below the title, and ``stackedTop`` is the height of that title and
+ * legend stack, used as ``grid.top``. Other charts keep the legend in the
+ * strip, since their series (pie, funnel, ...) don't move down to clear it.
+ * Bottom-anchored controls are then stacked if more than one shares the strip.
  */
 function applyControlLayout(
   option: EChartsOptionObject,
@@ -1321,7 +1322,8 @@ function applyControlLayout(
   stackedBottom?: number
 } {
   const titleAtTop = titlePlacement(option).occupiesTop
-  const legendTop = titleAtTop ? legendTopBelowTitlePx(option, theme) : 0
+  const hasCartesianAxis = "xAxis" in option || "yAxis" in option
+  const legendTop = titleAtTop ? belowTopTitlePx(option, theme) : 0
   let next = option
   if (
     hasBottomAnchoredComponent(next) &&
@@ -1330,7 +1332,7 @@ function applyControlLayout(
     next = withLegendsMovedTo(next, legendTop, isDefaultBottomLegend)
   }
   let stackedTop: number | undefined
-  if (titleAtTop) {
+  if (titleAtTop && hasCartesianAxis) {
     next = withLegendsMovedTo(next, legendTop, isLegendInTitleStrip)
     if (next !== option) {
       // One legend row is ECharts' 14px item plus 5px padding on each side.
@@ -1406,7 +1408,7 @@ function buildDefaultGrid(
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
  * ``grid`` layout, legend placement around titles and stacking of
  * bottom-anchored chart controls, the style of inside funnel and pie labels,
- * the bottom inset of a treemap without a breadcrumb, and the label position
+ * treemap insets around a title or breadcrumb, and the label position
  * of horizontal markLines).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
@@ -1456,36 +1458,58 @@ export function applyStreamlitOptionDefaults(
     return filled
   }
   return withHorizontalMarkLineLabels(
-    withTreemapBottomInset(withInsideLabelStyle(filled, theme), theme)
+    withTreemapInsets(withInsideLabelStyle(filled, theme), theme)
   )
 }
 
 /**
- * Drop the breadcrumb room from a treemap that hides its breadcrumb.
+ * Fit a treemap's insets to the title and breadcrumb around it.
  *
- * The theme's treemap ``bottom`` keeps room for the breadcrumb, and the theme
- * can't branch on ``breadcrumb.show``. A series that sets ``bottom`` or
- * ``height`` keeps its own layout.
+ * The theme's treemap insets assume a bottom breadcrumb and nothing above the
+ * tiles, and the theme can't branch on the spec. A top title gets room above
+ * the tiles, a top-anchored breadcrumb takes its room from the top instead of
+ * the bottom, and a hidden breadcrumb drops its room. A series that sets
+ * ``height``, or the inset in question, keeps its own layout.
  */
-function withTreemapBottomInset(
+function withTreemapInsets(
   option: EChartsOptionObject,
   theme: EmotionTheme
 ): EChartsOptionObject {
-  const { inset } = buildTreemapInsets(theme)
+  const { inset, bottom: breadcrumbRoom } = buildTreemapInsets(theme)
+  const chart = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const titleRoom = titlePlacement(chart).occupiesTop
+    ? belowTopTitlePx(chart, theme)
+    : undefined
   return mapOptionSeries(option, series => {
-    const { breadcrumb } = series
-    const hidesBreadcrumb =
-      isPlainObject(breadcrumb) &&
-      (breadcrumb as Record<string, unknown>).show === false
-    if (
-      series.type !== "treemap" ||
-      !hidesBreadcrumb ||
-      series.bottom !== undefined ||
-      series.height !== undefined
-    ) {
+    if (series.type !== "treemap" || series.height !== undefined) {
       return series
     }
-    return { ...series, bottom: inset }
+    const breadcrumb = isPlainObject(series.breadcrumb)
+      ? (series.breadcrumb as Record<string, unknown>)
+      : {}
+    const showsBreadcrumb = breadcrumb.show !== false
+    const breadcrumbAtTop =
+      showsBreadcrumb &&
+      breadcrumb.top !== undefined &&
+      breadcrumb.top !== "bottom"
+    let top: number | undefined
+    if (series.top === undefined) {
+      top = breadcrumbAtTop ? breadcrumbRoom : titleRoom
+    }
+    const bottom =
+      series.bottom === undefined && (!showsBreadcrumb || breadcrumbAtTop)
+        ? inset
+        : undefined
+    if (top === undefined && bottom === undefined) {
+      return series
+    }
+    return {
+      ...series,
+      ...(top !== undefined && { top }),
+      ...(bottom !== undefined && { bottom }),
+    }
   })
 }
 
