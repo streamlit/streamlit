@@ -380,8 +380,9 @@ Reads a media file the app still stores:
   - **A media-file id or a media URL** that reads no stored file, such as one whose
     file a later run replaced or a run in progress has not re-created yet: pass `url`
     as the latest result shows it. If a run is still in progress, call `interact` with
-    only `session_id` to collect it first. Do not call `interact` just to re-create a
-    file.
+    only `session_id` to collect it first. Do not rerun with no changes to retry the
+    read: an earlier result's file comes back only by returning the app to the state
+    that showed it, such as its page and filters, which runs the app again.
   - **Anything else:** it is not a media file, so do not call `get_data` for it again,
     since the same argument fails the same way.
 - **Annotations:** `readOnlyHint: true`, `destructiveHint: false`,
@@ -423,8 +424,8 @@ four places, in order of how reliably clients show them to the model:
 
 1. **The tool descriptions**, which every client passes to the model with the tool. The
    essentials come first, since some clients cut long descriptions. The `interact`
-   description is about 2 KB and states the server's idle-session limit; with both
-   tools' input schemas, the tool list is about 10 KB, roughly 2,500 tokens spent in
+   description is under 3 KB and states the server's idle-session limit; with both
+   tools' input schemas, the tool list is about 11 KB, roughly 2,800 tokens spent in
    every conversation the server is enabled in.
 2. **The input schema's property descriptions**, the same text as the OpenAPI request
    schema's.
@@ -440,7 +441,14 @@ model needs:
 - Send `{}` to start, then pass the returned `session_id`. Act only on keys from the
   latest result, and never construct one.
 - `actions` lists what can be done now. Before sending a value, read the element's
-  `value_schema` for its shape and its `props` for the legal values.
+  `value_schema` for its shape and its `props` for the legal values. After the call,
+  check that each key sent is still there with the value sent: a key the run removed or
+  re-keyed loses its value without an error.
+- An element with `support` is reported but cannot be fully driven:
+  `action_unsupported` means a browser user can act on it and this API cannot, so it is
+  absent from `actions` even where `props` such as `on_select` describe the app's
+  handler; `browser_required` means what renders may differ from what is reported.
+  `fragment` is an id to compare: keys in one fragment rerun only that fragment.
 - `data.complete: false` with a `data.url` means there is more: read it with
   `get_data`, starting at the length of `data.preview.rows`, before the next
   `interact` call replaces the result. Pass `url` as the result shows it; it does not
@@ -772,7 +780,11 @@ element tree is deliberately an open object, and a call returns a snapshot, a
 could check, which would help agent frameworks that turn `outputSchema` into typed
 results, but a full page sent twice is about 80,000 characters, past the 50,000 at which
 Claude Code moves a result into a file if it counts both copies. Adding them to
-`get_data` later changes nothing a client that reads text sees.
+`get_data` later changes nothing a client that reads text sees. Some clients wrap a
+result with `isError: true` in an envelope of their own: ChatGPT shows it as an
+`INVALID_ARGUMENT` exception with a `structuredContent` of only its own error code, and
+embeds this server's error body as text. The text is the contract, so `code` and
+`message` are always read from it.
 
 **`session_id` as an argument, not the MCP session.** Tying the app session to MCP's
 `Mcp-Session-Id` would spare the model from carrying `session_id`, but it would break

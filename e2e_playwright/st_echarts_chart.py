@@ -753,3 +753,24 @@ with st.container(key="c_narrow_time_axis", width=320):
         renderer="svg",
         height=_HEIGHT,
     )
+
+# A default treemap. ECharts turns on wheel roam for treemaps unless the spec
+# sets ``roam: false``.
+with st.container(key="c_treemap"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "Alpha", "value": 40},
+                        {"name": "Beta", "value": 30},
+                        {"name": "Gamma", "value": 20},
+                        {"name": "Delta", "value": 10},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )

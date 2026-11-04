@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
+import math
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
@@ -787,6 +789,67 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
     return option, arrow_datasets
 
 
+def _find_unserializable_value(value: Any, path: str) -> tuple[str, Any] | None:
+    """Return the option path and value of the first value JSON rejects.
+
+    ``None`` if no single value is to blame, for example a non-string dict key.
+    """
+    if isinstance(value, float):
+        return None if math.isfinite(value) else (path, value)
+    if value is None or isinstance(value, (str, int)):
+        return None
+    if isinstance(value, dict):
+        for key, item in value.items():
+            found = _find_unserializable_value(
+                item, f"{path}.{key}" if path else str(key)
+            )
+            if found is not None:
+                return found
+        return None
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            found = _find_unserializable_value(item, f"{path}[{index}]")
+            if found is not None:
+                return found
+        return None
+    return path, value
+
+
+def _describe_unserializable_value(value: Any) -> str:
+    """Name an unserializable value and suggest the fix."""
+    import numpy as np
+    import pandas as pd
+
+    if isinstance(value, float):
+        name = "NaN" if math.isnan(value) else repr(value)
+        return f"`{name}`. Use `None` for missing or non-finite numbers"
+    value_type = type(value)
+    module = value_type.__module__.split(".")[0]
+    type_name = (
+        value_type.__qualname__
+        if module == "builtins"
+        else f"{module}.{value_type.__qualname__}"
+    )
+    description = f"a `{type_name}`"
+    if isinstance(value, (np.bool_, np.number)):
+        return f"{description}. Convert it with `int()`, `float()`, or `bool()`"
+    if value is pd.NaT or value is pd.NA:
+        return f"{description}. Use `None` for missing values"
+    if isinstance(value, (dt.date, dt.time)):
+        return f"{description}. Convert it with `.isoformat()`"
+    if dataframe_util.is_dataframe_like(value):
+        return (
+            f"{description}. Only `dataset.source` accepts dataframes and "
+            "arrays, so pass the data there"
+        )
+    if callable(value):
+        return (
+            f"{description}. Use an ECharts string template such as "
+            '`"{b}: {c}"` instead of a callback'
+        )
+    return f"{description}. Convert it to a plain Python value"
+
+
 def _serialize_option(option: dict[str, Any]) -> str:
     """Strictly serialize the option dict to JSON for ``proto.spec``.
 
@@ -797,15 +860,23 @@ def _serialize_option(option: dict[str, Any]) -> str:
     try:
         return json.dumps(option, allow_nan=False, separators=(",", ":"))
     except (TypeError, ValueError) as ex:
+        try:
+            unserializable = _find_unserializable_value(option, "")
+        except RecursionError:
+            # A circular reference has no single offending value to name.
+            unserializable = None
+        detail = ""
+        if unserializable is not None:
+            path, value = unserializable
+            detail = f" `{path}` is {_describe_unserializable_value(value)}."
         raise StreamlitAPIException(
-            "The provided ECharts spec is not JSON-serializable. "
-            "`st.echarts_chart` only supports JSON-compatible option objects: "
-            "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
-            "dataframe in `dataset.source`, which converts datetimes, NumPy "
-            "values, and missing values automatically; values anywhere else "
-            "(for example `series.data`) must already be plain Python values "
-            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
+            f"The provided ECharts spec is not JSON-serializable.{detail} "
+            "`st.echarts_chart` only supports JSON-compatible option objects. "
+            "Pass chart data as a dataframe in `dataset.source`, which converts "
+            "datetimes, NumPy values, and missing values automatically. Values "
+            "anywhere else (for example `series.data`) must already be plain "
+            "Python values such as `int`, `float`, `str`, `None`, lists, and "
+            "dicts.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -1097,6 +1168,11 @@ class EChartsMixin:
             ``dataset.dimensions`` when you haven't set it. The dataframe index
             isn't included, so use ``df.reset_index()`` to plot it.
 
+            On a category axis, ECharts reads numbers as 0-based category
+            positions, so a marker at ``{"xAxis": 2023}`` doesn't mark the 2023
+            category. Pass the label as a string, and cast numeric category
+            columns, such as years, with ``.astype(str)``.
+
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
 
@@ -1317,10 +1393,11 @@ class EChartsMixin:
         the top so it doesn't share the footer with a bottom ``dataZoom``
         slider. Each series takes its legend name from its dataframe column.
 
-        With an inside ``dataZoom``, the wheel scrolls the page until the
-        pointer rests on the chart, then zooms or pans. Pinch, or the modifier
-        set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first
-        wheel of a new flick, unless that flick started as a page scroll.
+        With an inside ``dataZoom`` or wheel ``roam`` (on by default for
+        treemaps), the wheel scrolls the page until the pointer rests on the
+        chart, then zooms or pans. A pinch, or the ``dataZoom`` modifier set in
+        ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first wheel
+        of a new flick, unless that flick started as a page scroll.
 
         .. code-block:: python
            :filename: streamlit_app.py

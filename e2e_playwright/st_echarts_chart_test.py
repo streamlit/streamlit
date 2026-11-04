@@ -618,3 +618,23 @@ def test_narrow_time_axis_hides_overlapping_labels(app: Page):
         if left["right"] > right["left"]
     ]
     assert overlapping == [], f"Overlapping time axis labels: {overlapping}"
+
+
+def test_wheel_over_treemap_scrolls_page(app: Page):
+    """A wheel right after the pointer enters a treemap scrolls the page.
+
+    ECharts turns on wheel roam for treemaps by default and would otherwise
+    zoom the treemap and block the page scroll.
+    """
+    chart = _get_chart(app, "c_treemap")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_have_attribute("aria-busy", "false")
+    main = app.get_by_test_id("stMain")
+    scroll_before = main.evaluate("el => el.scrollTop")
+    assert scroll_before > 0
+
+    chart.hover()
+    for _ in range(3):
+        app.mouse.wheel(0, -200)
+
+    wait_until(app, lambda: main.evaluate("el => el.scrollTop") < scroll_before)
