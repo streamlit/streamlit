@@ -110,6 +110,9 @@ for any method:
   other methods before it checks reserved paths, and MCP clients only `POST`.
 - At the app's root, a reserved path a route does not take keeps the static file
   server's answer: `POST /_stcore/health` stays a `405`.
+- Any other path under `/_stcore/agent/`, such as a mistyped `/_stcore/agent/mpc`, is
+  a `404` for any method, at the root or under a page's URL, so a wrong path never
+  reads as a server that answers.
 
 **A trailing slash connects.** The static file server answers a path ending in `/`,
 such as `/_stcore/agent/mcp/`, with a `308` for methods other than `GET` and `HEAD`. A

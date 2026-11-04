@@ -230,6 +230,38 @@ class TestReservedPaths:
 
         assert response.status_code == 405
 
+    @pytest.mark.parametrize("method", ["GET", "POST"])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/_stcore/agent",
+            "/_stcore/agent/foo",
+            "/_stcore/agent/interact/extra",
+            "/page2/_stcore/agent/foo",
+        ],
+    )
+    def test_unknown_agent_path_returns_404(
+        self, static_app: TestClient, method: str, path: str
+    ) -> None:
+        """A path under the agent prefix that no route serves is a 404 for
+        every method, rather than the app's HTML or a 405 that reads as a
+        route that exists.
+        """
+        response = static_app.request(method, path)
+
+        assert response.status_code == 404
+        assert "text/html" not in response.headers.get("content-type", "")
+
+    def test_path_merely_containing_agent_is_not_reserved(
+        self, static_app: TestClient
+    ) -> None:
+        """Only the `_stcore/agent` segment is reserved, not a page whose
+        name contains it.
+        """
+        response = static_app.get("/my_stcore/agentic")
+
+        assert response.status_code == 200
+
 
 class TestWithBaseUrl:
     """Tests for static files with base URL."""

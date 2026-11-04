@@ -53,6 +53,11 @@ _RESERVED_STATIC_PATH_SUFFIXES: Final = (
     "_stcore/agent/mcp",
 )
 
+# Every other path under the agent API's prefix is reserved too, so a path the
+# API does not serve, such as `/_stcore/agent/foo`, is a 404 for every method
+# instead of the app's HTML.
+_RESERVED_STATIC_PATH_SEGMENT: Final = "/_stcore/agent/"
+
 
 def create_streamlit_static_handler(
     directory: str, base_url: str | None
@@ -159,8 +164,9 @@ def create_streamlit_static_handler(
                         # the static files' own answer stands, such as a 405
                         # for a `POST` to the health check.
                         raise
-                    # Appended to a page's URL, a reserved path is never a
-                    # static file, so it is a 404 for every method: a `POST`
+                    # Appended to a page's URL, or under the agent prefix
+                    # without naming one of its routes, a reserved path is
+                    # never a static file, so it is a 404 for every method: a `POST`
                     # from an MCP client would otherwise get the 405 that
                     # static files answer to methods other than GET.
                     raise HTTPException(status_code=404) from exc
@@ -179,6 +185,8 @@ def create_streamlit_static_handler(
             # TODO: Consider making this path-segment-aware in the future to avoid
             # false positives like "/my_stcore/health" matching "_stcore/health".
             url_path = request_path.split("?", 1)[0]
+            if _RESERVED_STATIC_PATH_SEGMENT in f"/{url_path.strip('/')}/":
+                return True
             return any(url_path.endswith(x) for x in _RESERVED_STATIC_PATH_SUFFIXES)
 
         def _apply_cache_headers(self, response: Response, served_path: str) -> None:
