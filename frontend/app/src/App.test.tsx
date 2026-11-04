@@ -4039,6 +4039,73 @@ describe("App", () => {
       ).toHaveBeenCalledWith(0, ["frag_a"])
     })
 
+    it.each([
+      { runKind: "full-app", fragmentIds: [], fragmentId: undefined },
+      { runKind: "fragment", fragmentIds: ["frag_a"], fragmentId: "frag_a" },
+    ])(
+      "keeps a later error run's nodes when a $runKind run finishes after it started",
+      async ({ fragmentIds, fragmentId }) => {
+        renderApp(getProps())
+        sendNewSession(NEW_SESSION_JSON, {
+          scriptRunId: "run_a",
+          fragmentIds,
+        })
+        sendForwardMessage("navigation", NAVIGATION_JSON)
+
+        // A BackMsg error while run_a executes sends an error run that
+        // finishes right away. run_a keeps executing, so its later deltas
+        // and its finish arrive after the error run's new_session.
+        sendNewSession(NEW_SESSION_JSON, {
+          scriptRunId: "run_error",
+          fragmentIds: [],
+        })
+        sendScriptFinished(
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+          { scriptRunId: "run_error", fragmentIds: [] }
+        )
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "error from BackMsg", help: "" },
+            },
+          },
+          { deltaPath: [0, 0], activeScriptHash: "page_script_hash" }
+        )
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "late output", help: "" },
+            },
+            fragmentId,
+          },
+          { deltaPath: [0, 1], activeScriptHash: "page_script_hash" }
+        )
+        await waitFor(() => {
+          expect(screen.getByText("error from BackMsg")).toBeVisible()
+        })
+
+        sendScriptFinished(
+          fragmentIds.length
+            ? ForwardMsg.ScriptFinishedStatus
+                .FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+            : ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY,
+          { scriptRunId: "run_a", fragmentIds }
+        )
+
+        expect(screen.getByText("error from BackMsg")).toBeVisible()
+        expect(screen.getByText("late output")).toBeVisible()
+        expect(
+          getMockConnectionManager().incrementMessageCacheRunCount
+        ).toHaveBeenLastCalledWith(0, fragmentIds)
+      }
+    )
+
     it("still skips stale-node cleanup for an interrupted run", async () => {
       renderApp(getProps())
       sendNewSession(NEW_SESSION_JSON, {

@@ -2076,10 +2076,11 @@ export class App extends PureComponent<Props, State> {
     metadata?: ForwardMsgMetadata | null
   ): void {
     // A finish without identity only comes from the stop AppSession sends
-    // when handling a BackMsg exception; the error run sent right after it
-    // carries identity and does this work. Widget completion, stale-node
-    // cleanup, and cache aging need the finished run, so they are skipped
-    // here rather than guessed from React state.
+    // when handling a BackMsg exception. Later finishes, from the error run
+    // and from the script that was still running, carry identity and do this
+    // work. Widget completion, stale-node cleanup, and cache aging need the
+    // finished run, so they are skipped here rather than guessed from React
+    // state.
     const finishedRun = getRunIdentity(metadata)
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
@@ -2139,13 +2140,25 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
+        // Skip a full-app cleanup once a later run has started (an error run
+        // sent while this run was still executing, whose finish has already
+        // cleaned up): it would drop that run's nodes. Fragment cleanup is
+        // safe, because any later write restamps the blocks on its path.
         this.setState(
-          ({ elements }) => ({
-            elements: elements.clearStaleNodes(
-              finishedRun.scriptRunId,
-              finishedRun.fragmentIds
-            ),
-          }),
+          ({ elements, scriptRunId }) => {
+            if (
+              finishedRun.fragmentIds.length === 0 &&
+              scriptRunId !== finishedRun.scriptRunId
+            ) {
+              return null
+            }
+            return {
+              elements: elements.clearStaleNodes(
+                finishedRun.scriptRunId,
+                finishedRun.fragmentIds
+              ),
+            }
+          },
           () => {
             this.removeInactiveWidgetState()
           }
