@@ -367,6 +367,9 @@ class Cache(Generic[R]):
         self._invalidation_lock = threading.Lock()
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
+        # Maps value_key -> trigger time of the latest background refresh that wrote
+        # its result. Entries stored before that time have already been replaced.
+        self._refresh_written_triggered_at: dict[str, float] = {}
 
     @property
     def is_active(self) -> bool:
@@ -476,7 +479,7 @@ class Cache(Generic[R]):
         *,
         expected_generation: int,
         expected_key_generation: int,
-    ) -> None:
+    ) -> bool:
         """Write back the result of a background refresh, unless it is orphaned.
 
         The write is discarded (not applied) if the cache was detached, the whole
@@ -484,6 +487,7 @@ class Cache(Generic[R]):
         entry is no longer present (hard-evicted, LRU-evicted, or cleared).
         ``cache_resource`` also releases the replaced resource on success and the
         freshly produced resource on a discard so nothing leaks.
+        Returns whether the result was written.
         """
         raise NotImplementedError
 
@@ -537,6 +541,24 @@ class Cache(Generic[R]):
         """Clear any failure cooldown for a key after a successful refresh."""
         with self._invalidation_lock:
             self._refresh_cooldowns.pop(value_key, None)
+
+    def record_refresh_written(self, value_key: str, triggered_at: float) -> None:
+        """Record that a background refresh triggered at ``triggered_at`` wrote its
+        result.
+        """
+        with self._invalidation_lock:
+            self._refresh_written_triggered_at[value_key] = triggered_at
+
+    def refreshed_since(self, value_key: str, stored_at: float) -> bool:
+        """Whether an entry stored at ``stored_at`` was already replaced by a
+        background refresh.
+
+        A caller that read a stale entry can find the refresh lock free because a
+        refresh finished after its read, not because none is needed.
+        """
+        with self._invalidation_lock:
+            triggered_at = self._refresh_written_triggered_at.get(value_key)
+            return triggered_at is not None and stored_at < triggered_at
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
         """Return the lock that should be held while computing a new cached value.
@@ -599,10 +621,12 @@ class Cache(Generic[R]):
                     self._generation += 1
                     self._refresh_cooldowns.clear()
                     self._key_generations.clear()
+                    self._refresh_written_triggered_at.clear()
                 else:
                     # A per-key clear invalidates only earlier writes for this key.
                     self._key_generations[key] = self._key_generations.get(key, 0) + 1
                     self._refresh_cooldowns.pop(key, None)
+                    self._refresh_written_triggered_at.pop(key, None)
         self._clear(key=key)
 
     @abstractmethod
@@ -798,7 +822,7 @@ class CachedFunc(Generic[P, R]):
                 # Background mode, stale grace window: return the stale value now and
                 # kick off a single deduplicated background refresh (no spinner).
                 self._maybe_trigger_background_refresh(
-                    cache, value_key, func_args, func_kwargs
+                    cache, value_key, read.result.stored_at, func_args, func_kwargs
                 )
             return self._handle_cache_hit(read.result)
 
@@ -1083,15 +1107,17 @@ class CachedFunc(Generic[P, R]):
         self,
         cache: Cache[R],
         value_key: str,
+        stale_stored_at: float | None,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
     ) -> None:
         """Trigger a deduplicated background refresh for a stale entry.
 
-        Skips the refresh if a recent failure's cooldown is still active or another
-        compute/refresh already holds the per-key lock. The per-key compute lock
-        doubles as the "refresh in flight" flag and is handed to the worker, which
-        releases it when done.
+        Skips the refresh if a recent failure's cooldown is still active, another
+        compute/refresh already holds the per-key lock, or a refresh already replaced
+        the stale entry (stored at ``stale_stored_at``) after this caller read it. The
+        per-key compute lock doubles as the "refresh in flight" flag and is handed to
+        the worker, which releases it when done.
         """
         if cache.in_refresh_cooldown(value_key):
             return
@@ -1102,11 +1128,18 @@ class CachedFunc(Generic[P, R]):
         if not lock.acquire(blocking=False):
             return
 
+        if stale_stored_at is not None and cache.refreshed_since(
+            value_key, stale_stored_at
+        ):
+            lock.release()
+            return
+
         # Triggering must never fail the stale-serve path or leak the per-key lock. When
         # the task is scheduled, the worker owns the lock and releases it; otherwise we
         # release it here (in the finally) so the key can be retried on a later access.
         scheduled = False
         try:
+            triggered_at = TTLCACHE_TIMER()
             expected_generation = cache.generation
             expected_key_generation = cache.key_generation(value_key)
             scheduled = (
@@ -1117,6 +1150,7 @@ class CachedFunc(Generic[P, R]):
                         func_args,
                         func_kwargs,
                         lock,
+                        triggered_at,
                         expected_generation,
                         expected_key_generation,
                     )
@@ -1140,6 +1174,7 @@ class CachedFunc(Generic[P, R]):
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
         lock: threading.Lock,
+        triggered_at: float,
         expected_generation: int,
         expected_key_generation: int,
     ) -> None:
@@ -1161,12 +1196,15 @@ class CachedFunc(Generic[P, R]):
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, new_value
             )
-            cache.write_background_refresh_result(
+            if cache.write_background_refresh_result(
                 value_key,
                 new_value,
                 expected_generation=expected_generation,
                 expected_key_generation=expected_key_generation,
-            )
+            ):
+                # Recorded before the lock is released, so any caller that acquires
+                # the lock afterwards sees it.
+                cache.record_refresh_written(value_key, triggered_at)
             cache.clear_refresh_cooldown(value_key)
             self._metrics.record_background_refresh("success")
         except Exception as ex:

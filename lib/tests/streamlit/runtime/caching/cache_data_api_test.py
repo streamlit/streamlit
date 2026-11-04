@@ -1227,8 +1227,8 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         cache.write_result("vk", 123, [])
         return cache
 
-    def _write_background(self, cache: DataCache[Any], value: object = 456) -> None:
-        cache.write_background_refresh_result(
+    def _write_background(self, cache: DataCache[Any], value: object = 456) -> bool:
+        return cache.write_background_refresh_result(
             "vk",
             value,
             expected_generation=cache.generation,
@@ -1368,11 +1368,14 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
             patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
         ):
-            cache.write_background_refresh_result(
-                "vk",
-                456,
-                expected_generation=cache.generation,
-                expected_key_generation=cache.key_generation("vk"),
+            assert (
+                cache.write_background_refresh_result(
+                    "vk",
+                    456,
+                    expected_generation=cache.generation,
+                    expected_key_generation=cache.key_generation("vk"),
+                )
+                is True
             )
             mock_has.assert_called_once_with("vk")
             mock_get.assert_not_called()
@@ -1450,7 +1453,7 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             patch.object(cache.storage, "has", **has_kwargs),
             patch.object(cache.storage, "set") as mock_set,
         ):
-            self._write_background(cache)
+            assert self._write_background(cache) is False
             mock_set.assert_not_called()
 
     def test_background_writeback_skips_when_orphaned_under_lock(self) -> None:
@@ -1460,5 +1463,5 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             patch.object(cache, "_refresh_is_orphaned", side_effect=[False, True]),
             patch.object(cache.storage, "set") as mock_set,
         ):
-            self._write_background(cache)
+            assert self._write_background(cache) is False
             mock_set.assert_not_called()

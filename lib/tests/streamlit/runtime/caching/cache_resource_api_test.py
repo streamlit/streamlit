@@ -953,11 +953,14 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         singleton = object()
         cache.write_result("k", singleton, [])
 
-        cache.write_background_refresh_result(
-            "k",
-            singleton,
-            expected_generation=cache.generation,
-            expected_key_generation=cache.key_generation("k"),
+        assert (
+            cache.write_background_refresh_result(
+                "k",
+                singleton,
+                expected_generation=cache.generation,
+                expected_key_generation=cache.key_generation("k"),
+            )
+            is True
         )
 
         assert released == []
@@ -990,11 +993,14 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
 
         # A stale generation orphans the write-back, so the produced value (2) is
         # discarded and released; the raising on_release must not escape.
-        cache.write_background_refresh_result(
-            "k",
-            2,
-            expected_generation=cache.generation + 1,
-            expected_key_generation=cache.key_generation("k"),
+        assert (
+            cache.write_background_refresh_result(
+                "k",
+                2,
+                expected_generation=cache.generation + 1,
+                expected_key_generation=cache.key_generation("k"),
+            )
+            is False
         )
 
         assert released == [2]
