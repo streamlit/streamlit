@@ -141,8 +141,9 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         409,
         (
             "The element is on the page but disabled; it accepts nothing until "
-            "the app enables it. Enable it in one request, then use it in the "
-            "next: each request is checked against the snapshot before it."
+            "the app enables it. Send what enables it in one request, then use "
+            "it in the next: each request is checked against the snapshot before "
+            "it."
         ),
     ),
     "session_busy": (

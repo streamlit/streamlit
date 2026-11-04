@@ -193,9 +193,8 @@ are that operation's request, and its result is the same snapshot as JSON \
 text. `get_data` reads a file a result points to, for clients that cannot \
 fetch a URL: a table's `data.url` as pages of JSON rows, or another media file \
 as itself. It takes a valid `session_id`, normally that of the result \
-whose URL it reads. A \
-refused call is a tool result with `isError: true` whose text is \
-an `Error` body.
+whose URL it reads. A refused call is a tool result with `isError: true` \
+whose text is an `Error` body.
 
 Codes only `get_data` returns, which no HTTP operation does:
 """ + "\n".join(
@@ -338,8 +337,7 @@ headers into `st.user` (`server.trustedUserHeaders`), the app sees the \
 caller's user, and only that identity can use the session. Otherwise it is \
 anonymous, and an app behind `st.login` shows its signed-out state; calling \
 `st.login()` does not sign this session in. The app reads each request's \
-headers as \
-`st.context.headers`, minus `Cookie`, `Authorization`, and \
+headers as `st.context.headers`, minus `Cookie`, `Authorization`, and \
 `Proxy-Authorization`.
 """
 
@@ -821,8 +819,8 @@ def _widget_state_schema() -> dict[str, Any]:
             "date or color, or a short slider range resets to the default; a "
             "fraction sent to an integer `st.number_input` or slider is "
             "truncated; text past `max_chars` is cut; and a reversed slider "
-            "range is kept, so send the lower value first. `step` is not "
-            "checked. `null` resets a "
+            "range is kept, so send the lower value first. A value between "
+            "`step` increments is not refused. `null` resets a "
             "widget to its default, unless its node has `clearable: true`: a "
             "browser user can empty it, and `null` does. `[]` clears a list. "
             "Checks only a browser runs, `required` and `validate`, are not "
@@ -1088,9 +1086,10 @@ def _node_schema() -> dict[str, Any]:
                     "so a flag such as `disabled` is reported even when false; a "
                     "documented default, such as `unsafe_allow_html=False`, may "
                     "be left out. A few report state rather than "
-                    "an argument: a dialog's `is_open`, a popover's or plain "
-                    "tab's `open`; a stateful `st.tabs` or `st.expander` "
-                    "reports it as its `value`. A widget bound to the URL "
+                    "an argument: a dialog's `is_open`, a plain popover's or "
+                    "plain tab's `open`; a stateful `st.tabs`, `st.expander`, "
+                    "or `st.popover` reports that state as its `value`. A "
+                    "widget bound to the URL "
                     "reports `bind`, and its key names the `query_params` "
                     "entry that sets it."
                 ),
