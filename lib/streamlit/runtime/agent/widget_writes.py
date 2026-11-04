@@ -54,6 +54,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.agent import snapshot
 from streamlit.runtime.agent.errors import AgentRequestError
 from streamlit.runtime.state.common import (
     is_array_value_field_name,
@@ -176,13 +177,6 @@ def _unknown_key(key: str) -> AgentRequestError:
         f"No element with key {key!r} is registered in this session, or it "
         "has left the page. Read the keys from the latest snapshot.",
     )
-
-
-def _reported_key(element_id: str) -> str:
-    """The key the snapshot reports for an element: the author's, or its ID."""
-    if is_element_id(element_id):
-        return user_key_from_element_id(element_id) or element_id
-    return element_id
 
 
 def _not_accepted(key: str) -> AgentRequestError:
@@ -461,9 +455,9 @@ def build_widget_states(
     form = next(iter(touched_forms), "")
     if form and submitted_form != form:
         submit_keys = [
-            _reported_key(element_id)
+            snapshot.public_key(element_id)
             for element_id, state in element_states.items()
-            if state.form_id == form and state.action == "trigger"
+            if state.form_id == form and state.action == "trigger" and state.actionable
         ]
         listed = (
             f": {', '.join(repr(submit_key) for submit_key in submit_keys)}"

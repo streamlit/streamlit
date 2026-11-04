@@ -113,8 +113,6 @@ _ORIGIN_MESSAGE: Final = (
     "is not in `server.corsAllowedOrigins`. Call the API from a program, which "
     "sends no `Origin` header."
 )
-
-
 _PAGE_CONTENT_TYPE_MESSAGE: Final = (
     "A request from a web page (it has an `Origin` header) must send "
     "`Content-Type: application/json`."

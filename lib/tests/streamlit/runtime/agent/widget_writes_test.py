@@ -19,7 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, get_args
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -27,6 +27,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.agent import widget_writes
 from streamlit.runtime.agent.errors import AgentRequestError
@@ -842,6 +843,7 @@ class WidgetWritesTest(SnapshotCase):
         with st.form("unkeyed"):
             st.text_input("Note", key="note")
             st.form_submit_button("Send")
+            st.form_submit_button("Later", disabled=True)
 
         keyed = self._refusal({"name": "Ada"})
         assert keyed.code == "missing_form_submit"
@@ -849,6 +851,14 @@ class WidgetWritesTest(SnapshotCase):
         assert "'pay'" not in keyed.message
         generated = self._refusal({"note": "x"})
         assert "'FormSubmitter:unkeyed-Send'" in generated.message
+        # A disabled submit button would only be refused in turn.
+        assert "Later" not in generated.message
+
+    def test_every_support_reason_has_a_refusal(self) -> None:
+        """Each `support` reason gets its own sentence in `unsupported_element`."""
+        assert set(widget_writes._SUPPORT_REFUSALS) == set(
+            get_args(agent_spec.SupportReason)
+        )
 
     def test_resolve_fragment_scopes_to_a_shared_fragment(self) -> None:
         """Keys in one fragment rerun it; anything wider, or a fragment the

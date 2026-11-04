@@ -141,9 +141,8 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         409,
         (
             "The element is on the page but disabled; it accepts nothing until "
-            "the app enables it. A request is checked against the snapshot "
-            "before it, so send what enables it first, then use it in the next "
-            "request."
+            "the app enables it. Enable it in one request, then use it in the "
+            "next: each request is checked against the snapshot before it."
         ),
     ),
     "session_busy": (
@@ -186,8 +185,9 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         (
             "Sent by a web page whose `Origin` is not in "
             "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`. "
-            "Responses carry no CORS headers, so even a listed page can send a "
-            "request but cannot read the response."
+            "Responses carry no CORS headers, so listing an origin only admits "
+            "callers that CORS does not restrict, such as the app's own page. A "
+            "page on another origin is stopped at its preflight."
         ),
     ),
     "too_many_sessions": (

@@ -192,7 +192,8 @@ It has two fixed tools. `interact` is the interact operation: its arguments \
 are that operation's request, and its result is the same snapshot as JSON \
 text. `get_data` reads a file a result points to, for clients that cannot \
 fetch a URL: a table's `data.url` as pages of JSON rows, or another media file \
-as itself. It takes the `session_id` of the result whose URL it reads. A \
+as itself. It takes a valid `session_id`, normally that of the result \
+whose URL it reads. A \
 refused call is a tool result with `isError: true` whose text is \
 an `Error` body.
 
@@ -216,7 +217,8 @@ with that `key` in `tree`: its `value_schema` gives the JSON shape, and its \
 `widget_state` and fire one trigger with `trigger`. Change pages with `page`, \
 or the URL parameters with `query_params`, in a call without widget changes. \
 A call with only `session_id` reruns the app; a trigger never fires twice. \
-Send one to close a dialog or to refresh a fragment that reruns on a timer.
+Send such a call to close a dialog or to refresh a fragment that reruns on \
+a timer.
 
 Tables and charts carry `data`. `complete: true` means everything is there. \
 `complete: false` with a `url` means there is more: read it with `get_data`, \
@@ -312,9 +314,9 @@ settles, including reruns from callbacks, `st.rerun()`, or a page redirect.
 
 A request with no changes reruns the app. It re-applies nothing, so a trigger \
 never fires twice, but code that runs on every rerun runs again. You rarely \
-need one: nothing changes a session between interactions. Send one to close a \
-dialog, refresh a `run_every` fragment, or pick up data that changed outside \
-the app.
+need one, since a session does not change on its own between interactions. \
+Send one to close a dialog, refresh a `run_every` fragment, or pick up data \
+that changed outside the app.
 
 **A timeout is not a failure.** A run that outlasts `server.agentWaitTimeout`, \
 such as a first load of uncached data, returns `202` with `wait_timed_out` and \
@@ -335,7 +337,8 @@ A session runs as whoever created it. Where the deployment maps identity \
 headers into `st.user` (`server.trustedUserHeaders`), the app sees the \
 caller's user, and only that identity can use the session. Otherwise it is \
 anonymous, and an app behind `st.login` shows its signed-out state; calling \
-`st.login()` does nothing. The app reads each request's headers as \
+`st.login()` does not sign this session in. The app reads each request's \
+headers as \
 `st.context.headers`, minus `Cookie`, `Authorization`, and \
 `Proxy-Authorization`.
 """
@@ -362,11 +365,10 @@ _STATUSES: Final[dict[snapshot.SnapshotStatus, str]] = {
     ),
     "error": (
         "the app raised, so the tree stops at the raise and `actions` may "
-        "shrink; act on this snapshot. The session stays usable. An exception "
-        "an earlier full run left also counts while it is still on the page, "
-        "as after a fragment rerun. A script that "
-        "failed to compile leaves only the error in `main`, and no `actions` "
-        "until it compiles."
+        "shrink; act on this snapshot. The session stays usable. It is also "
+        "reported while an exception from an earlier full run is still on the "
+        "page, such as after a fragment rerun. A script that failed to compile "
+        "leaves only the error in `main`, and no `actions` until it compiles."
     ),
 }
 
@@ -608,7 +610,7 @@ def _mcp_operation(*, enabled: bool) -> dict[str, Any]:
                         "type": "object",
                         "description": (
                             "One JSON-RPC 2.0 request, notification, or response. "
-                            "A batch is refused, in a `200` response."
+                            "A batch is refused with a `200` response."
                         ),
                     }
                 }
@@ -830,10 +832,11 @@ def _widget_state_schema() -> dict[str, Any]:
             "you set is still there. A form's fields go with one of its submit "
             "triggers; with `clear_on_submit`, send every field each time, since "
             "fields keep their values here. Keys in an open `st.dialog` go on "
-            "their own. Controls outside an open dialog stay usable, and any "
-            "full rerun closes it unless the app opens it again, a request with "
-            "no changes included. Where the dialog sets `on_dismiss`, its own "
-            "key fires its dismiss."
+            "their own. Controls outside an open dialog stay usable. Any full "
+            "rerun, including a request with no changes, closes the dialog "
+            "unless the app opens it again. When its `on_dismiss` is `rerun`, "
+            "the dialog's own key fires its dismiss; with `ignore` it has no "
+            "key."
         ),
     }
 
@@ -906,8 +909,8 @@ def _request_schema() -> dict[str, Any]:
                 "one creating call can open a parameterized report. One equal to "
                 "its widget's default is ignored, so move a widget back with "
                 "`widget_state`, and one its widget cannot take is dropped with "
-                "a `200`, leaving the widget as it was. A bound widget keeps its value "
-                "when its parameter is left out, so `{}` clears only unbound "
+                "a `200`, leaving the widget as it was. A bound widget keeps its "
+                "value when its parameter is left out, so `{}` clears only unbound "
                 "parameters. "
                 "At most "
                 f"{query_params_state.CLIENT_STATE_QUERY_STRING_MAX_FIELDS} "
@@ -1087,8 +1090,9 @@ def _node_schema() -> dict[str, Any]:
                     "be left out. A few report state rather than "
                     "an argument: a dialog's `is_open`, a popover's or plain "
                     "tab's `open`; a stateful `st.tabs` or `st.expander` "
-                    "reports it as its `value`. A widget bound to the URL reports `bind`, and its key "
-                    "names the `query_params` entry that sets it."
+                    "reports it as its `value`. A widget bound to the URL "
+                    "reports `bind`, and its key names the `query_params` "
+                    "entry that sets it."
                 ),
             },
             "value": {
