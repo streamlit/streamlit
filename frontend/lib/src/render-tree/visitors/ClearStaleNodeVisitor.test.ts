@@ -16,6 +16,7 @@
 
 import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
+import type { AppNode } from "~lib/AppNode"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { BlockNode } from "src/render-tree/BlockNode"
@@ -468,6 +469,115 @@ describe("ClearStaleNodeVisitor", () => {
       expect(result.children).toHaveLength(2)
       expect((result.children[0] as BlockNode).children[0]).toBe(element1)
       expect((result.children[1] as BlockNode).children[0]).toBe(element2)
+    })
+  })
+
+  describe("preserved fragments", () => {
+    const currentRunId = "current_run"
+    const fragmentText = (
+      body: string,
+      scriptRunId: string,
+      fragmentId: string
+    ): ElementNode =>
+      new ElementNode(
+        makeProto(Element, { text: { body } }),
+        ForwardMsgMetadata.create(),
+        scriptRunId,
+        "script_hash",
+        fragmentId
+      )
+    const fragmentBlock = (
+      children: AppNode[],
+      scriptRunId: string,
+      fragmentId: string
+    ): BlockNode =>
+      new BlockNode(
+        "script_hash",
+        children,
+        undefined,
+        scriptRunId,
+        fragmentId
+      )
+
+    /**
+     * Parent fragment P reran in the current run. Nested fragment N's output
+     * from that run was dropped, so all of N's nodes still carry the old run.
+     */
+    const renderParentWithNestedFragment = (
+      nestedFragment: BlockNode
+    ): { parent: BlockNode; current: ElementNode; stale: ElementNode } => {
+      const current = fragmentText("P current", currentRunId, "P")
+      const stale = fragmentText("P stale", "old_run", "P")
+      const parent = fragmentBlock(
+        [current, nestedFragment, stale],
+        currentRunId,
+        "P"
+      )
+      return { parent, current, stale }
+    }
+
+    it("keeps a preserved fragment's content inside a container its parent rewrote", () => {
+      const nestedContent = fragmentText("N content", "old_run", "N")
+      const nestedBlock = fragmentBlock(
+        [fragmentText("N nested", "old_run", "N")],
+        "old_run",
+        "N"
+      )
+      const container = fragmentBlock(
+        [nestedContent, nestedBlock],
+        currentRunId,
+        "P"
+      )
+      const { parent, current } = renderParentWithNestedFragment(container)
+      const visitor = new ClearStaleNodeVisitor(
+        currentRunId,
+        ["P"],
+        undefined,
+        new Set(["N"])
+      )
+
+      const result = visitor.visitBlockNode(parent) as BlockNode
+
+      expect(result.children).toHaveLength(2)
+      expect(result.children[0]).toBe(current)
+      expect(result.children[1]).toBe(container)
+    })
+
+    it("keeps a preserved fragment's own container with its subtree", () => {
+      const nestedContainer = fragmentBlock(
+        [fragmentText("N content", "old_run", "N")],
+        "old_run",
+        "N"
+      )
+      const { parent, current } =
+        renderParentWithNestedFragment(nestedContainer)
+      const visitor = new ClearStaleNodeVisitor(
+        currentRunId,
+        ["P"],
+        undefined,
+        new Set(["N"])
+      )
+
+      const result = visitor.visitBlockNode(parent) as BlockNode
+
+      expect(result.children).toHaveLength(2)
+      expect(result.children[0]).toBe(current)
+      expect(result.children[1]).toBe(nestedContainer)
+    })
+
+    it("removes a nested fragment's old content when it is not preserved", () => {
+      const nestedContainer = fragmentBlock(
+        [fragmentText("N content", "old_run", "N")],
+        "old_run",
+        "N"
+      )
+      const { parent, current } =
+        renderParentWithNestedFragment(nestedContainer)
+      const visitor = new ClearStaleNodeVisitor(currentRunId, ["P"])
+
+      const result = visitor.visitBlockNode(parent) as BlockNode
+
+      expect(result.children).toEqual([current])
     })
   })
 })

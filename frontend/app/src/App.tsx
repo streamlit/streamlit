@@ -2164,7 +2164,8 @@ export class App extends PureComponent<Props, State> {
             return {
               elements: elements.clearStaleNodes(
                 finishedRun.scriptRunId,
-                cleanupFragmentIds
+                cleanupFragmentIds,
+                finishedRun.droppedFragmentIds
               ),
             }
           },

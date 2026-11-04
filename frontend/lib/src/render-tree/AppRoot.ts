@@ -342,11 +342,14 @@ export class AppRoot {
 
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    preservedFragmentIds?: ReadonlySet<string>
   ): AppRoot {
     const visitor = new ClearStaleNodeVisitor(
       currentScriptRunId,
-      fragmentIdsThisRun
+      fragmentIdsThisRun,
+      undefined,
+      preservedFragmentIds
     )
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
