@@ -148,6 +148,77 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
+- **Category order follows the data.** With several datasets on one category axis, ECharts collects categories in first-seen order across series, so groups with different x values can scramble the axis. Set `xAxis.data` to the sorted categories, or use a value or time axis for numeric or date x.
+- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, so many categories squeeze the bars and ECharts hides most labels. Compute the height, for example `height=60 + 22 * len(df)`.
+
+ECharts has no Vega-style `color=` field for long-format data (one row per group and x value). Give each group its own `dataset` entry and series, linked by `datasetIndex`. Series with the same `name` share a color and legend entry. Keep the group frames to map a selection back: `series_index` picks the frame and `data_indices` index into it.
+
+```python
+groups = {app: g.reset_index(drop=True) for app, g in df.groupby("app")}
+frames = list(groups.values())
+event = st.echarts_chart(
+    {
+        "legend": {},
+        "tooltip": {},
+        "dataset": [{"source": g} for g in frames],
+        "xAxis": {"type": "category", "data": sorted(df["quarter"].unique())},
+        "yAxis": {},
+        "series": [
+            {
+                "type": "bar",
+                "name": app,
+                "datasetIndex": i,
+                "encode": {"x": "quarter", "y": "sessions"},
+                "selectedMode": "multiple",
+            }
+            for i, app in enumerate(groups)
+        ],
+    },
+    on_select="rerun",
+    key="sessions_chart",
+    alt="Quarterly sessions by app, web peaks in Q2",
+)
+rows = [
+    frames[s["series_index"]].iloc[s["data_indices"]]
+    for s in event.selection.selected
+]
+if rows:
+    st.dataframe(pd.concat(rows))
+```
+
+Range bars and Gantt charts don't need a `custom` series. Draw each bar as a `lines` series item on `cartesian2d` with a wide, butt-capped line, and list the rows in a category `yAxis.data`. A `lines` series doesn't extend the axes, so set `xAxis.min` and `xAxis.max`, or the chart stays empty. Inline `coords` must be JSON-compatible, so convert datetimes with `.isoformat()`.
+
+```python
+st.echarts_chart(
+    {
+        "tooltip": {"formatter": "{b}"},
+        "xAxis": {
+            "type": "time",
+            "min": runs["start"].min().isoformat(),
+            "max": runs["end"].max().isoformat(),
+        },
+        "yAxis": {"type": "category", "data": sorted(runs["shard"].unique())},
+        "series": [
+            {
+                "type": "lines",
+                "coordinateSystem": "cartesian2d",
+                "lineStyle": {"width": 14, "opacity": 1, "cap": "butt"},
+                "data": [
+                    {
+                        "name": r.test,
+                        "coords": [
+                            [r.start.isoformat(), r.shard],
+                            [r.end.isoformat(), r.shard],
+                        ],
+                    }
+                    for r in runs.itertuples()
+                ],
+            }
+        ],
+    },
+    alt="Test runs per shard over time",
+)
+```
 
 ## Chart selections
 
@@ -190,7 +261,7 @@ st.dataframe(visits.iloc[rows])
 ```
 
 - **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
-- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
+- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. With a dataset `transform` such as `filter`, they address the transformed rows, so split grouped data into one dataset per group instead (see [Apache ECharts](#apache-echarts)). Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
 - Target an axis on an ECharts brush (`"brush": {"xAxisIndex": "all"}`) so its regions appear in `areas`.
 - Set `key` on Altair, Vega-Lite, ECharts, and pydeck charts to keep a selection when the data changes. Without a key, any change to the chart resets it. Plotly selections reset whenever the figure changes, even with a key.
 - Import `VegaLiteState`, `EChartsState`, `PlotlyState`, and `PydeckState` from `streamlit.typing` to annotate the returned event.
