@@ -27,6 +27,7 @@ import * as MobileUtil from "~lib/util/isMobile"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import Selectbox, { getInsertedText, type Props } from "./Selectbox"
+import * as UseSyncEnterTargetFocus from "./useSyncComboBoxEnterTargetFocus"
 
 vi.mock("~lib/WidgetStateManager")
 
@@ -884,6 +885,45 @@ describe("Selectbox widget", () => {
     expect(props.onChange).toHaveBeenCalledWith(null)
   })
 
+  it("clears the committed value via the clear button", async () => {
+    const user = userEvent.setup()
+    props = getProps({ value: "b", clearable: true })
+    render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("b")
+
+    await user.click(screen.getByRole("button", { name: "Clear value" }))
+
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith(null)
+    expect(input).toHaveValue("")
+    expect(
+      screen.queryByRole("button", { name: "Clear value" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+  })
+
+  it.each(["ArrowDown", "ArrowUp"])(
+    "opens the dropdown on %s after keyboard focus",
+    async key => {
+      const user = userEvent.setup()
+      render(<Selectbox {...props} />)
+
+      await user.tab()
+      expect(screen.getByRole("combobox")).toHaveFocus()
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+
+      await user.keyboard(`{${key}}`)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("option")).toHaveLength(
+          props.options.length
+        )
+      })
+      expect(props.onChange).not.toHaveBeenCalled()
+    }
+  )
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[0])).toBeVisible()
@@ -891,6 +931,18 @@ describe("Selectbox widget", () => {
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
     expect(screen.getByDisplayValue(props.options[1])).toBeVisible()
+  })
+
+  it("clears the input if the parent resets the value to null", () => {
+    const { rerender } = render(<Selectbox {...props} />)
+    const input = screen.getByRole("combobox")
+    expect(input).toHaveValue("a")
+
+    props = getProps({ value: null })
+    rerender(<Selectbox {...props} />)
+
+    expect(input).toHaveValue("")
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 
   it("preserves value after prop change and blur without selection", async () => {
@@ -1075,6 +1127,83 @@ describe("Selectbox widget", () => {
     await user.type(selectboxInput, "hello world!")
     await user.keyboard("{enter}")
     expect(props.onChange).not.toHaveBeenCalled()
+  })
+
+  describe("before React Aria focuses the Enter target", () => {
+    beforeEach(() => {
+      vi.spyOn(
+        UseSyncEnterTargetFocus,
+        "useSyncComboBoxEnterTargetFocus"
+      ).mockImplementation(() => undefined)
+    })
+
+    it("commits the first match on Enter", async () => {
+      const user = userEvent.setup()
+      props = getProps({
+        value: undefined,
+        options: ["apple", "apricot", "banana"],
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+
+      await user.click(input)
+      await user.type(input, "apr")
+      expect(input).not.toHaveAttribute("aria-activedescendant")
+      await user.keyboard("{Enter}")
+
+      expect(props.onChange).toHaveBeenCalledTimes(1)
+      expect(props.onChange).toHaveBeenCalledWith("apricot")
+      expect(input).toHaveValue("apricot")
+      await waitFor(() => {
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+      })
+    })
+
+    it("commits the typed text as a new option on Enter", async () => {
+      const user = userEvent.setup()
+      props = getProps({
+        value: undefined,
+        options: ["apple"],
+        acceptNewOptions: true,
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+
+      await user.click(input)
+      await user.type(input, "xyz")
+      expect(input).not.toHaveAttribute("aria-activedescendant")
+      await user.keyboard("{Enter}")
+
+      expect(props.onChange).toHaveBeenCalledTimes(1)
+      expect(props.onChange).toHaveBeenCalledWith("xyz")
+      expect(input).toHaveValue("xyz")
+      await waitFor(() => {
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument()
+      })
+    })
+
+    it("skips the leading Add row on ArrowDown", async () => {
+      const user = userEvent.setup()
+      props = getProps({
+        value: undefined,
+        options: ["apple-0", "apple-1"],
+        acceptNewOptions: true,
+      })
+      render(<Selectbox {...props} />)
+      const input = screen.getByRole("combobox")
+
+      await user.click(input)
+      await user.type(input, "a")
+      expect(screen.getAllByRole("option")[0]).toHaveTextContent(/Add: a/i)
+      expect(input).not.toHaveAttribute("aria-activedescendant")
+
+      await user.keyboard("{ArrowDown}")
+      await expectActiveOption(input, "apple-0")
+      await user.keyboard("{Enter}")
+
+      expect(props.onChange).toHaveBeenCalledTimes(1)
+      expect(props.onChange).toHaveBeenCalledWith("apple-0")
+    })
   })
 })
 

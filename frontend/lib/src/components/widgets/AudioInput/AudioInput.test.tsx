@@ -366,6 +366,97 @@ describe("AudioInput Recording Journey", () => {
 
     await waitFor(() => expect(timer).toHaveTextContent("00:05"))
   })
+
+  it("approves the stopped recording when stop succeeds", async () => {
+    const user = userEvent.setup()
+    controllerState = "recording"
+    const stoppedBlob = new Blob(["stopped"], { type: "audio/wav" })
+    controller.stop = vi.fn().mockResolvedValue({
+      blob: stoppedBlob,
+      meta: {
+        durationMs: 1000,
+        sampleRate: 16000,
+        mimeType: "audio/wav",
+        size: 7,
+      },
+    })
+
+    render(<AudioInput {...createProps()} />)
+
+    await user.click(screen.getByRole("button", { name: "Stop recording" }))
+
+    await waitFor(() => {
+      expect(controller.approve).toHaveBeenCalledWith(stoppedBlob)
+    })
+    expect(
+      screen.queryByText(/An error has occurred, please try again/i)
+    ).not.toBeInTheDocument()
+  })
+
+  it("clears the previous recording and deletes its file when recording again", async () => {
+    const user = userEvent.setup()
+    render(
+      <AudioInput
+        {...createProps(
+          {},
+          { uploadClient: mockUploadClient, widgetMgr: mockWidgetMgr }
+        )}
+      />
+    )
+
+    act(() => {
+      void latestEvents?.onApprove?.(new Blob(["old"], { type: "audio/wav" }))
+    })
+
+    expect(await screen.findByRole("button", { name: "Play" })).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: "Record" }))
+
+    await waitFor(() => {
+      expect(controller.start).toHaveBeenCalled()
+    })
+    expect(mockUploadClient.deleteFile).toHaveBeenCalledWith("delete-url-123")
+    expect(global.URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-url")
+    expect(
+      screen.queryByRole("button", { name: "Play" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("downloads the recording as a WAV file", async () => {
+    const user = userEvent.setup()
+    const clickedLinks: HTMLAnchorElement[] = []
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function (this: HTMLAnchorElement) {
+        clickedLinks.push(this)
+      }
+    )
+
+    render(<AudioInput {...createProps()} />)
+
+    act(() => {
+      void latestEvents?.onApprove?.(new Blob(["wav"], { type: "audio/wav" }))
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: /Download as WAV/ })
+    )
+
+    expect(clickedLinks).toHaveLength(1)
+    expect(clickedLinks[0]).toHaveAttribute("href", "blob:test-url")
+    expect(clickedLinks[0]).toHaveAttribute("download", "recording.wav")
+  })
+
+  it("names toolbar actions without label context when the label is empty", async () => {
+    render(<AudioInput {...createProps({ label: "" })} />)
+
+    act(() => {
+      void latestEvents?.onApprove?.(new Blob(["wav"], { type: "audio/wav" }))
+    })
+
+    expect(
+      await screen.findByRole("button", { name: /^Download as WAV/ })
+    ).toHaveAccessibleName("Download as WAV")
+  })
 })
 
 describe("AudioInput Playback Journey", () => {
@@ -536,6 +627,119 @@ describe("AudioInput Playback Journey", () => {
     const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
     expect(timer).toHaveTextContent("00:00")
   })
+
+  it("updates the timer on each animation frame while playing", async () => {
+    let frameCallback: FrameRequestCallback | undefined
+    global.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      frameCallback = callback
+      return 123
+    })
+    isPlaybackPlaying = true
+    controller.playback.getCurrentTimeMs = vi.fn().mockReturnValue(3200)
+
+    render(<AudioInput {...createProps()} />)
+
+    const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
+    expect(timer).toHaveTextContent("00:00")
+    expect(global.requestAnimationFrame).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      frameCallback?.(0)
+    })
+
+    await waitFor(() => expect(timer).toHaveTextContent("00:03"))
+    expect(global.requestAnimationFrame).toHaveBeenCalledTimes(2)
+  })
+
+  describe("with a recording", () => {
+    beforeEach(() => {
+      global.URL.createObjectURL = vi.fn(() => "blob:playback-url")
+      global.URL.revokeObjectURL = vi.fn()
+      uploadFilesMock.mockResolvedValue({
+        successfulUploads: [{ fileUrl: { deleteUrl: "delete-123" } }],
+        failedUploads: [],
+      })
+    })
+
+    afterEach(() => {
+      uploadFilesMock.mockReset()
+    })
+
+    const approveRecording = (): void => {
+      act(() => {
+        void latestEvents?.onApprove?.(
+          new Blob(["test"], { type: "audio/wav" })
+        )
+      })
+    }
+
+    it("pauses playback and shows the paused time", async () => {
+      const user = userEvent.setup()
+      isPlaybackPlaying = true
+      controller.playback.getDurationMs = vi.fn().mockReturnValue(5000)
+      controller.playback.getCurrentTimeMs = vi.fn().mockReturnValue(2500)
+
+      render(<AudioInput {...createProps()} />)
+      approveRecording()
+
+      const timer = screen.getByTestId("stAudioInputWaveformTimeCode")
+      await waitFor(() => expect(timer).toHaveTextContent("00:05"))
+
+      await user.click(await screen.findByRole("button", { name: "Pause" }))
+
+      expect(controller.playback.pause).toHaveBeenCalledTimes(1)
+      expect(controller.playback.play).not.toHaveBeenCalled()
+      await waitFor(() => expect(timer).toHaveTextContent("00:02"))
+    })
+
+    it("cancels the playback timer when the recording is cleared", async () => {
+      const user = userEvent.setup()
+      isPlaybackPlaying = true
+
+      render(<AudioInput {...createProps()} />)
+      approveRecording()
+
+      const clearButton = await screen.findByRole("button", {
+        name: /Clear recording/,
+      })
+      expect(global.cancelAnimationFrame).not.toHaveBeenCalled()
+
+      await user.click(clearButton)
+
+      expect(global.cancelAnimationFrame).toHaveBeenCalledWith(123)
+      expect(controller.cancel).toHaveBeenCalled()
+    })
+
+    it("ignores a playback load that resolves after the recording is cleared", async () => {
+      const user = userEvent.setup()
+      let resolveLoad: () => void = () => {}
+      controller.playback.load = vi.fn(
+        () =>
+          new Promise<void>(resolve => {
+            resolveLoad = resolve
+          })
+      )
+      controller.playback.getDurationMs = vi.fn().mockReturnValue(7000)
+
+      render(<AudioInput {...createProps()} />)
+      approveRecording()
+
+      await user.click(
+        await screen.findByRole("button", { name: /Clear recording/ })
+      )
+
+      await act(async () => {
+        resolveLoad()
+        await new Promise(resolve => {
+          setTimeout(resolve, 0)
+        })
+      })
+
+      expect(
+        screen.getByTestId("stAudioInputWaveformTimeCode")
+      ).toHaveTextContent("00:00")
+    })
+  })
 })
 
 describe("AudioInput Upload & Abort", () => {
@@ -698,6 +902,88 @@ describe("AudioInput Upload & Abort", () => {
         screen.getByText(/An error has occurred, please try again/i)
       ).toBeInTheDocument()
     })
+  })
+
+  it("ignores the result of an upload superseded by a newer one", async () => {
+    let resolveFirstUpload: (value: unknown) => void = () => {}
+    uploadFilesMock.mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          resolveFirstUpload = resolve
+        })
+    )
+
+    render(
+      <AudioInput
+        {...createProps(
+          {},
+          { uploadClient: mockUploadClient, widgetMgr: mockWidgetMgr }
+        )}
+      />
+    )
+
+    act(() => {
+      void latestEvents?.onApprove?.(
+        new Blob(["first"], { type: "audio/wav" })
+      )
+    })
+    act(() => {
+      void latestEvents?.onApprove?.(
+        new Blob(["second"], { type: "audio/wav" })
+      )
+    })
+
+    await waitFor(() => {
+      expect(uploadFilesMock).toHaveBeenCalledTimes(2)
+    })
+
+    await act(async () => {
+      resolveFirstUpload({
+        successfulUploads: [],
+        failedUploads: [{ error: "stale failure" }],
+      })
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+    })
+
+    expect(
+      screen.queryByText(/An error has occurred, please try again/i)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /Clear recording/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows an error and resets form upload tracking on an unexpected failure", async () => {
+    const setFormsWithUploadsInProgressSpy = vi
+      .spyOn(mockWidgetMgr, "setFormsWithUploadsInProgress")
+      .mockImplementationOnce(() => {
+        throw new Error("unexpected")
+      })
+
+    render(
+      <AudioInput
+        {...createProps(
+          { formId: "form-1" },
+          { uploadClient: mockUploadClient, widgetMgr: mockWidgetMgr }
+        )}
+      />
+    )
+
+    act(() => {
+      void latestEvents?.onApprove?.(
+        new Blob(["audio"], { type: "audio/wav" })
+      )
+    })
+
+    expect(
+      await screen.findByText(/An error has occurred, please try again/i)
+    ).toBeVisible()
+    expect(uploadFilesMock).not.toHaveBeenCalled()
+    expect(setFormsWithUploadsInProgressSpy).toHaveBeenLastCalledWith(
+      new Set()
+    )
   })
 
   it("handles upload with failed uploads array", async () => {
