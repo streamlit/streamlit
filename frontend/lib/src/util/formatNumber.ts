@@ -21,6 +21,26 @@ import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 import { isNullOrUndefined, notNullOrUndefined } from "./utils"
 
 /**
+ * The named formats ``formatNumber`` implements, the same set ``st.metric``
+ * accepts. Any other non-empty format is treated as a printf-style string.
+ * Keep this in sync with the branches of ``formatNumber`` and with
+ * ``NumberFormat`` in ``lib/streamlit/elements/lib/column_types.py``.
+ */
+export const NAMED_NUMBER_FORMATS: ReadonlySet<string> = new Set([
+  "plain",
+  "localized",
+  "dollar",
+  "euro",
+  "yen",
+  "percent",
+  "compact",
+  "scientific",
+  "engineering",
+  "accounting",
+  "bytes",
+])
+
+/**
  * Determines the default mantissa to use for the given number.
  *
  * @param value - The number to determine the mantissa for.
@@ -34,7 +54,7 @@ function determineDefaultMantissa(value: number): number {
 
   const expStr = value.toExponential()
   const parts = expStr.split("e")
-  return Math.abs(parseInt(parts[1], 10))
+  return Math.abs(Number.parseInt(parts[1], 10))
 }
 
 /**

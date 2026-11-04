@@ -30,7 +30,9 @@ from streamlit.elements.widgets.chat import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidHeightError,
+    StreamlitInvalidLayoutContextError,
     StreamlitInvalidWidthError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -167,13 +169,11 @@ class ChatTest(DeltaGeneratorTestCase):
 
     def test_chat_not_allowed_in_form(self):
         """Test that it disallows being called in a form."""
-        with pytest.raises(StreamlitAPIException) as exception_message:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"`st.chat_input\(\)` can't be used in a `st.form\(\)`",
+        ):
             st.form("Form Key").chat_input()
-
-        assert (
-            str(exception_message.value)
-            == "`st.chat_input()` can't be used in a `st.form()`."
-        )
 
     @parameterized.expand(
         [
@@ -189,9 +189,10 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects inline position when nested in any of layout containers."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] != RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            != RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     @parameterized.expand(
@@ -204,9 +205,30 @@ class ChatTest(DeltaGeneratorTestCase):
         """Test that it selects bottom position when called in the main dg."""
         container_call().chat_input()
 
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
+        assert message.delta.new_element.chat_input.is_auto_positioned_at_bottom is True
+
+    @parameterized.expand(
+        [
+            ("context_manager", True),
+            ("method_call", False),
+        ]
+    )
+    def test_chat_input_in_explicit_bottom_is_not_auto_positioned(
+        self, _name: str, use_context_manager: bool
+    ) -> None:
+        """Test that explicit bottom placement is not automatic positioning."""
+        if use_context_manager:
+            with st.bottom:
+                st.chat_input()
+        else:
+            st.bottom.chat_input()
+
+        message = self.get_message_from_queue()
+        assert message.metadata.delta_path[0] == RootContainerProto.BOTTOM
         assert (
-            self.get_message_from_queue().metadata.delta_path[0]
-            == RootContainerProto.BOTTOM
+            message.delta.new_element.chat_input.is_auto_positioned_at_bottom is False
         )
 
     def test_supports_programmatic_value_assignment(self):
@@ -257,7 +279,7 @@ class ChatTest(DeltaGeneratorTestCase):
 
         assert (
             str(ex.value)
-            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'."
+            == "Invalid `accept_file` value. Supported values: True, False, 'multiple', 'directory'. Got 'invalid'."
         )
 
     def test_file_type(self):
@@ -628,15 +650,14 @@ class ChatTest(DeltaGeneratorTestCase):
             ("negative", -1),
             ("float", 1.5),
             ("string", "10"),
+            ("true", True),
         ]
     )
     def test_max_upload_size_invalid(self, _: str, max_upload_size: object) -> None:
         """Test that invalid max_upload_size values raise an exception for chat_input."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(StreamlitValueError) as exc:
             st.chat_input("the label", max_upload_size=max_upload_size)
-        assert "The `max_upload_size` parameter must be a positive integer" in str(
-            exc.value
-        )
+        assert "a positive integer" in str(exc.value)
 
     def test_accept_file_single(self):
         """Test st.chat_input with accept_file=True."""
@@ -1004,6 +1025,32 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
         assert result == "test message"
 
+    @parameterized.expand(
+        [
+            ("past_the_limit", 4, "abcdef", "abcd"),
+            ("at_the_limit", 6, "abcdef", "abcdef"),
+            ("no_limit", None, "abcdef", "abcdef"),
+            # The browser reads 0 as no limit.
+            ("zero_means_no_limit", 0, "abcdef", "abcdef"),
+        ]
+    )
+    def test_deserialize_cuts_text_past_max_chars(
+        self, _name: str, max_chars: int | None, sent: str, expected: str
+    ) -> None:
+        """Text a client sends past `max_chars` is cut, as a text input cuts it."""
+        serde = ChatInputSerde(max_chars=max_chars)
+
+        assert serde.deserialize(ChatInputValueProto(data=sent)) == expected
+
+    def test_deserialize_cuts_text_past_max_chars_with_files(self) -> None:
+        """The cut applies to the text of a submission that accepts files too."""
+        serde = ChatInputSerde(accept_files=True, max_chars=2)
+
+        result = serde.deserialize(ChatInputValueProto(data="abc"))
+
+        assert isinstance(result, ChatInputValue)
+        assert result.text == "ab"
+
 
 class PopUploadFilesTest(DeltaGeneratorTestCase):
     """Test _pop_upload_files and _pop_audio_file functions."""
@@ -1149,17 +1196,29 @@ class ChatInputSerdeFilesAudioTest(DeltaGeneratorTestCase):
         )
 
         proto = ChatInputValueProto()
-        proto.data = "msg"
+        proto.data = ""
         info = proto.file_uploader_state.uploaded_file_info.add()
         info.file_id = "file1"
+        info.file_urls.file_id = "file1"
+        info.file_urls.upload_url = "upload"
+        info.file_urls.delete_url = "delete"
 
         serde = ChatInputSerde(accept_files=True, accept_audio=False)
         result = serde.deserialize(proto)
 
         assert isinstance(result, ChatInputValue)
-        assert result.text == "msg"
+        assert result.text == ""
         assert len(result.files) == 1
         assert result.files[0].name == "doc.txt"
+        assert result.files[0].type == "text/plain"
+        assert result.files[0].getvalue() == b"abc"
+        assert (
+            self.script_run_ctx.uploaded_file_mgr.get_files(
+                session_id=self.script_run_ctx.session_id,
+                file_ids=["file1"],
+            )
+            == []
+        )
         # Anti-regression: when accept_audio is False, audio access raises.
         with pytest.raises(AttributeError):
             _ = result.audio
@@ -1211,8 +1270,67 @@ class ChatInputValueExtraTest(DeltaGeneratorTestCase):
         """Test __contains__ returns False when the key is not a string."""
         value = ChatInputValue(text="hi")
         assert (42 in value) is False
+        assert ([] in value) is False
+        assert value.get([]) is None
         # Anti-regression: a valid string key should still report membership.
         assert "text" in value
+
+
+@pytest.mark.parametrize(
+    ("include_files", "include_audio", "expected"),
+    [
+        (False, False, "ChatInputValue(text='hi')"),
+        (True, False, "ChatInputValue(text='hi', files=[])"),
+        (False, True, "ChatInputValue(text='hi', audio=None)"),
+        (True, True, "ChatInputValue(text='hi', files=[], audio=None)"),
+    ],
+)
+def test_chat_input_value_repr_includes_only_enabled_keys(
+    include_files: bool, include_audio: bool, expected: str
+) -> None:
+    """repr omits files/audio unless those inputs were accepted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=include_files,
+        _include_audio=include_audio,
+    )
+    assert repr(value) == expected
+
+
+def test_chat_input_value_repr_skips_deleted_keys() -> None:
+    """repr does not raise after an included key is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["files"]
+    assert "files" not in value
+    assert list(value) == ["text", "audio"]
+    assert value.to_dict() == {"text": "hi", "audio": None}
+    assert repr(value) == "ChatInputValue(text='hi', audio=None)"
+
+
+def test_chat_input_value_setitem_after_delete() -> None:
+    """An accepted key can be set again after it is deleted."""
+    value = ChatInputValue(
+        text="hi",
+        files=[],
+        audio=None,
+        _include_files=True,
+        _include_audio=True,
+    )
+    del value["text"]
+    del value["files"]
+    value["text"] = "again"
+    value["files"] = []
+    assert value["text"] == "again"
+    assert value["files"] == []
+    assert "audio" in value
 
 
 class AvatarProcessingTest(DeltaGeneratorTestCase):
@@ -1245,7 +1363,10 @@ class AvatarProcessingTest(DeltaGeneratorTestCase):
 
     def test_chat_message_raises_when_name_is_none(self) -> None:
         """Test chat_message raises when name is explicitly None."""
-        with pytest.raises(StreamlitAPIException, match="author name is required"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"`name` parameter is required",
+        ):
             st.chat_message(None)  # type: ignore[arg-type]
 
 

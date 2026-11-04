@@ -29,13 +29,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import tomllib
 from pathlib import Path
-
-# tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 
 
 def get_package_version() -> str:

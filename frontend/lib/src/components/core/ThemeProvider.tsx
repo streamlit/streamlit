@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 

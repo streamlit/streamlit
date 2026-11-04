@@ -17,7 +17,7 @@
 import { screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { Html as HtmlProto } from "@streamlit/protobuf"
+import type { Html as HtmlProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 

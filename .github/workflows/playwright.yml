@@ -1,3 +1,4 @@
+# snapshot-autofix.yml listens for this name via workflow_run.
 name: Playwright E2E Tests
 
 on:
@@ -29,6 +30,8 @@ env:
   E2E_MARKER_EXPR: not performance
 
 jobs:
+  # snapshot-autofix.yml treats a failure of this job as the Playwright failure.
+  # It matches the job display name, which stays this id only when `name:` is unset.
   playwright-e2e-tests:
     runs-on: ubuntu-latest-64-cores
     timeout-minutes: 30
@@ -70,16 +73,17 @@ jobs:
           cd e2e_playwright && rm -rf ./test-results
           uv run pytest "${selection_flags[@]}" -m "$E2E_MARKER_EXPR" -n auto --reruns 1
       - name: Upload test statistics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: playwright_test_stats
           path: e2e_playwright/test-results/test-stats.json
           if-no-files-found: ignore
       - name: Upload failed test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
+          # snapshot-autofix.yml downloads this by "<prefix><first 6 of the PR head SHA>".
           name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
           path: e2e_playwright/test-results
 

@@ -26,10 +26,12 @@ Streamlit supports Markdown throughout its API—in `st.markdown()`, widget labe
 | Streamlit logo | `:streamlit:` | `:streamlit:` | ✓ |
 | Material icon | `:material/icon_name:` | `:material/check_circle:` | ✓ |
 | Colored text | `:color[text]` | `:red[Error]` | ✓ |
+| Custom hex/CSS color | `:color[text]{foreground="..." background="..."}` | `:color[Important]{foreground="#E03131" background="#FFF5F5"}` | ✓ |
 | Colored background | `:color-background[text]` | `:blue-background[Info]` | ✓ |
 | Badge | `:color-badge[text]` | `:green-badge[Success]` | ✓ |
 | Shimmer animation | `:shimmer[text]` | `:shimmer[Loading...]` | ✓ |
 | Small text | `:small[text]` | `:small[footnote]` | ✓ |
+| Typographic symbols | `<- -> <-> -- >= <= ~=` → `← → ↔ — ≥ ≤ ≈` when bounded by whitespace or the start or end of the text (literal in links and inline code) | `A -> B` | ✓ |
 | LaTeX (inline) | `$formula$` | `$ax^2 + bx + c$` | ✓ |
 | LaTeX (block) | `$$formula$$` | `$$\int_0^1 x^2 dx$$` | ✗ |
 
@@ -43,7 +45,7 @@ The lists below are not exhaustive. Always use `streamlit docs st.<command>` to 
 - `st.markdown()`, `st.write()`, `st.caption()`, `st.info()`, `st.warning()`, `st.error()`, `st.success()`, `st.table` cells, index labels, and headers, tooltips (`help` parameter)
 
 **Label subset** — Inline formatting only (see table above). Block elements (e.g. headings, lists, tables) are silently stripped:
-- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`.
+- Widget and element labels (`st.button`, `st.checkbox`, `st.radio`, `st.expander`, `st.page_link`, etc.), `st.radio` and `st.select_slider` options, `st.tabs` names, `st.metric` label/value/delta, `st.title`, `st.header`, `st.subheader`, `st.image` caption, `st.dialog` title, `st.progress`, `st.spinner`, `st.markdown` / `st.caption` when `wrap=False`.
 
 **No Markdown** — Text displays literally:
 - `st.text()`, `st.json()`, `st.dataframe()` / `st.data_editor()` cells, `st.selectbox` / `st.multiselect` options, input placeholders, `st.Page` titles, chart/map labels
@@ -100,9 +102,12 @@ st.mermaid_chart(
         B -->|Yes| C[OK]
         B -->|No| D[Cancel]
 """,
-    width="stretch",
-)  # "stretch" (default), "content", or a pixel value
+    alt="Decision flowchart from start to OK or Cancel",
+    width="stretch",  # "stretch" (default), "content", or a pixel value
+)
 ```
+
+`alt` names `st.mermaid_chart` only; a mermaid fence in `st.markdown` has no `alt` parameter.
 
 ## Colored text, backgrounds, and badges
 
@@ -114,7 +119,9 @@ st.markdown(":green-badge[Active] :red-badge[Inactive]")  # Inline badges
 
 **Available colors:** `red`, `orange`, `yellow`, `green`, `blue`, `violet`, `gray`/`grey`, `rainbow`, `primary`
 
-Note: `rainbow` is not supported for backgrounds or badges. Standalone badges also available via `st.badge()`.
+Note: `rainbow` is not supported for badges. Standalone badges also available via `st.badge()`.
+
+Stick to the predefined palette above whenever possible — it adapts to the theme. For an exact hex or CSS color when the design truly requires one, add a `{foreground="..." background="..."}` modifier to the `:color[...]` directive (both keys are optional; e.g. `:color[Important]{foreground="#E03131"}` or `:color[Note]{background="#FFF3BF"}`) rather than raw HTML / `unsafe_allow_html`.
 
 ## Material icons
 
@@ -126,7 +133,7 @@ Full list of icons available in Streamlit: [material_icon_names.py](https://raw.
 st.markdown(":material/check_circle: Complete")
 ```
 
-Material icons also work in `icon` parameters across many elements (`st.button`, `st.expander`, `st.info`, etc.).
+Material icons also work in `icon` parameters across many elements (`st.title`, `st.header`, `st.subheader`, `st.button`, `st.expander`, `st.info`, etc.).
 
 ## Emojis
 
@@ -140,7 +147,7 @@ st.markdown("Hello! 👋 :+1: :tada: :streamlit:")
 
 ## LaTeX math
 
-Single `$` for inline, double `$$` for display mode. Inline math requires non-whitespace after `$` to avoid conflicts with currency (e.g., "$5" won't be parsed as math).
+Single `$` for inline, double `$$` for display mode. Inline math can't start or end with a space, and its closing `$` can't be followed by a digit, so dollar amounts like "$5 and $10" stay plain text. One formula turns math parsing on for the whole string, so escape other dollar signs as `\\$` (e.g., `"Costs \\$5, where $r$ is the rate"`).
 
 ```python
 # Inline math
@@ -230,18 +237,53 @@ Control layout with `text_alignment` and `width` parameters.
 st.markdown("Centered heading", text_alignment="center")  # left, center, right, justify
 st.markdown(
     "Content width only", width="content"
-)  # stretch, content, or pixels (e.g. 400)
+)  # "auto" (default), "stretch", "content", or pixels (e.g. 400)
 ```
 
-## HTML (use very sparingly!)
+## Keep text on one line with wrap
 
-Mix Markdown with HTML using `unsafe_allow_html=True`. For pure HTML without markdown processing, use `st.html()` instead.
+`st.markdown`, `st.caption`, `st.title`, `st.header`,
+`st.subheader`, and `st.text` accept `wrap`. The default is `True` (text
+wraps onto additional lines). Pass `wrap=False` to keep the text on one
+ellipsized line. The ellipsis appears only when the element is narrower
+than its text. Content-sized elements are capped by their parent width, so
+they still truncate when the parent is narrower than their text. Use
+`width="stretch"` or a pixel width to set the available width explicitly.
+
+When `wrap=False`, `st.markdown` and `st.caption` use the same inline-only
+subset as widget labels (no headings, lists, tables, or block quotes).
+`wrap=False` cannot be combined with `unsafe_allow_html=True`. Extra body
+lines after the first newline are not supported on `st.title`, `st.header`,
+and `st.subheader`.
 
 ```python
+metric, updated, region = st.columns(3, vertical_alignment="center")
+metric.markdown(
+    "Quarterly revenue versus plan for the complete fiscal year",
+    wrap=False,
+    width="stretch",
+)
+updated.caption("Last updated just now", wrap=False, width="stretch")
+region.text("North America · EMEA · APAC", wrap=False, width="stretch")
+```
+
+## HTML (use only when no native element exists)
+
+Prefer native Streamlit elements and theming over custom HTML. Do not use `unsafe_allow_html` on `st.markdown`, `st.caption`, or `st.write` to recreate UI or inject CSS. Use Streamlit Markdown coloring (`:red[...]`, `:color[...]{foreground="..."}`) and `.streamlit/config.toml` instead.
+
+If you need HTML or CSS without Markdown, use `st.html`.
+
+```python
+# BAD: HTML in Markdown to restyle text
 st.markdown(
     "**Status:** <span style='color: coral'>Custom styled</span>",
     unsafe_allow_html=True,
 )
+
+# GOOD: Native Markdown coloring
+st.markdown('**Status:** :color[Custom styled]{foreground="coral"}')
+
+# GOOD: HTML/CSS that isn't Markdown, when no native element exists
 st.html("<div class='custom'>Pure HTML content</div>")
 ```
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createContext, FC, PropsWithChildren, useMemo } from "react"
+import { createContext, type FC, type PropsWithChildren, useMemo } from "react"
 
 import { Direction } from "./utils"
 
@@ -45,10 +45,51 @@ export interface IFlexContext {
    * Returns false if there's a fixed-width container that is closer than any content-width container.
    */
   isInContentWidthContainer: boolean
+  /**
+   * Whether this container gives its stretch-height children a definite
+   * height to fill:
+   * - true for pixel- and rem-height containers, and for stretch-height
+   *   containers whose own parent has a definite height. Tab panels use their
+   *   tab container's height.
+   * - false (or unset) for the root and content-height containers, where
+   *   stretch elements size to their content.
+   */
+  hasDefiniteHeight?: boolean
 }
 
 export const FlexContext = createContext<IFlexContext | null>(null)
 FlexContext.displayName = "FlexContext"
+
+/**
+ * Whether a stretch-height element should use its default height. It should
+ * only do so when its container has no definite height to fill. Inside a
+ * definite-height container, a default height would stop the element from
+ * shrinking to fit next to its siblings.
+ */
+export function hasStretchHeightFallback(
+  flexContext: IFlexContext | null
+): boolean {
+  return flexContext?.hasDefiniteHeight !== true
+}
+
+/**
+ * Whether a container gives stretch-height children a definite height: it
+ * has a fixed height, or it stretches inside a definite-height parent.
+ */
+export function getHasDefiniteHeight({
+  hasFixedHeight,
+  hasStretchHeight,
+  parentContext,
+}: {
+  hasFixedHeight: boolean
+  hasStretchHeight: boolean
+  parentContext: IFlexContext | null | undefined
+}): boolean {
+  return (
+    hasFixedHeight ||
+    (hasStretchHeight && parentContext?.hasDefiniteHeight === true)
+  )
+}
 
 /**
  * FlexContextProvider sets the current `FlexContext` value to one of the
@@ -74,6 +115,8 @@ FlexContext.displayName = "FlexContext"
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
  *   container, unless a closer fixed-width container overrides it.
+ * @returns hasDefiniteHeight: Whether stretch-height children get a definite
+ *   height from this container.
  *
  * Search the codebase for `<FlexContextProvider` to see where this is used.
  *
@@ -87,6 +130,8 @@ export const FlexContextProvider: FC<
     parentWidth?: number
     hasContentWidth?: boolean
     hasFixedWidth?: boolean
+    hasFixedHeight?: boolean
+    hasStretchHeight?: boolean
     parentContext?: IFlexContext | null
   }>
 > = ({
@@ -98,6 +143,8 @@ export const FlexContextProvider: FC<
   parentWidth,
   hasContentWidth = false,
   hasFixedWidth = false,
+  hasFixedHeight = false,
+  hasStretchHeight = false,
   parentContext = null,
 }) => {
   const value = useMemo<IFlexContext>(() => {
@@ -117,6 +164,12 @@ export const FlexContextProvider: FC<
         parentContext?.isInContentWidthContainer ?? false
     }
 
+    const hasDefiniteHeight = getHasDefiniteHeight({
+      hasFixedHeight,
+      hasStretchHeight,
+      parentContext,
+    })
+
     return {
       direction,
       isInHorizontalLayout,
@@ -125,6 +178,7 @@ export const FlexContextProvider: FC<
       wrap,
       parentWidth,
       isInContentWidthContainer,
+      hasDefiniteHeight,
     }
   }, [
     direction,
@@ -134,6 +188,8 @@ export const FlexContextProvider: FC<
     parentWidth,
     hasContentWidth,
     hasFixedWidth,
+    hasFixedHeight,
+    hasStretchHeight,
     parentContext,
   ])
 

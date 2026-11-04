@@ -237,6 +237,47 @@ class BidiComponentManager:
             js=js,
         )
 
+    def ensure_definition_if_missing_or_placeholder(
+        self,
+        *,
+        component_key: str,
+        html: str | None,
+        css: str | None,
+        js: str | None,
+    ) -> None:
+        """Register captured HTML, CSS, and JS for a missing or discovered name.
+
+        A definition the script already registered stays unchanged, including
+        an explicit empty ``component()`` call. This method records the
+        original ``css`` and ``js`` only when it stores the definition, so an
+        already registered definition keeps its own inputs.
+
+        Parameters
+        ----------
+        component_key : str
+            Component name to ensure.
+        html : str | None
+            Original inline HTML passed to ``component()``.
+        css : str | None
+            Original inline CSS or an asset path/glob passed to ``component()``.
+        js : str | None
+            Original inline JavaScript or an asset path/glob passed to
+            ``component()``.
+        """
+        existing = self.get(component_key)
+        if existing is not None and not existing.is_manifest_discovery:
+            return
+
+        # Resolve paths before the registry lock so file reads do not hold it.
+        definition = self.build_definition_with_validation(
+            component_key=component_key,
+            html=html,
+            css=css,
+            js=js,
+        )
+        if self._registry.register_if_missing_or_placeholder(definition):
+            self.record_api_inputs(component_key, css, js)
+
     def get_component_asset_root(self, name: str) -> Path | None:
         """Get the asset root for a manifest-backed component.
 
@@ -379,7 +420,7 @@ class BidiComponentManager:
                 updated_def = self._recompute_definition_from_api(name)
                 if updated_def is not None:
                     self._registry.update_component(updated_def)
-            except Exception:  # noqa: PERF203
+            except Exception:
                 _LOGGER.exception("Failed to update component after change: %s", name)
 
     def _recompute_definition_from_api(

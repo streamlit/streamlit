@@ -7,8 +7,11 @@ Most features need implementation in three areas:
 - Frontend: `frontend/`
 - Protobufs: `proto/`
 
+Keep the element's logic in its own backend module and frontend folder. The shared files named below (`Element.proto`, `__init__.py`, `element_mocks.py`, `ElementNodeRenderer.tsx`) are registration points: limit the element's entry in each to wiring. See "Keep elements self-contained" in [`AGENTS.md`](../AGENTS.md).
+
 New features should include:
 - Python unit tests in `lib/tests`
+- Python typing tests in `lib/tests/streamlit/typing/` for public `st.*` commands
 - Vitest unit tests
 - E2E Playwright tests in `e2e_playwright/`
 
@@ -20,10 +23,12 @@ New features should include:
 2. **Backend** in `lib/streamlit/`
    - New elements: add to `lib/streamlit/__init__.py`
    - Public `st.*` commands: decorate with `gather_metrics`. Use it only for those public APIs, not internal helpers.
+   - New elements and parameters: describe them for the agent API with `agent_spec.element(...)` or `agent_spec.block(...)` where the proto is filled, and pass that as `agent_props=`. See "Agent API element descriptions" in `lib/streamlit/AGENTS.md`.
 
 3. **Python unit tests** in `lib/tests`
    - Run: `uv run pytest lib/tests/streamlit/the_test_name.py`
    - New elements: add to `lib/tests/streamlit/element_mocks.py`
+   - Public `st.*` commands: add or update `lib/tests/streamlit/typing/<command>_types.py` (mypy and ty `assert_type`, not pytest)
 
 4. **Frontend** in `frontend/`
    - New elements: add to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`

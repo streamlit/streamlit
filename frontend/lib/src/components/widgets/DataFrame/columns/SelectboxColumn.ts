@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
-import { DropdownCellType } from "@glideapps/glide-data-grid-cells"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import type { DropdownCellType } from "@glideapps/glide-data-grid-cells"
 
-import { isBooleanType } from "~lib/dataframes/arrowTypeUtils"
+import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
+import {
+  type ArrowType,
+  getFormattableCategoryType,
+  isBooleanType,
+} from "~lib/dataframes/arrowTypeUtils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   mergeColumnParameters,
   toSafeBoolean,
@@ -66,6 +71,30 @@ export const prepareOptions = (
     })
 }
 
+/**
+ * Returns the default options of a categorical column.
+ *
+ * Period, interval, date, datetime, and time categories get a formatted label,
+ * e.g. `(0, 1]` instead of `{"left": 0, "right": 1}`. The option value stays
+ * the raw category, so it still matches the cell values.
+ *
+ * @param arrowType The arrow type of the categorical column.
+ * @returns The categorical options.
+ */
+function getCategoricalOptions(
+  arrowType: ArrowType
+): (string | SelectOption)[] {
+  const options = arrowType.categoricalOptions ?? []
+  const categoryType = getFormattableCategoryType(arrowType)
+  if (isNullOrUndefined(categoryType)) {
+    return options
+  }
+  return options.map(option => ({
+    value: option,
+    label: formatArrowCell(option, categoryType),
+  }))
+}
+
 export interface SelectboxColumnParams {
   /**
    * A list of options available in the selectbox.
@@ -89,7 +118,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     {
       options: isBooleanType(props.arrowType)
         ? [true, false]
-        : (props.arrowType.categoricalOptions ?? []),
+        : getCategoricalOptions(props.arrowType),
     },
     // User parameters:
     props.columnTypeOptions
@@ -151,7 +180,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
         cellData = toSafeString(data)
       }
 
-      if (validate) {
+      if (validate === true) {
         const isValidValue = cellTemplate.data.allowedValues.some(option => {
           if (option === null) {
             return cellData === null
@@ -176,7 +205,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       return {
         ...cellTemplate,
         isMissingValue: cellData === null,
-        copyData: cellData || "", // Column sorting is done via the copyData value
+        copyData: cellData ?? "", // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
           value: cellData,
@@ -184,15 +213,15 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
       } as DropdownCellType
     },
     getCellValue(cell: DropdownCellType): string | number | boolean | null {
-      if (isNullOrUndefined(cell.data?.value) || cell.data?.value === "") {
+      if (isNullOrUndefined(cell.data.value) || cell.data.value === "") {
         return null
       }
       if (dataType === "number") {
-        return toSafeNumber(cell.data?.value) ?? null
+        return toSafeNumber(cell.data.value) ?? null
       } else if (dataType === "boolean") {
-        return toSafeBoolean(cell.data?.value) ?? null
+        return toSafeBoolean(cell.data.value) ?? null
       }
-      return cell.data?.value
+      return cell.data.value
     },
   }
 }

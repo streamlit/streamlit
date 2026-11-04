@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.text_input
 # The return type depends on the value parameter:
@@ -107,6 +105,14 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", value=None, disabled=True), str | None)
 
     # =====================================================================
+    # Test required parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Enter text", required=True), str)
+    assert_type(text_input("Enter text", required=False), str)
+    assert_type(text_input("Enter text", value=None, required=True), str | None)
+
+    # =====================================================================
     # Test label_visibility parameter (keyword-only)
     # =====================================================================
 
@@ -133,6 +139,16 @@ if TYPE_CHECKING:
     assert_type(text_input("Label", value=None, validate="^x$"), str | None)
     assert_type(text_input("Label", validate=("^x$", "msg")), str)
     assert_type(text_input("Label", value=None, validate=("^x$", "msg")), str | None)
+
+    # =====================================================================
+    # Test live parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Label", live=True), str)
+    assert_type(text_input("Label", live=False), str)
+    assert_type(text_input("Label", live="300ms"), str)
+    assert_type(text_input("Label", value=None, live=True), str | None)
+    assert_type(text_input("Label", value=None, live="300ms"), str | None)
 
     # =====================================================================
     # Test width parameter (keyword-only)
@@ -171,6 +187,9 @@ if TYPE_CHECKING:
         str,
     )
     assert_type(text_input("Enter text", on_change=None), str)
+    assert_type(text_input("Enter text", on_change="rerun"), str)
+    assert_type(text_input("Enter text", on_change="ignore"), str)
+    assert_type(text_input("Enter text", value=None, on_change="ignore"), str | None)
     assert_type(text_input("Enter text", value=None, on_change=my_callback), str | None)
     assert_type(
         text_input(
@@ -197,6 +216,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Type something...",
             disabled=False,
+            required=True,
             label_visibility="visible",
             icon=":material/edit:",
             width="stretch",
@@ -223,6 +243,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Password",
             disabled=False,
+            required=True,
             label_visibility="visible",
             icon=":material/lock:",
             width=300,

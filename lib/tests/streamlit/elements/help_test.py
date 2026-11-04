@@ -139,10 +139,11 @@ class StHelpTest(DeltaGeneratorTestCase):
         signature = (
             "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, "
             "sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False, "
-            "autoplay: 'bool' = False, width: 'WidthWithoutContent' = 'stretch') -> 'DeltaGenerator'"
+            "autoplay: 'bool' = False, alt: 'str | None' = None, "
+            "width: 'WidthWithoutContent' = 'stretch') -> 'DeltaGenerator'"
         )
 
-        assert f"streamlit.delta_generator.MediaMixin.audio{signature}" == ds.value
+        assert f"streamlit.elements.media.MediaMixin.audio{signature}" == ds.value
         assert ds.doc_string.startswith("Display an audio player")
 
     def test_builtin_func(self):
@@ -608,22 +609,6 @@ def test_get_signature_returns_none_when_inspect_signature_raises_typeerror() ->
 
     obj = CallableWithBrokenSignature()
     assert _get_signature(obj) is None
-
-
-def test_get_signature_strips_element_prefix_for_delta_generator_callables() -> None:
-    """``_get_signature`` rewrites the leading ``(element, ...)`` prefix when the
-    callable lives in ``streamlit.delta_generator``.
-    """
-
-    def fn(element, x, y):  # type: ignore[no-untyped-def]
-        pass
-
-    # Spoof ``__module__`` so the ``is_delta_gen`` branch in ``_get_signature``
-    # is exercised. The raw signature is ``(element, x, y)``; the helper must
-    # strip the ``element, `` prefix and return ``(x, y)``.
-    fn.__module__ = "streamlit.delta_generator"
-
-    assert _get_signature(fn) == "(x, y)"
 
 
 def test_get_signature_for_bound_delta_generator_method_does_not_leak_self() -> None:

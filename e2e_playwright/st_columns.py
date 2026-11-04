@@ -135,6 +135,26 @@ with st.expander("Vertical alignment - bottom", expanded=True):
     col3.checkbox("Checkbox 1 (bottom)")
     col3.checkbox("Checkbox 2 (bottom)")
 
+# Toggle counterpart to the checkbox vertical-alignment fixtures above.
+# Two toggles per column so the :first-of-type and :last-of-type alignment rules
+# land on different widgets.
+with st.expander("Vertical alignment - toggle", expanded=True):
+    with st.container(key="vertical_alignment_toggle_top"):
+        top_col1, top_col2, top_col3 = st.columns(3, vertical_alignment="top")
+        top_col1.text_input("Text input (top toggle)")
+        top_col2.button("Button (top toggle)", width="stretch")
+        top_col3.toggle("Toggle 1 (top)")
+        top_col3.toggle("Toggle 2 (top)")
+
+    with st.container(key="vertical_alignment_toggle_bottom"):
+        bottom_col1, bottom_col2, bottom_col3 = st.columns(
+            3, vertical_alignment="bottom"
+        )
+        bottom_col1.text_input("Text input (bottom toggle)")
+        bottom_col2.button("Button (bottom toggle)", width="stretch")
+        bottom_col3.toggle("Toggle 1 (bottom)")
+        bottom_col3.toggle("Toggle 2 (bottom)")
+
 if st.button("Nested columns - two levels"):
     col1, col2 = st.columns(2)
     with col1:
@@ -185,3 +205,9 @@ with st.container(key="columns_wrap_true"):
     wrap_true_cols = st.columns(3, wrap=True, border=True)
     for i, col in enumerate(wrap_true_cols):
         col.write(f"Wrap true {i + 1}")
+
+with st.container(key="columns_bordered_bottom"):
+    tall_col, short_col = st.columns(2, border=True, vertical_alignment="bottom")
+    for line in range(4):
+        tall_col.write(f"Tall column line {line}")
+    short_col.write("Short column content")

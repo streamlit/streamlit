@@ -22,10 +22,21 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+    StreamlitPageNotFoundError,
+    StreamlitValueError,
+)
 from streamlit.navigation.page import Page, StreamlitPage, _create_page
 from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+_NESTED_URL_PATHS = [
+    ("simple", "foo/bar", "foo/bar"),
+    ("leading_slash", "/foo/bar", "foo/bar"),
+    ("trailing_slash", "foo/bar/", "foo/bar"),
+]
 
 
 def test_page_is_a_class_with_compatibility_alias() -> None:
@@ -51,16 +62,18 @@ def test_page_constructor_signature() -> None:
         "url_path",
         "default",
         "visibility",
+        "help",
     ]
     assert parameters["page"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
     assert parameters["page"].default is inspect.Parameter.empty
-    for name in ("title", "icon", "url_path", "default", "visibility"):
+    for name in ("title", "icon", "url_path", "default", "visibility", "help"):
         assert parameters[name].kind is inspect.Parameter.KEYWORD_ONLY
     assert parameters["title"].default is None
     assert parameters["icon"].default is None
     assert parameters["url_path"].default is None
     assert parameters["default"].default is False
     assert parameters["visibility"].default == "visible"
+    assert parameters["help"].default is None
 
 
 @patch("pathlib.Path.is_file", MagicMock(return_value=True))
@@ -95,21 +108,30 @@ class StPagesTest(DeltaGeneratorTestCase):
         # Provide an assertion to ensure no error
         assert True
 
-    def test_empty_string_icon_should_raise_exception(self):
-        """Test that passing an empty string icon raises an exception."""
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_empty_or_whitespace_icon_means_no_icon(self, icon: str) -> None:
+        """Empty or whitespace-only icon means no icon."""
+        page = st.Page("page.py", icon=icon)
+        assert page.icon == ""
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("page.py", icon="")
+    def test_empty_string_icon_overrides_inferred_filename_icon(self) -> None:
+        """An explicit empty icon must not fall back to an emoji in the filename."""
+        page = st.Page("1_👋_hello.py", icon="")
+        assert page.icon == ""
 
-        assert 'The value "" is not a valid emoji' in str(exc_info.value)
+    def test_filename_emoji_is_inferred_when_icon_is_omitted(self) -> None:
+        """A leading emoji in the filename becomes the page icon when icon is None."""
+        assert st.Page("1_👋_hello.py").icon == "👋"
 
-    def test_whitespace_only_icon_should_raise_exception(self):
-        """Test that passing a whitespace-only icon raises an exception."""
-
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("page.py", icon="   ")
-
-        assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+    def test_user_provided_icon_is_normalized(self) -> None:
+        """User-provided icons are stored in normalized form."""
+        page = st.Page("page.py", icon=" :material/thumb_up: ")
+        assert page.icon == ":material/thumb_up:"
 
     def test_script_hash_for_paths_are_different(self):
         """Tests that script hashes are different when url path (inferred or not) is unique"""
@@ -145,15 +167,16 @@ class StPagesTest(DeltaGeneratorTestCase):
             ("forward_then_backslash_unc", "/\\server\\share\\page.py"),
             ("backslash_then_forward_unc", "\\/server/share/page.py"),
             ("extended_unc", "\\\\?\\UNC\\server\\share\\page.py"),
+            ("extended_local", "\\\\?\\C:\\app\\page.py"),
             ("device_namespace", "\\\\.\\device\\page.py"),
             ("path_object", Path("\\\\server\\share\\page.py")),
         ]
     )
     @patch("streamlit.env_util.IS_WINDOWS", True)
-    def test_rejects_windows_network_paths_before_resolving(
+    def test_rejects_unsafe_windows_paths_before_resolving(
         self, _name: str, page: str | Path
     ) -> None:
-        """Windows network paths are rejected before any filesystem access.
+        """Windows network and device paths are rejected before filesystem access.
 
         This includes mixed-separator spellings (``/\\``, ``\\/``) that Windows
         normalizes to a UNC root when resolving.
@@ -252,17 +275,25 @@ class StPagesTest(DeltaGeneratorTestCase):
         def page_9():
             pass
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitMissingRequiredParameterError):
             st.Page(page_9, url_path="")
 
-    def test_non_default_pages_cannot_have_nested_url_path(self):
-        """Tests that an error is raised if the url path contains a nested path"""
+    @parameterized.expand(_NESTED_URL_PATHS)
+    def test_non_default_pages_cannot_have_nested_url_path(
+        self, _name: str, url_path: str, expected_path: str
+    ) -> None:
+        """Tests that an error is raised if the url path contains a nested path."""
 
         def page_9():
             pass
 
-        with pytest.raises(StreamlitAPIException):
-            st.Page(page_9, url_path="foo/bar")
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.Page(page_9, url_path=url_path)
+
+        assert exc_info.value.error_id == "page-nested-url-path"
+        message = str(exc_info.value)
+        assert f"`{expected_path}`" in message
+        assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     def test_page_with_no_title_raises_api_exception(self):
         """Tests that an error is raised if the title is empty or inferred to be empty"""
@@ -305,19 +336,17 @@ class StPagesTest(DeltaGeneratorTestCase):
 # @patch mocking the return value of `is_file` takes precedence over the method level
 # patch.
 @patch("pathlib.Path.is_file", MagicMock(return_value=False))
-def test_st_Page_throws_error_if_path_is_invalid():
-    with pytest.raises(StreamlitAPIException) as e:
-        st.Page("nonexistent.py")
-    assert (
-        str(e.value)
-        == "Unable to create Page. The file `nonexistent.py` could not be found."
-    )
-
-    with pytest.raises(StreamlitAPIException) as e:
-        st.Page(Path("nonexistent2.py"))
-    assert (
-        str(e.value)
-        == "Unable to create Page. The file `nonexistent2.py` could not be found."
+@pytest.mark.parametrize(
+    "page",
+    ["nonexistent.py", Path("nonexistent2.py")],
+    ids=["str-path", "path-object"],
+)
+def test_st_Page_throws_error_if_path_is_invalid(page: str | Path) -> None:
+    """Missing page files raise StreamlitPageNotFoundError."""
+    with pytest.raises(StreamlitPageNotFoundError) as e:
+        st.Page(page)
+    assert str(e.value) == (
+        f"Unable to create Page. The file `{Path(page).name}` could not be found."
     )
 
 
@@ -344,6 +373,67 @@ class StPagesVisibilityTest(DeltaGeneratorTestCase):
         assert "hidden" in str(exc_info.value)
 
 
+@patch("pathlib.Path.is_file", MagicMock(return_value=True))
+class StPagesHelpTest(DeltaGeneratorTestCase):
+    """Test the ``st.Page`` ``help`` parameter."""
+
+    @parameterized.expand(
+        [
+            ("omitted", {}),
+            ("none", {"help": None}),
+            ("empty", {"help": ""}),
+            ("spaces", {"help": "   "}),
+            ("blank_lines", {"help": "\n    \n"}),
+        ]
+    )
+    def test_blank_help_means_no_help(self, _name: str, kwargs: dict[str, str]):
+        """None, "" and whitespace-only help all set nothing."""
+        page = st.Page("page.py", **kwargs)
+        assert page.help == ""
+
+    def test_help_is_dedented_but_otherwise_kept(self):
+        """Help is dedented like other help values, and Markdown is kept as is."""
+        page = st.Page(
+            "page.py",
+            help="""
+            Net revenue by **region**.
+              Excludes refunds.
+            """,
+        )
+        assert page.help == "\nNet revenue by **region**.\n  Excludes refunds.\n"
+
+    def test_help_does_not_change_other_page_metadata(self):
+        """Help is not used to infer the title, icon, or URL pathname."""
+        page = st.Page("🔥_page.py", help="Shows the page.")
+        assert page.help == "Shows the page."
+        assert page.title == "page"
+        assert page.icon == "🔥"
+        assert page.url_path == "page"
+
+    def test_callable_page_keeps_help(self):
+        """A page defined by a callable keeps its help."""
+        page = st.Page(lambda: None, title="Callable", help="From a callable.")
+        assert page.help == "From a callable."
+
+    def test_external_url_page_keeps_help(self):
+        """An external URL page keeps its help for its nav item and page links."""
+        page = st.Page(
+            "https://docs.streamlit.io", title="Docs", help="Opens the docs."
+        )
+        assert page.is_external is True
+        assert page.help == "Opens the docs."
+
+    def test_help_is_set_without_a_script_run_context(self):
+        """Page.help works in bare Python, where the constructor returns early."""
+        with patch("streamlit.navigation.page.get_script_run_ctx", return_value=None):
+            page = st.Page("page.py", help="  Bare Python.")
+        assert page.help == "Bare Python."
+
+    def test_pages_directory_pages_have_no_help(self):
+        """Pages created for the pages/ directory never get help."""
+        assert _create_page("page.py").help == ""
+
+
 class TestExternalUrlSupport(DeltaGeneratorTestCase):
     """Test external URL support in st.Page."""
 
@@ -352,7 +442,7 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc_info:
             st.Page("https://docs.streamlit.io")
 
-        assert "External URL pages require a `title` parameter" in str(exc_info.value)
+        assert "External URL pages require a non-empty title" in str(exc_info.value)
 
     def test_external_url_with_title(self):
         """Test that external URL pages can be created with a title."""
@@ -458,15 +548,24 @@ class TestExternalUrlSupport(DeltaGeneratorTestCase):
         kwargs: dict = {"title": title}
         if url_path is not None:
             kwargs["url_path"] = url_path
-        with pytest.raises(StreamlitAPIException, match="URL path cannot be empty"):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match="The `url_path` parameter is required",
+        ):
             st.Page("https://example.com", **kwargs)
 
-    def test_external_url_cannot_have_nested_url_path(self):
+    @parameterized.expand(_NESTED_URL_PATHS)
+    def test_external_url_cannot_have_nested_url_path(
+        self, _name: str, url_path: str, expected_path: str
+    ) -> None:
         """Test that external URL pages cannot have nested url_path."""
         with pytest.raises(StreamlitAPIException) as exc_info:
-            st.Page("https://example.com", title="Test", url_path="foo/bar")
+            st.Page("https://example.com", title="Test", url_path=url_path)
 
-        assert "nested path" in str(exc_info.value)
+        assert exc_info.value.error_id == "page-nested-url-path"
+        message = str(exc_info.value)
+        assert f"`{expected_path}`" in message
+        assert "https://github.com/streamlit/streamlit/issues/8971" in message
 
     @parameterized.expand(
         [

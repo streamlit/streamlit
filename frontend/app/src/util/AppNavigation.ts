@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-import { AppRoot, HostCommunicationManager } from "@streamlit/lib"
+import type { AppRoot, HostCommunicationManager } from "@streamlit/lib"
 import {
-  IAppPage,
+  type AppPage,
   Navigation,
-  NewSession,
-  PageConfig,
+  type NewSession,
+  type PageConfig,
 } from "@streamlit/protobuf"
 
 interface AppNavigationState {
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   currentPageScriptHash: string
   navSections: string[]
 }
@@ -67,9 +67,9 @@ export class AppNavigation {
 
   mainScriptHash: string | null
 
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
 
-  mainPage: IAppPage | null
+  mainPage: AppPage.$Properties | null
 
   hideSidebarNav: boolean | null
 
@@ -101,10 +101,8 @@ export class AppNavigation {
     }
 
     this.mainScriptHash = newSession.mainScriptHash
-    // Initialize to the config value if provided
-    if (this.hideSidebarNav === null) {
-      this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
-    }
+    // Null means unset. A stored false is an explicit choice and must stick.
+    this.hideSidebarNav ??= newSession.config?.hideSidebarNav ?? null
 
     return [
       {
@@ -125,8 +123,10 @@ export class AppNavigation {
     const currentPageScriptHash = navigationMsg.pageScriptHash
     const currentPage = appPages.find(
       p => p.pageScriptHash === currentPageScriptHash
-    ) as IAppPage
-    const mainPage = appPages.find(p => p.isDefault) as IAppPage
+    ) as AppPage.$Properties
+    const mainPage = appPages.find(
+      p => p.isDefault === true
+    ) as AppPage.$Properties
     this.mainPage = mainPage
     const currentPageName = currentPage.urlPathname as string
 
@@ -172,7 +172,8 @@ export class AppNavigation {
           // Make sure we don't send the official page name for the main page
           // This command is used to update the URL in the url bar, so the main page
           // should not have a page name in the URL.
-          currentPageName: currentPage.isDefault ? "" : currentPageName,
+          currentPageName:
+            currentPage.isDefault === true ? "" : currentPageName,
           currentPageScriptHash,
         })
       },
@@ -194,7 +195,7 @@ export class AppNavigation {
     ]
   }
 
-  findPageByUrlPath(pathname: string): IAppPage | null {
+  findPageByUrlPath(pathname: string): AppPage.$Properties | null {
     // Browsers URL-encode Unicode during Back/Forward navigation (popstate),
     // so decode before matching against unencoded page URL paths.
     let decodedPathname: string

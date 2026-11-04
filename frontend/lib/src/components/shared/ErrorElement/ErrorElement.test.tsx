@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import ErrorElement, { ErrorElementProps } from "./ErrorElement"
+import ErrorElement, { type ErrorElementProps } from "./ErrorElement"
 
 const getProps = (
   propOverrides: Partial<ErrorElementProps> = {}

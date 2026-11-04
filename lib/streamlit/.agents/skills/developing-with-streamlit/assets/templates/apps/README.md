@@ -11,7 +11,7 @@ These templates are based on official Streamlit demo apps and work out of the bo
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-seattle-weather** | Weather data exploration dashboard | `st.metric`, `st.pills`, `st.altair_chart`, year comparison |
-| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized charts, peer average calculation |
+| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized `st.echarts_chart` lines with a zoom slider, peer average calculation |
 
 ### Analytics Dashboard Templates
 
@@ -19,10 +19,11 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, line/bar toggle |
+| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, `st.skeleton` on quick cards with `st.spinner` for the slow report |
 
 ## Quick Start
 
@@ -49,13 +50,15 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
+
 ## Canonical Patterns
 
 When creating new templates or adapting existing ones, follow these patterns for consistency.
 
 ### Page Configuration
 
-Always set page config as the first Streamlit call, with `layout="wide"` and a Material icon:
+Set page config near the top of the script, with `layout="wide"` and a Material icon:
 
 ```python
 st.set_page_config(
@@ -145,17 +148,24 @@ def metric_card(metric_name: str):
         st.markdown(f"**{metric_name}**")  # Stays stable while the body loads
         with st.skeleton(height=300):
             data = load_metric(metric_name)  # Cached; loads in parallel
-            st.line_chart(data)
+            st.line_chart(data, alt=f"{metric_name} over time")
 ```
 
-Keep `st.dialog` / `st.switch_page` and writes to containers created *outside*
-the fragment out of parallel fragments — gate those behind a widget interaction
-instead, where the fragment reruns sequentially.
+Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
+behind a widget interaction instead, where the fragment reruns sequentially.
+A parallel fragment cannot write to `st.sidebar`, `st.bottom`, or other
+containers created outside it, even from inside the fragment function.
 
 ### Data Loading with Caching
 
-Cache the expensive load and bound it with a `ttl` (and/or `max_entries`) so the
-cache stays fresh and doesn't grow without limit. Use a custom spinner message
+Cache the expensive load. Use a `ttl` to keep data fresh and `max_entries` when
+the workload gives a practical entry-count bound. For `st.cache_data`, use
+`max_size` only when the user provides a byte budget or deployment memory
+constraints and the intended allocation across caches determine a per-cache
+budget. It limits serialized bytes for one decorated function, not total process
+memory. Don't guess it from source dataset size, representative or example
+values, or arbitrary constants; ask the user when the memory budget is unknown.
+Combine limits when they address different risks. Use a custom spinner message
 for loaders that run directly in the page. Use `show_spinner=False` only when a
 surrounding loading UI, such as `st.skeleton`, already provides feedback:
 
@@ -171,13 +181,12 @@ def load_metric_data() -> pd.DataFrame:
 ```
 
 Guidelines: real-time data → `ttl="1m"`; metrics/reports → `ttl="5m"`–`"15m"`;
-reference data → `ttl="1h"` or more; static data → no TTL. Use `max_entries` for
-parameterized loaders so per-argument entries stay bounded.
+reference data → `ttl="1h"` or more; static data → no TTL.
 
 ## Dependencies
 
-All templates require Python >=3.10 and use:
+All templates require Python >=3.11 and use:
 - `streamlit`
-- `altair>=5.5.0`
 - `pandas>=2.2.3`
+- `altair>=5.5.0` (templates that chart with `st.altair_chart`)
 - `numpy>=1.26.0` (most templates)

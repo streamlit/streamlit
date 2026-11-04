@@ -1,64 +1,39 @@
-# Streamlit charts & data
+# Streamlit data display
 
-Present data clearly.
+Present tabular data clearly. For charts, maps, and diagrams, see [charts.md](charts.md).
 
-## Native charts first
+## Contents
 
-Prefer Streamlit's native charts for simple cases.
+- [Accessible names (alt)](#accessible-names-alt)
+- [Deprecated: use_container_width](#deprecated-use_container_width)
+- [Dataframe column configuration](#dataframe-column-configuration)
+- [Markdown in dataframe cells](#markdown-in-dataframe-cells)
+- [Colored badges with MultiselectColumn](#colored-badges-with-multiselectcolumn)
+- [Row actions with ButtonColumn](#row-actions-with-buttoncolumn)
+- [Choosing the right data widget](#choosing-the-right-data-widget)
+- [Description and key-value lists](#description-and-key-value-lists)
+- [Pandas Styler: formatting vs coloring](#pandas-styler-formatting-vs-coloring)
+- [Editing data with st.data_editor](#editing-data-with-stdata_editor)
+- [Row, column and cell selections](#row-column-and-cell-selections)
+- [Empty DataFrames](#empty-dataframes)
+- [Pinned columns](#pinned-columns)
+- [Sparklines in metrics](#sparklines-in-metrics)
+- [References](#references)
 
-```python
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="count")
-st.scatter_chart(df, x="age", y="salary")
-st.area_chart(df, x="date", y="value")
-```
+## Accessible names (`alt`)
 
-Native charts support additional parameters: `color` for series grouping, `stack` for bar/area stacking, `size` for scatter point sizing, `horizontal` for horizontal bars. See the [chart API reference](https://docs.streamlit.io/develop/api-reference/charts) for full options.
-
-## Human-readable labels
-
-Use clear labels—not column names or abbreviations. Skip `x_label`/`y_label` if the column names are already readable.
-
-```python
-# BAD: cryptic column names without labels
-st.line_chart(df, x="dt", y="rev")
-
-# GOOD: readable columns, no labels needed
-st.line_chart(df, x="date", y="revenue")
-
-# GOOD: cryptic columns, add labels
-st.line_chart(df, x="dt", y="rev", x_label="Date", y_label="Revenue")
-```
-
-## Altair for complex charts
-
-Use Altair when you need more control. Altair is bundled with Streamlit (no extra install), while Plotly requires an additional package. Pick one and stay consistent throughout your app.
+Pass keyword-only `alt=` on tables and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence) that states the table's purpose; Markdown syntax is announced literally. Do not paste cell values into `alt`. For charts and maps, see [charts.md](charts.md#accessible-names-alt).
 
 ```python
-import altair as alt
-
-chart = (
-    alt.Chart(df)
-    .mark_line()
-    .encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y("revenue:Q", title="Revenue ($)"),
-        color="region:N",
-    )
-)
-st.altair_chart(chart)
+st.dataframe(df, alt="Top 20 customers by revenue")
+st.table(summary, alt="Quarterly KPI summary")
 ```
 
-**When to use Altair:**
-
-- Custom axis formatting
-- Multiple series with legends
-- Interactive tooltips
-- Layered visualizations
+A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on every command.
 
 ## Deprecated: `use_container_width`
 
-**Do not use `use_container_width`.** It is deprecated — Streamlit elements now stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
+**Do not use `use_container_width`.** It is deprecated. Dataframes and most charts stretch to fill their container by default. Use the `width` parameter instead: `width="stretch"` (equivalent to `use_container_width=True`) or `width="content"` (equivalent to `use_container_width=False`). Remove `use_container_width` when you see it, and never add it to new code.
 
 ```python
 # BAD: deprecated parameter
@@ -121,11 +96,11 @@ st.dataframe(
 - `ListColumn` → Display lists/arrays
 - `MarkdownColumn` → Raw Markdown text with a rendered detail overlay
 - `MultiselectColumn` → Multi-value selection or colored badges in read-only dataframes
-- `NumberColumn` → Numbers with formatting
+- `NumberColumn` → Numbers and timedelta/duration values with formatting
 - `ProgressColumn` → Progress bars
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
-- `TimeColumn` → Time only (no date)
+- `TimeColumn` → Clock time of day without a date (not elapsed duration)
 - `VideoColumn` → Video playback
 
 ## Markdown in dataframe cells
@@ -204,11 +179,13 @@ st.dataframe(
 
 | Widget           | Use When                                                                      |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `st.dataframe`   | Large datasets, interactive exploration, sorting, filtering, row selection    |
+| `st.dataframe`   | Large datasets, interactive exploration, sorting, search, row selection       |
 | `st.data_editor` | Users need to modify data (edit cells, add/delete rows)                       |
 | `st.table`       | Small static tables and key-value lists; Markdown and extended Pandas Styler support |
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
+
+Prefer `st.dataframe` for sorting, search, and formatting, and `st.data_editor` for editing, over `streamlit-aggrid`. Use `column_config` for formats and editors. Search highlights matching cells and does not hide other rows. Search is unavailable when rows load lazily (automatic above 150,000 in-memory rows, or 10,000 for an unevaluated source such as a Polars `LazyFrame`). Pass `lazy=False` only when the full table still fits in the browser. Use aggrid only for per-column filter menus, row grouping, or custom cell renderers that `column_config` cannot express. Use `streamlit-pivot-table` for pivot tables. When hiding non-matching rows is enough, filter the data in Python with separate widgets.
 
 ## Description and key-value lists
 
@@ -261,6 +238,8 @@ st.dataframe(
 
 **Percentage formatting:** Use `NumberColumn(format="percent")` for 0-1 values, or `format="%.2f%%"` for already-multiplied values.
 
+**Durations:** Use `NumberColumn` for `timedelta` values, not `TimeColumn`. Timedelta values are edited as a number of seconds, not a duration string. On a timedelta column, `format="compact"` is an elapsed-time clock (`02:00:00`) and `format="localized"` is a locale-aware duration. On other number columns, both keep their number meaning (`compact` is `1.2K`). On any number column, `format="duration"` shows the value in seconds as an approximate humanized duration.
+
 ## Editing data with st.data_editor
 
 ```python
@@ -303,7 +282,7 @@ selected_data = df.iloc[selected_indices]
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
 
-Import `DataframeState` from `streamlit.typing` when annotating the returned event. The same public namespace exposes `PlotlyState`, `VegaLiteState`, and `PydeckState` for selection events from `st.plotly_chart`, `st.altair_chart`/`st.vega_lite_chart`, and `st.pydeck_chart`, respectively. Do not import these types from Streamlit's internal modules.
+Import `DataframeState` from `streamlit.typing` when annotating the returned event; do not import it from Streamlit's internal modules. For chart selections, see [charts.md](charts.md#chart-selections).
 
 ## Empty DataFrames
 
@@ -347,9 +326,11 @@ st.metric(
     delta="-7.42% (MoM)",
     delta_color="inverse",
     chart_data=values,
-    chart_type="line",  # or "bar"
+    chart_type="line",  # or "bar" or "area"
 )
 ```
+
+**Zero deltas:** Streamlit treats numeric zeros and the string `"0"` as zero. It does not parse other string deltas as numbers to choose the arrow and color, so `"0%"` gets a green up-arrow. For a flat period, pass the number `0` as `delta` and put the qualifier text in `delta_description`.
 
 **Note:** Sparklines only show y-values and ignore x-axis spacing. Use them for evenly-spaced data (like daily or weekly snapshots). For irregularly-spaced time series, use a proper chart instead.
 
@@ -361,6 +342,3 @@ See `dashboards.md` for composing metrics into dashboard layouts.
 - [st.table](https://docs.streamlit.io/develop/api-reference/data/st.table)
 - [st.column_config](https://docs.streamlit.io/develop/api-reference/data/st.column_config)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
-- [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
-- [st.bar_chart](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)
-- [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)

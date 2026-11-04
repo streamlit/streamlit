@@ -221,10 +221,10 @@ def test_menu_button_in_columns(app: Page, assert_snapshot: ImageCompareFunction
     expect(columns_container.get_by_test_id("stMenuButton")).to_have_count(2)
 
     # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
-    content_width_label = (
-        get_element_by_key(app, "col2_menu")
-        .get_by_test_id("stMarkdownContainer")
-        .locator("p")
+    # Measure the markdown container: wrap=False inlines leftover <p> boxes,
+    # so the paragraph itself is not the overflow box.
+    content_width_label = get_element_by_key(app, "col2_menu").get_by_test_id(
+        "stMarkdownContainer"
     )
     wait_until(
         app,

@@ -25,7 +25,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.connections import BaseConnection
 from streamlit.connections.util import extract_from_dict
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.caching import cache_data
 
 if TYPE_CHECKING:
@@ -188,7 +191,8 @@ class SQLConnection(BaseConnection["Engine"]):
         if not len(conn_params):
             raise StreamlitAPIException(
                 "Missing SQL DB connection configuration. "
-                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?"
+                "Did you forget to set this in `secrets.toml` or as kwargs to `st.connection`?",
+                error_id="sql-missing-connection-config",
             )
 
         if "url" in conn_params:
@@ -196,7 +200,13 @@ class SQLConnection(BaseConnection["Engine"]):
         else:
             for p in _REQUIRED_CONNECTION_PARAMS:
                 if p not in conn_params:
-                    raise StreamlitAPIException(f"Missing SQL DB connection param: {p}")
+                    raise StreamlitMissingRequiredParameterError(
+                        p,
+                        detail=(
+                            "Set this SQL DB connection parameter in `secrets.toml` "
+                            "or pass it as a kwarg to `st.connection`."
+                        ),
+                    )
 
             drivername = conn_params["dialect"] + (
                 f"+{conn_params['driver']}" if "driver" in conn_params else ""
@@ -414,11 +424,15 @@ class SQLConnection(BaseConnection["Engine"]):
         Example
         -------
         >>> import streamlit as st
+        >>> from sqlalchemy import text
+        >>>
         >>> conn = st.connection("sql")
         >>> n = st.slider("Pick a number")
         >>> if st.button("Add the number!"):
         ...     with conn.session as session:
-        ...         session.execute("INSERT INTO numbers (val) VALUES (:n);", {"n": n})
+        ...         session.execute(
+        ...             text("INSERT INTO numbers (val) VALUES (:n);"), {"n": n}
+        ...         )
         ...         session.commit()
         """
         from sqlalchemy.orm import Session

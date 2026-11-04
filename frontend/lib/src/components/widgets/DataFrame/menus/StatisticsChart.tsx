@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
+import { memo, type ReactElement, useEffect, useMemo, useRef } from "react"
 
-import { CSSObject, Global } from "@emotion/react"
+import { type CSSObject, Global } from "@emotion/react"
 import { getLogger } from "loglevel"
-import embed from "vega-embed"
-import { expressionInterpreter } from "vega-interpreter"
-import { TopLevelSpec } from "vega-lite"
+import type { TopLevelSpec } from "vega-lite"
 
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { loadVegaEmbed } from "~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 
 import {
-  ColumnStatistics,
+  type ColumnStatistics,
   createLabeledBarDatum,
   formatTooltipDate,
   formatTooltipNumber,
-  HistogramBin,
-  LabeledBarDatum,
+  type HistogramBin,
+  type LabeledBarDatum,
 } from "./statisticsUtils"
 import {
   StyledStatisticsBarChart,
@@ -112,7 +111,9 @@ function createHistogramSpec(
   }))
 
   const spec: TopLevelSpec = {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    // Keep the schema's major version in sync with the bundled vega-lite
+    // package. vega-embed logs a version mismatch warning otherwise.
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: CHART_WIDTH,
     height: CHART_HEIGHT,
     data: { values: data },
@@ -227,7 +228,7 @@ function StatisticsChart({
     const chartElement = chartRef.current
     let spec: TopLevelSpec | null = null
     let cancelled = false
-    let embedResult: Awaited<ReturnType<typeof embed>> | null = null
+    let finalizeEmbed: (() => void) | undefined
 
     switch (statistics.type) {
       case "numeric":
@@ -263,32 +264,40 @@ function StatisticsChart({
         break
     }
 
-    if (spec) {
-      embed(chartElement, spec, {
+    const renderChart = async (chartSpec: TopLevelSpec): Promise<void> => {
+      // Load Vega here, not at module scope, so dataframes download it only
+      // when the statistics menu shows a histogram.
+      const { embed, expressionInterpreter } = await loadVegaEmbed()
+      if (cancelled) return
+
+      const result = await embed(chartElement, chartSpec, {
         actions: false,
         renderer: "svg",
         ast: true,
         expr: expressionInterpreter,
         tooltip: { theme: "custom" },
       })
-        .then(result => {
-          if (cancelled) {
-            result.finalize()
-          } else {
-            embedResult = result
-          }
-        })
-        .catch((error: unknown) => {
-          // Embed errors are expected when the component unmounts mid-render, so
-          // we don't surface them to the user. Log at debug level to keep genuine
-          // spec errors discoverable during development without adding noise.
-          LOG.debug("Failed to embed statistics chart:", error)
-        })
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets cancelled during the await
+      if (cancelled) {
+        result.finalize()
+      } else {
+        finalizeEmbed = result.finalize
+      }
+    }
+
+    if (spec) {
+      renderChart(spec).catch((error: unknown) => {
+        // Leave the histogram empty on load or embed errors (unmount
+        // mid-render, failed chunk load). LOG.debug keeps real spec errors
+        // discoverable during development.
+        LOG.debug("Failed to embed statistics chart:", error)
+      })
     }
 
     return () => {
       cancelled = true
-      embedResult?.finalize()
+      finalizeEmbed?.()
       chartElement.innerHTML = ""
     }
   }, [statistics, theme])

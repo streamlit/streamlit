@@ -23,21 +23,24 @@ from e2e_playwright.conftest import (
     build_app_url,
     wait_for_app_loaded,
     wait_for_app_run,
+    wait_until,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    clear_date_segments,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
     get_date_input,
     get_element_by_key,
+    paste_into,
     reset_focus,
     reset_hovering,
     type_date,
 )
 
-NUM_DATE_INPUTS = 24
+NUM_DATE_INPUTS = 35
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -129,6 +132,33 @@ def test_date_input_narrow_rendering(app: Page, assert_snapshot: ImageCompareFun
         assert container_box is not None
         assert field_box is not None
         assert field_box["width"] <= container_box["width"]
+
+    # Trailing controls stay pinned while the wider segments scroll separately.
+    date_input = get_element_by_key(app, "narrow_clearable_bounded")
+    field = date_input.get_by_test_id("stDateInputField")
+    type_date(field, "2021", "01", "01", commit=False)
+
+    scroller = date_input.get_by_test_id("stDateInputFieldsScroller")
+    error_icon = date_input.get_by_test_id("stDateInputError")
+    clear_button = date_input.get_by_test_id("stDateInputClearButton")
+    expect(error_icon).to_be_visible()
+    expect(clear_button).to_be_visible()
+    wait_until(
+        app,
+        lambda: bool(scroller.evaluate("el => el.scrollWidth > el.clientWidth")),
+    )
+
+    field_box = field.bounding_box()
+    assert field_box is not None
+    field_left = field_box["x"]
+    field_right = field_left + field_box["width"]
+
+    # Allow 1px for subpixel rounding in bounding boxes.
+    for control in (error_icon, clear_button):
+        control_box = control.bounding_box()
+        assert control_box is not None
+        assert control_box["x"] >= field_left - 1
+        assert control_box["x"] + control_box["width"] <= field_right + 1
 
 
 def test_help_tooltip_works(app: Page):
@@ -228,6 +258,43 @@ def test_empty_date_input_behaves_correctly(
     expect_markdown(app, "Value 13: None")
 
 
+def test_form_clear_empties_segments_and_restores_focus(app: Page):
+    """Incomplete segments clear on reset; focus returns only if previously focused."""
+    range_field = get_date_input(app, "Range date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    range_start_year = range_field.get_by_role("spinbutton").first
+    range_start_year.press_sequentially("2020")
+    expect(range_start_year).to_have_text("2020")
+
+    app.get_by_role("button", name="Submit date form").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Range date form value: ()")
+
+    reset_range_start = range_field.get_by_role("spinbutton").first
+    expect(reset_range_start).to_have_attribute("data-placeholder", "true")
+    expect(reset_range_start).not_to_be_focused()
+
+    single_field = get_date_input(app, "Single date in form").get_by_test_id(
+        "stDateInputField"
+    )
+    single_year = single_field.get_by_role("spinbutton").first
+    single_year.press_sequentially("2020")
+    expect(single_year).to_have_text("2020")
+
+    # Submit without moving focus first, so the reset arrives while the field
+    # is still focused (a Playwright click would focus the button).
+    app.get_by_role("button", name="Submit date form").evaluate(
+        "button => button.click()"
+    )
+    wait_for_app_run(app)
+    expect_markdown(app, "Single date form value: None")
+
+    reset_single_year = single_field.get_by_role("spinbutton").first
+    expect(reset_single_year).to_have_attribute("data-placeholder", "true")
+    expect(reset_single_year).to_be_focused()
+
+
 def test_handles_range_end_date_changes(app: Page):
     """Test that it correctly handles changes to the end date of a range."""
     date_field = get_date_input(app, "Range, one date").get_by_test_id(
@@ -246,7 +313,11 @@ def test_handles_range_end_date_changes(app: Page):
 
 
 def test_handles_range_start_end_date_changes(app: Page):
-    """Test that it correctly handles changes to the start and end date of a range."""
+    """Test that clicking a day of a complete range starts a new range on it.
+
+    Covers a day inside the range, the current start date, and a month change
+    from the header picker before the end date is picked.
+    """
     date_field = get_date_input(app, "Range, two dates").get_by_test_id(
         "stDateInputField"
     )
@@ -265,6 +336,31 @@ def test_handles_range_start_end_date_changes(app: Page):
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
+    )
+
+    # --- Clicking the current start date starts the new range on it ---
+    date_field.get_by_role("spinbutton").first.click()
+    # Pressing the start anchors React Aria on the current end (July 12) until
+    # the click ends, so this must not commit July 12.
+    calendar.get_by_label(re.compile(r"Wednesday, July 10, 2019 selected$")).click()
+
+    expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
+
+    # --- The start date survives a month change from the header picker ---
+    # The picker renders outside the calendar, so focusing it makes React
+    # Aria drop the anchor.
+    month_trigger = calendar.get_by_role("button", name="month", exact=True)
+    month_trigger.click()
+    app.get_by_test_id("stDateInputHeaderPickerPopover").get_by_role(
+        "option", name="August"
+    ).click()
+    expect(month_trigger).to_have_text("August")
+
+    # The start stays anchored, so the hovered day may already read "selected".
+    calendar.get_by_label(re.compile(r"Friday, August 2, 2019( selected)?$")).click()
+
+    expect_markdown(
+        app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 8, 2))"
     )
 
 
@@ -474,10 +570,10 @@ def test_range_date_input_start_error_state(
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for start date error is shown
+    # Check the error tooltip when the start date is below the allowed minimum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: Start date set outside allowed range. Please select a date after 2009/07/06.",
+        "Error: Date set outside allowed range. Please select a date on or after 2009/07/06.",
         use_inner_text=True,
     )
 
@@ -512,10 +608,10 @@ def test_range_date_input_end_error_state(themed_app: Page):
     # Hover over the error tooltip target
     reset_hovering(themed_app)
     error_icon.hover()
-    # Check that the expected error tooltip message for end date error is shown
+    # Check the error tooltip when the end date is above the allowed maximum
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
     expect(tooltip).to_have_text(
-        "Error: End date set outside allowed range. Please select a date before 2029/07/08.",
+        "Error: Date set outside allowed range. Please select a date on or before 2029/07/08.",
         use_inner_text=True,
     )
 
@@ -884,3 +980,347 @@ def test_year_picker_does_not_revert_month(app: Page):
     calendar.get_by_label(re.compile(r"March 6, 2011")).click()
     wait_for_app_run(app)
     expect_markdown(app, "Value 2: 2011-03-06")
+
+
+def test_calendar_header_with_year_crossing_bounds(app: Page):
+    """Exercises the calendar header when the bounds cross a year boundary.
+
+    With `max_value`'s month/day preceding `min_value`'s:
+
+    - the year dropdown offers both years,
+    - the header year matches the grid,
+    - picking the earlier year clamps into range,
+    - disabled month options are visibly distinct from selectable ones,
+    - range mode behaves the same.
+
+    Regression test for GitHub issue #16686.
+    """
+    date_field = get_date_input(app, "Year-crossing single").get_by_test_id(
+        "stDateInputField"
+    )
+    date_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(calendar).to_be_visible()
+
+    # The grid opens on February 2025, so the header must agree.
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "February"
+    )
+    year_trigger = calendar.get_by_role("button", name="year", exact=True)
+    expect(year_trigger).to_have_text("2025")
+
+    year_trigger.click()
+    year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(year_popover).to_be_visible()
+    expect(year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+    # 2024 is reachable. February 2024 precedes `min_value`, so the calendar
+    # clamps to the earliest allowed month instead of leaving the valid range.
+    year_popover.get_by_role("option", name="2024").click()
+    expect(year_trigger).to_have_text("2024")
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "August"
+    )
+    # --- Months with no reachable day are offered but not selectable ---
+    # Selecting a year closes the picker but leaves the calendar open, now on
+    # August 2024: August is in range, January-July 2024 are not.
+    calendar.get_by_role("button", name="month", exact=True).click()
+    month_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(month_popover).to_be_visible()
+    expect(month_popover.get_by_role("option", name="August")).not_to_have_attribute(
+        "aria-disabled", "true"
+    )
+    expect(month_popover.get_by_role("option", name="January")).to_have_attribute(
+        "aria-disabled", "true"
+    )
+
+    # The state has to be visible, not just announced: an unselectable month
+    # that looks identical to a selectable one reads as a dead click target. The
+    # cursor and the fade come from the same rule, so asserting the cursor is
+    # enough to prove it matched. December rather than August is the enabled
+    # sample, because August is selected and would bring its own styling.
+    expect(month_popover.get_by_role("option", name="January")).to_have_css(
+        "cursor", "not-allowed"
+    )
+    expect(month_popover.get_by_role("option", name="December")).to_have_css(
+        "cursor", "pointer"
+    )
+
+    # Assert each dismissal: if the first Escape missed the picker, the calendar
+    # would stay open and the range half below would match two calendars.
+    app.keyboard.press("Escape")
+    expect(month_popover).not_to_be_attached()
+    expect(calendar).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(calendar).not_to_be_attached()
+
+    # --- Range mode reads a different calendar state, so re-check it there ---
+    range_field = get_date_input(app, "Year-crossing range").get_by_test_id(
+        "stDateInputField"
+    )
+    range_field.get_by_role("spinbutton").first.click()
+
+    range_calendar = app.get_by_test_id("stDateInputCalendar")
+    expect(range_calendar).to_be_visible()
+
+    range_year_trigger = range_calendar.get_by_role("button", name="year", exact=True)
+    expect(range_year_trigger).to_have_text("2025")
+
+    range_year_trigger.click()
+    range_year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(range_year_popover).to_be_visible()
+    expect(range_year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+
+def test_range_date_input_whole_range_paste(app: Page):
+    """Pasting a full start-end string into the range start field commits both dates."""
+    date_input = get_date_input(app, "Range, no date")
+    date_field = date_input.get_by_test_id("stDateInputField")
+    spinbuttons = date_field.get_by_role("spinbutton")
+    start_year = spinbuttons.nth(0)
+    start_month = spinbuttons.nth(1)
+    start_day = spinbuttons.nth(2)
+    end_year = spinbuttons.nth(3)
+    end_month = spinbuttons.nth(4)
+    end_day = spinbuttons.nth(5)
+    start_year.click()
+
+    paste_into(start_year, "2024/03/06 \u2013 2024/03/08")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(start_year).to_have_text("2024")
+    expect(start_month).to_have_text("03")
+    expect(start_day).to_have_text("06")
+    expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")
+
+    paste_into(start_year, "2024/03/06 \u2013 not-a-date")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(start_year).to_have_text("2024")
+    expect(start_month).to_have_text("03")
+    expect(start_day).to_have_text("06")
+
+    end_year.click()
+    paste_into(end_year, "2025/01/01 \u2013 2025/01/31")
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "Value 3: (datetime.date(2024, 3, 6), datetime.date(2024, 3, 8))",
+    )
+    expect(end_year).to_have_text("2024")
+    expect(end_month).to_have_text("03")
+    expect(end_day).to_have_text("08")
+
+
+def test_date_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_date="))
+
+    date_field = get_date_input(app, "Ignore change date input").get_by_test_id(
+        "stDateInputField"
+    )
+
+    # Typing without committing must not update the URL or Python.
+    type_date(date_field, "2025", "02", "01", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_date="))
+
+    # Escape commits the buffered value without a rerun, and updates the URL.
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-01-15")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-01"))
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore date", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-01", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore date value: 2025-02-01", exact=True)
+    ).to_be_visible()
+
+    # Type-then-click: Apply lives in the sidebar so the calendar overlay cannot
+    # intercept it. Blur/close commits the dirty value, then the button reruns.
+    type_date(date_field, "2025", "02", "10", commit=False)
+    app.get_by_role("button", name="Apply ignore date", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore date value: 2025-02-10", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-10"))
+
+    # Calendar selection commits immediately without a rerun, and updates the URL.
+    date_field.get_by_role("spinbutton").first.click()
+    app.get_by_test_id("stDateInputCalendar").get_by_label(
+        "Thursday, February 20, 2025"
+    ).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-02-20"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("02")
+    expect(spinbuttons.nth(2)).to_have_text("20")
+
+    # Paste commits immediately without a rerun, and updates the URL.
+    date_field.get_by_role("spinbutton").first.click()
+    paste_into(date_field.get_by_role("spinbutton").first, "2025/03/05")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore date value: 2025-02-10", exact=True)).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_date=2025-03-05"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("03")
+    expect(spinbuttons.nth(2)).to_have_text("05")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore date value:", "2025-03-05")
+    spinbuttons = date_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("03")
+    expect(spinbuttons.nth(2)).to_have_text("05")
+
+
+def test_date_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required date inputs block empty form submissions and commits
+    while preserving hidden-label accessibility.
+    """
+    date_widget = get_element_by_key(app, "required_date")
+    range_widget = get_element_by_key(app, "required_range")
+    date_field = date_widget.get_by_test_id("stDateInputField")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(date_field).to_have_attribute("aria-required", "true")
+    expect(date_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required date input form", exact=True
+    )
+    submit_button.click()
+    expect(date_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(date_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect(range_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_date(date_field, "2020", "01", "02")
+    submit_button.click()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    range_field = range_widget.get_by_test_id("stDateInputField")
+    type_date(range_field, "2020", "01", "01", "2020", "01", "07")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required date: 2020-01-02")
+    expect_markdown(
+        app, "required range: (datetime.date(2020, 1, 1), datetime.date(2020, 1, 7))"
+    )
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(date_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+    expect(range_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone")
+    standalone_field = standalone_widget.get_by_test_id("stDateInputField")
+    type_date(standalone_field, "2020", "02", "06")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 2020-02-06")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateInputClearButton")).to_have_count(0)
+
+    clear_date_segments(standalone_field)
+    expect(standalone_widget.get_by_test_id("stDateInputError")).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone: 2020-02-06")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_date(standalone_field, "2020", "03", "01")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone: 2020-03-01")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateInputError")).not_to_be_visible()
+
+    range_standalone_widget = get_element_by_key(app, "required_standalone_range")
+    range_standalone_widget.scroll_into_view_if_needed()
+    range_standalone_field = range_standalone_widget.get_by_test_id("stDateInputField")
+    type_date(range_standalone_field, "2020", "01", "01", "2020", "01", "10")
+    # Escape-only still races React Aria in Linux Playwright; blur is the
+    # dedicated fallback that commits the painted complete range.
+    app.get_by_test_id("stApp").click(position={"x": 0, "y": 0})
+    wait_for_app_run(app)
+    expect_markdown(
+        app,
+        "required standalone range: (datetime.date(2020, 1, 1), datetime.date(2020, 1, 10))",
+    )
+    expect(app.get_by_text("Runs: 5", exact=True)).to_be_visible()
+    expect(
+        range_standalone_widget.get_by_test_id("stDateInputError")
+    ).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden")
+    expect(hidden_widget.get_by_test_id("stDateInputField")).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_date_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_date_input-required_marker")
+
+    field = widget.get_by_test_id("stDateInputField")
+    type_date(field, "2020", "02", "06")
+    wait_for_app_run(themed_app)
+    clear_date_segments(field)
+    expect(widget.get_by_test_id("stDateInputError")).to_be_visible()
+    assert_snapshot(widget, name="st_date_input-required_error")

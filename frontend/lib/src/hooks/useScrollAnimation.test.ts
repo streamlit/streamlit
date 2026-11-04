@@ -30,11 +30,15 @@ describe("useScrollAnimation", () => {
     scrollHeight = 200
     offsetHeight = 100
     Object.defineProperty(targetElement, "scrollHeight", {
-      set: value => (scrollHeight = value),
+      set: value => {
+        scrollHeight = value
+      },
       get: () => scrollHeight,
     })
     Object.defineProperty(targetElement, "offsetHeight", {
-      set: value => (offsetHeight = value),
+      set: value => {
+        offsetHeight = value
+      },
       get: () => offsetHeight,
     })
     targetElement.addEventListener = vi.fn()

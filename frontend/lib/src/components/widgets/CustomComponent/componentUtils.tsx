@@ -18,16 +18,15 @@ import { getLogger } from "loglevel"
 
 import {
   ArrowDataframe,
-  ComponentInstance as ComponentInstanceProto,
-  IArrowTable,
-  ISpecialArg,
-  SpecialArg as SpecialArgProto,
+  type ArrowTable,
+  type ComponentInstance as ComponentInstanceProto,
+  type SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
 import type { EmotionTheme } from "~lib/theme/types"
 import { toExportedTheme } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
+import type { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
@@ -189,7 +188,7 @@ export function createIframeMessageHandler(
  */
 export function parseArgs(
   jsonArgs: string,
-  specialArgs: ISpecialArg[]
+  specialArgs: SpecialArgProto.$Properties[]
 ): [newArgs: Args, dataframeArgs: DataframeArg[]] {
   // Parse arguments. Our JSON arguments are just stored in a JSON string.
   const newArgs: Args = JSON.parse(jsonArgs)
@@ -302,7 +301,7 @@ function handleSetComponentValue(
 
   switch (dataType) {
     case "dataframe":
-      widgetMgr.setArrowValue(element.id, value as IArrowTable, {
+      widgetMgr.setArrowValue(element.id, value as ArrowTable.$Properties, {
         ...source,
         formId: element.formId,
         fragmentId,

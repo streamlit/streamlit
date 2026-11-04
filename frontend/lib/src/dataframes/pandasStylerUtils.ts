@@ -18,7 +18,7 @@
  * Utility functions to get Pandas styler information from a Quiver object.
  */
 
-import { Quiver } from "./Quiver"
+import type { Quiver } from "./Quiver"
 
 /**
  * A styled header object with information from Pandas Styler.
@@ -151,10 +151,10 @@ export function getStyledCell(
     " "
   )
 
-  const displayContent = data.styler?.displayValues
-    ? (data.styler.displayValues.getCell(rowIndex, columnIndex)
-        .content as string)
-    : undefined
+  const displayContent = data.styler.displayValues.getCell(
+    rowIndex,
+    columnIndex
+  ).content as string
 
   return {
     cssId: `${data.styler.cssId}_row${rowIndex}_col${dataColumnIndex}`,

@@ -29,11 +29,11 @@ from typing import (
     overload,
 )
 
-from streamlit import config
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
@@ -41,14 +41,24 @@ from streamlit.elements.lib.layout_utils import (
     create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
+from streamlit.errors import (
+    StreamlitIncompatibleParametersError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+)
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as PydeckProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
     WidgetCallback,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.util import ReadOnlyAttributeDictionary
 
@@ -80,13 +90,13 @@ def parse_selection_mode(
         # Only a single selection mode was passed
         selection_mode_set = {selection_mode}
     else:
-        # Multiple selection modes were passed.
-        # This is not yet supported as a functionality, but the infra is here to
-        # support it in the future!
-        # @see DeckGlJsonChart.tsx
-        raise StreamlitAPIException(
-            f"Invalid selection mode: {selection_mode}. ",
-            "Selection mode must be a single value, but got a set instead.",
+        # Only a single string selection mode is supported. Lists and sets are
+        # rejected until multi-mode selection lands (see DeckGlJsonChart.tsx).
+        raise StreamlitInvalidParameterTypeError(
+            "selection_mode",
+            type(selection_mode).__name__,
+            ["str"],
+            detail="Selection mode must be a single value.",
         )
 
     if not selection_mode_set.issubset(_SELECTION_MODES):
@@ -98,8 +108,9 @@ def parse_selection_mode(
     if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
         {"single-object", "multi-object"}
     ):
-        raise StreamlitAPIException(
-            "Only one of `single-object` or `multi-object` can be selected as selection mode."
+        raise StreamlitIncompatibleParametersError(
+            "selection_mode='single-object'",
+            "selection_mode='multi-object'",
         )
 
     parsed_selection_modes = []
@@ -322,12 +333,10 @@ class PydeckMixin:
         width: WidthWithoutContent = "stretch",
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
-        selection_mode: Literal[
-            "single-object"
-        ],  # Selection mode will only be activated by on_select param; default value here to make it work with mypy
-        # No default value here to make it work with mypy
-        on_select: Literal["ignore"],
+        selection_mode: SelectionMode = "single-object",
+        on_select: Literal["ignore"] = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -339,8 +348,10 @@ class PydeckMixin:
         use_container_width: bool | None = None,
         height: HeightWithoutContent = 500,
         selection_mode: SelectionMode = "single-object",
-        on_select: Literal["rerun"] | WidgetCallback = "rerun",
+        # No default: omitted on_select must match the "ignore" overload.
+        on_select: Literal["rerun"] | WidgetCallback,
         key: Key | None = None,
+        alt: str | None = None,
     ) -> PydeckState: ...
 
     @gather_metrics("pydeck_chart")
@@ -354,6 +365,7 @@ class PydeckMixin:
         selection_mode: SelectionMode = "single-object",
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         key: Key | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | PydeckState:
         """Draw a chart using the PyDeck library.
 
@@ -397,7 +409,15 @@ class PydeckMixin:
         Parameters
         ----------
         pydeck_obj : pydeck.Deck or None
-            Object specifying the PyDeck chart to draw.
+            Object specifying the PyDeck chart to draw. Built-in deck.gl
+            layers, views (``MapView``, ``OrbitView``, ``OrthographicView``,
+            ``FirstPersonView``, and ``GlobeView``), JSON ``parameters``, and
+            layer extensions are supported. Use ``map_provider=None`` to omit
+            the basemap (pydeck 0.9+). Pass extensions as ``@@type`` dicts,
+            for example
+            ``extensions=[{"@@type": "DataFilterExtension", "filterSize": 1}]``.
+            Custom JS libraries, widgets, and multi-view layouts are not
+            supported.
         width : "stretch" or int
             The width of the chart element. This can be one of the following:
 
@@ -474,6 +494,18 @@ class PydeckMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
+        alt : str or None
+            A description of the chart for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the chart.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Keep this to a short description of the visual; it is not a full
+            text alternative for dense graphics.
+
         Returns
         -------
         element or PydeckState
@@ -526,7 +558,8 @@ class PydeckMixin:
         ...                 get_radius=200,
         ...             ),
         ...         ],
-        ...     )
+        ...     ),
+        ...     alt="Hexagon and scatter map of sample points near San Francisco",
         ... )
 
         .. output::
@@ -575,36 +608,36 @@ class PydeckMixin:
         if tooltip:
             pydeck_proto.tooltip = json.dumps(tooltip)
 
-        # Get the Mapbox key from the PyDeck object first, and then fallback to the
-        # old mapbox.token config option.
-
         mapbox_token = getattr(pydeck_obj, "mapbox_key", None)
-        if mapbox_token is None or mapbox_token == "":
-            mapbox_token = config.get_option("mapbox.token")
-
         if mapbox_token:
             pydeck_proto.mapbox_token = mapbox_token
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # Carry alt on its own proto field. The pydeck JSON is hashed into the
+            # element ID, and alt must never be written into a hashed spec.
+            pydeck_proto.alt = normalized_alt
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         if is_selection_activated:
             # Selections are activated, treat Pydeck as a widget:
             pydeck_proto.selection_mode.extend(parse_selection_mode(selection_mode))
 
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=False,
                 enable_check_callback_rules=is_callback,
@@ -614,16 +647,17 @@ class PydeckMixin:
             pydeck_proto.id = compute_and_register_element_id(
                 "deck_gl_json_chart",
                 user_key=key,
-                # When a key is provided, only selection_mode affects the element ID.
-                # This allows selection state to persist across data/spec changes.
-                # Note: This can lead to orphaned selections if data length shrinks,
-                # but the frontend handles this by sanitizing invalid indices.
+                # Only selection_mode is hashed when a key is given, so alt changes never
+                # reset selection state; unkeyed charts hash alt like any other stable kwarg.
+                # Spec/data are also omitted from that keyed hash, which can leave orphaned
+                # selections if data length shrinks; the frontend sanitizes invalid indices.
                 key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 is_selection_activated=is_selection_activated,
                 selection_mode=selection_mode,
                 use_container_width=use_container_width,
                 spec=spec,
+                alt=normalized_alt,
             )
 
             serde = PydeckSelectionSerde()
@@ -632,25 +666,60 @@ class PydeckMixin:
                 pydeck_proto.id,
                 ctx=ctx,
                 deserializer=serde.deserialize,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 serializer=serde.serialize,
                 value_type="string_value",
             )
 
             self.dg._enqueue(
-                "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+                "deck_gl_json_chart",
+                pydeck_proto,
+                layout_config=layout_config,
+                agent_props=agent_spec.element(
+                    "pydeck_chart",
+                    key=pydeck_proto.id,
+                    support="action_unsupported",
+                    selection_mode=selection_mode,
+                    # A callback reaches the server too, so it is "rerun".
+                    on_select="rerun",
+                    alt=pydeck_proto.alt or None,
+                    data_builder=lambda: _pydeck_data(pydeck_proto),
+                ),
             )
 
             return widget_state.value
 
         return self.dg._enqueue(
-            "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            pydeck_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "pydeck_chart",
+                key=key,
+                alt=pydeck_proto.alt or None,
+                data_builder=lambda: _pydeck_data(pydeck_proto),
+            ),
         )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _pydeck_data(pydeck_proto: PydeckProto) -> dict[str, Any] | None:
+    """A Deck.gl chart's agent ``data``: its spec, with the tooltip it shows.
+
+    The tooltip travels beside the spec in its own proto field, so it is put
+    back under the `pdk.Deck` argument's name, ``tooltip``.
+    """
+    data = agent_data.raw_spec(pydeck_proto.json)
+    if data is None or not pydeck_proto.tooltip:
+        return data
+    spec = data["spec"]
+    if isinstance(spec, dict):
+        data["spec"] = {**spec, "tooltip": json.loads(pydeck_proto.tooltip)}
+    return data
 
 
 def _get_pydeck_width(pydeck_obj: Deck | None) -> int | None:

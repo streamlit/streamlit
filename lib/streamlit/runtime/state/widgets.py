@@ -17,9 +17,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from streamlit.errors import (
-    StreamlitAPIException,
-    StreamlitInvalidBindValueError,
-    StreamlitInvalidPersistStateError,
+    StreamlitIncompatibleParametersError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
@@ -156,22 +156,23 @@ def register_widget(
         to be used in a non-streamlit setting.
     """
     if on_change_handler is not None and callbacks is not None:
-        raise StreamlitAPIException(
-            "Cannot provide both `on_change` and `callbacks` to a widget."
-        )
+        raise StreamlitIncompatibleParametersError("on_change", "callbacks")
 
     # Validate bind parameter value
     if bind is not None and bind != "query-params":
-        raise StreamlitInvalidBindValueError("bind", ["'query-params'", "None"])
+        raise StreamlitValueError("bind", ["'query-params'", "None"])
 
     # Validate that widget with bind="query-params" has a provided key
     if bind == "query-params":
         user_key = user_key_from_element_id(element_id)
         if user_key is None:
-            raise StreamlitAPIException(
-                "When using bind='query-params', the widget must have a unique 'key' "
-                "parameter specified. This 'key' will be used as the name of the "
-                "query parameter."
+            raise StreamlitMissingRequiredParameterError(
+                "key",
+                detail=(
+                    "When using bind='query-params', the widget must have a unique "
+                    "'key' parameter specified. This 'key' will be used as the name "
+                    "of the query parameter."
+                ),
             )
         # Internal API check: clearable must be set for query param binding
         if clearable is None:
@@ -183,14 +184,15 @@ def register_widget(
     # Validate persist_state value and key requirement.
     if persist_state is not None:
         if persist_state not in {"page", "session"}:
-            raise StreamlitInvalidPersistStateError(
-                "persist_state", ["'page'", "'session'", "None"]
-            )
+            raise StreamlitValueError("persist_state", ["'page'", "'session'", "None"])
         if user_key_from_element_id(element_id) is None:
-            raise StreamlitAPIException(
-                "When using persist_state, the widget must have a unique 'key' "
-                "parameter specified so its value can be preserved across reruns "
-                "and page switches."
+            raise StreamlitMissingRequiredParameterError(
+                "key",
+                detail=(
+                    "When using persist_state, the widget must have a unique 'key' "
+                    "parameter specified so its value can be preserved across reruns "
+                    "and page switches."
+                ),
             )
 
     # Create the widget's updated metadata, and register it with session_state.

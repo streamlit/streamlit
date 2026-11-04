@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime
+from datetime import date, time
 
 import numpy as np
 
@@ -142,11 +142,9 @@ st.container(key="st_text_input").text_input(selected_feature_markdown)
 st.container(key="st_number_input").number_input(selected_feature_markdown)
 st.container(key="st_text_area").text_area(selected_feature_markdown)
 st.container(key="st_date_input").date_input(
-    selected_feature_markdown, datetime.date(2000, 3, 7)
+    selected_feature_markdown, date(2000, 3, 7)
 )
-st.container(key="st_time_input").time_input(
-    selected_feature_markdown, datetime.time(8, 45)
-)
+st.container(key="st_time_input").time_input(selected_feature_markdown, time(8, 45))
 st.container(key="st_file_uploader").file_uploader(selected_feature_markdown)
 st.container(key="st_color_picker").color_picker(selected_feature_markdown)
 st.container(key="st_audio_input").audio_input(selected_feature_markdown)

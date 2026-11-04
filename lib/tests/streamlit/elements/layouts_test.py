@@ -15,6 +15,7 @@
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
@@ -24,10 +25,11 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitDuplicateElementId,
-    StreamlitInvalidColumnGapError,
+    StreamlitIncompatibleParametersError,
     StreamlitInvalidFormCallbackError,
-    StreamlitInvalidHorizontalAlignmentError,
-    StreamlitInvalidVerticalAlignmentError,
+    StreamlitInvalidLayoutContextError,
+    StreamlitInvalidParameterTypeError,
+    StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -35,6 +37,7 @@ from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
+from streamlit.runtime.state import get_session_state
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -70,6 +73,29 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[1].add_block.column.weight == 1.0 / 3
         assert columns_blocks[2].add_block.column.weight == 1.0 / 3
 
+    def test_literal_count_returns_a_list(self) -> None:
+        """A small literal count is a tuple to type checkers and a list at runtime."""
+        assert isinstance(st.columns(2), list)
+
+    def test_width_tuple_returns_a_list(self) -> None:
+        """A known-length width tuple is a tuple to type checkers and a list at runtime."""
+        columns = st.columns((3, 1))
+        assert isinstance(columns, list)
+        assert len(columns) == 2
+
+    def test_numpy_integer_spec(self):
+        """numpy integer specs are treated as a column count, like Python ints."""
+        columns = st.columns(np.int64(3))
+        assert len(columns) == 3
+
+    def test_float_spec_raises_invalid_parameter_type(self):
+        """A non-integer scalar spec is a type error, not a crash on ``len()``."""
+        with pytest.raises(StreamlitInvalidParameterTypeError) as exc:
+            st.columns(6.28)
+        assert exc.value.exec_kwargs["parameter"] == "spec"
+        assert "Expected one of: int, sequence of numbers" in str(exc.value)
+        assert "Provided type: float" in str(exc.value)
+
     @parameterized.expand(
         [
             ("bottom", BlockProto.Column.VerticalAlignment.BOTTOM),
@@ -102,7 +128,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
 
     def test_columns_with_invalid_vertical_alignment(self):
         """Test that it throws an error on invalid vertical_alignment argument"""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitValueError, match=r"Got 'invalid'\."):
             st.columns(3, vertical_alignment="invalid")
 
     def test_not_equal_width_int_columns(self):
@@ -307,7 +333,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
         """Test that it throws an error on invalid gap argument"""
-        with pytest.raises(StreamlitInvalidColumnGapError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             st.columns(3, gap=invalid_gap)
 
     def test_columns_with_border(self):
@@ -393,10 +419,12 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander()
 
     def test_label_none_raises(self):
-        """Test that an explicit label=None raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `label` parameter is required",
+        ):
             st.expander(None)
-        assert "A label is required for an expander" in str(e.value)
 
     def test_just_label(self):
         """Test that it can be called with no params"""
@@ -470,8 +498,8 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander("label", icon="invalid")
         assert (
             str(e.value)
-            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead."
+            == 'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     def test_invalid_material_icon(self):
@@ -596,7 +624,7 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that icon validation also applies to step-type expanders."""
         with pytest.raises(StreamlitAPIException) as e:
             st.expander("label", type="step", icon="not-a-valid-icon")
-        assert "is not a valid emoji" in str(e.value)
+        assert "is not a valid icon" in str(e.value)
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -710,6 +738,80 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
         with st.form("form"):
             st.expander("label", on_change="rerun")
+
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.expander("label", key="my_exp", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_invalid_value_raises_without_key(self) -> None:
+        """Test that an invalid bind value raises even when key is also missing."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.expander("label", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_query_params_requires_key(self) -> None:
+        """Test that bind='query-params' without key raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match="'key' parameter"
+        ):
+            st.expander("label", bind="query-params")
+
+    def test_bind_query_params_sets_proto_fields(self) -> None:
+        """Test that bind='query-params' sets query_param_key and default_expanded on proto."""
+        st.expander("label", key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("default_expanded")
+        assert expandable.default_expanded is False
+
+    def test_bind_query_params_default_expanded_true(self) -> None:
+        """Test that `default_expanded` matches the `expanded=` argument."""
+        st.expander("label", expanded=True, key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("default_expanded")
+        assert expandable.default_expanded is True
+
+    def test_bind_query_params_activates_widget_registration(self) -> None:
+        """Test that bind='query-params' alone (on_change='ignore') activates widget registration."""
+        expander = st.expander("label", key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        # Widget ID must be set (widget is registered)
+        assert expander_block.add_block.expandable.HasField("id")
+        assert expander_block.add_block.expandable.id != ""
+        # .open reflects state (not None) because widget is registered
+        assert expander.open is False
+
+    def test_bind_query_params_with_on_change_rerun(self) -> None:
+        """Test that bind='query-params' and on_change='rerun' together work correctly."""
+        expander = st.expander(
+            "label", key="my_exp", bind="query-params", on_change="rerun"
+        )
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("id")
+        assert expander.open is False
+
+    def test_bind_query_params_session_state_accessible(self) -> None:
+        """Test that bind='query-params' makes expander state accessible via session_state."""
+        st.expander("label", key="my_exp", bind="query-params")
+        assert "my_exp" in st.session_state
+        assert st.session_state.my_exp is False
+
+    def test_bind_query_params_no_query_param_key_without_bind(self) -> None:
+        """Test that query_param_key is NOT set when bind is not specified."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert not expander_block.add_block.expandable.HasField("query_param_key")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_bind_query_params_inside_form_does_not_raise(self) -> None:
+        """Test that bind='query-params' inside st.form does not raise (no callable on_change)."""
+        with st.form("form"):
+            st.expander("label", key="my_exp", bind="query-params")
 
 
 class ContainerTest(DeltaGeneratorTestCase):
@@ -916,9 +1018,11 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     def test_container_wrap_false_without_horizontal_raises(self) -> None:
         """Test that st.container raises for wrap=False without horizontal=True."""
-        with pytest.raises(StreamlitAPIException) as exc:
+        with pytest.raises(
+            StreamlitIncompatibleParametersError,
+            match=r"Set `horizontal=True` to use `wrap=False`",
+        ):
             st.container(horizontal=False, wrap=False)
-        assert "horizontal=True" in str(exc.value)
 
     def test_container_wrap_true_without_horizontal_allowed(self) -> None:
         """Test that wrap=True on a vertical container is a no-op, not an error."""
@@ -958,7 +1062,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     @parameterized.expand([("invalid",), (-1,), (True,)])
     def test_container_invalid_gap(self, invalid_gap) -> None:
         """Test that st.container raises on invalid gap values."""
-        with pytest.raises(StreamlitInvalidColumnGapError):
+        with pytest.raises(StreamlitValueError, match=r"`gap`"):
             st.container(gap=invalid_gap)
 
     @parameterized.expand(
@@ -969,7 +1073,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`horizontal_alignment`"):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
     @parameterized.expand(
@@ -980,7 +1084,7 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        with pytest.raises(StreamlitInvalidVerticalAlignmentError):
+        with pytest.raises(StreamlitValueError, match=r"`vertical_alignment`"):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
     @parameterized.expand(
@@ -1022,10 +1126,12 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             st.popover()
 
     def test_label_none_raises(self):
-        """Test that an explicit label=None raises a StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException) as e:
+        """Test that an explicit label=None raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `label` parameter is required",
+        ):
             st.popover(None)
-        assert "A label is required for a popover" in str(e.value)
 
     def test_invalid_type_raises(self):
         """Test that an unsupported button type raises a StreamlitValueError."""
@@ -1168,8 +1274,8 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
             st.popover("label", icon="invalid")
         assert (
             str(e.value)
-            == 'The value "invalid" is not a valid emoji. Shortcodes are not allowed, '
-            "please use a single character instead."
+            == 'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     def test_invalid_material_icon(self):
@@ -1764,15 +1870,24 @@ class TabsTest(DeltaGeneratorTestCase):
         with pytest.raises(TypeError):
             st.tabs()
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match="Provide at least one tab label",
+        ):
             st.tabs([])
 
     def test_only_label_strings_allowed(self):
         """Test that only strings are allowed as tab labels."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="a string for each tab label",
+        ):
             st.tabs(["tab1", True])
 
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="a string for each tab label",
+        ):
             st.tabs(["tab1", 10])
 
     def test_returns_all_expected_tabs(self):
@@ -1808,12 +1923,10 @@ class TabsTest(DeltaGeneratorTestCase):
         tabs = ["Tab 1", "Tab 2", "Tab 3"]
         default_tab = "Tab 4"
 
-        with pytest.raises(StreamlitAPIException) as context:
+        with pytest.raises(
+            StreamlitValueError, match=r"`Tab 4` is not in the list of tabs"
+        ):
             st.tabs(tabs, default=default_tab)
-
-        assert "The default tab 'Tab 4' is not in the list of tabs." in str(
-            context.value
-        )
 
     def test_valid_default_tab(self):
         """Test that a valid default tab sets the correct index."""
@@ -2180,6 +2293,114 @@ class TabsTest(DeltaGeneratorTestCase):
         assert second_id != ""
         assert first_id != second_id
 
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.tabs(["A", "B"], key="my_tabs", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_invalid_value_raises_without_key(self) -> None:
+        """Test that an invalid bind value raises even when key is also missing."""
+        with pytest.raises(StreamlitValueError, match="Invalid `bind` value"):
+            st.tabs(["A", "B"], bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_query_params_requires_key(self) -> None:
+        """Test that bind='query-params' without key raises StreamlitMissingRequiredParameterError."""
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError, match="'key' parameter"
+        ):
+            st.tabs(["A", "B"], bind="query-params")
+
+    def test_bind_query_params_duplicate_labels_raises(self) -> None:
+        """Test that bind='query-params' rejects duplicate tab labels."""
+        with pytest.raises(StreamlitValueError, match="unique"):
+            st.tabs(["A", "A", "B"], key="my_tabs", bind="query-params")
+
+    def test_bind_query_params_empty_label_raises(self) -> None:
+        """Test that bind='query-params' rejects empty tab labels."""
+        with pytest.raises(StreamlitValueError, match="non-empty"):
+            st.tabs(["A", "", "B"], key="my_tabs", bind="query-params")
+
+    def test_bind_query_params_invalid_session_state_resets(self) -> None:
+        """Test that an invalid bound tab label in session state resets to default."""
+        st.session_state["my_tabs"] = "Missing"
+        with get_session_state().query_params() as qp:
+            qp.set_initial_query_params("my_tabs=Missing")
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        assert st.session_state.my_tabs == "A"
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+        assert "my_tabs" not in st.query_params
+
+    def test_on_change_rerun_invalid_session_state_resets(self) -> None:
+        """Test that an invalid tab label in session state resets to default."""
+        st.session_state["my_tabs"] = "Missing"
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", on_change="rerun")
+        assert st.session_state.my_tabs == "A"
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_bind_query_params_sets_proto_fields(self) -> None:
+        """Test that bind='query-params' sets query_param_key and default_tab_label."""
+        st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("default_tab_label")
+        assert tab_container.default_tab_label == "A"
+
+    def test_bind_query_params_default_tab_label(self) -> None:
+        """Test that `default_tab_label` matches the `default=` argument."""
+        st.tabs(["A", "B", "C"], default="B", key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("default_tab_label")
+        assert tab_container.default_tab_label == "B"
+
+    def test_bind_query_params_activates_widget_registration(self) -> None:
+        """Test that bind='query-params' alone (on_change='ignore') activates widget registration."""
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.HasField("id")
+        assert tab_container.id != ""
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_bind_query_params_with_on_change_rerun(self) -> None:
+        """Test that bind='query-params' and on_change='rerun' together work correctly."""
+        tabs = st.tabs(
+            ["A", "B", "C"],
+            key="my_tabs",
+            bind="query-params",
+            on_change="rerun",
+        )
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        tab_container = tab_container_block.add_block.tab_container
+        assert tab_container.query_param_key == "my_tabs"
+        assert tab_container.HasField("id")
+        assert tabs[0].open is True
+
+    def test_bind_query_params_session_state_accessible(self) -> None:
+        """Test that bind='query-params' makes tab state accessible via session_state."""
+        st.tabs(["A", "B", "C"], key="my_tabs", bind="query-params")
+        assert "my_tabs" in st.session_state
+        assert st.session_state.my_tabs == "A"
+
+    def test_bind_query_params_no_query_param_key_without_bind(self) -> None:
+        """Test that query_param_key is NOT set when bind is not specified."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="rerun")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        assert not tab_container_block.add_block.tab_container.HasField(
+            "query_param_key"
+        )
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_bind_query_params_inside_form_does_not_raise(self) -> None:
+        """Test that bind='query-params' inside st.form does not raise (no callable on_change)."""
+        with st.form("form"):
+            st.tabs(["A", "B"], key="my_tabs", bind="query-params")
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog
@@ -2200,6 +2421,10 @@ class DialogTest(DeltaGeneratorTestCase):
         assert not dialog_block.add_block.dialog.is_open
         assert dialog_block.add_block.dialog.dismissible
         assert not dialog_block.add_block.dialog.id
+        assert (
+            dialog_block.add_block.dialog.position
+            == BlockProto.Dialog.DialogPosition.CENTER
+        )
 
     @parameterized.expand(
         [
@@ -2211,13 +2436,104 @@ class DialogTest(DeltaGeneratorTestCase):
     def test_dialog_width(
         self, width: str, expected_width: BlockProto.Dialog.DialogWidth.ValueType
     ):
-        """Test that the dialog width parameter works correctly for all supported values"""
+        """Test that a preset width maps to the enum and leaves pixel_width unset."""
         dialog = st._main._dialog(DialogTest.title, width=width)
         with dialog:
             # No content so that 'get_delta_from_queue' returns the dialog.
             pass
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.width == expected_width
+        assert not dialog_block.add_block.dialog.HasField("pixel_width")
+
+    @parameterized.expand(
+        [
+            (400,),
+            (1,),
+            (2**32 - 1,),
+        ]
+    )
+    def test_dialog_pixel_width(self, width: int) -> None:
+        """Test that a positive integer width sets pixel_width and the small enum."""
+        dialog = st._main._dialog(DialogTest.title, width=width)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_proto = self.get_delta_from_queue().add_block.dialog
+        assert dialog_proto.HasField("pixel_width")
+        assert dialog_proto.pixel_width == width
+        assert dialog_proto.width == BlockProto.Dialog.DialogWidth.SMALL
+
+    def test_dialog_decorator_sets_pixel_width(self) -> None:
+        """Test that the dialog decorator propagates an integer width."""
+
+        @st.dialog("Pixels", width=400)
+        def test_dialog() -> None:
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        dialogs = [
+            delta.add_block.dialog
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        ]
+        assert dialogs
+        for dialog in dialogs:
+            assert dialog.HasField("pixel_width")
+            assert dialog.pixel_width == 400
+            assert dialog.width == BlockProto.Dialog.DialogWidth.SMALL
+
+    def test_dialog_pixel_width_does_not_share_id_with_small_preset(self) -> None:
+        """Test that an integer width stays in the dialog element id.
+
+        The proto enum is SMALL for every pixel width. The id must still use
+        the caller's width so a pixel dialog does not collide with ``"small"``.
+        """
+        small = st._main._dialog(DialogTest.title, width="small")
+        pixels = st._main._dialog(DialogTest.title, width=400)
+        assert small._current_proto is not None
+        assert pixels._current_proto is not None
+        assert small._current_proto.id != pixels._current_proto.id
+
+    @parameterized.expand(
+        [
+            (0,),
+            (-1,),
+            (True,),
+            (False,),
+            (1.5,),
+            ("stretch",),
+            ("content",),
+            ("50%",),
+            ("500px",),
+            ("huge",),
+            (2**32,),
+        ]
+    )
+    def test_dialog_invalid_width(self, width: object) -> None:
+        """Test that invalid dialog widths raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match="width"):
+            st._main._dialog(DialogTest.title, width=width)  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            ("center", BlockProto.Dialog.DialogPosition.CENTER),
+            ("left", BlockProto.Dialog.DialogPosition.LEFT),
+            ("right", BlockProto.Dialog.DialogPosition.RIGHT),
+        ]
+    )
+    def test_dialog_position(
+        self,
+        position: str,
+        expected_position: BlockProto.Dialog.DialogPosition.ValueType,
+    ):
+        """Test that the dialog position parameter maps to the proto enum."""
+        dialog = st._main._dialog(DialogTest.title, position=position)
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.position == expected_position
 
     def test_dialog_sets_icon(self):
         """Test that the dialog icon is propagated."""
@@ -2240,6 +2556,21 @@ class DialogTest(DeltaGeneratorTestCase):
         deltas = self.get_all_deltas_from_queue()
         assert any(
             delta.add_block.dialog.icon == "✅"
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        )
+
+    def test_dialog_decorator_sets_position(self):
+        """Test that the dialog decorator propagates the position."""
+
+        @st.dialog("With position", position="left")
+        def test_dialog():
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        assert any(
+            delta.add_block.dialog.position == BlockProto.Dialog.DialogPosition.LEFT
             for delta in deltas
             if delta.HasField("add_block") and delta.add_block.HasField("dialog")
         )
@@ -2312,15 +2643,16 @@ class DialogTest(DeltaGeneratorTestCase):
             "dialog_decorator() missing 1 required positional argument: 'title'"
         )
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(
+            StreamlitMissingRequiredParameterError,
+            match=r"The `title` parameter is required",
+        ):
 
             @st.dialog("")
             def dialog():
                 return None
 
             dialog()
-
-        assert e.value.args[0].startswith("A non-empty `title`")
 
     def test_dialog_decorator_must_be_called_like_a_function_with_a_title(self):
         """Test that the decorator must be called like a function."""
@@ -2359,9 +2691,11 @@ class DialogTest(DeltaGeneratorTestCase):
         def level1_dialog():
             level2_dialog()
 
-        with pytest.raises(FragmentHandledException) as e:
+        with pytest.raises(
+            FragmentHandledException,
+            match=r"Dialogs may not be nested inside other dialogs\.",
+        ):
             level1_dialog()
-        assert str(e.value) == "Dialogs may not be nested inside other dialogs."
 
     def test_only_one_dialog_can_be_opened_at_same_time(self):
         @st.dialog("Dialog1")
@@ -2372,13 +2706,12 @@ class DialogTest(DeltaGeneratorTestCase):
         def dialog2():
             st.empty()
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=r"Only one dialog is allowed to be opened at the same time\.",
+        ):
             dialog1()
             dialog2()
-
-        assert e.value.args[0].startswith(
-            "Only one dialog is allowed to be opened at the same time."
-        )
 
     def test_dialog_deltagenerator_dismissible_false(self):
         """Test that the delta-generator dialog properly handles dismissible=False"""
@@ -2404,6 +2737,18 @@ class DialogTest(DeltaGeneratorTestCase):
             test_dialog()
 
         assert "Invalid `on_dismiss` value" in str(exc_info.value)
+
+    def test_dialog_decorator_invalid_position(self):
+        """Test dialog decorator with invalid position raises error"""
+        with pytest.raises(StreamlitValueError) as exc_info:
+
+            @dialog_decorator("Test Dialog", position="top")
+            def test_dialog():
+                pass
+
+            test_dialog()
+
+        assert "Invalid `position` value" in str(exc_info.value)
 
     def test_dialog_on_dismiss_rerun(self):
         """Test that the dialog decorator with on_dismiss='rerun'."""

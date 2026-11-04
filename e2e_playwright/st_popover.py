@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-import datetime
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -104,7 +104,7 @@ with st.popover(
 with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
     st.date_input(
         "Date in popover",
-        value=datetime.date(2020, 1, 1),
+        value=date(2020, 1, 1),
         key="date_dismissal",
     )
 

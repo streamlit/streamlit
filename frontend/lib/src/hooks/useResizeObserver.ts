@@ -15,7 +15,7 @@
  */
 
 import {
-  MutableRefObject,
+  type MutableRefObject,
   useCallback,
   useEffect,
   useRef,

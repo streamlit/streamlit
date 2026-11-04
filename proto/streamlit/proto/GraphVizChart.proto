@@ -26,5 +26,12 @@ message GraphVizChart {
   // The engine used to layout and render the graph.
   string engine = 6;
 
+  // Author-provided description of the chart, exposed to assistive
+  // technologies as the accessible name. Unset when omitted or when an empty /
+  // whitespace-only value was normalized away in Python.
+  optional string alt = 7;
+
+  // Next ID: 8
+
   reserved 2, 3, 4;
 }

@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import datetime
 import functools
 import hashlib
 import os
@@ -27,6 +26,7 @@ import types
 import unittest
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum, auto
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, cast
@@ -207,25 +207,23 @@ class HashTest(unittest.TestCase):
         assert get_hash(uuid3) != get_hash(uuid4)
 
     def test_datetime_naive(self):
-        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
-        naive_datetime1_copy = datetime.datetime(2007, 12, 23, 15, 45, 55)
-        naive_datetime3 = datetime.datetime(2011, 12, 21, 15, 45, 55)
+        naive_datetime1 = datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1_copy = datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime3 = datetime(2011, 12, 21, 15, 45, 55)
 
         assert get_hash(naive_datetime1) == get_hash(naive_datetime1_copy)
         assert id(naive_datetime1) != id(naive_datetime1_copy)
         assert get_hash(naive_datetime1) != get_hash(naive_datetime3)
 
     def test_datetime_aware(self):
-        tz_info = datetime.timezone.utc
-        aware_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
-        aware_datetime1_copy = datetime.datetime(
-            2007, 12, 23, 15, 45, 55, tzinfo=tz_info
-        )
-        aware_datetime2 = datetime.datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
+        tz_info = UTC
+        aware_datetime1 = datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime1_copy = datetime(2007, 12, 23, 15, 45, 55, tzinfo=tz_info)
+        aware_datetime2 = datetime(2011, 12, 21, 15, 45, 55, tzinfo=tz_info)
 
         # naive datetime1 is the same datetime that aware_datetime,
         # but without timezone info. They should have different hashes.
-        naive_datetime1 = datetime.datetime(2007, 12, 23, 15, 45, 55)
+        naive_datetime1 = datetime(2007, 12, 23, 15, 45, 55)
 
         assert get_hash(aware_datetime1) == get_hash(aware_datetime1_copy)
         assert id(aware_datetime1) != id(aware_datetime1_copy)
@@ -234,7 +232,6 @@ class HashTest(unittest.TestCase):
 
     @parameterized.expand(
         [
-            "US/Pacific",
             "America/Los_Angeles",
             "Europe/Berlin",
             "UTC",
@@ -324,7 +321,16 @@ class HashTest(unittest.TestCase):
         assert is_type(a, "builtins.getset_descriptor")
 
         assert get_hash(a) == get_hash(a)
-        assert get_hash(a) != get_hash(b)
+        # Python 3.15 shares object's __dict__ descriptor, so
+        # A.__dict__["__dict__"] and B.__dict__["__dict__"] are one object and
+        # hash the same. On 3.11-3.14 each class has its own descriptor.
+        if a is b:
+            assert get_hash(a) == get_hash(b)
+        else:
+            assert get_hash(a) != get_hash(b)
+
+        # Distinct builtin descriptors stay distinct on every supported version.
+        assert get_hash(int.__dict__["real"]) != get_hash(int.__dict__["imag"])
 
     def test_dict(self):
         assert get_hash({1: 1}) == get_hash({1: 1})
@@ -1399,3 +1405,187 @@ def test_cache_hash_seed_moves_off_a_real_collision() -> None:
 
     with patch_config_options({"runner.cacheHashSeed": 12345}):
         assert get_hash(base) != get_hash(mutated)
+
+
+class _FakePolarsHashResult:
+    """Chainable stand-in for Polars ``hash`` / ``hash_rows`` Arrow output."""
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        return self
+
+    def to_arrow(self) -> _FakePolarsHashResult:
+        return self
+
+    def to_string(self) -> str:
+        return "polars-hash"
+
+
+class _FakePolarsSeries:
+    """Minimal Polars Series stand-in for hashing tests."""
+
+    def __init__(self, n: int = 3) -> None:
+        self.dtype = "Int64"
+        self.shape = (n,)
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def sample(self, n: int, seed: int = 0) -> _FakePolarsSeries:
+        return _FakePolarsSeries(n)
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        return _FakePolarsHashResult()
+
+
+class _FakePolarsDataFrame:
+    """Minimal Polars DataFrame stand-in for hashing tests."""
+
+    def __init__(self, n: int = 3) -> None:
+        self.shape = (n, 1)
+        self.schema = {"a": "Int64"}
+        self._n = n
+
+    def __len__(self) -> int:
+        return self._n
+
+    def sample(self, n: int, seed: int = 0) -> _FakePolarsDataFrame:
+        return _FakePolarsDataFrame(n)
+
+    def hash_rows(self, seed: int = 0) -> _FakePolarsHashResult:
+        return _FakePolarsHashResult()
+
+
+class _UnhashablePolarsSeries(_FakePolarsSeries):
+    """Polars Series stand-in whose native ``hash`` raises ``TypeError``."""
+
+    def hash(self, seed: int = 0) -> _FakePolarsHashResult:
+        raise TypeError("forced")
+
+
+class _UnhashablePolarsDataFrame(_FakePolarsDataFrame):
+    """Polars DataFrame stand-in whose ``hash_rows`` raises ``TypeError``."""
+
+    def hash_rows(self, seed: int = 0) -> _FakePolarsHashResult:
+        raise TypeError("forced")
+
+
+def _hash_as_polars_type(obj: object, type_name: str) -> bytes:
+    """Hash ``obj`` while treating it as the given Polars type."""
+
+    def fake_is_type(_obj: object, type_to_check: object) -> bool:
+        return type_to_check == type_name
+
+    with (
+        mock.patch.dict("sys.modules", {"polars": mock.MagicMock()}),
+        mock.patch(
+            "streamlit.runtime.caching.hashing.type_util.is_type",
+            side_effect=fake_is_type,
+        ),
+    ):
+        return get_hash(obj)
+
+
+_POLARS_HASH_CASES = [
+    (_FakePolarsSeries, "polars.series.series.Series"),
+    (_FakePolarsDataFrame, "polars.dataframe.frame.DataFrame"),
+]
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name"),
+    _POLARS_HASH_CASES,
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_is_deterministic_with_mocked_polars(
+    factory: type[Any], type_name: str
+) -> None:
+    """Polars hashing is deterministic for mocked Series and DataFrame stand-ins."""
+    digest = _hash_as_polars_type(factory(), type_name)
+    assert digest == _hash_as_polars_type(factory(), type_name)
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name"),
+    _POLARS_HASH_CASES,
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_samples_large_objects(
+    factory: type[Any], type_name: str
+) -> None:
+    """Large Polars objects are hashed from a sample of rows."""
+    large = factory(n=_PANDAS_ROWS_LARGE)
+    with mock.patch.object(large, "sample", wraps=large.sample) as mock_sample:
+        _hash_as_polars_type(large, type_name)
+    mock_sample.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("factory", "type_name", "label"),
+    [
+        (_UnhashablePolarsSeries, "polars.series.series.Series", "polars Series"),
+        (
+            _UnhashablePolarsDataFrame,
+            "polars.dataframe.frame.DataFrame",
+            "polars DataFrame",
+        ),
+    ],
+    ids=["series", "dataframe"],
+)
+def test_polars_hashing_pickles_on_typeerror(
+    factory: type[Any], type_name: str, label: str
+) -> None:
+    """``TypeError`` from native Polars hashing falls back to pickle."""
+    obj = factory()
+    with mock.patch.object(_LOGGER, "warning") as mock_warning:
+        digest = _hash_as_polars_type(obj, type_name)
+    mock_warning.assert_called_once()
+    assert "exc_info" not in mock_warning.call_args.kwargs
+    logged_message = mock_warning.call_args.args[0] % mock_warning.call_args.args[1:]
+    assert digest == _hash_as_polars_type(obj, type_name)
+    assert label in logged_message
+    assert "forced" in logged_message
+    assert "falling back to pickling the object" in logged_message
+
+
+class _FakePydanticV1:
+    """Pydantic v1-style model that exposes ``json()`` instead of ``model_dump_json``."""
+
+    def json(self) -> str:
+        return '{"a": 1}'
+
+
+class _FakePydanticUnhashable:
+    """Pydantic-like model whose JSON dump fails."""
+
+    def model_dump_json(self) -> str:
+        raise TypeError("cannot serialize")
+
+
+def test_pydantic_v1_model_hashes_via_json_method() -> None:
+    """Pydantic v1 models without ``model_dump_json`` hash via ``json()``."""
+    obj = _FakePydanticV1()
+    with (
+        mock.patch(
+            "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+            return_value=True,
+        ),
+        mock.patch.object(obj, "json", wraps=obj.json) as mock_json,
+    ):
+        digest = get_hash(obj)
+    mock_json.assert_called()
+    with mock.patch(
+        "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+        return_value=True,
+    ):
+        assert get_hash(obj) == digest
+
+
+def test_pydantic_like_model_is_unhashable_when_json_dump_fails() -> None:
+    """Failed Pydantic serialization raises ``UnhashableTypeError``."""
+    with mock.patch(
+        "streamlit.runtime.caching.hashing.type_util.is_pydantic_model",
+        return_value=True,
+    ):
+        with pytest.raises(UnhashableTypeError, match="unhashable members"):
+            get_hash(_FakePydanticUnhashable())

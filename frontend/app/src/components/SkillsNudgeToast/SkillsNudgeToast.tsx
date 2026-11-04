@@ -15,8 +15,8 @@
  */
 
 import {
-  KeyboardEvent,
-  ReactElement,
+  type KeyboardEvent,
+  type ReactElement,
   useCallback,
   useEffect,
   useState,
@@ -90,6 +90,7 @@ function SkillsNudgeToast({
       .then(detail => {
         setSuccessDetail(detail ?? "")
         setStatus("success")
+        return
       })
       .catch((error: unknown) => {
         setStatus("error")

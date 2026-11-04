@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -47,7 +45,8 @@ if TYPE_CHECKING:
     assert_type(menu_button("Action", [Action.EXPORT, Action.IMPORT]), Action | None)
 
     # Menu button with mixed types
-    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)
+    # ty infers `int | str | Action | None` rather than `object`.
+    assert_type(menu_button("Mixed", [1, "two", Action.DELETE]), object)  # ty: ignore[type-assertion-failure]
 
     # Menu button with key parameter (str or int)
     assert_type(menu_button("Actions", ["a", "b"], key="my_menu"), str | None)

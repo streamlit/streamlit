@@ -16,15 +16,15 @@
 
 import { groupBy } from "lodash-es"
 
-import { IAppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
 interface NavigationSections {
-  [sectionHeader: string]: IAppPage[]
+  [sectionHeader: string]: AppPage.$Properties[]
 }
 
 interface ProcessedNavigation {
-  individualPages: IAppPage[]
+  individualPages: AppPage.$Properties[]
   sections: NavigationSections
 }
 
@@ -32,14 +32,16 @@ interface ProcessedNavigation {
  * Returns the external destination URL when the page targets an external
  * destination, otherwise undefined.
  */
-export function getExternalPageUrl(page: IAppPage): string | undefined {
+export function getExternalPageUrl(
+  page: AppPage.$Properties
+): string | undefined {
   return page.externalUrl ?? undefined
 }
 
 /**
  * True when the page destination is external.
  */
-export function isExternalPage(page: IAppPage): boolean {
+export function isExternalPage(page: AppPage.$Properties): boolean {
   return !isNullOrUndefined(page.externalUrl)
 }
 
@@ -48,7 +50,9 @@ export function isExternalPage(page: IAppPage): boolean {
  * Navigation is hidden when there is only 1 or fewer visible pages.
  * Hidden pages (isHidden=true) are excluded from this calculation.
  */
-export function shouldShowNavigation(appPages: IAppPage[]): boolean {
+export function shouldShowNavigation(
+  appPages: AppPage.$Properties[]
+): boolean {
   const visiblePageCount = filterVisiblePages(appPages).length
   return visiblePageCount > 1
 }
@@ -56,8 +60,10 @@ export function shouldShowNavigation(appPages: IAppPage[]): boolean {
 /**
  * Groups app pages by their section header.
  */
-export function groupPagesBySection(appPages: IAppPage[]): NavigationSections {
-  return groupBy(appPages, page => page.sectionHeader || "")
+export function groupPagesBySection(
+  appPages: AppPage.$Properties[]
+): NavigationSections {
+  return groupBy(appPages, page => page.sectionHeader ?? "")
 }
 
 /**
@@ -89,8 +95,9 @@ export function processNavigationStructure(
     }
   }
 
-  // If there are named sections, separate empty section pages as individuals
-  const individualPages = navSections[""] || []
+  // Pages with an empty section header render as individuals. That group is
+  // absent when every page has a named section.
+  const individualPages = "" in navSections ? navSections[""] : []
   const sections: NavigationSections = {}
 
   Object.entries(navSections).forEach(([header, pages]) => {
@@ -112,6 +119,8 @@ export function processNavigationStructure(
  * Hidden pages remain in NavigationContext for URL routing but are not displayed
  * in the navigation menu.
  */
-export function filterVisiblePages(pages: IAppPage[]): IAppPage[] {
-  return pages.filter(page => !page.isHidden)
+export function filterVisiblePages(
+  pages: AppPage.$Properties[]
+): AppPage.$Properties[] {
+  return pages.filter(page => page.isHidden !== true)
 }

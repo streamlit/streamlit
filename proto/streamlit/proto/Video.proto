@@ -56,5 +56,11 @@ message Video {
 
   optional streamlit.WidthConfig width_config = 13;
 
+  // Author-provided description of the video, exposed to assistive
+  // technologies as the accessible name. Unset when omitted or when an empty /
+  // whitespace-only value was normalized away in Python. Presence distinguishes
+  // "not provided" from a future decorative empty string on other elements.
+  optional string alt = 14;
+
   reserved 1, 2, 4;
 }

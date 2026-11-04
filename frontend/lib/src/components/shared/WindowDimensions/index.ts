@@ -16,7 +16,7 @@
 
 import { createContext } from "react"
 
-import { WindowDimensions } from "./useWindowDimensions"
+import type { WindowDimensions } from "./useWindowDimensions"
 
 export const WindowDimensionsContext = createContext<WindowDimensions | null>(
   null

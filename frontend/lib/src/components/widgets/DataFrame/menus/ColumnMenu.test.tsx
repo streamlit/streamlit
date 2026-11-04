@@ -28,7 +28,9 @@ import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
-import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"
+import ColumnMenu, { type ColumnMenuProps } from "./ColumnMenu"
+import { FORMATTING_MENU_CLASS } from "./FormattingMenu"
+import { STATISTICS_MENU_CLASS } from "./StatisticsMenu"
 
 describe("DataFrame ColumnMenu", () => {
   const mockWriteText = vi.fn()
@@ -41,6 +43,7 @@ describe("DataFrame ColumnMenu", () => {
   )
 
   beforeEach(() => {
+    vi.clearAllMocks()
     mockWriteText.mockReset()
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
@@ -94,10 +97,6 @@ describe("DataFrame ColumnMenu", () => {
     onChangeFormat: vi.fn(),
     onAutosize: vi.fn(),
   }
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
 
   it("renders the column menu at the correct position", () => {
     render(<ColumnMenu {...defaultProps} />)
@@ -479,7 +478,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.setAttribute("data-testid", "stDataFrameStatisticsMenu")
+      insideSubMenu.className = STATISTICS_MENU_CLASS
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -488,8 +487,8 @@ describe("DataFrame ColumnMenu", () => {
 
         expect(statsMenuItem).toHaveAttribute("aria-expanded", "true")
       } finally {
-        // Always remove the node so a failed assertion can't leak a
-        // testid-bearing element into subsequent tests.
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
         insideSubMenu.remove()
       }
     })
@@ -519,10 +518,7 @@ describe("DataFrame ColumnMenu", () => {
       expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
 
       const insideSubMenu = document.createElement("div")
-      insideSubMenu.setAttribute(
-        "data-testid",
-        "stDataFrameColumnFormattingMenu"
-      )
+      insideSubMenu.className = FORMATTING_MENU_CLASS
       insideSubMenu.tabIndex = -1
       document.body.appendChild(insideSubMenu)
 
@@ -531,8 +527,8 @@ describe("DataFrame ColumnMenu", () => {
 
         expect(formatMenuItem).toHaveAttribute("aria-expanded", "true")
       } finally {
-        // Always remove the node so a failed assertion can't leak a
-        // testid-bearing element into subsequent tests.
+        // Always detach the synthetic node so a failed assertion cannot leak
+        // it into later tests.
         insideSubMenu.remove()
       }
     })
@@ -556,14 +552,14 @@ describe("DataFrame ColumnMenu", () => {
   })
 
   describe("click-outside sub-menu guard", () => {
-    it.each(["stDataFrameStatisticsMenu", "stDataFrameColumnFormattingMenu"])(
+    it.each([STATISTICS_MENU_CLASS, FORMATTING_MENU_CLASS])(
       "does not close the menu on pointer down inside a %s sub-menu",
-      async testId => {
+      async className => {
         const user = userEvent.setup()
         render(<ColumnMenu {...defaultProps} />)
 
         const subMenuNode = document.createElement("div")
-        subMenuNode.setAttribute("data-testid", testId)
+        subMenuNode.className = className
         document.body.appendChild(subMenuNode)
 
         try {
@@ -571,9 +567,9 @@ describe("DataFrame ColumnMenu", () => {
 
           expect(defaultProps.onCloseMenu).not.toHaveBeenCalled()
         } finally {
-          // Always remove the node so a failed assertion can't leak a
-          // testid-bearing element into subsequent tests.
-          document.body.removeChild(subMenuNode)
+          // Always detach the synthetic node so a failed assertion cannot leak
+          // it into later tests.
+          subMenuNode.remove()
         }
       }
     )

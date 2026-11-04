@@ -16,15 +16,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, Literal, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     TextAlignment,
     Width,
     WidthWithoutContent,
     create_layout_config,
+    validate_wrap,
 )
+from streamlit.errors import StreamlitIncompatibleParametersError
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import clean_text, to_help_str, validate_icon_or_emoji
 from streamlit.type_util import SupportsStr, is_sympy_expression
 
 if TYPE_CHECKING:
@@ -33,6 +36,20 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
+
+
+def _validate_markdown_wrap(*, wrap: bool, unsafe_allow_html: bool) -> None:
+    """Reject invalid wrap values and the wrap=False + HTML combination."""
+    validate_wrap(wrap)
+    if wrap is False and unsafe_allow_html:
+        raise StreamlitIncompatibleParametersError(
+            "wrap=False",
+            "unsafe_allow_html=True",
+            explanation=(
+                "One-line markdown cannot ellipsize raw HTML. Pass `wrap=True` "
+                "to render HTML, or omit `unsafe_allow_html` to truncate."
+            ),
+        )
 
 
 class MarkdownMixin:
@@ -46,17 +63,26 @@ class MarkdownMixin:
         text_alignment: TextAlignment = "left",
         unterminated_parsing: bool = False,
         anchors: bool = True,
+        wrap: bool = True,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
-        """Internal markdown method with extended options."""
+        """Internal markdown method with extended options.
+
+        ``agent_props`` lets a command that renders itself as markdown describe
+        itself under its own name, instead of appearing as `st.markdown`.
+        """
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        markdown_proto.body = body_text
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
         markdown_proto.hide_anchors = not anchors
+        markdown_proto.wrap = wrap
         if help:
-            markdown_proto.help = help
+            markdown_proto.help = to_help_str(help)
 
         if width != "auto":
             layout_config = create_layout_config(
@@ -67,7 +93,19 @@ class MarkdownMixin:
         else:
             layout_config = create_layout_config(text_alignment=text_alignment)
 
-        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            markdown_proto,
+            layout_config=layout_config,
+            agent_props=agent_props
+            or agent_spec.element(
+                "markdown",
+                body=body_text,
+                help=markdown_proto.help or None,
+                # Omitted when false, which is the documented default.
+                unsafe_allow_html=unsafe_allow_html or None,
+            ),
+        )
 
     @gather_metrics("markdown")
     def markdown(
@@ -79,6 +117,7 @@ class MarkdownMixin:
         width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
         anchors: bool = True,
+        wrap: bool = True,
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
 
@@ -110,7 +149,12 @@ class MarkdownMixin:
 
             - LaTeX expressions, by wrapping them in "$" or "$$" (the "$$"
               must be on their own lines). Supported LaTeX functions are listed
-              at https://katex.org/docs/supported.html.
+              at https://katex.org/docs/supported.html. An expression in "$"
+              can't start or end with a space, and its closing "$" can't be
+              followed by a digit, so text like "$5 and $10" is displayed
+              as-is. One LaTeX expression turns LaTeX parsing on for the
+              whole text, so escape any other dollar signs as ``\$``
+              (``"\\$"`` in a regular Python string).
 
             - Colored text and background colors for text. There are two ways
               to apply colors:
@@ -160,11 +204,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
 
         help : str or None
             A tooltip that gets displayed next to the Markdown. If this is
@@ -217,6 +262,21 @@ class MarkdownMixin:
             This is useful when Markdown headings are used purely for
             styling and the anchor link icons would be visual noise.
 
+        wrap : bool
+            Whether the text can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the text is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The text stays on one line. Overflow is truncated
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``. Truncation only appears when the
+              element is narrower than its text. Hovering truncated text
+              reveals the full text, including when ``help`` is set.
+
         Examples
         --------
         >>> import streamlit as st
@@ -247,6 +307,7 @@ class MarkdownMixin:
             width=width,
             text_alignment=text_alignment,
             anchors=anchors,
+            wrap=wrap,
         )
 
     @gather_metrics("caption")
@@ -258,6 +319,7 @@ class MarkdownMixin:
         help: str | None = None,
         width: Width = "stretch",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         """Display text in small font.
 
@@ -283,11 +345,12 @@ class MarkdownMixin:
             expressions within ``body`` will be rendered.
 
             Adding custom HTML to your app impacts safety, styling, and
-            maintainability.
+            maintainability. Don't use ``unsafe_allow_html`` to recreate UI
+            or inject CSS. Prefer native Streamlit features and theming
+            instead. If you need HTML or CSS without Markdown, use
+            ``st.html``.
 
-            .. note::
-                If you only want to insert HTML or CSS without Markdown text,
-                we recommend using ``st.html`` instead.
+            ``unsafe_allow_html=True`` cannot be combined with ``wrap=False``.
 
         help : str or None
             A tooltip that gets displayed next to the caption. If this is
@@ -325,6 +388,20 @@ class MarkdownMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the caption can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the caption is too wide for the element,
+              it wraps onto additional lines.
+            - ``False``: The caption stays on one line. Overflow is truncated
+              with an ellipsis. Markdown is limited to inline formatting
+              (the same subset used in widget labels). Leading block
+              markers such as ``#`` and ``-`` are shown as literal text
+              rather than headings or lists. This cannot be combined with
+              ``unsafe_allow_html=True``. Hovering truncated text reveals
+              the full text, including when ``help`` is set.
+
         Examples
         --------
         >>> import streamlit as st
@@ -333,18 +410,32 @@ class MarkdownMixin:
         >>> st.caption("A caption with _italics_ :blue[colors] and emojis :sunglasses:")
 
         """
+        _validate_markdown_wrap(wrap=wrap, unsafe_allow_html=unsafe_allow_html)
         caption_proto = MarkdownProto()
-        caption_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        caption_proto.body = body_text
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
+        caption_proto.wrap = wrap
         if help:
-            caption_proto.help = help
+            caption_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(
             width=width, text_alignment=text_alignment, allow_content_width=True
         )
 
-        return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            caption_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "caption",
+                body=body_text,
+                help=caption_proto.help or None,
+                # Omitted when false, which is the documented default.
+                unsafe_allow_html=unsafe_allow_html or None,
+            ),
+        )
 
     @gather_metrics("latex")
     def latex(
@@ -405,15 +496,25 @@ class MarkdownMixin:
 
             body = sympy.latex(body)
 
+        body_text = clean_text(body)
         latex_proto = MarkdownProto()
-        latex_proto.body = f"$$\n{clean_text(body)}\n$$"
+        latex_proto.body = f"$$\n{body_text}\n$$"
         latex_proto.element_type = MarkdownProto.Type.LATEX
         if help:
-            latex_proto.help = help
+            latex_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            latex_proto,
+            layout_config=layout_config,
+            # `body` is the dedented LaTeX source, not the `$$`-delimited form
+            # the frontend needs.
+            agent_props=agent_spec.element(
+                "latex", body=body_text, help=latex_proto.help or None
+            ),
+        )
 
     @gather_metrics("divider")
     def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
@@ -449,7 +550,13 @@ class MarkdownMixin:
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            divider_proto,
+            layout_config=layout_config,
+            # st.divider takes no arguments; its body is a rendering detail.
+            agent_props=agent_spec.element("divider"),
+        )
 
     @gather_metrics("badge")
     def badge(
@@ -565,7 +672,8 @@ class MarkdownMixin:
             height: 220px
 
         """
-        icon_str = validate_icon_or_emoji(icon) + " " if icon is not None else ""
+        validated_icon = validate_icon_or_emoji(icon)
+        icon_str = f"{validated_icon} " if validated_icon else ""
 
         # Escape [ and ] characters in the label to prevent breaking the directive syntax
         escaped_label = label.replace("[", "\\[").replace("]", "\\]")
@@ -575,11 +683,25 @@ class MarkdownMixin:
         badge_proto.element_type = MarkdownProto.Type.NATIVE
 
         if help is not None:
-            badge_proto.help = help
+            badge_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "markdown",
+            badge_proto,
+            layout_config=layout_config,
+            # st.badge would be indistinguishable from st.markdown by its
+            # payload: it emits NATIVE markdown with the color and icon
+            # directives already expanded into `body`.
+            agent_props=agent_spec.element(
+                "badge",
+                label=label,
+                icon=icon,
+                color=color,
+                help=badge_proto.help or None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

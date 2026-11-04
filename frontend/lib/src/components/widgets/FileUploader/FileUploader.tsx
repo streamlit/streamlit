@@ -20,12 +20,12 @@ import { isEqual, zip } from "lodash-es"
 import { flushSync } from "react-dom"
 
 import {
-  FileUploader as FileUploaderProto,
+  type FileUploader as FileUploaderProto,
   FileUploaderState as FileUploaderStateProto,
-  FileURLs as FileURLsProto,
-  IFileURLs,
+  type FileURLs as FileURLsProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import BaseButton, {
   BaseButtonKind,
@@ -33,14 +33,15 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import {
-  UploadedStatus,
+  type UploadedStatus,
   UploadFileInfo,
 } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { ensureError, formatRejectionMessage } from "~lib/util/ErrorHandling"
 import {
   type FileRejection,
   FileSize,
@@ -52,7 +53,7 @@ import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
@@ -289,6 +290,10 @@ const FileUploader = ({
         formId: element.formId,
         fragmentId,
         fromUser: true,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
       })
     }
   }, [status, files, widgetMgr, element, fragmentId])
@@ -343,7 +348,7 @@ const FileUploader = ({
    * Update the file status when the upload has finished.
    */
   const onUploadComplete = useCallback(
-    (localFileId: number, fileUrls: IFileURLs): void => {
+    (localFileId: number, fileUrls: FileURLsProto.$Properties): void => {
       const curFile = getFile(localFileId)
       if (isNullOrUndefined(curFile) || curFile.status.type !== "uploading") {
         return
@@ -365,7 +370,7 @@ const FileUploader = ({
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
-    (fileURLs: IFileURLs, file: File): void => {
+    (fileURLs: FileURLsProto.$Properties, file: File): void => {
       const abortController = new AbortController()
       const fileName = file.webkitRelativePath || file.name
 
@@ -390,13 +395,13 @@ const FileUploader = ({
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
-        .catch(err => {
+        .catch((err: unknown) => {
           if (!(err instanceof DOMException && err.name === "AbortError")) {
             updateFile(
               uploadingFileInfo.id,
               uploadingFileInfo.setStatus({
                 type: "error",
-                errorMessage: err ? err.toString() : "Unknown error",
+                errorMessage: formatRejectionMessage(err),
               })
             )
           }
@@ -430,7 +435,10 @@ const FileUploader = ({
         file.status.abortController.abort()
       }
 
-      if (file.status.type === "uploaded" && file.status.fileUrls.deleteUrl) {
+      if (
+        file.status.type === "uploaded" &&
+        !isNullOrEmptyString(file.status.fileUrls.deleteUrl)
+      ) {
         void uploadClient.deleteFile(file.status.fileUrls.deleteUrl)
       }
 
@@ -476,36 +484,43 @@ const FileUploader = ({
         }
       }
 
+      const replaceExistingFileIfNeeded = (): void => {
+        if (multipleFiles || acceptedFiles.length === 0) {
+          return
+        }
+        const existingFile = filesRef.current.find(
+          f => f.status.type !== "error"
+        )
+        if (!existingFile) {
+          return
+        }
+        setForceUpdatingStatus(true)
+        try {
+          deleteFile(existingFile.id)
+        } finally {
+          setForceUpdatingStatus(false)
+        }
+      }
+
       uploadClient
         .fetchFileURLs(acceptedFiles)
-        .then((fileURLsArray: IFileURLs[]) => {
-          if (!multipleFiles && acceptedFiles.length > 0) {
-            const existingFile = filesRef.current.find(
-              f => f.status.type !== "error"
-            )
-            if (existingFile) {
-              setForceUpdatingStatus(true)
-              try {
-                deleteFile(existingFile.id)
-              } finally {
-                setForceUpdatingStatus(false)
-              }
-            }
-          }
-
+        .then((fileURLsArray: FileURLsProto.$Properties[]) => {
+          replaceExistingFileIfNeeded()
           zip(fileURLsArray, acceptedFiles).forEach(
             ([fileURLs, acceptedFile]) => {
               uploadFile(fileURLs as FileURLsProto, acceptedFile as File)
             }
           )
+          return
         })
-        .catch((errorMessage: string) => {
+        .catch((error: unknown) => {
           addFiles(
             acceptedFiles.map(
               f =>
                 new UploadFileInfo(f.name, f.size, nextLocalFileId(), {
                   type: "error",
-                  errorMessage,
+                  // fetchFileURLs rejects with the backend error string
+                  errorMessage: ensureError(error).message,
                 })
             )
           )

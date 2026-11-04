@@ -339,7 +339,14 @@ with chart_col:
             .interactive()
         )
 
-        st.altair_chart(chart)
+        st.altair_chart(
+            chart,
+            alt=(
+                f"{rolling_label} share of requests by endpoint over time"
+                if normalize
+                else f"{rolling_label} request count by endpoint over time"
+            ),
+        )
 
 # Raw data section. The expander is collapsed by default, so guard the
 # dataframe behind `.open` (enabled by `on_change="rerun"`) to avoid building
@@ -359,4 +366,5 @@ if raw_data_section.open:
             display_df,
             hide_index=True,
             column_config=column_config or None,
+            alt="Filtered endpoint request data",
         )

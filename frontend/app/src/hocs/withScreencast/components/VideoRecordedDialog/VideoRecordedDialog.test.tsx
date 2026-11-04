@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "@streamlit/lib/testing"
 
-import VideoRecordedDialog, { Props } from "./VideoRecordedDialog"
+import VideoRecordedDialog, { type Props } from "./VideoRecordedDialog"
 
 URL.createObjectURL = vi.fn()
 

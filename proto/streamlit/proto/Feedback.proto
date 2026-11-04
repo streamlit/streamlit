@@ -34,5 +34,13 @@ message Feedback {
   optional uint32 value = 6;
   bool set_value = 7;
 
-  // next id: 8
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Inside a form, this flag has no effect because the form
+  // batches values until submit.
+  bool ignore_rerun = 8;
+
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 9;
+
+  // next id: 10
 }

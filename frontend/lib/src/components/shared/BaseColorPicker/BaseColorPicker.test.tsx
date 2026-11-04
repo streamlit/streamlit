@@ -21,7 +21,7 @@ import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constant
 import { render } from "~lib/test_util"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import BaseColorPicker, { BaseColorPickerProps } from "./BaseColorPicker"
+import BaseColorPicker, { type BaseColorPickerProps } from "./BaseColorPicker"
 
 const getProps = (
   props: Partial<BaseColorPickerProps> = {}

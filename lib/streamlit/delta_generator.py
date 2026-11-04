@@ -50,6 +50,7 @@ from streamlit.elements.arrow import ArrowMixin
 from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
+from streamlit.elements.echarts_chart import EChartsMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
@@ -61,6 +62,7 @@ from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
 from streamlit.elements.json import JsonMixin
 from streamlit.elements.layouts import LayoutsMixin
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import FormData, current_form_id
 from streamlit.elements.lib.layout_utils import (
     get_height_config,
@@ -106,7 +108,11 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.errors import (
+    NoSessionContext,
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
@@ -116,6 +122,7 @@ from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
+    is_fragment_callback_warning_suppressed,
 )
 
 if TYPE_CHECKING:
@@ -182,14 +189,23 @@ def _maybe_print_fragment_callback_warning() -> None:
     # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
     # are the only public entry points for binding ctx, and both seed
     # ThreadState. ThreadState.get() is therefore safe here without a guard.
-    if ctx and ThreadState.get().in_fragment_callback:
-        warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+    if not ctx or not ThreadState.get().in_fragment_callback:
+        return
 
-        logger.get_logger("root").warning(
-            f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
-            "During a fragment rerun, within a callback, displaying elements is not officially supported because "
-            "those elements will replace the existing elements at the top of your app."
-        )
+    # The internal yield-point placeholder is not a user element. The runner
+    # raises in _enqueue_forward_msg before sending it. Skip the warning for
+    # that write. Read the flag only on this path so ordinary element writes
+    # skip the ContextVar lookup.
+    if is_fragment_callback_warning_suppressed():
+        return
+
+    warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
+
+    logger.get_logger("root").warning(
+        f"\n  {warning} A fragment rerun was triggered with a callback that displays one or more elements. "
+        "During a fragment rerun, within a callback, displaying elements is not officially supported because "
+        "those elements will replace the existing elements at the top of your app."
+    )
 
 
 class DeltaGenerator(
@@ -218,6 +234,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    EChartsMixin,
     MermaidChartMixin,
     MetricMixin,
     MenuButtonMixin,
@@ -330,13 +347,6 @@ class DeltaGenerator(
         # If this an `st.form` block, this will get filled in.
         self._form_data: FormData | None = None
 
-        # Change the module of all mixin'ed functions to be st.delta_generator,
-        # instead of the original module (e.g. st.elements.markdown)
-        for mixin in self.__class__.__bases__:
-            for func in mixin.__dict__.values():
-                if callable(func):
-                    func.__module__ = self.__module__
-
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -383,7 +393,8 @@ class DeltaGenerator(
         """
         return self._parent._main_dg if self._parent else self
 
-    def __getattr__(self, name: str) -> Callable[..., NoReturn]:
+    def _raise_for_unknown_command(self, name: str) -> Callable[..., NoReturn]:
+        """Return a callable that raises ``StreamlitAPIException`` for ``name``."""
         import streamlit as st
 
         streamlit_methods = [
@@ -393,22 +404,29 @@ class DeltaGenerator(
         def wrapper(*args: Any, **kwargs: Any) -> NoReturn:
             if name in streamlit_methods:
                 if self._root_container == RootContainer.SIDEBAR:
-                    message = (
+                    raise StreamlitAPIException(
                         f"Method `{name}()` does not exist for "
-                        f"`st.sidebar`. Did you mean `st.{name}()`?"
+                        f"`st.sidebar`. Did you mean `st.{name}()`?",
+                        error_id="sidebar-method-does-not-exist",
                     )
-                else:
-                    message = (
-                        f"Method `{name}()` does not exist for "
-                        "`DeltaGenerator` objects. Did you mean "
-                        f"`st.{name}()`?"
-                    )
-            else:
-                message = f"`{name}()` is not a valid Streamlit command."
-
-            raise StreamlitAPIException(message)
+                raise StreamlitAPIException(
+                    f"Method `{name}()` does not exist for "
+                    "`DeltaGenerator` objects. Did you mean "
+                    f"`st.{name}()`?",
+                    error_id="delta-generator-method-does-not-exist",
+                )
+            raise StreamlitAPIException(
+                f"`{name}()` is not a valid Streamlit command.",
+                error_id="invalid-streamlit-command",
+            )
 
         return wrapper
+
+    # Hide ``__getattr__`` from type checkers so unknown container methods such
+    # as ``st.sidebar.echo`` stay type errors. mypy only honors the unaliased
+    # ``TYPE_CHECKING`` name here; an alias makes those calls type-check.
+    if not TYPE_CHECKING:
+        __getattr__ = _raise_for_unknown_command
 
     def __deepcopy__(self, _memo: Any) -> DeltaGenerator:
         dg = DeltaGenerator(
@@ -503,12 +521,36 @@ class DeltaGenerator(
         dg = self._active_dg
         return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
 
+    def _get_write_delta_path_str(self) -> str:
+        """Return the delta path where this DeltaGenerator's next element is written.
+
+        Unlike ``_get_delta_path_str``, this follows a fragment's write to a
+        container declared outside it into the wrapper block ``_enqueue``
+        redirects it to. The outside container's own cursor advances only once
+        for that wrapper, so it would give every such element the same path.
+        """
+        dg = self._active_dg
+        ctx = get_script_run_ctx()
+        if ctx is not None:
+            ts = ThreadState.get()
+            if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
+                wrapper = ctx.fragment_storage.get_outside_wrapper(
+                    ts.fragment_id, dg._id
+                )
+                if wrapper is None:
+                    # `_enqueue` creates the wrapper at this cursor's position,
+                    # and the element becomes its first child.
+                    return str([*cast("Cursor", dg._cursor).delta_path, 0])
+                dg = wrapper.delta_generator
+        return str(dg._cursor.delta_path) if dg._cursor is not None else "[]"
+
     def _enqueue(
         self,
         delta_type: str,
         element_proto: Message,
         layout_config: LayoutConfig | None = None,
         has_one_shot_effect: bool = False,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -518,6 +560,10 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
+        agent_props : str or None
+            The command's description for the agent API, from
+            ``agent_spec.element``. ``None`` for every session the agent API
+            did not create, which is the normal case.
 
         Returns
         -------
@@ -540,15 +586,12 @@ class DeltaGenerator(
                 if fragment_path and not _is_inside_fragment_path(
                     cursor_path, fragment_path
                 ):
-                    raise StreamlitAPIException(
-                        "Writing to containers outside a parallel fragment is not "
-                        "allowed during the initial page load, because parallel "
-                        "fragments run concurrently on separate threads and "
-                        "external container writes are not thread-safe.\n\n"
-                        "To fix this, move the element inside the fragment body, "
-                        "or gate the write behind a widget interaction "
-                        "(e.g., `if st.button(...):`) so it runs during a "
-                        "sequential fragment rerun instead."
+                    raise StreamlitInvalidLayoutContextError(
+                        "Writing to a container created outside a parallel "
+                        "fragment, including `st.sidebar` and `st.bottom`, is "
+                        "not supported on a full app run or a later fragment "
+                        "rerun.\n\n"
+                        "To fix this, move the element inside the fragment body."
                     )
 
             if ts.fragment_id and _needs_outside_wrapper(dg, ts, ctx.fragment_storage):
@@ -586,6 +629,8 @@ class DeltaGenerator(
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
             msg.metadata.delta_path[:] = dg._cursor.delta_path
+            if agent_props is not None:
+                msg.metadata.agent_props = agent_props
 
             _enqueue_message(msg)
             msg_was_enqueued = True
@@ -617,6 +662,7 @@ class DeltaGenerator(
             used_dg_id=dg._id,
             returned_dg_id=output_dg._id,
             layout_config=layout_config,
+            agent_props=agent_props,
         )
 
         return output_dg
@@ -625,6 +671,7 @@ class DeltaGenerator(
         self,
         block_proto: Block_pb2.Block | None = None,
         dg_type: type | None = None,
+        agent_props: str | None = None,
     ) -> DeltaGenerator:
         if block_proto is None:
             block_proto = Block_pb2.Block()
@@ -679,13 +726,14 @@ class DeltaGenerator(
         block_dg._creating_fragment_id = ts.fragment_id if ts else None
 
         # open_block() already advanced the parent cursor, so we only emit here.
-        _enqueue_add_block(block_delta_path, block_proto)
+        _enqueue_add_block(block_delta_path, block_proto, agent_props=agent_props)
 
         caching.save_block_message(
             block_proto,
             invoked_dg_id=self._id,
             used_dg_id=dg._id,
             returned_dg_id=block_dg._id,
+            agent_props=agent_props,
         )
 
         return block_dg
@@ -763,10 +811,16 @@ def _is_inside_fragment_path(
     return cursor_path[: len(fragment_path)] == fragment_path
 
 
-def _enqueue_add_block(delta_path: list[int], block_proto: Block_pb2.Block) -> None:
+def _enqueue_add_block(
+    delta_path: list[int],
+    block_proto: Block_pb2.Block,
+    agent_props: str | None = None,
+) -> None:
     """Send an add_block ForwardMsg for `block_proto` at `delta_path`."""
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = delta_path
+    if agent_props is not None:
+        msg.metadata.agent_props = agent_props
     msg.delta.add_block.CopyFrom(block_proto)
     _enqueue_message(msg)
 
@@ -828,13 +882,17 @@ def _get_or_create_outside_wrapper(
     if ctx.fragment_ids_this_run and (
         dg._creating_fragment_id not in ctx.fragment_ids_this_run
     ):
-        raise StreamlitAPIException(
-            "A fragment tried to write to a container created outside the "
-            "fragment, but that container was not written to during the initial "
-            "run, so Streamlit could not reserve a stable position for it.\n\n"
-            "Write to the container at least once during the full app run (e.g. "
-            "claim the slot with `outside.empty()`), then fill it during fragment "
-            "reruns."
+        raise StreamlitInvalidLayoutContextError(
+            "A fragment tried to write to a container created outside it, but "
+            "the fragment did not write to that container during the last full "
+            "app run, so Streamlit could not reserve a stable position for it.\n\n"
+            "If this fragment uses `parallel=True`, writing to containers "
+            "created outside it is not supported, including `st.sidebar` and "
+            "`st.bottom`. Move the element inside the fragment body.\n\n"
+            "Otherwise, inside the fragment function, write to the container "
+            "on every full app run (e.g. `outside_container.empty()` or "
+            "`with outside_container: st.empty()`), then fill it during "
+            "fragment reruns."
         )
 
     parent_cursor = cast("Cursor", dg._cursor)
@@ -842,6 +900,9 @@ def _get_or_create_outside_wrapper(
     block_proto = Block_pb2.Block()
     block_proto.transparent.SetInParent()
     block_proto.allow_empty = True
+    # An internal wrapper with no public counterpart: its children belong to
+    # the container the author actually wrote to.
+    wrapper_agent_props = agent_spec.block("container", transparent=True)
 
     creation_delta_path = list(parent_cursor.delta_path)
 
@@ -864,7 +925,9 @@ def _get_or_create_outside_wrapper(
         block_type="transparent",
     )
 
-    _enqueue_add_block(creation_delta_path, block_proto)
+    _enqueue_add_block(
+        creation_delta_path, block_proto, agent_props=wrapper_agent_props
+    )
     # Advance the outside container's cursor exactly once, at creation time.
     parent_cursor.lock_element()
 
@@ -876,6 +939,7 @@ def _get_or_create_outside_wrapper(
             creation_delta_path,
             block_proto,
             creating_fragment_id=dg._creating_fragment_id,
+            agent_props=wrapper_agent_props,
         ),
     )
     return wrapper_dg

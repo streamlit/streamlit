@@ -19,20 +19,15 @@ syntax = "proto3";
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 
-// NOTE: These proto types are used by some external services so need to
-// remain relatively stable. While they aren't entirely set in stone, changing
-// them may require a good amount of effort so should be avoided if possible.
-
 // This is the first message that is sent when a new session starts.
+// The enclosing ForwardMsg.metadata.run carries the identity of the run this
+// message starts.
 message NewSession {
   // Initialization data. This data does *not* change from rerun to rerun,
   // but we send it every time so that we don't have to track whether the
   // client has already received it. The client is responsible for
   // performing initialization logic only once.
   Initialize initialize = 1;
-
-  // The script run ID
-  string script_run_id = 2;
 
   // The basename of the script that launched this app. Example: 'foo.py'
   string name = 3;
@@ -55,14 +50,11 @@ message NewSession {
   // A hash of the script corresponding to the page currently being viewed.
   string page_script_hash = 9;
 
-  // The fragment IDs being run in this session if it corresponds to a fragment
-  // script run.
-  repeated string fragment_ids_this_run = 10;
-
   // Hash of the main script running (ie streamlit run main_script.py)
   string main_script_hash = 11;
 
-  reserved 5;
+  reserved 2, 5, 10;
+  reserved "script_run_id", "fragment_ids_this_run";
 }
 
 // Contains the session status that existed at the time the user connected.
@@ -107,6 +99,12 @@ message Initialize {
   //                            loopback gate excludes.
   //   "check_failed"         - the eligibility check itself threw, so the
   //                            nudge was withheld defensively.
+  //   "check_unreadable"     - no install target could be read (e.g.
+  //                            permissions), so whether the skills are
+  //                            installed is unknown and the nudge was withheld.
+  //                            Split from "check_failed" because the two point
+  //                            at different fixes: ours vs. the user's
+  //                            filesystem.
   // The high-volume uninteresting cases (headless, no agent harness, skills
   // already installed, user dismissed) are deliberately NOT reported.
   //
@@ -209,6 +207,7 @@ message CustomThemeConfig {
   optional string code_text_color = 59;
   optional string code_background_color = 25;
   optional string dataframe_header_background_color = 31;
+  optional string dataframe_header_text_color = 66;
   repeated string chart_categorical_colors = 33;
   repeated string chart_sequential_colors = 36;
   repeated string chart_diverging_colors = 62;
@@ -244,13 +243,17 @@ message CustomThemeConfig {
   optional string metric_value_font_size = 64;
   optional int32 metric_value_font_weight = 65;
 
+  // Page content padding:
+  optional string padding_top = 67;
+  optional string padding_bottom = 68;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
   reserved 5, 7, 8, 9, 16, 17;
-  // Next ID: 66
+  // Next ID: 69
 }
 
 message FontFace {

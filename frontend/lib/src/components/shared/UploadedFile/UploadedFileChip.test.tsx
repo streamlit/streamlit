@@ -19,7 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { render } from "~lib/test_util"
 
-import UploadedFileChip, { Props } from "./UploadedFileChip"
+import UploadedFileChip, { type Props } from "./UploadedFileChip"
 import { UploadFileInfo } from "./UploadFileInfo"
 
 const mockCreateObjectURL = vi.fn()

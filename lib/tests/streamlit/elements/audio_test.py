@@ -23,11 +23,14 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.media import (
+    _LOGGER,
     _maybe_convert_to_wav_bytes,
     _parse_start_time_end_time,
 )
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingRequiredParameterError,
+)
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -118,29 +121,32 @@ class AudioTest(DeltaGeneratorTestCase):
 
         valid_np_array = np.array([1, 2, 3, 4, 5])
 
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitMissingRequiredParameterError) as e:
             st.audio(valid_np_array)
 
-        assert (
-            str(e.value)
-            == "`sample_rate` must be specified when `data` is a numpy array."
-        )
+        assert "sample_rate" in str(e.value)
 
-    def test_st_audio_sample_rate_raises_warning(self):
-        """Test st.audio raises streamlit warning when sample_rate parameter provided,
-        but data is not a numpy array."""
+    def test_st_audio_sample_rate_logs_warning(self):
+        """Test st.audio logs a warning when sample_rate is provided but data
+        is not a numpy array.
+        """
 
         fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
         sample_rate = 44100
 
-        st.audio(fake_audio_data, sample_rate=sample_rate)
+        with self.assertLogs(_LOGGER) as logs:
+            st.audio(fake_audio_data, sample_rate=sample_rate)
 
-        c = self.get_delta_from_queue(-2).new_element.alert
-        assert c.format == AlertProto.WARNING
         assert (
-            c.body
-            == "Warning: `sample_rate` will be ignored since data is not a numpy array."
+            "`sample_rate` will be ignored since data is not a numpy array."
+            in logs.records[0].getMessage()
         )
+        assert logs.records[0].stack_info is not None
+        assert not any(
+            delta.new_element.WhichOneof("type") == "alert"
+            for delta in self.get_all_deltas_from_queue()
+        )
+        assert self.get_delta_from_queue().new_element.WhichOneof("type") == "audio"
 
     def test_maybe_convert_to_wave_numpy_arr_empty(self):
         """Test _maybe_convert_to_wave_bytes works correctly with empty numpy array."""
@@ -270,6 +276,7 @@ class AudioTest(DeltaGeneratorTestCase):
             end_time=21,
             loop=True,
             autoplay=True,
+            alt="A cat purring",
         )
 
         el = self.get_delta_from_queue().new_element
@@ -277,6 +284,8 @@ class AudioTest(DeltaGeneratorTestCase):
         assert el.audio.end_time == 21
         assert el.audio.loop
         assert el.audio.autoplay
+        assert el.audio.HasField("alt")
+        assert el.audio.alt == "A cat purring"
         assert el.audio.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_audio_data, "audio/mp3"), el.audio.url
 
@@ -290,8 +299,55 @@ class AudioTest(DeltaGeneratorTestCase):
         assert el.audio.end_time == 0
         assert not el.audio.loop
         assert not el.audio.autoplay
+        assert not el.audio.HasField("alt")
         assert el.audio.url.startswith(MEDIA_ENDPOINT)
         assert _calculate_file_id(fake_audio_data, "audio/wav"), el.audio.url
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_st_audio_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
+        st.audio(fake_audio_data, alt=blank_alt)
+        el = self.get_delta_from_queue().new_element
+        assert not el.audio.HasField("alt")
+
+    def test_st_audio_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
+        st.audio(fake_audio_data, alt="  A cat purring  ")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.audio.HasField("alt")
+        assert el.audio.alt == "A cat purring"
+
+    def test_st_audio_alt_is_included_in_element_id(self):
+        """Changing only alt must change the autoplay element ID.
+
+        Unkeyed media include ``alt`` in the identity hash like other stable
+        kwargs; editing ``alt`` remounts the player and may re-trigger autoplay.
+        """
+        fake_audio_data = b"\x11\x22\x33\x44\x55\x66"
+
+        def audio_id(**kwargs: object) -> str:
+            # Each call registers its ID, so clear the registry to simulate a
+            # fresh script run instead of tripping the duplicate-ID guard.
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.audio(fake_audio_data, autoplay=True, **kwargs)
+            return self.get_delta_from_queue().new_element.audio.id
+
+        with_alt = audio_id(alt="First description")
+        with_other_alt = audio_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+
+        # Same alt must keep the same ID (sanity against always-random IDs).
+        assert audio_id(alt="First description") == with_alt
 
     @parameterized.expand(
         [

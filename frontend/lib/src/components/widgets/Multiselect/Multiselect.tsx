@@ -15,7 +15,7 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   type ReactElement,
   useCallback,
@@ -39,21 +39,25 @@ import {
 } from "react-aria-components"
 
 import {
-  MultiSelect as MultiSelectProto,
+  type MultiSelect as MultiSelectProto,
   streamlit,
 } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
+import { useSyncComboBoxEnterTargetFocus } from "~lib/components/shared/Dropdown/useSyncComboBoxEnterTargetFocus"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
 import {
   SHIFT_VIEWPORT_PADDING,
   useFloatingOverlay,
@@ -73,7 +77,7 @@ import {
   getSelectPlaceholder,
   labelVisibilityProtoValueToEnum,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -117,7 +121,7 @@ const getDefaultStateFromProto = (
 const getCurrStateFromProto = (
   element: MultiSelectProto
 ): MultiselectValue => {
-  return element.rawValues ?? []
+  return element.rawValues
 }
 
 const updateWidgetMgrState = (
@@ -130,33 +134,60 @@ const updateWidgetMgrState = (
     formId: element.formId,
     fragmentId,
     fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 
 /**
- * Null-render component mounted inside <ComboBox> to expose RAC's internal
- * open/close methods and focusedKey via refs. Same pattern as the Selectbox widget.
+ * Null-render component mounted inside <ComboBox> to expose React Aria's
+ * open/close methods and to keep selectionManager.focusedKey on the Enter
+ * target so the combobox exposes aria-activedescendant while typing (#16841).
  */
 const DropdownController = memo<{
   openRef: React.MutableRefObject<
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >
+  closeRef: React.MutableRefObject<(() => void) | null>
   focusedKeyRef: React.MutableRefObject<Key | null>
-}>(({ openRef, focusedKeyRef }) => {
-  const state = useContext(ComboBoxStateContext)
-  useEffect(() => {
-    if (state) {
-      openRef.current = (focusStrategy = null) =>
-        state.open(focusStrategy, "manual")
-    }
-    return () => {
-      openRef.current = null
-    }
-  }, [state, openRef])
-  // Read synchronously — an effect would leave a stale-read window for keydown handlers
-  focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
-  return null
-})
+  /** Default Enter target (hover or first visible row) when syncing focus. */
+  enterTargetKey: Key | null
+  /** Skip sync when hover ends so arrow focus is not overwritten. */
+  skipEnterTargetFocusSyncRef: React.MutableRefObject<boolean>
+}>(
+  ({
+    openRef,
+    closeRef,
+    focusedKeyRef,
+    enterTargetKey,
+    skipEnterTargetFocusSyncRef,
+  }) => {
+    const state = useContext(ComboBoxStateContext)
+
+    useEffect(() => {
+      if (state) {
+        openRef.current = (focusStrategy = null) =>
+          state.open(focusStrategy, "manual")
+        closeRef.current = () => state.close()
+      }
+      return () => {
+        openRef.current = null
+        closeRef.current = null
+      }
+    }, [state, openRef, closeRef])
+
+    useSyncComboBoxEnterTargetFocus(
+      enterTargetKey,
+      skipEnterTargetFocusSyncRef
+    )
+
+    // Read synchronously — an effect would leave a stale-read window for keydown handlers
+    focusedKeyRef.current = state?.selectionManager.focusedKey ?? null
+    return null
+  }
+)
 DropdownController.displayName = "DropdownController"
 
 const TagRemoveIcon: FC = () => (
@@ -175,21 +206,6 @@ const TagRemoveIcon: FC = () => (
     />
   </svg>
 )
-
-/** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
-const renderOption = (item: unknown): ReactElement => {
-  const option = item as MultiselectOption
-  return (
-    <StyledListBoxItem
-      id={option.id}
-      textValue={option.label}
-      $isCreatable={option.isCreatable}
-      $isBulkAction={option.isBulkAction}
-    >
-      <StyledItemHighlight data-item-hl="">{option.label}</StyledItemHighlight>
-    </StyledListBoxItem>
-  )
-}
 
 /**
  * Pass-through filter for RAC's <ComboBox defaultFilter>. Our own
@@ -216,7 +232,7 @@ const Multiselect: FC<Props> = props => {
   const scrollLockRef = useRef(false)
   const focusedTagIndexRef = useRef(0)
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_array_value" as const,
@@ -255,7 +271,14 @@ const Multiselect: FC<Props> = props => {
   const openDropdownRef = useRef<
     ((focusStrategy?: "first" | "last" | null) => void) | null
   >(null)
+  const closeDropdownRef = useRef<(() => void) | null>(null)
   const focusedKeyRef = useRef<Key | null>(null)
+  // Hover drives the Enter target; arrow focus is kept on pointer leave.
+  const [hoveredKey, setHoveredKey] = useState<Key | null>(null)
+  const hoveredKeyRef = useRef<Key | null>(null)
+  hoveredKeyRef.current = hoveredKey
+  // onHoverEnd: skip one sync so leave does not focus the first row.
+  const skipEnterTargetFocusSyncRef = useRef(false)
 
   // In the sidebar, flip/shift are bounded by the viewport so the dropdown can
   // flip up when near the bottom, rather than overflowing (see #16181).
@@ -263,7 +286,7 @@ const Multiselect: FC<Props> = props => {
     ? { boundary: document.documentElement }
     : undefined
 
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-start",
     offsetPx: convertRemToPx(theme.spacing.twoXS),
@@ -283,10 +306,31 @@ const Multiselect: FC<Props> = props => {
     filterMode: element.filterMode,
     acceptNewOptions: element.acceptNewOptions ?? false,
     maxSelections: element.maxSelections,
+    selectAll: element.selectAll,
   })
 
   const displayOptionsRef = useRef(displayOptions)
   displayOptionsRef.current = displayOptions
+  // A filter can unmount the hovered row without onHoverEnd. Clear that
+  // hover so it does not become the Enter target again when the query is
+  // cleared.
+  if (
+    notNullOrUndefined(hoveredKey) &&
+    !displayOptions.some(o => o.id === hoveredKey)
+  ) {
+    setHoveredKey(null)
+  }
+  // Hovered row if still listed; otherwise first visible row.
+  const enterTargetKey = useMemo((): string | null => {
+    if (
+      notNullOrUndefined(hoveredKey) &&
+      displayOptions.some(o => o.id === hoveredKey)
+    ) {
+      return String(hoveredKey)
+    }
+    return displayOptions[0]?.id ?? null
+  }, [hoveredKey, displayOptions])
+
   const valueRef = useRef(value)
   valueRef.current = value
 
@@ -410,7 +454,7 @@ const Multiselect: FC<Props> = props => {
         // Bulk select: add all currently displayed (non-special) options
         const options = displayOptionsRef.current
         const optionsToAdd = options
-          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .filter(o => o.isBulkAction !== true && o.isCreatable !== true)
           .map(o => o.value)
 
         let newValue: string[]
@@ -450,7 +494,7 @@ const Multiselect: FC<Props> = props => {
       // already handled by early returns above, so only filter undefined here.
       const optionById = new Map(
         displayOptionsRef.current
-          .filter(o => !o.isBulkAction && !o.isCreatable)
+          .filter(o => o.isBulkAction !== true && o.isCreatable !== true)
           .map(o => [o.id, o.value])
       )
       const newValues = selectedKeys
@@ -470,7 +514,11 @@ const Multiselect: FC<Props> = props => {
         return
       }
 
-      setValueWithSource({ value: finalValue, fromUser: true })
+      // React Aria calls onChange with the unchanged selection whenever the
+      // menu closes (Escape, click outside), so only commit an actual change.
+      if (!arrayComparator(finalValue, value)) {
+        setValueWithSource({ value: finalValue, fromUser: true })
+      }
       setInputValue("")
     },
     [element.maxSelections, setValueWithSource, value]
@@ -494,7 +542,47 @@ const Multiselect: FC<Props> = props => {
     isOpenRef.current = open
     if (!open) {
       setInputValue("")
+      setHoveredKey(null)
+      // Drop a hover-end skip that never met a sync effect (e.g. hovered the
+      // first row) so reopen still restores aria-activedescendant.
+      skipEnterTargetFocusSyncRef.current = false
     }
+  }, [])
+
+  /** Render a single option. Cast required: styled(ListBox) erases the generic item type. */
+  const renderOption = useCallback((item: unknown): ReactElement => {
+    const option = item as MultiselectOption
+    return (
+      <StyledListBoxItem
+        id={option.id}
+        textValue={option.label}
+        $isCreatable={option.isCreatable}
+        $isBulkAction={option.isBulkAction}
+        onHoverStart={() => {
+          skipEnterTargetFocusSyncRef.current = false
+          setHoveredKey(option.id)
+        }}
+        onHoverEnd={() => {
+          // Keep arrow focus when the pointer leaves a row. Skip the Enter-
+          // target sync only when clearing hover changes that target (not the
+          // first row). Leaving the first row does not change the target, so
+          // the effect would not run and a sticky skip would swallow the next
+          // sync.
+          const firstId = displayOptionsRef.current.at(0)?.id
+          if (
+            hoveredKeyRef.current === option.id &&
+            String(option.id) !== String(firstId ?? "")
+          ) {
+            skipEnterTargetFocusSyncRef.current = true
+          }
+          setHoveredKey(prev => (prev === option.id ? null : prev))
+        }}
+      >
+        <StyledItemHighlight data-item-hl="">
+          {option.label}
+        </StyledItemHighlight>
+      </StyledListBoxItem>
+    )
   }, [])
 
   const handleTagGroupRemove = useCallback(
@@ -528,7 +616,8 @@ const Multiselect: FC<Props> = props => {
 
       if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         e.preventDefault()
-        const prev = tags[idx - 1]
+        // `at(idx - 1)` wraps when idx is 0 and would focus the last tag.
+        const prev = idx > 0 ? tags[idx - 1] : undefined
         if (prev) {
           tag.tabIndex = -1
           prev.tabIndex = 0
@@ -537,7 +626,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault()
-        const next = tags[idx + 1]
+        const next = tags.at(idx + 1)
         if (next) {
           tag.tabIndex = -1
           next.tabIndex = 0
@@ -545,21 +634,24 @@ const Multiselect: FC<Props> = props => {
           focusedTagIndexRef.current = idx + 1
         } else {
           tag.tabIndex = -1
-          const first = tags[0]
+          const first = tags.at(0)
           if (first) first.tabIndex = 0
           focusedTagIndexRef.current = 0
           inputRef.current?.focus()
         }
       } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault()
-        const tagValue = value[idx]
+        // idx is -1 when the tag isn't in tags; value.at(-1) would remove the last value instead.
+        const tagValue =
+          idx >= 0 && idx < value.length ? value[idx] : undefined
         if (tagValue !== undefined) {
-          const nextFocus = tags[idx + 1] ?? tags[idx - 1]
+          const next = tags.at(idx + 1)
+          const prev = idx > 0 ? tags[idx - 1] : undefined
+          const nextFocus = next ?? prev
           handleTagGroupRemove(new Set([tagValue]))
           if (nextFocus && nextFocus !== tag) {
-            // After removal, right neighbor slides to idx; left stays at idx-1
-            focusedTagIndexRef.current =
-              nextFocus === tags[idx + 1] ? idx : idx - 1
+            // After removal, the right neighbor shifts into idx; the left neighbor stays at idx - 1.
+            focusedTagIndexRef.current = nextFocus === next ? idx : idx - 1
             nextFocus.tabIndex = 0
             nextFocus.focus({ preventScroll: true })
           } else {
@@ -569,7 +661,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "Home") {
         e.preventDefault()
-        const first = tags[0]
+        const first = tags.at(0)
         if (first && first !== tag) {
           tag.tabIndex = -1
           first.tabIndex = 0
@@ -578,7 +670,7 @@ const Multiselect: FC<Props> = props => {
         }
       } else if (e.key === "End") {
         e.preventDefault()
-        const last = tags[tags.length - 1]
+        const last = tags.at(-1)
         if (last && last !== tag) {
           tag.tabIndex = -1
           last.tabIndex = 0
@@ -632,6 +724,20 @@ const Multiselect: FC<Props> = props => {
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (disabled) return
 
+      // RAC binds Mod+A to "select all options" while the menu is open and
+      // calls preventDefault(), which would keep the user from selecting the
+      // typed filter text. stopPropagation (without preventDefault) keeps the
+      // input's native select-all.
+      if (
+        e.key.toLowerCase() === "a" &&
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey
+      ) {
+        e.stopPropagation()
+        return
+      }
+
       // Block character input for FILTER_MODE_NONE, but allow Backspace
       // through when input is empty so the tag-removal handler can process it.
       if (isFilterNone && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -653,6 +759,15 @@ const Multiselect: FC<Props> = props => {
         openDropdownRef.current?.()
       }
 
+      // Close before React Aria's Tab shortcut can commit() the synced
+      // focusedKey (including "Select all"). isOpenRef is cleared sync so
+      // handleChange drops any late selection callback from close. Do not
+      // stopPropagation — dialog FocusScope needs to see Tab for containment.
+      if (e.key === "Tab" && isOpenRef.current) {
+        isOpenRef.current = false
+        closeDropdownRef.current?.()
+      }
+
       if (e.key === "Escape") {
         if (filterActiveRef.current) {
           // Layered: first Escape clears filter (keeps dropdown open),
@@ -664,42 +779,34 @@ const Multiselect: FC<Props> = props => {
         }
       }
 
-      // Creatable Enter: commit typed text as a new option.
-      // Only create when no item is focused or CREATABLE_ID is focused.
-      // If focus is on a real option or bulk action, let RAC handle it.
-      if (
-        e.key === "Enter" &&
-        !e.nativeEvent.isComposing &&
-        (element.acceptNewOptions ?? false)
-      ) {
-        const currentInput = inputValueRef.current
-        if (currentInput) {
-          const focused = focusedKeyRef.current
-          const shouldCreate =
-            !notNullOrUndefined(focused) || String(focused) === CREATABLE_ID
-
-          if (shouldCreate) {
-            const alreadyExists =
-              element.options.some(o => o === currentInput) ||
-              value.includes(currentInput)
-            if (!alreadyExists) {
-              if (
-                element.maxSelections > 0 &&
-                value.length >= element.maxSelections
-              ) {
-                e.preventDefault()
-                e.stopPropagation()
-                return
-              }
-              e.preventDefault()
-              e.stopPropagation()
-              const newValue = [...value, currentInput]
-              setValueWithSource({ value: newValue, fromUser: true })
-              setInputValue("")
-              return
-            }
-          }
+      // Enter while open: always commit through Streamlit so aria focusedKey
+      // sync cannot change selection semantics. Prefer RAC focusedKey (arrow
+      // nav or our Enter-target sync), then hover, then the first visible row
+      // ("Select all" / "Select X matches" when shown, else first match;
+      // "Add: …" is first only when nothing else matches).
+      if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+        if (!isOpenRef.current) return
+        // Swallow Enter when the menu is open (including empty lists, e.g.
+        // max_selections reached) so RAC does not try to commit typed text.
+        e.preventDefault()
+        e.stopPropagation()
+        const display = displayOptionsRef.current
+        const focused = focusedKeyRef.current
+        const focusedStillShown =
+          notNullOrUndefined(focused) &&
+          display.some(o => o.id === String(focused))
+        const hovered = hoveredKeyRef.current
+        const hoveredStillShown =
+          notNullOrUndefined(hovered) && display.some(o => o.id === hovered)
+        const targetId = focusedStillShown
+          ? String(focused)
+          : hoveredStillShown
+            ? hovered
+            : display[0]?.id
+        if (notNullOrUndefined(targetId)) {
+          handleChange([targetId])
         }
+        return
       }
 
       // Backspace on empty input removes last tag
@@ -722,15 +829,7 @@ const Multiselect: FC<Props> = props => {
         setValueWithSource({ value: newValue, fromUser: true })
       }
     },
-    [
-      disabled,
-      element.acceptNewOptions,
-      element.maxSelections,
-      element.options,
-      isFilterNone,
-      setValueWithSource,
-      value,
-    ]
+    [disabled, handleChange, isFilterNone, setValueWithSource, value]
   )
 
   // Map selected values to option IDs for the ComboBox selection prop
@@ -796,10 +895,13 @@ const Multiselect: FC<Props> = props => {
         >
           <DropdownController
             openRef={openDropdownRef}
+            closeRef={closeDropdownRef}
             focusedKeyRef={focusedKeyRef}
+            enterTargetKey={enterTargetKey}
+            skipEnterTargetFocusSyncRef={skipEnterTargetFocusSyncRef}
           />
           <StyledTrigger
-            ref={refs.setReference}
+            ref={setReference}
             $maxHeight={maxHeight}
             onClick={handleContainerClick}
           >
@@ -881,7 +983,7 @@ const Multiselect: FC<Props> = props => {
             </StyledOpenButton>
           </StyledTrigger>
           <StyledPopover
-            ref={refs.setFloating}
+            ref={setFloating}
             data-testid="stMultiSelectDropdown"
             placement="bottom left"
             isNonModal

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Accept } from "react-dropzone"
+import type { Accept } from "react-dropzone"
 
 import { isMimeType } from "~lib/util/FileHelper"
 

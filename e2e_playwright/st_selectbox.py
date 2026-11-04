@@ -296,6 +296,66 @@ v_bound_clear = st.selectbox(
 )
 st.write("bound select clear value:", v_bound_clear)
 
+# --- on_change="ignore" selectbox ---
+# Run counter so test_selectbox_on_change_ignore can detect an unexpected rerun.
+if "runs" not in st.session_state:
+    st.session_state.runs = 0
+st.session_state.runs += 1
+st.write("Runs:", st.session_state.runs)
+
+ignore_select = st.selectbox(
+    "Ignore change selectbox",
+    ["alpha", "beta", "gamma"],
+    key="ignore_select",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore selectbox value:", ignore_select)
+
+if st.button("Apply ignore selectbox", key="apply_ignore_selectbox"):
+    st.write("Applied ignore selectbox value:", ignore_select)
+
+# --- required selectboxes ---
+st.markdown("Required selectboxes:")
+
+with st.form("required_selectbox_form", clear_on_submit=True):
+    st.selectbox(
+        "Required country",
+        ["France", "Germany", "Italy"],
+        index=None,
+        key="required_country",
+        required=True,
+    )
+    st.selectbox(
+        "Required city",
+        ["Paris", "Berlin", "Rome"],
+        index=None,
+        key="required_city",
+        required=True,
+    )
+    required_form_submitted = st.form_submit_button("Submit required selectbox form")
+st.write("required form submitted:", required_form_submitted)
+st.write("required country:", st.session_state.get("required_country"))
+
+required_color = st.selectbox(
+    "Required color",
+    ["red", "green", "blue"],
+    index=None,
+    key="required_color",
+    required=True,
+    accept_new_options=True,
+)
+st.write("required color:", required_color)
+
+st.selectbox(
+    "Required hidden",
+    ["a", "b"],
+    index=None,
+    key="required_hidden_select",
+    required=True,
+    label_visibility="hidden",
+)
+
 # Regression test for https://github.com/streamlit/streamlit/issues/16181:
 # a selectbox near the bottom of the sidebar must flip its dropdown up and stay
 # within the viewport instead of opening downward and overflowing. The
@@ -310,3 +370,22 @@ with st.sidebar:
         key="sidebar_bottom_select",
     )
     st.write("sidebar bottom value:", v_sidebar_bottom)
+
+# --- icon parameter ---
+st.selectbox("selectbox 27 (material icon)", options, icon=":material/public:")
+
+v28 = st.selectbox(
+    "selectbox 28 (emoji icon, accept new options)",
+    options,
+    index=None,
+    icon="👤",
+    placeholder="Pick someone",
+    accept_new_options=True,
+)
+st.write("value 28:", v28)
+
+# The start icons and the text of these three inputs should line up.
+with st.container(key="icon_alignment"):
+    st.text_input("aligned text input", "male", icon=":material/person:")
+    st.number_input("aligned number input", value=1, icon=":material/tag:")
+    st.selectbox("aligned selectbox", options, icon=":material/person:")

@@ -18,7 +18,9 @@ import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import CameraInputButton, { CameraInputButtonProps } from "./CameraInputButton"
+import CameraInputButton, {
+  type CameraInputButtonProps,
+} from "./CameraInputButton"
 
 const getProps = (
   props: Partial<CameraInputButtonProps> = {}

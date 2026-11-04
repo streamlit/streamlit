@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are incorrect.
 # Note: Due to https://mypy.readthedocs.io/en/latest/duck_type_compatibility.html, mypy will not detect
@@ -88,3 +86,43 @@ if TYPE_CHECKING:
     assert_type(number_input("foo", value=3.14, bind="query-params"), float)
     assert_type(number_input("foo", bind=None), float)
     assert_type(number_input("foo", value=None, bind="query-params"), float | None)
+
+    # Check on_change parameter modes
+    assert_type(number_input("foo", on_change=None), float)
+    assert_type(number_input("foo", on_change="rerun"), float)
+    assert_type(number_input("foo", on_change="ignore"), float)
+    assert_type(number_input("foo", on_change=lambda: None), float)
+    assert_type(number_input("foo", value=5, on_change="ignore"), int)
+    assert_type(number_input("foo", min_value=1, on_change="ignore"), int)
+    assert_type(number_input("foo", value=None, on_change="ignore"), float | None)
+
+    # Test required parameter (keyword-only)
+    assert_type(number_input("foo", required=True), float)
+    assert_type(number_input("foo", required=False), float)
+    assert_type(number_input("foo", value=None, required=True), float | None)
+    assert_type(number_input("foo", min_value=1, value=None, required=True), int | None)
+    assert_type(number_input("foo", value=0, required=True), int)
+
+    def on_number_change(prefix: str) -> None: ...
+
+    # Common parameters combined
+    assert_type(
+        number_input(
+            "foo",
+            value=1,
+            format="%d",
+            key="quantity",
+            help="Enter a quantity",
+            on_change=on_number_change,
+            args=("quantity",),
+            kwargs={},
+            placeholder="0",
+            disabled=False,
+            required=True,
+            label_visibility="visible",
+            icon=":material/123:",
+            width=240,
+            persist_state="page",
+        ),
+        int,
+    )

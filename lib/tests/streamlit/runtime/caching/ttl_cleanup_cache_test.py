@@ -14,6 +14,8 @@
 
 import math
 
+import pytest
+
 from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 
 
@@ -113,12 +115,8 @@ class TestTTLCleanupCache:
 
         assert released_items == [i + 10 for i in range(5)]
 
-    def test_repr_does_not_fire_release_hooks(self):
-        """Inspecting the cache via repr() must not trigger on_release.
-
-        currsize/len() reap expired entries (firing release hooks), so __repr__
-        must avoid them and stay side-effect free.
-        """
+    def test_inspection_properties_do_not_fire_release_hooks(self):
+        """Properties stay side-effect free, while len() reaps expired entries."""
         released_items = []
 
         def on_release(item: int) -> None:
@@ -131,8 +129,14 @@ class TestTTLCleanupCache:
         test_cache[0] = 10
 
         assert repr(test_cache) == "TTLCleanupCache(maxsize=500, ttl=0, currsize=1)"
-        # The expired-but-unreaped entry must not have been released by repr().
+        assert test_cache.currsize == 0
+        assert test_cache.curr_total_size is None
+        # The expired entry remains physically present after property reads.
         assert released_items == []
+
+        # __len__ intentionally reaps entries for resource-cache cleanup.
+        assert len(test_cache) == 0
+        assert released_items == [10]
 
     def test_safe_del_calls_release(self):
         """Tests that safe_del() will call release() on elements."""
@@ -156,3 +160,45 @@ class TestTTLCleanupCache:
         test_cache.safe_del(3)
         assert released_items == [11, 13]
         assert list(test_cache.keys()) == [0, 2, 4]
+
+    def test_on_evict_is_forwarded(self):
+        """Automatic evictions are reported; release-hook clears are not."""
+        evictions: list[tuple[str, int]] = []
+        test_cache = TTLCleanupCache(
+            maxsize=1,
+            ttl=math.inf,
+            timer=fake_timer,
+            on_release=lambda _: None,
+            on_evict=lambda reason, count: evictions.append((reason, count)),
+        )
+
+        test_cache[0] = 10
+        test_cache[1] = 11
+        test_cache.clear()
+
+        assert evictions == [("max_entries", 1)]
+
+    def test_capacity_eviction_reported_when_release_raises(self):
+        """The eviction is reported before the release hook, which runs once."""
+        evictions: list[tuple[str, int]] = []
+        released_items: list[int] = []
+
+        def on_release(item: int) -> None:
+            released_items.append(item)
+            raise RuntimeError("cleanup failed")
+
+        test_cache = TTLCleanupCache(
+            maxsize=1,
+            ttl=math.inf,
+            timer=fake_timer,
+            on_release=on_release,
+            on_evict=lambda reason, count: evictions.append((reason, count)),
+        )
+
+        test_cache[0] = 10
+        with pytest.raises(RuntimeError, match="cleanup failed"):
+            test_cache[1] = 11
+
+        assert evictions == [("max_entries", 1)]
+        assert released_items == [10]
+        assert 0 not in test_cache

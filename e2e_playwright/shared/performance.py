@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-import datetime
 import json
 import os
 import time
 from contextlib import contextmanager
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from e2e_playwright.shared.git_utils import get_git_root
@@ -249,7 +249,7 @@ def measure_performance(
         # Ensure the directory exists
         os.makedirs(performance_results_dir, exist_ok=True)
 
-        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
         with open(
             os.path.join(performance_results_dir, f"{timestamp}_{test_name}.json"),

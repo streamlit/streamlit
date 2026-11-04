@@ -100,7 +100,12 @@ def get_time_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Loc
 
 
 def type_time(
-    time_display: Locator, hour: str, minute: str, second: str | None = None
+    time_display: Locator,
+    hour: str,
+    minute: str,
+    second: str | None = None,
+    *,
+    commit: bool = True,
 ) -> None:
     """Type a time into a TimeInput's spinbutton segments.
 
@@ -110,7 +115,8 @@ def type_time(
 
     After typing, blurs the last segment so the widget commits the value
     to the backend (commit is deferred to blur, matching st.number_input
-    semantics).
+    semantics). Pass ``commit=False`` to leave the last segment focused
+    without committing.
 
     Parameters
     ----------
@@ -127,14 +133,20 @@ def type_time(
         Two-digit second string (e.g. "30"). Only applicable when the widget
         has sub-minute step (seconds granularity). If None, the seconds segment
         is not interacted with.
+
+    commit : bool
+        If True (default), blur the last typed segment so the widget commits
+        the value. Set to False to keep the edit uncommitted (e.g. to test
+        typing without a rerun).
     """
     spinbuttons = time_display.get_by_role("spinbutton")
     spinbuttons.first.press_sequentially(hour)
     spinbuttons.nth(1).press_sequentially(minute)
     if second is not None:
         spinbuttons.nth(2).press_sequentially(second)
-        spinbuttons.nth(2).blur()
-    else:
+        if commit:
+            spinbuttons.nth(2).blur()
+    elif commit:
         spinbuttons.nth(1).blur()
     # Blur triggers the deferred commit to the backend.
 
@@ -298,9 +310,9 @@ def select_selectbox_option(
     # Wait for the React component to be fully initialized before interacting
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
-    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
-    # Note: this shifts focus to the first option, so the initially-selected item
-    # will not be highlighted when the dropdown first opens.
+    # ArrowDown is a backup open. The Enter target is already active (the
+    # current value, or the first option when the input is empty), so this
+    # key moves to the next row. The helper then filters and clicks by name.
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing
@@ -401,6 +413,9 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
         Pass 3 parts for a single-date field, 6 for a range field (start +
         end segments), e.g.
         ``type_date(field, "1970", "01", "02")`` for a `YYYY/MM/DD` field.
+        Each part must match the rendered segment text exactly (zero-padded
+        months/days and a 4-digit year for current callers), because the
+        helper waits with ``to_have_text(part)`` before the next keystroke.
 
     commit : bool
         If True (default), press Escape after typing to close the popover and
@@ -410,9 +425,67 @@ def type_date(date_input_field: Locator, *parts: str, commit: bool = True) -> No
     """
     spinbuttons = date_input_field.get_by_role("spinbutton")
     for i, part in enumerate(parts):
-        spinbuttons.nth(i).press_sequentially(part)
+        target = spinbuttons.nth(i)
+        target.press_sequentially(part)
+        # Wait for React Aria to paint the digits before the next segment or
+        # Escape. Otherwise close/blur can run before the last bound exists.
+        expect(target).to_have_text(part)
     if commit:
         date_input_field.page.keyboard.press("Escape")
+
+
+def clear_date_segments(date_input_field: Locator) -> None:
+    """Backspace every segment of a date or datetime field, then press Escape.
+
+    Escape closes the popover and tries to commit the empty field: optional
+    fields commit it, required fields block it, and fields with a non-empty
+    default revert.
+
+    Parameters
+    ----------
+    date_input_field : Locator
+        The segmented field container (``stDateInputField`` or
+        ``stDateTimeInputField``).
+    """
+    page = date_input_field.page
+    spinbuttons = date_input_field.get_by_role("spinbutton")
+    for i in range(spinbuttons.count()):
+        spinbuttons.nth(i).click()
+        # Four presses cover the year segment; extra presses are harmless
+        # after a segment is empty.
+        for _ in range(4):
+            page.keyboard.press("Backspace")
+    page.keyboard.press("Escape")
+
+
+def paste_into(locator: Locator, text: str) -> None:
+    """Dispatch a synthetic ``paste`` event carrying ``text`` on the given element.
+
+    Playwright's ``fill``/``press_sequentially`` never produce a ``paste``
+    event, so segmented widgets (``st.date_input``, ``st.time_input``) that
+    implement an ``onPaste`` handler need the event synthesized directly.
+
+    Parameters
+    ----------
+    locator : Locator
+        The element to dispatch the paste event on.
+
+    text : str
+        The clipboard text to paste.
+    """
+    locator.evaluate(
+        """(el, text) => {
+            const dt = new DataTransfer();
+            dt.setData('text/plain', text);
+            const event = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+            });
+            Object.defineProperty(event, 'clipboardData', { value: dt });
+            el.dispatchEvent(event);
+        }""",
+        text,
+    )
 
 
 def get_slider(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -1120,10 +1193,15 @@ def expect_label_truncated(element: Locator) -> None:
     Parameters
     ----------
     element : Locator
-        A locator whose subtree contains a single label markdown container
-        (e.g. a button, popover trigger, or menu-button trigger).
+        A locator whose subtree contains a single label markdown or caption
+        container (e.g. a button, popover trigger, or ``st.caption``).
     """
-    label = element.get_by_test_id("stMarkdownContainer").locator("p").first
+    # Ellipsis is applied on the markdown/caption container (and may also be
+    # on nested paragraphs). Measure the container so this stays valid when
+    # wrap=False flattens leftover block remnants into inline siblings.
+    label = element.locator(
+        '[data-testid="stMarkdownContainer"], [data-testid="stCaptionContainer"]'
+    ).first
     expect(label).to_be_visible()
     # Retry until layout is stable — a one-shot evaluate can race with flex
     # sizing even after the label is visible.
@@ -1682,6 +1760,49 @@ def goto_app(page: Page, url: str) -> None:
     """
     page.goto(url)
     wait_for_app_loaded(page)
+
+
+def flush_print_media_change(page: Page) -> None:
+    """Yield one task after ``emulate_media`` changes the media.
+
+    Playwright queues media-query ``change`` events for the next task. Yielding
+    delivers them before assertions read the printed layout.
+
+    Parameters
+    ----------
+    page : Page
+        The page that emulates print media.
+    """
+    page.evaluate("() => new Promise(resolve => setTimeout(resolve, 0))")
+
+
+def start_browser_print(page: Page) -> None:
+    """Enter print the way a browser does: ``beforeprint``, then print media.
+
+    A browser fires ``beforeprint`` while screen media is still active and
+    switches to print afterwards. Print colors are forced, as in a PDF.
+
+    Parameters
+    ----------
+    page : Page
+        The page to print.
+    """
+    page.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    page.emulate_media(media="print", forced_colors="active")
+    flush_print_media_change(page)
+
+
+def end_browser_print(page: Page) -> None:
+    """Fire ``afterprint`` and restore screen media.
+
+    Parameters
+    ----------
+    page : Page
+        The page that was printed.
+    """
+    page.evaluate("() => window.dispatchEvent(new Event('afterprint'))")
+    page.emulate_media(media="screen", forced_colors="none")
+    flush_print_media_change(page)
 
 
 def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:

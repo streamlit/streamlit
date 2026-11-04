@@ -124,6 +124,27 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
             assert wrapped_storage.get("some-key") == b"some-value"
             mock_persist_get.assert_not_called()
 
+    def test_expired_memory_entry_raises_storage_cache_miss(self) -> None:
+        """An entry expiring during lookup is translated to a storage cache miss."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            ttl_seconds=1,
+        )
+        with patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "cache_utils.TTLCACHE_TIMER",
+            return_value=0,
+        ) as timer:
+            wrapped_storage = InMemoryCacheStorageWrapper(
+                persist_storage=DummyCacheStorage(), context=context
+            )
+            wrapped_storage.set("some-key", b"some-value")
+            timer.return_value = 2
+
+            with pytest.raises(CacheStorageKeyNotFoundError):
+                wrapped_storage._read_from_mem_cache("some-key")
+
     def test_has_key_in_memory_storage_does_not_check_persist_storage(self):
         context = self.get_storage_context()
         persist_storage = LocalDiskCacheStorage(context)
@@ -199,6 +220,29 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         with pytest.raises(CacheStorageKeyNotFoundError):
             wrapped_storage.get("some-key")
 
+    def test_delete_physically_removes_expired_memory_entry(self) -> None:
+        """Explicit deletion removes an expired entry that has not been reaped."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            ttl_seconds=1,
+        )
+        with patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "cache_utils.TTLCACHE_TIMER",
+            return_value=0,
+        ) as timer:
+            wrapped_storage = InMemoryCacheStorageWrapper(
+                persist_storage=DummyCacheStorage(), context=context
+            )
+            wrapped_storage.set("some-key", b"some-value")
+            timer.return_value = 2
+
+            assert "some-key" in wrapped_storage._mem_cache._data
+            wrapped_storage.delete("some-key")
+
+        assert "some-key" not in wrapped_storage._mem_cache._data
+
     def test_in_memory_cache_storage_wrapper_close(self):
         """
         Test that storage.close() closes the underlying persist storage
@@ -214,3 +258,86 @@ class InMemoryCacheStorageWrapperTest(unittest.TestCase):
         ) as mock_persist_close:
             wrapped_storage.close()
             mock_persist_close.assert_called_once()
+
+    def test_max_size_and_max_entries_are_both_enforced(self) -> None:
+        """Byte and entry-count limits are enforced together."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            max_entries=2,
+            max_size_bytes=5,
+        )
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(), context=context
+        )
+
+        wrapped_storage.set("a", b"aaa")
+        wrapped_storage.set("b", b"bb")
+        wrapped_storage.set("c", b"c")
+
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("a")
+        assert wrapped_storage._read_from_mem_cache("b") == b"bb"
+        assert wrapped_storage._read_from_mem_cache("c") == b"c"
+
+        # Updating an existing key keeps the entry count at two but exceeds the
+        # byte limit, so the other entry must be evicted.
+        wrapped_storage.set("c", b"ccccc")
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("b")
+        assert wrapped_storage._read_from_mem_cache("c") == b"ccccc"
+
+    def test_oversized_entry_is_retained_and_warns_once(self) -> None:
+        """A lone oversized entry is retained and warns only once."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            max_size_bytes=2,
+        )
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=DummyCacheStorage(), context=context
+        )
+
+        with patch(
+            "streamlit.runtime.caching.storage.in_memory_cache_storage_wrapper."
+            "_LOGGER.warning"
+        ) as warning:
+            wrapped_storage.set("sensitive-cache-key", b"sensitive-cached-value")
+            wrapped_storage.set("second", b"larger")
+
+        with pytest.raises(CacheStorageKeyNotFoundError):
+            wrapped_storage._read_from_mem_cache("sensitive-cache-key")
+        assert wrapped_storage._read_from_mem_cache("second") == b"larger"
+        warning.assert_called_once_with(
+            "A cached result is larger than the st.cache_data size limit and "
+            "was stored anyway. Function %r produced %s serialized bytes, "
+            "exceeding %s.",
+            "func-display-name",
+            len(b"sensitive-cached-value"),
+            "max_size (2 bytes)",
+        )
+        warning_message = warning.call_args.args[0] % warning.call_args.args[1:]
+        assert "sensitive-cache-key" not in warning_message
+        assert "sensitive-cached-value" not in warning_message
+        assert warning.call_args.kwargs == {}
+
+    def test_byte_eviction_preserves_persisted_entry(self) -> None:
+        """Byte eviction leaves the persisted copy available for reload."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            max_size_bytes=3,
+        )
+        persist_storage = LocalDiskCacheStorage(context)
+        wrapped_storage = InMemoryCacheStorageWrapper(
+            persist_storage=persist_storage, context=context
+        )
+        wrapped_storage.set("a", b"aa")
+        wrapped_storage.set("b", b"bb")
+
+        with patch.object(
+            persist_storage, "get", wraps=persist_storage.get
+        ) as persist_get:
+            assert wrapped_storage.get("a") == b"aa"
+            persist_get.assert_called_once_with("a")

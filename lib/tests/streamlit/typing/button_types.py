@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -103,7 +101,9 @@ if TYPE_CHECKING:
             kwargs=None,
             type="primary",
             icon="🚀",
+            icon_position="right",
             disabled=False,
+            use_container_width=True,
             width="stretch",
             shortcut="Enter",
             wrap=False,
@@ -188,7 +188,9 @@ if TYPE_CHECKING:
             kwargs=None,
             type="primary",
             icon=":material/download:",
+            icon_position="right",
             disabled=False,
+            use_container_width=True,
             width="stretch",
             shortcut="Ctrl+Shift+D",
             wrap=False,
@@ -303,7 +305,9 @@ if TYPE_CHECKING:
             help="Visit Streamlit",
             type="primary",
             icon="🚀",
+            icon_position="right",
             disabled=False,
+            use_container_width=True,
             width="stretch",
             shortcut="Ctrl+Shift+S",
             wrap=False,
@@ -362,8 +366,10 @@ if TYPE_CHECKING:
             "pages/page1.py",
             label="Page 1",
             icon="📄",
+            icon_position="right",
             help="Navigate to page 1",
             disabled=False,
+            use_container_width=True,
             width="stretch",
             query_params={"utm_source": "app"},
         ),
@@ -440,7 +446,9 @@ if TYPE_CHECKING:
             key="full_submit",
             type="primary",
             icon="🚀",
+            icon_position="right",
             disabled=False,
+            use_container_width=True,
             width="stretch",
             shortcut="Ctrl+Enter",
             wrap=False,

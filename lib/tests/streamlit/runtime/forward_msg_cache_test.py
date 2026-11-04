@@ -84,6 +84,21 @@ class ForwardMsgCacheTest(unittest.TestCase):
         populate_hash_if_needed(msg2)
         assert msg1.hash == msg2.hash
 
+    def test_run_identity_metadata(self):
+        """Test that run identity metadata doesn't change the hash"""
+        msg1 = create_dataframe_msg([1, 2, 3], 1)
+        msg1.metadata.run.script_run_id = "run_1"
+        msg2 = create_dataframe_msg([1, 2, 3], 1)
+        msg2.metadata.run.script_run_id = "run_2"
+        msg2.metadata.run.fragment_ids.extend(["fragment_1", "fragment_2"])
+        populate_hash_if_needed(msg1)
+        populate_hash_if_needed(msg2)
+        assert msg1.hash == msg2.hash
+        # Hashing restores the metadata it excluded.
+        assert msg1.metadata.run.script_run_id == "run_1"
+        assert msg2.metadata.run.script_run_id == "run_2"
+        assert list(msg2.metadata.run.fragment_ids) == ["fragment_1", "fragment_2"]
+
     def test_reference_msg(self):
         """Test creation of 'reference' ForwardMsgs"""
         msg = create_dataframe_msg([1, 2, 3], 34)

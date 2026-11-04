@@ -120,10 +120,10 @@ def test_popover_columns(app: Page, assert_snapshot: ImageCompareFunction):
     expect_markdown(columns_popover_1, "Popover in column 1")
 
     # Auto no-wrap must not ellipsize a content-width trigger whose label fits.
-    content_width_label = (
-        get_popover(app, "popover 17 (in column 2)")
-        .get_by_test_id("stMarkdownContainer")
-        .locator("p")
+    # Measure the markdown container: wrap=False inlines leftover <p> boxes,
+    # so the paragraph itself is not the overflow box.
+    content_width_label = get_popover(app, "popover 17 (in column 2)").get_by_test_id(
+        "stMarkdownContainer"
     )
     wait_until(
         app,

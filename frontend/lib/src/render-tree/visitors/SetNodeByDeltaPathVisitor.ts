@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
+import {
+  getRetainedAfterWrite,
+  shiftRetainedAfter,
+} from "~lib/render-tree/elementRetention"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * A visitor that sets a node at a specific delta path, maintaining immutability
@@ -111,6 +120,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
 
     // Create a copy of the children array
     let newChildren: AppNode[] = []
+    let insertedTransient = false
     const childVisitor = new SetNodeByDeltaPathVisitor(
       remainingPath,
       this.nodeToSet,
@@ -120,6 +130,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
     // If the child at the current index is undefined, we assume we are out of bounds
     // This may be just an element being added at the end of the block.
     // So, we can just replace it with the nodeToSet assuming the path is valid.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- index access past the end (or into a hole) is undefined, which the AppNode[] type hides
     if (!node.children[currentIndex]) {
       if (remainingPath.length > 0) {
         throw new Error("Cannot set a node at a delta path")
@@ -148,6 +159,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
           // and not affect the existing non-transient child
           newChildren.push(nextChild)
           newChildren.push(child)
+          insertedTransient = true
         } else {
           // This will be a replacement
           newChildren.push(nextChild)
@@ -163,8 +175,35 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       node.deltaBlock,
       this.scriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      this.getRetained(node, currentIndex, newChildren, insertedTransient)
     )
+  }
+
+  /**
+   * Retained elements of `node` after this write. Only the parent of the
+   * written slot updates them; ancestors rebuilt along the path keep theirs.
+   */
+  private getRetained(
+    node: BlockNode,
+    index: number,
+    newChildren: AppNode[],
+    insertedTransient: boolean
+  ): BlockNode["retained"] {
+    if (this.deltaPath.length > 1) {
+      return node.retained
+    }
+    if (insertedTransient) {
+      return shiftRetainedAfter(node.retained, index)
+    }
+    return getRetainedAfterWrite({
+      retained: node.retained,
+      index,
+      // Undefined when the write appends past the last child.
+      prev: node.children[index],
+      next: newChildren[index],
+      scriptRunId: this.scriptRunId,
+    })
   }
 
   /**

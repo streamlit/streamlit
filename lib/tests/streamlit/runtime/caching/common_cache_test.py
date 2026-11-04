@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import threading
 import time
 import unittest
 from datetime import timedelta
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -35,14 +37,16 @@ from streamlit.runtime.caching import (
     cache_data_api,
     cache_resource,
     cache_resource_api,
+    cache_utils,
     clear_session_data_cache,
     clear_session_resource_cache,
 )
 from streamlit.runtime.caching.cache_errors import (
+    CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
     CacheReplayClosureError,
 )
-from streamlit.runtime.caching.cache_utils import CachedResult
+from streamlit.runtime.caching.cache_utils import _LOGGER, CachedResult
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -56,12 +60,13 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils import script_run_context
+from streamlit.runtime.scriptrunner_utils.exceptions import StopException
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
 from tests.streamlit.elements.image_test import create_image
-from tests.testutil import create_mock_script_run_ctx
+from tests.testutil import create_mock_script_run_ctx, patch_config_options
 
 
 def get_text_or_block(delta):
@@ -348,6 +353,197 @@ class CommonCacheTest(DeltaGeneratorTestCase):
         text = self.get_text_delta_contents()
 
         assert text == ["1", "---", "1"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_st_function_replay_isolated(self, _, cache_decorator) -> None:
+        """Concurrent async cache misses capture only their own display messages."""
+
+        async def run_concurrent_misses() -> None:
+            first_started = asyncio.Event()
+            second_finished = asyncio.Event()
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text(label: str) -> str:
+                st.text(f"{label}-before")
+                if label == "first":
+                    first_started.set()
+                    await second_finished.wait()
+                else:
+                    await first_started.wait()
+                    st.text(f"{label}-after")
+                    second_finished.set()
+                    return label
+                st.text(f"{label}-after")
+                return label
+
+            await asyncio.gather(cached_text("first"), cached_text("second"))
+
+            self.clear_queue()
+            await cached_text("first")
+            st.text("---")
+            await cached_text("second")
+
+        asyncio.run(run_concurrent_misses())
+
+        assert self.get_text_delta_contents() == [
+            "first-before",
+            "first-after",
+            "---",
+            "second-before",
+            "second-after",
+        ]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_st_function_replay_includes_child_tasks(
+        self, _, cache_decorator
+    ) -> None:
+        """Child tasks contribute display messages to their cached parent."""
+
+        async def run_miss_and_hit() -> None:
+            async def write_text(label: str) -> None:
+                await asyncio.sleep(0)
+                st.text(label)
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text() -> None:
+                await asyncio.gather(write_text("first"), write_text("second"))
+
+            await cached_text()
+            self.clear_queue()
+            await cached_text()
+
+        asyncio.run(run_miss_and_hit())
+
+        assert self.get_text_delta_contents() == ["first", "second"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_detached_child_cannot_mutate_cached_replay(
+        self, _, cache_decorator
+    ) -> None:
+        """A child writing after its parent returns cannot alter cached replay."""
+
+        async def run_detached_child_then_hit() -> None:
+            child_started = asyncio.Event()
+            allow_child_write = asyncio.Event()
+            child_task: asyncio.Task[None] | None = None
+
+            async def write_late() -> None:
+                child_started.set()
+                await allow_child_write.wait()
+                st.text("late")
+
+            @cache_decorator(show_spinner=False)
+            async def cached_text() -> None:
+                nonlocal child_task
+                st.text("captured")
+                child_task = asyncio.create_task(write_late())
+                await child_started.wait()
+
+            await cached_text()
+            assert child_task is not None
+
+            allow_child_write.set()
+            await child_task
+
+            self.clear_queue()
+            await cached_text()
+
+        asyncio.run(run_detached_child_then_hit())
+
+        assert self.get_text_delta_contents() == ["captured"]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_async_cached_widget_policy_resets_after_success_and_error(
+        self, name, cache_decorator
+    ) -> None:
+        """Widget policy applies inside async caches and resets on every exit path."""
+
+        @cache_decorator(show_spinner=False)
+        async def cached_widget(should_raise: bool) -> None:
+            st.button(f"inside-{name}-{should_raise}")
+            await asyncio.sleep(0)
+            if should_raise:
+                raise RuntimeError("boom")
+
+        with patch.object(st, "exception") as warning:
+            asyncio.run(cached_widget(False))
+            warning.assert_called_once()
+
+            warning.reset_mock()
+            st.button(f"outside-success-{name}")
+            warning.assert_not_called()
+
+            with pytest.raises(RuntimeError, match="boom"):
+                asyncio.run(cached_widget(True))
+            warning.assert_called_once()
+
+            warning.reset_mock()
+            st.button(f"outside-error-{name}")
+            warning.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_mixed_nested_cache_replay_resets_after_inner_error(
+        self, _, cache_decorator
+    ) -> None:
+        """Nested sync output, blocks, and media replay through an async outer cache."""
+
+        @cache_decorator(show_spinner=False)
+        def inner(label: str, should_raise: bool) -> None:
+            with st.container():
+                st.text(f"inner-{label}")
+                st.image(create_image(5))
+            if should_raise:
+                raise RuntimeError("inner boom")
+
+        @cache_decorator(show_spinner=False)
+        async def outer(label: str, inner_raises: bool) -> None:
+            st.text(f"outer-{label}-before")
+            try:
+                inner(label, inner_raises)
+            except RuntimeError:
+                st.text(f"outer-{label}-handled")
+            await asyncio.sleep(0)
+            st.text(f"outer-{label}-after")
+
+        async def populate_and_replay() -> None:
+            await outer("success", False)
+            await outer("error", True)
+
+            self.clear_queue()
+            await outer("success", False)
+            st.text("---")
+            await outer("error", True)
+
+        asyncio.run(populate_and_replay())
+
+        assert self.get_text_delta_contents() == [
+            "outer-success-before",
+            "inner-success",
+            "outer-success-after",
+            "---",
+            "outer-error-before",
+            "inner-error",
+            "outer-error-handled",
+            "outer-error-after",
+        ]
+        replayed_images = [
+            delta.new_element.imgs
+            for delta in self.get_all_deltas_from_queue()
+            if delta.HasField("new_element")
+            and delta.new_element.WhichOneof("type") == "imgs"
+        ]
+        assert len(replayed_images) == 2
+        assert all(image_list.imgs[0].url for image_list in replayed_images)
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
@@ -1061,6 +1257,304 @@ class CommonCacheThreadingTest(unittest.TestCase):
         call_on_threads(call_foo, num_threads=self.NUM_THREADS, timeout=0.5)
 
     @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_wait_can_be_interrupted(self, _, cache_decorator):
+        """An abandoned waiter exits without interrupting the cache owner."""
+        compute_started = threading.Event()
+        release_compute = threading.Event()
+        yield_checked = threading.Event()
+        call_count = 0
+        owner_results: list[int] = []
+        waiter_exceptions: list[BaseException] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=lambda: owner_results.append(get_value()))
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        def cancel_wait() -> None:
+            yield_checked.set()
+            raise StopException()
+
+        waiter_ctx = create_mock_script_run_ctx()
+        waiter_ctx.reset(yield_check=cancel_wait)
+
+        def wait_for_value() -> None:
+            try:
+                get_value()
+            except BaseException as ex:
+                waiter_exceptions.append(ex)
+
+        waiter = threading.Thread(target=wait_for_value)
+        add_script_run_ctx(waiter, waiter_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert yield_checked.wait(timeout=1)
+                waiter.join(timeout=0.5)
+                assert not waiter.is_alive()
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert owner_results == [42]
+        assert len(waiter_exceptions) == 1
+        assert isinstance(waiter_exceptions[0], StopException)
+        assert get_value() == 42
+        assert call_count == 1
+
+    def test_contended_acquire_checks_for_interruption_before_use(self):
+        """A waiter checks for interruption after acquiring a contended lock."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, True]
+        yield_check = MagicMock(side_effect=StopException)
+
+        with (
+            patch.object(cache_utils, "get_run_yield_check", return_value=yield_check),
+            pytest.raises(StopException),
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pytest.fail("An interrupted waiter must not use the compute lock")
+
+        assert lock.acquire.call_args_list == [
+            call(blocking=False),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+        ]
+        yield_check.assert_called_once_with()
+        lock.release.assert_called_once_with()
+
+    def test_contended_acquire_reuses_yield_check_while_polling(self):
+        """A contended waiter reuses one yield check across every polling timeout."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, False, False, True]
+        yield_check = MagicMock()
+
+        with (
+            patch.object(
+                cache_utils, "get_run_yield_check", return_value=yield_check
+            ) as get_yield_check,
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pass
+
+        get_yield_check.assert_called_once_with()
+        assert lock.acquire.call_args_list == [
+            call(blocking=False),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+            call(timeout=cache_utils._COMPUTE_LOCK_POLL_SECONDS),
+        ]
+        assert yield_check.call_count == 3
+        lock.release.assert_called_once_with()
+
+    def test_contended_acquire_without_yield_check_blocks_once(self):
+        """A waiter without a yield check uses a blocking lock acquisition."""
+        lock = MagicMock()
+        lock.acquire.side_effect = [False, True]
+
+        with (
+            patch.object(cache_utils, "get_run_yield_check", return_value=None),
+            cache_utils._hold_compute_lock(lock),
+        ):
+            pass
+
+        assert lock.acquire.call_args_list == [call(blocking=False), call()]
+        lock.release.assert_called_once_with()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_live_waiter_returns_owner_value(self, _, cache_decorator):
+        """A live waiter returns the value computed by the cache owner."""
+        compute_started = threading.Event()
+        release_compute = threading.Event()
+        yield_checked = threading.Event()
+        call_count = 0
+        waiter_results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=get_value)
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        waiter_ctx = create_mock_script_run_ctx()
+        waiter_ctx.reset(yield_check=yield_checked.set)
+        waiter = threading.Thread(target=lambda: waiter_results.append(get_value()))
+        add_script_run_ctx(waiter, waiter_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert yield_checked.wait(timeout=1)
+                assert waiter.is_alive()
+                release_compute.set()
+                waiter.join(timeout=1)
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert not waiter.is_alive()
+        assert waiter_results == [42]
+        assert call_count == 1
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_nested_cache_wait_is_not_interrupted(self, _, cache_decorator):
+        """A nested cached call remains protected from run interruption."""
+        inner_compute_started = threading.Event()
+        outer_compute_started = threading.Event()
+        release_inner_compute = threading.Event()
+        yield_checked = threading.Event()
+        outer_results: list[int] = []
+        outer_exceptions: list[BaseException] = []
+
+        @cache_decorator(show_spinner=False)
+        def inner() -> int:
+            inner_compute_started.set()
+            assert release_inner_compute.wait(timeout=5)
+            return 42
+
+        @cache_decorator(show_spinner=False)
+        def outer() -> int:
+            outer_compute_started.set()
+            return inner()
+
+        inner_owner = threading.Thread(target=inner)
+        add_script_run_ctx(inner_owner, create_mock_script_run_ctx())
+        inner_owner.start()
+        assert inner_compute_started.wait(timeout=1)
+
+        def interrupt_if_called() -> None:
+            yield_checked.set()
+            raise StopException()
+
+        outer_ctx = create_mock_script_run_ctx()
+        outer_ctx.reset(yield_check=interrupt_if_called)
+
+        def call_outer() -> None:
+            try:
+                outer_results.append(outer())
+            except BaseException as ex:
+                outer_exceptions.append(ex)
+
+        outer_waiter = threading.Thread(target=call_outer)
+        add_script_run_ctx(outer_waiter, outer_ctx)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                outer_waiter.start()
+                assert outer_compute_started.wait(timeout=1)
+                time.sleep(0.05)
+                assert outer_waiter.is_alive()
+                assert not yield_checked.is_set()
+                release_inner_compute.set()
+                outer_waiter.join(timeout=1)
+        finally:
+            release_inner_compute.set()
+            inner_owner.join(timeout=1)
+            outer_waiter.join(timeout=1)
+
+        assert not inner_owner.is_alive()
+        assert not outer_waiter.is_alive()
+        assert outer_exceptions == []
+        assert outer_results == [42]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_uncontended_miss_does_not_resolve_yield_check(self, _, cache_decorator):
+        """An uncontended miss does not look up or call the run yield check."""
+        callback = MagicMock()
+        results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            return 42
+
+        ctx = create_mock_script_run_ctx()
+        ctx.reset(yield_check=callback)
+        worker = threading.Thread(target=lambda: results.append(get_value()))
+        add_script_run_ctx(worker, ctx)
+
+        with patch.object(cache_utils, "get_run_yield_check") as get_yield_check:
+            worker.start()
+            worker.join(timeout=1)
+
+        assert not worker.is_alive()
+        assert results == [42]
+        get_yield_check.assert_not_called()
+        callback.assert_not_called()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_contended_wait_without_script_context_is_not_interrupted(
+        self, _, cache_decorator
+    ):
+        """A waiter without a script context keeps waiting for the owner."""
+        compute_started = threading.Event()
+        waiter_started = threading.Event()
+        release_compute = threading.Event()
+        call_count = 0
+        waiter_results: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def get_value() -> int:
+            nonlocal call_count
+            call_count += 1
+            compute_started.set()
+            assert release_compute.wait(timeout=5)
+            return 42
+
+        owner = threading.Thread(target=get_value)
+        add_script_run_ctx(owner, create_mock_script_run_ctx())
+        owner.start()
+        assert compute_started.wait(timeout=1)
+
+        def wait_for_value() -> None:
+            waiter_started.set()
+            waiter_results.append(get_value())
+
+        waiter = threading.Thread(target=wait_for_value)
+        try:
+            with patch.object(cache_utils, "_COMPUTE_LOCK_POLL_SECONDS", 0.01):
+                waiter.start()
+                assert waiter_started.wait(timeout=1)
+                time.sleep(0.05)
+                assert waiter.is_alive()
+                release_compute.set()
+                waiter.join(timeout=1)
+        finally:
+            release_compute.set()
+            owner.join(timeout=1)
+            waiter.join(timeout=1)
+
+        assert not owner.is_alive()
+        assert not waiter.is_alive()
+        assert waiter_results == [42]
+        assert call_count == 1
+
+    @parameterized.expand(
         [
             ("cache_data", cache_data, cache_data.clear),
             ("cache_resource", cache_resource, cache_resource.clear),
@@ -1115,8 +1609,8 @@ def test_arrow_replay():
     assert not at.exception
 
 
-# The fresh ttl (in seconds) used across the background-refresh tests. The hard
-# eviction bound is 2*_BG_TTL, and the stale grace window is [_BG_TTL, 2*_BG_TTL).
+# The fresh ttl (in seconds) used across the background-refresh tests. Default
+# hard eviction bound is 2*_BG_TTL; individual tests may override the multiplier.
 _BG_TTL = 100
 
 
@@ -1210,8 +1704,51 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_background_refresh_rejects_awaitable(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """Streamlit closes the rejected coroutine, serves stale data, and starts cooldown."""
+        call_count = [0]
+        created_coroutines: list[Any] = []
+
+        async def operation() -> int:
+            return 42
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> Any:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return 1
+            coroutine = operation()
+            created_coroutines.append(coroutine)
+            return coroutine
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        with (
+            self._patch_sync_submit(),
+            patch.object(_LOGGER, "warning") as warning_mock,
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+
+        assert call_count[0] == 2
+        assert len(created_coroutines) == 1
+        assert inspect.getcoroutinestate(created_coroutines[0]) == inspect.CORO_CLOSED
+        assert isinstance(
+            warning_mock.call_args.args[2], CachedFunctionReturnedAwaitableError
+        )
+        timer_patch.return_value = _BG_TTL * 1.5
+        assert foo() == 1
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_hard_expiry_blocks_foreground(self, _, cache_decorator, timer_patch: Mock):
-        """Past 2*ttl the entry is a hard miss: a blocking foreground recompute, no stale serve."""
+        """Past the default 2*ttl hard bound, the call blocks and recomputes."""
         call_count = [0]
 
         @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
@@ -1228,6 +1765,69 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
             assert foo() == 2
             # A hard miss is not a stale serve, so no background refresh is triggered.
             submit_mock.assert_not_called()
+
+        assert call_count[0] == 2
+
+    @parameterized.expand(
+        [
+            ("cache_data_widen", cache_data, 4.0, _BG_TTL * 2.5, _BG_TTL * 4 + 1),
+            (
+                "cache_resource_widen",
+                cache_resource,
+                4.0,
+                _BG_TTL * 2.5,
+                _BG_TTL * 4 + 1,
+            ),
+            ("cache_data_shorten", cache_data, 1.5, _BG_TTL * 1.25, _BG_TTL * 1.75),
+            (
+                "cache_resource_shorten",
+                cache_resource,
+                1.5,
+                _BG_TTL * 1.25,
+                _BG_TTL * 1.75,
+            ),
+        ]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_configured_multiplier_sets_hard_expiry(
+        self,
+        _name: str,
+        cache_decorator: Any,
+        multiplier: float,
+        stale_at: float,
+        expired_at: float,
+        timer_patch: Mock,
+    ) -> None:
+        """The configured multiplier sets when a stale value is served vs hard-expired."""
+        call_count = [0]
+
+        with patch_config_options(
+            {"runner.cacheBackgroundRefreshTTLMultiplier": multiplier}
+        ):
+
+            @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+            def foo() -> int:
+                call_count[0] += 1
+                return call_count[0]
+
+            timer_patch.return_value = 0
+            assert foo() == 1
+
+            # Fail the refresh so the stale value stays until hard expiry.
+            with patch.object(
+                cache_background_refresh.get_background_refresh_manager(),
+                "submit",
+                return_value=False,
+            ) as submit_mock:
+                timer_patch.return_value = stale_at
+                assert foo() == 1
+                submit_mock.assert_called_once()
+                assert call_count[0] == 1
+
+                submit_mock.reset_mock()
+                timer_patch.return_value = expired_at
+                assert foo() == 2
+                submit_mock.assert_not_called()
 
         assert call_count[0] == 2
 
@@ -1507,7 +2107,8 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
 
         with patch.object(st, "exception") as mock_exception:
             timer_patch.return_value = 0
-            assert foo() == 1
+            with self.assertLogs(_LOGGER) as logs:
+                assert foo() == 1
             # Display output renders live during the actual miss.
             assert self._text_deltas() == ["hello"]
             # A warning is emitted about background-mode display commands.
@@ -1516,6 +2117,8 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
                 mock_exception.call_args[0][0],
                 CachedStFunctionInBackgroundModeWarning,
             )
+            assert 'refresh_mode="background"' in logs.records[0].getMessage()
+            assert logs.records[0].stack_info is not None
 
             mock_exception.reset_mock()
             self.clear_queue()

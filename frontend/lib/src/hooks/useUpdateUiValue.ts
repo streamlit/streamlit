@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Dispatch, SetStateAction, useEffect } from "react"
+import { type Dispatch, type SetStateAction, useEffect } from "react"
 
 /**
  * Sets the ui value to the new value if they are not equal and the ui value is not dirty.

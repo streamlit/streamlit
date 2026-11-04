@@ -13,9 +13,9 @@
 # limitations under the License.
 from __future__ import annotations
 
-import textwrap
 from typing import TYPE_CHECKING, Literal, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import FormData, current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -34,7 +34,11 @@ from streamlit.elements.widgets.button import (
     IconPosition,
     _normalize_icon_position,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitDuplicateElementKey,
+    StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
+)
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
@@ -42,33 +46,6 @@ from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
-
-
-def _build_duplicate_form_message(user_key: str | None = None) -> str:
-    if user_key is not None:
-        message = textwrap.dedent(
-            f"""
-            There are multiple identical forms with `key='{user_key}'`.
-
-            To fix this, please make sure that the `key` argument is unique for
-            each `st.form` you create.
-            """
-        )
-    else:
-        message = textwrap.dedent(
-            """
-            There are multiple identical forms with the same generated key.
-
-            When a form is created, it's assigned an internal key based on
-            its structure. Multiple forms with an identical structure will
-            result in the same internal key, which causes this error.
-
-            To fix this error, please pass a unique `key` argument to
-            `st.form`.
-            """
-        )
-
-    return message.strip("\n")
 
 
 class FormMixin:
@@ -214,7 +191,9 @@ class FormMixin:
 
         """
         if is_in_form(self.dg):
-            raise StreamlitAPIException("Forms cannot be nested in other forms.")
+            raise StreamlitInvalidLayoutContextError(
+                "Forms cannot be nested in other forms."
+            )
 
         check_cache_replay_rules()
         check_session_state_rules(default_value=None, key=key, writes_allowed=False)
@@ -224,7 +203,7 @@ class FormMixin:
 
         ctx = get_script_run_ctx()
         if ctx is not None and not ctx.shared.form_ids_this_run.check_and_add(form_id):
-            raise StreamlitAPIException(_build_duplicate_form_message(key))
+            raise StreamlitDuplicateElementKey(key)
 
         block_proto = Block_pb2.Block()
         block_proto.form.form_id = form_id
@@ -235,7 +214,15 @@ class FormMixin:
         block_proto.width_config.CopyFrom(get_width_config(width))
         validate_height(height, allow_content=True)
         block_proto.height_config.CopyFrom(get_height_config(height))
-        block_dg = self.dg._block(block_proto)
+        block_dg = self.dg._block(
+            block_proto,
+            agent_props=agent_spec.block(
+                "form",
+                key=form_id,
+                clear_on_submit=clear_on_submit,
+                enter_to_submit=enter_to_submit,
+            ),
+        )
 
         # Attach the form's button info to the newly-created block's
         # DeltaGenerator.
@@ -439,9 +426,9 @@ class FormMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------

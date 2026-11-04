@@ -65,3 +65,8 @@ st.caption(
  This line contains <div>html</div>!
 """
 )
+
+_WRAP_TEXT = "Quarterly revenue versus plan for the complete fiscal year dashboard"
+
+with st.container(key="wrap_false_caption", width=200):
+    st.caption(_WRAP_TEXT, wrap=False)

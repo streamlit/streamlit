@@ -27,12 +27,17 @@ from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
-from streamlit.errors import StreamlitValueError
+from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
+from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
+    ThreadState,
+    get_script_run_ctx,
+)
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -246,6 +251,54 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 # Matches CPython's ``got an unexpected keyword argument 'name'`` TypeError.
 _UNEXPECTED_KWARG_RE: Final = re.compile(
     r"got an unexpected keyword argument '([^']+)'"
+)
+# ``foo() missing 1 required positional argument: 'bar'`` (also keyword-only).
+_MISSING_ARG_RE: Final = re.compile(
+    r"missing \d+ required (?:positional |keyword-only )?arguments?: '(\w+)'"
+)
+_NO_MODULE_RE: Final = re.compile(r"No module named ['\"]([^'\"]+)['\"]")
+_CANNOT_IMPORT_FROM_RE: Final = re.compile(r"cannot import name '[^']+' from '([^']+)'")
+_STREAMLIT_ATTRIBUTE_RE: Final = re.compile(
+    r"module 'streamlit' has no attribute '([^']+)'"
+)
+# Import namespaces used by Streamlit itself or by its optional features. Only
+# these names are appended to telemetry to avoid recording private app modules.
+_STREAMLIT_IMPORT_MODULE_PREFIXES: Final = frozenset(
+    {
+        "altair",
+        "anyio",
+        "authlib",
+        "click",
+        "google.protobuf",
+        "graphviz",
+        "httptools",
+        "httpx",
+        "itsdangerous",
+        "matplotlib",
+        "multipart",
+        "numpy",
+        "orjson",
+        "packaging",
+        "pandas",
+        "PIL",
+        "plotly",
+        "pyarrow",
+        "pydeck",
+        "python_multipart",
+        "requests",
+        "rich",
+        "snowflake",
+        "sqlalchemy",
+        "starlette",
+        "streamlit",
+        "streamlit_pdf",
+        "toml",
+        "typing_extensions",
+        "uvicorn",
+        "uvloop",
+        "watchdog",
+        "websockets",
+    }
 )
 
 
@@ -488,28 +541,77 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def _is_streamlit_import_module(module: str) -> bool:
+    """Return whether an import namespace is relevant to Streamlit internals."""
+    return any(
+        module == prefix or module.startswith(f"{prefix}.")
+        for prefix in _STREAMLIT_IMPORT_MODULE_PREFIXES
+    )
+
+
 def format_uncaught_exception(exc: BaseException) -> str:
     """Return a page-profile label for an uncaught exception.
 
-    Uses the exception type name, appending ``:<param>`` when the failing
-    parameter is known:
+    Uses the exception type name, appending a short suffix when a stable
+    category is known:
 
     - unexpected-keyword ``TypeError`` → ``"TypeError:<param>"``
-    - ``StreamlitValueError`` → ``"StreamlitValueError:<param>"``
+    - missing required argument ``TypeError`` → ``"TypeError:missing:<param>"``
+    - allowlisted ``ImportError`` / ``ModuleNotFoundError``
+      → ``"<Type>:<module>"``
+    - missing top-level ``streamlit`` attributes → ``"AttributeError:<attribute>"``
+    - ``LocalizableStreamlitException`` with a ``parameter`` kwarg
+      → ``"<Type>:<parameter>"``
+    - ``StreamlitAPIException`` with ``error_id`` (when there is no
+      ``parameter``) → ``"<Type>:<error_id>"``
 
+    Does not append user values such as widget keys or file paths.
     Enrichment failures are swallowed so telemetry cannot interrupt script
     execution or drop the page-profile payload.
     """
     name = type(exc).__name__
     with contextlib.suppress(Exception):
         if isinstance(exc, TypeError):
-            match = _UNEXPECTED_KWARG_RE.search(str(exc))
+            msg = str(exc)
+            match = _UNEXPECTED_KWARG_RE.search(msg)
             if match:
                 return f"{name}:{match.group(1)}"
-        elif isinstance(exc, StreamlitValueError):
-            parameter = exc.exec_kwargs.get("parameter")
-            if isinstance(parameter, str) and parameter:
-                return f"{name}:{parameter}"
+            match = _MISSING_ARG_RE.search(msg)
+            if match:
+                return f"{name}:missing:{match.group(1)}"
+        elif isinstance(exc, ImportError):
+            module = getattr(exc, "name", None)
+            if not isinstance(module, str) or not module:
+                msg = str(exc)
+                match = _NO_MODULE_RE.search(msg) or _CANNOT_IMPORT_FROM_RE.search(msg)
+                module = match.group(1) if match else None
+            if (
+                isinstance(module, str)
+                and module
+                and _is_streamlit_import_module(module)
+            ):
+                return f"{name}:{module}"
+        elif isinstance(exc, AttributeError):
+            attribute = getattr(exc, "name", None)
+            obj = getattr(exc, "obj", None)
+            if (
+                obj is sys.modules.get("streamlit")
+                and isinstance(attribute, str)
+                and attribute
+            ):
+                return f"{name}:{attribute}"
+            if obj is None and attribute is None:
+                match = _STREAMLIT_ATTRIBUTE_RE.fullmatch(str(exc))
+                if match:
+                    return f"{name}:{match.group(1)}"
+        elif isinstance(exc, StreamlitAPIException):
+            if isinstance(exc, LocalizableStreamlitException):
+                parameter = exc.exec_kwargs.get("parameter")
+                if isinstance(parameter, str) and parameter:
+                    return f"{name}:{parameter}"
+            error_id = exc.error_id
+            if isinstance(error_id, str) and error_id:
+                return f"{name}:{error_id}"
     return name
 
 
@@ -588,19 +690,24 @@ def gather_metrics(
         exec_start = timer()
         ctx = get_script_run_ctx(suppress_warning=True)
 
+        thread_state: FragmentThreadState | None = None
+        if ctx is not None and ctx.gather_usage_stats:
+            # Skip tracking rather than raise into user code when this thread
+            # has a ScriptRunContext but no ThreadState.
+            with contextlib.suppress(RuntimeError):
+                thread_state = ThreadState.get()
+
         tracking_activated = (
             ctx is not None
-            and ctx.gather_usage_stats
-            and not ctx.command_tracking_deactivated
+            and thread_state is not None
+            and not thread_state.command_tracking_deactivated
             and ctx.shared.tracked_commands_count
             < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
         )
 
         command_telemetry: Command | None = None
-        # This flag is needed to make sure that only the command (the outermost command)
-        # that deactivated tracking (via ctx.command_tracking_deactivated) is able to reset it
-        # again. This is important to prevent nested commands from reactivating tracking.
-        # At this point, we don't know yet if the command will deactivated tracking.
+        # Only the command that deactivated tracking may restore it, so nested
+        # commands cannot reactivate tracking for an outer command.
         has_set_command_tracking_deactivated = False
 
         if ctx and tracking_activated:
@@ -615,10 +722,7 @@ def gather_metrics(
 
                 ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
                 # Deactivate tracking to prevent calls inside already tracked commands
-                ctx.command_tracking_deactivated = True
-                # The ctx.command_tracking_deactivated flag was set to True,
-                # we also need to set has_set_command_tracking_deactivated to True
-                # to make sure that this command is able to reset it again.
+                ThreadState.update(command_tracking_deactivated=True)
                 has_set_command_tracking_deactivated = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
@@ -633,11 +737,8 @@ def gather_metrics(
                 command_telemetry.time = to_microseconds(timer() - exec_start)
             raise
         finally:
-            # Activate tracking again if command executes without any exceptions
-            # we only want to do that if this command has set the
-            # flag to deactivate tracking.
-            if ctx and has_set_command_tracking_deactivated:
-                ctx.command_tracking_deactivated = False
+            if has_set_command_tracking_deactivated:
+                ThreadState.update(command_tracking_deactivated=False)
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
@@ -674,6 +775,8 @@ def create_page_profile_message(
     # Include the server mode for metrics tracking
     if config._server_mode:
         page_profile.server_mode = config._server_mode
+
+    agent_usage.fill_page_profile(page_profile)
 
     # Collect all config options that have been manually set
     config_options: set[str] = set()

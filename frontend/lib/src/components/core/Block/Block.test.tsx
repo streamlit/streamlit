@@ -14,26 +14,43 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { type ReactElement, useContext } from "react"
 
 import { screen, within } from "@testing-library/react"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import {
   Block as BlockProto,
   Button as ButtonProto,
-  Element,
+  Delta as DeltaProto,
+  type Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
 
-import { AppNode, BlockNode, ElementNode } from "~lib/AppNode"
+import { type AppNode, AppRoot, BlockNode, ElementNode } from "~lib/AppNode"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
-import { text } from "~lib/render-tree/test-utils"
+import { mockEndpoints } from "~lib/mocks/mocks"
+import {
+  forwardMsgMetadata,
+  makeProto,
+  text,
+} from "~lib/render-tree/test-utils"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { renderWithContexts } from "~lib/test_util"
+import { mockEllipsizedLabels, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
+import { RenderNodeVisitor } from "./RenderNodeVisitor"
+
+// SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
+// async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
+// Mocking it here prevents the animation machinery from running in unit tests.
+vi.mock("react-aria-components", async importOriginal => {
+  const actual = await importOriginal<typeof ReactAriaComponents>()
+  return { ...actual, SelectionIndicator: () => null }
+})
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -92,10 +109,26 @@ function makeButton(label: string): ElementNode {
   )
 }
 
-function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
+function makeStretchSpace(): ElementNode {
+  const element = {
+    type: "space",
+    space: {},
+    widthConfig: { useStretch: true },
+    heightConfig: { useStretch: true },
+  } as unknown as Element
+
+  return new ElementNode(
+    element,
+    ForwardMsgMetadata.create(),
+    "",
+    FAKE_SCRIPT_HASH
+  )
+}
+
+function makeHorizontalBlock(children: AppNode[]): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
-    [makeColumn(1, columnChildren)],
+    children,
     new BlockProto({
       allowEmpty: true,
       flexContainer: {
@@ -106,6 +139,16 @@ function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
   )
 }
 
+function makeColumnsBlock(columnChildren: AppNode[]): BlockNode {
+  return makeHorizontalBlock([makeColumn(1, columnChildren)])
+}
+
+const DefiniteHeightProbe = (): ReactElement => (
+  <div data-testid="definiteHeightProbe">
+    {String(useContext(FlexContext)?.hasDefiniteHeight)}
+  </div>
+)
+
 function makeVerticalBlockComponent(node: BlockNode): ReactElement {
   return (
     <FlexBoxContainer
@@ -113,9 +156,9 @@ function makeVerticalBlockComponent(node: BlockNode): ReactElement {
       scriptRunId={""}
       scriptRunState={ScriptRunState.NOT_RUNNING}
       widgetsDisabled={false}
-      // @ts-expect-error
+      // @ts-expect-error - widgetMgr is required
       widgetMgr={undefined}
-      // @ts-expect-error
+      // @ts-expect-error - uploadClient is required
       uploadClient={undefined}
     />
   )
@@ -175,7 +218,7 @@ describe("FlexBoxContainer Block Component", () => {
     renderWithContexts(makeVerticalBlockComponent(block))
 
     expect(screen.getAllByTestId("stVerticalBlock")[0]).toHaveStyle(
-      "border: 1px solid rgba(49, 51, 63, 0.2);"
+      "border: 1px solid #dcd8d4;"
     )
   })
 
@@ -188,9 +231,9 @@ describe("FlexBoxContainer Block Component", () => {
           scriptRunId={""}
           scriptRunState={ScriptRunState.NOT_RUNNING}
           widgetsDisabled={false}
-          // @ts-expect-error
+          // @ts-expect-error - widgetMgr is required
           widgetMgr={undefined}
-          // @ts-expect-error
+          // @ts-expect-error - uploadClient is required
           uploadClient={undefined}
         />
       )
@@ -391,6 +434,182 @@ describe("FlexBoxContainer layout props", () => {
     expect(horizontalBlock).toHaveAttribute("data-test-wrap", "true")
   })
 
+  it.each([
+    [
+      "top",
+      BlockProto.Column.VerticalAlignment.TOP,
+      "justify-content: start;",
+    ],
+    [
+      "center",
+      BlockProto.Column.VerticalAlignment.CENTER,
+      "justify-content: center;",
+    ],
+    [
+      "bottom",
+      BlockProto.Column.VerticalAlignment.BOTTOM,
+      "justify-content: end;",
+    ],
+  ])(
+    "aligns content inside a %s-aligned column instead of shrinking it",
+    (_label, verticalAlignment, expectedJustify) => {
+      const column = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        new BlockProto({
+          allowEmpty: true,
+          column: { weight: 1, verticalAlignment },
+        })
+      )
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([makeHorizontalBlock([column])])
+        )
+      )
+
+      const columnElement = screen.getByTestId("stColumn")
+      // Auto margins would shrink the column and break equal-height borders.
+      expect(columnElement).not.toHaveStyle("margin-top: auto;")
+      expect(within(columnElement).getByTestId("stVerticalBlock")).toHaveStyle(
+        expectedJustify
+      )
+    }
+  )
+
+  it("stretches a stretch-height container to the row in a horizontal parent", () => {
+    const stretchChild = makeVerticalBlock([], {
+      heightConfig: { useStretch: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        border: true,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeHorizontalBlock([stretchChild])])
+      )
+    )
+
+    const layoutWrapper = within(
+      screen.getByTestId("stHorizontalBlock")
+    ).getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveStyle("align-self: stretch;")
+    expect(layoutWrapper).toHaveStyle("min-height: 100%;")
+    // No max height, so taller content can grow it past a fixed-height row.
+    expect(layoutWrapper).not.toHaveStyle("max-height: 100%;")
+    expect(layoutWrapper).not.toHaveStyle("height: 100%;")
+    // The bordered block fills its stretched wrapper through flex, without a
+    // percentage height that would let it shrink below its content.
+    const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+    expect(innerBlock).toHaveStyle("height: auto;")
+    expect(innerBlock).toHaveStyle("flex: 1;")
+  })
+
+  it("fills a vertical parent with a flex basis for a stretch-height container", () => {
+    const stretchChild = makeVerticalBlock([], {
+      heightConfig: { useStretch: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(makeVerticalBlock([stretchChild]))
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    // A percentage height would cap the container at its parent's height.
+    expect(layoutWrapper).toHaveStyle("flex: 0 1 100%;")
+    expect(layoutWrapper).toHaveStyle("height: auto;")
+    expect(layoutWrapper).not.toHaveStyle("align-self: stretch;")
+  })
+
+  describe("print layout", () => {
+    /** The top-level declarations of an element's emotion `@media print` rule. */
+    const printDeclarations = (element: HTMLElement): string => {
+      const css = [...document.querySelectorAll("style")]
+        .map(style => style.textContent ?? "")
+        .join("\n")
+      return [...element.classList]
+        .filter(className => className.startsWith("css-"))
+        .map(
+          className =>
+            new RegExp(`@media print\\{\\.${className}\\{([^}]*)\\}`).exec(
+              css
+            )?.[1] ?? ""
+        )
+        .join(";")
+    }
+
+    const stretchChild = (): BlockNode =>
+      makeVerticalBlock([], {
+        heightConfig: { useStretch: true },
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+          justify: BlockProto.FlexContainer.Justify.JUSTIFY_CENTER,
+        },
+      })
+
+    it("keeps flex for a stretch-height container in a fixed-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(
+          makeVerticalBlock([stretchChild()], {
+            heightConfig: { pixelHeight: 400 },
+            flexContainer: {
+              direction: BlockProto.FlexContainer.Direction.VERTICAL,
+            },
+          })
+        )
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).not.toContain("display:block")
+      expect(printDeclarations(innerBlock)).not.toContain("display:block")
+    })
+
+    it("uses block layout for a stretch-height container in a content-height parent", () => {
+      renderWithContexts(
+        makeVerticalBlockComponent(makeVerticalBlock([stretchChild()]))
+      )
+
+      const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+      const innerBlock = within(layoutWrapper).getByTestId("stVerticalBlock")
+      expect(printDeclarations(layoutWrapper)).toContain("display:block")
+      expect(printDeclarations(innerBlock)).toContain("display:block")
+    })
+  })
+
+  it("does not apply the stretch overrides to a content-height container", () => {
+    const contentChild = makeVerticalBlock([], {
+      heightConfig: { useContent: true },
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+    })
+    renderWithContexts(
+      makeVerticalBlockComponent(makeVerticalBlock([contentChild]))
+    )
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).not.toHaveStyle("flex: 0 1 100%;")
+    expect(within(layoutWrapper).getByTestId("stVerticalBlock")).toHaveStyle(
+      "height: auto;"
+    )
+  })
+
+  it("does not stretch st.space along the cross axis of a horizontal parent", () => {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([makeHorizontalBlock([makeStretchSpace()])])
+      )
+    )
+
+    const spaceContainer = screen.getByTestId("stElementContainer")
+    expect(within(spaceContainer).getByTestId("stSpace")).toBeVisible()
+    expect(spaceContainer).not.toHaveStyle("align-self: stretch;")
+    expect(spaceContainer).not.toHaveStyle("max-height: 100%;")
+  })
+
   it("does not enable horizontal scrolling for a vertical container with wrap=false", () => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer: {
@@ -446,7 +665,7 @@ describe("BlockNodeRenderer CSS key class placement", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -520,7 +739,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -576,7 +795,7 @@ describe("BlockNodeRenderer step blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -618,7 +837,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
         scriptRunState={ScriptRunState.NOT_RUNNING}
         widgetsDisabled={false}
         widgetMgr={widgetMgr}
-        // @ts-expect-error
+        // @ts-expect-error - uploadClient is required
         uploadClient={undefined}
       />
     )
@@ -689,6 +908,7 @@ describe("BlockNodeRenderer transparent blocks", () => {
 })
 
 describe("BlockNodeRenderer direct column wrapping context", () => {
+  mockEllipsizedLabels()
   const label = "Regenerate the complete quarterly report now"
 
   async function renderColumnChildren(children: AppNode[]): Promise<void> {
@@ -728,5 +948,457 @@ describe("BlockNodeRenderer direct column wrapping context", () => {
     await renderColumnChildren([nestedContainer])
 
     expect(screen.queryByTitle(label)).not.toBeInTheDocument()
+  })
+})
+
+describe("BlockNodeRenderer container types", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+  const endpoints = mockEndpoints()
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        endpoints={endpoints}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("renders nothing for an empty block that does not allow empty", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({ allowEmpty: false })
+    )
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    expect(screen.queryByTestId("stLayoutWrapper")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stForm")).not.toBeInTheDocument()
+  })
+
+  it("renders a form block and registers submit behaviors", () => {
+    const setFormSubmitBehaviorsSpy = vi.spyOn(
+      widgetMgr,
+      "setFormSubmitBehaviors"
+    )
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("form child")], {
+          form: {
+            formId: "form-1",
+            clearOnSubmit: true,
+            enterToSubmit: false,
+            border: true,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stForm")).toBeVisible()
+    expect(screen.getByText("form child")).toBeVisible()
+    expect(setFormSubmitBehaviorsSpy).toHaveBeenCalledWith(
+      "form-1",
+      true,
+      false
+    )
+    // A content-height form keeps filling its layout wrapper.
+    expect(screen.getByTestId("stForm")).toHaveStyle("height: 100%;")
+  })
+
+  it("renders a stretch-height form that grows with its content", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("form child")], {
+          heightConfig: { useStretch: true },
+          form: { formId: "stretch-form", border: true },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stLayoutWrapper")).toHaveStyle(
+      "flex: 0 1 100%;"
+    )
+    const form = screen.getByTestId("stForm")
+    expect(form).toHaveStyle("height: auto;")
+    expect(form).toHaveStyle("flex: 1 1 0%;")
+  })
+
+  it("renders a chat message block", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("hello")], {
+          chatMessage: { name: "assistant" },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stChatMessage")).toBeVisible()
+    expect(screen.getByText("hello")).toBeVisible()
+  })
+
+  it("renders an empty chat message", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([], { chatMessage: { name: "user" } })
+      )
+    )
+
+    expect(screen.getByTestId("stChatMessage")).toBeVisible()
+    expect(screen.getByTestId("stChatMessageContent")).toBeVisible()
+  })
+
+  it("renders a dialog block when open", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("dialog body")], {
+          dialog: {
+            title: "My dialog",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stDialog")).toBeVisible()
+    expect(screen.getByText("dialog body")).toBeVisible()
+    expect(
+      screen.queryByTestId("stDialogContentEndPad")
+    ).not.toBeInTheDocument()
+  })
+
+  it("pads the end of a left drawer dialog", () => {
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([text("drawer body")], {
+          dialog: {
+            title: "My drawer",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+            position: BlockProto.Dialog.DialogPosition.LEFT,
+          },
+        })
+      )
+    )
+
+    expect(screen.getByText("drawer body")).toBeVisible()
+    expect(screen.getByTestId("stDialogContentEndPad")).toHaveStyle({
+      height: "2rem",
+    })
+  })
+
+  it("hides a leftover dialog from a previous full-app run", () => {
+    const dialogBlock = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [text("dialog body")],
+      new BlockProto({
+        allowEmpty: true,
+        dialog: {
+          title: "My dialog",
+          isOpen: true,
+          dismissible: true,
+          // id activates on_dismiss; the spy below would fire if this hide
+          // went through Dialog.handleClose instead of unmounting.
+          id: "test-dialog-id",
+          width: BlockProto.Dialog.DialogWidth.LARGE,
+        },
+      }),
+      "previous-run"
+    )
+    const setTriggerValue = vi.spyOn(widgetMgr, "setTriggerValue")
+
+    renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+      scriptRunContext: {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "current-run",
+        fragmentIdsThisRun: [],
+      },
+    })
+
+    expect(screen.queryByTestId("stDialog")).not.toBeInTheDocument()
+    expect(screen.queryByText("dialog body")).not.toBeInTheDocument()
+    expect(setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      desc: "from the current full-app run while running",
+      nodeScriptRunId: "current-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover while a rerun is only requested",
+      nodeScriptRunId: "previous-run",
+      fragmentId: undefined,
+      scriptRunState: ScriptRunState.RERUN_REQUESTED,
+      fragmentIdsThisRun: [] as string[],
+    },
+    {
+      desc: "leftover during a fragment run",
+      nodeScriptRunId: "previous-run",
+      fragmentId: "dialog-fragment",
+      scriptRunState: ScriptRunState.RUNNING,
+      fragmentIdsThisRun: ["dialog-fragment"],
+    },
+  ])(
+    "keeps a dialog $desc",
+    ({ nodeScriptRunId, fragmentId, scriptRunState, fragmentIdsThisRun }) => {
+      const dialogBlock = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [text("dialog body")],
+        new BlockProto({
+          allowEmpty: true,
+          dialog: {
+            title: "My dialog",
+            isOpen: true,
+            dismissible: true,
+            width: BlockProto.Dialog.DialogWidth.LARGE,
+          },
+        }),
+        nodeScriptRunId,
+        fragmentId
+      )
+
+      renderWithContexts(makeBlockNodeComponent(dialogBlock), {
+        scriptRunContext: {
+          scriptRunState,
+          scriptRunId: "current-run",
+          fragmentIdsThisRun,
+        },
+      })
+
+      expect(screen.getByTestId("stDialog")).toBeVisible()
+      expect(screen.getByText("dialog body")).toBeVisible()
+    }
+  )
+
+  it("renders a tab container", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(makeVerticalBlock([tab], { tabContainer: {} }))
+    )
+
+    expect(screen.getByTestId("stTabs")).toBeVisible()
+    expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
+    expect(screen.getByTestId("stTabs")).not.toHaveStyle({ height: "400px" })
+  })
+
+  it("applies a constraining pixel height to a tab container", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeVerticalBlock([tab], {
+          tabContainer: {},
+          heightConfig: { pixelHeight: 400 },
+        })
+      )
+    )
+
+    expect(screen.getByTestId("stTabs")).toBeVisible()
+    expect(screen.getByRole("tab", { name: "Tab 0" })).toBeVisible()
+    expect(screen.getByTestId("stTabs")).toHaveStyle({ height: "400px" })
+  })
+
+  it.each([
+    ["a pixel-height", { pixelHeight: 300 }, "true"],
+    ["a stretch-height root-level", { useStretch: true }, "false"],
+    ["a content-height", { useContent: true }, "false"],
+  ])(
+    "derives the panel's definite height from %s tab container",
+    (_label, heightConfig, expected) => {
+      const collectElements = vi
+        .spyOn(RenderNodeVisitor, "collectReactElements")
+        .mockReturnValue([<DefiniteHeightProbe key="probe" />])
+      try {
+        const tab = makeVerticalBlock([text("tab body")], {
+          tab: { label: "Tab 0" },
+        })
+        renderWithContexts(
+          makeBlockNodeComponent(
+            makeVerticalBlock([tab], { tabContainer: {}, heightConfig })
+          )
+        )
+
+        expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
+          expected
+        )
+      } finally {
+        collectElements.mockRestore()
+      }
+    }
+  )
+
+  it("stretches a stretch-height tab container to the row in a horizontal parent", () => {
+    const tab = makeVerticalBlock([text("tab body")], {
+      tab: { label: "Tab 0" },
+    })
+    renderWithContexts(
+      makeBlockNodeComponent(
+        makeHorizontalBlock([
+          makeVerticalBlock([tab], {
+            tabContainer: {},
+            heightConfig: { useStretch: true },
+          }),
+        ])
+      )
+    )
+
+    const tabs = screen.getByTestId("stTabs")
+    expect(tabs).toHaveStyle("align-self: stretch;")
+    expect(tabs).toHaveStyle("max-height: 100%;")
+    expect(tabs).not.toHaveStyle("height: 100%;")
+  })
+})
+
+describe("element retention", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  // ElementNodeRenderer lazy-loads TextInput. Load it up front so the first
+  // render doesn't depend on how fast a cold dynamic import resolves.
+  beforeAll(async () => {
+    await import("~lib/components/widgets/TextInput/TextInput")
+  }, 30_000)
+
+  function writeElement(
+    root: AppRoot,
+    scriptRunId: string,
+    index: number,
+    element: Element.$Properties
+  ): AppRoot {
+    return root.applyDelta(
+      scriptRunId,
+      makeProto(DeltaProto, { newElement: element }),
+      forwardMsgMetadata([0, index])
+    )
+  }
+
+  function renderMain(root: AppRoot): ReactElement {
+    return (
+      <FlexBoxContainer
+        node={root.main}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  const nameInput = {
+    textInput: { id: "$$ID-name-key", label: "Name", default: "" },
+  }
+
+  it("keeps a displaced widget mounted until the run re-emits it", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, { text: { body: "first" } })
+    root = writeElement(root, "run0", 1, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const input = await screen.findByRole("textbox", { name: "Name" })
+
+    // A notice is inserted above the input and overwrites its delta path.
+    const running = {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    }
+    root = writeElement(root, "run1", 0, { text: { body: "first" } })
+    root = writeElement(root, "run1", 1, { text: { body: "notice" } })
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(await screen.findByText("notice")).toBeVisible()
+    expect(input).toBeInTheDocument()
+    expect(input).not.toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).toHaveAttribute("data-retained", "true")
+
+    // The input arrives one slot later and reclaims the mounted instance.
+    root = writeElement(root, "run1", 2, nameInput)
+    rerenderWithContexts(renderMain(root), running)
+
+    expect(screen.getByRole("textbox", { name: "Name" })).toBe(input)
+    expect(input).toBeVisible()
+    expect(
+      input.closest("[data-testid='stElementContainer']")
+    ).not.toHaveAttribute("data-retained")
+  })
+
+  it("unmounts a displaced widget that the run never re-emits", async () => {
+    let root = new AppRoot(
+      FAKE_SCRIPT_HASH,
+      new BlockNode(FAKE_SCRIPT_HASH, [
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          [],
+          new BlockProto({ allowEmpty: true })
+        ),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+        new BlockNode(FAKE_SCRIPT_HASH),
+      ])
+    )
+    root = writeElement(root, "run0", 0, nameInput)
+    root = root.clearStaleNodes("run0")
+
+    const { rerenderWithContexts } = renderWithContexts(renderMain(root))
+    expect(await screen.findByRole("textbox", { name: "Name" })).toBeVisible()
+
+    root = writeElement(root, "run1", 0, { text: { body: "replacement" } })
+    rerenderWithContexts(renderMain(root))
+    expect(await screen.findByText("replacement")).toBeVisible()
+    expect(
+      screen.getByRole("textbox", { name: "Name", hidden: true })
+    ).not.toBeVisible()
+
+    root = root.clearStaleNodes("run1")
+    rerenderWithContexts(renderMain(root))
+
+    expect(screen.getByText("replacement")).toBeVisible()
+    expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull()
   })
 })

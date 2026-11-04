@@ -19,11 +19,17 @@ import { lazy } from "react"
 import { screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { render } from "~lib/test_util"
 
 import { ElementContainer } from "./ElementContainer"
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 
 // Helper to create a mock element node
 const createMockElementNode = (
@@ -86,7 +92,26 @@ describe("ElementContainer", () => {
     const container = screen.getByTestId("stElementContainer")
     expect(container).toHaveClass("stElementContainer")
     expect(container).toHaveClass("element-container")
+    expect(container).not.toHaveClass(PrintLayout.FIXED_WIDTH)
+    expect(container).not.toHaveClass(PrintLayout.GRAPHIC)
   })
+
+  it.each([PrintLayout.FIXED_WIDTH, PrintLayout.GRAPHIC])(
+    "adds the %s class from the config's print layout",
+    printLayout => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={new ElementContainerConfig({ printLayout })}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveClass(printLayout)
+    }
+  )
 
   describe("user key handling", () => {
     it("applies user-provided key as CSS class for custom styling", () => {
@@ -158,6 +183,43 @@ describe("ElementContainer", () => {
       expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
         "data-stale",
         "false"
+      )
+    })
+  })
+
+  describe("retained state", () => {
+    it("marks the container as retained inside a retained element", () => {
+      render(
+        <RetainedElementContext.Provider value={true}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={true}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </RetainedElementContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-retained",
+        "true"
+      )
+    })
+
+    it("does not mark the container as retained by default", () => {
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).not.toHaveAttribute(
+        "data-retained"
       )
     })
   })
@@ -262,6 +324,83 @@ describe("ElementContainer", () => {
       )
 
       expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    })
+  })
+
+  describe("stretch size containment", () => {
+    const definiteHeightContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+      hasDefiniteHeight: true,
+    }
+
+    const stretchNode = (widthConfig: {
+      useStretch?: boolean
+      useContent?: boolean
+    }): ElementNode =>
+      ({
+        ...createMockElementNode("code"),
+        element: {
+          type: "code",
+          code: {},
+          heightConfig: { useStretch: true },
+          widthConfig,
+        },
+      }) as unknown as ElementNode
+
+    it("size-contains a stretch element in a definite-height container", () => {
+      render(
+        <FlexContext.Provider value={definiteHeightContext}>
+          <ElementContainer
+            node={stretchNode({ useStretch: true })}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </FlexContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toHaveStyle({
+        contain: "size",
+      })
+    })
+
+    it("does not size-contain a stretch element without a definite parent height", () => {
+      render(
+        <ElementContainer
+          node={stretchNode({ useStretch: true })}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <div>Content</div>
+        </ElementContainer>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).not.toHaveStyle(
+        "contain: size"
+      )
+    })
+
+    it("does not size-contain a content-width stretch element", () => {
+      render(
+        <FlexContext.Provider value={definiteHeightContext}>
+          <ElementContainer
+            node={stretchNode({ useContent: true })}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <div>Content</div>
+          </ElementContainer>
+        </FlexContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).not.toHaveStyle(
+        "contain: size"
+      )
     })
   })
 })

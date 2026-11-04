@@ -36,5 +36,11 @@ message Audio {
 
   optional streamlit.WidthConfig width_config = 10;
 
+  // Author-provided description of the audio, exposed to assistive
+  // technologies as the accessible name. Unset when omitted or when an empty /
+  // whitespace-only value was normalized away in Python. Presence distinguishes
+  // "not provided" from a future decorative empty string on other elements.
+  optional string alt = 11;
+
   reserved 1, 2, 4;
 }

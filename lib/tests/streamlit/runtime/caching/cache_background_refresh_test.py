@@ -151,3 +151,24 @@ def test_zero_workers_disables_background_refresh() -> None:
         assert manager._slots is None
     finally:
         manager.shutdown()
+
+
+def test_submit_releases_slot_on_unexpected_executor_error() -> None:
+    """Non-RuntimeError failures from ``submit`` log a warning and skip the refresh."""
+    manager = _BackgroundRefreshManager(max_workers=2)
+    try:
+        failing_executor = Mock()
+        failing_executor.submit.side_effect = ValueError("unexpected")
+        manager._executor = failing_executor
+
+        ran = Mock()
+        with patch(
+            "streamlit.runtime.caching.cache_background_refresh._LOGGER.warning"
+        ) as mock_warning:
+            assert manager.submit(ran) is False
+        ran.assert_not_called()
+        assert manager._slots._value == 2
+        mock_warning.assert_called_once()
+        assert "Failed to schedule" in mock_warning.call_args.args[0]
+    finally:
+        manager.shutdown()

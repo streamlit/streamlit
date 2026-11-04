@@ -102,7 +102,7 @@ def test_top_nav_links_have_expected_attributes_and_navigation(app: Page) -> Non
     internal_section.click()
 
     # Click "About" in the popover
-    about_link = app.get_by_role("link", name="About")
+    about_link = app.get_by_role("menuitem", name="About")
     expect(about_link).to_be_visible()
     # Internal links should not open in a new tab.
     expect(about_link).not_to_have_attribute("target", "_blank")

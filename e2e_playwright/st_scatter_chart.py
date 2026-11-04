@@ -40,7 +40,7 @@ utc_df = pd.DataFrame(
     }
 )
 
-utc_df.set_index("index", inplace=True)
+utc_df = utc_df.set_index("index")
 
 # Dataframe to test the color parameter support:
 N = 100
@@ -72,3 +72,10 @@ st.scatter_chart(color_df, x="a", y="b", color="e")
 st.scatter_chart(color_df, x="a", y="b", size="d", color="e")
 st.scatter_chart(color_df, x="a", y="b", size="d", color="c")
 st.scatter_chart(df, x_label="X Axis Label", y_label="Y Axis Label")
+
+# Keep accessible-name cases last because existing E2E assertions use positional
+# chart indexes.
+with st.container(key="scatter_alt"):
+    st.scatter_chart(df, alt="Scatter chart of columns a, b, and c")
+with st.container(key="scatter_no_alt"):
+    st.scatter_chart(df)

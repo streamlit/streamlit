@@ -33,6 +33,7 @@ from streamlit.elements.widgets.button_group import (
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementId,
+    StreamlitIncompatibleParametersError,
     StreamlitValueError,
 )
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
@@ -572,7 +573,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             (
                 st.pills,
                 ("label", ["a", "b", "c"]),
-                {"help": "Test help param"},
+                {"help": "    Test help param"},
                 ["a", "b", "c"],
                 "content",
                 ButtonGroupProto.Style.PILLS,
@@ -617,6 +618,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         if test_label:
             assert delta.label == command_args[0]
+            assert delta.help == "Test help param"
         assert (
             delta.label_visibility.value
             is LabelVisibility.LabelVisibilityOptions.VISIBLE
@@ -697,6 +699,31 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         button_group_2 = self.get_delta_from_queue().new_element.button_group
 
         assert button_group_1.id != button_group_2.id
+
+    def test_omitted_label_leaves_proto_label_unset(self) -> None:
+        """Omitted labels stay unset so the frontend collapses them."""
+        ButtonGroupMixin._internal_button_group(st._main, ["a", "b", "c"])
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == ""
+        assert not delta.HasField("label_visibility")
+
+    def test_omitted_label_invalid_visibility_raises(self) -> None:
+        """Omitted labels still validate ``label_visibility``."""
+        with pytest.raises(
+            StreamlitValueError, match=r"Invalid `label_visibility` value"
+        ):
+            ButtonGroupMixin._internal_button_group(
+                st._main,
+                ["a", "b"],
+                label_visibility="wrong_value",  # type: ignore[arg-type]
+            )
+
+    def test_non_string_label_is_coerced(self) -> None:
+        """Non-string labels are coerced without collapsing the proto label."""
+        st.pills(123, ["a", "b", "c"])  # type: ignore[arg-type]
+        delta = self.get_delta_from_queue().new_element.button_group
+        assert delta.label == "123"
+        assert delta.HasField("label_visibility")
 
     @parameterized.expand(
         get_command_matrix(
@@ -856,9 +883,26 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert c.default[:] == expected
         assert [option.content for option in c.options] == ["Coffee", "Tea", "Water"]
 
-    @parameterized.expand(get_command_matrix([]))
+    @parameterized.expand(
+        [
+            (
+                lambda *args, **kwargs: st.pills("label", *args, **kwargs),
+                "pills",
+            ),
+            (
+                lambda *args, **kwargs: st.segmented_control("label", *args, **kwargs),
+                "segmented_control",
+            ),
+            (
+                lambda *args, **kwargs: ButtonGroupMixin._internal_button_group(
+                    st._main, *args, **kwargs
+                ),
+                "segmented_control",
+            ),
+        ]
+    )
     def test_default_for_single_select_must_be_single_value(
-        self, command: Callable[..., None]
+        self, command: Callable[..., None], expected_command: str
     ):
         """Test that passing multiple values as default for single select raises an
         exception."""
@@ -868,10 +912,9 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 default=["Coffee", "Tea"],
                 selection_mode="single",
             )
-        assert (
-            str(exception.value)
-            == "The default argument to `st.pills` must be a single value when "
-            "`selection_mode='single'`."
+        assert str(exception.value) == (
+            f"The default argument to `st.{expected_command}` must be a single "
+            "value when `selection_mode='single'`."
         )
 
     @parameterized.expand(
@@ -2158,8 +2201,8 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
     ):
         """Test that required=True with selection_mode='multi' raises an exception."""
         with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be used with.*selection_mode='multi'",
+            StreamlitIncompatibleParametersError,
+            match=r"`required` is only supported for single-select mode",
         ):
             command("label", ["a", "b", "c"], selection_mode="multi", required=True)
 
@@ -2253,3 +2296,113 @@ def test_multi_serde_serialize_value_matched_by_format_func(
         format_func=lambda x: f"LABEL:{x}",
     )
     assert serde.serialize(values) == expected
+
+
+class PillsOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.pills("the label", ["a", "b"], on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pills("the label", ["a", "b"], on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pills("the label", ["a", "b"], on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.pills("the label", ["a", "b"], on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.button_group
+        assert c.ignore_rerun is True
+
+    def test_on_change_mode_excluded_from_element_id(self) -> None:
+        """Toggling on_change mode must not change the unkeyed element id."""
+        st.pills("same label", ["a", "b"], on_change="rerun")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.pills("same label", ["a", "b"], on_change="ignore")
+
+
+class SegmentedControlOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality for st.segmented_control."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.segmented_control("the label", ["a", "b"], on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.segmented_control("the label", ["a", "b"], on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.segmented_control(
+                "the label",
+                ["a", "b"],
+                on_change=[],  # type: ignore[arg-type]
+            )
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.segmented_control("the label", ["a", "b"], on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.button_group
+        assert c.ignore_rerun is True
+
+    def test_on_change_mode_excluded_from_element_id(self) -> None:
+        """Toggling on_change mode must not change the unkeyed element id."""
+        st.segmented_control("same label", ["a", "b"], on_change="rerun")
+        with pytest.raises(StreamlitDuplicateElementId):
+            st.segmented_control("same label", ["a", "b"], on_change="ignore")

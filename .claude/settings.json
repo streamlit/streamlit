@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" subagent_invocation",
+            "command": "uv run python \"${CLAUDE_PROJECT_DIR:-.}/scripts/log_agent_metrics.py\" subagent_invocation",
             "timeout": 5
           }
         ]
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run python \"$CLAUDE_PROJECT_DIR/scripts/log_agent_metrics.py\" skill_invocation",
+            "command": "uv run python \"${CLAUDE_PROJECT_DIR:-.}/scripts/log_agent_metrics.py\" skill_invocation",
             "timeout": 5
           }
         ]
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pre_bash_redirect.py",
+            "command": "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/pre_bash_redirect.py",
             "timeout": 10
           }
         ]
@@ -75,7 +75,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post_edit_autofix.sh",
+            "command": "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/post_edit_autofix.sh",
             "timeout": 5
           }
         ]
@@ -86,7 +86,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/stop_check.sh",
+            "command": "${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/stop_check.sh",
             "timeout": 120,
             "statusMessage": "Running make check (fast)..."
           }

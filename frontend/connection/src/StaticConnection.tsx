@@ -16,11 +16,11 @@
 
 import { getLogger } from "loglevel"
 
-import { ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
+import { type ForwardMsg, ForwardMsgList } from "@streamlit/protobuf"
 import { localStorageAvailable } from "@streamlit/utils"
 
 import { ConnectionState } from "./ConnectionState"
-import {
+import type {
   ErrorDetails,
   OnConnectionStateChange,
   OnMessage,

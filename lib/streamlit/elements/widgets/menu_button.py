@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.options_selector_utils import create_mappings
@@ -29,7 +29,12 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidLayoutContextError,
+    StreamlitMissingRequiredParameterError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import StringTriggerValue
 from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -39,8 +44,9 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
 
 if TYPE_CHECKING:
@@ -262,10 +268,10 @@ class MenuButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. The icon and expansion arrow
-            remain visible. This parameter controls only the trigger label;
-            menu option labels are unaffected.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. The icon and
+            expansion arrow remain visible. This parameter controls only the
+            trigger label; menu option labels are unaffected.
 
         Returns
         -------
@@ -332,6 +338,12 @@ class MenuButtonMixin:
         ctx: ScriptRunContext | None = None,
     ) -> T | None:
         key = to_key(key)
+        label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
 
         check_widget_policies(
             self.dg,
@@ -342,7 +354,7 @@ class MenuButtonMixin:
         )
 
         if runtime.exists() and is_in_form(self.dg):
-            raise StreamlitAPIException(
+            raise StreamlitInvalidLayoutContextError(
                 f"`st.menu_button()` can't be used in an `st.form()`.{_FORM_DOCS_INFO}"
             )
 
@@ -356,8 +368,8 @@ class MenuButtonMixin:
         opt = convert_anything_to_list(options)
 
         if len(opt) == 0:
-            raise StreamlitAPIException(
-                "The options argument to st.menu_button must contain at least one option."
+            raise StreamlitMissingRequiredParameterError(
+                "options", detail="Provide at least one option."
             )
 
         check_python_comparable(opt)
@@ -371,7 +383,8 @@ class MenuButtonMixin:
         if len(formatted_options) != len(formatted_option_to_option_index):
             raise StreamlitAPIException(
                 "The `format_func` produced duplicate labels for the menu button "
-                "options. Each formatted option label must be unique."
+                "options. Each formatted option label must be unique.",
+                error_id="menu-button-duplicate-format-labels",
             )
 
         element_id = compute_and_register_element_id(
@@ -397,7 +410,7 @@ class MenuButtonMixin:
             menu_button_proto.wrap = wrap
 
         if help is not None:
-            menu_button_proto.help = dedent(help)
+            menu_button_proto.help = to_help_str(help)
 
         if icon is not None:
             menu_button_proto.icon = validate_icon_or_emoji(icon)
@@ -435,7 +448,31 @@ class MenuButtonMixin:
                 },
             )
 
-        self.dg._enqueue("menu_button", menu_button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "menu_button",
+            menu_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "menu_button",
+                key=element_id,
+                # A payload-bearing trigger: the fired option is the trigger's
+                # value.
+                action="trigger",
+                value_schema=agent_spec.STRING,
+                label=label,
+                # Copied only while recording: this argument runs before the
+                # gate inside element().
+                options=(
+                    list(menu_button_proto.options)
+                    if agent_spec.is_recording()
+                    else None
+                ),
+                help=menu_button_proto.help or None,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
+        )
         return widget_state.value
 
     @property

@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-import { createRef, PureComponent, ReactNode } from "react"
+import { createRef, type JSX, PureComponent, type ReactNode } from "react"
 
-import classNames from "classnames"
 import { enableMapSet, enablePatches } from "immer"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
-import Hotkeys from "react-hot-keys"
 
 import AppView from "@streamlit/app/src/components/AppView/AppView"
 import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import { GlobalHotkeys } from "@streamlit/app/src/components/GlobalHotkeys/GlobalHotkeys"
 import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
 import {
   isSkillsNudgeDismissed,
@@ -42,16 +41,16 @@ import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitCon
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import {
-  ConnectionErrorProps,
-  DialogProps,
-  ScriptCompileErrorProps,
+  type ConnectionErrorProps,
+  type DialogProps,
+  type ScriptCompileErrorProps,
   StreamlitDialog,
-  WarningProps,
+  type WarningProps,
 } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
-import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
+import type { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
 import withScreencast, {
-  ScreenCastHOC,
+  type ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
 import { useViewportSize } from "@streamlit/app/src/hooks/useViewportSize"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -59,21 +58,21 @@ import { SessionEventDispatcher } from "@streamlit/app/src/SessionEventDispatche
 import { StyledApp } from "@streamlit/app/src/styled-components"
 import getBrowserInfo from "@streamlit/app/src/util/getBrowserInfo"
 import {
-  AppConfig,
+  type AppConfig,
   ConnectionManager,
   ConnectionState,
   DefaultStreamlitEndpoints,
-  ErrorDetails,
-  IHostConfigProperties,
+  type ErrorDetails,
+  type IHostConfigProperties,
   isHostConfigBypassEnabled,
-  LibConfig,
+  type LibConfig,
   parseUriIntoBaseParts,
-  StreamlitEndpoints,
+  type StreamlitEndpoints,
 } from "@streamlit/connection"
 import {
   AppRoot,
   BackendOperationClient,
-  CircularBuffer,
+  type CircularBuffer,
   ComponentRegistry,
   createAutoTheme,
   createCustomThemes,
@@ -81,12 +80,12 @@ import {
   createPresetThemes,
   CUSTOM_THEME_AUTO_NAME,
   darkTheme,
-  DeployedAppMetadata,
+  type DeployedAppMetadata,
   ensureError,
   ensureHotkeysFilterConfigured,
   extractPageNameFromPathName,
   FileUploadClient,
-  FormsData,
+  type FormsData,
   generateUID,
   getElementId,
   getEmbeddingIdClassName,
@@ -102,7 +101,7 @@ import {
   hashString,
   hasLightBackgroundColor,
   HostCommunicationManager,
-  IMenuItem,
+  type IMenuItem,
   INITIAL_SCRIPT_RUN_ID,
   isEmbed,
   isInChildFrame,
@@ -111,48 +110,47 @@ import {
   isPresetTheme,
   isScrollingHidden,
   isToolbarDisplayed,
-  IToolbarItem,
+  type IToolbarItem,
   lightTheme,
   mark,
   measure,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
-  PresetThemeName,
+  type PresetThemeName,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
-  ThemeConfig,
+  type ThemeConfig,
   toExportedTheme,
   WidgetStateManager,
 } from "@streamlit/lib"
 import {
-  AuthRedirect,
-  AutoRerun,
-  BackendOperationResponse,
+  type AppPage,
+  type AuthRedirect,
+  type AutoRerun,
+  type BackendOperationResponse,
   BackMsg,
   Config,
-  CustomThemeConfig,
-  Delta,
-  FileURLsResponse,
+  type CustomThemeConfig,
+  type Delta,
+  type FileURLsResponse,
   ForwardMsg,
-  ForwardMsgMetadata,
-  GitInfo,
-  IAppPage,
-  ICustomThemeConfig,
-  IGitInfo,
-  Initialize,
-  Logo,
+  type ForwardMsgMetadata,
+  type GitInfo,
+  type Initialize,
+  type Logo,
   Navigation,
-  NewSession,
+  type NewSession,
   PageConfig,
-  PageInfo,
-  PageNotFound,
+  type PageInfo,
+  type PageNotFound,
   PageProfile,
-  ParentMessage,
-  SessionEvent,
-  SessionStatus,
-  StopAutoRerun,
-  WidgetStates,
+  type ParentMessage,
+  type SessionEvent,
+  type SessionStatus,
+  type StopAutoRerun,
+  type WidgetStates,
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
@@ -165,12 +163,13 @@ import {
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
 // Import @font-face rules for app and icon fonts
 import "@streamlit/app/src/assets/css/fonts.css"
-import { AppNavigation, MaybeStateUpdate } from "./util/AppNavigation"
+import { AppNavigation, type MaybeStateUpdate } from "./util/AppNavigation"
 import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
-import { ThemeManager } from "./util/useThemeManager"
+import { getRunIdentity, type RunIdentity } from "./util/runIdentity"
+import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
 declare const PACKAGE_METADATA: {
@@ -198,21 +197,21 @@ interface State {
   layout: PageConfig.Layout
   initialSidebarState: PageConfig.SidebarState
   initialSidebarWidth?: number
-  menuItems?: PageConfig.IMenuItems | null
+  menuItems?: PageConfig.MenuItems.$Properties | null
   allowRunOnSave: boolean
   scriptFinishedHandlers: (() => void)[]
   toolbarMode: Config.ToolbarMode
   showErrorLinks: Config.ShowErrorLinks
   disableDataExport: boolean
   themeHash: string
-  gitInfo: IGitInfo | null
+  gitInfo: GitInfo.$Properties | null
   formsData: FormsData
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
   sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
-  appPages: IAppPage[]
+  appPages: AppPage.$Properties[]
   navSections: string[]
   // The hash of the current page executing
   currentPageScriptHash: string
@@ -273,6 +272,23 @@ interface State {
 }
 
 export const LOG = getLogger("App")
+
+/**
+ * Returns a new_session's run identity, or a placeholder full-app run when the
+ * message has none (an old recorded stream, or a backend from another build).
+ * The placeholder is a fresh ID, never INITIAL_SCRIPT_RUN_ID, because that ID
+ * makes the app report that no script has run yet.
+ */
+function getNewSessionRunIdentity(
+  metadata?: ForwardMsgMetadata | null
+): RunIdentity {
+  const runIdentity = getRunIdentity(metadata)
+  if (runIdentity) {
+    return runIdentity
+  }
+  LOG.error("Received a new_session message without run identity metadata.")
+  return { scriptRunId: generateUID(), fragmentIds: [] }
+}
 
 declare global {
   interface Window {
@@ -337,6 +353,30 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  /**
+   * History-navigation PageInfo should use replaceState, not pushState, so the
+   * restored back/forward entry is not duplicated. Only relevant when the
+   * backend changes the query string during a history rerun; an unchanged
+   * query string never reaches the history API (see handlePageInfoChanged).
+   *
+   * Attribution is best-effort (PageInfo has no run id):
+   * - {@link rerunEpoch}: increments on every rerun request the frontend sends.
+   * - {@link historyNavigationEpoch}: set to that epoch on a history BackMsg;
+   *   advanced with the epoch only for an auto-rerun that immediately follows
+   *   a still-pending history BackMsg (no NewSession yet, no intervening
+   *   non-history BackMsg) — matching backend sticky coalesce. Left unchanged
+   *   on other non-history BackMsgs; cleared on a superseding NewSession
+   *   (epoch mismatch) or on a successful finish for the latest run.
+   * - PageInfo uses replaceState while historyNavigationEpoch !== null.
+   * - FINISHED_EARLY_FOR_RERUN does not clear the epoch.
+   *
+   * Known limitation: a stale history NewSession after a newer non-history
+   * BackMsg can clear the epoch early (same class as hasReceivedNewSession).
+   * Closing that requires a run id on PageInfo.
+   */
+  private rerunEpoch: number = 0
+  private historyNavigationEpoch: number | null = null
+
   // Active `run_every` auto-rerun timers, keyed by fragment id. These are
   // imperative resources (setInterval handles), so they live outside of React
   // state. Keying by fragment id lets us keep a single timer per fragment: we
@@ -386,11 +426,12 @@ export class App extends PureComponent<Props, State> {
   private inFlightSkillsInstall: Promise<string | undefined> | null = null
 
   private get skillsCalloutEnvEligible(): boolean {
-    if (this.cachedSkillsCalloutEnvEligible === undefined) {
-      this.cachedSkillsCalloutEnvEligible =
-        isLocalhost() && !isEmbed() && localStorageAvailable()
-    }
-    return this.cachedSkillsCalloutEnvEligible
+    // A stored false is a real cached answer, so only fill an unset value.
+    const eligible =
+      this.cachedSkillsCalloutEnvEligible ??
+      (isLocalhost() && !isEmbed() && localStorageAvailable())
+    this.cachedSkillsCalloutEnvEligible = eligible
+    return eligible
   }
 
   public constructor(props: Props) {
@@ -458,7 +499,7 @@ export class App extends PureComponent<Props, State> {
       pageLinkBaseUrl: "",
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
-      queryParams: window.location?.search?.replace(/^\?/, "") ?? "",
+      queryParams: normalizeQueryString(window.location.search),
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
@@ -479,13 +520,25 @@ export class App extends PureComponent<Props, State> {
     })
 
     // Sync widget URL changes to App state for page navigation preservation.
-    this.widgetMgr.setQueryParamsChangeHandler(
-      this.handleQueryParamsFromWidget
-    )
+    this.widgetMgr.setQueryParamsChangeHandler(this.syncQueryParams)
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
-      sendRerunBackMsg: this.sendRerunBackMsg,
+      sendRerunBackMsg: (
+        widgetStates?: WidgetStates,
+        pageScriptHash?: string,
+        queryStringOverride?: string
+      ) => {
+        // HostCommunicationManager omits fragmentId and isAutoRerun; App.sendRerunBackMsg
+        // takes those before queryStringOverride.
+        this.sendRerunBackMsg(
+          widgetStates,
+          undefined,
+          pageScriptHash,
+          undefined,
+          queryStringOverride
+        )
+      },
       closeModal: this.closeDialog,
       stopScript: this.stopScript,
       rerunScript: this.rerunScript,
@@ -730,7 +783,7 @@ export class App extends PureComponent<Props, State> {
           // deprecated setAnonymousCrossOriginPropertyOnMediaElements (if true, use "anonymous")
           resourceCrossOriginMode:
             resourceCrossOriginMode ??
-            (setAnonymousCrossOriginPropertyOnMediaElements
+            (setAnonymousCrossOriginPropertyOnMediaElements === true
               ? "anonymous"
               : undefined),
         }
@@ -786,7 +839,7 @@ export class App extends PureComponent<Props, State> {
         },
       }
 
-      // @ts-expect-error
+      // @ts-expect-error - iframe-resizer contentWindow path has no type declarations
       void import("iframe-resizer/js/iframeResizer.contentWindow")
     }
 
@@ -804,9 +857,9 @@ export class App extends PureComponent<Props, State> {
     _prevProps: Readonly<Props>,
     prevState: Readonly<State>
   ): void {
-    // @ts-expect-error
+    // @ts-expect-error - prerenderReady flag is missing from Window
     if (window.prerenderReady === false && this.isAppInReadyState(prevState)) {
-      // @ts-expect-error
+      // @ts-expect-error - prerenderReady flag is missing from Window
       window.prerenderReady = true
     }
     if (this.state.scriptRunState !== prevState.scriptRunState) {
@@ -862,7 +915,7 @@ export class App extends PureComponent<Props, State> {
   ): void {
     // Show dialog only if blockErrorDialogs host config is false
     const { blockErrorDialogs } = this.state.appConfig
-    if (!blockErrorDialogs) {
+    if (blockErrorDialogs !== true) {
       this.openDialog(newDialog)
     }
 
@@ -940,7 +993,7 @@ export class App extends PureComponent<Props, State> {
         notNullOrUndefined(environmentInfo) &&
         notNullOrUndefined(environmentInfo.streamlitVersion)
       ) {
-        return currentStreamlitVersion != environmentInfo.streamlitVersion
+        return currentStreamlitVersion !== environmentInfo.streamlitVersion
       }
     }
 
@@ -952,7 +1005,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleThemeMessage = (
     themeName?: PresetThemeName,
-    theme?: ICustomThemeConfig
+    theme?: CustomThemeConfig.$Properties
   ): void => {
     const [, lightTheme, darkTheme] = createPresetThemes()
     const isUsingPresetTheme = isPresetTheme(this.props.theme.activeTheme)
@@ -1052,14 +1105,14 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  handleGitInfoChanged = (gitInfo: IGitInfo): void => {
+  handleGitInfoChanged = (gitInfo: GitInfo.$Properties): void => {
     this.setState({
       gitInfo,
     })
   }
 
   handleCustomParentMessage = (parentMessage: ParentMessage): void => {
-    if (this.state.appConfig.enableCustomParentMessages) {
+    if (this.state.appConfig.enableCustomParentMessages === true) {
       this.hostCommunicationMgr.sendMessageToHost({
         type: "CUSTOM_PARENT_MESSAGE",
         message: parentMessage.message,
@@ -1097,7 +1150,10 @@ export class App extends PureComponent<Props, State> {
     try {
       dispatchProto(msgProto, "type", {
         newSession: (newSessionMsg: NewSession) =>
-          this.handleNewSession(newSessionMsg),
+          this.handleNewSession(
+            newSessionMsg,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         sessionStatusChanged: (msg: SessionStatus) =>
           this.handleSessionStatusChanged(msg),
         sessionEvent: (evtMsg: SessionEvent) =>
@@ -1117,7 +1173,10 @@ export class App extends PureComponent<Props, State> {
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
-          this.handleScriptFinished(status),
+          this.handleScriptFinished(
+            status,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
@@ -1233,7 +1292,7 @@ export class App extends PureComponent<Props, State> {
       // Now that we allow multiple set page config calls, menu items are additive
       // for behavior consistency with other page config properties.
       this.setState((prevState: State) => {
-        if (menuItems.clearAboutMd) {
+        if (menuItems.clearAboutMd === true) {
           menuItems.aboutSectionMd = ""
         }
         return {
@@ -1243,8 +1302,8 @@ export class App extends PureComponent<Props, State> {
     }
   }
 
-  /** Callback for WidgetStateManager when bound widgets update URL params. */
-  handleQueryParamsFromWidget = (queryString: string): void => {
+  /** Update local query-param state and notify the host. */
+  syncQueryParams = (queryString: string): void => {
     this.setState({ queryParams: queryString })
 
     this.hostCommunicationMgr.sendMessageToHost({
@@ -1257,7 +1316,22 @@ export class App extends PureComponent<Props, State> {
     const { queryString } = pageInfo
     const targetUrl =
       document.location.pathname + (queryString ? `?${queryString}` : "")
-    window.history.pushState({}, "", targetUrl)
+    const currentSearch = normalizeQueryString(document.location.search)
+
+    // `pushState` always adds a history entry, even when the resulting URL is
+    // identical, so reruns that re-assign the same query params would otherwise
+    // fill the back stack with no-op entries. React state and the host message
+    // below are still updated so embeds stay in sync.
+    if (queryString !== currentSearch) {
+      if (this.historyNavigationEpoch !== null) {
+        // PageInfo can arrive in multiple messages during one history rerun.
+        // replaceState keeps the address bar and host query params aligned
+        // without polluting the back stack.
+        window.history.replaceState({}, "", targetUrl)
+      } else {
+        window.history.pushState({}, "", targetUrl)
+      }
+    }
 
     this.setState({ queryParams: queryString })
 
@@ -1301,9 +1375,9 @@ export class App extends PureComponent<Props, State> {
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
       isFragmentRun: Boolean(pageProfileObj.isFragmentRun),
-      numPages: this.state.appPages?.length,
+      numPages: this.state.appPages.length,
       pageScriptHash: this.state.currentPageScriptHash,
-      activeTheme: this.props.theme?.activeTheme?.name,
+      activeTheme: this.props.theme.activeTheme.name,
       totalLoadTime: Math.round(
         (performance.now() - this.state.latestRunTime) * 1000
       ),
@@ -1489,8 +1563,12 @@ export class App extends PureComponent<Props, State> {
   /**
    * Handler for ForwardMsg.newSession messages. This runs on each rerun
    * @param newSessionProto a NewSession protobuf
+   * @param metadata the ForwardMsg metadata, which carries the run identity
    */
-  handleNewSession = (newSessionProto: NewSession): void => {
+  handleNewSession = (
+    newSessionProto: NewSession,
+    metadata?: ForwardMsgMetadata | null
+  ): void => {
     const initialize = newSessionProto.initialize as Initialize
 
     if (this.hasStreamlitVersionChanged(initialize)) {
@@ -1501,6 +1579,13 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
+
+    // NewSession is attributed to the latest BackMsg (rerunEpoch). Keep
+    // history replaceState only when that BackMsg was history navigation;
+    // otherwise end it so this run's PageInfo can pushState.
+    if (this.historyNavigationEpoch !== this.rerunEpoch) {
+      this.historyNavigationEpoch = null
+    }
 
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
@@ -1513,20 +1598,23 @@ export class App extends PureComponent<Props, State> {
 
     const { appHash, currentPageScriptHash: prevPageScriptHash } = this.state
     const {
-      scriptRunId,
       name: scriptName,
       mainScriptPath,
-      fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
       mainScriptHash,
     } = newSessionProto
+    const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
+      getNewSessionRunIdentity(metadata)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
       this.cleanupAutoReruns()
 
       const config = newSessionProto.config as Config
-      const themeInput = newSessionProto.customTheme as CustomThemeConfig
+      const themeInput = newSessionProto.customTheme as
+        | CustomThemeConfig
+        | null
+        | undefined
 
       this.processThemeInput(themeInput)
       this.setState({
@@ -1815,9 +1903,11 @@ export class App extends PureComponent<Props, State> {
     // Best-effort durable suppression: the localStorage flag already suppresses
     // the nudge in this browser, so a failed marker write only means a fresh
     // browser could see it again — log it rather than failing the dismissal.
-    this.backendOperationClient.requestDismissSkillsNudge().catch(error => {
-      LOG.warn("Failed to persist skills nudge dismissal", error)
-    })
+    this.backendOperationClient
+      .requestDismissSkillsNudge()
+      .catch((error: unknown) => {
+        LOG.warn("Failed to persist skills nudge dismissal", error)
+      })
     this.trackSkillsNudge("skillsNudgeDontShowAgain", "toast")
   }
 
@@ -1835,23 +1925,44 @@ export class App extends PureComponent<Props, State> {
    * Handler called when the history state changes, e.g. `popstate` event.
    */
   onHistoryChange = (): void => {
-    const { currentPageScriptHash } = this.state
+    const { currentPageScriptHash, queryParams } = this.state
     const targetAppPage = this.appNavigation.findPageByUrlPath(
       document.location.pathname
     )
 
-    // do not cause a rerun when an anchor is clicked and we aren't changing pages
-    const hasAnchor = document.location.toString().includes("#")
-    const isSamePage = targetAppPage?.pageScriptHash === currentPageScriptHash
-
-    if (isNullOrUndefined(targetAppPage) || (hasAnchor && isSamePage)) {
+    // Before Navigation metadata arrives, findPageByUrlPath returns null.
+    // Fall back to the current page hash so query-only back/forward still reruns
+    // instead of being ignored as unknown-page navigation.
+    const pageScriptHash =
+      targetAppPage?.pageScriptHash ?? currentPageScriptHash
+    if (!pageScriptHash) {
       return
     }
-    // Pass preserveQueryParams=true to preserve query params from the URL when
-    // navigating via browser history (back/forward buttons). This ensures that
-    // query params present in the URL after history navigation are sent to the
-    // server on the first script run.
-    this.onPageChange(targetAppPage.pageScriptHash as string, undefined, true)
+
+    const hasAnchor = document.location.toString().includes("#")
+    const isSamePage =
+      isNullOrUndefined(targetAppPage) ||
+      targetAppPage.pageScriptHash === currentPageScriptHash
+    const queryString = normalizeQueryString(document.location.search)
+    const stateQueryString = normalizeQueryString(queryParams)
+
+    // Do not rerun for anchor-only navigation on the same page.
+    if (hasAnchor && isSamePage && queryString === stateQueryString) {
+      return
+    }
+
+    // After popstate the URL is the source of truth. Pass its query string
+    // explicitly to onPageChange because syncQueryParams' setState has not
+    // flushed yet, and preserve it across page changes.
+    this.syncQueryParams(queryString)
+    const preserveQueryParams = true
+    const isHistoryNavigation = true
+    this.onPageChange(
+      pageScriptHash,
+      queryString,
+      preserveQueryParams,
+      isHistoryNavigation
+    )
   }
 
   /**
@@ -1865,7 +1976,7 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
-  createThemeHash = (themeInput?: CustomThemeConfig): string => {
+  createThemeHash = (themeInput?: CustomThemeConfig | null): string => {
     if (!themeInput) {
       // If themeInput is null, then we didn't receive a custom theme for this
       // app from the server. We use a hardcoded string literal for the
@@ -1886,7 +1997,7 @@ export class App extends PureComponent<Props, State> {
     return hashString(JSON.stringify(sorted))
   }
 
-  processThemeInput(themeInput: CustomThemeConfig): void {
+  processThemeInput(themeInput: CustomThemeConfig | null | undefined): void {
     const themeHash = this.createThemeHash(themeInput)
     if (themeHash === this.state.themeHash) {
       return
@@ -1956,18 +2067,45 @@ export class App extends PureComponent<Props, State> {
   /**
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
+   * @param metadata the ForwardMsg metadata, which carries the identity of the
+   * run that finished. A later run may already have started by the time this
+   * message is handled, so React state can't be used to name the finished run.
    */
-  handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+  handleScriptFinished(
+    status: ForwardMsg.ScriptFinishedStatus,
+    metadata?: ForwardMsgMetadata | null
+  ): void {
+    // A finish without identity only comes from the stop AppSession sends
+    // when handling a BackMsg exception. Later finishes, from the error run
+    // and from the script that was still running, carry identity and do this
+    // work. Widget completion, stale-node cleanup, and cache aging need the
+    // finished run, so they are skipped here rather than guessed from React
+    // state.
+    const finishedRun = getRunIdentity(metadata)
+
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
     // the status-conditional handling below on purpose: the counter must bump
-    // for every finish status (including FINISHED_WITH_COMPILE_ERROR) so widgets
-    // re-enable even when a run ends with a compilation error.
-    this.setState(prevState => ({
-      scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
-    }))
+    // for every attributed finish status (including FINISHED_WITH_COMPILE_ERROR)
+    // so widgets re-enable even when a run ends with a compilation error.
+    if (finishedRun) {
+      this.setState(prevState => ({
+        scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
+        scriptRunFinishedFragmentIds: finishedRun.fragmentIds,
+      }))
+    }
+
+    // Clear history replaceState only on a real finish for the latest
+    // requested run. An interrupt (FINISHED_EARLY_FOR_RERUN) from an older
+    // history run must not drop the flag for a newer history request that is
+    // still pending.
+    if (
+      this.hasReceivedNewSession &&
+      status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+    ) {
+      this.historyNavigationEpoch = null
+    }
 
     if (
       status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
@@ -1975,17 +2113,25 @@ export class App extends PureComponent<Props, State> {
       status ===
         ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      Promise.resolve().then(() => {
-        // Notify any subscribers of this event (and do it on the next cycle of
-        // the event loop)
-        this.state.scriptFinishedHandlers.forEach(handler => handler())
+      // Notify subscribers on the next microtask so this finish handler can
+      // return before widgets react to the completion of this run. Isolate
+      // handler failures so one throw does not skip later handlers or surface
+      // as an uncaught error.
+      queueMicrotask(() => {
+        this.state.scriptFinishedHandlers.forEach(handler => {
+          try {
+            handler()
+          } catch (error) {
+            LOG.error("Script finished handler failed", error)
+          }
+        })
       })
 
       if (
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        finishedRun &&
+        (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+          status ===
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
       ) {
         // Clear any stale elements left over from the previous run.
         // We only do that for completed runs, not for runs that were finished early
@@ -1994,13 +2140,22 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
+        // Skip a full-app cleanup once a later run has started (an error run
+        // sent while this run was still executing, whose finish has already
+        // cleaned up): it would drop that run's nodes. Fragment cleanup is
+        // safe, because any later write restamps the blocks on its path.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun, elements }) => {
+          ({ elements, scriptRunId }) => {
+            if (
+              finishedRun.fragmentIds.length === 0 &&
+              scriptRunId !== finishedRun.scriptRunId
+            ) {
+              return null
+            }
             return {
-              // Apply any pending elements that haven't been applied.
               elements: elements.clearStaleNodes(
-                scriptRunId,
-                fragmentIdsThisRun
+                finishedRun.scriptRunId,
+                finishedRun.fragmentIds
               ),
             }
           },
@@ -2017,6 +2172,7 @@ export class App extends PureComponent<Props, State> {
       // before a NewSession message is processed. This issue should not
       // disrupt users and is not a critical need for the message cache
       if (
+        finishedRun &&
         this.connectionManager !== null &&
         status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
         this.sessionInfo.isSet &&
@@ -2024,12 +2180,13 @@ export class App extends PureComponent<Props, State> {
         // a NewSession message after the latest rerun request. This is done
         // to ignore finished messages from previous script runs, which would
         // cause issues with deleting cached messages that are needed for the
-        // current script run.
+        // current script run. Read the flag here, not in a setState callback:
+        // a later NewSession can set it before React commits.
         this.hasReceivedNewSession
       ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge,
-          this.state.fragmentIdsThisRun
+          finishedRun.fragmentIds
         )
       }
     }
@@ -2137,7 +2294,9 @@ export class App extends PureComponent<Props, State> {
     metadataMsg: ForwardMsgMetadata,
     elementHash?: string
   ): void => {
-    // Use functional state update to ensure we have latest elements
+    // A delta belongs to the run of the most recent new_session before it.
+    // Reading scriptRunId from prevState (not this.state) keeps that true,
+    // because React applies queued updaters in order.
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(
         prevState.scriptRunId,
@@ -2181,7 +2340,7 @@ export class App extends PureComponent<Props, State> {
 
     // It's not a problem that we're mucking around with private fields since
     // this is a test-only method anyway.
-    // @ts-expect-error
+    // @ts-expect-error - test-only access to the private websocket message cache
     this.connectionManager?.websocketConnection?.cache.messages.clear()
   }
 
@@ -2262,7 +2421,8 @@ export class App extends PureComponent<Props, State> {
   onPageChange = (
     pageScriptHash: string,
     queryString?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const { elements, mainScriptHash } = this.state
 
@@ -2290,7 +2450,8 @@ export class App extends PureComponent<Props, State> {
       pageScriptHash,
       undefined,
       queryString,
-      preserveQueryParams
+      preserveQueryParams,
+      isHistoryNavigation
     )
   }
 
@@ -2309,7 +2470,8 @@ export class App extends PureComponent<Props, State> {
     pageScriptHash?: string,
     isAutoRerun?: boolean,
     queryStringOverride?: string,
-    preserveQueryParams?: boolean
+    preserveQueryParams?: boolean,
+    isHistoryNavigation?: boolean
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -2337,7 +2499,10 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash !== currentPageScriptHash && !preserveQueryParams) {
+      if (
+        pageScriptHash !== currentPageScriptHash &&
+        preserveQueryParams !== true
+      ) {
         // When switching pages, preserve only embed params and widget-bound params.
         // All other params (like ?foo=bar) should be cleared.
         const filteredParams = this.widgetMgr.filterParamsForPageChange(
@@ -2380,6 +2545,22 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
+    this.rerunEpoch += 1
+    if (isHistoryNavigation === true) {
+      this.historyNavigationEpoch = this.rerunEpoch
+    } else if (
+      isAutoRerun === true &&
+      // Only re-stick while a history BackMsg is still awaiting NewSession
+      // (backend pending coalesce). Do not re-stick after the history run's
+      // NewSession (a later auto-rerun is a separate interrupt) or after a
+      // superseding widget BackMsg (epoch gap — last-wins already dropped the
+      // history bit on the backend).
+      !this.hasReceivedNewSession &&
+      this.historyNavigationEpoch === this.rerunEpoch - 1
+    ) {
+      this.historyNavigationEpoch = this.rerunEpoch
+    }
+
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -2389,6 +2570,7 @@ export class App extends PureComponent<Props, State> {
           pageName,
           fragmentId,
           isAutoRerun,
+          isHistoryNavigation,
           cachedMessageHashes,
           contextInfo,
         },
@@ -2564,7 +2746,7 @@ export class App extends PureComponent<Props, State> {
     } catch {
       windowToPrint = window
     } finally {
-      if (!windowToPrint) windowToPrint = window
+      windowToPrint ??= window
       windowToPrint.print()
     }
   }
@@ -2626,7 +2808,7 @@ export class App extends PureComponent<Props, State> {
         ? queryParams
         : document.location.search
 
-    return queryString.startsWith("?") ? queryString.substring(1) : queryString
+    return normalizeQueryString(queryString)
   }
 
   getThemeColorScheme = (): string => {
@@ -2725,9 +2907,11 @@ export class App extends PureComponent<Props, State> {
   private readonly hasAppDefinedMenuItems = (): boolean => {
     const { menuItems } = this.state
     return Boolean(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank about text still lets other menu items count
       menuItems?.aboutSectionMd ||
-      (menuItems?.getHelpUrl && !menuItems?.hideGetHelp) ||
-      (menuItems?.reportABugUrl && !menuItems?.hideReportABug)
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank help url still lets the bug-report item count
+      (menuItems?.getHelpUrl && menuItems.hideGetHelp !== true) ||
+      (menuItems?.reportABugUrl && menuItems.hideReportABug !== true)
     )
   }
 
@@ -2798,14 +2982,14 @@ export class App extends PureComponent<Props, State> {
       this.state.toolbarMode
     )
 
-    const outerDivClass = classNames(
+    const outerDivClass = [
       "stApp",
       getEmbeddingIdClassName(this.embeddingId),
-      {
-        "streamlit-embedded": isEmbed(),
-        "streamlit-wide": userSettings.wideMode,
-      }
-    )
+      isEmbed() && "streamlit-embedded",
+      userSettings.wideMode && "streamlit-wide",
+    ]
+      .filter(Boolean)
+      .join(" ")
 
     const renderedDialog: React.ReactNode = dialog
       ? StreamlitDialog({
@@ -2882,7 +3066,7 @@ export class App extends PureComponent<Props, State> {
         onInstallSkills={this.handleErrorCalloutInstall}
         onSkillsCalloutShown={this.handleErrorCalloutShown}
       >
-        <Hotkeys
+        <GlobalHotkeys
           keyName="r,c,esc"
           onKeyDown={this.handleKeyDown}
           onKeyUp={this.handleKeyUp}
@@ -2892,7 +3076,9 @@ export class App extends PureComponent<Props, State> {
             className={outerDivClass}
             data-testid="stApp"
             data-test-script-state={
-              scriptRunId == INITIAL_SCRIPT_RUN_ID ? "initial" : scriptRunState
+              scriptRunId === INITIAL_SCRIPT_RUN_ID
+                ? "initial"
+                : scriptRunState
             }
             data-test-connection-state={connectionState}
           >
@@ -2981,7 +3167,7 @@ export class App extends PureComponent<Props, State> {
             />
             {renderedDialog}
           </StyledApp>
-        </Hotkeys>
+        </GlobalHotkeys>
       </StreamlitContextProvider>
     )
   }

@@ -16,6 +16,74 @@ index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d
          let save = false;
          if (event.key === "Escape") {
              event.stopPropagation();
+diff --git a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+--- a/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
++++ b/dist/cjs/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+@@ -13,6 +13,22 @@ function getThousandSeprator() {
+ const NumberOverlayEditor = p => {
+-    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
++    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
+     const inputRef = React.useRef();
++    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++    const lastEmittedFloatValueRef = React.useRef(cellValue);
++    React.useLayoutEffect(() => {
++        // Keep typed text when Glide re-renders with the same parsed float.
++        // Replace it when validation or another update sends a different number.
++        // See streamlit/streamlit#16909.
++        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
++            lastEmittedFloatValueRef.current = cellValue;
++            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++        }
++    }, [cellValue]);
++    const handleValueChange = React.useCallback(nextValue => {
++        lastEmittedFloatValueRef.current = nextValue.floatValue;
++        setValue(nextValue.value);
++        onChange(nextValue);
++    }, [onChange]);
+     React.useLayoutEffect(() => {
+         if (validatedSelection !== undefined) {
+             const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
+@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
+             // decimalScale={3}
+             // prefix={"$"}
+-            onValueChange: onChange })));
++            onValueChange: handleValueChange })));
+ };
+ export default NumberOverlayEditor;
+diff --git a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+--- a/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
++++ b/dist/esm/internal/data-grid-overlay-editor/private/number-overlay-editor.js
+@@ -13,6 +13,22 @@ function getThousandSeprator() {
+ const NumberOverlayEditor = p => {
+-    const { value, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
++    const { value: cellValue, onChange, disabled, highlight, validatedSelection, fixedDecimals, allowNegative, thousandSeparator, decimalSeparator, } = p;
+     const inputRef = React.useRef();
++    const [value, setValue] = React.useState(() => Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++    const lastEmittedFloatValueRef = React.useRef(cellValue);
++    React.useLayoutEffect(() => {
++        // Keep typed text when Glide re-renders with the same parsed float.
++        // Replace it when validation or another update sends a different number.
++        // See streamlit/streamlit#16909.
++        if (!Object.is(cellValue, lastEmittedFloatValueRef.current)) {
++            lastEmittedFloatValueRef.current = cellValue;
++            setValue(Object.is(cellValue, -0) ? "-" : cellValue ?? "");
++        }
++    }, [cellValue]);
++    const handleValueChange = React.useCallback(nextValue => {
++        lastEmittedFloatValueRef.current = nextValue.floatValue;
++        setValue(nextValue.value);
++        onChange(nextValue);
++    }, [onChange]);
+     React.useLayoutEffect(() => {
+         if (validatedSelection !== undefined) {
+             const range = typeof validatedSelection === "number" ? [validatedSelection, null] : validatedSelection;
+@@ -24,5 +40,5 @@ const NumberOverlayEditor = p => {
+             // decimalScale={3}
+             // prefix={"$"}
+-            onValueChange: onChange })));
++            onValueChange: handleValueChange })));
+ };
+ export default NumberOverlayEditor;
 diff --git a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js b/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js
 index face64122d35e884020eeabc6d96514141fc18d1..1e71f5198f0685882e1282cc2abd606d6d64a68b 100644
 --- a/dist/esm/internal/data-grid-overlay-editor/data-grid-overlay-editor.js

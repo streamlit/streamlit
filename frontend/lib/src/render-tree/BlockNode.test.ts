@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { block, text } from "./test-utils"
 import { TransientNode } from "./TransientNode"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"

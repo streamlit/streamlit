@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from streamlit.elements.widgets.color_picker import ColorPickerMixin
@@ -79,6 +77,8 @@ if TYPE_CHECKING:
         str,
     )
     assert_type(color_picker("Pick a color", on_change=None), str)
+    assert_type(color_picker("Pick a color", on_change="rerun"), str)
+    assert_type(color_picker("Pick a color", on_change="ignore"), str)
 
     # Full combination of parameters
     assert_type(
@@ -94,6 +94,7 @@ if TYPE_CHECKING:
             label_visibility="visible",
             width="stretch",
             bind=None,
+            persist_state="session",
         ),
         str,
     )

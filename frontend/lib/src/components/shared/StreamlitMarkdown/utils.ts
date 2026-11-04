@@ -19,6 +19,9 @@ import { useEffect, useState } from "react"
 import type { Root as HastRoot } from "hast"
 import { once } from "lodash-es"
 import type { Root as MdastRoot } from "mdast"
+import type * as RehypeKatex from "rehype-katex"
+import type * as RehypeRaw from "rehype-raw"
+import type * as RemarkEmoji from "remark-emoji"
 import type { VFile } from "vfile"
 
 /**
@@ -106,7 +109,7 @@ const loadingPromises: Record<
 }
 
 /** Lazy load rehype-katex for math rendering */
-export const loadKatexPlugin = (): Promise<typeof import("rehype-katex")> =>
+export const loadKatexPlugin = (): Promise<typeof RehypeKatex> =>
   import("rehype-katex")
 
 /** Load KaTeX CSS styles (only once per app lifecycle) */
@@ -115,11 +118,11 @@ export const loadKatexStyles = once((): void => {
 })
 
 /** Lazy load rehype-raw for HTML parsing (pulls in parse5) */
-export const loadRehypeRaw = (): Promise<typeof import("rehype-raw")> =>
+export const loadRehypeRaw = (): Promise<typeof RehypeRaw> =>
   import("rehype-raw")
 
 /** Lazy load remark-emoji for emoji shortcode conversion */
-export const loadRemarkEmoji = (): Promise<typeof import("remark-emoji")> =>
+export const loadRemarkEmoji = (): Promise<typeof RemarkEmoji> =>
   import("remark-emoji")
 
 /**
@@ -183,7 +186,10 @@ export function wrapRehypePlugin<Options = unknown>(
   return (options?: Options): RehypeTransformer => {
     const transformer = plugin(options)
 
-    return (tree: HastRoot, file: VFile): HastRoot | undefined | void => {
+    return (
+      tree: HastRoot | undefined,
+      file: VFile
+    ): HastRoot | undefined | void => {
       if (!tree) {
         return tree
       }
@@ -214,7 +220,10 @@ export function wrapRemarkPlugin<Options = unknown>(
   return (options?: Options): RemarkTransformer => {
     const transformer = plugin(options)
 
-    return (tree: MdastRoot, file: VFile): MdastRoot | undefined | void => {
+    return (
+      tree: MdastRoot | undefined,
+      file: VFile
+    ): MdastRoot | undefined | void => {
       if (!tree) {
         return tree
       }
@@ -256,9 +265,9 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
 
   useEffect(() => {
     // Skip if not needed, already cached, or already have a loading result.
-    // LOAD_FAILED is a truthy Symbol, so failed plugins are intentionally cached
+    // LOAD_FAILED is not null, so failed plugins are intentionally cached
     // and not retried - this prevents infinite retry loops on persistent failures.
-    if (!needed || cachedPlugin || loadingResult) {
+    if (!needed || cachedPlugin !== null || loadingResult !== null) {
       return
     }
 
@@ -271,6 +280,7 @@ export function useLazyPlugin<T>(config: PluginLoaderConfig): PluginState<T> {
           // Wrap in arrow function to prevent React from calling the plugin
           setLoadingResult(() => p as PluginState<T>)
         }
+        return p
       })
       return () => {
         isCancelled = true

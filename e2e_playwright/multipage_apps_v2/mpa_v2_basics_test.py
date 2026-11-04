@@ -468,6 +468,52 @@ def test_switch_page_with_query_params(app: Page):
     expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
 
 
+def test_switch_page_from_callback_by_st_page(app: Page):
+    """Test that a callback can navigate with an st.Page object."""
+
+    click_button(app, "callback nav by object")
+
+    expect(page_heading(app)).to_contain_text("Page 9")
+
+
+def test_switch_page_from_callback_applies_query_params(app: Page):
+    """Test that query params passed from a callback reach the URL and the new page."""
+
+    click_button(app, "callback nav with params")
+    app.wait_for_url("**/page_5?team=streamlit", timeout=15000)
+
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
+
+
+def test_switch_page_from_fragment_callback(app: Page):
+    """Test that a callback on a fragment widget can still navigate.
+
+    The interaction is fragment-scoped but the navigation it requests is app-wide, so
+    this checks that fragment scoping does not suppress the page switch.
+    """
+
+    get_page_link(app, "page 10").click()
+    wait_for_app_loaded(app)
+    expect(page_heading(app)).to_contain_text("Page 10")
+
+    click_button(app, "callback nav from fragment")
+
+    expect(page_heading(app)).to_contain_text("Page 5")
+
+
+def test_switch_page_from_callback_does_not_navigate_again(app: Page):
+    """Test that a callback's navigation is not replayed when the user navigates away."""
+
+    click_button(app, "callback nav by path")
+    expect(page_heading(app)).to_contain_text("Page 5")
+
+    get_page_link(app, "page 2").click()
+    wait_for_app_loaded(app)
+
+    expect(page_heading(app)).to_contain_text("Page 2")
+
+
 def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):
     """Test that query params are removed when swapping pages by clicking on a link."""
 

@@ -80,6 +80,10 @@ describe("passesTextInputValidation", () => {
     }
   )
 
+  it("returns false for whitespace-only values so they still run the regex", () => {
+    expect(passesTextInputValidation("   ", regex)).toBe(false)
+  })
+
   it("returns true when the value matches the regex", () => {
     expect(passesTextInputValidation("abc", regex)).toBe(true)
   })

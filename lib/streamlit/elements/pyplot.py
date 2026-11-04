@@ -23,9 +23,10 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.image_utils import marshall_images
 from streamlit.elements.lib.layout_utils import create_layout_config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitMissingRequiredParameterError
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -64,8 +65,8 @@ st.image(buf)
 """
 
 _FIG_REQUIRED: Final[str] = """
-`st.pyplot` requires a Matplotlib figure. Passing `None` is not supported
-because Matplotlib's global figure object is not thread-safe.
+Passing `None` is not supported because Matplotlib's global figure object
+is not thread-safe.
 
 Pass a figure explicitly:
 
@@ -87,13 +88,25 @@ class PyplotMixin:
         *,
         width: Width = "stretch",
         use_container_width: bool | None = None,
+        alt: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
-        """Display a matplotlib.pyplot figure.
+        """Display a matplotlib.pyplot figure as a static image.
 
         Streamlit renders the figure by calling Matplotlib's ``savefig`` with
         ``bbox_inches="tight"`` and ``dpi=200`` so charts look sharp and cropped
         by default.
+
+        .. note::
+            For new charts, prefer a Vega-based chart command (``st.line_chart``,
+            ``st.bar_chart``, ``st.area_chart``, ``st.scatter_chart``, or
+            ``st.altair_chart``) or ``st.echarts_chart``. A ``st.pyplot`` chart
+            is a static image with no zoom, tooltips, or selections. It doesn't
+            follow the app's theme, so a default figure stays white on a dark
+            theme, and it's rendered on the server on every rerun. Use
+            ``st.pyplot`` to display a Matplotlib figure you already have, or
+            output from libraries that only produce Matplotlib figures, such as
+            seaborn.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
@@ -109,6 +122,8 @@ class PyplotMixin:
         fig : Matplotlib Figure
             The Matplotlib ``Figure`` object to render. See
             https://matplotlib.org/stable/gallery/index.html for examples.
+            Pandas' ``DataFrame.plot()`` returns an ``Axes`` rather than a
+            ``Figure``, so pass its ``.get_figure()`` result.
 
         clear_figure : bool
             Whether to clear the figure after rendering it. If this is
@@ -126,7 +141,11 @@ class PyplotMixin:
             - An integer specifying the width in pixels: The element has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the element matches the width
-              of the parent container.
+              of the parent container. Streamlit shrinks a wider image to
+              exactly that many pixels, so it can look blurry on
+              high-resolution screens. With ``"stretch"`` or ``"content"``,
+              Streamlit keeps up to 1,460 pixels, so the figure stays sharp in
+              the default centered layout.
 
         use_container_width : bool
             Whether to override the figure's native width with the width of
@@ -142,6 +161,15 @@ class PyplotMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``. For ``use_container_width=False``, use
                 ``width="content"``.
+
+        alt : str or None
+            A description of the figure image for screen readers and other
+            assistive technologies. If this is ``None`` (default), Streamlit
+            does not provide an accessible name for the figure.
+
+            An empty string (``""``) marks the image as decorative. Whitespace-
+            only values are treated as ``None`` and logged. Prefer naming the
+            chart's takeaway rather than pasting axis tick labels.
 
         **kwargs : any
             Arguments to pass to Matplotlib's ``savefig`` function.
@@ -163,7 +191,7 @@ class PyplotMixin:
         >>> fig, ax = plt.subplots()
         >>> ax.hist(arr, bins=20)
         >>>
-        >>> st.pyplot(fig)
+        >>> st.pyplot(fig, alt="Histogram of sample values, roughly normal")
 
         .. output::
            https://doc-pyplot.streamlit.app/
@@ -179,7 +207,10 @@ class PyplotMixin:
         """
 
         if fig is None:
-            raise StreamlitAPIException(_FIG_REQUIRED)
+            raise StreamlitMissingRequiredParameterError(
+                "fig",
+                detail=_FIG_REQUIRED.strip(),
+            )
 
         if use_container_width is not None:
             show_deprecation_warning(
@@ -211,9 +242,26 @@ class PyplotMixin:
             layout_config,
             fig,
             clear_figure,
+            alt=alt,
             **kwargs,
         )
-        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "imgs",
+            image_list_proto,
+            layout_config=layout_config,
+            # The figure is a bitmap by the time it is emitted, so it is reported
+            # the way `st.image` is: by the URL a client can fetch it from.
+            agent_props=agent_spec.element(
+                "pyplot",
+                # A figure is always one image.
+                url=image_list_proto.imgs[0].url if image_list_proto.imgs else None,
+                # `""` is kept: it marks the figure as decorative.
+                alt=next(
+                    (img.alt for img in image_list_proto.imgs if img.HasField("alt")),
+                    None,
+                ),
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -227,14 +275,15 @@ def marshall(
     layout_config: LayoutConfig,
     fig: Figure,
     clear_figure: bool = False,
+    alt: str | None = None,
     **kwargs: Any,
 ) -> None:
     try:
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:  # pragma: no cover - optional dep
-        raise ImportError("pyplot() command requires matplotlib")
+    except ImportError as e:  # pragma: no cover - optional dep
+        raise ImportError("pyplot() command requires matplotlib") from e
 
     # Apply Streamlit defaults, then let deprecated kwargs override them.
     savefig_kwargs = {**_DEFAULT_SAVEFIG_OPTIONS, **kwargs}
@@ -268,6 +317,7 @@ def marshall(
         clamp=False,
         channels="RGB",
         output_format="PNG",
+        alt=alt,
     )
 
     # Clear the figure after rendering so later draws on this figure start empty.

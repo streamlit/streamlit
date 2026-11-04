@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
-import { JsonCell } from "./cells/JsonCell"
+import type { JsonCell } from "./cells/JsonCell"
 import {
-  BaseColumn,
-  BaseColumnProps,
+  type BaseColumn,
+  type BaseColumnProps,
   getErrorCell,
   removeLineBreaks,
   toJsonString,
@@ -77,7 +77,7 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
       }
     },
     getCellValue(cell: JsonCell): string | object | null {
-      return cell.data?.value ?? null
+      return cell.data.value ?? null
     },
     valuesEqual(a: unknown, b: unknown): boolean {
       // Treat two JSON values as equal when their serialized form matches.

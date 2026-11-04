@@ -26,16 +26,18 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    clear_date_segments,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
     get_datetime_input,
     get_element_by_key,
+    paste_into,
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 19
+NUM_DATETIME_INPUTS = 24
 
 
 def test_datetime_input_widget_rendering(
@@ -232,6 +234,79 @@ def test_clearable_datetime_input(app: Page):
     expect_markdown(app, "Value 8: None")
 
 
+def test_keeps_time_given_before_a_date(app: Page):
+    """A time given before any date survives the calendar date selection.
+
+    The field reports no value until every segment is filled, so a time entered
+    while the date segments are still empty has to be read back out of the
+    field's segment state when a date completes the value — otherwise it silently
+    becomes midnight. Covers all three entry points: the inline segments, the
+    popover TimeField, and a date typed inline with the time given only in the
+    popover — the last dismissed by an outside click, which runs the commit path
+    twice.
+    """
+    datetime_input = get_datetime_input(app, "Datetime input 8 (empty)")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    # Segments follow the default YYYY/MM/DD format: year, month, day, hour, minute.
+    segments = datetime_field.get_by_role("spinbutton")
+
+    # --- Time typed into the inline field, with the date left empty ---
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(calendar).to_be_visible()
+
+    # Any in-month day works: the assertions pin only the preserved time, so
+    # they must not depend on which month an empty widget opens on.
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 03:24:00"))
+
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Time set in the popover TimeField, with no value committed yet ---
+    segments.first.click()
+    expect(calendar).to_be_visible()
+
+    popover_segments = app.get_by_test_id("stDateTimeInputPopoverTime").get_by_role(
+        "spinbutton"
+    )
+    popover_segments.first.press_sequentially("09")
+    popover_segments.last.press_sequentially("45")
+
+    calendar.get_by_role("button", name=re.compile(r"\b15, ")).click()
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Value 8:", re.compile(r"\d{4}-\d{2}-\d{2} 09:45:00"))
+
+    datetime_input.get_by_test_id("stDateTimeInputClearButton").click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: None")
+
+    # --- Date typed inline, time set only in the popover, no calendar click ---
+    # Neither control reports a value in this state, so dismissal has to combine
+    # what is on screen. Worth covering here rather than only in unit tests: a
+    # real outside click commits on pointerdown and then fires blur, running the
+    # commit path twice, which jsdom does not reproduce.
+    segments.first.click()
+    expect(calendar).to_be_visible()
+    popover_segments.first.press_sequentially("07")
+    popover_segments.last.press_sequentially("30")
+    segments.nth(0).press_sequentially("2026")
+    segments.nth(1).press_sequentially("01")
+    segments.nth(2).press_sequentially("15")
+
+    app.get_by_text("Value 8:").click()
+    expect(calendar).not_to_be_visible()
+    wait_for_app_run(app)
+    expect_markdown(app, "Value 8: 2026-01-15 07:30:00")
+
+
 def test_callback_invoked(app: Page):
     datetime_field = get_datetime_input(
         app, "Datetime input 6 (with callback)"
@@ -254,6 +329,57 @@ def test_form_submission_resets_value(app: Page):
     # Click submit button to submit the form (no rerun until form submit in st.form)
     app.get_by_role("button", name="Submit datetime form").click()
     wait_for_app_run(app)
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+
+
+def test_form_clear_empties_the_segments_and_keeps_focus(app: Page):
+    """A cleared form empties the field's segments, not just its value.
+
+    React Aria keeps display state for segments typed but not completed, so a
+    partial time could survive `clear_on_submit` and be committed with a later
+    date. Clearing remounts the field, which costs the focused segment — checked
+    here rather than only in unit tests, since focus and remount timing are
+    browser behavior.
+    """
+    form_field = get_datetime_input(app, "Datetime input 13 (form)").get_by_test_id(
+        "stDateTimeInputField"
+    )
+    segments = form_field.get_by_role("spinbutton")
+
+    # A time with no date: the field reports no value, so only the segments hold it.
+    segments.nth(3).press_sequentially("03")
+    segments.nth(4).press_sequentially("24")
+    expect(segments.nth(3)).to_have_text("03")
+
+    app.get_by_role("button", name="Submit datetime form").click()
+    wait_for_app_run(app)
+
+    # The time must not survive the clear, on screen or in the committed value.
+    expect(form_field.get_by_role("spinbutton").nth(3)).to_have_attribute(
+        "data-placeholder", "true"
+    )
+    expect_markdown(app, "Form submitted value: None")
+
+    # Submitting by button leaves focus on the button, so nothing is restored.
+    expect(form_field.get_by_role("spinbutton").first).not_to_be_focused()
+
+    # Enter-to-submit is the case where focus is in the field when the clear
+    # arrives, and the remount would otherwise drop the user to the page body.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
+    expect(form_field.get_by_role("spinbutton").first).to_be_focused()
+
+    # Re-entering the value that was just submitted has to reach widget state
+    # again: the clear ends the interaction, so the commit-dedup memory must not
+    # carry over. If it did, Enter would submit with the cleared value and the
+    # display below would flip to None.
+    type_date(form_field, "2025", "12", "24", "12", "00", commit=False)
+    form_field.get_by_role("spinbutton").last.press("Enter")
+    wait_for_app_run(app)
+
     expect_markdown(app, "Form submitted value: 2025-12-24 12:00:00")
 
 
@@ -374,3 +500,222 @@ def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url
 
     expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))
+
+
+def test_year_picker_lists_boundary_year_when_bounds_cross_a_year(app: Page):
+    """st.datetime_input shares the calendar header with st.date_input, so the
+    year dropdown must offer the later year here too.
+
+    Regression test for GitHub issue #16686.
+    """
+    datetime_field = get_datetime_input(app, "Year-crossing datetime")
+    datetime_field.get_by_role("spinbutton").first.click()
+
+    calendar = app.get_by_test_id("stDateTimeInputCalendar")
+    expect(calendar).to_be_visible()
+
+    expect(calendar.get_by_role("button", name="month", exact=True)).to_have_text(
+        "February"
+    )
+    year_trigger = calendar.get_by_role("button", name="year", exact=True)
+    expect(year_trigger).to_have_text("2025")
+
+    year_trigger.click()
+    year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
+    expect(year_popover).to_be_visible()
+    expect(year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+
+def test_datetime_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_datetime="))
+
+    datetime_field = get_datetime_input(
+        app, "Ignore change datetime input"
+    ).get_by_test_id("stDateTimeInputField")
+
+    # Typing without committing must not update the URL or Python.
+    type_date(datetime_field, "2025", "11", "20", "09", "30", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_datetime="))
+
+    # Escape commits the buffered value without a rerun, and updates the URL.
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-20T09%3A30"))
+    spinbuttons = datetime_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("11")
+    expect(spinbuttons.nth(2)).to_have_text("20")
+    expect(spinbuttons.nth(3)).to_have_text("09")
+    expect(spinbuttons.nth(4)).to_have_text("30")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore datetime", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-20 09:30:00", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text(
+            "Applied ignore datetime value: 2025-11-20 09:30:00", exact=True
+        )
+    ).to_be_visible()
+
+    # Type-then-click: Apply lives in the sidebar so the calendar overlay cannot
+    # intercept it. Blur/close commits the dirty value, then the button reruns.
+    type_date(datetime_field, "2025", "11", "21", "10", "00", commit=False)
+    app.get_by_role("button", name="Apply ignore datetime", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text(
+            "Applied ignore datetime value: 2025-11-21 10:00:00", exact=True
+        )
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-21T10%3A00"))
+
+    # Calendar selection commits when the popover closes, without a rerun.
+    # Time typed earlier (10:00) is preserved.
+    datetime_field.get_by_role("spinbutton").first.click()
+    app.get_by_test_id("stDateTimeInputCalendar").get_by_role(
+        "button", name=re.compile(r"November 25")
+    ).click()
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-25T10%3A00"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("11")
+    expect(spinbuttons.nth(2)).to_have_text("25")
+    expect(spinbuttons.nth(3)).to_have_text("10")
+    expect(spinbuttons.nth(4)).to_have_text("00")
+
+    # Paste commits immediately without a rerun, and updates the URL.
+    datetime_field.get_by_role("spinbutton").first.click()
+    paste_into(datetime_field.get_by_role("spinbutton").first, "2025-12-01T08:15")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-12-01T08%3A15"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("12")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+    expect(spinbuttons.nth(3)).to_have_text("08")
+    expect(spinbuttons.nth(4)).to_have_text("15")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-12-01 08:15:00")
+    spinbuttons = datetime_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("12")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+    expect(spinbuttons.nth(3)).to_have_text("08")
+    expect(spinbuttons.nth(4)).to_have_text("15")
+
+
+def test_datetime_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required datetime inputs block empty form submissions and commits
+    while preserving hidden-label accessibility.
+    """
+    form_widget = get_element_by_key(app, "required_datetime")
+    form_field = form_widget.get_by_test_id("stDateTimeInputField")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+    expect(form_field).to_have_attribute("aria-required", "true")
+    expect(form_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required datetime input form", exact=True
+    )
+    submit_button.click()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(form_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_date(form_field, "2025", "12", "24", "12", "00")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required datetime: 2025-12-24 12:00:00")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone_datetime")
+    standalone_field = standalone_widget.get_by_test_id("stDateTimeInputField")
+    type_date(standalone_field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(
+        standalone_widget.get_by_test_id("stDateTimeInputClearButton")
+    ).to_have_count(0)
+
+    clear_date_segments(standalone_field)
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_date(standalone_field, "2025", "11", "20", "08", "30")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-20 08:30:00")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden_datetime")
+    expect(hidden_widget.get_by_test_id("stDateTimeInputField")).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_datetime_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone_datetime")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_marker")
+
+    field = widget.get_by_test_id("stDateTimeInputField")
+    type_date(field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(themed_app)
+    clear_date_segments(field)
+    expect(widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_error")
