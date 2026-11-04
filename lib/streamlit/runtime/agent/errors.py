@@ -139,13 +139,20 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
     ),
     "disabled_widget": (
         409,
-        "The element is on the page but disabled; it accepts nothing until the app enables it.",
+        (
+            "The element is on the page but disabled; it accepts nothing until "
+            "the app enables it. Send what enables it in one request, then use "
+            "it in the next: each request is checked against the snapshot before "
+            "it."
+        ),
     ),
     "session_busy": (
         409,
         (
-            "The session already has an interaction in flight, or a timed-out "
-            "run is still going. Collect that run by sending only `session_id`."
+            "The session already has an interaction in flight, or a run whose "
+            "client timed out or disconnected is still going. Wait for the "
+            "request in flight; once its client has gone, send only "
+            "`session_id` to collect the run."
         ),
     ),
     # 202 rather than 504: the request was accepted and its run is still going,
@@ -178,7 +185,10 @@ ERROR_CATALOG: Final[dict[AgentErrorCode, tuple[int, str]]] = {
         403,
         (
             "Sent by a web page whose `Origin` is not in "
-            "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`."
+            "`server.corsAllowedOrigins`. Programmatic clients send no `Origin`. "
+            "Responses carry no CORS headers, so listing an origin only admits "
+            "callers that CORS does not restrict, such as the app's own page. A "
+            "page on another origin is stopped at its preflight."
         ),
     ),
     "too_many_sessions": (

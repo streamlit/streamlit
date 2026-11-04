@@ -192,8 +192,9 @@ It has two fixed tools. `interact` is the interact operation: its arguments \
 are that operation's request, and its result is the same snapshot as JSON \
 text. `get_data` reads a file a result points to, for clients that cannot \
 fetch a URL: a table's `data.url` as pages of JSON rows, or another media file \
-as itself. A refused call is a tool result with `isError: true` whose text is \
-an `Error` body.
+as itself. It takes a valid `session_id`, normally that of the result \
+whose URL it reads. A refused call is a tool result with `isError: true` \
+whose text is an `Error` body.
 
 Codes only `get_data` returns, which no HTTP operation does:
 """ + "\n".join(
@@ -214,7 +215,9 @@ with that `key` in `tree`: its `value_schema` gives the JSON shape, and its \
 `props`, such as `options` and bounds, the legal values. Set values with \
 `widget_state` and fire one trigger with `trigger`. Change pages with `page`, \
 or the URL parameters with `query_params`, in a call without widget changes. \
-A call with only `session_id` reruns the app; a trigger never fires twice.
+A call with only `session_id` reruns the app; a trigger never fires twice. \
+Send such a call to close a dialog or to refresh a fragment that reruns on \
+a timer.
 
 Tables and charts carry `data`. `complete: true` means everything is there. \
 `complete: false` with a `url` means there is more: read it with `get_data`, \
@@ -310,7 +313,9 @@ settles, including reruns from callbacks, `st.rerun()`, or a page redirect.
 
 A request with no changes reruns the app. It re-applies nothing, so a trigger \
 never fires twice, but code that runs on every rerun runs again. You rarely \
-need one: nothing changes a session between interactions.
+need one, since a session does not change on its own between interactions. \
+Send one to close a dialog, refresh a `run_every` fragment, or pick up data \
+that changed outside the app.
 
 **A timeout is not a failure.** A run that outlasts `server.agentWaitTimeout`, \
 such as a first load of uncached data, returns `202` with `wait_timed_out` and \
@@ -330,9 +335,10 @@ to close.
 A session runs as whoever created it. Where the deployment maps identity \
 headers into `st.user` (`server.trustedUserHeaders`), the app sees the \
 caller's user, and only that identity can use the session. Otherwise it is \
-anonymous, and an app behind `st.login` shows its signed-out state. The app \
-reads each request's headers as `st.context.headers`, minus `Cookie`, \
-`Authorization`, and `Proxy-Authorization`.
+anonymous, and an app behind `st.login` shows its signed-out state; calling \
+`st.login()` does not sign this session in. The app reads each request's \
+headers as `st.context.headers`, minus `Cookie`, `Authorization`, and \
+`Proxy-Authorization`.
 """
 
 _ERROR_RESPONSE_DESCRIPTION: Final = """\
@@ -357,9 +363,10 @@ _STATUSES: Final[dict[snapshot.SnapshotStatus, str]] = {
     ),
     "error": (
         "the app raised, so the tree stops at the raise and `actions` may "
-        "shrink; act on this snapshot. The session stays usable. A script that "
-        "failed to compile leaves only the error in `main`, and no `actions` "
-        "until it compiles."
+        "shrink; act on this snapshot. The session stays usable. It is also "
+        "reported while an exception from an earlier full run is still on the "
+        "page, such as after a fragment rerun. A script that failed to compile "
+        "leaves only the error in `main`, and no `actions` until it compiles."
     ),
 }
 
@@ -601,7 +608,7 @@ def _mcp_operation(*, enabled: bool) -> dict[str, Any]:
                         "type": "object",
                         "description": (
                             "One JSON-RPC 2.0 request, notification, or response. "
-                            "A batch is refused."
+                            "A batch is refused with a `200` response."
                         ),
                     }
                 }
@@ -612,7 +619,8 @@ def _mcp_operation(*, enabled: bool) -> dict[str, Any]:
                 "description": (
                     "A request's JSON-RPC response: its result, or an error such "
                     "as `-32601` for a method this server does not implement. A "
-                    "refused tool call is a result."
+                    "refused tool call is a result. A batch gets one `-32600` "
+                    "error here too."
                 ),
                 "content": _JSON_RPC_MESSAGE,
             },
@@ -811,7 +819,8 @@ def _widget_state_schema() -> dict[str, Any]:
             "date or color, or a short slider range resets to the default; a "
             "fraction sent to an integer `st.number_input` or slider is "
             "truncated; text past `max_chars` is cut; and a reversed slider "
-            "range is kept, so send the lower value first. `null` resets a "
+            "range is kept, so send the lower value first. A value between "
+            "`step` increments is not refused. `null` resets a "
             "widget to its default, unless its node has `clearable: true`: a "
             "browser user can empty it, and `null` does. `[]` clears a list. "
             "Checks only a browser runs, `required` and `validate`, are not "
@@ -821,7 +830,11 @@ def _widget_state_schema() -> dict[str, Any]:
             "you set is still there. A form's fields go with one of its submit "
             "triggers; with `clear_on_submit`, send every field each time, since "
             "fields keep their values here. Keys in an open `st.dialog` go on "
-            "their own."
+            "their own. Controls outside an open dialog stay usable. Any full "
+            "rerun, including a request with no changes, closes the dialog "
+            "unless the app opens it again. When its `on_dismiss` is `rerun`, "
+            "the dialog's own key fires its dismiss; with `ignore` it has no "
+            "key."
         ),
     }
 
@@ -893,9 +906,9 @@ def _request_schema() -> dict[str, Any]:
                 'bound to a widget (`bind="query-params"`) sets that widget, so '
                 "one creating call can open a parameterized report. One equal to "
                 "its widget's default is ignored, so move a widget back with "
-                "`widget_state`, and one its widget cannot take is dropped, "
-                "leaving the widget as it was. A bound widget keeps its value "
-                "when its parameter is left out, so `{}` clears only unbound "
+                "`widget_state`, and one its widget cannot take is dropped with "
+                "a `200`, leaving the widget as it was. A bound widget keeps its "
+                "value when its parameter is left out, so `{}` clears only unbound "
                 "parameters. "
                 "At most "
                 f"{query_params_state.CLIENT_STATE_QUERY_STRING_MAX_FIELDS} "
@@ -981,7 +994,9 @@ def _snapshot_schema() -> dict[str, Any]:
                 "description": (
                     "When this snapshot was assembled, for citing an answer. After "
                     "a fragment rerun, content outside the fragment is as an "
-                    "earlier run left it, as in a browser."
+                    "earlier run left it, as in a browser. A fragment with "
+                    "`run_every` does not refresh on its own here: its content "
+                    "is as the last request that reran it left it."
                 ),
             },
             "page": {
@@ -1069,11 +1084,14 @@ def _node_schema() -> dict[str, Any]:
                     "effective values where they change what the element means or "
                     "how it is used (`disabled`, `expanded`, `options`, bounds), "
                     "so a flag such as `disabled` is reported even when false; a "
-                    "documented default, such as `unsafe_allow_html=False`, is "
-                    "left out. A few report state rather than "
-                    "an argument: a dialog's `is_open`, a popover's or tab's "
-                    "`open`. A widget bound to the URL reports `bind`, and its key "
-                    "names the `query_params` entry that sets it."
+                    "documented default, such as `unsafe_allow_html=False`, may "
+                    "be left out. A few report state rather than "
+                    "an argument: a dialog's `is_open`, a plain popover's or "
+                    "plain tab's `open`; a stateful `st.tabs`, `st.expander`, "
+                    "or `st.popover` reports that state as its `value`. A "
+                    "widget bound to the URL "
+                    "reports `bind`, and its key names the `query_params` "
+                    "entry that sets it."
                 ),
             },
             "value": {

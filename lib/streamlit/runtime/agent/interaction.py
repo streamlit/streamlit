@@ -663,9 +663,9 @@ async def interact(
     if session.busy:
         raise AgentRequestError(
             "session_busy",
-            "This session already has an interaction in flight. If it is one "
-            "whose response you lost, send only `session_id` in a moment to "
-            "collect it.",
+            "This session already has an interaction in flight. Wait for its "
+            "response. If its client timed out or disconnected, send only "
+            "`session_id` in a moment to collect it.",
         )
     session.busy = True
     session.released.clear()
@@ -776,8 +776,9 @@ async def _run_interaction(
         # owed to the client that started it.
         raise AgentRequestError(
             "session_busy",
-            "This session is still running an interaction that timed out. "
-            "Send only `session_id` to wait for it, then send this request.",
+            "This session is still running an interaction that timed out or "
+            "whose client disconnected. Send only `session_id` to wait for it, "
+            "then send this request.",
         )
     if pending is not None:
         # Its result goes uncollected, but its run happened, so this request
@@ -1237,8 +1238,8 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
         if not isinstance(trigger, dict):
             raise AgentRequestError(
                 "invalid_request",
-                "`trigger` must be an object with a `key`, and at most one may "
-                "be sent.",
+                "`trigger` must be an object, `{key, value?}`. Send one "
+                "trigger per request.",
             )
         if extra := set(trigger).difference(TRIGGER_FIELDS):
             raise AgentRequestError(

@@ -29,7 +29,7 @@ from streamlit.elements.widgets.chat import ChatInputValue
 from streamlit.proto.ArrowData_pb2 import ArrowData
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.agent import widget_values
-from streamlit.runtime.agent.snapshot import _public_key
+from streamlit.runtime.agent.snapshot import public_key
 from streamlit.runtime.agent.widget_values import _authored_options
 from streamlit.runtime.state.session_state import Serialized
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
@@ -314,7 +314,7 @@ class WidgetValueTest(SnapshotCase):
         element_id = next(
             widget_id
             for widget_id, metadata in state._new_widget_state.widget_metadata.items()
-            if _public_key(widget_id) == "pick"
+            if public_key(widget_id) == "pick"
         )
 
         def _fail(_value: object) -> str:
@@ -332,7 +332,7 @@ class WidgetValueTest(SnapshotCase):
         num_id = next(
             widget_id
             for widget_id in state._new_widget_state.widget_metadata
-            if _public_key(widget_id) == "num"
+            if public_key(widget_id) == "num"
         )
         num_meta = state.get_widget_metadata(num_id)
         assert num_meta is not None
@@ -416,7 +416,7 @@ class WidgetValueTest(SnapshotCase):
         element_id = next(
             widget_id
             for widget_id in state._new_widget_state.widget_metadata
-            if _public_key(widget_id) == "chat"
+            if public_key(widget_id) == "chat"
         )
         proto = WidgetStateProto()
         proto.id = element_id
@@ -461,7 +461,7 @@ class WidgetValueTest(SnapshotCase):
             element_id = next(
                 widget_id
                 for widget_id in state._new_widget_state.widget_metadata
-                if _public_key(widget_id) == key
+                if public_key(widget_id) == key
             )
             metadata = state.get_widget_metadata(element_id)
             assert metadata is not None

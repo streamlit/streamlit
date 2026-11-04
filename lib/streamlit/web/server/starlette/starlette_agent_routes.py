@@ -119,6 +119,13 @@ _PAGE_CONTENT_TYPE_MESSAGE: Final = (
 )
 
 
+def _too_large_message(max_request_bytes: int) -> str:
+    return (
+        f"The request body exceeds {max_request_bytes} bytes, the limit "
+        "`server.maxWidgetStateSize` sets."
+    )
+
+
 class _ClientGoneError(Exception):
     """The client closed the connection before its interaction settled."""
 
@@ -605,7 +612,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except _BodyTooLargeError:
             return error_response(
                 "request_too_large",
-                f"The request body exceeds {max_request_bytes} bytes.",
+                _too_large_message(max_request_bytes),
             )
         try:
             # Off the event loop, since a body can be as large as a message
@@ -659,7 +666,7 @@ def create_agent_routes(runtime: Runtime, base_url: str | None) -> list[BaseRout
         except _BodyTooLargeError:
             return _jsonrpc_pre_parse_refusal(
                 "request_too_large",
-                f"The request body exceeds {max_request_bytes} bytes.",
+                _too_large_message(max_request_bytes),
             )
         # Unlike the interact route, which reads an empty body as `{}`,
         # JSON-RPC has no empty message.
