@@ -185,7 +185,8 @@ export function resetPageWheelClockForTests(): void {
 }
 
 /**
- * Keep page-scroll flicks from zooming an inside ``dataZoom``.
+ * Keep page-scroll flicks from zooming an inside ``dataZoom`` or wheel roam,
+ * such as a default treemap.
  *
  * ECharts calls ``preventDefault`` on every wheel over the plot. When the
  * flick should keep scrolling, this capture listener stops the event before
@@ -196,7 +197,8 @@ export function useInsideDataZoomWheelGuard(
   containerRef: RefObject<HTMLElement | null>,
   option: EChartsOptionObject | null
 ): void {
-  const capturesWheel = insideDataZoomCapturesWheel(option)
+  const capturesWheel =
+    insideDataZoomCapturesWheel(option) || optionHasWheelRoam(option)
   const optionRef = useRef(option)
   optionRef.current = option
   const gestureRef = useRef(createChartWheelGesture())

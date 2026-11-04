@@ -713,6 +713,27 @@ with st.container(key="c_narrow_time_axis", width=320):
         height=_HEIGHT,
     )
 
+# A default treemap. ECharts turns on wheel roam for treemaps unless the spec
+# sets ``roam: false``.
+with st.container(key="c_treemap"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "Alpha", "value": 40},
+                        {"name": "Beta", "value": 30},
+                        {"name": "Gamma", "value": 20},
+                        {"name": "Delta", "value": 10},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
 # Layout defaults: a top legend moves below a centered title and subtitle, a
 # treemap fills the chart above its breadcrumb, and a horizontal reference
 # line keeps its end label inside the plot.
@@ -732,7 +753,7 @@ with st.container(key="c_title_top_legend"):
         height=_HEIGHT,
     )
 
-with st.container(key="c_treemap"):
+with st.container(key="c_treemap_layout"):
     st.echarts_chart(
         {
             "series": [

@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 35
+_EXPECTED_CHART_COUNT = 36
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -511,7 +511,7 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # the treemap fills the chart above its breadcrumb, and horizontal
         # reference-line labels stay inside the plot.
         "c_title_top_legend": "st_echarts_chart-title_top_legend",
-        "c_treemap": "st_echarts_chart-treemap",
+        "c_treemap_layout": "st_echarts_chart-treemap",
         "c_reference_lines": "st_echarts_chart-reference_lines",
     }
     for key, name in snapshots.items():
@@ -608,3 +608,23 @@ def test_narrow_time_axis_hides_overlapping_labels(app: Page):
         if left["right"] > right["left"]
     ]
     assert overlapping == [], f"Overlapping time axis labels: {overlapping}"
+
+
+def test_wheel_over_treemap_scrolls_page(app: Page):
+    """A wheel right after the pointer enters a treemap scrolls the page.
+
+    ECharts turns on wheel roam for treemaps by default and would otherwise
+    zoom the treemap and block the page scroll.
+    """
+    chart = _get_chart(app, "c_treemap")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_have_attribute("aria-busy", "false")
+    main = app.get_by_test_id("stMain")
+    scroll_before = main.evaluate("el => el.scrollTop")
+    assert scroll_before > 0
+
+    chart.hover()
+    for _ in range(3):
+        app.mouse.wheel(0, -200)
+
+    wait_until(app, lambda: main.evaluate("el => el.scrollTop") < scroll_before)
