@@ -50,7 +50,7 @@ Some facts are in no prop at all:
   knows Streamlit can work out.
 - A password input's value is write-only, and only prose says so.
 
-### The commonest drill-down cannot be driven
+### Agents cannot select dataframe rows
 
 [Follow-up #8](../2026-08-28-agent-app-interface/product-spec.md#follow-ups) of the agent
 spec puts dataframe selections first, because "select a row for
@@ -93,14 +93,14 @@ a one-item list stands for the single value the schema names.
 
 Five rules follow:
 
-- **A keyword appears only where the widget's own server-side check enforces it, or
-  something stricter.** A constraint that only the browser enforces never becomes a
-  keyword, because the schema would then refuse values the server accepts. `validate`
-  and the checks of `type="email"` are examples.
+- **A keyword appears only where the widget's own server-side check enforces the same
+  constraint or a stricter one.** A constraint that only the browser enforces never
+  becomes a keyword, because the schema would then refuse values the server accepts.
+  `validate` and the checks of `type="email"` are examples.
 - **Reported values match.** Sending back what the snapshot reports never fails its
-  schema, with one exception: a value no client sent that the widget does not reconcile
-  when its constraints change, such as an author's color default with a trailing
-  newline, or the selection of a keyed table whose rows shrank under it. Sending such a
+  schema, except for a value the widget holds without checking it against its current
+  constraints: an author's color default with a trailing newline, or the selection of a
+  dataframe with a `key` whose rows shrank after the selection was made. Sending such a
   value back is still accepted, because neither check applies to an unchanged value; see
   [On the server](#on-the-server-the-schema-first-then-the-widget).
 - **No list is copied.** `enum` never appears. Options stay in `props.options` and table
@@ -328,8 +328,9 @@ A request selects rows 0 and 2:
   - `single-column` adds `maxItems: 1`.
   - There is no `uniqueItems`. An Arrow table can repeat a column name, and selecting
     both such columns sends the name twice.
-- **Cells** are `[row, column]` pairs. Each pair is
-  `{"type": "array", "prefixItems": [<the row schema>, {"type": "string"}], "minItems": 2, "maxItems": 2}`,
+- **Cells** are `[row, column]` pairs. For a table of four rows, each pair is
+  `{"type": "array", "prefixItems": [{"type": "integer", "minimum": 0, "maximum": 3}, {"type": "string"}], "minItems": 2, "maxItems": 2}`.
+  The row takes the bounds of an item of `rows`. `minItems` and `maxItems` are there
   because `prefixItems` alone also lets a shorter or longer list pass.
   - `single-cell` adds `maxItems: 1`.
   - `multi-cell` takes any number of cells. A browser sends a dragged rectangle as the
@@ -338,7 +339,9 @@ A request selects rows 0 and 2:
   - There is no `uniqueItems`, for the same reason as for columns.
 - **Rows, columns, and cells combine freely**, because the browser blends selections
   additively.
-- **`null` resets the selection** to `selection_default`, or to no selection.
+- **`null` resets the selection** to `selection_default`, or else to no selection. In
+  `single-row-required` mode, no selection on a table with rows becomes row 0, as on its
+  first render.
 
 A selection schema costs about 360 bytes, or about 470 with every mode enabled, a small
 part of a table node.
@@ -356,8 +359,10 @@ than refusing them. A client's selection reaches the app unchecked. Item 8 names
 - empty rows in `single-row-required` mode;
 - rows out of order.
 
-It also has to compare column names as text. A browser session drops such a value, as
-#17717 does with every refused value, and the agent API refuses it with `invalid_value`.
+It also has to compare column names as text, and keep a `multi-cell` list as sent, which
+today's check of programmatic selections empties. A browser session drops a value from
+the list above, as #17717 does with every refused value, and the agent API refuses it
+with `invalid_value`.
 
 Chart selections follow the same pattern with #17717 item 12. They are harder, because a
 selected point is identified by library-specific data values rather than by position; see
@@ -369,21 +374,26 @@ selected point is identified by library-specific data values rather than by posi
 
 Each `widget_state` value, and each trigger's `value`, is first normalized by v1's rules:
 `null`, a one-item list for a single value, and a whole float such as `1.0` read as an
-integer. It is then checked against its element's `value_schema`, before it is encoded.
+integer wherever the schema says `integer`, at any depth, so a selected row of `1.0`
+is row 1. It is then checked against its element's `value_schema`, before it is encoded.
 
 - **This replaces `_check_json_type`.** Nested selections get checked, and so do trigger
   payloads such as `st.chat_input` text against `maxLength`.
 - **The widget's own check from #17782 runs next.** It decides everything a schema cannot:
   options, `required`, UTF-16 length, order, and labels shared by several options.
-- **An unchanged value skips both checks.** #17782's widget check passes a value whose
-  wire form equals the stored one, and the schema check follows the same rule. So
-  sending back an unreconciled reported value is accepted and changes nothing.
+- **An unchanged value skips both checks.** A value that equals the element's reported
+  `value` after normalization is left out of the request, as #17782 leaves out a value
+  whose wire form equals the stored one. Comparing parsed JSON needs no encoding, and a
+  selection whose keys come in another order still counts as unchanged. So sending back
+  an unreconciled reported value is accepted and changes nothing.
 - **The validator supports only the keywords the snapshot emits:** `type`, `format`,
   `minimum`, `maximum`, `maxLength`, `pattern`, `items`, `prefixItems`, `minItems`,
   `maxItems`, `uniqueItems`, `properties`, `required`, `additionalProperties`, and
   `writeOnly`. That is about 150 lines.
   - `format` is an annotation, as JSON Schema's default treats it. The widget checks the
     layout itself.
+  - `writeOnly` is an annotation too. It says the value is never reported, and it refuses
+    nothing.
   - `pattern` is ECMA-262. The only pattern is the fixed color one, which reads the same
     in Python's `re` when matched in full.
 - **The test suite holds the validator to the standard.** Its verdicts are tested against
@@ -486,7 +496,7 @@ can pass them through.
 | --- | --- | --- |
 | 1 | The schema validator in place of `_check_json_type`, trigger payloads checked, `error.violations`, the `ValueSchema` component, and the CI checks. No new keywords. | #17782 merged, since it rewrites `widget_writes.py` |
 | 2 | The keywords in [Keywords per widget](#keywords-per-widget), through new `agent_spec` builder parameters. | #17782, so the widgets refuse what the keywords rule out |
-| 3 | Dataframe selections: the description, the codec (the value travels as JSON text in `string_value`), and the snapshot changes. The schema needs the row count, so it is built only while recording, like `data`. | #17717 item 8, in the same PR or before it |
+| 3 | Dataframe selections: the description, the codec (the value travels as JSON text in `string_value`), and the snapshot changes. The schema needs the row count, so it is built only for agent sessions, like `data`. | #17717 item 8, in the same PR or before it |
 
 When these land, the agent spec needs these edits:
 
