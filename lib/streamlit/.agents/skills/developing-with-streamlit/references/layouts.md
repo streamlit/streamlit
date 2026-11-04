@@ -24,6 +24,17 @@ How you structure your app affects usability more than you think.
 
 By default, the app script enters every tab, expander, and popover body on every rerun, including hidden, collapsed, and closed bodies. For expensive content, see [Conditional rendering](performance.md#conditional-rendering).
 
+### Side by side: columns vs grid vs horizontal container
+
+|                     | `st.columns`                                          | `st.grid`                                                                   | `st.container(horizontal=True)`               |
+| ------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| Item width          | Set by `spec` ratios                                  | Equal-width columns                                                         | Each item's own `width`                       |
+| When space runs out | All columns stack at once on viewports ≤640px         | Drops one column at a time below `min_column_width`, based on its own width | Wraps items that don't fit onto the next line |
+| Item count          | Fixed when you call it                                | Any; each child becomes a cell                                              | Any                                           |
+| Best for            | A known split: main + aside, a comparison, a form row | Repeated tiles: metric walls, galleries, card walls                         | Toolbars, button groups, badges, chips        |
+
+All three take `wrap=False` to keep one row that scrolls horizontally instead.
+
 ## Sidebar: navigation + global filters only
 
 The sidebar should only contain navigation and app-level filters. Main content goes in the main area.
@@ -105,10 +116,7 @@ with st.grid(4):
 Use `grid.cell()` only when a cell holds several elements, or spans tracks
 with `column_span` (an integer, or `"all"` for a full-width row) or `row_span`.
 
-**Grid vs columns vs flex:**
-- `st.columns` — Fixed side-by-side split. Pass `wrap=False` to keep columns in one row.
-- `st.container(horizontal=True)` — Natural-width toolbars and chips.
-- `st.grid` — Repeated equal-width tiles that wrap using `min_column_width`.
+For when to pick a grid over columns or a horizontal container, see "Side by side: columns vs grid vs horizontal container" above.
 
 **Common grid patterns:**
 

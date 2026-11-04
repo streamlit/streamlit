@@ -62,9 +62,7 @@ with st.grid(4, row_height=160, gap="medium"):
     st.metric("Conversion", "3.2%", "+0.1%", border=True, height="stretch")
 ```
 
-**Grid vs horizontal container:**
-- `st.container(horizontal=True)` — Items take their content width and wrap when they don't fit
-- `st.grid` — Items fill equal-width columns; the column count drops as the page narrows
+For a side-by-side comparison of `st.columns`, `st.grid`, and horizontal containers, see "Side by side: columns vs grid vs horizontal container" in `layouts.md`.
 
 ## Zero deltas
 
