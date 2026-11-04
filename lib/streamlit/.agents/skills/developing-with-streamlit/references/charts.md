@@ -149,12 +149,12 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 - **Category order follows the data.** With several datasets on one category axis, ECharts collects categories in first-seen order across series, so groups with different x values can scramble the axis. Set `xAxis.data` to the sorted categories, or use a value or time axis for numeric or date x.
-- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, so many categories squeeze the bars and ECharts hides most labels. Compute the height, for example `height=60 + 22 * len(df)`.
+- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, so many categories squeeze the bars and ECharts hides most labels. Compute the height from the category count, for example `height=60 + 22 * df["category"].nunique()` (about 60 pixels of chrome plus 22 per bar).
 
-ECharts has no Vega-style `color=` field for long-format data (one row per group and x value). Give each group its own `dataset` entry and series, linked by `datasetIndex`. Series with the same `name` share a color and legend entry. Keep the group frames to map a selection back: `series_index` picks the frame and `data_indices` index into it.
+ECharts has no Vega-style `color=` field for long-format data (one row per group and x value). Give each group its own `dataset` entry and series, linked by `datasetIndex`. Keep the group frames to map a selection back: `series_index` picks the frame and `data_indices` are row positions in that frame. With a `key`, the selection survives data changes, so reset it or check the positions when the groups change.
 
 ```python
-groups = {app: g.reset_index(drop=True) for app, g in df.groupby("app")}
+groups = {app: g for app, g in df.groupby("app")}
 frames = list(groups.values())
 event = st.echarts_chart(
     {
@@ -185,7 +185,7 @@ if rows:
     st.dataframe(pd.concat(rows))
 ```
 
-Range bars and Gantt charts don't need a `custom` series. Draw each bar as a `lines` series item on `cartesian2d` with a wide, butt-capped line, and list the rows in a category `yAxis.data`. A `lines` series doesn't extend the axes, so set `xAxis.min` and `xAxis.max`, or the chart stays empty. Inline `coords` must be JSON-compatible, so convert datetimes with `.isoformat()`.
+Range bars and Gantt charts don't need a `custom` series. Draw each bar as a `lines` series item on `cartesian2d` with a wide, opaque line, and list the lanes (for example, shards or resources) in a category `yAxis.data`. Use string lane names, because ECharts reads a number on a category axis as a position and NumPy values outside `dataset.source` raise an error. A `lines` series doesn't extend the axes, so set `xAxis.min` and `xAxis.max`, or the chart stays empty. Inline `coords` must be JSON-compatible, so convert datetimes with `.isoformat()`.
 
 ```python
 st.echarts_chart(
@@ -201,7 +201,7 @@ st.echarts_chart(
             {
                 "type": "lines",
                 "coordinateSystem": "cartesian2d",
-                "lineStyle": {"width": 14, "opacity": 1, "cap": "butt"},
+                "lineStyle": {"width": 14, "opacity": 1},
                 "data": [
                     {
                         "name": r.test,
