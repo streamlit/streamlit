@@ -999,8 +999,8 @@ Charts and maps:
   small figure, so it is dropped and named in `spec_omitted`; content a template adds,
   such as a "DRAFT" annotation, a shape, or an image, is kept, since removing decoration
   must not remove meaning. Title text a template sets for the figure, an axis, or the
-  legend is dropped with it in v1; keeping that text is a follow-up. Colors of the form
-  `#0000XX`, such as each Plotly Express trace's `line.color`, are placeholders the
+  legend is dropped with it in v1; keeping that text is a follow-up. The colors
+  `#000001` through `#000040`, such as each Plotly Express trace's `line.color`, are placeholders the
   browser replaces with the app theme's colors, and can be ignored. Base64 typed arrays (`bdata`), which a model cannot read, are
   expanded into numbers. Nothing that holds data is dropped at any size: the traces are
   the figure's data. Serving a large specification behind `data.url` is follow-up #9.
