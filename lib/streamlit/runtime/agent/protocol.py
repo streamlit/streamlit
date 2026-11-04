@@ -944,6 +944,14 @@ def _page_schema() -> dict[str, Any]:
             },
             "title": {"type": "string"},
             "icon": {"type": "string"},
+            "help": {
+                "type": "string",
+                "description": (
+                    "What the page is for, as the author's Markdown from "
+                    "`st.Page(help=...)`. Absent when the page has none. Read it "
+                    "to choose a page without running it."
+                ),
+            },
         },
     }
 

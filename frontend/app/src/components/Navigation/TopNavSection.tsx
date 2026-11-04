@@ -74,6 +74,14 @@ interface TopNavSectionProps {
 /** Why the menu was closed — drives focus-return behavior. */
 type CloseReason = "tab" | "shift-tab" | "other"
 
+/**
+ * Presses inside these elements don't close the menu. A menu item's help
+ * tooltip is portaled outside the menu, and a link in it must stay clickable.
+ * The selector matches any Streamlit tooltip, but while the menu is open the
+ * only one showing is the focused or hovered item's.
+ */
+const MENU_DISMISSAL_EXCLUDE_SELECTORS = [".stTooltipContent"]
+
 const TopNavSection = ({
   title,
   sections,
@@ -96,7 +104,7 @@ const TopNavSection = ({
   const prevOpenRef = useRef(false)
   const openRef = useRef(open)
   openRef.current = open
-  /** Item index to focus when the menu mounts (ArrowUp opens on the last). */
+  /** Item index to focus once the open menu is positioned (ArrowUp opens on the last). */
   const initialFocusIndexRef = useRef(0)
 
   const flatLinkCount = useMemo(
@@ -128,17 +136,19 @@ const TopNavSection = ({
     setOpen(false)
   }, [])
 
-  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
-    open,
-    placement: "bottom-start",
-    offsetPx: convertRemToPx(theme.spacing.twoXS),
-  })
+  const { floatingStyles, isPositioned, setFloating, setReference } =
+    useFloatingOverlay({
+      open,
+      placement: "bottom-start",
+      offsetPx: convertRemToPx(theme.spacing.twoXS),
+    })
 
   const { setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: open,
     onClose: closeMenu,
     floatingSetFn: setFloating,
     referenceSetFn: setReference,
+    excludeSelectors: MENU_DISMISSAL_EXCLUDE_SELECTORS,
   })
 
   useLayoutEffect(() => {
@@ -254,23 +264,24 @@ const TopNavSection = ({
   )
 
   /**
-   * Focuses the initial item (last for ArrowUp, otherwise first) once the menu
-   * DOM mounts. A layout effect can't do this: FloatingPortal mounts its
-   * children one commit after `open` turns true. Child anchor refs run before
-   * this ref, so the target already exists.
+   * Focuses the initial item (last for ArrowUp, otherwise first) only after
+   * the open menu is positioned, so a help tooltip that focus opens anchors to
+   * the item's final spot. The menu mounts at the viewport origin and moves a
+   * frame later; a tooltip opened before that move closes when its trigger
+   * jumps. `handleMenuFocus` syncs `focusedIndex`.
    */
-  const menuListRef = useCallback((node: HTMLDivElement | null): void => {
-    if (node) {
-      const mountedCount = menuItemLinksRef.current.filter(Boolean).length
-      const index = Math.min(
-        initialFocusIndexRef.current,
-        Math.max(0, mountedCount - 1)
-      )
-      initialFocusIndexRef.current = 0
-      menuItemLinksRef.current[index]?.focus()
-      setFocusedIndex(index)
+  useLayoutEffect(() => {
+    if (!open || !isPositioned) {
+      return
     }
-  }, [])
+    const mountedCount = menuItemLinksRef.current.filter(Boolean).length
+    const index = Math.min(
+      initialFocusIndexRef.current,
+      Math.max(0, mountedCount - 1)
+    )
+    initialFocusIndexRef.current = 0
+    menuItemLinksRef.current[index]?.focus()
+  }, [open, isPositioned])
 
   const handleMenuFocus = (event: FocusEvent<HTMLDivElement>): void => {
     const target = event.target
@@ -422,6 +433,7 @@ const TopNavSection = ({
           menuTabIndex={clampedIndex === currentLinkIndex ? 0 : -1}
           setMenuItemRef={setMenuItemRef}
           menuItemIndex={currentLinkIndex}
+          help={item.help}
         >
           {pageName}
         </SidebarNavLink>
@@ -518,7 +530,6 @@ const TopNavSection = ({
             data-testid="stTopNavPopoverBody"
           >
             <StyledPopoverContent
-              ref={menuListRef}
               id={menuId}
               data-testid="stTopNavPopover"
               role="menu"

@@ -220,6 +220,11 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
     assert isinstance(created["schema_version"], int)
     assert created["page"]["url_path"] == _home_path(created)
     assert {"report", "slow"} <= set(_url_paths(created["pages"]))
+    # The snapshot includes a page's help before the agent opens the page, and
+    # omits the `help` key when the page has none.
+    pages_by_path = {entry["url_path"]: entry for entry in created["pages"]}
+    assert pages_by_path["report"]["help"] == "Quarterly figures for one **region**."
+    assert "help" not in pages_by_path[_home_path(created)]
     region_action = next(
         action for action in created["actions"] if action["key"] == "region"
     )
@@ -235,6 +240,7 @@ def test_create_rerun_navigate_and_refuse_unknown_page(
         _interact(page, app_base_url, {"session_id": session_id, "page": "report"})
     )
     assert report["page"]["url_path"] == "report"
+    assert report["page"]["help"] == "Quarterly figures for one **region**."
     assert _keyed(report, "quarter")["value"] == "Q1"
     assert _lines(report)["runs"] == "3"
 

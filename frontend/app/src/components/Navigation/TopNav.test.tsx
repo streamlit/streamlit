@@ -174,6 +174,33 @@ describe("TopNav", () => {
     expect(nav).toHaveAttribute("data-testid", "stTopNav")
   })
 
+  it("describes each top-bar link with its page's help", () => {
+    const appPages: AppPage.$Properties[] = [
+      {
+        pageScriptHash: "page_1",
+        pageName: "page 1",
+        urlPathname: "page_1",
+        isDefault: true,
+        help: "Revenue by region.",
+      },
+      {
+        pageScriptHash: "page_2",
+        pageName: "page 2",
+        urlPathname: "page_2",
+        isDefault: false,
+      },
+    ]
+
+    renderTopNav({}, { navigationContext: { appPages } })
+
+    expect(
+      screen.getByRole("link", { name: "page 1" })
+    ).toHaveAccessibleDescription("Revenue by region.")
+    expect(screen.getByRole("link", { name: "page 2" })).not.toHaveAttribute(
+      "aria-describedby"
+    )
+  })
+
   it("marks collapsed overflow links inert and leaves visible links active", () => {
     // jsdom does not skip inert hosts on Tab, so assert the host contract here.
     overflowMockState.collapseAfterIndex = 0

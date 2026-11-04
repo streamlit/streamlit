@@ -723,19 +723,25 @@ import streamlit as st
 from tests.streamlit.runtime.agent import run_gate
 
 run_gate.wait()
-st.selectbox("Region", ["EMEA", "APAC"], key="region")
-st.selectbox("Team", ["Ops", "Sales"], index=None, key="team")
-st.slider("Range", 0, 10, (2, 8), key="range")
-with st.form("ticket"):
-    st.text_input("Title", key="title")
-    st.form_submit_button("Submit", key="submit")
-st.text_input("Password", type="password", key="password")
-st.file_uploader("Upload", key="upload")
-st.image(np.zeros((2, 2, 3), dtype=np.uint8))
-st.dataframe(pd.DataFrame({"n": range(150)}))
-st.line_chart(pd.DataFrame({"y": [1, 3, 2]}))
-st.plotly_chart(go.Figure(go.Bar(y=[1, 2]), layout={"template": "plotly"}))
-st.chat_input("Ask", key="chat")
+
+def elements():
+    st.selectbox("Region", ["EMEA", "APAC"], key="region")
+    st.selectbox("Team", ["Ops", "Sales"], index=None, key="team")
+    st.slider("Range", 0, 10, (2, 8), key="range")
+    with st.form("ticket"):
+        st.text_input("Title", key="title")
+        st.form_submit_button("Submit", key="submit")
+    st.text_input("Password", type="password", key="password")
+    st.file_uploader("Upload", key="upload")
+    st.image(np.zeros((2, 2, 3), dtype=np.uint8))
+    st.dataframe(pd.DataFrame({"n": range(150)}))
+    st.line_chart(pd.DataFrame({"y": [1, 3, 2]}))
+    st.plotly_chart(go.Figure(go.Bar(y=[1, 2]), layout={"template": "plotly"}))
+    st.chat_input("Ask", key="chat")
+
+st.navigation(
+    [st.Page(elements, icon=":material/widgets:", help="Every **element** type.")]
+).run()
 """
 
 
@@ -812,6 +818,8 @@ def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
             assert set(node.get("data", {})) <= documented("ElementData"), node
         for action in body["actions"]:
             assert set(action) <= documented("Action"), action
+        for page in [body["page"], *body["pages"]]:
+            assert set(page) <= documented("Page"), page
     for code, response in refused.items():
         assert response.status_code == error_status(code), response.text
         body = response.json()
@@ -837,6 +845,7 @@ def test_responses_match_the_served_openapi_document(tmp_path: Path) -> None:
     blocks = [node["data"] for node in nodes if "data" in node]
     assert any("url" in data and "preview" in data for data in blocks)
     assert any("spec_omitted" in data for data in blocks)
+    assert {"icon", "help"} <= set(created.json()["page"])
     [chat_action] = [a for a in created.json()["actions"] if a["key"] == "chat"]
     assert "label" not in chat_action
     [chat] = [
