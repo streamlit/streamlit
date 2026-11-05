@@ -697,8 +697,8 @@ def gather_metrics(
             with contextlib.suppress(RuntimeError):
                 thread_state = ThreadState.get()
 
-        # Unlocked fast path: skip building telemetry once the list is full.
-        # ``track_command`` enforces the exact cap under its lock.
+        # Fast path: skip building telemetry once the list is full. This check is
+        # not atomic with track_command(), which enforces the exact cap.
         tracking_activated = (
             ctx is not None
             and thread_state is not None

@@ -84,7 +84,7 @@ class SharedRunState:
         """Atomically record a command, enforcing both caps.
 
         - If the list already holds ``max_total`` commands, drop the command
-          without counting it, matching the unlocked fast path in
+          without counting it, matching the fast-path check in
           ``gather_metrics``.
         - Otherwise, count it, and append it if its name is under
           ``max_per_command``.

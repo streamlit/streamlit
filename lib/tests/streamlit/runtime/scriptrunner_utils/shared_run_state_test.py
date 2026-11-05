@@ -64,7 +64,7 @@ def test_track_command_appends_and_counts() -> None:
 
 
 def test_track_command_respects_per_command_cap() -> None:
-    """The list stops growing past the cap, but the counter keeps counting."""
+    """Past ``max_per_command``, a name is still counted but no longer appended."""
     shared = SharedRunState()
     for _ in range(5):
         shared.track_command(_make_command("markdown"), max_per_command=2, max_total=10)
@@ -87,7 +87,7 @@ def test_track_command_respects_total_cap() -> None:
 
 
 def test_concurrent_track_command_respects_total_cap() -> None:
-    """Concurrent ``track_command()`` calls cannot grow the list past the cap."""
+    """Concurrent calls keep the list and the summed counts at ``max_total``."""
     shared = SharedRunState()
     num_threads = 16
     per_thread = 50
