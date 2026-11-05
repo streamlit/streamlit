@@ -165,14 +165,16 @@ def load_orders(): ...  # Another slow query / API call
 def revenue_body():
     with st.skeleton(height=260):
         data = load_revenue()
-        st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
+        st.bar_chart(
+            data, x="region", y="revenue", height=260, alt="Revenue by region"
+        )
 
 
 @st.fragment(parallel=True)
 def orders_body():
     with st.skeleton(height=260):
         data = load_orders()
-        st.dataframe(data, hide_index=True, alt="Recent orders")
+        st.dataframe(data, hide_index=True, height=260, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
