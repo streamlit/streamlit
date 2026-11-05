@@ -284,8 +284,9 @@ def _update_script_finished_message(
 
     ``dropped_fragment_ids`` holds the fragments whose deltas this clear dropped
     from the run that this ``script_finished`` belongs to. A kept finish lists
-    them in ``metadata.delivery``. ``metadata.run`` is never rewritten, so it
-    still matches the run's ``new_session``.
+    them in ``metadata.delivery``; a downgraded finish has no ``delivery``.
+    ``metadata.run`` is never rewritten, so it still matches the run's
+    ``new_session``.
     """
     status = msg.script_finished
     if is_fragment_run and status == ForwardMsg.FINISHED_SUCCESSFULLY:
@@ -317,3 +318,7 @@ def _update_script_finished_message(
             return
 
     msg.script_finished = ForwardMsg.FINISHED_EARLY_FOR_RERUN
+    # An earlier clear may have recorded a partial drop. The browser reads it
+    # on any finish, so a downgraded finish must not narrow widget completion.
+    if msg.metadata.HasField("delivery"):
+        msg.metadata.ClearField("delivery")

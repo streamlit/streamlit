@@ -531,7 +531,9 @@ class ForwardMsgQueueTest(unittest.TestCase):
     def test_fragment_clears_downgrade_coalesced_finish_once_all_fragments_dropped(
         self,
     ):
-        """Fragments dropped by earlier clears count toward a later clear."""
+        """Fragments dropped by earlier clears count toward a later clear, and
+        the downgrade discards the earlier partial-drop record.
+        """
         fmq = ForwardMsgQueue()
         self._enqueue_coalesced_fragment_run(fmq)
 
@@ -547,6 +549,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
             "frag-b",
             "frag-a",
         ]
+        assert not retained_finish.metadata.HasField("delivery")
 
     def test_fragment_clear_downgrades_coalesced_finish_when_all_fragments_dropped(
         self,
