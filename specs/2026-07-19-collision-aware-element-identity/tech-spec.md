@@ -53,7 +53,7 @@ There are five materially different causes behind the same exception:
 |---|---|---|
 | Ambiguous backend widgets | Two identical keyless buttons in a loop | Keep raising; Streamlit cannot infer the data item's semantic identity safely |
 | Identical frontend-state elements | The same passive Plotly figure rendered ten times ([#11424](https://github.com/streamlit/streamlit/issues/11424)); repeated autoplay audio ([#11360](https://github.com/streamlit/streamlit/issues/11360)) | Automatically isolate each rendered instance |
-| Rewrites of one placement | Repeatedly drawing a passive Plotly chart into one `st.empty()` ([#9752](https://github.com/streamlit/streamlit/issues/9752)) | Treat as an update to one logical element |
+| Rewrites of one placement | Repeatedly drawing a passive Plotly chart into one `st.empty()` ([#9752](https://github.com/streamlit/streamlit/issues/9752), closed but still reproduces on `develop` with an identical figure) | Treat as an update to one logical element |
 | Missing stable identity inputs | Main vs. sidebar ([#10598](https://github.com/streamlit/streamlit/issues/10598)); labels omitted for pills ([#11975](https://github.com/streamlit/streamlit/issues/11975)) | Fix the element's identity inputs and regression tests |
 | Overlapping execution | The same nested periodic fragment executes twice ([#10719](https://github.com/streamlit/streamlit/issues/10719)) | Fix scheduling/ownership; do not hide the race with new IDs |
 
@@ -260,11 +260,14 @@ item-stable identity across reordering can pass `key=` to `st.plotly_chart`.
 Each run's `claims` are isolated until the run ends; the committed state is never reset
 wholesale. `ScriptRunner` manages the lifecycle of every run:
 
-1. **Start:** the run obtains a monotonically increasing run token and an empty `claims`
-   overlay. Parallel workers for one run share the token and overlay.
+1. **Start:** the run registers its existing `RunDescriptor` (one per run, created by
+   `ScriptRunner`) with the registry, which records it as the newest run for its scope and
+   opens an empty `claims` overlay. Parallel workers for one run share the descriptor and
+   overlay.
 2. **Supersede check:** only the newest run for a scope (the full app or one fragment) may
-   commit. A runner stopped for a fast-rerun handoff cannot commit or clean up for its
-   replacement.
+   commit. `RunDescriptor` IDs are random, so recency comes from the registry's start
+   order, not from the ID. A runner stopped for a fast-rerun handoff cannot commit or clean
+   up for its replacement.
 3. **Finish:** the outcome decides what is committed, mirroring when the frontend clears
    stale nodes and inactive element state:
    - *Completed normally:* replace all committed placements in the run's scope with the
@@ -394,12 +397,12 @@ into structural fallback IDs.
   - Create the session's registry and pass it to every new `ScriptRunner`, including
     fast-rerun replacements.
 - `lib/streamlit/runtime/scriptrunner/script_runner.py`
-  - Obtain a run token per run, attach the registry and run state to each
-    `ScriptRunContext`, and commit or discard the run's claims when the run finishes
+  - Register each run's `RunDescriptor` with the registry, attach the registry and run state
+    to each `ScriptRunContext`, and commit or discard the run's claims when the run finishes
     (section 4). This is the only place that commits or cleans up.
 - `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
-  - Expose the registry reference, run token, and scope to `_enqueue`. Do not create or clear
-    the registry in `reset()`.
+  - Expose the registry reference, `RunDescriptor`, and scope to `_enqueue`. Do not create or
+    clear the registry in `reset()`.
 - `lib/streamlit/elements/lib/utils.py`
   - Keep widget computation and strict registration behavior, including keyed frontend calls.
   - Add the frontend identity descriptor and pure base-ID computation path.
@@ -420,6 +423,18 @@ into structural fallback IDs.
 No functional frontend or protobuf change is expected. The frontend receives distinct valid
 IDs and continues using the existing React-key, `elementStates`, active-ID collection, and
 cleanup paths.
+
+The frontend also keeps an element with a stable ID mounted when a rerun displaces it to a
+later slot ([#17804](https://github.com/streamlit/streamlit/pull/17804)). This interacts with
+collision resolution as follows:
+
+- A unique passive chart keeps its base ID, so it stays mounted when output is inserted above
+  it, as it does today.
+- A derived ID encodes its placement, so a shifted duplicate arrives with a new ID and
+  remounts. This matches the accepted trade-offs in section 3.
+- Audio and video are excluded from retention so hidden media cannot keep playing. Autoplay
+  elements still remount when displaced; their autoplay guard is keyed by ID in
+  `elementStates`, which retention does not affect.
 
 The architecture reference in
 `.claude/skills/understanding-streamlit-architecture/references/element-identity.md` should be
