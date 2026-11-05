@@ -25,7 +25,7 @@ import math
 import threading
 import time
 from abc import abstractmethod
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import (
@@ -367,9 +367,10 @@ class Cache(Generic[R]):
         self._invalidation_lock = threading.Lock()
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
-        # Maps value_key -> trigger time of the latest background refresh that wrote
-        # its result. Entries stored before that time have already been replaced.
-        self._refresh_written_triggered_at: dict[str, float] = {}
+        # Maps value_key -> (trigger time, write time) of the latest background refresh
+        # that wrote its result, in write order. Entries stored before the trigger time
+        # have already been replaced.
+        self._refresh_written: OrderedDict[str, tuple[float, float]] = OrderedDict()
 
     @property
     def is_active(self) -> bool:
@@ -542,12 +543,30 @@ class Cache(Generic[R]):
         with self._invalidation_lock:
             self._refresh_cooldowns.pop(value_key, None)
 
+    def _refresh_record_lifetime(self) -> float | None:
+        """How long after a refresh's write its record is kept, or ``None`` to keep
+        records until the cache or key is cleared.
+        """
+        return None
+
     def record_refresh_written(self, value_key: str, triggered_at: float) -> None:
         """Record that a background refresh triggered at ``triggered_at`` wrote its
-        result.
+        result, and drop records older than ``_refresh_record_lifetime``.
         """
+        lifetime = self._refresh_record_lifetime()
         with self._invalidation_lock:
-            self._refresh_written_triggered_at[value_key] = triggered_at
+            records = self._refresh_written
+            now = TTLCACHE_TIMER()
+            records.pop(value_key, None)
+            records[value_key] = (triggered_at, now)
+            if lifetime is None:
+                return
+            # Records are in write order, so expired ones are at the front.
+            while records:
+                oldest_key, (_, written_at) = next(iter(records.items()))
+                if now - written_at < lifetime:
+                    break
+                del records[oldest_key]
 
     def refreshed_since(self, value_key: str, stored_at: float) -> bool:
         """Whether an entry stored at ``stored_at`` was already replaced by a
@@ -557,8 +576,8 @@ class Cache(Generic[R]):
         refresh finished after its read, not because none is needed.
         """
         with self._invalidation_lock:
-            triggered_at = self._refresh_written_triggered_at.get(value_key)
-            return triggered_at is not None and stored_at < triggered_at
+            record = self._refresh_written.get(value_key)
+            return record is not None and stored_at < record[0]
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
         """Return the lock that should be held while computing a new cached value.
@@ -621,12 +640,12 @@ class Cache(Generic[R]):
                     self._generation += 1
                     self._refresh_cooldowns.clear()
                     self._key_generations.clear()
-                    self._refresh_written_triggered_at.clear()
+                    self._refresh_written.clear()
                 else:
                     # A per-key clear invalidates only earlier writes for this key.
                     self._key_generations[key] = self._key_generations.get(key, 0) + 1
                     self._refresh_cooldowns.pop(key, None)
-                    self._refresh_written_triggered_at.pop(key, None)
+                    self._refresh_written.pop(key, None)
         self._clear(key=key)
 
     @abstractmethod

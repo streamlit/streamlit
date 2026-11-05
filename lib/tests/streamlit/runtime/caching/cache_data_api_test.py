@@ -1456,6 +1456,28 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             assert self._write_background(cache) is False
             mock_set.assert_not_called()
 
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_records_expire_a_fresh_ttl_after_their_write(
+        self, timer_patch: Mock
+    ) -> None:
+        """Refresh records for keys that are never read again don't accumulate."""
+        cache = self._cache("bg_records", ttl=100, refresh_mode="background")
+
+        timer_patch.return_value = 0
+        cache.record_refresh_written("a", 0)
+        timer_patch.return_value = 50
+        cache.record_refresh_written("b", 50)
+        timer_patch.return_value = 99
+        cache.record_refresh_written("a", 99)
+        assert cache.refreshed_since("a", 98)
+        assert cache.refreshed_since("b", 49)
+
+        timer_patch.return_value = 150
+        cache.record_refresh_written("c", 150)
+        assert not cache.refreshed_since("b", 49)
+        assert cache.refreshed_since("a", 98)
+        assert list(cache._refresh_written) == ["a", "c"]
+
     def test_background_writeback_skips_when_orphaned_under_lock(self) -> None:
         """A refresh that becomes orphaned after pickling is not written."""
         cache = self._background_cache("bg_orphaned_lock")

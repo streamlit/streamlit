@@ -966,6 +966,31 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         assert released == []
         assert cache.read_result("k").value is singleton
 
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_records_expire_a_fresh_ttl_after_their_write(
+        self, timer_patch: Mock
+    ) -> None:
+        """Refresh records for keys that are never read again don't accumulate."""
+        cache: ResourceCache[int] = ResourceCache(
+            key="records",
+            max_entries=float("inf"),
+            ttl_seconds=_BG_TTL * 2,
+            validate=None,
+            display_name="records",
+            on_release=lambda _: None,
+            fresh_ttl_seconds=_BG_TTL,
+            refresh_mode="background",
+        )
+
+        timer_patch.return_value = 0
+        cache.record_refresh_written("a", 0)
+        timer_patch.return_value = _BG_TTL
+        cache.record_refresh_written("b", _BG_TTL)
+
+        assert not cache.refreshed_since("a", -1)
+        assert cache.refreshed_since("b", _BG_TTL - 1)
+        assert list(cache._refresh_written) == ["b"]
+
     def test_orphan_discard_swallows_release_error(self) -> None:
         """A raising on_release while discarding an orphaned refresh must not propagate.
 
