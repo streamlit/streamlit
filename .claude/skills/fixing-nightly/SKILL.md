@@ -5,7 +5,7 @@ description: Triages a failed Nightly Build run and resolves it. Reruns the fail
 
 # Fixing nightly builds
 
-The `Nightly Build` workflow (`.github/workflows/nightly.yml`) tags `develop`, runs the Python (`python-tests.yml`), JavaScript (`js-tests.yml`), and Playwright (`playwright.yml`) suites against that tag, and publishes `streamlit-nightly` to PyPI only when every test job passes. Rerunning the failed jobs also reruns the jobs that depend on them, so a successful rerun still publishes that night's build.
+The `Nightly Build` workflow (`.github/workflows/nightly.yml`) tags `develop`, runs the Python (`python-tests.yml`), JavaScript (`js-tests.yml`), and Playwright (`playwright.yml`) suites against that tag. It publishes `streamlit-nightly` to PyPI only after every test job passes. Rerunning the failed jobs also reruns the jobs that depend on them, so a successful rerun still publishes that night's build.
 
 The goal is a green nightly with the least work: rerun what was transient, fix what is broken, and hand the rest to a maintainer.
 
@@ -34,7 +34,7 @@ A Nightly Build run ID or URL. Without one, use the most recent failed run of `n
 
 - Check earlier attempts of this run and the last ~10 nightly runs. Nightlies often pass on attempt 2 or 3, so a one-off failure is a good rerun candidate.
 - Check recent `push` runs of the failing workflow on `develop`. A failure that repeats there is likely a real breakage.
-- Commits between the last green nightly tag and this one (`git log <previous-tag>..<this-tag>`). A deterministic failure usually traces back to one of them.
+- Check the commits between the last green nightly tag and this one (`git log <previous-tag>..<this-tag>`). A deterministic failure usually traces back to one of those commits.
 - For a test that might be flaky, check for `@pytest.mark.flaky` and the output of `uv run scripts/fetch_flaky_tests.py`.
 
 ### 3. Classify
@@ -47,7 +47,7 @@ A Nightly Build run ID or URL. Without one, use the most recent failed run of `n
 
 Keep these in mind:
 
-- Playwright already retries each failing test once inside the run (`--reruns 1`). An E2E failure in the log therefore failed twice in that attempt. It can still be flaky if it is isolated to one browser and passes in other runs.
+- Playwright retries a failing test once (`--reruns 1` in `playwright.yml`), except failures whose message contains `Missing snapshot` (`--rerun-except` in `e2e_playwright/pytest.ini`). A retried failure in the log failed twice in that attempt. It can still be flaky when it is isolated to one browser and passes in other runs.
 - Do not rerun publishing failures. Part of the release may already be on PyPI, and PyPI rejects files that already exist, so a rerun fails the same way.
 - If any failure in the run is a real breakage, choose **fix**. A rerun cannot turn the nightly green while one job is broken.
 - Allow at most 3 attempts per run (the original plus 2 reruns). After that, a remaining flaky failure needs a fix or a report.
@@ -55,7 +55,7 @@ Keep these in mind:
 
 ### 4. Act on the decision
 
-**rerun:** Rerun only the failed jobs (`gh run rerun <id> --failed`).
+**rerun:** Outside CI, rerun only the failed jobs (`gh run rerun <id> --failed`). In CI, record the decision and let the workflow rerun the jobs.
 
 **fix:**
 
@@ -80,7 +80,7 @@ Keep it short and factual:
 
 ## Running in CI
 
-The `ai-fix-nightly` workflow (`.github/workflows/ai-fix-nightly.yml`) runs this skill with a read-only token. Later workflow jobs rerun the nightly and open the PR. In that mode, do not run `gh run rerun`, commit, push, or create PRs. Leave the fix as uncommitted changes and write the decision and summary files the workflow prompt asks for. The workflow's token cannot push changes under `.github/workflows/`. If the fix needs one, choose **report** and put the proposed diff in the summary.
+The `ai-fix-nightly` workflow (`.github/workflows/ai-fix-nightly.yml`) runs this skill with a read-only token. Later workflow jobs rerun the nightly and open the PR. In that mode, do not run `gh run rerun`, commit, push, or create PRs. Leave the fix as uncommitted changes and write the decision and summary files the workflow prompt asks for. `GITHUB_TOKEN` lacks the `workflows` permission, so later jobs cannot push changes under `.github/workflows/`. If the fix needs one, choose **report** and put the proposed diff in the summary.
 
 ## Rules
 

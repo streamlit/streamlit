@@ -7,9 +7,9 @@
 # - fix: opens a PR against develop with the agent's changes.
 # - report: nothing beyond the job summary. A maintainer has to act.
 #
-# This workflow starts reruns with GITHUB_TOKEN, so GitHub may not trigger it
-# again when a rerun fails. Slack still reports that failure; dispatch this
-# workflow with the run ID to triage it.
+# Reruns start with GITHUB_TOKEN, so GitHub may not trigger this workflow again
+# if a rerun fails. Slack still reports that failure; dispatch this workflow with
+# the run ID to triage it.
 name: AI Fix Nightly
 
 on:
@@ -93,9 +93,9 @@ jobs:
             gh api "repos/$REPOSITORY/actions/runs/$RUN_ID" \
               --jq '[.path, .event, .status, (.conclusion // "none"), .run_attempt, .html_url] | @tsv'
           )
-          # workflow_run matches by name, so any branch with a "Nightly Build" workflow can
-          # trigger this. Schedules only run on develop, so event == schedule limits
-          # triage to real nightlies.
+          # workflow_run matches by workflow name, so a "Nightly Build" workflow on any
+          # branch could trigger this. Scheduled runs only start from the default branch,
+          # so requiring event == schedule limits triage to real nightlies.
           if [[ "$path" != ".github/workflows/nightly.yml" || "$event" != "schedule" ]]; then
             echo "::error::Run $RUN_ID is not a scheduled Nightly Build run ($path, $event)."
             exit 1
@@ -171,6 +171,10 @@ jobs:
           echo "$HOME/.cursor/bin" >> $GITHUB_PATH
 
       - name: AI nightly triage and fix
+        # Stay below the job timeout, and let a failed or timed-out agent fall through
+        # to the decision step, which reports a missing decision.
+        timeout-minutes: 45
+        continue-on-error: true
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -244,8 +248,13 @@ jobs:
           touch work-tmp/nightly-fix.patch
           if [ "$ACTION" = "fix" ]; then
             git add -A
-            # Diff against the checkout so the patch also keeps changes the agent committed.
-            if git diff --cached --quiet "$DEVELOP_SHA"; then
+            # Diff against the develop SHA captured before the agent ran, so the patch
+            # also includes changes the agent committed. If the agent left HEAD on the
+            # nightly tag, that diff would add the version bump and revert newer commits.
+            if ! git merge-base --is-ancestor "$DEVELOP_SHA" HEAD; then
+              echo "::warning::The agent left HEAD off develop. Reporting only."
+              ACTION=report
+            elif git diff --cached --quiet "$DEVELOP_SHA"; then
               echo "::warning::The agent chose fix but left no changes. Reporting only."
               ACTION=report
             else
@@ -268,7 +277,8 @@ jobs:
             echo "- Nightly run: $RUN_URL (attempt $RUN_ATTEMPT)";
             echo "- Decision: $ACTION";
             echo "";
-            cat work-tmp/changes.md;
+            # Step summaries over 1 MiB fail the step, which would skip the artifact upload.
+            head -c 60000 work-tmp/changes.md;
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifacts
@@ -416,6 +426,8 @@ jobs:
               `Automated fix for the failed nightly build ${runUrl} (attempt ${runAttempt}).`,
               '',
               `This PR was created by the \`ai-fix-nightly\` workflow using \`${model}\`.`,
+              // Events from GITHUB_TOKEN do not start workflows, so the PR has no checks yet.
+              'CI does not start on its own for PRs that GitHub Actions opens. Close and reopen this PR to run it.',
               '',
               '## Analysis',
               '',
