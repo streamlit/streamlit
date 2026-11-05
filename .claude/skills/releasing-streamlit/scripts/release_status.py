@@ -1,0 +1,473 @@
+#!/usr/bin/env python3
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Print the status board for a Streamlit core release. Read-only.
+
+Derives every step's state from GitHub, PyPI, and the SiS static asset CDN, so
+it is safe to run at any time and gives the same answer however many times it
+runs. It never dispatches workflows, pushes, or merges.
+
+Usage:
+    uv run python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0
+    uv run python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0 --json
+
+Steps the script cannot observe (SiS e2e results in Slack, the Anaconda
+request, Community Cloud example apps) are reported as "manual".
+"""
+
+# A CLI that shells out to `gh` and prints a report.
+# ruff: noqa: T201, S404, S603, S310
+
+from __future__ import annotations
+
+import argparse
+import json
+import operator
+import re
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
+REPO = "streamlit/streamlit"
+DOCS_REPO = "streamlit/docs"
+FEEDSTOCK_REPO = "conda-forge/streamlit-feedstock"
+VERSION_COMMIT_PREFIX = "Up version to "
+ASSET_HOSTS = {"preprod": "preprod.app.snowflake.com", "prod": "app.snowflake.com"}
+ASSET_PATHS = ("static/css/index.css", "static/js/index.js")
+# The SiS CDN answers 403 to urllib's default user agent.
+USER_AGENT = "streamlit-release-status/1.0"
+
+DONE, RUNNING, TODO, FAIL, WARN, MANUAL, NA = "✓", "⏳", "·", "✗", "⚠", "🧑", "-"
+
+
+@dataclass
+class Step:
+    key: str
+    title: str
+    state: str = TODO
+    detail: str = ""
+    links: list[str] = field(default_factory=list)
+
+
+class UnavailableError(Exception):
+    """A lookup failed (network, auth). Reported as a warning, never as 'not done'."""
+
+
+def gh_api(path: str, *, jq: str | None = None, paginate: bool = False) -> Any:
+    cmd = ["gh", "api", path]
+    if paginate:
+        cmd.append("--paginate")
+    if jq:
+        cmd += ["--jq", jq]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+    if proc.returncode != 0:
+        if any(m in proc.stderr for m in ("Not Found", "HTTP 404", "No commit found")):
+            return None
+        raise UnavailableError(f"gh api {path}: {proc.stderr.strip()[:200]}")
+    out = proc.stdout.strip()
+    if not out:
+        return None
+    if jq:
+        return out
+    return json.loads(out)
+
+
+def http_status(url: str) -> int:
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        return e.code
+    except (urllib.error.URLError, TimeoutError) as e:
+        raise UnavailableError(f"{url}: {e}") from e
+
+
+def recent_prs(repo: str, state: str = "all", pages: int = 1) -> list[dict[str, Any]]:
+    prs: list[dict[str, Any]] = []
+    for page in range(1, pages + 1):
+        batch = (
+            gh_api(f"repos/{repo}/pulls?state={state}&per_page=100&page={page}") or []
+        )
+        prs += batch
+        if len(batch) < 100:
+            break
+    return prs
+
+
+def pypi_versions() -> list[str]:
+    try:
+        with urllib.request.urlopen(
+            "https://pypi.org/pypi/streamlit/json", timeout=20
+        ) as resp:
+            data = json.load(resp)
+    except (urllib.error.URLError, TimeoutError) as e:
+        raise UnavailableError(f"PyPI: {e}") from e
+    return [v for v, files in data["releases"].items() if files]
+
+
+def parse(v: str) -> tuple[int, int, int] | None:
+    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", v)
+    return (int(m[1]), int(m[2]), int(m[3])) if m else None
+
+
+def ref_sha(ref: str) -> str | None:
+    """Commit SHA for refs/heads/... or refs/tags/... (annotated tags are peeled)."""
+    data = gh_api(f"repos/{REPO}/commits/{ref}", jq=".sha")
+    return data or None
+
+
+def expected_version_check(version: str, published: list[str]) -> Step:
+    step = Step("version", "Version")
+    target = parse(version)
+    if target is None:
+        step.state, step.detail = FAIL, f"{version!r} is not a full x.y.z version"
+        return step
+    parsed = sorted(p for p in (parse(v) for v in published) if p)
+    if target in parsed:
+        step.state, step.detail = DONE, "already on PyPI"
+        return step
+    latest = parsed[-1]
+    maj, minor, patch = target
+    if patch == 0:
+        expected = (latest[0], latest[1] + 1, 0)
+        ok = target == expected
+        why = f"next minor after {'.'.join(map(str, latest))} is {'.'.join(map(str, expected))}"
+    else:
+        ok = (maj, minor, patch - 1) in parsed
+        why = f"a patch must follow {maj}.{minor}.{patch - 1}, which is not on PyPI"
+    if ok:
+        kind = "regular" if patch == 0 else "patch"
+        step.state, step.detail = (
+            DONE,
+            f"{kind} release; latest PyPI is {'.'.join(map(str, latest))}",
+        )
+    else:
+        step.state, step.detail = FAIL, f"unexpected version: {why}"
+    return step
+
+
+def find_cutoff_nightly(base_sha: str, prev_minor: tuple[int, int, int]) -> str | None:
+    """Return the nightly tag whose parent commit is the release branch's base."""
+    prefix = f"{prev_minor[0]}.{prev_minor[1]}.{prev_minor[2] + 1}.dev"
+    tags = gh_api(
+        f"repos/{REPO}/git/matching-refs/tags/{prefix}", jq=".[].ref", paginate=True
+    )
+    if not tags:
+        return None
+    names = sorted(
+        (t.removeprefix("refs/tags/") for t in tags.splitlines()), reverse=True
+    )
+    for name in names[:30]:
+        sha = ref_sha(f"refs/tags/{name}")
+        if (
+            sha
+            and gh_api(f"repos/{REPO}/commits/{sha}", jq=".parents[0].sha") == base_sha
+        ):
+            return name
+    return None
+
+
+def latest_nightly_run() -> dict[str, Any] | None:
+    runs = gh_api(
+        f"repos/{REPO}/actions/workflows/nightly.yml/runs?per_page=1&event=schedule"
+    )
+    return (runs or {}).get("workflow_runs", [None])[0]
+
+
+def status(version: str) -> dict[str, Any]:
+    steps: list[Step] = []
+    published = pypi_versions()
+    vstep = expected_version_check(version, published)
+    steps.append(vstep)
+    target = parse(version)
+    if vstep.state == FAIL or target is None:
+        return {
+            "version": version,
+            "steps": [asdict(s) for s in steps],
+            "next": "Fix the version argument.",
+        }
+
+    is_patch = target[2] != 0
+    on_pypi = version in published
+    branch = f"release/{version}"
+    branch_sha = ref_sha(f"refs/heads/{branch}")
+    tag_sha = ref_sha(f"refs/tags/{version}")
+
+    # 1. Cutoff
+    cutoff = Step("cutoff", "Base" if is_patch else "Cutoff nightly")
+    base_ref: str | None = None
+    if is_patch:
+        base_ref = f"{target[0]}.{target[1]}.{target[2] - 1}"
+        cutoff.state, cutoff.detail = DONE, f"base tag {base_ref}"
+    elif tag_sha or branch_sha:
+        cmp = gh_api(f"repos/{REPO}/compare/develop...{tag_sha or branch_sha}")
+        base_sha = cmp["merge_base_commit"]["sha"]
+        prev = max(p for p in (parse(v) for v in published) if p and p < target)
+        nightly = find_cutoff_nightly(base_sha, prev)
+        if nightly:
+            base_ref = f"{nightly}^"
+            cutoff.state, cutoff.detail = (
+                DONE,
+                f"{nightly} (from {branch} base {base_sha[:9]})",
+            )
+        else:
+            base_ref = base_sha
+            cutoff.state, cutoff.detail = (
+                WARN,
+                f"branch base {base_sha[:9]} matches no nightly tag",
+            )
+    else:
+        run = latest_nightly_run()
+        if run:
+            green = run["conclusion"] == "success"
+            cutoff.state = MANUAL if green else WARN
+            cutoff.detail = (
+                f"latest nightly run {run['created_at']} {run['conclusion'] or run['status']}. "
+                "Pick the tag and check SiS e2e counts in #e2e-tests-sis-oss."
+            )
+            cutoff.links.append(run["html_url"])
+    steps.append(cutoff)
+
+    # 2. Branch
+    bstep = Step("branch", "Release branch")
+    if branch_sha:
+        bstep.state, bstep.detail = DONE, f"{branch} @ {branch_sha[:9]}"
+    steps.append(bstep)
+
+    # 3. Cherry-picks
+    pstep = Step("picks", "Cherry-picks")
+    head_sha = tag_sha or branch_sha
+    if head_sha and base_ref:
+        cmp = gh_api(f"repos/{REPO}/compare/{base_ref}...{head_sha}")
+        heads = [c["commit"]["message"].split("\n")[0] for c in cmp["commits"]]
+        picks = [h for h in heads if not h.startswith(VERSION_COMMIT_PREFIX)]
+        pstep.state = DONE
+        pstep.detail = f"{len(picks)}: " + "; ".join(picks[:5]) if picks else "none"
+        if len(picks) > 5:
+            pstep.detail += f"; … {len(picks) - 5} more"
+    steps.append(pstep)
+
+    # 4. Tag + merge-back PR
+    tstep = Step("tag", "Tag + merge-back PR")
+    prs = (
+        gh_api(f"repos/{REPO}/pulls?state=all&head=streamlit:{branch}&per_page=5") or []
+    )
+    pr = prs[0] if prs else None
+    others = [
+        str(p["number"])
+        for p in recent_prs(REPO, state="open", pages=3)
+        if p["head"]["ref"].startswith("release/")
+        and (not pr or p["number"] != pr["number"])
+    ]
+    if tag_sha:
+        if branch_sha and tag_sha != branch_sha and not on_pypi:
+            tstep.state = FAIL
+            tstep.detail = (
+                f"tag {tag_sha[:9]} is NOT the branch head {branch_sha[:9]}. Stop."
+            )
+        else:
+            tstep.state = DONE
+            tstep.detail = f"{version} @ {tag_sha[:9]}"
+        if pr:
+            state = "merged" if pr.get("merged_at") else pr["state"]
+            tstep.detail += f" · PR #{pr['number']} {state}"
+            tstep.links.append(pr["html_url"])
+        elif not on_pypi:
+            tstep.state, tstep.detail = FAIL, tstep.detail + " · no merge-back PR"
+    if others and not on_pypi:
+        tstep.state = FAIL if tstep.state != TODO else WARN
+        tstep.detail += (
+            f" · other open release/* PRs: {', '.join('#' + n for n in others)}"
+        )
+    steps.append(tstep)
+
+    # 5. SiS static assets
+    astep = Step("assets", "SiS static assets")
+    results = {}
+    for env, host in ASSET_HOSTS.items():
+        codes = [
+            http_status(f"https://{host}/static/streamlit/{version}/{p}")
+            for p in ASSET_PATHS
+        ]
+        results[env] = all(c == 200 for c in codes)
+    if all(results.values()):
+        astep.state, astep.detail = DONE, "preprod 200 · prod 200"
+    elif results["preprod"]:
+        astep.state, astep.detail = (
+            MANUAL,
+            "preprod 200 · prod missing (run the prod Jenkins job)",
+        )
+    else:
+        astep.detail = "preprod missing · prod missing"
+    steps.append(astep)
+
+    # 6. Build Release
+    rstep = Step("build", "Build Release")
+    if on_pypi:
+        rel = gh_api(f"repos/{REPO}/releases/tags/{version}")
+        rstep.state = DONE if rel else WARN
+        rstep.detail = "on PyPI · GitHub release " + ("exists" if rel else "MISSING")
+        if rel:
+            rstep.links.append(rel["html_url"])
+    else:
+        runs = gh_api(
+            f"repos/{REPO}/actions/workflows/release.yml/runs?branch={version}&per_page=5"
+        )
+        run = ((runs or {}).get("workflow_runs") or [None])[0]
+        if run:
+            rstep.links.append(run["html_url"])
+            if run["status"] == "completed":
+                rstep.state = FAIL
+                rstep.detail = (
+                    f"last run {run['conclusion']} and {version} is not on PyPI"
+                )
+            else:
+                pending = (
+                    gh_api(f"repos/{REPO}/actions/runs/{run['id']}/pending_deployments")
+                    or []
+                )
+                rstep.state = RUNNING
+                rstep.detail = (
+                    "waiting for `release` approval"
+                    if pending
+                    else f"run {run['status']}"
+                )
+                # A run started before the tag moved builds the old commit.
+                if tag_sha and run["head_sha"] != tag_sha:
+                    rstep.state = FAIL
+                    rstep.detail = (
+                        f"in-flight run is on {run['head_sha'][:9]} but tag {version} "
+                        f"is {tag_sha[:9]}. Do not approve it."
+                    )
+    steps.append(rstep)
+
+    # 7. Docs (regular releases only)
+    if is_patch:
+        steps.append(Step("docs", "Docs", NA, "not needed for patch releases"))
+    else:
+        dstep = Step("docs", "Docs")
+        docs_prs = recent_prs(DOCS_REPO, pages=2)
+        # The release PR is titled "Update docs for Streamlit <v> release"; later
+        # follow-ups also mention the version, so prefer the release title.
+        release_re = re.compile(rf"Streamlit {re.escape(version)} release")
+        any_re = re.compile(rf"\b{re.escape(version)}\b")
+        doc = next(
+            (p for p in docs_prs if release_re.search(p["title"])), None
+        ) or next((p for p in docs_prs if any_re.search(p["title"])), None)
+        if doc:
+            num, state, merged_at = doc["number"], doc["state"], doc["merged_at"]
+            dstep.links.append(doc["html_url"])
+            if merged_at:
+                after = [
+                    p
+                    for p in docs_prs
+                    if p["title"] == "Automated sitemap update"
+                    and p["merged_at"]
+                    and p["merged_at"] >= merged_at
+                ]
+                sitemap = (
+                    min(after, key=operator.itemgetter("merged_at"))["number"]
+                    if after
+                    else None
+                )
+                dstep.state = DONE if sitemap else RUNNING
+                dstep.detail = f"PR #{num} merged · sitemap " + (
+                    f"#{sitemap} merged" if sitemap else "pending"
+                )
+                dstep.detail += " · example apps: check the docs PR description"
+            else:
+                dstep.state, dstep.detail = (
+                    RUNNING,
+                    f"PR #{num} {state}, awaiting review/merge",
+                )
+        steps.append(dstep)
+
+    # 8. Close out
+    cstep = Step("closeout", "Close out")
+    parts = []
+    pr_merged = bool(pr and pr.get("merged_at"))
+    parts.append(
+        "release PR " + ("merged" if pr_merged else "open" if pr else "not opened")
+    )
+    feed = next(
+        (p for p in recent_prs(FEEDSTOCK_REPO) if p["title"].endswith(f"v{version}")),
+        None,
+    )
+    feed_merged = bool(feed and feed["merged_at"])
+    if feed:
+        parts.append(
+            f"conda-forge #{feed['number']} "
+            + ("merged" if feed_merged else feed["state"])
+        )
+        cstep.links.append(feed["html_url"])
+    else:
+        parts.append("conda-forge PR not yet opened")
+    parts.append("Anaconda request: check #anaconda-snowflake-technical")
+    cstep.detail = " · ".join(parts)
+    if pr_merged and feed_merged:
+        cstep.state = DONE
+    elif on_pypi:
+        cstep.state = RUNNING
+    steps.append(cstep)
+
+    return {
+        "version": version,
+        "steps": [asdict(s) for s in steps],
+        "next": next_action(steps),
+    }
+
+
+def next_action(steps: list[Step]) -> str:
+    for s in steps:
+        if s.state == FAIL:
+            return f"Stop: {s.title}: {s.detail}"
+    for s in steps:
+        if s.state in {TODO, RUNNING, MANUAL, WARN}:
+            return f"{s.title}: {s.detail or 'not started'}"
+    return "All steps done."
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("version", help="full x.y.z version, e.g. 1.67.0")
+    parser.add_argument(
+        "--json", action="store_true", help="print machine-readable output"
+    )
+    args = parser.parse_args()
+    try:
+        result = status(args.version)
+    except UnavailableError as e:
+        print(f"{WARN} could not complete lookups: {e}", file=sys.stderr)
+        return 2
+    if args.json:
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
+    print(f"Streamlit release {result['version']}\n")
+    for s in result["steps"]:
+        print(f"  {s['state']}  {s['title']:<22} {s['detail']}")
+        for link in s["links"]:
+            print(f"     {'':<22} {link}")
+    print(f"\n  Next: {result['next']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
