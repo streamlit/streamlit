@@ -52,10 +52,10 @@ export interface IFlexContext {
    */
   isInContentWidthContainer: boolean
   /**
-   * True inside an `st.grid` cell. A `grid.cell()` block fills that cell, so a
-   * stretch container in it matches the row. A stretch chart matches the row
-   * only when `hasDefiniteHeight` is true. Nested providers do not inherit
-   * this.
+   * True inside an `st.grid` cell. A `grid.cell()` block fills that cell, so
+   * stretch descendants match the row. Without `hasDefiniteHeight` (content
+   * rows), stretch charts keep their default height as a minimum. Nested
+   * providers do not inherit this.
    */
   fillAvailableHeight?: boolean
   /**

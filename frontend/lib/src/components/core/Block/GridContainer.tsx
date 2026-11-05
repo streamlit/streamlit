@@ -707,9 +707,9 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
             // containers in it match the row like direct grid children do.
             fillAvailableHeight
             fillJustify={gridCellJustifyContent(verticalAlignment)}
-            // Only a fixed row height is definite. Stretch charts in a
-            // content row keep their default size, because the row's
-            // height comes from its content.
+            // Only a fixed row height is definite. A content row's height
+            // comes from its content, so stretch charts there keep their
+            // default height as a minimum and fill a taller row.
             hasFixedHeight={hasFixedRowHeight}
             parentContext={parentContext}
           >

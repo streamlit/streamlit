@@ -92,3 +92,12 @@ with aligned_grid.cell(), st.container(key="short"):
 with aligned_grid.container(border=True, key="aligned_tall"):
     for i in range(6):
         st.write(f"row {i}")
+
+# A stretch chart in a content-row grid.cell() fills a row that a taller
+# neighbor sets, like a direct grid child or a chart in st.columns.
+chart_grid = st.grid(2, key="content_chart")
+with chart_grid.cell():
+    st.line_chart({"a": [1, 3, 2]}, height="stretch")
+with chart_grid.container(border=True, key="chart_neighbor"):
+    for i in range(12):
+        st.write(f"item {i}")

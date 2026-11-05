@@ -286,7 +286,7 @@ export const FlexBoxContainer = (
 
   const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
   // Only a fixed row height is definite. In a content row, the cell grows
-  // with the row, but stretch charts keep their default height.
+  // with the row, and stretch charts keep their default height as a minimum.
   const fillDefiniteGridCell =
     fillGridCell && parentContext?.hasDefiniteHeight === true
 
