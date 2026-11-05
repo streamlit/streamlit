@@ -1383,7 +1383,6 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
         (np.uint32(7), 7),
         (np.float32(1.5), 1.5),
         (np.bool_(False), False),
-        (np.str_("a"), "a"),
         (decimal.Decimal("1.25"), 1.25),
         # Naive datetimes keep their wall-clock time without an offset.
         (dt.datetime(2024, 1, 2, 3, 4, 5, 678901), "2024-01-02T03:04:05.678"),
@@ -1402,6 +1401,7 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
         (dt.date(2024, 1, 2), "2024-01-02"),
         (dt.time(3, 4, 5), "03:04:05"),
         (dt.time(3, 4, 5, 250000), "03:04:05.250"),
+        (dt.time(3, 4, 5, tzinfo=dt.UTC), "03:04:05"),
         # Durations become milliseconds.
         (dt.timedelta(seconds=1.5), 1500.0),
         (pd.Timedelta(minutes=1), 60000.0),

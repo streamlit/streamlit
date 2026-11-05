@@ -793,12 +793,19 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
 def _to_json_value(value: object) -> object:
     """Convert a non-JSON scalar using the same rules as ``dataset.source``.
 
-    Used as the ``json.dumps`` ``default`` hook, so it only runs for values that
-    are not already JSON types. The rules match the frontend's Arrow dataset
-    conversion: naive datetimes keep their wall-clock time, timezone-aware ones
-    become UTC with a trailing ``Z``, dates become ``YYYY-MM-DD``, times become
-    ``HH:mm:ss[.sss]`` (a time has no date to shift to UTC, so its tzinfo is
-    dropped), durations become milliseconds, and ``Decimal`` becomes a float.
+    ``json.dumps`` calls this as its ``default`` hook, so it only sees values
+    that are not already JSON types. The rules match the frontend's Arrow
+    dataset conversion:
+
+    - NumPy scalars become their Python value.
+    - Naive datetimes keep their wall-clock time. Timezone-aware ones become
+      UTC with a trailing ``Z``.
+    - Dates become ``YYYY-MM-DD``.
+    - Times become ``HH:mm:ss[.sss]``. Their tzinfo is dropped because a time
+      has no date to shift to UTC.
+    - Durations become milliseconds.
+    - ``Decimal`` becomes a float.
+
     Missing values, arrays, and other objects raise.
     """
     import numpy as np
@@ -929,10 +936,10 @@ def _serialize_option(option: dict[str, Any]) -> str:
         raise StreamlitAPIException(
             f"The provided ECharts spec is not JSON-serializable.{detail} "
             "`st.echarts_chart` only supports JSON-compatible option objects. "
-            "NumPy and pandas scalars, datetimes, and durations are converted "
-            "anywhere in the option. Pass chart data, including arrays and "
-            "Series, as a dataframe in `dataset.source`, which also converts "
-            "missing values. "
+            "NumPy and pandas scalars, datetimes, durations, and `Decimal` "
+            "values are converted anywhere in the option. Pass chart data, "
+            "including arrays and Series, as a dataframe in `dataset.source`, "
+            "which turns missing values into `null`. "
             "Elsewhere (for example `series.data`), use plain Python lists and "
             "`None` for missing values.",
             error_id="echarts-spec-not-json-serializable",
