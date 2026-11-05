@@ -4196,6 +4196,209 @@ describe("App", () => {
       ).toBe(sequenceBefore)
     })
 
+    describe("with fragment output dropped before delivery", () => {
+      const renderAppWithRef = (): (() => App) => {
+        let appInstance: App | null = null
+        render(
+          <RootStyleProvider theme={getDefaultTheme()}>
+            <WindowDimensionsProvider>
+              <App
+                {...getProps()}
+                ref={instance => {
+                  appInstance = instance
+                }}
+              />
+            </WindowDimensionsProvider>
+          </RootStyleProvider>
+        )
+        return () => {
+          if (!appInstance) {
+            throw new Error("App did not mount")
+          }
+          return appInstance
+        }
+      }
+
+      const sendFragmentFinish = (
+        scriptRunId: string,
+        fragmentIds: string[],
+        droppedFragmentIds: string[] = []
+      ): void =>
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+          {
+            run: { scriptRunId, fragmentIds },
+            delivery: { droppedFragmentIds },
+          }
+        )
+
+      /**
+       * Renders one block with a child per fragment, then starts a rerun of
+       * all of them that re-sends only the delivered fragments' blocks, so
+       * every child is stale until that rerun's cleanup.
+       */
+      const renderStaleFragments = async (
+        fragmentIds: string[],
+        deliveredFragmentIds: string[]
+      ): Promise<void> => {
+        const sendBlock = (fragmentId: string, index: number): void =>
+          sendForwardMessage(
+            "delta",
+            {
+              type: "addBlock",
+              addBlock: { vertical: {}, allowEmpty: true },
+              fragmentId,
+            },
+            { deltaPath: [0, index], activeScriptHash: "page_script_hash" }
+          )
+
+        sendNewSession(NEW_SESSION_JSON, { scriptRunId: "run_1", fragmentIds })
+        sendForwardMessage("navigation", NAVIGATION_JSON)
+        fragmentIds.forEach((fragmentId, index) => {
+          sendBlock(fragmentId, index)
+          sendForwardMessage(
+            "delta",
+            {
+              type: "newElement",
+              newElement: {
+                type: "text",
+                text: { body: `stale from ${fragmentId}`, help: "" },
+              },
+              fragmentId,
+            },
+            {
+              deltaPath: [0, index, 0],
+              activeScriptHash: "page_script_hash",
+            }
+          )
+        })
+
+        sendNewSession(NEW_SESSION_JSON, { scriptRunId: "run_2", fragmentIds })
+        fragmentIds.forEach((fragmentId, index) => {
+          if (deliveredFragmentIds.includes(fragmentId)) {
+            sendBlock(fragmentId, index)
+          }
+        })
+
+        await waitFor(() => {
+          fragmentIds.forEach(fragmentId => {
+            expect(screen.getByText(`stale from ${fragmentId}`)).toBeVisible()
+          })
+        })
+      }
+
+      it("limits cleanup, cache aging, and widget acks to delivered fragments", async () => {
+        const getApp = renderAppWithRef()
+        await renderStaleFragments(["frag_a", "frag_b"], ["frag_a"])
+
+        sendFragmentFinish("run_2", ["frag_a", "frag_b"], ["frag_b"])
+
+        await waitFor(() => {
+          expect(
+            screen.queryByText("stale from frag_a")
+          ).not.toBeInTheDocument()
+        })
+        // frag_b's dropped output is replaced by its own rerun, so its
+        // previous content stays until then.
+        expect(screen.getByText("stale from frag_b")).toBeVisible()
+        expect(
+          getMockConnectionManager().incrementMessageCacheRunCount
+        ).toHaveBeenCalledWith(0, ["frag_a"])
+        expect(getApp().state.scriptRunFinishedFragmentIds).toEqual(["frag_a"])
+      })
+
+      it("keeps a dropped nested fragment's content until its own rerun cleans it up", async () => {
+        renderApp(getProps())
+        const sendBlock = (fragmentId: string, deltaPath: number[]): void =>
+          sendForwardMessage(
+            "delta",
+            {
+              type: "addBlock",
+              addBlock: { vertical: {}, allowEmpty: true },
+              fragmentId,
+            },
+            { deltaPath, activeScriptHash: "page_script_hash" }
+          )
+        const sendText = (
+          body: string,
+          fragmentId: string,
+          deltaPath: number[]
+        ): void =>
+          sendForwardMessage(
+            "delta",
+            {
+              type: "newElement",
+              newElement: { type: "text", text: { body, help: "" } },
+              fragmentId,
+            },
+            { deltaPath, activeScriptHash: "page_script_hash" }
+          )
+
+        // Parent fragment P renders nested fragment N and a sibling.
+        sendNewSession(NEW_SESSION_JSON, {
+          scriptRunId: "run_1",
+          fragmentIds: ["frag_p"],
+        })
+        sendForwardMessage("navigation", NAVIGATION_JSON)
+        sendBlock("frag_p", [0, 0])
+        sendBlock("frag_n", [0, 0, 0])
+        sendText("N content", "frag_n", [0, 0, 0, 0])
+        sendText("N stale", "frag_n", [0, 0, 0, 1])
+        sendText("P stale", "frag_p", [0, 0, 1])
+        sendFragmentFinish("run_1", ["frag_p"])
+
+        // P and N rerun together, and the server drops N's output because N
+        // is about to rerun on its own.
+        sendNewSession(NEW_SESSION_JSON, {
+          scriptRunId: "run_2",
+          fragmentIds: ["frag_p", "frag_n"],
+        })
+        sendBlock("frag_p", [0, 0])
+        sendFragmentFinish("run_2", ["frag_p", "frag_n"], ["frag_n"])
+
+        await waitFor(() => {
+          expect(screen.queryByText("P stale")).not.toBeInTheDocument()
+        })
+        expect(screen.getByText("N content")).toBeVisible()
+        expect(screen.getByText("N stale")).toBeVisible()
+
+        sendNewSession(NEW_SESSION_JSON, {
+          scriptRunId: "run_3",
+          fragmentIds: ["frag_n"],
+        })
+        sendBlock("frag_n", [0, 0, 0])
+        sendText("N content", "frag_n", [0, 0, 0, 0])
+        sendFragmentFinish("run_3", ["frag_n"])
+
+        await waitFor(() => {
+          expect(screen.queryByText("N stale")).not.toBeInTheDocument()
+        })
+        expect(screen.getByText("N content")).toBeVisible()
+      })
+
+      it("skips cleanup and cache aging when every fragment's output was dropped", async () => {
+        const getApp = renderAppWithRef()
+        await renderStaleFragments(["frag_a"], [])
+        const sequenceBefore = getApp().state.scriptRunFinishedSequence
+
+        sendFragmentFinish("run_2", ["frag_a"], ["frag_a"])
+
+        // An empty cleanup list would mean a full-app run, so the widget ack
+        // keeps the run's own fragments.
+        await waitFor(() => {
+          expect(getApp().state.scriptRunFinishedSequence).toBe(
+            sequenceBefore + 1
+          )
+        })
+        expect(getApp().state.scriptRunFinishedFragmentIds).toEqual(["frag_a"])
+        expect(screen.getByText("stale from frag_a")).toBeVisible()
+        expect(
+          getMockConnectionManager().incrementMessageCacheRunCount
+        ).not.toHaveBeenCalled()
+      })
+    })
+
     it("will clear stale nodes if finished successfully", async () => {
       renderApp(getProps())
       // Run the script with one new element

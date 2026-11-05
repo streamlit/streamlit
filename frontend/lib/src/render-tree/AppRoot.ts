@@ -340,13 +340,21 @@ export class AppRoot {
     )
   }
 
+  /**
+   * @param preservedFragmentIds Fragments whose nodes, with their subtrees,
+   * are kept as-is because their output was dropped from this run and their
+   * own rerun cleans them up.
+   */
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    preservedFragmentIds?: ReadonlySet<string>
   ): AppRoot {
     const visitor = new ClearStaleNodeVisitor(
       currentScriptRunId,
-      fragmentIdsThisRun
+      fragmentIdsThisRun,
+      undefined,
+      preservedFragmentIds
     )
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
