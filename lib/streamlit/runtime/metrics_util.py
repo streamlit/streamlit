@@ -697,12 +697,13 @@ def gather_metrics(
             with contextlib.suppress(RuntimeError):
                 thread_state = ThreadState.get()
 
+        # Unlocked fast path: skip building telemetry once the list is full.
+        # ``track_command`` enforces the exact cap under its lock.
         tracking_activated = (
             ctx is not None
             and thread_state is not None
             and not thread_state.command_tracking_deactivated
-            and ctx.shared.tracked_commands_count
-            < _MAX_TRACKED_COMMANDS  # Prevent too much memory usage
+            and ctx.shared.tracked_commands_count < _MAX_TRACKED_COMMANDS
         )
 
         command_telemetry: Command | None = None
@@ -722,7 +723,7 @@ def gather_metrics(
 
                 ctx.shared.track_command(
                     command_telemetry,
-                    _MAX_TRACKED_PER_COMMAND,
+                    max_per_command=_MAX_TRACKED_PER_COMMAND,
                     max_total=_MAX_TRACKED_COMMANDS,
                 )
                 # Deactivate tracking to prevent calls inside already tracked commands

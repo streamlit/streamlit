@@ -75,7 +75,7 @@ def test_track_command_respects_per_command_cap() -> None:
 
 
 def test_track_command_respects_total_cap() -> None:
-    """Once the list is full, commands are neither appended nor counted."""
+    """``track_command()`` drops commands without counting them once the list is full."""
     shared = SharedRunState()
     for name in ["markdown", "button", "markdown", "text"]:
         shared.track_command(_make_command(name), max_per_command=5, max_total=2)
