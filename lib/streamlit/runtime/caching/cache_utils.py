@@ -342,6 +342,10 @@ def get_session_id_or_throw() -> str:
 class Cache(Generic[R]):
     """Function cache interface. Caches persist across script runs."""
 
+    # How long an entry stays fresh before a background refresh is due, or None for
+    # no freshness limit. Set by subclasses.
+    fresh_ttl_seconds: float | None
+
     def __init__(self) -> None:
         self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self._value_locks_lock = threading.Lock()
@@ -368,8 +372,9 @@ class Cache(Generic[R]):
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
         # Maps value_key -> (trigger time, write time) of the latest background refresh
-        # that wrote its result, in write order. Entries stored before the trigger time
-        # have already been replaced.
+        # that wrote its result, in write order. A cached entry stored before the
+        # trigger time was already replaced, so a caller holding it must not refresh
+        # again.
         self._refresh_written: OrderedDict[str, tuple[float, float]] = OrderedDict()
 
     @property
@@ -543,17 +548,11 @@ class Cache(Generic[R]):
         with self._invalidation_lock:
             self._refresh_cooldowns.pop(value_key, None)
 
-    def _refresh_record_lifetime(self) -> float | None:
-        """How long after a refresh's write its record is kept, or ``None`` to keep
-        records until the cache or key is cleared.
-        """
-        return None
-
     def record_refresh_written(self, value_key: str, triggered_at: float) -> None:
         """Record that a background refresh triggered at ``triggered_at`` wrote its
-        result, and drop records older than ``_refresh_record_lifetime``.
+        result, and drop records older than one fresh TTL.
         """
-        lifetime = self._refresh_record_lifetime()
+        lifetime = self.fresh_ttl_seconds
         with self._invalidation_lock:
             records = self._refresh_written
             now = TTLCACHE_TIMER()
@@ -561,7 +560,10 @@ class Cache(Generic[R]):
             records[value_key] = (triggered_at, now)
             if lifetime is None:
                 return
-            # Records are in write order, so expired ones are at the front.
+            # Keep each record for one fresh TTL after its write. After that, the
+            # entry the refresh wrote is stale too, so the record can no longer flag
+            # a duplicate. Records are in write order, so expired ones are at the
+            # front.
             while records:
                 oldest_key, (_, written_at) = next(iter(records.items()))
                 if now - written_at < lifetime:
@@ -572,11 +574,13 @@ class Cache(Generic[R]):
         """Whether an entry stored at ``stored_at`` was already replaced by a
         background refresh.
 
-        A caller that read a stale entry can find the refresh lock free because a
-        refresh finished after its read, not because none is needed.
+        Lets a caller that read a stale entry tell a lock that is free because an
+        earlier refresh already finished from one where no refresh has run yet.
         """
         with self._invalidation_lock:
             record = self._refresh_written.get(value_key)
+            # Strictly before the trigger: the value this refresh wrote is stamped at
+            # or after triggered_at and must stay eligible for a later refresh.
             return record is not None and stored_at < record[0]
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
@@ -1221,8 +1225,8 @@ class CachedFunc(Generic[P, R]):
                 expected_generation=expected_generation,
                 expected_key_generation=expected_key_generation,
             ):
-                # Recorded before the lock is released, so any caller that acquires
-                # the lock afterwards sees it.
+                # Record the write before releasing the compute lock so the next
+                # caller that acquires it sees the record.
                 cache.record_refresh_written(value_key, triggered_at)
             cache.clear_refresh_cooldown(value_key)
             self._metrics.record_background_refresh("success")

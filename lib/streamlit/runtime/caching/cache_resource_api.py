@@ -821,18 +821,15 @@ class ResourceCache(Cache[R]):
         Hard-expired keys never reach this method: the storage layer treats them as
         missing.
         """
-        # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
-        # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
-        if self.refresh_mode != "background" or result.stored_at is None:
+        if (
+            self.refresh_mode != "background"
+            or result.stored_at is None
+            or self.fresh_ttl_seconds is None
+        ):
             return False
         return (
             cache_utils.TTLCACHE_TIMER() - result.stored_at
         ) >= self.fresh_ttl_seconds
-
-    def _refresh_record_lifetime(self) -> float | None:
-        # A fresh TTL after a refresh's write, the entry it wrote is stale too, so
-        # its record can no longer mark a refresh as a duplicate.
-        return self.fresh_ttl_seconds
 
     def read_result(self, value_key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.

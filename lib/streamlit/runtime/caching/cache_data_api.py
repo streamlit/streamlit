@@ -963,11 +963,6 @@ class DataCache(Cache[R]):
             cache_utils.TTLCACHE_TIMER() - result.stored_at
         ) >= self.fresh_ttl_seconds
 
-    def _refresh_record_lifetime(self) -> float | None:
-        # A fresh TTL after a refresh's write, the entry it wrote is stale too, so
-        # its record can no longer mark a refresh as a duplicate.
-        return self.fresh_ttl_seconds
-
     @gather_metrics("_cache_data_object")
     def write_result(self, value_key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache.

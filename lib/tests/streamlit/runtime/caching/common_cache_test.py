@@ -1705,8 +1705,8 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
     )
     @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
     def test_refresh_finishing_after_stale_read_is_not_repeated(
-        self, _, cache_decorator, timer_patch: Mock
-    ):
+        self, _: str, cache_decorator: Any, timer_patch: Mock
+    ) -> None:
         """A caller whose stale read raced a finished refresh doesn't refresh again."""
         call_count = [0]
 
