@@ -702,9 +702,9 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           <FlexContextProvider
             direction={Direction.VERTICAL}
             isDirectlyInColumn
-            // A grid.cell() block fills its cell in both row-height modes,
-            // so stretch containers in it match the row like direct
-            // children do. It then aligns its own children.
+            // A grid.cell() block fills its cell in both row-height modes and
+            // applies `vertical_alignment` to its own children, so stretch
+            // containers in it match the row like direct grid children do.
             fillAvailableHeight
             fillJustify={gridCellJustifyContent(verticalAlignment)}
             // Only a fixed row height is definite. Stretch charts in a

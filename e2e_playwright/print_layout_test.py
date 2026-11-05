@@ -537,10 +537,7 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     after_grid = app.get_by_text("After the grid cell chart", exact=True)
     expect(grid_cell_chart).to_be_visible()
     expect(below_grid_chart).to_be_visible()
-    assert (
-        grid_cell_block.evaluate("element => getComputedStyle(element).display")
-        == "flex"
-    )
+    expect(grid_cell_block).to_have_css("display", "flex")
 
     def grid_cell_chart_does_not_overlap() -> None:
         chart_box = grid_cell_chart.bounding_box()

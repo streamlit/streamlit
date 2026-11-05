@@ -1995,10 +1995,10 @@ describe("GridContainer Component", () => {
   }
 
   it.each([
-    ["a content", BlockProto.GridContainer.RowHeightMode.CONTENT, "false"],
-    ["a fixed", BlockProto.GridContainer.RowHeightMode.FIXED, "true"],
+    ["content", BlockProto.GridContainer.RowHeightMode.CONTENT, "false"],
+    ["fixed", BlockProto.GridContainer.RowHeightMode.FIXED, "true"],
   ])(
-    "gives grid.cell() children a definite height only in %s row",
+    "gives grid.cell() children a definite height in a %s row: %s",
     (_label, rowHeightMode, expected) => {
       const collectElements = vi
         .spyOn(RenderNodeVisitor, "collectReactElements")
