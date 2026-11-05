@@ -2315,9 +2315,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.43":
-  version: 1.31.43
-  resolution: "@microlink/react-json-view@npm:1.31.43"
+"@microlink/react-json-view@npm:^1.31.44":
+  version: 1.31.44
+  resolution: "@microlink/react-json-view@npm:1.31.44"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2325,7 +2325,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/8b848e1703210daf6e8a45ab9502b24649ceb9514cffadafd87eaa9d4767307549b9fa3d8f9790e878867a3a4a89744828b7d5981be2a1832d1adf983326a0c2
+  checksum: 10c0/c4866103b810f9393f36092cbd8a1d1a4a4e42dea056b0be4715e43c6b74bf09fd994438da4bdc7c6386b7d3cda0296d88b199fba044317eebde91cc027c6f3b
   languageName: node
   linkType: hard
 
@@ -3627,7 +3627,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.43"
+    "@microlink/react-json-view": "npm:^1.31.44"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3717,7 +3717,7 @@ __metadata:
     vite-plugin-dts: "npm:^5.1.2"
     vitest: "npm:^5.0.5"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^8.0.3"
+    wavesurfer.js: "npm:^8.0.4"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -16092,10 +16092,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^8.0.3":
-  version: 8.0.3
-  resolution: "wavesurfer.js@npm:8.0.3"
-  checksum: 10c0/5b0743197f7c28893f23ca0dbe15793b08032afafd33c1ae3292b38a6e766c78b0ccd345e43803fac3249bd545e021fed3c54077bfff49d64c34437527dadc9b
+"wavesurfer.js@npm:^8.0.4":
+  version: 8.0.4
+  resolution: "wavesurfer.js@npm:8.0.4"
+  checksum: 10c0/d6195abf7a8b8086d9707960161f191c22fdc653e8d429ea90f0197bd49f732fc18234d77c7714ddb57dd8f6b5539f5e5e40474a2598b8dd1ad0b42edc2437da
   languageName: node
   linkType: hard
 
