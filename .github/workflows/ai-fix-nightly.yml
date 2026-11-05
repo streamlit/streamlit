@@ -249,9 +249,12 @@ jobs:
           if [ "$ACTION" = "fix" ]; then
             git add -A
             # Diff against the develop SHA captured before the agent ran, so the patch
-            # also includes changes the agent committed. If the agent left HEAD on the
-            # nightly tag, that diff would add the version bump and revert newer commits.
-            if ! git merge-base --is-ancestor "$DEVELOP_SHA" HEAD; then
+            # also includes changes the agent committed. HEAD must descend from that SHA
+            # and contain no tag that develop lacks. Otherwise the agent left HEAD on an
+            # older commit or the nightly tag, and the patch would revert newer commits
+            # or add the nightly version bump.
+            if ! git merge-base --is-ancestor "$DEVELOP_SHA" HEAD ||
+              [ -n "$(git tag --merged HEAD --no-merged "$DEVELOP_SHA")" ]; then
               echo "::warning::The agent left HEAD off develop. Reporting only."
               ACTION=report
             elif git diff --cached --quiet "$DEVELOP_SHA"; then
