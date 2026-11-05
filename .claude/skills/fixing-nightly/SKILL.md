@@ -64,7 +64,7 @@ Keep these in mind:
 3. Fix the root cause with the smallest change. Do not skip or delete tests, loosen assertions or snapshot thresholds, or add `@pytest.mark.flaky` to turn the build green. For flaky E2E tests, follow the `fixing-flaky-e2e-tests` skill.
 4. Update snapshots only when the visual change is intended, such as a commit that deliberately changed the UI. Take Linux snapshots from the run's `snapshot-updates/` artifact instead of rendering them on another OS, and copy only the images for the failing tests.
 5. Verify: rerun the failing tests and `make check`.
-6. Outside CI, open the PR with the `creating-pull-requests` skill. Use a `[fix] ...` title. In the description, link the nightly run and name the root cause and the commit that introduced it. Label `change:bugfix` (`change:other` for test-only fixes), and use `impact:users` only when user-facing behavior changes.
+6. Outside CI, finalize the change and open the PR with the `finalizing-pr` skill. Use a `[fix] ...` title. In the description, link the nightly run and name the root cause and the commit that introduced it. Label `change:bugfix` (`change:other` for test-only fixes), and use `impact:users` only when user-facing behavior changes.
 
 **report:** Change nothing in the repository. The summary is the deliverable.
 
