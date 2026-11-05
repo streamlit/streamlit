@@ -4710,6 +4710,7 @@ describe("App", () => {
     it.each([
       ["no metadata", null],
       ["an empty delta path", { deltaPath: [] }],
+      ["a delta path without an index", { deltaPath: [0] }],
     ])(
       "logs and drops a delta with %s without unmounting the app",
       async (_description, metadata) => {
@@ -4746,7 +4747,7 @@ describe("App", () => {
         )
 
         expect(logErrorSpy).toHaveBeenCalledWith(
-          "Dropping a newElement delta without a delta path in its metadata."
+          "Dropping a newElement delta with a missing or invalid delta path."
         )
         expect(screen.queryByText("Malformed element")).not.toBeInTheDocument()
         expect(screen.getByTestId("stApp")).toBeVisible()
