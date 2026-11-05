@@ -52,9 +52,9 @@ export interface FinishedRun extends RunIdentity {
   droppedFragmentIds: ReadonlySet<string>
   /**
    * Fragments whose stale nodes this finish clears: fragmentIds minus
-   * droppedFragmentIds. Empty for a full-app run. Undefined when every
-   * fragment's output was dropped, because an empty list would mean a
-   * full-app run.
+   * droppedFragmentIds. Empty for a full-app run. Undefined if delivery lists
+   * every fragment (the server downgrades such finishes instead), because an
+   * empty list would mean a full-app run.
    */
   cleanupFragmentIds?: string[]
 }

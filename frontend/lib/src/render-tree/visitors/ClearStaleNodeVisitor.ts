@@ -49,7 +49,7 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *
  * Usage:
  * ```typescript
- * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock)
+ * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock, preservedFragmentIds)
  * const newNode = node.accept(visitor)
  * // newNode will be undefined if the node should be filtered out
  * ```

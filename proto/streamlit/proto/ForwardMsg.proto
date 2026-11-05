@@ -209,8 +209,8 @@ message ForwardMsgMetadata {
   //   finished.
   RunIdentity run = 6;
 
-  // How the finished run's output reached the client. Set on script_finished
-  // only.
+  // Which of the finished run's fragments had their output dropped before
+  // delivery. Set only on script_finished.
   RunDelivery delivery = 7;
 
   reserved 3;
@@ -226,10 +226,12 @@ message RunIdentity {
   repeated string fragment_ids = 2;
 }
 
-// How a finished run's output reached the client. Set on script_finished only.
+// Which of the finished run's fragments had their output dropped before
+// delivery. Set only on script_finished.
 message RunDelivery {
-  // Subset of run.fragment_ids whose output was discarded before delivery,
-  // because those fragments rerun next. Empty means all output was delivered.
+  // Fragments in run.fragment_ids whose deltas the server dropped before
+  // sending this finish, because those fragments rerun next. Empty means the
+  // server delivered every fragment's output.
   repeated string dropped_fragment_ids = 1;
 }
 

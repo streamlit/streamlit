@@ -573,6 +573,55 @@ class ForwardMsgQueueTest(unittest.TestCase):
         ]
         assert not retained_finish.metadata.HasField("delivery")
 
+    def test_fragment_clear_downgrades_coalesced_finish_when_nested_fragment_dropped(
+        self,
+    ):
+        """Dropping one of the run's own fragments and a fragment nested in
+        another of them still downgrades: cleanup of the remaining fragment
+        would remove the nested fragment's live output.
+        """
+        fmq = ForwardMsgQueue()
+        for msg in (
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 0)),
+            self._fragment_delta("frag-b", make_delta_path(RootContainer.MAIN, (), 1)),
+            self._fragment_delta(
+                "frag-x", make_delta_path(RootContainer.MAIN, (1, 0), 0)
+            ),
+            self._fragment_finish("run-coalesced", ["frag-a", "frag-b"]),
+        ):
+            fmq.enqueue(msg)
+
+        fmq.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a", "frag-x"]
+        )
+
+        retained_finish = fmq._queue[-1]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert not retained_finish.metadata.HasField("delivery")
+
+    def test_fragment_clear_ignores_drops_from_a_run_without_a_finish(self):
+        """Deltas of a run that was replaced before it sent a script_finished
+        don't count against the next run's finish.
+        """
+        fmq = ForwardMsgQueue()
+        for msg in (
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 0)),
+            NEW_SESSION_MSG,
+            self._fragment_delta("frag-c", make_delta_path(RootContainer.MAIN, (), 1)),
+            self._fragment_finish("run-c", ["frag-c"]),
+        ):
+            fmq.enqueue(msg)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a"])
+
+        retained_finish = fmq._queue[-1]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        assert not retained_finish.metadata.HasField("delivery")
+
     def test_fragment_clear_downgrades_unattributed_fragment_finish(self):
         """A finish without run identity can't name a delivered subset."""
         fmq = ForwardMsgQueue()

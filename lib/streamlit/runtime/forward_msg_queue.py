@@ -123,20 +123,29 @@ class ForwardMsgQueue:
         If fragment_ids_this_run is provided, delta messages not belonging to any
         fragment or belonging to a fragment not in fragment_ids_this_run will be
         preserved to prevent clearing messages unrelated to the running fragments.
+
+        Retained ``script_finished`` messages may be downgraded to
+        ``FINISHED_EARLY_FOR_RERUN`` or annotated with the fragments whose output
+        this clear dropped; see ``_update_script_finished_message``.
         """
 
         if not retain_lifecycle_msgs:
             self._queue = []
         else:
             retained: list[ForwardMsg] = []
-            # A run's deltas precede its script_finished, so this holds the
-            # fragments whose output was dropped from the run that finishes next.
+            # A run's deltas follow its new_session and precede its
+            # script_finished, so this holds the fragments whose output was
+            # dropped from the run that finishes next.
             dropped_fragment_ids: set[str] = set()
             for msg in self._queue:
                 if not _is_retained_on_clear(msg, fragment_ids_this_run):
                     dropped_fragment_ids.add(msg.delta.fragment_id)
                     continue
-                if msg.WhichOneof("type") == "script_finished":
+                if msg.WhichOneof("type") == "new_session":
+                    # Deltas before it came from a run that was replaced before
+                    # it sent a script_finished, so no finish lost them.
+                    dropped_fragment_ids = set()
+                elif msg.WhichOneof("type") == "script_finished":
                     _update_script_finished_message(
                         msg,
                         is_fragment_run=fragment_ids_this_run is not None,
@@ -260,7 +269,8 @@ def _is_retained_on_clear(
         return True
 
     # A fragment rerun only drops deltas of the fragments it is about to rerun.
-    # Non-delta messages have an empty fragment_id and are kept.
+    # Messages without a fragment_id (non-delta messages and main-script deltas)
+    # are kept.
     return (
         fragment_ids_this_run is not None
         and msg.delta.fragment_id not in fragment_ids_this_run
@@ -270,21 +280,20 @@ def _is_retained_on_clear(
 def _update_script_finished_message(
     msg: ForwardMsg, *, is_fragment_run: bool, dropped_fragment_ids: set[str]
 ) -> None:
-    """Update a retained ``script_finished`` message in place.
-
-    When we are here, the message queue is cleared from non-lifecycle messages
-    before they were flushed to the browser.
-
-    If there were no non-lifecycle messages in the queue, changing the type here
-    should not matter for the frontend anyways, so we optimistically change the
-    `script_finished` message to `FINISHED_EARLY_FOR_RERUN`. This indicates to
-    the frontend that the previous run was interrupted by a new script start.
-    Otherwise, a `FINISHED_SUCCESSFULLY` message might trigger a reset of widget
-    states on the frontend.
+    """Rewrite a retained ``script_finished`` after a lifecycle-retaining clear.
 
     ``dropped_fragment_ids`` holds the fragments whose deltas this clear dropped
-    from the run that this ``script_finished`` belongs to. A kept finish lists
-    them in ``metadata.delivery``; a downgraded finish has no ``delivery``.
+    from the run that this ``script_finished`` belongs to.
+
+    - A full-app clear downgrades every finish to ``FINISHED_EARLY_FOR_RERUN``,
+      so a stale ``FINISHED_SUCCESSFULLY`` can't reset widget state in the
+      browser.
+    - A fragment clear never changes ``FINISHED_SUCCESSFULLY``.
+    - A fragment clear keeps ``FINISHED_FRAGMENT_RUN_SUCCESSFULLY`` if it dropped
+      nothing from that run, or only output of some of the run's own fragments.
+      Those fragments are listed in ``metadata.delivery``.
+    - Every other finish is downgraded and loses ``delivery``.
+
     ``metadata.run`` is never rewritten, so it still matches the run's
     ``new_session``.
     """

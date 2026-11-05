@@ -2097,7 +2097,8 @@ export class App extends PureComponent<Props, State> {
     if (finishedRun) {
       this.setState(prevState => ({
         scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-        // A fragment whose output was dropped is acked when its rerun finishes.
+        // Widgets in a fragment whose output was dropped re-enable when that
+        // fragment's own rerun finishes.
         scriptRunFinishedFragmentIds:
           finishedRun.cleanupFragmentIds ?? finishedRun.fragmentIds,
       }))
