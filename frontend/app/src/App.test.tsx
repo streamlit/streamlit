@@ -4673,6 +4673,10 @@ describe("App", () => {
   })
 
   describe("App.handleDeltaMessage", () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
     it("renders something on the screen", async () => {
       renderApp(getProps())
       // Need to set up a Script ID
@@ -4762,7 +4766,6 @@ describe("App", () => {
 
         expect(await screen.findByText("Second element")).toBeVisible()
         expect(screen.getByText("First element")).toBeVisible()
-        logErrorSpy.mockRestore()
       }
     )
   })
