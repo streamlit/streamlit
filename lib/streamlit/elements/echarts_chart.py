@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import math
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -789,6 +790,60 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
     return option, arrow_datasets
 
 
+def _to_json_value(value: object) -> object:
+    """Convert a non-JSON scalar using the same rules as ``dataset.source``.
+
+    ``json.dumps`` calls this as its ``default`` hook, so it only sees values
+    that are not already JSON types. The rules match the frontend's Arrow
+    dataset conversion:
+
+    - NumPy scalars become their Python value.
+    - Naive datetimes keep their wall-clock time. Timezone-aware ones become
+      UTC with a trailing ``Z``.
+    - Dates become ``YYYY-MM-DD``.
+    - Times become ``HH:mm:ss[.sss]``. Their tzinfo is dropped because a time
+      has no date to shift to UTC.
+    - Durations become milliseconds.
+    - ``Decimal`` becomes a float.
+
+    Missing values, arrays, and other objects raise.
+    """
+    import numpy as np
+    import pandas as pd
+
+    # pd.NaT subclasses datetime, and its isoformat() returns "NaT".
+    if value is pd.NaT or (
+        isinstance(value, (np.datetime64, np.timedelta64)) and np.isnat(value)
+    ):
+        raise ValueError("NaT is not JSON-serializable.")
+    if isinstance(value, np.datetime64):
+        return np.datetime_as_string(value, unit="ms")
+    if isinstance(value, np.timedelta64):
+        return float(value / np.timedelta64(1, "ms"))
+    if isinstance(value, np.generic):
+        item = value.item()
+        # np.longdouble.item() returns another np.longdouble, which would make
+        # json call this hook forever.
+        if isinstance(item, np.generic):
+            raise TypeError(f"{type(value).__name__} is not JSON-serializable.")
+        return item
+    if isinstance(value, datetime):
+        if value.utcoffset() is None:
+            return value.isoformat(timespec="milliseconds")
+        utc_value = value.astimezone(UTC).replace(tzinfo=None)
+        return f"{utc_value.isoformat(timespec='milliseconds')}Z"
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        text = value.replace(tzinfo=None).isoformat(timespec="milliseconds")
+        return text.removesuffix(".000")
+    if isinstance(value, timedelta):
+        return value / timedelta(milliseconds=1)
+    if isinstance(value, Decimal):
+        return float(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON-serializable.")
+
+
 def _find_unserializable_value(value: Any, path: str) -> tuple[str, Any] | None:
     """Return the option path and value of the first value JSON rejects.
 
@@ -812,7 +867,12 @@ def _find_unserializable_value(value: Any, path: str) -> tuple[str, Any] | None:
             if found is not None:
                 return found
         return None
-    return path, value
+    try:
+        converted = _to_json_value(value)
+    except (TypeError, ValueError):
+        return path, value
+    # A converted value can still be NaN, for example ``np.float32("nan")``.
+    return _find_unserializable_value(converted, path)
 
 
 def _describe_unserializable_value(value: Any) -> str:
@@ -831,12 +891,12 @@ def _describe_unserializable_value(value: Any) -> str:
         else f"{module}.{value_type.__qualname__}"
     )
     description = f"a `{type_name}`"
-    if isinstance(value, (np.bool_, np.number)):
-        return f"{description}. Convert it with `int()`, `float()`, or `bool()`"
-    if value is pd.NaT or value is pd.NA:
+    if (
+        value is pd.NaT
+        or value is pd.NA
+        or (isinstance(value, (np.datetime64, np.timedelta64)) and np.isnat(value))
+    ):
         return f"{description}. Use `None` for missing values"
-    if isinstance(value, (dt.date, dt.time)):
-        return f"{description}. Convert it with `.isoformat()`"
     if dataframe_util.is_dataframe_like(value):
         return (
             f"{description}. Only `dataset.source` accepts dataframes and "
@@ -853,12 +913,16 @@ def _describe_unserializable_value(value: Any) -> str:
 def _serialize_option(option: dict[str, Any]) -> str:
     """Strictly serialize the option dict to JSON for ``proto.spec``.
 
-    ``allow_nan=False`` and the absence of a ``default`` fallback ensure that JS
-    callbacks, arbitrary Python objects, and non-finite numbers surface a helpful
-    error instead of being silently stringified.
+    NumPy and pandas scalars, datetimes, durations, and ``Decimal`` values are
+    converted (see ``_to_json_value``). Everything else the hook rejects (JS
+    callbacks, arbitrary objects, arrays, missing values) and non-finite
+    numbers, including converted ones, raise a helpful error instead of being
+    silently stringified.
     """
     try:
-        return json.dumps(option, allow_nan=False, separators=(",", ":"))
+        return json.dumps(
+            option, allow_nan=False, separators=(",", ":"), default=_to_json_value
+        )
     except (TypeError, ValueError) as ex:
         try:
             unserializable = _find_unserializable_value(option, "")
@@ -872,11 +936,12 @@ def _serialize_option(option: dict[str, Any]) -> str:
         raise StreamlitAPIException(
             f"The provided ECharts spec is not JSON-serializable.{detail} "
             "`st.echarts_chart` only supports JSON-compatible option objects. "
-            "Pass chart data as a dataframe in `dataset.source`, which converts "
-            "datetimes, NumPy values, and missing values automatically. Values "
-            "anywhere else (for example `series.data`) must already be plain "
-            "Python values such as `int`, `float`, `str`, `None`, lists, and "
-            "dicts.",
+            "NumPy and pandas scalars, datetimes, durations, and `Decimal` "
+            "values are converted anywhere in the option. Pass chart data, "
+            "including arrays and Series, as a dataframe in `dataset.source`, "
+            "which turns missing values into `null`. "
+            "Elsewhere (for example `series.data`), use plain Python lists and "
+            "`None` for missing values.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -1158,9 +1223,12 @@ class EChartsMixin:
             - Value types: Datetimes become ISO-8601 strings (in UTC if
               timezone-aware), durations become milliseconds, and missing
               values become ``null``. Other non-numeric values use the text
-              ``st.dataframe`` shows. Values elsewhere in the option, such as
-              ``series.data``, must already be JSON-compatible, so datetimes,
-              NumPy integers, and ``NaN`` in them raise an error.
+              ``st.dataframe`` shows. Elsewhere in the option, such as in
+              ``series.data``, NumPy and pandas scalars, datetimes, durations,
+              and ``Decimal`` values are converted the same way (a ``Decimal``
+              becomes a float). Arrays and missing values such as ``NaN``,
+              ``pd.NaT``, and ``pd.NA`` raise an error instead of becoming
+              ``null``.
             - Show data: The chart's hover toolbar has a **Show data** button
               that displays the dataframe as a table.
 

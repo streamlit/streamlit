@@ -631,6 +631,11 @@ renderer switch requires, just as it does after a `setTheme`.
   Note that `NaN`/`NaT`/`±Infinity` *inside* a `dataset.source` dataframe become `null`
   (ECharts' own "no value" marker) rather than being rejected; only non-finite floats the user
   writes directly into the option raise.
+- **Inline values** — NumPy and pandas scalars, datetimes, durations, and `Decimal` values
+  anywhere else in the option (for example `markLine` values or `xAxis.data`) are converted like
+  `dataset.source` values: datetimes become ISO-8601 strings (UTC with `Z` if timezone-aware),
+  durations become milliseconds, and `Decimal` becomes a float. Missing values (`NaN`, `pd.NaT`,
+  `pd.NA`) and arrays, Series, or dataframes outside `dataset.source` still raise.
 - **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
   chart area rather than crashing the app.
 
