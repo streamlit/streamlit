@@ -543,8 +543,10 @@ class AppSession:
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
-        This can be called on both the main thread and a ScriptRunner
-        run thread.
+        This must only be called on the AppSession event loop because
+        ForwardMsgQueue is not thread-safe. Callers on other threads, such as
+        ScriptRunner or file-watcher threads, must schedule the call with
+        ``_call_soon_on_event_loop``.
 
         Parameters
         ----------
