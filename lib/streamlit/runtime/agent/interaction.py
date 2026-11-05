@@ -276,6 +276,10 @@ class AgentSessionClient(SessionClient):
         ``dropped_fragment_ids`` are fragments whose output the server dropped
         from this run because they rerun next. Their older deltas, and
         everything under their containers, stay until their own rerun finishes.
+        Unlike the browser, this keeps them even when a container above them is
+        dropped, such as one their parent fragment stopped rendering in the same
+        run. The browser removes them with that container, so until their own
+        rerun an agent snapshot can list widgets the browser no longer shows.
         """
         # Keep in sync with `ClearStaleNodeVisitor` in
         # frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts,

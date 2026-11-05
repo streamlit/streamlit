@@ -142,8 +142,9 @@ class ForwardMsgQueue:
                     dropped_fragment_ids.add(msg.delta.fragment_id)
                     continue
                 if msg.WhichOneof("type") == "new_session":
-                    # Deltas before it came from a run that was replaced before
-                    # it sent a script_finished, so no finish lost them.
+                    # Drops collected before this new_session belong to a run
+                    # that was replaced before it sent script_finished, so they
+                    # must not count against the next finish.
                     dropped_fragment_ids = set()
                 elif msg.WhichOneof("type") == "script_finished":
                     _update_script_finished_message(
@@ -269,8 +270,8 @@ def _is_retained_on_clear(
         return True
 
     # A fragment rerun only drops deltas of the fragments it is about to rerun.
-    # Messages without a fragment_id (non-delta messages and main-script deltas)
-    # are kept.
+    # Other fragments' deltas are kept, as are main-script deltas and non-delta
+    # messages (their fragment_id is empty).
     return (
         fragment_ids_this_run is not None
         and msg.delta.fragment_id not in fragment_ids_this_run

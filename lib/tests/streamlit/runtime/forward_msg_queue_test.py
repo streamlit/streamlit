@@ -528,7 +528,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         ]
         assert [m.delta.fragment_id for m in fmq._queue[:-1]] == ["frag-a"]
 
-    def test_fragment_clears_downgrade_coalesced_finish_once_all_fragments_dropped(
+    def test_second_fragment_clear_downgrades_coalesced_finish_and_drops_partial_delivery(
         self,
     ):
         """Fragments dropped by earlier clears count toward a later clear, and
@@ -551,7 +551,7 @@ class ForwardMsgQueueTest(unittest.TestCase):
         ]
         assert not retained_finish.metadata.HasField("delivery")
 
-    def test_fragment_clear_downgrades_coalesced_finish_when_all_fragments_dropped(
+    def test_single_fragment_clear_of_every_fragment_downgrades_coalesced_finish(
         self,
     ):
         """Dropping every fragment of a coalesced run leaves nothing to clean up."""

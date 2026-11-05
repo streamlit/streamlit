@@ -579,5 +579,29 @@ describe("ClearStaleNodeVisitor", () => {
 
       expect(result.children).toEqual([current])
     })
+
+    it("keeps a delivered nested fragment's old content until a preserved parent reruns", () => {
+      const nestedContainer = fragmentBlock(
+        [
+          fragmentText("N current", currentRunId, "N"),
+          fragmentText("N stale", "old_run", "N"),
+        ],
+        currentRunId,
+        "N"
+      )
+      const parent = fragmentBlock(
+        [fragmentText("P content", "old_run", "P"), nestedContainer],
+        "old_run",
+        "P"
+      )
+      const visitor = new ClearStaleNodeVisitor(
+        currentRunId,
+        ["P", "N"],
+        undefined,
+        new Set(["P"])
+      )
+
+      expect(visitor.visitBlockNode(parent)).toBe(parent)
+    })
   })
 })

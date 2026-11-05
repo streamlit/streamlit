@@ -261,6 +261,16 @@ def test_client_keeps_a_dropped_fragments_content_until_its_own_rerun() -> None:
         "row 1",
     ]
 
+    _write_all(
+        client,
+        _new_session("r3", fragment_ids=["inner"]),
+        _block([0, 1, 1], fragment_id="inner"),
+        _markdown([0, 1, 1, 0], "row 0 v2", fragment_id="inner"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["app", "outer v2", "row 0 v2"]
+
 
 def test_client_inner_fragment_run_keeps_the_outer_fragment() -> None:
     """A nested fragment's own rerun replaces only its container's contents."""

@@ -340,6 +340,11 @@ export class AppRoot {
     )
   }
 
+  /**
+   * @param preservedFragmentIds Fragments whose nodes, with their subtrees,
+   * are kept as-is because their output was dropped from this run and their
+   * own rerun cleans them up.
+   */
   public clearStaleNodes(
     currentScriptRunId: string,
     fragmentIdsThisRun?: Array<string>,
