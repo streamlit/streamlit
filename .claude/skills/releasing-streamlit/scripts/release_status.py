@@ -20,8 +20,8 @@ it is safe to run at any time and gives the same answer however many times it
 runs. It never dispatches workflows, pushes, or merges.
 
 Usage:
-    uv run python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0
-    uv run python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0 --json
+    uv run --no-project python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0
+    uv run --no-project python .claude/skills/releasing-streamlit/scripts/release_status.py 1.67.0 --json
 
 Steps the script cannot observe (SiS e2e results in Slack, the Anaconda
 request, Community Cloud example apps) are reported as "manual".
@@ -57,7 +57,8 @@ PROD_ASSETS_JOB = (
 # The SiS CDN answers 403 to urllib's default user agent.
 USER_AGENT = "streamlit-release-status/1.0"
 
-DONE, RUNNING, TODO, FAIL, WARN, MANUAL, NA = "✓", "⏳", "·", "✗", "⚠", "🧑", "-"
+# Single-width BMP symbols, so the columns line up and no viewer mangles them.
+DONE, RUNNING, TODO, FAIL, WARN, MANUAL, NA = "✓", "…", "·", "✗", "⚠", "»", "-"
 
 
 @dataclass
@@ -79,7 +80,12 @@ def gh_api(path: str, *, jq: str | None = None, paginate: bool = False) -> Any:
         cmd.append("--paginate")
     if jq:
         cmd += ["--jq", jq]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=60, check=False
+        )
+    except subprocess.TimeoutExpired as e:
+        raise UnavailableError(f"gh api {path}: timed out") from e
     if proc.returncode != 0:
         if any(m in proc.stderr for m in ("Not Found", "HTTP 404", "No commit found")):
             return None
@@ -92,13 +98,20 @@ def gh_api(path: str, *, jq: str | None = None, paginate: bool = False) -> Any:
     return json.loads(out)
 
 
-def http_status(url: str) -> int:
+def asset_exists(url: str) -> bool:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
-            return resp.status
+            # Some Snowsight paths answer a missing file with 200 and the app's
+            # HTML page, so a 200 alone doesn't prove the asset is there.
+            return resp.status == 200 and "html" not in resp.headers.get(
+                "Content-Type", ""
+            )
     except urllib.error.HTTPError as e:
-        return e.code
+        # A missing asset is a 403 or 404; anything else is a failed lookup.
+        if e.code in {403, 404}:
+            return False
+        raise UnavailableError(f"{url}: HTTP {e.code}") from e
     except (urllib.error.URLError, TimeoutError) as e:
         raise UnavailableError(f"{url}: {e}") from e
 
@@ -167,18 +180,34 @@ def expected_version_check(version: str, published: list[str]) -> Step:
     return step
 
 
-def find_cutoff_nightly(base_sha: str, prev_minor: tuple[int, int, int]) -> str | None:
-    """Return the nightly tag whose parent commit is the release branch's base."""
-    prefix = f"{prev_minor[0]}.{prev_minor[1]}.{prev_minor[2] + 1}.dev"
+def nightly_tags(prev: tuple[int, int, int]) -> list[str]:
+    """Nightly tags after the previous release, newest first.
+
+    Nightlies are versioned one patch above the latest PyPI release at the time,
+    so a patch published after the cutoff changes the prefix. Search the whole
+    minor line of the previous release and sort by the date suffix.
+    """
     tags = gh_api(
-        f"repos/{REPO}/git/matching-refs/tags/{prefix}", jq=".[].ref", paginate=True
+        f"repos/{REPO}/git/matching-refs/tags/{prev[0]}.{prev[1]}.",
+        jq=".[].ref",
+        paginate=True,
     )
     if not tags:
-        return None
-    names = sorted(
-        (t.removeprefix("refs/tags/") for t in tags.splitlines()), reverse=True
+        return []
+    return sorted(
+        (
+            name
+            for t in tags.splitlines()
+            if ".dev" in (name := t.removeprefix("refs/tags/"))
+        ),
+        key=lambda n: n.rsplit(".dev", 1)[1],
+        reverse=True,
     )
-    for name in names[:30]:
+
+
+def find_cutoff_nightly(base_sha: str, prev: tuple[int, int, int]) -> str | None:
+    """Return the nightly tag whose parent commit is the release branch's base."""
+    for name in nightly_tags(prev)[:30]:
         sha = ref_sha(f"refs/tags/{name}")
         if (
             sha
@@ -192,7 +221,8 @@ def latest_nightly_run() -> dict[str, Any] | None:
     runs = gh_api(
         f"repos/{REPO}/actions/workflows/nightly.yml/runs?per_page=1&event=schedule"
     )
-    return (runs or {}).get("workflow_runs", [None])[0]
+    workflow_runs = (runs or {}).get("workflow_runs") or []
+    return workflow_runs[0] if workflow_runs else None
 
 
 def status(version: str) -> dict[str, Any]:
@@ -215,6 +245,7 @@ def status(version: str) -> dict[str, Any]:
     tag_sha = ref_sha(f"refs/tags/{version}")
 
     # 1. Cutoff
+    prev = max(p for p in (parse(v) for v in published) if p and p < target)
     cutoff = Step("cutoff", "Base" if is_patch else "Cutoff nightly")
     base_ref: str | None = None
     if is_patch:
@@ -223,7 +254,6 @@ def status(version: str) -> dict[str, Any]:
     elif tag_sha or branch_sha:
         cmp = gh_api(f"repos/{REPO}/compare/develop...{tag_sha or branch_sha}")
         base_sha = cmp["merge_base_commit"]["sha"]
-        prev = max(p for p in (parse(v) for v in published) if p and p < target)
         nightly = find_cutoff_nightly(base_sha, prev)
         if nightly:
             base_ref = f"{nightly}^"
@@ -242,9 +272,11 @@ def status(version: str) -> dict[str, Any]:
         if run:
             green = run["conclusion"] == "success"
             cutoff.state = MANUAL if green else WARN
+            tags = nightly_tags(prev)
             cutoff.detail = (
-                f"latest nightly run {run['created_at']} {run['conclusion'] or run['status']}. "
-                "Pick the tag and check SiS e2e counts in #e2e-tests-sis-oss."
+                f"latest nightly run {run['created_at']} {run['conclusion'] or run['status']}"
+                f" · newest nightly tag {tags[0] if tags else 'none since ' + '.'.join(map(str, prev))}. "
+                "Confirm the tag and check SiS e2e counts in #e2e-tests-sis-oss."
             )
             cutoff.links.append(run["html_url"])
     steps.append(cutoff)
@@ -293,24 +325,26 @@ def status(version: str) -> dict[str, Any]:
             state = "merged" if pr.get("merged_at") else pr["state"]
             tstep.detail += f" · PR #{pr['number']} {state}"
             tstep.links.append(pr["html_url"])
+            # Build Release finds the release branch through the open PR.
+            if state != "open" and not on_pypi:
+                tstep.state = FAIL
+                tstep.detail += ", but it must stay open until publishing"
         elif not on_pypi:
             tstep.state, tstep.detail = FAIL, tstep.detail + " · no merge-back PR"
     if others and not on_pypi:
         tstep.state = FAIL if tstep.state != TODO else WARN
-        tstep.detail += (
-            f" · other open release/* PRs: {', '.join('#' + n for n in others)}"
-        )
+        note = f"other open release/* PRs: {', '.join('#' + n for n in others)}"
+        tstep.detail = f"{tstep.detail} · {note}" if tstep.detail else note
     steps.append(tstep)
 
     # 5. SiS static assets
     astep = Step("assets", "SiS static assets")
     results = {}
     for env, host in ASSET_HOSTS.items():
-        codes = [
-            http_status(f"https://{host}/static/streamlit/{version}/{p}")
+        results[env] = all(
+            asset_exists(f"https://{host}/static/streamlit/{version}/{p}")
             for p in ASSET_PATHS
-        ]
-        results[env] = all(c == 200 for c in codes)
+        )
     if all(results.values()):
         astep.state, astep.detail = DONE, "preprod 200 · prod 200"
     elif results["preprod"]:
@@ -320,7 +354,9 @@ def status(version: str) -> dict[str, Any]:
         )
         astep.links.append(PROD_ASSETS_JOB)
     else:
-        astep.detail = "preprod missing · prod missing"
+        astep.detail = "preprod missing · prod " + (
+            "200" if results["prod"] else "missing"
+        )
     steps.append(astep)
 
     # 6. Build Release
@@ -335,14 +371,26 @@ def status(version: str) -> dict[str, Any]:
         runs = gh_api(
             f"repos/{REPO}/actions/workflows/release.yml/runs?branch={version}&per_page=5"
         )
-        run = ((runs or {}).get("workflow_runs") or [None])[0]
+        workflow_runs = (runs or {}).get("workflow_runs") or []
+        run = workflow_runs[0] if workflow_runs else None
         if run:
             rstep.links.append(run["html_url"])
             if run["status"] == "completed":
-                rstep.state = FAIL
-                rstep.detail = (
-                    f"last run {run['conclusion']} and {version} is not on PyPI"
-                )
+                if tag_sha and run["head_sha"] != tag_sha:
+                    # The tag moved after this run; a new run is the next step.
+                    rstep.detail = (
+                        f"last run {run['conclusion']} on {run['head_sha'][:9]}, "
+                        f"before tag {version} moved to {tag_sha[:9]}"
+                    )
+                elif run["conclusion"] == "success":
+                    # PyPI's JSON API can lag the upload by a few minutes.
+                    rstep.state = WARN
+                    rstep.detail = f"run succeeded but {version} is not on PyPI yet"
+                else:
+                    rstep.state = FAIL
+                    rstep.detail = (
+                        f"last run {run['conclusion']} and {version} is not on PyPI"
+                    )
             else:
                 pending = (
                     gh_api(f"repos/{REPO}/actions/runs/{run['id']}/pending_deployments")
@@ -354,20 +402,27 @@ def status(version: str) -> dict[str, Any]:
                     if pending
                     else f"run {run['status']}"
                 )
-                # A run started before the tag moved builds the old commit.
-                if tag_sha and run["head_sha"] != tag_sha:
-                    rstep.state = FAIL
-                    rstep.detail = (
-                        f"in-flight run is on {run['head_sha'][:9]} but tag {version} "
-                        f"is {tag_sha[:9]}. Do not approve it."
-                    )
+        # A run started before the tag moved builds the old commit, and it can
+        # still be waiting for approval behind a newer run.
+        stale = [
+            r
+            for r in workflow_runs
+            if r["status"] != "completed" and tag_sha and r["head_sha"] != tag_sha
+        ]
+        if stale:
+            rstep.state = FAIL
+            rstep.detail = (
+                f"in-flight run on {stale[0]['head_sha'][:9]} but tag {version} "
+                f"is {tag_sha[:9]}. Cancel it; do not approve it."
+            )
+            rstep.links = [r["html_url"] for r in stale] + rstep.links
     steps.append(rstep)
 
     # 7. Docs (regular releases only)
     if is_patch:
         steps.append(Step("docs", "Docs", NA, "not needed for patch releases"))
     else:
-        dstep = Step("docs", "Docs")
+        dstep = Step("docs", "Docs", detail="no docs PR found")
         docs_prs = recent_prs(DOCS_REPO, pages=2)
         # The release PR is titled "Update docs for Streamlit <v> release"; later
         # follow-ups also mention the version, so prefer the release title.
