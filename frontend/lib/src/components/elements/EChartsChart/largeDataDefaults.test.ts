@@ -28,8 +28,8 @@ type Series = Record<string, unknown>
 const DENSE = 30_000
 
 /** Rows shaped like a hydrated Arrow ``dataset.source``. */
-function rows(count: number): Array<Record<string, number | null>> {
-  return Array.from({ length: count }, (_, i) => ({ x: i, y: i % 7 }))
+function rows(count: number): Array<Array<number | null>> {
+  return Array.from({ length: count }, (_, i) => [i, i % 7])
 }
 
 /** A single-series chart that reads ``count`` rows from a dataset. */
@@ -39,7 +39,7 @@ function chart(
   extra: EChartsOptionObject = {}
 ): EChartsOptionObject {
   return {
-    dataset: { source: rows(count) },
+    dataset: { source: rows(count), dimensions: ["x", "y"] },
     xAxis: { type: series.type === "line" ? "time" : "value" },
     yAxis: { type: "value" },
     series: [{ encode: { x: "x", y: "y" }, ...series }],
@@ -170,12 +170,14 @@ describe("applyLargeDataDefaults", () => {
 
   it("keeps line symbols when gaps would hide points", () => {
     const source = rows(DENSE)
-    source[100] = { x: 100, y: null }
-    const option = chart({ type: "line" }, 0, { dataset: { source } })
+    source[100] = [100, null]
+    const option = chart({ type: "line" }, 0, {
+      dataset: { source, dimensions: ["x", "y"] },
+    })
     expect(applyLargeDataDefaults(option, false)).toBe(option)
 
     const connected = chart({ type: "line", connectNulls: true }, 0, {
-      dataset: { source },
+      dataset: { source, dimensions: ["x", "y"] },
     })
     expect(prepare(connected).showSymbol).toBe(false)
   })
