@@ -78,13 +78,18 @@ class SharedRunState:
         with self._telemetry_lock:
             return len(self._tracked_commands)
 
-    def track_command(self, command: Command, max_per_command: int) -> None:
+    def track_command(
+        self, command: Command, max_per_command: int, *, max_total: int
+    ) -> None:
         """Atomically track a command.
 
-        Appends the command to the list if it is under the per-command cap, and
-        always updates the counter.
+        Once the list holds ``max_total`` commands, the command is dropped
+        without updating the counter. Otherwise, the counter is updated and the
+        command is appended to the list if it is under the per-command cap.
         """
         with self._telemetry_lock:
+            if len(self._tracked_commands) >= max_total:
+                return
             if self._tracked_commands_counter[command.name] < max_per_command:
                 self._tracked_commands.append(command)
             self._tracked_commands_counter.update([command.name])

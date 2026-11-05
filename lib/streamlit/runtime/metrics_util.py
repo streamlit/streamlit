@@ -720,7 +720,11 @@ def gather_metrics(
                     **kwargs,
                 )
 
-                ctx.shared.track_command(command_telemetry, _MAX_TRACKED_PER_COMMAND)
+                ctx.shared.track_command(
+                    command_telemetry,
+                    _MAX_TRACKED_PER_COMMAND,
+                    max_total=_MAX_TRACKED_COMMANDS,
+                )
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ThreadState.update(command_tracking_deactivated=True)
                 has_set_command_tracking_deactivated = True

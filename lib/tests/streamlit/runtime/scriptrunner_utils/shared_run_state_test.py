@@ -33,7 +33,7 @@ def test_reset_clears_all_fields() -> None:
     shared.widget_user_keys_this_run.check_and_add("key")
     shared.form_ids_this_run.check_and_add("form")
     shared.new_fragment_ids.check_and_add("fragment")
-    shared.track_command(_make_command("markdown"), max_per_command=5)
+    shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
 
     shared.reset()
 
@@ -49,9 +49,9 @@ def test_reset_clears_all_fields() -> None:
 def test_track_command_appends_and_counts() -> None:
     """``track_command()`` records commands in the list and counter."""
     shared = SharedRunState()
-    shared.track_command(_make_command("markdown"), max_per_command=5)
-    shared.track_command(_make_command("button"), max_per_command=5)
-    shared.track_command(_make_command("markdown"), max_per_command=5)
+    shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
+    shared.track_command(_make_command("button"), max_per_command=5, max_total=10)
+    shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
 
     assert shared.tracked_commands_count == 3
     assert [cmd.name for cmd in shared.tracked_commands] == [
@@ -67,11 +67,53 @@ def test_track_command_respects_per_command_cap() -> None:
     """The list stops growing past the cap, but the counter keeps counting."""
     shared = SharedRunState()
     for _ in range(5):
-        shared.track_command(_make_command("markdown"), max_per_command=2)
+        shared.track_command(_make_command("markdown"), max_per_command=2, max_total=10)
 
     assert shared.tracked_commands_count == 2
     assert all(cmd.name == "markdown" for cmd in shared.tracked_commands)
     assert shared.command_count_for("markdown") == 5
+
+
+def test_track_command_respects_total_cap() -> None:
+    """Once the list is full, commands are neither appended nor counted."""
+    shared = SharedRunState()
+    for name in ["markdown", "button", "markdown", "text"]:
+        shared.track_command(_make_command(name), max_per_command=5, max_total=2)
+
+    assert [cmd.name for cmd in shared.tracked_commands] == ["markdown", "button"]
+    assert shared.command_count_for("markdown") == 1
+    assert shared.command_count_for("button") == 1
+    assert shared.command_count_for("text") == 0
+
+
+def test_concurrent_track_command_respects_total_cap() -> None:
+    """Concurrent ``track_command()`` calls cannot grow the list past the cap."""
+    shared = SharedRunState()
+    num_threads = 16
+    per_thread = 50
+    max_total = 100
+    barrier = threading.Barrier(num_threads)
+
+    def worker(thread_index: int) -> None:
+        barrier.wait()
+        for _ in range(per_thread):
+            shared.track_command(
+                _make_command(f"cmd_{thread_index}"),
+                max_per_command=per_thread,
+                max_total=max_total,
+            )
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert shared.tracked_commands_count == max_total
+    assert (
+        sum(shared.command_count_for(f"cmd_{i}") for i in range(num_threads))
+        == max_total
+    )
 
 
 def test_concurrent_track_command() -> None:
@@ -85,7 +127,9 @@ def test_concurrent_track_command() -> None:
     def worker(thread_index: int) -> None:
         for _ in range(per_thread):
             shared.track_command(
-                _make_command(f"cmd_{thread_index}"), max_per_command=cap
+                _make_command(f"cmd_{thread_index}"),
+                max_per_command=cap,
+                max_total=cap,
             )
 
     threads = [threading.Thread(target=worker, args=(i,)) for i in range(num_threads)]
@@ -102,7 +146,7 @@ def test_concurrent_track_command() -> None:
 def test_tracked_commands_returns_immutable_snapshot() -> None:
     """The returned tuple cannot be mutated and does not affect internal state."""
     shared = SharedRunState()
-    shared.track_command(_make_command("markdown"), max_per_command=5)
+    shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
 
     snapshot = shared.tracked_commands
     assert isinstance(snapshot, tuple)
