@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-import { waitFor } from "@testing-library/dom"
-import Plotly from "plotly.js"
+import { waitFor } from "@testing-library/react"
+import type Plotly from "plotly.js"
 
-import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
+import type { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { applyStreamlitTheme, layoutWithThemeDefaults } from "./CustomTheme"
+import { applyStreamlitTheme } from "./CustomTheme"
 import {
   applyTheming,
   handleClickEvent,
@@ -35,7 +35,6 @@ import {
 vi.mock("./CustomTheme", () => ({
   replaceTemporaryColors: vi.fn().mockReturnValue("{}"),
   applyStreamlitTheme: vi.fn(),
-  layoutWithThemeDefaults: vi.fn().mockReturnValue({}),
 }))
 
 describe("PlotlyChart utils", () => {
@@ -120,13 +119,12 @@ describe("PlotlyChart utils", () => {
       expect(applyStreamlitTheme).toHaveBeenCalled()
     })
 
-    it("applies default theme when not using the default plotly theme", () => {
+    it("does not apply Streamlit theme when theme is empty (theme=None)", () => {
       const mockPlotlyFigure = { data: [{}], layout: {}, frames: [] }
-      const chartTheme = "default"
 
-      applyTheming(mockPlotlyFigure, chartTheme, mockTheme.emotion)
+      applyTheming(mockPlotlyFigure, "", mockTheme.emotion)
 
-      expect(layoutWithThemeDefaults).toHaveBeenCalled()
+      expect(applyStreamlitTheme).not.toHaveBeenCalled()
     })
   })
 
@@ -136,6 +134,22 @@ describe("PlotlyChart utils", () => {
     return new WidgetStateManager({
       sendRerunBackMsg,
       formsDataChanged,
+    })
+  }
+
+  const EMPTY_SELECTION =
+    '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}'
+
+  /** Store a selection without scheduling a rerun. */
+  const storeSelection = (
+    widgetMgr: WidgetStateManager,
+    plotlyProto: PlotlyChartProto,
+    selection = '{"selection":{"points":[{"x":1,"y":2}],"point_indices":[0],"box":[],"lasso":[]}}'
+  ): void => {
+    widgetMgr.setStringValue(plotlyProto.id, selection, {
+      formId: plotlyProto.formId,
+      fragmentId: undefined,
+      fromUser: false,
     })
   }
 
@@ -150,12 +164,12 @@ describe("PlotlyChart utils", () => {
       const widgetMgr = getWidgetMgr()
       vi.spyOn(widgetMgr, "setStringValue")
 
-      // @ts-expect-error
       handleSelection(undefined, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
     })
 
-    it("should handle an event with no points or selections", () => {
+    it("does not commit an empty event when no selection is stored", () => {
+      // Plotly emits an empty plotly_selected event on double-click.
       const event = {
         points: undefined,
         selections: undefined,
@@ -165,7 +179,25 @@ describe("PlotlyChart utils", () => {
       vi.spyOn(widgetMgr, "setStringValue")
 
       handleSelection(event, widgetMgr, proto, mockFragmentId)
-      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+    })
+
+    it("commits an empty event that clears a stored selection", () => {
+      const event = {
+        points: undefined,
+        selections: undefined,
+      } as unknown as Plotly.PlotSelectionEvent
+      const widgetMgr = getWidgetMgr()
+      storeSelection(widgetMgr, proto)
+
+      vi.spyOn(widgetMgr, "setStringValue")
+
+      handleSelection(event, widgetMgr, proto, mockFragmentId)
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        proto.id,
+        EMPTY_SELECTION,
+        expect.objectContaining({ fromUser: true })
+      )
     })
 
     it("should process events with points correctly", () => {
@@ -185,10 +217,9 @@ describe("PlotlyChart utils", () => {
 
       handleSelection(event, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: "plotly_chart", selectionMode: [0, 1, 2] },
+        "plotly_chart",
         '{"selection":{"points":[{"point_index":1,"point_indices":[1],"customdata":[10,null,{"extra_info":7}],"legendgroup":"group1"}],"point_indices":[1],"box":[],"lasso":[]}}',
-        { fromUi: true },
-        "testFragment"
+        { formId: undefined, fragmentId: "testFragment", fromUser: true }
       )
     })
 
@@ -212,10 +243,9 @@ describe("PlotlyChart utils", () => {
 
       handleSelection(event, widgetMgr, proto, undefined)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: "plotly_chart", selectionMode: [0, 1, 2] },
+        "plotly_chart",
         '{"selection":{"points":[],"point_indices":[],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[]}}',
-        { fromUi: true },
-        undefined
+        { formId: undefined, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -231,10 +261,9 @@ describe("PlotlyChart utils", () => {
 
       handleSelection(event, widgetMgr, proto, mockFragmentId)
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        { id: "plotly_chart", selectionMode: [0, 1, 2] },
+        "plotly_chart",
         '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7.8]}]}}',
-        { fromUi: true },
-        "testFragment"
+        { formId: undefined, fragmentId: "testFragment", fromUser: true }
       )
     })
 
@@ -251,7 +280,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(
         event,
         widgetMgr,
-        // @ts-expect-error
+        // @ts-expect-error - spread object is not a PlotlyChartProto
         { ...proto, selectionMode: [] },
         mockFragmentId
       )
@@ -279,7 +308,7 @@ describe("PlotlyChart utils", () => {
       handleSelection(
         event,
         widgetMgr,
-        // @ts-expect-error
+        // @ts-expect-error - spread object is not a PlotlyChartProto
         { ...proto, selectionMode: [] },
         mockFragmentId
       )
@@ -296,10 +325,9 @@ describe("PlotlyChart utils", () => {
       vi.spyOn(widgetMgr, "setStringValue")
 
       widgetMgr.setStringValue(
-        proto,
+        proto.id,
         '{"selection":{"points":[],"point_indices":[],"box":[],"lasso":[]}}',
-        { fromUi: true },
-        undefined
+        { formId: proto.formId, fragmentId: undefined, fromUser: true }
       )
 
       handleSelection(event, widgetMgr, proto, mockFragmentId)
@@ -380,15 +408,39 @@ describe("PlotlyChart utils", () => {
       )
       expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
       expect(widgetMgr.setStringValue).toHaveBeenLastCalledWith(
-        { id: "plotly_chart", selectionMode: [1, 2] },
+        "plotly_chart",
         '{"selection":{"points":[{"point_index":1,"point_indices":[1],"x":1,"y":1,"legendgroup":"group1"},{"point_index":0,"point_indices":[0],"x":0,"y":0,"legendgroup":"group2"}],"point_indices":[1,0],"box":[{"xref":"x","yref":"y","x":["0","1"],"y":["0","1"]}],"lasso":[{"xref":"x","yref":"y","x":[4,4],"y":[8,7]}]}}',
-        { fromUi: true },
-        undefined
+        { formId: undefined, fragmentId: undefined, fromUser: true }
       )
     })
   })
 
   describe("sendEmptySelection", () => {
+    it.each([
+      ["no selection has been stored", undefined],
+      ["the stored selection is already empty", EMPTY_SELECTION],
+    ])("does not commit or rerun when %s", async (_desc, storedSelection) => {
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const plotlyProto = { id: "plotly_chart" } as PlotlyChartProto
+      if (storedSelection !== undefined) {
+        storeSelection(widgetMgr, plotlyProto, storedSelection)
+      }
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      sendEmptySelection(widgetMgr, plotlyProto, undefined)
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(widgetMgr.getStringValue(plotlyProto)).toBe(storedSelection)
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    })
+
     it("sets empty selection state", async () => {
       const sendRerunBackMsg = vi.fn()
       const widgetMgr = new WidgetStateManager({
@@ -396,6 +448,7 @@ describe("PlotlyChart utils", () => {
         formsDataChanged: vi.fn(),
       })
       const plotlyProto = { id: "plotly_chart" } as PlotlyChartProto
+      storeSelection(widgetMgr, plotlyProto)
 
       sendEmptySelection(widgetMgr, plotlyProto, undefined)
 
@@ -432,6 +485,7 @@ describe("PlotlyChart utils", () => {
       })
       const plotlyProto = { id: "plotly_chart" } as PlotlyChartProto
       const fragmentId = "test-fragment"
+      storeSelection(widgetMgr, plotlyProto)
 
       sendEmptySelection(widgetMgr, plotlyProto, fragmentId)
 
@@ -511,10 +565,9 @@ describe("PlotlyChart utils", () => {
       handleClickEvent(event, widgetMgr, proto, mockFragmentId)
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        proto,
+        proto.id,
         '{"selection":{"points":[{"label":"China","id":"Asia/China","parent":"Asia","value":1318683096,"current_path":"/Asia/","percent_root":0.21,"percent_entry":0.21,"percent_parent":0.35,"point_number":25,"curve_number":0}],"point_indices":[25],"box":[],"lasso":[]}}',
-        { fromUi: true },
-        mockFragmentId
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
       )
     })
 
@@ -535,10 +588,9 @@ describe("PlotlyChart utils", () => {
       handleClickEvent(event, widgetMgr, proto, mockFragmentId)
 
       expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
-        proto,
+        proto.id,
         expect.stringContaining('"point_indices":[]'),
-        { fromUi: true },
-        mockFragmentId
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
       )
     })
 
@@ -564,10 +616,9 @@ describe("PlotlyChart utils", () => {
 
       // Pre-set the state to match what the click would produce
       widgetMgr.setStringValue(
-        proto,
+        proto.id,
         '{"selection":{"points":[{"label":"China","id":"Asia/China","parent":"Asia","value":1318683096,"current_path":"/Asia/","percent_root":0.21,"percent_entry":0.21,"percent_parent":0.35,"point_number":25,"curve_number":0}],"point_indices":[25],"box":[],"lasso":[]}}',
-        { fromUi: true },
-        mockFragmentId
+        { formId: proto.formId, fragmentId: mockFragmentId, fromUser: true }
       )
 
       // Clear the mock to only count the handleClickEvent call

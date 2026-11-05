@@ -21,12 +21,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.image_utils import (
     Channels,
     ImageFormatOrAuto,
@@ -39,10 +40,15 @@ from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import Width
 
-UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
+_USE_COLUMN_WIDTH_REMOVED_WARNING: Final = (
+    "`use_column_width` was removed and has no effect. "
+    "Use `width='stretch'`, `width='content'`, or an integer pixel value instead."
+)
 
 
 class ImageMixin:
@@ -54,13 +60,15 @@ class ImageMixin:
         #  by way of overload
         caption: str | list[str] | None = None,
         width: Width = "content",
-        use_column_width: UseColumnWith = None,
         clamp: bool = False,
         channels: Channels = "RGB",
         output_format: ImageFormatOrAuto = "auto",
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
+        # Compatibility no-op for pre-1.61 callers.
+        use_column_width: Any = None,
+        alt: str | Sequence[str | None] | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -111,23 +119,12 @@ class ImageMixin:
 
             When using an SVG image without a default width, use ``"stretch"``
             or an integer.
-        use_column_width : "auto", "always", "never", or bool
-            If "auto", set the image's width to its natural size,
-            but do not exceed the width of the column.
-            If "always" or True, set the image's width to the column width.
-            If "never" or False, set the image's width to its natural size.
-            Note: if set, `use_column_width` takes precedence over the `width` parameter.
-
-            .. deprecated::
-                ``use_column_width`` is deprecated and will be removed in a future
-                release. Please use the ``width`` parameter instead.
-
         clamp : bool
             Whether to clamp image pixel values to a valid range (0-255 per
             channel). This is only used for byte array images; the parameter is
             ignored for image URLs and files. If this is ``False`` (default)
-            and an image has an out-of-range value, a ``RuntimeError`` will be
-            raised.
+            and an image has an out-of-range value, a ``StreamlitAPIException``
+            will be raised.
         channels : "RGB" or "BGR"
             The color format when ``image`` is an ``nd.array``. This is ignored
             for other image types. If this is ``"RGB"`` (default),
@@ -163,32 +160,47 @@ class ImageMixin:
 
             This parameter is only supported when displaying a single image.
 
+        use_column_width : any
+            This parameter is kept purely for compatibility.
+
+            .. deprecated::
+                ``use_column_width`` is deprecated, has no effect, and will be
+                fully removed in a future version. Use ``width="stretch"``,
+                ``width="content"``, or an integer pixel value instead.
+
+        alt : str, sequence of str or None, or None
+            A description of the image(s) for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the image.
+
+            An empty string (``""``) marks the image as decorative. Whitespace-
+            only values are treated as ``None`` and logged. For multiple
+            images, pass a sequence of the same length (use ``None`` to skip
+            an image, or ``""`` for a decorative entry). A single string with
+            several images raises a ``StreamlitAPIException``.
+
+            Prefer describing what the image shows rather than repeating a
+            visible ``caption``. Caption and ``alt`` are independent; a
+            caption never becomes the image's ``alt``.
+
         Examples
         --------
         >>> import streamlit as st
-        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
+        >>> st.image(
+        ...     "sunrise.jpg",
+        ...     caption="Sunrise by the mountains",
+        ...     alt="Sunrise over a mountain ridge",
+        ... )
 
         .. output::
            https://doc-image.streamlit.app/
            height: 710px
 
         """
-
         if use_column_width is not None:
-            if use_container_width is not None:
-                raise StreamlitAPIException(
-                    "`use_container_width` and `use_column_width` cannot be set at the same time.",
-                    "Please utilize `use_container_width` since `use_column_width` is deprecated.",
-                )
-
-            show_deprecation_warning(
-                "The `use_column_width` parameter has been deprecated and will be removed "
-                "in a future release. Please utilize the `width` parameter instead."
-            )
-            if use_column_width in {"auto", "never"} or use_column_width is False:
-                width = "content"
-            elif use_column_width == "always" or use_column_width is True:
-                width = "stretch"
+            # Keep the keyword so pre-1.61 callers do not raise TypeError, but
+            # ignore the value so width and use_container_width stay authoritative.
+            show_deprecation_warning(_USE_COLUMN_WIDTH_REMOVED_WARNING)
 
         if use_container_width is not None:
             show_deprecation_warning(
@@ -223,6 +235,7 @@ class ImageMixin:
             clamp,
             channels,
             output_format,
+            alt=alt,
         )
 
         if link:
@@ -230,13 +243,63 @@ class ImageMixin:
             if len(image_list_proto.imgs) > 1:
                 raise StreamlitAPIException(
                     "The `link` parameter is only supported when displaying a single image. "
-                    f"You passed {len(image_list_proto.imgs)} images."
+                    f"You passed {len(image_list_proto.imgs)} images.",
+                    error_id="image-link-requires-single-image",
                 )
             image_list_proto.link = link
 
-        return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
+        imgs = image_list_proto.imgs
+        return self.dg._enqueue(
+            "imgs",
+            image_list_proto,
+            layout_config=layout_config,
+            # st.image and st.pyplot both emit ImageList, and nothing in the
+            # payload says which one ran.
+            agent_props=_describe_images(image, imgs, link)
+            if agent_spec.is_recording()
+            else None,
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _describe_images(image: Any, imgs: Sequence[Any], link: str | None) -> str | None:
+    """Describe an `st.image` call for the agent API.
+
+    Reported the way the author passed the images: one image as single values,
+    several as parallel lists. None marks an image without a caption or alt
+    text; `""` alt text is kept, because it marks an image as decorative, which
+    is not the same as unlabeled.
+    """
+    several = _is_image_list(image)
+    return agent_spec.element(
+        "image",
+        caption=_as_authored([img.caption or None for img in imgs], several),
+        url=_as_authored([img.url for img in imgs], several),
+        alt=_as_authored(
+            [img.alt if img.HasField("alt") else None for img in imgs], several
+        ),
+        link=link,
+    )
+
+
+def _is_image_list(image: Any) -> bool:
+    """Whether ``image`` holds several images, by the rule `marshall_images` uses."""
+    if isinstance(image, (list, set, tuple)):
+        return True
+    import numpy as np
+
+    return isinstance(image, np.ndarray) and len(image.shape) == 4
+
+
+def _as_authored(values: list[Any], several: bool) -> Any:
+    """Every image's value as a list, or one image's value alone.
+
+    A list that would only hold None is left out, as an unset parameter is.
+    """
+    if several:
+        return values if any(value is not None for value in values) else None
+    return values[0] if values else None

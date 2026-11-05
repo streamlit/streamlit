@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import check_top_level_class
+from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 
 TOTAL_TABLE_ELEMENTS = 48
 
@@ -52,6 +52,34 @@ def test_pandas_styler_tooltips(app: Page, assert_snapshot: ImageCompareFunction
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stTable")
+
+
+def test_table_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the <table> accessible name; scroll region stays separate."""
+    labeled = get_element_by_key(app, "table_with_alt").get_by_test_id(
+        "stTableStyledTable"
+    )
+    expect(labeled).to_have_accessible_name(
+        "Scrollable sample grid with custom row index"
+    )
+    expect(labeled).to_have_attribute(
+        "aria-label", "Scrollable sample grid with custom row index"
+    )
+    # Native table role — no invented figure/img role.
+    expect(labeled).not_to_have_attribute("role")
+
+    # Scroll wrapper keeps the hardcoded region label; it must not compete with
+    # the author name on the <table>.
+    scroll_region = get_element_by_key(app, "table_with_alt").get_by_role(
+        "region", name="Scrollable table"
+    )
+    expect(scroll_region).to_be_visible()
+
+    unlabeled = get_element_by_key(app, "table_without_alt").get_by_test_id(
+        "stTableStyledTable"
+    )
+    expect(unlabeled).not_to_have_attribute("aria-label")
+    expect(unlabeled).to_have_accessible_name("")
 
 
 def test_table_fixed_dimensions_with_scrolling(

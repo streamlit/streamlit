@@ -28,7 +28,7 @@ import {
 } from "~lib/render-tree/test-utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { BlockPropsWithoutWidth } from "./Block"
+import type { BlockPropsWithoutWidth } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 
 // Mock props for testing
@@ -231,6 +231,70 @@ describe("RenderNodeVisitor", () => {
   })
 
   describe("static collectReactElements", () => {
+    describe("retained elements", () => {
+      const retainedInput = textInput("retained", "retained_id", "prev_run")
+      const retainedId = "$$ID-retained_id-key"
+
+      const blockWithRetained = (before: number): BlockNode =>
+        new BlockNode(
+          "fake_script_hash",
+          [text("a"), text("b")],
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [{ node: retainedInput, id: retainedId, before }]
+        )
+
+      it.each([
+        [0, [retainedId, "0", "1"]],
+        [1, ["0", retainedId, "1"]],
+        [2, ["0", "1", retainedId]],
+        [5, ["0", "1", retainedId]],
+      ])(
+        "renders an entry anchored before child %i in place",
+        (before, expectedKeys) => {
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(blockWithRetained(before))
+          )
+
+          // The retained element does not shift the positional keys.
+          expect(result.map(element => element.key)).toEqual(expectedKeys)
+        }
+      )
+
+      it("marks only the retained element as retained", () => {
+        const result = RenderNodeVisitor.collectReactElements(
+          createMockProps(blockWithRetained(1))
+        )
+
+        expect(result[1].props.node).toBe(retainedInput)
+        expect(result[1].props.isRetained).toBe(true)
+        expect(result[0].props.isRetained).toBeUndefined()
+        expect(result[2].props.isRetained).toBeUndefined()
+      })
+
+      it("skips a retained element whose id was already rendered", () => {
+        const current = textInput("current", "retained_id", "current_run")
+        const node = new BlockNode(
+          "fake_script_hash",
+          [current],
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [{ node: retainedInput, id: retainedId, before: 1 }]
+        )
+
+        const result = RenderNodeVisitor.collectReactElements(
+          createMockProps(node)
+        )
+
+        expect(result).toHaveLength(1)
+        expect(result[0].props.node).toBe(current)
+      })
+    })
+
     it("returns empty array for block with no children", () => {
       const emptyBlock = block([])
       const mockProps = createMockProps(emptyBlock)
@@ -238,6 +302,51 @@ describe("RenderNodeVisitor", () => {
       const result = RenderNodeVisitor.collectReactElements(mockProps)
 
       expect(result).toEqual([])
+    })
+
+    it("skips a later block that reuses a keyed block id", () => {
+      // A rerun can leave the previous keyed container in place until stale
+      // nodes are cleared. The updated block is at the earlier index. The
+      // skipped copy still consumes an index, so a later unkeyed sibling keeps
+      // the positional key it would have had if that copy were rendered.
+      const blockId = "$$ID-abc123-my_key"
+      const currentBlock = blockWithId(blockId, [text("current")])
+      const staleBlock = blockWithId(blockId, [text("stale")])
+      const parentBlock = block([
+        currentBlock,
+        text("between"),
+        staleBlock,
+        text("after"),
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result).toHaveLength(3)
+      expect(result[0].key).toBe(blockId)
+      expect(result[0].props.node).toBe(currentBlock)
+      expect(result[1].key).toBe("1")
+      expect(result[2].key).toBe("3")
+      expect(result.some(element => element.props.node === staleBlock)).toBe(
+        false
+      )
+    })
+
+    it("renders keyed blocks that have different ids", () => {
+      const parentBlock = block([
+        blockWithId("$$ID-abc123-one"),
+        blockWithId("$$ID-def456-two"),
+      ])
+
+      const result = RenderNodeVisitor.collectReactElements(
+        createMockProps(parentBlock)
+      )
+
+      expect(result.map(element => element.key)).toEqual([
+        "$$ID-abc123-one",
+        "$$ID-def456-two",
+      ])
     })
 
     it("collects React elements from block children", () => {

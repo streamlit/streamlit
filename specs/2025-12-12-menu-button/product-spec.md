@@ -126,7 +126,11 @@ options = [{"id": 1, "name": "Edit"}, {"id": 2, "name": "Delete"}]
 action = st.menu_button(
     "Actions",
     options=options,
-    format_func=lambda x: f":material/edit: {x['name']}" if x["id"] == 1 else f":material/delete: {x['name']}",
+    format_func=lambda x: (
+        f":material/edit: {x['name']}"
+        if x["id"] == 1
+        else f":material/delete: {x['name']}"
+    ),
 )
 if action:
     st.write(f"Selected ID: {action['id']}")

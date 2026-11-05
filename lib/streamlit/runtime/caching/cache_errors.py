@@ -17,7 +17,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import type_util
-from streamlit.errors import MarkdownFormattedException, StreamlitAPIException
+from streamlit.errors import (
+    MarkdownFormattedException,
+    StreamlitAPIException,
+    StreamlitAPIWarning,
+)
 from streamlit.runtime.caching.cache_type import CacheType, get_decorator_api_name
 
 if TYPE_CHECKING:
@@ -111,7 +115,7 @@ effect of that element, because the referenced block might not exist when
 the replay happens.
 
 How to fix this:
-* Move the creation of $THING inside {func_name}.
+* Move the creation of that layout block inside {func_name}.
 * Move the call to the streamlit element outside of {func_name}.
 * Remove the `@st.{decorator_name}` decorator from {func_name}.
             """
@@ -139,5 +143,56 @@ class UnserializableReturnValueError(MarkdownFormattedException, Generic[R]):
         )
 
 
+class CachedFunctionReturnedAwaitableError(StreamlitAPIException):
+    """Raised when a synchronous cached function returns an awaitable.
+
+    This includes non-coroutine objects implementing ``__await__``.
+    """
+
+    def __init__(
+        self, cache_type: CacheType, func: Callable[..., Any], value: Any
+    ) -> None:
+        func_name = get_cached_func_name_md(func)
+        decorator_name = get_decorator_api_name(cache_type)
+        super().__init__(
+            f"{func_name} is a synchronous function decorated with "
+            f"`st.{decorator_name}`, but it returned an awaitable of type "
+            f"`{type_util.get_fqn_type(value)}`. The function may have returned an "
+            "asynchronous operation without awaiting it, or the returned object may "
+            "itself be awaitable.\n\n"
+            "Return a non-awaitable value instead. Prefer defining the cached function "
+            "with `async def` and `await` the operation; note that `async def` cached "
+            'functions require `refresh_mode="foreground"`.'
+        )
+
+
 class UnevaluatedDataFrameError(StreamlitAPIException):
     """Used to display a message about uncollected dataframe being used."""
+
+
+class CachedStFunctionInBackgroundModeWarning(StreamlitAPIWarning):
+    """Warning shown when a background-mode cached function issues display commands.
+
+    With ``refresh_mode="background"``, cached ``st.*`` output is not replayed on
+    cache hits, so any display elements only appear during the initial miss (and any
+    later foreground recompute) and then disappear on subsequent reruns.
+    """
+
+    def __init__(self, cache_type: CacheType, cached_func: Callable[..., Any]) -> None:
+        func_name = get_cached_func_name_md(cached_func)
+        decorator_name = get_decorator_api_name(cache_type)
+
+        msg = (
+            f"""
+{func_name} is decorated with `@st.{decorator_name}(refresh_mode="background")`
+and uses a Streamlit display command (e.g. `st.write`). In background mode, cached
+display output is **not** replayed on cache hits, so these elements only appear when
+the function actually runs (the initial cache miss and any later foreground recompute)
+and then disappear on subsequent reruns.
+
+To fix this, either move the display commands outside the cached function, or use
+`refresh_mode="foreground"`.
+"""
+        ).strip("\n")
+
+        super().__init__(msg)

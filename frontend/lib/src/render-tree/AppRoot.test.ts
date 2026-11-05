@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import { MockInstance } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { Delta as DeltaProto, Logo as LogoProto } from "@streamlit/protobuf"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { AppRoot } from "./AppRoot"
 import { BlockNode } from "./BlockNode"
-import { ElementNode } from "./ElementNode"
+import type { ElementNode } from "./ElementNode"
 import {
   block,
   FAKE_SCRIPT_HASH,
@@ -1320,6 +1320,52 @@ describe("AppRoot", () => {
       ).toHaveLength(3)
     })
 
+    it("keeps run A cleanup scoped to A after run B nodes exist", () => {
+      // Enclosing fragment A renders a nested child, then A reruns without
+      // that child, then unrelated fragment B writes. Finish cleanup for A2
+      // must drop A's stale nested node and keep B.
+      const enclosingA = makeProto(DeltaProto, {
+        addBlock: { vertical: {}, allowEmpty: true },
+        fragmentId: "frag_a",
+      })
+      const root = AppRoot.empty(FAKE_SCRIPT_HASH)
+        .applyDelta("run_a", enclosingA, forwardMsgMetadata([0, 0]))
+        .applyDelta(
+          "run_a",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "stale nested from A" } },
+            fragmentId: "frag_a",
+          }),
+          forwardMsgMetadata([0, 0, 0])
+        )
+        .applyDelta("run_a2", enclosingA, forwardMsgMetadata([0, 0]))
+        .applyDelta(
+          "run_b",
+          makeProto(DeltaProto, {
+            addBlock: { vertical: {}, allowEmpty: true },
+            fragmentId: "frag_b",
+          }),
+          forwardMsgMetadata([0, 1])
+        )
+        .applyDelta(
+          "run_b",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "from B" } },
+            fragmentId: "frag_b",
+          }),
+          forwardMsgMetadata([0, 1, 0])
+        )
+
+      const pruned = root.clearStaleNodes("run_a2", ["frag_a"])
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 0])
+      ).toBeUndefined()
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1, 0])
+      ).toBeTextNode("from B")
+    })
+
     it("uses ClearStaleNodeVisitor internally", () => {
       // Create a more complex tree with multiple nodes
       const delta1 = makeProto(DeltaProto, {
@@ -1510,6 +1556,7 @@ describe("AppRoot", () => {
 
   describe("AppRoot.debug", () => {
     it("prints labeled child sections with tree output", () => {
+      // eslint-disable-next-line testing-library/no-debugging-utils -- AppRoot.debug() is a tree printer, not Testing Library's screen.debug().
       const out = ROOT.debug()
       // Header
       expect(out.startsWith("AppRoot\n")).toBe(true)

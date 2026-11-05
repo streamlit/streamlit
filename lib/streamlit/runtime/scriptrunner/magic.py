@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import ast
-import sys
 from typing import Any, Final
 
 from streamlit import config
@@ -94,9 +93,7 @@ def _modify_ast_subtree(
 
         # Recursively parses the contents of try statements,
         # all their handlers (except and else) and the finally body
-        elif node_type is ast.Try or (
-            sys.version_info >= (3, 11) and node_type is ast.TryStar
-        ):
+        elif node_type is ast.Try or node_type is ast.TryStar:
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, body_attr="finalbody")
             _modify_ast_subtree(node, body_attr="orelse")
@@ -110,7 +107,7 @@ def _modify_ast_subtree(
             _modify_ast_subtree(node)
             _modify_ast_subtree(node, "orelse")
 
-        elif sys.version_info >= (3, 10) and node_type is ast.Match:
+        elif node_type is ast.Match:
             for case_node in node.cases:
                 _modify_ast_subtree(case_node)
 

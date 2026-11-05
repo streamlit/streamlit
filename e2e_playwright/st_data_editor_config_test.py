@@ -14,6 +14,7 @@
 
 import pytest
 from playwright.sync_api import Locator, Page, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
@@ -38,6 +39,46 @@ def _get_editor(app: Page, key: str) -> Locator:
     data_editor = get_element_by_key(app, key).get_by_test_id("stDataFrame").first
     expect(data_editor).to_be_visible()
     return data_editor
+
+
+def _open_markdown_cell(app: Page, row: int) -> Locator:
+    """Double-click a markdown cell until its overlay is visible.
+
+    After a rerun the canvas can accept the double-click before cells are
+    interactive, so the overlay never mounts. Retry until it does. If the
+    overlay appears after a short wait, return it instead of clicking again
+    — a click on a covered canvas times out inside ``click_on_cell``.
+    """
+    overlay = app.get_by_test_id("portal").locator(".gdg-clip-region")
+    last_error: Exception | None = None
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        if overlay.is_visible():
+            return overlay
+
+        editor = _get_editor(app, "markdown-column")
+        editor.scroll_into_view_if_needed()
+        try:
+            click_on_cell(editor, row, 0, double_click=True, column_width="medium")
+        except PlaywrightTimeoutError as error:
+            if overlay.is_visible():
+                return overlay
+            last_error = error
+            continue
+
+        if attempt == max_attempts - 1:
+            return get_open_cell_overlay(app)
+        try:
+            expect(overlay).to_be_visible(timeout=2000)
+            return overlay
+        except AssertionError as error:
+            last_error = error
+
+    if overlay.is_visible():
+        return overlay
+    if last_error is not None:
+        raise last_error
+    return overlay
 
 
 def test_data_editor_supports_various_configurations(
@@ -226,13 +267,9 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
 )  # Cell overlay visibility flaky on webkit and Firefox
 def test_markdown_cell_keyboard_shortcuts(app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
-    markdown_column_df = _get_editor(app, "markdown-column")
-    expect_canvas_to_be_visible(markdown_column_df)
-
-    # Open the second markdown cell (row 2) to avoid conflicts with previous test
-    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    expect(cell_overlay).to_be_visible()
+    # Open the second data cell (row 2; row 0 is the header) so this
+    # test does not share a cell with test_markdown_cell_editing.
+    cell_overlay = _open_markdown_cell(app, 2)
 
     edit_button = cell_overlay.get_by_label("Edit")
     expect(edit_button).to_be_visible()
@@ -256,13 +293,8 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
         app, "Markdown column return:", "Saved via keyboard", exact_match=False
     )
 
-    # Re-fetch the dataframe locator since the page has been rerendered, then
-    # re-open the same cell to confirm it can be re-opened after saving.
-    markdown_column_df = _get_editor(app, "markdown-column")
-    expect_canvas_to_be_visible(markdown_column_df)
-    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(app)
-    expect(cell_overlay).to_be_visible()
+    # Re-open the same cell to confirm it can be re-opened after saving.
+    cell_overlay = _open_markdown_cell(app, 2)
     expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_contain_text(
         "Shortcut Header"
     )

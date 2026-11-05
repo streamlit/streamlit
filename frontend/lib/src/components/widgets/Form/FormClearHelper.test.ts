@@ -17,7 +17,7 @@
 import { renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { FormClearHelper, useFormClearHelper } from "./FormClearHelper"
 

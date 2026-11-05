@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import config
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.web.server.server_util import get_cookie_secret
 from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
@@ -65,13 +65,14 @@ from streamlit.web.server.starlette.starlette_websocket import create_websocket_
 
 if TYPE_CHECKING:
     import asyncio
-    from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+    from collections.abc import AsyncGenerator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
+    from typing import TypeAlias
 
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.routing import BaseRoute
-    from starlette.types import ExceptionHandler, Receive, Scope, Send
+    from starlette.types import Receive, Scope, Send
 
     from streamlit.runtime import Runtime
     from streamlit.runtime.media_file_manager import MediaFileManager
@@ -81,6 +82,13 @@ if TYPE_CHECKING:
         OnScriptErrorHandler,
     )
     from streamlit.runtime.secrets import SecretsValue
+
+    # Accept handlers typed with a specific exception subclass (the usual user
+    # pattern). Starlette's ExceptionHandler uses Callable[[Request, Exception],
+    # Response]; because Callable parameters are contravariant, those handlers
+    # are rejected. Two Any parameters accept them while still requiring a
+    # two-argument callable.
+    ExceptionHandler: TypeAlias = Callable[[Any, Any], Any]
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -99,21 +107,27 @@ def _validate_run_config(
         return {}
 
     if not isinstance(run_config, MappingABC):
-        raise StreamlitAPIException(
-            f"config must be a mapping or None, got {type(run_config).__name__!r}."
+        raise StreamlitInvalidParameterTypeError(
+            "config",
+            type(run_config).__name__,
+            ["Mapping", "None"],
         )
 
     validated_config = dict(run_config)
     for config_key in validated_config:
         config_option = config._config_options_template.get(config_key)
         if config_option is None:
-            raise StreamlitAPIException(f"Unrecognized config option: {config_key!r}")
+            raise StreamlitAPIException(
+                f"Unrecognized config option: {config_key!r}",
+                error_id="app-run-unrecognized-config-option",
+            )
 
         if config_option.sensitive:
             raise StreamlitAPIException(
                 f"Setting {config_key!r} option using App.run(config=...) is not "
                 "allowed. Set this option in the configuration file or environment "
-                f"variable: {config_option.env_var!r}"
+                f"variable: {config_option.env_var!r}",
+                error_id="app-run-sensitive-config-option",
             )
 
     return validated_config
@@ -172,6 +186,14 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
 
+    # Add the agent API routes, both of which answer even when the API is off.
+    # Imported here to keep the agent API's modules out of `import streamlit`.
+    from streamlit.web.server.starlette.starlette_agent_routes import (
+        create_agent_routes,
+    )
+
+    routes.extend(create_agent_routes(runtime, base_url))
+
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
         # TODO(lukasmasuch): Expose main_script_path as property on runtime class
@@ -221,14 +243,18 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Keep static asset responses out of the gzip middleware. Local load testing
-    # showed that bypassing gzip on these paths materially improves initial load
-    # times and peak RSS, while a session-only bypass regressed.
+    # Keep static asset and media responses out of the gzip middleware. Local
+    # load testing showed that bypassing gzip on the static paths materially
+    # improves initial load times and peak RSS (a session-only bypass
+    # regressed), and compressing binary media breaks range-based playback.
+    # The base URL is forwarded so the path bypass works when
+    # server.baseUrlPath is configured.
     middleware.append(
         Middleware(
             SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
+            base_url=config.get_option("server.baseUrlPath") or "",
         )
     )
 
@@ -259,7 +285,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
-    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+    async def _lifespan(_app: Starlette) -> AsyncGenerator[None, None]:
         _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
@@ -335,9 +361,10 @@ class App:
         A mapping of either integer status codes, or exception class types onto
         callables which handle the exceptions. Exception handler callables should
         be of the form ``handler(request, exc) -> response`` and may be either
-        standard functions, or async functions. This is only for exception handling
-        on the network layer. Use ``on_script_error`` for customized handling of
-        uncaught exceptions from the app script.
+        standard functions, or async functions. The ``exc`` argument may be
+        annotated with a specific exception subclass. This is only for exception
+        handling on the network layer. Use ``on_script_error`` for customized
+        handling of uncaught exceptions from the app script.
     debug : bool
         Enable debug mode for the underlying Starlette application.
 
@@ -345,13 +372,13 @@ class App:
     --------
     Basic usage:
 
-    >>> from streamlit.web.server.starlette import App
-    >>> app = App("main.py")
+    >>> import streamlit as st
+    >>> app = st.App("main.py")
 
     With lifespan hooks:
 
     >>> from contextlib import asynccontextmanager
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
     >>> @asynccontextmanager
     ... async def lifespan(app):
@@ -359,25 +386,25 @@ class App:
     ...     yield {"model": "loaded"}
     ...     print("Shutting down...")
     >>>
-    >>> app = App("main.py", lifespan=lifespan)
+    >>> app = st.App("main.py", lifespan=lifespan)
 
     With custom routes:
 
+    >>> import streamlit as st
     >>> from starlette.routing import Route
     >>> from starlette.responses import JSONResponse
-    >>> from streamlit.web.server.starlette import App
     >>>
     >>> async def health(request):
     ...     return JSONResponse({"status": "ok"})
     >>>
-    >>> app = App("main.py", routes=[Route("/health", health)])
+    >>> app = st.App("main.py", routes=[Route("/health", health)])
 
     With programmatic secrets:
 
     >>> import os
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
-    >>> app = App(
+    >>> app = st.App(
     ...     "main.py",
     ...     secrets={
     ...         "database": {
@@ -390,7 +417,7 @@ class App:
     With error monitoring (Sentry):
 
     >>> import sentry_sdk
-    >>> from streamlit.web.server.starlette import App
+    >>> import streamlit as st
     >>>
     >>> sentry_sdk.init(dsn="...")
     >>>
@@ -398,18 +425,17 @@ class App:
     ...     sentry_sdk.capture_exception(exc)
     ...     return None  # Show default exception display
     >>>
-    >>> app = App("main.py", on_script_error=log_to_sentry)
+    >>> app = st.App("main.py", on_script_error=log_to_sentry)
 
     With custom error UI:
 
     >>> import streamlit as st
-    >>> from streamlit.web.server.starlette import App
     >>>
     >>> def custom_error_handler(exc):
     ...     st.error("Something went wrong!")
     ...     return True  # Suppress default exception display
     >>>
-    >>> app = App("main.py", on_script_error=custom_error_handler)
+    >>> app = st.App("main.py", on_script_error=custom_error_handler)
     """
 
     def __init__(
@@ -572,7 +598,8 @@ class App:
             raise StreamlitAPIException(
                 "A Streamlit server is already running in this process; call "
                 "App.run() only once, and not when the app is also served via "
-                "streamlit run, uvicorn, or mounted on another framework."
+                "streamlit run, uvicorn, or mounted on another framework.",
+                error_id="app-already-running",
             )
 
         # Guard on `sys.argv[0]` representing a script path, not just on
@@ -602,6 +629,11 @@ class App:
             self._resolved_script_path = self._resolve_script_path()
 
         bootstrap.load_config_options(config_overrides)
+        from streamlit.runtime.caching.global_cache_budget import (
+            reconfigure_global_cache_budget_from_config,
+        )
+
+        reconfigure_global_cache_budget_from_config()
         bootstrap._prepare_asgi_app_run_context(
             launcher_path,
             script_args,
@@ -628,9 +660,9 @@ class App:
         Mount st.App on FastAPI:
 
         >>> from fastapi import FastAPI
-        >>> from streamlit.starlette import App
+        >>> import streamlit as st
         >>>
-        >>> streamlit_app = App("dashboard.py")
+        >>> streamlit_app = st.App("dashboard.py")
         >>> fastapi_app = FastAPI(lifespan=streamlit_app.lifespan())
         >>> fastapi_app.mount("/dashboard", streamlit_app)
         """
@@ -711,7 +743,7 @@ class App:
         )
 
     @asynccontextmanager
-    async def _combined_lifespan(self, _app: Starlette) -> AsyncIterator[None]:
+    async def _combined_lifespan(self, _app: Starlette) -> AsyncGenerator[None, None]:
         """Combine Streamlit runtime lifecycle with user's lifespan.
 
         The runtime must already be created (via _create_runtime) before this

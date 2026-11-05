@@ -24,7 +24,13 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.elements.widgets.radio import RadioSerde
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -152,13 +158,16 @@ class RadioTest(DeltaGeneratorTestCase):
 
     def test_invalid_value(self):
         """Test that value must be an int."""
-        with pytest.raises(StreamlitAPIException):
+        with pytest.raises(StreamlitInvalidParameterTypeError):
             st.radio("the label", ("m", "f"), "1")
 
-    def test_invalid_value_range(self):
-        """Test that value must be within the length of the options."""
-        with pytest.raises(StreamlitAPIException):
+    def test_index_out_of_range(self):
+        """Out-of-range index names the closed interval in StreamlitValueOutOfRangeError."""
+        with pytest.raises(StreamlitValueOutOfRangeError) as ex:
             st.radio("the label", ("m", "f"), 2)
+        assert str(ex.value) == (
+            "The `index` parameter, set to 2, is outside the required range [0, 1]."
+        )
 
     def test_outside_form(self):
         """Test that form id is marshalled correctly outside of a form."""
@@ -216,11 +225,11 @@ class RadioTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.radio("the label", ("m", "f"), label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_no_captions(self):
@@ -755,8 +764,8 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
 
     def test_invalid_bind_value_raises_exception(self):
-        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
-        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+        """Test that an invalid bind value raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `bind` value"):
             st.radio("the label", ["a", "b"], key="my_key", bind="invalid-value")
 
     def test_bind_with_format_func(self):
@@ -782,3 +791,102 @@ class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.query_param_key == "my_key"
         assert not c.HasField("default")
+
+
+class RadioOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.radio("the label", ("a", "b"), on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.radio("the label", ("a", "b"), on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.radio("the label", ("a", "b"), on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.radio("the label", ("a", "b"), on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.radio
+        assert c.ignore_rerun is True
+
+
+def _radio_format_func_raises(_: Any) -> str:
+    """format_func stub that always raises to exercise the fallback path."""
+    raise ValueError("format_func failed")
+
+
+def test_radio_serde_serialize_returns_none_without_options() -> None:
+    """serialize returns None when the serde has no options.
+
+    Covers both the ``v is None`` short-circuit and the empty-options guard.
+    """
+    serde: RadioSerde[Any] = RadioSerde(
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+    )
+    assert serde.serialize("anything") is None
+    assert serde.serialize(None) is None
+
+
+def test_radio_serde_serialize_falls_back_to_str_when_format_func_raises() -> None:
+    """serialize returns ``str(v)`` when ``format_func`` raises an exception."""
+    serde: RadioSerde[str] = RadioSerde(
+        ["a", "b"],
+        formatted_options=["a", "b"],
+        formatted_option_to_option_index={"a": 0, "b": 1},
+        format_func=_radio_format_func_raises,
+    )
+    assert serde.serialize(123) == "123"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        # Value maps to an existing option.
+        ("a", "A"),
+        # Value is not among the options; the formatted string is still returned.
+        ("z", "Z"),
+    ],
+)
+def test_radio_serde_serialize_returns_formatted_value(
+    value: str, expected: str
+) -> None:
+    """serialize returns the formatted value for both known and unknown inputs."""
+    serde: RadioSerde[str] = RadioSerde(
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=str.upper,
+    )
+    assert serde.serialize(value) == expected

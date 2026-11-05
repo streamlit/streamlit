@@ -15,7 +15,9 @@
 """Metrics dashboard template.
 
 Demonstrates:
-- Time series visualization with Altair (line, area, bar, point charts)
+- KPI row of bordered ``st.metric`` values with deltas and sparklines
+- Time series with ``st.echarts_chart`` (line, area, bar, point charts) that
+  animate when a filter changes and zoom with a ``dataZoom`` slider
 - Metric cards with chart/table toggle and popover filters
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
 - Line options (Daily, 7-day MA)
@@ -30,8 +32,8 @@ with your own data sources (e.g., Snowflake queries, APIs, etc.).
 
 import hashlib
 from datetime import date, timedelta
+from typing import Any
 
-import altair as alt
 import numpy as np
 import pandas as pd
 
@@ -49,7 +51,10 @@ st.set_page_config(
 # =============================================================================
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
-CHART_HEIGHT = 300
+CHART_HEIGHT = 350  # Leaves room for each chart's legend and zoom slider
+KPI_HEIGHT = 215  # Approximate height of a bordered st.metric with a sparkline
+# Tooltip number format, using the same format strings as ``st.metric``.
+VALUE_FORMAT = "%,.0f"
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -158,146 +163,149 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     return filtered
 
 
-def _melt_chart_data(
-    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
-) -> pd.DataFrame:
-    """Melt wide data into long form and re-label the series column."""
-    melted = df.melt(
-        id_vars=[x_col],
-        value_vars=y_cols,
-        var_name="series",
-        value_name="value",
+def describe_trend(
+    title: str, source: pd.DataFrame, x_col: str, y_col: str, series: str
+) -> str:
+    """Summarize one plotted series for the chart's ``alt`` text.
+
+    ``source`` is the chart's ``dataset.source``, so the summary uses the drawn
+    values, such as the weekly means of the bar chart.
+    """
+    values = source[y_col]
+    if values.empty:
+        return f"{title}, {series}: no data"
+    span = (
+        f"{title}, {series} from {source[x_col].iloc[0]:%Y-%m-%d} to "
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
-    label_map = dict(zip(y_cols, labels, strict=True))
-    melted["series"] = melted["series"].map(label_map)
-    return melted
+    if not values.iloc[0]:
+        # A zero starting value has no percent change.
+        return f"{span}: latest {values.iloc[-1]:,.0f}"
+    return f"{span}: {values.iloc[-1] / values.iloc[0] - 1:+.1%}"
 
 
-def _chart_tooltip(x_col: str, x_title: str = "Date") -> list[alt.Tooltip]:
-    """Standard tooltip for melted chart data."""
-    return [
-        alt.Tooltip(f"{x_col}:T", title=x_title, format="%Y-%m-%d"),
-        alt.Tooltip("series:N", title="Series"),
-        alt.Tooltip("value:Q", title="Value", format=",.0f"),
-    ]
+def _time_series_option(
+    source: pd.DataFrame,
+    series: list[dict[str, Any]],
+    y_from_zero: bool = False,
+) -> dict[str, Any]:
+    """Build an ECharts option for series that share a time x-axis.
+
+    The dataframe goes in ``dataset.source``, so Streamlit sends it as Arrow,
+    and each series picks its columns with ``encode``.
+    """
+    return {
+        "dataset": {"source": source},
+        "legend": {},
+        "tooltip": {"trigger": "axis", "valueFormatter": VALUE_FORMAT},
+        "xAxis": {"type": "time"},
+        # Without ``scale``, the axis always starts at zero.
+        "yAxis": {"type": "value", "scale": not y_from_zero},
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": series,
+    }
+
+
+def _line_series(x_col: str, y_col: str, label: str) -> dict[str, Any]:
+    """A line series without point markers, dashed for the "7-day MA" label."""
+    return {
+        "type": "line",
+        "name": label,
+        "encode": {"x": x_col, "y": y_col},
+        "showSymbol": False,
+        "lineStyle": {"type": "dashed"} if label == "7-day MA" else {},
+    }
 
 
 def render_line_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_cols: list[str],
-    labels: list[str],
-    height: int = CHART_HEIGHT,
-) -> alt.Chart:
-    """Render a multi-line chart."""
-    melted = _melt_chart_data(df, x_col, y_cols, labels)
-
-    chart: alt.Chart = (
-        alt.Chart(melted)
-        .mark_line()
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
-            color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            strokeDash=alt.condition(
-                alt.datum.series == "7-day MA",
-                alt.value([5, 5]),
-                alt.value([0]),
-            ),
-            tooltip=_chart_tooltip(x_col),
-        )
-        .properties(height=height)
-    )
-    return chart
+    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
+) -> dict[str, Any]:
+    """Build a multi-line chart."""
+    series = [
+        _line_series(x_col, y_col, label)
+        for y_col, label in zip(y_cols, labels, strict=True)
+    ]
+    return _time_series_option(df[[x_col, *y_cols]], series)
 
 
 def render_area_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_cols: list[str],
-    labels: list[str],
-    height: int = CHART_HEIGHT,
-) -> alt.Chart:
-    """Render a stacked area chart."""
-    melted = _melt_chart_data(df, x_col, y_cols, labels)
+    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
+) -> dict[str, Any]:
+    """Build an area chart.
 
-    chart: alt.Chart = (
-        alt.Chart(melted)
-        .mark_area(opacity=0.6, line=True)
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
-            color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            tooltip=_chart_tooltip(x_col),
-        )
-        .properties(height=height)
-    )
-    return chart
+    The areas overlap instead of stacking because the daily value and its
+    7-day MA measure the same quantity.
+    """
+    series = [
+        {**_line_series(x_col, y_col, label), "areaStyle": {"opacity": 0.3}}
+        for y_col, label in zip(y_cols, labels, strict=True)
+    ]
+    return _time_series_option(df[[x_col, *y_cols]], series)
 
 
 def render_bar_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_cols: list[str],
-    labels: list[str],
-    height: int = CHART_HEIGHT,
-) -> alt.Chart:
-    """Render a bar chart (weekly aggregation for readability)."""
+    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
+) -> dict[str, Any]:
+    """Build a grouped bar chart (weekly averages for readability)."""
     df = df.copy()
-    df[x_col] = pd.to_datetime(df[x_col])
-    df["week"] = df[x_col].dt.to_period("W").dt.start_time
+    # Each bar sits at the start of its week.
+    df[x_col] = pd.to_datetime(df[x_col]).dt.to_period("W").dt.start_time
+    weekly = df.groupby(x_col, as_index=False)[y_cols].mean()
 
-    agg_df = df.groupby("week")[y_cols].mean().reset_index()
-    melted = _melt_chart_data(agg_df, "week", y_cols, labels)
-
-    chart: alt.Chart = (
-        alt.Chart(melted)
-        .mark_bar(opacity=0.8)
-        .encode(
-            x=alt.X("week:T", title=None),
-            y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
-            color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            xOffset="series:N",
-            tooltip=_chart_tooltip("week", x_title="Week"),
-        )
-        .properties(height=height)
-    )
-    return chart
+    series = [
+        {"type": "bar", "name": label, "encode": {"x": x_col, "y": y_col}}
+        for y_col, label in zip(y_cols, labels, strict=True)
+    ]
+    # Bars start at zero so their lengths stay comparable.
+    return _time_series_option(weekly, series, y_from_zero=True)
 
 
 def render_point_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_cols: list[str],
-    labels: list[str],
-    height: int = CHART_HEIGHT,
-) -> alt.Chart:
-    """Render a scatter/point chart with a dashed trend line for the 7-day MA."""
-    melted = _melt_chart_data(df, x_col, y_cols, labels)
+    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
+) -> dict[str, Any]:
+    """Build a scatter chart of daily values with a dashed 7-day MA trend line."""
+    series = [
+        _line_series(x_col, y_col, label)
+        if label == "7-day MA"
+        else {
+            "type": "scatter",
+            "name": label,
+            "encode": {"x": x_col, "y": y_col},
+            "symbolSize": 4,
+            "itemStyle": {"opacity": 0.5},
+        }
+        for y_col, label in zip(y_cols, labels, strict=True)
+    ]
+    return _time_series_option(df[[x_col, *y_cols]], series)
 
-    points = (
-        alt.Chart(melted)
-        .mark_point(opacity=0.5, size=20)
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
-            color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            tooltip=_chart_tooltip(x_col),
+
+# =============================================================================
+# KPI Card Component
+# =============================================================================
+
+
+@st.fragment(parallel=True)
+def kpi_card(label: str, metric_name: str) -> None:
+    """Display a bordered KPI card: the latest 7-day average and its 4-week change.
+
+    Like the metric cards, each KPI is a parallel fragment that loads its own
+    (cached) data inside ``st.skeleton``.
+    """
+    with st.skeleton(height=KPI_HEIGHT):
+        # The last 4 weeks (29 daily points) of the 7-day average: the value is
+        # the latest point, the delta compares it to the first one.
+        trend = load_metric(metric_name)["value_7d_ma"].tail(29)
+        change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
+        st.metric(
+            label,
+            f"{trend.iloc[-1]:,.0f}",
+            # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
+            f"{change:+.1%}" if change else 0,
+            delta_description="vs. 4 weeks ago",
+            help="7-day average",
+            chart_data=trend,
+            border=True,
         )
-    )
-
-    trend = (
-        alt.Chart(melted[melted["series"] == "7-day MA"])
-        .mark_line(strokeDash=[5, 5], strokeWidth=2)
-        .encode(
-            x=alt.X(f"{x_col}:T"),
-            y=alt.Y("value:Q"),
-            color=alt.Color("series:N"),
-        )
-    )
-
-    chart: alt.Chart = (points + trend).properties(height=height)
-    return chart
 
 
 # =============================================================================
@@ -395,10 +403,21 @@ def metric_card(
                     filtered_df,
                     height=CHART_HEIGHT,
                     hide_index=True,
+                    alt=f"{title} data",
                 )
             elif y_cols:
-                st.altair_chart(
-                    render_chart(filtered_df, "ds", y_cols, labels),
+                option = render_chart(filtered_df, "ds", y_cols, labels)
+                # Describe the last series drawn: the smoother 7-day MA when shown.
+                y_col = y_cols[-1]
+                series = "7-day average" if y_col == "value_7d_ma" else "daily values"
+                if chart_type == "bar":
+                    series = f"weekly means of the {series}"
+                st.echarts_chart(
+                    option,
+                    height=CHART_HEIGHT,
+                    alt=describe_trend(
+                        title, option["dataset"]["source"], "ds", y_col, series
+                    ),
                 )
             else:
                 st.info("Select at least one line option.")
@@ -427,8 +446,15 @@ def render_page_header(title: str) -> None:
 # Page header
 render_page_header("# :material/monitoring: Metrics Dashboard")
 
-# Each card loads its own data; as parallel fragments they load concurrently on
-# the first run instead of blocking on each other.
+# Each KPI and card loads its own data; as parallel fragments they load
+# concurrently on the first run instead of blocking on each other.
+
+# KPI row: horizontal containers wrap on narrow screens.
+with st.container(horizontal=True):
+    kpi_card("Active users", "users")
+    kpi_card("Sessions", "sessions")
+    kpi_card("Revenue", "revenue")
+    kpi_card("Conversions", "conversions")
 
 # Row 1: Users and Sessions
 row1 = st.columns(2)

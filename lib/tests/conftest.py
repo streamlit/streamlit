@@ -19,17 +19,30 @@ are executed.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 from typing import TYPE_CHECKING, Final
 from unittest.mock import mock_open, patch
 
 import pytest
+from coverage import inorout as coverage_inorout
 
 if TYPE_CHECKING:
     from streamlit.runtime.pages_manager import PagesManager
 
 _LOGGER: Final = logging.getLogger(__name__)
+
+# Whenever `sys.path` changes, as it does when a test's script run adds the
+# script's folder, coverage.py looks up its `source` packages again inside
+# `sys_modules_saved()`. On exit, that removes every module added to
+# `sys.modules` in the meantime by any thread, including a module another
+# thread is still importing, whose import then fails with a `KeyError` naming
+# it (https://github.com/coveragepy/coveragepy/issues/2247). The removal only
+# undoes the parent packages that looking up a dotted package name imports.
+# Looking up the top-level `streamlit` package imports nothing, so there is
+# nothing to undo. Remove this once coverage.py releases a fix.
+coverage_inorout.sys_modules_saved = contextlib.nullcontext
 
 # Do not import any Streamlit modules here! See below for details.
 
@@ -133,6 +146,15 @@ def pytest_collection_modifyitems(config, items):
         markers = item.get_closest_marker("usefixtures")
         if markers and "benchmark" in markers.args:
             item.add_marker(pytest.mark.performance)
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    """Pin `@pytest.mark.anyio` tests to the asyncio backend."""
+    # Streamlit only runs on asyncio. Without this pin, the anyio pytest plugin
+    # parametrizes tests over undeclared backends (like trio), which causes
+    # errors in the minimum-dependency test environment.
+    return "asyncio"
 
 
 @pytest.fixture

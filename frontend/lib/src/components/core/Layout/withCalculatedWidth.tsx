@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ComponentType, ReactElement } from "react"
+import type { ComponentType, ReactElement } from "react"
 
 import hoistNonReactStatics from "hoist-non-react-statics"
 
@@ -37,6 +37,7 @@ export const withCalculatedWidth = <P extends { width?: number }>(
     )
   }
   EnhancedComponent.displayName = `withCalculatedWidth(${
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank displayName falls through to the function name
     WrappedComponent.displayName || WrappedComponent.name
   })`
 

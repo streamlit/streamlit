@@ -18,7 +18,8 @@
     "src/**/*",
     "declarations.d.ts",
     "emotion.d.ts",
-    "../test-globals.d.ts"
+    "../test-globals.d.ts",
+    "../vitest-jest-dom.d.ts"
   ],
   "exclude": ["**/proto.js"]
 }

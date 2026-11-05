@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
+import { type RefObject, useState } from "react"
+
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type { AxiosProgressEvent } from "axios"
 
 import {
   ChatInput as ChatInputProto,
+  type ChatInputValue,
   FileURLs as FileURLsProto,
-  IChatInputValue,
 } from "@streamlit/protobuf"
 
-import type { WaveformController } from "~lib/components/audio/core/types"
+import { RecordingCancelledError } from "~lib/components/audio/core/RecordingCancelledError"
+import type {
+  RecordingState,
+  StopResult,
+  WaveformController,
+  WaveformControllerEvents,
+} from "~lib/components/audio/core/types"
+import { LOG } from "~lib/components/ChatInput/logger"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import {
@@ -35,7 +45,7 @@ import {
 } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ChatInput, { Props } from "./ChatInput"
+import ChatInput, { type Props } from "./ChatInput"
 
 const useWaveformControllerMock = vi.fn()
 
@@ -62,7 +72,7 @@ const getProps = (
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
   }),
-  // @ts-expect-error
+  // @ts-expect-error - upload client fixture does not implement FileUploadClient
   uploadClient: {
     uploadFile: vi.fn().mockImplementation(() => {
       return Promise.resolve()
@@ -83,7 +93,7 @@ const getProps = (
   ...widgetProps,
 })
 
-const mockChatInputValue = (text: string): IChatInputValue => {
+const mockChatInputValue = (text: string): ChatInputValue.$Properties => {
   return {
     data: text,
     fileUploaderState: {
@@ -134,6 +144,43 @@ const createMockWaveformController = (): WaveformController => ({
   destroy: vi.fn().mockReturnValue(undefined),
   setEventHandlers: vi.fn().mockReturnValue(undefined),
 })
+
+const createRecordingController = (): WaveformController => ({
+  ...createMockWaveformController(),
+  state: "recording",
+})
+
+/** Returns the controller events from the most recent useWaveformController call. */
+const getWaveformEvents = (): WaveformControllerEvents => {
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
+  return lastCall[0].events as WaveformControllerEvents
+}
+
+/** Returns the container ref from the most recent useWaveformController call. */
+const getWaveformContainerRef = (): RefObject<HTMLDivElement> => {
+  const lastCall = useWaveformControllerMock.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected useWaveformController to have been called")
+  }
+  return lastCall[0].containerRef as RefObject<HTMLDivElement>
+}
+
+/** Controller mock whose start() and cancel() drive the recording state. */
+function useStatefulWaveformControllerMock(): WaveformController {
+  const [state, setState] = useState<RecordingState>("idle")
+  return {
+    ...createMockWaveformController(),
+    state,
+    start: vi.fn(() => {
+      setState("recording")
+      return Promise.resolve()
+    }),
+    cancel: vi.fn(() => setState("idle")),
+  }
+}
 
 describe("ChatInput widget", () => {
   afterEach(() => {
@@ -212,12 +259,9 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "1234567890{enter}")
     expect(spy).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       mockChatInputValue("1234567890"),
-      {
-        fromUi: true,
-      },
-      undefined
+      { formId: undefined, fragmentId: undefined, fromUser: true }
     )
     expect(chatInput).toHaveTextContent("")
   })
@@ -253,12 +297,9 @@ describe("ChatInput widget", () => {
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "1234567890{enter}")
     expect(spy).toHaveBeenCalledWith(
-      props.element,
+      props.element.id,
       mockChatInputValue("1234567890"),
-      {
-        fromUi: true,
-      },
-      "myFragmentId"
+      { formId: undefined, fragmentId: "myFragmentId", fromUser: true }
     )
   })
 
@@ -270,9 +311,7 @@ describe("ChatInput widget", () => {
 
     const chatInput = screen.getByTestId("stChatInputTextArea")
     await user.type(chatInput, "{enter}")
-    expect(spy).not.toHaveBeenCalledWith(props.element, "", {
-      fromUi: true,
-    })
+    expect(spy).not.toHaveBeenCalled()
     expect(chatInput).toHaveTextContent("")
   })
 
@@ -421,6 +460,46 @@ describe("ChatInput widget", () => {
       expect(button).not.toBeDisabled()
     })
 
+    it("submits an attachment with explicit empty text", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 50,
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      const file = new File(["attachment contents"], "attachment.txt", {
+        type: "text/plain",
+      })
+      const uploadButton = screen.getByTestId("stChatInputFileUploadButton")
+      const fileInput = uploadButton.querySelector("input") as HTMLInputElement
+      await user.upload(fileInput, file)
+
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      await user.click(submitButton)
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        expect.objectContaining({
+          data: "",
+          fileUploaderState: expect.objectContaining({
+            uploadedFileInfo: [
+              expect.objectContaining({
+                fileId: "attachment.txt",
+                name: "attachment.txt",
+                size: file.size,
+              }),
+            ],
+          }),
+        }),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
+    })
+
     it("disables submit button when files are uploading", async () => {
       const user = userEvent.setup()
       const props = getProps({
@@ -545,13 +624,12 @@ describe("ChatInput widget", () => {
 
     await waitFor(() => {
       expect(mockSetChatInputValue).toHaveBeenCalledWith(
-        props.element,
+        props.element.id,
         expect.objectContaining({
           data: "Test message",
           fileUploaderState: expect.any(Object),
         }),
-        { fromUi: true },
-        undefined
+        { formId: undefined, fragmentId: undefined, fromUser: true }
       )
     })
 
@@ -798,15 +876,12 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stFileChipName")
-      expect(fileNames).toHaveLength(2)
-
-      // Check that both files are present using title attribute (full filename)
-      const fileTitles = Array.from(fileNames).map(el =>
-        el.getAttribute("title")
-      )
-      expect(fileTitles).toContain("folder/file1.txt")
-      expect(fileTitles).toContain("folder/file2.txt")
+      expect(
+        screen
+          .getAllByTestId("stFileChipName")
+          .map(el => el.getAttribute("title"))
+          .toSorted()
+      ).toEqual(["folder/file1.txt", "folder/file2.txt"])
     })
 
     // Find and delete file1
@@ -1013,11 +1088,7 @@ describe("ChatInput widget", () => {
     // We need to trigger the recording flow and get the approve callback
     // Instead, let's directly test by triggering the onApprove event from the mock
 
-    // Find the calls to useWaveformController and get the onApprove callback
-    const mockCalls = useWaveformControllerMock.mock.calls
-    const lastCallArgs = mockCalls[mockCalls.length - 1]
-    const { events } = lastCallArgs[0]
-    const onApprove = events?.onApprove
+    const onApprove = getWaveformEvents().onApprove
 
     // Create a mock audio blob
     const audioBlob = new Blob(["audio data"], { type: "audio/wav" })
@@ -1093,6 +1164,23 @@ describe("ChatInput widget", () => {
       const rootElement = textarea.closest('[data-testid="stChatInput"]')
       expect(rootElement).toBeVisible()
     })
+
+    it.each([
+      { description: "a pixel height", heightConfig: { pixelHeight: 200 } },
+      { description: "stretch height", heightConfig: { useStretch: true } },
+    ])(
+      "mounts the hidden waveform container on first render with $description",
+      ({ heightConfig }) => {
+        render(
+          <ChatInput {...getProps({ acceptAudio: true }, { heightConfig })} />
+        )
+
+        const waveform = screen.getByTestId("stChatInputWaveform")
+        expect(getWaveformContainerRef().current).toBe(waveform)
+        expect(waveform).not.toBeVisible()
+        expect(screen.getByTestId("stChatInputMicButton")).toBeVisible()
+      }
+    )
   })
 
   describe("submit_mode behavior", () => {
@@ -1742,5 +1830,680 @@ describe("ChatInput widget", () => {
       ).not.toBeInTheDocument()
       expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
     })
+  })
+
+  it("starts recording when the microphone button is clicked", async () => {
+    const user = userEvent.setup()
+    const mockController = createMockWaveformController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+
+    expect(mockController.start).toHaveBeenCalledTimes(1)
+    expect(mockController.cancel).not.toHaveBeenCalled()
+  })
+
+  it("approves an in-progress recording", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputApproveButton"))
+
+    expect(mockController.stop).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockController.approve).toHaveBeenCalled()
+    })
+    expect(mockController.start).not.toHaveBeenCalled()
+  })
+
+  it("skips approval without an error when a pending submit is cancelled", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    let rejectStop: (error: Error) => void = () => {}
+    mockController.stop = vi.fn(
+      () =>
+        new Promise<StopResult>((_resolve, reject) => {
+          rejectStop = reject
+        })
+    )
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputApproveButton"))
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+    await act(async () => {
+      rejectStop(new RecordingCancelledError())
+      await Promise.resolve()
+    })
+
+    expect(mockController.cancel).toHaveBeenCalledTimes(1)
+    expect(mockController.approve).not.toHaveBeenCalled()
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("cancels an in-progress recording", async () => {
+    const user = userEvent.setup()
+    const mockController = createRecordingController()
+    useWaveformControllerMock.mockReturnValue(mockController)
+
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+
+    expect(mockController.cancel).toHaveBeenCalledTimes(1)
+    expect(mockController.approve).not.toHaveBeenCalled()
+  })
+
+  it("keeps the same waveform node across compact, toolbar, and recording layouts", async () => {
+    const user = userEvent.setup()
+    useWaveformControllerMock.mockImplementation(
+      useStatefulWaveformControllerMock
+    )
+    const props = getProps({ acceptAudio: true })
+    const { rerender } = render(<ChatInput {...props} />)
+
+    const waveform = screen.getByTestId("stChatInputWaveform")
+    expect(getWaveformContainerRef().current).toBe(waveform)
+    expect(waveform).not.toBeVisible()
+
+    const expectWaveformNodeUnchanged = (): void => {
+      expect(screen.getByTestId("stChatInputWaveform")).toBe(waveform)
+      expect(getWaveformContainerRef().current).toBe(waveform)
+    }
+
+    // A configured height switches to the toolbar layout, the same branch an
+    // auto-expanded textarea uses (jsdom can't simulate its scrollHeight).
+    rerender(<ChatInput {...props} heightConfig={{ pixelHeight: 200 }} />)
+    expectWaveformNodeUnchanged()
+    expect(waveform).not.toBeVisible()
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByTestId("stChatInputCancelButton")).toBeVisible()
+    expectWaveformNodeUnchanged()
+    expect(waveform).toBeVisible()
+    expect(screen.queryByTestId("stChatInputTextArea")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("stChatInputCancelButton"))
+    expect(await screen.findByTestId("stChatInputTextArea")).toBeVisible()
+    expectWaveformNodeUnchanged()
+    expect(waveform).not.toBeVisible()
+  })
+
+  it.each([
+    {
+      description: "when microphone permission is denied",
+      triggerError: (events: WaveformControllerEvents) => {
+        events.onPermissionDenied()
+      },
+      message: "Microphone access denied",
+    },
+    {
+      description: "when the waveform controller reports an error",
+      triggerError: (events: WaveformControllerEvents) => {
+        events.onError(new Error("device failed"))
+      },
+      message: "Recording failed",
+    },
+  ])(
+    "shows a recording error $description",
+    async ({ triggerError, message }) => {
+      const user = userEvent.setup()
+      render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+      act(() => {
+        triggerError(getWaveformEvents())
+      })
+
+      await user.hover(screen.getByTestId("stChatInputMicButton"))
+      expect(await screen.findByText(message)).toBeVisible()
+    }
+  )
+
+  it.each([
+    {
+      description: "shows a generic error",
+      startRecording: () =>
+        Promise.reject(new Error("Record backend not initialized")),
+      message: "Recording failed",
+      absentMessage: "Microphone access denied",
+    },
+    {
+      description: "keeps the permission error the controller reported",
+      startRecording: () => {
+        getWaveformEvents().onPermissionDenied()
+        return Promise.reject(new Error("Microphone permission denied"))
+      },
+      message: "Microphone access denied",
+      absentMessage: "Recording failed",
+    },
+  ])(
+    "$description when start() rejects",
+    async ({ startRecording, message, absentMessage }) => {
+      const user = userEvent.setup()
+      const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+      useWaveformControllerMock.mockImplementation(() => ({
+        ...createMockWaveformController(),
+        start: vi.fn(startRecording),
+      }))
+      render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+      await user.click(screen.getByTestId("stChatInputMicButton"))
+
+      await user.hover(screen.getByTestId("stChatInputMicButton"))
+      expect(await screen.findByText(message)).toBeVisible()
+      expect(screen.queryByText(absentMessage)).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId("stChatInputCancelButton")
+      ).not.toBeInTheDocument()
+      expect(logErrorSpy).toHaveBeenCalledWith(
+        "Failed to start recording:",
+        expect.any(Error)
+      )
+    }
+  )
+
+  it("replaces an earlier attempt's error when a later start() rejects", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(LOG, "error").mockImplementation(() => {})
+    let attempt = 0
+    const startRecording = (): Promise<void> => {
+      attempt += 1
+      if (attempt === 1) {
+        getWaveformEvents().onPermissionDenied()
+        return Promise.reject(new Error("Microphone permission denied"))
+      }
+      // A failure the controller doesn't report through its events
+      return Promise.reject(new Error("Record plugin not initialized"))
+    }
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start: vi.fn(startRecording),
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+    // The mic button remounts when the error tooltip toggles, so re-query it.
+    const getMicButton = (): HTMLElement =>
+      screen.getByTestId("stChatInputMicButton")
+
+    await user.click(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+
+    await user.click(getMicButton())
+    await user.unhover(getMicButton())
+    await user.hover(getMicButton())
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+    expect(
+      screen.queryByText("Microphone access denied")
+    ).not.toBeInTheDocument()
+    expect(attempt).toBe(2)
+  })
+
+  it("keeps keyboard focus on the mic button when a retry fails again", async () => {
+    const user = userEvent.setup()
+    const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+    const getHandledStartFailures = (): number =>
+      logErrorSpy.mock.calls.filter(
+        ([message]) => message === "Failed to start recording:"
+      ).length
+    const start = vi.fn(async () => {
+      // Fail asynchronously, like a real getUserMedia() rejection, so any
+      // state update made before start() renders on its own
+      await new Promise(resolve => {
+        setTimeout(resolve, 0)
+      })
+      getWaveformEvents().onPermissionDenied()
+      throw new Error("Microphone permission denied")
+    })
+    useWaveformControllerMock.mockImplementation(() => ({
+      ...createMockWaveformController(),
+      start,
+    }))
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    await user.click(screen.getByTestId("stChatInputMicButton"))
+    // Retry only once the first failure has moved the button into its error
+    // tooltip, so the identity check below covers the retry alone.
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Microphone access denied")).toBeVisible()
+    await waitFor(() => expect(getHandledStartFailures()).toBe(1))
+
+    const micButton = screen.getByTestId("stChatInputMicButton")
+    act(() => micButton.focus())
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => expect(getHandledStartFailures()).toBe(2))
+    expect(start).toHaveBeenCalledTimes(2)
+    expect(screen.getByTestId("stChatInputMicButton")).toBe(micButton)
+    expect(micButton).toHaveFocus()
+    expect(
+      screen.queryByTestId("stChatInputCancelButton")
+    ).not.toBeInTheDocument()
+  })
+
+  it("clears a recording error when the user starts typing", async () => {
+    const user = userEvent.setup()
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    act(() => {
+      getWaveformEvents().onError(new Error("device failed"))
+    })
+
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+
+    await user.type(screen.getByTestId("stChatInputTextArea"), "hello")
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows a recording error when audio upload URL fetch returns nothing", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ acceptAudio: true })
+    props.uploadClient.fetchFileURLs = vi.fn().mockResolvedValue([])
+    render(<ChatInput {...props} />)
+
+    await act(async () => {
+      await getWaveformEvents().onApprove?.(
+        new Blob(["audio data"], { type: "audio/wav" })
+      )
+    })
+
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+    expect(props.uploadClient.uploadFile).not.toHaveBeenCalled()
+  })
+
+  it("retries a failed file upload when the chip is clicked", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      acceptFile: ChatInputProto.AcceptFile.SINGLE,
+      maxUploadSizeMb: 50,
+    })
+    props.uploadClient.fetchFileURLs = vi
+      .fn()
+      .mockRejectedValueOnce("upload failed")
+      .mockImplementation((acceptedFiles: File[]) =>
+        Promise.resolve(
+          acceptedFiles.map(
+            file =>
+              new FileURLsProto({
+                fileId: file.name,
+                uploadUrl: file.name,
+                deleteUrl: file.name,
+              })
+          )
+        )
+      )
+
+    render(<ChatInput {...props} />)
+
+    const fileUploadInput = screen
+      .getByTestId("stChatInputFileUploadButton")
+      .querySelector("input") as HTMLInputElement
+    const file = new File(["content"], "retry.txt", { type: "text/plain" })
+    await user.upload(fileUploadInput, file)
+
+    const retryChip = await screen.findByTitle("Click to retry upload")
+    await user.click(retryChip)
+
+    await waitFor(() => {
+      expect(props.uploadClient.fetchFileURLs).toHaveBeenCalledTimes(2)
+    })
+    expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(
+        screen.queryByTitle("Click to retry upload")
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  const renderChatInputWithFileDrop = (): void => {
+    render(
+      <ChatInput
+        {...getProps({
+          acceptFile: ChatInputProto.AcceptFile.SINGLE,
+          maxUploadSizeMb: 50,
+        })}
+      />
+    )
+  }
+
+  const dispatchWindowEvent = (
+    type: string,
+    properties: Record<string, unknown> = {}
+  ): void => {
+    act(() => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      // jsdom's Event has no dataTransfer/clientX/clientY, and those fields
+      // are read-only on real drag events, so set them via defineProperty.
+      for (const [key, value] of Object.entries(properties)) {
+        Object.defineProperty(event, key, { value })
+      }
+      window.dispatchEvent(event)
+    })
+  }
+
+  const startFileDrag = (): void => {
+    dispatchWindowEvent("dragover", { dataTransfer: { types: ["Files"] } })
+  }
+
+  it("shows a drop overlay while files are dragged over the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    dispatchWindowEvent("drop")
+
+    expect(
+      screen.queryByText("Drag and drop a file here")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each(["top-left", "bottom-right"] as const)(
+    "hides the drop overlay when the drag leaves the window at the %s",
+    corner => {
+      renderChatInputWithFileDrop()
+      startFileDrag()
+
+      expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+      const coordinates =
+        corner === "top-left"
+          ? { clientX: 0, clientY: 0 }
+          : {
+              // Default jsdom / WindowDimensionsProvider viewport is 1024x768.
+              clientX: 1024,
+              clientY: 768,
+            }
+      dispatchWindowEvent("dragleave", coordinates)
+
+      expect(
+        screen.queryByText("Drag and drop a file here")
+      ).not.toBeInTheDocument()
+    }
+  )
+
+  it("keeps the drop overlay when dragleave stays inside the window", () => {
+    renderChatInputWithFileDrop()
+    startFileDrag()
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+
+    dispatchWindowEvent("dragleave", { clientX: 40, clientY: 40 })
+
+    expect(screen.getByText("Drag and drop a file here")).toBeVisible()
+  })
+
+  describe("file upload lifecycle", () => {
+    const getUploadProps = (): Props =>
+      getProps({
+        acceptFile: ChatInputProto.AcceptFile.SINGLE,
+        maxUploadSizeMb: 50,
+      })
+
+    const getFileUploadInput = (): HTMLInputElement =>
+      screen
+        .getByTestId("stChatInputFileUploadButton")
+        .querySelector("input") as HTMLInputElement
+
+    const progressEvent = (
+      loaded: number,
+      total?: number
+    ): AxiosProgressEvent => ({
+      loaded,
+      total,
+      bytes: loaded,
+      lengthComputable: total !== undefined,
+    })
+
+    type PendingUpload = {
+      reportProgress?: (event: AxiosProgressEvent) => void
+      finish: () => void
+      promise: Promise<void>
+    }
+
+    /** Makes uploads stay pending, ignoring abort signals, until `finish` is called. */
+    const mockPendingUpload = (props: Props): PendingUpload => {
+      const upload: PendingUpload = {
+        finish: () => {},
+        promise: Promise.resolve(),
+      }
+      vi.mocked(props.uploadClient.uploadFile).mockImplementation(
+        (_widget, _url, _file, onUploadProgress) => {
+          upload.reportProgress = onUploadProgress
+          upload.promise = new Promise<void>(resolve => {
+            upload.finish = resolve
+          })
+          return upload.promise
+        }
+      )
+      return upload
+    }
+
+    it("keeps a file uploading while progress is reported, then submits it", async () => {
+      const user = userEvent.setup()
+      const props = getUploadProps()
+      const upload = mockPendingUpload(props)
+      const spy = vi.spyOn(props.widgetMgr, "setChatInputValue")
+      render(<ChatInput {...props} />)
+
+      await user.upload(getFileUploadInput(), createTestFile("progress.txt"))
+      expect(await screen.findByTestId("stFileChipIconSpinner")).toBeVisible()
+      expect(upload.reportProgress).toBeDefined()
+
+      act(() => {
+        upload.reportProgress?.(progressEvent(50, 100))
+        // A repeated percentage and a missing total must not end the upload.
+        upload.reportProgress?.(progressEvent(50, 100))
+        upload.reportProgress?.(progressEvent(10))
+      })
+
+      const submitButton = screen.getByTestId("stChatInputSubmitButton")
+      expect(screen.getByTestId("stFileChipIconSpinner")).toBeVisible()
+      expect(submitButton).toBeDisabled()
+
+      act(() => {
+        upload.finish()
+      })
+
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      expect(
+        screen.queryByTestId("stFileChipIconSpinner")
+      ).not.toBeInTheDocument()
+
+      await user.click(submitButton)
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        expect.objectContaining({
+          fileUploaderState: expect.objectContaining({
+            uploadedFileInfo: [
+              expect.objectContaining({ name: "progress.txt" }),
+            ],
+          }),
+        }),
+        { formId: undefined, fragmentId: undefined, fromUser: true }
+      )
+    })
+
+    it("aborts an in-progress upload when its chip is removed", async () => {
+      const user = userEvent.setup()
+      const props = getUploadProps()
+      let uploadSignal: AbortSignal | undefined
+      vi.mocked(props.uploadClient.uploadFile).mockImplementation(
+        (_widget, _url, _file, _onUploadProgress, signal) => {
+          uploadSignal = signal
+          return new Promise<void>((_resolve, reject) => {
+            signal?.addEventListener("abort", () => {
+              reject(new DOMException("Aborted", "AbortError"))
+            })
+          })
+        }
+      )
+      render(<ChatInput {...props} />)
+
+      await user.upload(getFileUploadInput(), createTestFile("pending.txt"))
+      await user.click(
+        await screen.findByRole("button", {
+          name: "Cancel upload of pending.txt",
+        })
+      )
+
+      expect(uploadSignal?.aborted).toBe(true)
+      await waitFor(() => {
+        expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+      })
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(props.uploadClient.deleteFile).not.toHaveBeenCalled()
+      expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
+    })
+
+    it("does not restore a removed file when its upload reports progress or completes later", async () => {
+      const user = userEvent.setup()
+      const props = getUploadProps()
+      const upload = mockPendingUpload(props)
+      render(<ChatInput {...props} />)
+
+      await user.upload(getFileUploadInput(), createTestFile("late.txt"))
+      const cancelButton = await screen.findByRole("button", {
+        name: "Cancel upload of late.txt",
+      })
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
+      expect(upload.reportProgress).toBeDefined()
+
+      await user.click(cancelButton)
+      expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+
+      await act(async () => {
+        upload.reportProgress?.(progressEvent(80, 100))
+        upload.finish()
+        await upload.promise
+      })
+
+      expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+      expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
+    })
+
+    it("marks a file as failed when its upload request errors", async () => {
+      const user = userEvent.setup()
+      const props = getUploadProps()
+      vi.mocked(props.uploadClient.uploadFile).mockRejectedValue(
+        new Error("Network down")
+      )
+      render(<ChatInput {...props} />)
+
+      await user.upload(getFileUploadInput(), createTestFile("broken.txt"))
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Network down"
+      )
+      expect(screen.getByTitle("Click to retry upload")).toBeVisible()
+      expect(
+        screen.queryByTestId("stFileChipIconSpinner")
+      ).not.toBeInTheDocument()
+    })
+
+    it.each([
+      {
+        description: "succeeds",
+        deleteFile: (): Promise<void> => Promise.resolve(),
+        expectedLogCalls: [],
+      },
+      {
+        description: "fails",
+        deleteFile: (): Promise<void> =>
+          Promise.reject(new Error("server gone")),
+        expectedLogCalls: [
+          ["Failed to delete file from server:", expect.any(Error)],
+        ],
+      },
+    ])(
+      "removes an uploaded file when server deletion $description",
+      async ({ deleteFile, expectedLogCalls }) => {
+        const user = userEvent.setup()
+        const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+        const props = getUploadProps()
+        props.uploadClient.deleteFile = vi.fn(deleteFile)
+        render(<ChatInput {...props} />)
+
+        await user.upload(getFileUploadInput(), createTestFile("done.txt"))
+        await user.click(
+          await screen.findByRole("button", { name: "Remove done.txt" })
+        )
+
+        expect(props.uploadClient.deleteFile).toHaveBeenCalledWith("done.txt")
+        expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+        expect(screen.getByTestId("stChatInputSubmitButton")).toBeDisabled()
+        await waitFor(() => {
+          expect(logErrorSpy.mock.calls).toEqual(expectedLogCalls)
+        })
+      }
+    )
+
+    it("ignores paste events without clipboard data", () => {
+      const props = getUploadProps()
+      render(<ChatInput {...props} />)
+
+      // userEvent always attaches clipboard data, so dispatch a bare paste.
+      act(() => {
+        screen
+          .getByTestId("stChatInputTextArea")
+          .dispatchEvent(
+            new Event("paste", { bubbles: true, cancelable: true })
+          )
+      })
+
+      expect(props.uploadClient.fetchFileURLs).not.toHaveBeenCalled()
+      expect(screen.queryByTestId("stFileChip")).not.toBeInTheDocument()
+    })
+  })
+
+  it("clears a recording error when a new recording starts", async () => {
+    const user = userEvent.setup()
+    render(<ChatInput {...getProps({ acceptAudio: true })} />)
+
+    act(() => {
+      getWaveformEvents().onError(new Error("device failed"))
+    })
+    await user.hover(screen.getByTestId("stChatInputMicButton"))
+    expect(await screen.findByText("Recording failed")).toBeVisible()
+
+    act(() => {
+      getWaveformEvents().onRecordStart?.()
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stTooltipErrorHoverTarget")
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByTestId("stChatInputMicButton")).toBeVisible()
+  })
+
+  it("focuses the textarea when the character counter is clicked", async () => {
+    const user = userEvent.setup()
+    render(<ChatInput {...getProps({ maxChars: 10 })} />)
+
+    const chatInput = screen.getByTestId("stChatInputTextArea")
+    await user.type(chatInput, "abc")
+    await user.tab()
+    expect(chatInput).not.toHaveFocus()
+
+    await user.click(screen.getByText("3/10"))
+
+    expect(chatInput).toHaveFocus()
   })
 })

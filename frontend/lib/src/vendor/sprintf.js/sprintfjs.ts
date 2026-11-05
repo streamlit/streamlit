@@ -45,7 +45,7 @@ const re = {
   sign: /^[+-]/,
 }
 
-const sprintfCache: Record<string, ParseTree> = Object.create(null)
+const sprintfCache: Partial<Record<string, ParseTree>> = Object.create(null)
 
 /**
  * Adds thousand separators to a numeric string.
@@ -231,7 +231,7 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
         let separator: string
         if (ph.thousand_sep === "_") {
           separator = "_"
-        } else if (ph.pad_char?.startsWith("'")) {
+        } else if (ph.pad_char?.startsWith("'") === true) {
           separator = ph.pad_char.charAt(1)
         } else {
           separator = ","
@@ -260,8 +260,9 @@ function sprintfFormat(parseTree: ParseTree, argv: unknown[]): string {
 }
 
 function sprintfParse(fmt: string): ParseTree {
-  if (sprintfCache[fmt]) {
-    return sprintfCache[fmt]
+  const cached = sprintfCache[fmt]
+  if (cached) {
+    return cached
   }
 
   let _fmt = fmt

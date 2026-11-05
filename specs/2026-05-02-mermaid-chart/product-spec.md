@@ -169,6 +169,8 @@ The theming uses Mermaid's "base" theme with Streamlit-specific color overrides:
 - Gantt chart completion uses Streamlit green
 - Git graph branches use the full Streamlit color palette
 
+Diagrams use Mermaid's "classic" look. Mermaid 12 otherwise defaults several diagram types to "neo" (drop shadows and heavier strokes), which is not driven by these theme variables. A diagram can still select `neo` or `handDrawn` in its own front matter. Layout stays on Mermaid's default.
+
 #### Loading State
 
 While the diagram is rendering:
@@ -220,12 +222,12 @@ The toolbar appears on hover over the diagram container and follows Streamlit's 
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 graph LR
     A[Start] --> B{Decision}
     B -->|Yes| C[OK]
     B -->|No| D[Cancel]
-''')
+""")
 ```
 
 #### Sequence Diagram
@@ -233,7 +235,7 @@ graph LR
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 sequenceDiagram
     participant User
     participant App
@@ -242,7 +244,7 @@ sequenceDiagram
     App->>Server: API request
     Server-->>App: Response
     App-->>User: Update UI
-''')
+""")
 ```
 
 #### Gantt Chart
@@ -250,7 +252,7 @@ sequenceDiagram
 ```python
 import streamlit as st
 
-st.mermaid_chart('''
+st.mermaid_chart("""
 gantt
     title Project Schedule
     dateFormat YYYY-MM-DD
@@ -260,7 +262,7 @@ gantt
     section Development
     Implementation :b1, after a2, 14d
     Testing        :b2, after b1, 7d
-''')
+""")
 ```
 
 #### Within Markdown Context
@@ -407,5 +409,5 @@ may not know about the markdown syntax.
 | No breaking API changes      | ⚠️ Markdown mermaid fences now render instead of showing source (see Backwards Compatibility) |
 | No new dependencies          | ✅ No new backend (Python) dependencies. mermaid.js is a new frontend dependency (lazy-loaded) |
 | Metrics collected            | ✅ `st.mermaid_chart` tracked via `gather_metrics`. Markdown-based usage tracked via frontend telemetry when mermaid code blocks are rendered |
-| Any security/legal impact?   | ✅ No — mermaid.js is MIT licensed; strict security mode used |
+| Any security/legal impact?   | ✅ mermaid.js is MIT licensed and rendered in strict mode. Mermaid 12 also bundles elkjs (EPL-2.0) for layout; the EPL notice is in NOTICES |
 | Any docs changes needed?     | ✅ API reference docs and tutorial page |

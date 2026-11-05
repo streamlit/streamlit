@@ -16,7 +16,9 @@
 
 import { Suspense } from "react"
 
-import type { IconSize } from "~lib/theme/types"
+import { isNullOrEmptyString } from "@streamlit/utils"
+
+import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -106,10 +108,27 @@ export function isMenuStyleIconLabel(
   icon: string | undefined,
   label: string | undefined
 ): boolean {
-  if (icon) {
+  if (!isNullOrEmptyString(icon)) {
     return false
   }
-  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
+  return !isNullOrEmptyString(label) && MENU_STYLE_ICONS.has(label.trim())
+}
+
+/**
+ * Accessible name for an icon-only control.
+ * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
+ */
+export function getIconAccessibleName(iconValue: string): string {
+  // Name the loading spinner as "Loading"; DynamicIcon renders "spinner" as a glyph, not an icon pack.
+  if (iconValue === "spinner") {
+    return "Loading"
+  }
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  if (pack === "material" && icon) {
+    return `${icon} icon`
+  }
+  // Strip the optional "emoji:" prefix so the name matches what EmojiIcon renders.
+  return (icon || iconValue).replace(/^emoji:/, "")
 }
 
 /**
@@ -122,7 +141,11 @@ export function getFilledStarIconSrc(): string {
 
 export interface DynamicIconProps {
   iconValue: string
-  size?: IconSize
+  /**
+   * Icon size token, or `"inherit"` to match the parent font-size (`1em`).
+   * Use inherit for inline contexts such as heading icons.
+   */
+  size?: IconSizeProp
   testid?: string
   color?: string
 }
@@ -136,7 +159,7 @@ const DynamicIconDispatcher = ({
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
           aria-hidden="true"
-          data-testid={props.testid || "stSpinnerIcon"}
+          data-testid={props.testid ?? "stSpinnerIcon"}
           {...props}
         />
       </StyledDynamicIcon>
@@ -152,7 +175,8 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
-                data-testid={props.testid || "stImageIcon"}
+                alt=""
+                data-testid={props.testid ?? "stImageIcon"}
               />
             </StyledDynamicIcon>
           )

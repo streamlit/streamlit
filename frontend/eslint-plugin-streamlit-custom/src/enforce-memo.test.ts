@@ -183,6 +183,28 @@ function MyComponent() {
       `,
     },
     {
+      name: "memo import is inserted below a leading license comment",
+      code: `/** License header */
+function MyComponent() {
+  return <div>Hello</div>;
+}
+export default MyComponent;
+`,
+      errors: [
+        {
+          messageId: "enforceMemo",
+        },
+      ],
+      output: `/** License header */
+import { memo } from 'react';
+
+function MyComponent() {
+  return <div>Hello</div>;
+}
+export default memo(MyComponent);
+`,
+    },
+    {
       name: "arrow function component without memo should be wrapped",
       code: `
         import React from 'react';

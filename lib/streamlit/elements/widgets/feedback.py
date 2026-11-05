@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import numbers
 from typing import (
     TYPE_CHECKING,
     Final,
@@ -22,6 +23,7 @@ from typing import (
     overload,
 )
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Width,
@@ -34,15 +36,22 @@ from streamlit.elements.lib.utils import (
     save_for_app_testing,
     to_key,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitValueError, StreamlitValueOutOfRangeError
 from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import (
+    get_session_state,
+    register_widget,
+    validate_on_change_mode,
+)
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
+        BindOption,
+        OnChangeMode,
+        PersistStateOption,
         WidgetArgs,
         WidgetCallback,
         WidgetKwargs,
@@ -87,7 +96,8 @@ class FeedbackSerde:
     The session state and return values are always int | None.
     """
 
-    def __init__(self, default_value: int | None = None):
+    def __init__(self, num_options: int, default_value: int | None = None):
+        self.num_options = num_options
         self.default_value = default_value
 
     def serialize(self, value: int | None) -> str:
@@ -100,7 +110,12 @@ class FeedbackSerde:
             return self.default_value  # No UI interaction yet
         if ui_value == "":
             return None  # User explicitly cleared
-        return int(ui_value)  # User selected a value
+        value = int(ui_value)  # User selected a value
+        # An index outside the options (e.g. ?rating=4 in the URL of a "thumbs"
+        # widget) falls back to the default, so a bound URL param is cleared.
+        if not 0 <= value < self.num_options:
+            return self.default_value
+        return value
 
 
 class FeedbackMixin:
@@ -112,10 +127,12 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> Literal[0, 1] | None: ...
 
     @overload
@@ -126,10 +143,12 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> Literal[0, 1, 2, 3, 4] | None: ...
 
     @gather_metrics("feedback")
@@ -140,10 +159,12 @@ class FeedbackMixin:
         key: Key | None = None,
         default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: Width = "content",
+        bind: BindOption = None,
+        persist_state: PersistStateOption = None,
     ) -> int | None:
         """Display a feedback widget.
 
@@ -196,9 +217,30 @@ class FeedbackMixin:
             An optional boolean that disables the feedback widget if set
             to ``True``. The default is ``False``.
 
-        on_change : callable
-            An optional callback invoked when this feedback widget's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the feedback widget should respond to value changes. This
+            controls whether or not Streamlit reruns the app when the user
+            interacts with the feedback widget. ``on_change`` can be one of
+            the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (clicking an option or clearing the
+              selection).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The feedback widget still updates in the
+              UI. The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -218,6 +260,48 @@ class FeedbackMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            The query parameter holds the index of the selected option, the
+            same integer the widget returns (e.g., ``?rating=4`` for five
+            stars). When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?rating=``) clears the
+            widget. Invalid query parameter values are ignored and removed
+            from the URL.
+
+            When ``on_change="ignore"``, Streamlit updates the URL on the
+            same commits described above. As with widgets inside a form,
+            the URL can show a value that Python hasn't received yet.
+            Python receives the new value on the next rerun, so a page load
+            or share uses the updated URL value.
+
+        persist_state : "page", "session", or None
+            How long to preserve the widget's value when it isn't rendered.
+            If this is ``None`` (default), the value is lost when the widget
+            stops being rendered or the user switches pages. If this is
+            ``"page"``, the value is preserved only while the user stays on the
+            page where the widget is defined (for example, while the widget is
+            conditionally hidden); it is discarded on a page switch and is not
+            restored if the user returns to the page. If this is ``"session"``,
+            the value is preserved for the entire session, including across
+            page switches, so it returns when the user navigates back. This
+            requires ``key`` to be set. If ``bind="query-params"`` is also set,
+            the binding takes precedence: the value is stored in the URL, so it
+            persists across page switches regardless of the ``persist_state``
+            scope.
 
         Returns
         -------
@@ -261,24 +345,21 @@ class FeedbackMixin:
 
         """
         if options not in {"thumbs", "faces", "stars"}:
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'faces', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
+            raise StreamlitValueError("options", ["'thumbs'", "'faces'", "'stars'"])
 
         num_options = _get_num_options(options)
 
-        if default is not None and (default < 0 or default >= num_options):
-            raise StreamlitAPIException(
-                f"The default value in '{options}' must be a number between 0 and {num_options - 1}."
-                f" The passed default value is {default}"
-            )
+        if default is not None and not (0 <= default < num_options):
+            raise StreamlitValueOutOfRangeError("default", default, 0, num_options - 1)
 
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        check_widget_policies(self.dg, key, on_change, default_value=default)
+        check_widget_policies(self.dg, key, on_change_callback, default_value=default)
 
         ctx = get_script_run_ctx()
         form_id = current_form_id(self.dg)
@@ -303,22 +384,54 @@ class FeedbackMixin:
         if default is not None:
             proto.default = default
 
-        serde = FeedbackSerde(default_value=default)
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
+        if isinstance(on_change, str) and on_change == "ignore":
+            proto.ignore_rerun = True
+
+        serde = FeedbackSerde(num_options, default_value=default)
 
         widget_state = register_widget(
             proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            disabled=disabled,
+            bind=bind,
+            persist_state=persist_state,
+            # Choosing the selected option again clears it.
+            clearable=True,
         )
 
-        if widget_state.value_changed:
-            if widget_state.value is not None:
-                proto.value = widget_state.value
+        current_value = widget_state.value
+        # Reset any value that isn't a valid option index to the default, so the
+        # widget never returns an index it doesn't display. register_widget
+        # skips the deserializer for a value set through session state or
+        # restored by persist_state, such as a persisted 5-star rating restored
+        # onto a "thumbs" widget. Any Integral is accepted so NumPy integers
+        # work, but bool is rejected although it subclasses int. `stored_value`
+        # is typed as `object` so the type checker doesn't flag these checks as
+        # unreachable.
+        stored_value: object = current_value
+        value_needs_reset = stored_value is not None and (
+            isinstance(stored_value, bool)
+            or not isinstance(stored_value, numbers.Integral)
+            or not 0 <= int(stored_value) < num_options
+        )
+        if value_needs_reset:
+            current_value = default
+            if key is not None:
+                get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            if current_value is not None:
+                proto.value = current_value
             proto.set_value = True
 
         if ctx:
@@ -328,10 +441,23 @@ class FeedbackMixin:
             "feedback",
             proto,
             layout_config=layout_config,
-            has_one_shot_effect=widget_state.value_changed,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "feedback",
+                key=element_id,
+                action="value",
+                # Choosing the current option again clears it, for every feedback type.
+                clearable=True,
+                # The index of the chosen option. `options` names the set.
+                value_schema=agent_spec.INTEGER,
+                choices=list(range(num_options)),
+                options=options,
+                disabled=disabled,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
 
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

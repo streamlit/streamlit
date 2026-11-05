@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
 import {
@@ -27,9 +27,12 @@ import {
   StreamlitErrorCodeBlock,
   StreamlitMarkdown,
 } from "@streamlit/lib"
-import { IException } from "@streamlit/protobuf"
+import type { Exception } from "@streamlit/protobuf"
 
-import { DeployDialog, DeployDialogProps } from "./DeployDialog/DeployDialog"
+import {
+  DeployDialog,
+  type DeployDialogProps,
+} from "./DeployDialog/DeployDialog"
 import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void
@@ -58,6 +61,7 @@ export function StreamlitDialog(dialogProps: DialogProps): ReactNode {
       return <DeployDialog {...dialogProps} />
     case DialogType.DEPLOY_ERROR:
       return <DeployErrorDialog {...dialogProps} />
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- untyped callers can omit the type; render a closed modal instead of the unrecognized-type dialog
     case undefined:
       return noDialog(dialogProps)
     default:
@@ -141,7 +145,7 @@ function ClearCacheDialog(props: ClearCacheProps): ReactElement {
 
 export interface ScriptCompileErrorProps {
   type: DialogType.SCRIPT_COMPILE_ERROR
-  exception: IException | null | undefined
+  exception: Exception.$Properties | null | undefined
   onClose: PlainEventHandler
 }
 
@@ -153,7 +157,8 @@ function ScriptCompileErrorDialog(
       <ModalHeader>Script execution error</ModalHeader>
       <ModalBody>
         <StreamlitErrorCodeBlock>
-          {props.exception?.message ? props.exception.message : "No message"}
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- blank exception message uses the fallback */}
+          {props.exception?.message || "No message"}
         </StreamlitErrorCodeBlock>
       </ModalBody>
       <ModalFooter>

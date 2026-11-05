@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -34,14 +32,11 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Basic usage - returns DeltaGenerator
-    assert_type(pyplot(), DeltaGenerator)
     assert_type(pyplot(fig), DeltaGenerator)
-    assert_type(pyplot(None), DeltaGenerator)
 
     # pyplot with clear_figure parameter
     assert_type(pyplot(fig, clear_figure=True), DeltaGenerator)
     assert_type(pyplot(fig, clear_figure=False), DeltaGenerator)
-    assert_type(pyplot(fig, clear_figure=None), DeltaGenerator)
 
     # pyplot with width parameter
     assert_type(pyplot(fig, width="stretch"), DeltaGenerator)
@@ -53,7 +48,12 @@ if TYPE_CHECKING:
     assert_type(pyplot(fig, use_container_width=False), DeltaGenerator)
     assert_type(pyplot(fig, use_container_width=None), DeltaGenerator)
 
-    # pyplot with extra savefig kwargs (**kwargs: Any)
+    # pyplot with alt parameter (before **kwargs)
+    assert_type(pyplot(fig, alt="Histogram of samples"), DeltaGenerator)
+    assert_type(pyplot(fig, alt=""), DeltaGenerator)
+    assert_type(pyplot(fig, alt=None), DeltaGenerator)
+
+    # pyplot with deprecated savefig kwargs (**kwargs: Any)
     assert_type(pyplot(fig, dpi=300, transparent=True), DeltaGenerator)
 
     # pyplot with all parameters combined
@@ -63,7 +63,8 @@ if TYPE_CHECKING:
             clear_figure=True,
             width="stretch",
             use_container_width=None,
-            dpi=200,
+            alt="Named chart",
+            dpi=200,  # deprecated savefig kwarg
         ),
         DeltaGenerator,
     )
@@ -72,11 +73,18 @@ if TYPE_CHECKING:
     # Invalid usages - should NOT type check
     # =====================================================================
 
-    # Invalid width value (not "content", "stretch", or int)
-    pyplot(fig, width="invalid")  # type: ignore[arg-type]
+    # Missing required figure
+    pyplot()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
 
-    # Invalid clear_figure value (not bool or None)
-    pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]
+    # Figure cannot be None
+    pyplot(None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid width value (not "content", "stretch", or int)
+    pyplot(fig, width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Invalid clear_figure values
+    pyplot(fig, clear_figure=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing width as positional argument (should be keyword-only)
-    pyplot(fig, None, "stretch")  # type: ignore[call-arg]
+    pyplot(fig, False, "stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

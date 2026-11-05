@@ -17,6 +17,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    expect_warning,
     get_expander,
 )
 
@@ -24,7 +25,7 @@ from e2e_playwright.shared.app_utils import (
 # If the html content is only style tags, it will generate the stHtml element
 # in the event container. If the html content is a mix of style tags and other tags,
 # it will generate the stHtml element with both style/other tags in the main container.
-ST_HTML_ELEMENTS = 12
+ST_HTML_ELEMENTS = 13
 
 
 def test_html_in_line_styles(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -114,13 +115,13 @@ def test_html_in_main_container(app: Page):
     # in the main container and are visible
     main_container = app.get_by_test_id("stMain")
     other_html_elements = main_container.get_by_test_id("stHtml")
-    expect(other_html_elements).to_have_count(10)
+    expect(other_html_elements).to_have_count(11)
 
     # Check that the remaining stHtml elements are in the main container
     # and are visible
     main_container = app.get_by_test_id("stMain")
     other_html_elements = main_container.get_by_test_id("stHtml")
-    expect(other_html_elements).to_have_count(10)
+    expect(other_html_elements).to_have_count(11)
     expect(other_html_elements.nth(0)).to_be_visible()
     expect(other_html_elements.nth(1)).to_be_visible()
     expect(other_html_elements.nth(2)).to_be_visible()
@@ -134,7 +135,7 @@ def test_check_top_level_class(app: Page):
 
 
 def test_html_from_file_str(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that we can load HTML files from str paths."""
+    """Test that we can load an HTML file from a Path."""
     html_elements = app.get_by_test_id("stHtml")
     expect(html_elements).to_have_count(ST_HTML_ELEMENTS)
     assert_snapshot(html_elements.nth(3), name="st_html-file_str")
@@ -145,6 +146,22 @@ def test_html_from_file_path(app: Page, assert_snapshot: ImageCompareFunction):
     html_elements = app.get_by_test_id("stHtml")
     expect(html_elements).to_have_count(ST_HTML_ELEMENTS)
     assert_snapshot(html_elements.nth(4), name="st_html-file_path")
+
+
+def test_html_from_string_file_path(app: Page):
+    """Test that string file paths show a warning and aren't read."""
+    expect_warning(
+        app,
+        "Passing a local file path as a string to st.html is no longer supported.",
+    )
+
+    html_elements = app.get_by_test_id("stHtml")
+    expect(html_elements).to_have_count(ST_HTML_ELEMENTS)
+    string_path_element = app.get_by_test_id("stMain").get_by_test_id("stHtml").last
+    expect(string_path_element).to_contain_text("test_div.html")
+    expect(string_path_element).not_to_contain_text(
+        "This is a div with some inline styles."
+    )
 
 
 def test_html_with_css_file(app: Page):

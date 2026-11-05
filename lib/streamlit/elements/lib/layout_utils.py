@@ -14,16 +14,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, cast
+from numbers import Integral
+from typing import Final, Literal, TypeAlias, cast
 
 from streamlit.errors import (
-    StreamlitInvalidColumnGapError,
     StreamlitInvalidHeightError,
-    StreamlitInvalidHorizontalAlignmentError,
-    StreamlitInvalidSizeError,
-    StreamlitInvalidTextAlignmentError,
-    StreamlitInvalidVerticalAlignmentError,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidWidthError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.Block_pb2 import Block
 from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
@@ -59,6 +58,45 @@ SIZE_TO_REM_MAPPING = {
     "large": 4.25,  # Height of large widget without label
     "xlarge": 6,  # Aligns with gap "xlarge" (96px)
     "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
+}
+_VALID_SPACE_SIZE_STRINGS: Final = ("stretch", *SIZE_TO_REM_MAPPING)
+_VALID_SPACE_SIZE_VALUES: Final = [
+    *[f"'{size}'" for size in _VALID_SPACE_SIZE_STRINGS],
+    "a positive integer",
+]
+
+# Shared by st.expander and st.status, which render through the same proto.
+ExpandableType: TypeAlias = Literal["default", "compact", "step"]
+
+# Protobuf ``uint32`` max. Pixel/span fields that serialize as uint32 must
+# stay in this range so invalid public API values raise Streamlit errors
+# instead of a native protobuf ``ValueError``.
+PROTO_UINT32_MAX: Final = 2**32 - 1
+
+
+def is_int(value: object) -> bool:
+    """Return True for real ints, excluding ``bool`` (a subclass of ``int``)."""
+    return isinstance(value, Integral) and not isinstance(value, bool)
+
+
+def validate_uint32_max(parameter: str, value: int, *, min_value: int = 1) -> None:
+    """Raise if ``value`` cannot be stored in a protobuf ``uint32`` field.
+
+    ``min_value`` is the public lower bound named in the error. Most pixel and
+    span parameters reject values below 1 before calling this. Gap allows 0.
+    """
+    if value < min_value or value > PROTO_UINT32_MAX:
+        raise StreamlitValueOutOfRangeError(
+            parameter, value, min_value, PROTO_UINT32_MAX
+        )
+
+
+EXPANDABLE_TYPE_TO_PROTO_MAPPING: Final[
+    dict[ExpandableType, Block.Expandable.Type.ValueType]
+] = {
+    "default": Block.Expandable.Type.DEFAULT,
+    "compact": Block.Expandable.Type.COMPACT,
+    "step": Block.Expandable.Type.STEP,
 }
 
 
@@ -179,6 +217,9 @@ def validate_width(width: Width | None, allow_content: bool = False) -> None:
             raise StreamlitInvalidWidthError(width, allow_content)
     elif width <= 0:
         raise StreamlitInvalidWidthError(width, allow_content)
+    else:
+        # Pixel widths are stored in a protobuf uint32.
+        validate_uint32_max("width", width)
 
 
 def validate_height(
@@ -222,6 +263,9 @@ def validate_height(
 
     elif height <= 0:
         raise StreamlitInvalidHeightError(height, allow_content)
+    else:
+        # Pixel heights are stored in a protobuf uint32.
+        validate_uint32_max("height", height)
 
 
 def validate_space_size(size: SpaceSize) -> None:
@@ -234,27 +278,16 @@ def validate_space_size(size: SpaceSize) -> None:
 
     Raises
     ------
-    StreamlitInvalidSizeError
+    StreamlitValueError
         If the size value is invalid.
     """
-    if not isinstance(size, (int, str)):
-        raise StreamlitInvalidSizeError(size)
-
-    if isinstance(size, str):
-        valid_strings = [
-            "stretch",
-            "xxsmall",
-            "xsmall",
-            "small",
-            "medium",
-            "large",
-            "xlarge",
-            "xxlarge",
-        ]
-        if size not in valid_strings:
-            raise StreamlitInvalidSizeError(size)
-    elif isinstance(size, int) and size <= 0:
-        raise StreamlitInvalidSizeError(size)
+    is_valid_size = (isinstance(size, str) and size in _VALID_SPACE_SIZE_STRINGS) or (
+        isinstance(size, int) and size > 0
+    )
+    if not is_valid_size:
+        raise StreamlitValueError(
+            "size", _VALID_SPACE_SIZE_VALUES, detail=f"Got {size!r}."
+        )
 
 
 def get_width_config(width: Width | SpaceSize) -> WidthConfig:
@@ -292,9 +325,16 @@ _GAP_STRING_MAPPING: dict[str, GapSize.ValueType] = {
     "xlarge": GapSize.XLARGE,
     "xxlarge": GapSize.XXLARGE,
 }
+_VALID_GAP_VALUES: Final = [
+    *[f"'{size}'" for size in _GAP_STRING_MAPPING],
+    "None",
+    "a non-negative integer (pixels)",
+]
 
 
-def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
+def get_gap_config(
+    gap: Gap | None, *, parameter: str = "gap", detail: str | None = None
+) -> GapConfig:
     """Convert a gap value to a ``GapConfig`` proto.
 
     ``gap`` may be one of the string enum values (``"xxsmall"``, ``"xsmall"``,
@@ -305,12 +345,15 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
     ----------
     gap : Gap or None
         The gap value to convert.
-    element_type : str
-        The element type used in error messages.
+    parameter : str
+        Parameter name used in validation errors. Defaults to ``"gap"``.
+    detail : str or None
+        Optional extra text for the validation error. Defaults to
+        ``Got {gap!r}.``.
 
     Raises
     ------
-    StreamlitInvalidColumnGapError
+    StreamlitValueError
         If ``gap`` is not a valid gap value.
     """
     gap_config = GapConfig()
@@ -318,6 +361,8 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
     # ``bool`` is a subclass of ``int`` in Python, but should not be accepted
     # as a pixel value.
     if isinstance(gap, int) and not isinstance(gap, bool) and gap >= 0:
+        # Pixel gaps are stored in a protobuf uint32.
+        validate_uint32_max(parameter, gap, min_value=0)
         gap_config.pixel_gap = gap
         return gap_config
 
@@ -329,21 +374,39 @@ def get_gap_config(gap: Gap | None, element_type: str) -> GapConfig:
         gap_config.gap_size = _GAP_STRING_MAPPING[gap.lower()]
         return gap_config
 
-    raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+    raise StreamlitValueError(
+        parameter,
+        _VALID_GAP_VALUES,
+        detail=f"Got {gap!r}." if detail is None else detail,
+    )
+
+
+_VALID_HORIZONTAL_ALIGNMENTS: Final = ["left", "center", "right", "distribute"]
+_VALID_HORIZONTAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_HORIZONTAL_ALIGNMENTS
+]
+_VALID_VERTICAL_ALIGNMENTS: Final = ["top", "center", "bottom", "distribute"]
+_VALID_VERTICAL_ALIGNMENT_VALUES: Final = [
+    f"'{alignment}'" for alignment in _VALID_VERTICAL_ALIGNMENTS
+]
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:
-    valid_horizontal_alignments = ["left", "center", "right", "distribute"]
-    if horizontal_alignment not in valid_horizontal_alignments:
-        raise StreamlitInvalidHorizontalAlignmentError(
-            horizontal_alignment, "st.container"
+    if horizontal_alignment not in _VALID_HORIZONTAL_ALIGNMENTS:
+        raise StreamlitValueError(
+            "horizontal_alignment",
+            _VALID_HORIZONTAL_ALIGNMENT_VALUES,
+            detail=f"Got {horizontal_alignment!r}.",
         )
 
 
 def validate_vertical_alignment(vertical_alignment: VerticalAlignment) -> None:
-    valid_vertical_alignments = ["top", "center", "bottom", "distribute"]
-    if vertical_alignment not in valid_vertical_alignments:
-        raise StreamlitInvalidVerticalAlignmentError(vertical_alignment, "st.container")
+    if vertical_alignment not in _VALID_VERTICAL_ALIGNMENTS:
+        raise StreamlitValueError(
+            "vertical_alignment",
+            _VALID_VERTICAL_ALIGNMENT_VALUES,
+            detail=f"Got {vertical_alignment!r}.",
+        )
 
 
 def validate_text_alignment(text_alignment: TextAlignment) -> None:
@@ -356,12 +419,34 @@ def validate_text_alignment(text_alignment: TextAlignment) -> None:
 
     Raises
     ------
-    StreamlitInvalidTextAlignmentError
+    StreamlitValueError
         If the text_alignment value is invalid.
     """
     valid_alignments = ["left", "center", "right", "justify"]
     if text_alignment not in valid_alignments:
-        raise StreamlitInvalidTextAlignmentError(text_alignment)
+        raise StreamlitValueError(
+            "text_alignment", ["'left'", "'center'", "'right'", "'justify'"]
+        )
+
+
+def validate_wrap(wrap: bool) -> None:
+    """Validate a strictly boolean ``wrap``, i.e. one with no auto/``None`` mode."""
+    if not isinstance(wrap, bool):
+        raise StreamlitValueError("wrap", ["True", "False"])
+
+
+def validate_bool_arg(parameter: str, value: object) -> None:
+    """Reject non-bool values before they reach protobuf.
+
+    A ``bool`` annotation does not stop callers from passing ``None`` or a
+    string, and protobuf then raises a native ``TypeError``.
+    """
+    if not isinstance(value, bool):
+        raise StreamlitInvalidParameterTypeError(
+            parameter,
+            type(value).__name__,
+            ["bool"],
+        )
 
 
 map_to_flex_terminology = {

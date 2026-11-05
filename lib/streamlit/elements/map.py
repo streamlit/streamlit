@@ -18,14 +18,16 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from streamlit import config, dataframe_util
+from streamlit import dataframe_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -37,6 +39,7 @@ from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
     create_layout_config,
 )
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -55,7 +58,8 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+# The frontend resolves this placeholder to the theme primary color at alpha 160.
+_DEFAULT_COLOR: Final = "primary"
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
@@ -97,6 +101,7 @@ class MapMixin:
         width: WidthWithoutContent = "stretch",
         height: HeightWithoutContent = 500,
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -148,7 +153,12 @@ class MapMixin:
 
             Can be:
 
-            - None, to use the default color.
+            - ``None`` (default): Markers use the theme primary color, partly
+              transparent so overlapping points stay visible. Customize it with
+              ``theme.primaryColor``.
+            - ``"primary"``: Same fill as ``None``. If the data has a column
+              named ``primary``, Streamlit colors the markers from that column
+              instead.
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -209,6 +219,18 @@ class MapMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the map for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the map.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Keep this to a short description of the visual; it is not a full
+            text alternative for dense graphics.
+
         Examples
         --------
         >>> import pandas as pd
@@ -220,7 +242,7 @@ class MapMixin:
         >>>     columns=["lat", "lon"],
         >>> )
         >>>
-        >>> st.map(df)
+        >>> st.map(df, alt="Sample points near San Francisco")
 
         .. output::
            https://doc-map.streamlit.app/
@@ -278,8 +300,28 @@ class MapMixin:
 
         marshall(map_proto, deck_gl_json)
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # st.map has no element ID today. Do not start hashing one just to include alt.
+            map_proto.alt = normalized_alt
+
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            # st.map and st.pydeck_chart share a proto. Size and color are the
+            # arguments the author passed; the generated Deck.gl spec is the
+            # map's data.
+            agent_props=agent_spec.element(
+                "map",
+                latitude=latitude,
+                longitude=longitude,
+                size=size,
+                color=color,
+                zoom=zoom,
+                alt=map_proto.alt or None,
+                data_builder=lambda: agent_data.raw_spec(map_proto.json),
+            ),
         )
 
     @property
@@ -296,6 +338,7 @@ def to_deckgl_json(
     color: str | Collection[float] | None,
     zoom: int | None,
 ) -> str:
+    """Serialize the map to a PyDeck JSON string."""
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 
@@ -376,7 +419,8 @@ def _get_lat_or_lon_col_name(
 
             raise StreamlitAPIException(
                 f"Map data must contain a {human_readable_name} column named: "
-                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}"
+                f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}",
+                error_id="map-missing-lat-lon-column",
             )
         col_name = candidate_col_name
 
@@ -389,7 +433,8 @@ def _get_lat_or_lon_col_name(
     if any(data[col_name].isna().array):
         raise StreamlitAPIException(
             f"Column {col_name} is not allowed to contain null values, such "
-            "as NaN, NaT, or None."
+            "as NaN, NaT, or None.",
+            error_id="map-column-contains-nulls",
         )
 
     return col_name
@@ -443,20 +488,27 @@ def _convert_color_arg_or_column(
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):  # type: ignore[arg-type]
+        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):
             # Convert to object dtype first to support tuple values (pandas 3.x infers
             # string columns as StringDtype which can't hold tuples).
             data[color_col_name] = data[color_col_name].astype(object)
             data[color_col_name] = data[color_col_name].map(to_int_color_tuple)
         else:
             raise StreamlitAPIException(
-                f'Column "{color_col_name}" does not appear to contain valid colors.'
+                f'Column "{color_col_name}" does not appear to contain valid colors.',
+                error_id="map-invalid-color-column",
             )
 
         color_arg_out = color_arg
 
     elif color_arg is not None:
-        color_arg_out = to_int_color_tuple(color_arg)
+        # "primary" is a placeholder that the frontend resolves to
+        # theme.colors.primary at a fixed marker alpha. Other values are
+        # converted to Deck.gl int color tuples here.
+        if isinstance(color_arg, str) and color_arg.lower() == "primary":
+            color_arg_out = "primary"
+        else:
+            color_arg_out = to_int_color_tuple(color_arg)
 
     return color_arg_out
 
@@ -517,6 +569,9 @@ def marshall(
     pydeck_proto.json = pydeck_json
     pydeck_proto.id = ""
 
-    mapbox_token = config.get_option("mapbox.token")
+    # st.map builds Deck JSON itself and never constructs a PyDeck Deck, so
+    # copy MAPBOX_API_KEY onto the proto. Default styles are Carto; the
+    # frontend uses this token only if the spec selects a Mapbox style.
+    mapbox_token = os.environ.get("MAPBOX_API_KEY")
     if mapbox_token:
         pydeck_proto.mapbox_token = mapbox_token

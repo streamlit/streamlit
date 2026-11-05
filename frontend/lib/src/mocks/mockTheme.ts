@@ -16,10 +16,10 @@
 
 /** A mock theme definition for use in unit tests. */
 
-import { lightThemePrimitives } from "baseui"
-import { transparentize } from "color2k"
-
-import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
+import {
+  type OptionalThemeColors,
+  requiredThemeColors,
+} from "~lib/theme/emotionBaseTheme/themeColors"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
 import { breakpoints } from "~lib/theme/primitives/breakpoints"
@@ -39,46 +39,6 @@ import {
 import { zIndices } from "~lib/theme/primitives/zIndices"
 import type { ThemeConfig } from "~lib/theme/types"
 
-const requiredThemeColors = {
-  bgColor: colors.white,
-  secondaryBg: colors.gray20,
-  bodyText: colors.gray85,
-
-  primary: colors.red70,
-  secondary: colors.blue70,
-
-  // Default main theme colors (light theme)
-  redColor: colors.red70,
-  orangeColor: colors.orange70,
-  yellowColor: colors.yellow80,
-  blueColor: colors.blue70,
-  greenColor: colors.green70,
-  violetColor: colors.purple70,
-  grayColor: colors.gray60,
-
-  // Default background theme colors (light theme)
-  redBackgroundColor: transparentize(colors.red80, 0.9),
-  orangeBackgroundColor: transparentize(colors.orange70, 0.9),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.9),
-  blueBackgroundColor: transparentize(colors.blue65, 0.9),
-  greenBackgroundColor: transparentize(colors.green70, 0.9),
-  violetBackgroundColor: transparentize(colors.purple60, 0.9),
-  grayBackgroundColor: transparentize(colors.gray85, 0.9),
-
-  // Default text theme colors (light theme)
-  redTextColor: colors.red90,
-  orangeTextColor: colors.orange95,
-  yellowTextColor: colors.yellow115,
-  blueTextColor: colors.blue90,
-  greenTextColor: colors.green90,
-  violetTextColor: colors.purple90,
-  grayTextColor: transparentize(colors.gray85, 0.4),
-}
-
-interface OptionalThemeColors {
-  widgetBorderColor?: string
-}
-
 const optionalThemeColors: OptionalThemeColors = {}
 
 const genericColors = {
@@ -88,13 +48,19 @@ const genericColors = {
 }
 
 // Create colors and shadows using the same pattern as emotionBaseTheme
-const emotionColors = createEmotionColors(genericColors)
+const baseEmotionColors = createEmotionColors(genericColors)
+const emotionColors = {
+  ...baseEmotionColors,
+  widgetBorderColor: baseEmotionColors.borderColor,
+}
 const shadows = createShadows(emotionColors)
 
 const emotionMockTheme = {
   inSidebar: false,
-  showSidebarBorder: false,
+  showSidebarBorder: true,
   linkUnderline: true,
+  paddingTop: undefined as string | undefined,
+  paddingBottom: undefined as string | undefined,
   breakpoints,
   colors: emotionColors,
   fonts,
@@ -111,14 +77,7 @@ const emotionMockTheme = {
   zIndices,
 }
 
-const baseuiMockTheme = createBaseUiTheme(
-  emotionMockTheme,
-  lightThemePrimitives
-)
-
 export const mockTheme: ThemeConfig = {
   name: "MockTheme",
   emotion: emotionMockTheme,
-  basewebTheme: baseuiMockTheme,
-  primitives: lightThemePrimitives,
 }

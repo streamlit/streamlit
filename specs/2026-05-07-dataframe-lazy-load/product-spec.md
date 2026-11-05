@@ -177,7 +177,9 @@ in-memory pandas and Polars dataframes.
 ```python
 df = pd.read_parquet("large_export.parquet")
 
-st.dataframe(df)  # uses lazy delivery when len(df) > 150_000 and lazy mode is compatible
+st.dataframe(
+    df
+)  # uses lazy delivery when len(df) > 150_000 and lazy mode is compatible
 ```
 
 For inputs already held in memory, this does not reduce server memory usage. If a non-pandas
@@ -243,8 +245,9 @@ st.dataframe(
 Validation and fallback:
 
 - `lazy=True` with incompatible options raises a `StreamlitAPIException`. Examples include
-  `pandas.Styler`, `on_select != "ignore"` in the first version, and inputs that cannot use a
-  native adapter or safe in-memory pandas fallback.
+  `pandas.Styler`, dataframes with multi-level (`MultiIndex`) column headers,
+  `on_select != "ignore"` in the first version, and inputs that cannot use a native adapter or
+  safe in-memory pandas fallback.
 - `lazy=None` should prefer compatibility: if lazy mode is not supported for the input/options,
   Streamlit uses eager rendering or the existing capped-preview fallback.
 - `lazy=False` always uses eager rendering or the existing capped-preview fallback.
@@ -275,16 +278,19 @@ The initial element message should include:
 - Element metadata and layout options.
 - Source metadata, including a source id and optional row count.
 - Column schema.
-- An initial row chunk when it is cheap to fetch.
+- An initial row chunk containing up to 1,000 rows and the full Arrow schema.
 
-The first visible rows should render immediately when the initial chunk is present. Otherwise,
-the table should show loading rows and request the first visible chunk.
+The first visible rows should render immediately from the initial chunk. A zero-row initial chunk
+can carry the schema for a source that needs to defer fetching row data.
 
 ### Scrolling
 
 - Scrolling requests missing row chunks from the server.
 - Scroll-triggered chunk requests must not trigger a script rerun.
-- The frontend should prefetch near the visible range and avoid duplicate in-flight requests.
+- The default chunk size is 1,000 rows.
+- The frontend should request only chunks that intersect the currently visible row range. This is
+  normally one chunk, or two when the visible range crosses a chunk boundary.
+- The frontend should avoid duplicate in-flight requests.
 - Cached chunks should render synchronously once loaded.
 - Failed chunks should show an inline error state with retry.
 
@@ -389,9 +395,10 @@ Not supported in lazy mode:
 ### Cache and Invalidation
 
 - Lazy source state should be scoped to the user session.
-- Rerunning the script should create a new source generation when the element identity or source
-  configuration changes.
-- The frontend should discard chunks from older generations.
+- The frontend should cache up to 25 chunks by default, retaining approximately 25,000 rows at the
+  default chunk size.
+- Rerunning the script should create a new source id when the element is registered again.
+- The frontend should discard chunks belonging to older source ids.
 - Server-side source state should be cleaned up when the session closes or the element
   disappears.
 - Fragment reruns should only prune lazy sources owned by the rerun fragment. Sources owned by

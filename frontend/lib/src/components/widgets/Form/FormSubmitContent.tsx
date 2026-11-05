@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import type { ReactElement } from "react"
 
-import { FormSubmitButton, Props } from "./FormSubmitButton"
+import { FormSubmitButton, type Props } from "./FormSubmitButton"
 import { StyledFormSubmitContent } from "./styled-components"
 
 export function FormSubmitContent(props: Props): ReactElement {

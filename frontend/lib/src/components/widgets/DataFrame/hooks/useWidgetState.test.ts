@@ -22,6 +22,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { TextColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useWidgetState from "./useWidgetState"
 
@@ -248,6 +249,76 @@ describe("useWidgetState hook", () => {
       // Should not have called setStringValue since state hasn't changed
       expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
     })
+
+    it("writes an ignored edit after unmount without waiting for the debounce", () => {
+      const mockWidgetMgr = createMockWidgetMgr()
+      const columns = [createMockColumn("col1", 0)]
+      const queued: Array<() => void> = []
+      let captureSync = false
+      const originalQueueMicrotask = globalThis.queueMicrotask.bind(globalThis)
+      const queueMicrotaskSpy = vi
+        .spyOn(globalThis, "queueMicrotask")
+        .mockImplementation(callback => {
+          if (captureSync) {
+            queued.push(callback)
+            return
+          }
+          originalQueueMicrotask(callback)
+        })
+
+      const { result, unmount } = renderHook(() =>
+        useWidgetState({
+          element: DataframeProto.create({
+            id: "test-id",
+            formId: "",
+            editingMode: DataframeProto.EditingMode.DYNAMIC,
+            ignoreRerun: true,
+          }),
+          widgetMgr: mockWidgetMgr as unknown as Parameters<
+            typeof useWidgetState
+          >[0]["widgetMgr"],
+          fragmentId: "test-fragment",
+          originalNumRows: 5,
+          originalColumns: columns,
+        })
+      )
+
+      act(() => {
+        result.current.editingState.current.addRow(new Map())
+        result.current.updateNumRows()
+      })
+
+      captureSync = true
+      act(() => {
+        result.current.syncEditState()
+      })
+      captureSync = false
+
+      expect(mockWidgetMgr.setStringValue).not.toHaveBeenCalled()
+      unmount()
+      expect(queued).toHaveLength(1)
+
+      act(() => {
+        queued[0]()
+      })
+
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
+        "test-id",
+        expect.any(String),
+        expect.objectContaining({
+          fromUser: true,
+          triggerRerun: false,
+        })
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(mockWidgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+
+      queueMicrotaskSpy.mockRestore()
+    })
   })
 
   describe("createSyncSelectionState", () => {
@@ -292,10 +363,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"rows":[0]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -339,10 +409,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"columns":["col2"]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -390,15 +459,18 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[[2,"col2"]]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
     it("does not include cell selection when syncCellSelections is false", () => {
       const mockWidgetMgr = createMockWidgetMgr()
+      // A stored row selection makes the cell-less (empty) selection a change.
+      mockWidgetMgr.getStringValue.mockReturnValue(
+        '{"selection":{"rows":[0],"columns":[],"cells":[]}}'
+      )
       const columns = [createMockColumn("col1", 0)]
 
       const { result } = renderHook(() =>
@@ -437,10 +509,9 @@ describe("useWidgetState hook", () => {
       })
 
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         expect.stringContaining('"cells":[]'),
-        expect.anything(),
-        "test-fragment"
+        expect.objectContaining({ fragmentId: "test-fragment" })
       )
     })
 
@@ -482,11 +553,135 @@ describe("useWidgetState hook", () => {
 
       // Should use the mapped index (5) instead of visual index (0)
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[5]'),
-        expect.anything(),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
+    })
+
+    describe("skips unchanged selections", () => {
+      const columns = [
+        createMockColumn("col1", 0),
+        createMockColumn("col2", 1),
+      ]
+
+      /**
+       * Renders the hook against a real WidgetStateManager holding
+       * `storedSelection`. `select` syncs a row/column selection and flushes
+       * any scheduled rerun.
+       */
+      const renderSelectionSync = (
+        storedSelection?: string
+      ): {
+        select: (
+          rows: CompactSelection,
+          selectedColumns: CompactSelection
+        ) => void
+        setStringValueSpy: ReturnType<typeof vi.spyOn>
+        sendRerunBackMsg: ReturnType<typeof vi.fn>
+      } => {
+        const sendRerunBackMsg = vi.fn()
+        const widgetMgr = new WidgetStateManager({
+          sendRerunBackMsg,
+          formsDataChanged: vi.fn(),
+        })
+        if (storedSelection !== undefined) {
+          widgetMgr.setStringValue("test-id", storedSelection, {
+            formId: "",
+            fragmentId: undefined,
+            fromUser: false,
+          })
+        }
+        const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+        const { result } = renderHook(() =>
+          useWidgetState({
+            element: DataframeProto.create({
+              id: "test-id",
+              formId: "",
+              editingMode: DataframeProto.EditingMode.READ_ONLY,
+            }),
+            widgetMgr,
+            fragmentId: undefined,
+            originalNumRows: 10,
+            originalColumns: columns,
+          })
+        )
+        const syncSelectionState = result.current.createSyncSelectionState(
+          columns,
+          (idx: number) => idx
+        )
+        const select = (
+          rows: CompactSelection,
+          selectedColumns: CompactSelection
+        ): void => {
+          act(() => {
+            syncSelectionState(
+              { rows, columns: selectedColumns, current: undefined },
+              true
+            )
+          })
+          act(() => {
+            vi.runAllTimers()
+          })
+        }
+        return { select, setStringValueSpy, sendRerunBackMsg }
+      }
+
+      it("does not commit an empty selection when nothing is stored", () => {
+        const { select, setStringValueSpy, sendRerunBackMsg } =
+          renderSelectionSync()
+
+        select(CompactSelection.empty(), CompactSelection.empty())
+
+        expect(setStringValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // A non-empty selection still commits and reruns.
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.empty()
+        )
+
+        expect(setStringValueSpy).toHaveBeenCalledWith(
+          "test-id",
+          '{"selection":{"rows":[1],"columns":[],"cells":[]}}',
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      })
+
+      it("does not commit a selection equal to a backend-set one", () => {
+        // Backend-set selections arrive as Python json.dumps output, whose
+        // spacing differs from JSON.stringify.
+        const { select, setStringValueSpy, sendRerunBackMsg } =
+          renderSelectionSync(
+            '{"selection": {"rows": [1], "columns": ["col2"], "cells": []}}'
+          )
+
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.fromSingleSelection(1)
+        )
+
+        expect(setStringValueSpy).not.toHaveBeenCalled()
+        expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+        // Clearing the column selection is a real change.
+        select(
+          CompactSelection.fromSingleSelection(1),
+          CompactSelection.empty()
+        )
+
+        expect(setStringValueSpy).toHaveBeenCalledWith(
+          "test-id",
+          '{"selection":{"rows":[1],"columns":[],"cells":[]}}',
+          expect.objectContaining({ fromUser: true })
+        )
+        expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+      })
     })
 
     it("serializes row selection in stable ascending order regardless of display order", () => {
@@ -536,10 +731,12 @@ describe("useWidgetState hook", () => {
       // order and does not trigger a spurious rerun when only the display order
       // changes.
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.anything(),
+        "test-id",
         expect.stringContaining('"rows":[2,5]'),
-        expect.anything(),
-        expect.anything()
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: true,
+        })
       )
     })
   })
@@ -710,10 +907,12 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.columns.length).toBe(0)
       expect(initialSelection?.current).toBeUndefined()
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionDefault,
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -844,7 +1043,7 @@ describe("useWidgetState hook", () => {
       expect(initialSelection?.current).toBeUndefined()
       // Verify the selection was synced to the widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         JSON.stringify({
           selection: {
             rows: [0],
@@ -852,8 +1051,10 @@ describe("useWidgetState hook", () => {
             cells: [],
           },
         }),
-        { fromUi: false },
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 
@@ -1180,10 +1381,12 @@ describe("useWidgetState hook", () => {
 
       // Should have synced to widget manager
       expect(mockWidgetMgr.setStringValue).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "test-id" }),
+        "test-id",
         selectionStateStr,
-        expect.objectContaining({ fromUi: false }),
-        "test-fragment"
+        expect.objectContaining({
+          fragmentId: "test-fragment",
+          fromUser: false,
+        })
       )
     })
 

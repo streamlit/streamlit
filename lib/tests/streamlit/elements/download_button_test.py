@@ -15,15 +15,47 @@
 """download_button unit test."""
 
 import io
+import mimetypes
+import os
+import tempfile
+from unittest.mock import patch
 
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.button import marshall_file
+from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
+from streamlit.runtime import get_instance
+from streamlit.runtime.media_file_storage import MediaFileStorageError
+from streamlit.runtime.memory_media_file_storage import MemoryFile
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
 class DownloadButtonTest(DeltaGeneratorTestCase):
     """Test ability to marshall download_button protos."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        # Bind `mimetypes.types_map` to the dict `guess_type` actually reads, so
+        # the pin in setUp takes effect. A lookup initializes the registry only
+        # if it is not initialized yet; calling `init()` instead would rebuild
+        # it and drop any `add_type()` registrations made earlier in the process.
+        mimetypes.guess_type("pin.csv")
+
+    def setUp(self) -> None:
+        super().setUp()
+        # Pin the extensions these tests infer so the assertions cover
+        # Streamlit's inference, not the host's. On Windows `mimetypes` reads the
+        # registry, where an installed app can claim an extension (Excel maps
+        # .csv to application/vnd.ms-excel).
+        patcher = patch.dict(
+            mimetypes.types_map,
+            {".csv": "text/csv", ".json": "application/json", ".png": "image/png"},
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     @parameterized.expand([("hello world",), (b"byteshere",)])
     def test_just_label(self, data):
@@ -162,3 +194,290 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c2 = self.get_delta_from_queue().new_element.download_button
         assert not c2.HasField("deferred_file_id")
         assert "/media/" in c2.url
+
+    def _stored_file(self, proto: DownloadButtonProto) -> MemoryFile:
+        """Return the MemoryFile stored for a download_button proto."""
+        return self.media_file_storage.get_file(os.path.basename(proto.url))
+
+    def test_file_object_infers_file_name_and_mime(self) -> None:
+        """A file object opened from disk fills in a missing file_name and
+        mime from its `name` attribute."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "report.csv")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("a,b\n1,2\n")
+            with open(path, "rb") as data:
+                st.download_button("Download", data=data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "report.csv"
+        assert stored.mimetype == "text/csv"
+
+    def test_raw_file_io_infers_file_name_and_mime(self) -> None:
+        """io.FileIO (the type mentioned in the issue) is also supported."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "photo.png")
+            with open(path, "wb") as f:
+                f.write(b"\x89PNG fake")
+            with io.FileIO(path, "rb") as data:
+                st.download_button("Download", data=data)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "photo.png"
+        assert stored.mimetype == "image/png"
+
+    def test_file_object_explicit_params_take_precedence(self) -> None:
+        """User-provided file_name/mime always win over inferred values."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "report.csv")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("a,b\n")
+            with open(path, "rb") as data:
+                st.download_button(
+                    "Download",
+                    data=data,
+                    file_name="custom.bin",
+                    mime="application/x-foo",
+                )
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "custom.bin"
+        assert stored.mimetype == "application/x-foo"
+
+    def test_explicit_file_name_drives_mime_inference(self) -> None:
+        """When file_name is user-provided but mime is not, the mime is
+        guessed from the explicit file_name, not from data.name."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = os.path.join(tmp_dir, "data.bin")
+            with open(path, "wb") as f:
+                f.write(b"{}")
+            with open(path, "rb") as data:
+                st.download_button("Download", data=data, file_name="report.json")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename == "report.json"
+        assert stored.mimetype == "application/json"
+
+    def test_nameless_buffer_keeps_existing_behavior(self) -> None:
+        """In-memory buffers without a usable name are unaffected."""
+        st.download_button("Download", data=io.BytesIO(b"payload"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "application/octet-stream"
+
+    def test_text_wrapper_over_nameless_buffer_keeps_existing_behavior(self) -> None:
+        """A TextIOWrapper over a nameless buffer must not crash: its `name`
+        property delegates to the buffer and raises AttributeError."""
+        st.download_button(
+            "Download", data=io.TextIOWrapper(io.BytesIO(b"payload"), encoding="utf-8")
+        )
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "text/plain"
+
+    def test_stringio_marshals_to_text_plain(self) -> None:
+        """io.StringIO is marshalled through the full button -> media-manager
+        path and stored as text/plain, mirroring the io.BytesIO case."""
+        st.download_button("Download", data=io.StringIO("hello"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.content == b"hello"
+        assert stored.filename is None
+        assert stored.mimetype == "text/plain"
+
+    def test_stream_raising_on_name_access_keeps_existing_behavior(self) -> None:
+        """A stream whose `name` property raises (e.g. a detached or closed
+        TextIOWrapper raises ValueError) must not crash inference."""
+
+        class RaisingNameBuffer(io.BytesIO):
+            @property
+            def name(self) -> str:
+                raise ValueError("underlying buffer has been detached")
+
+        st.download_button("Download", data=RaisingNameBuffer(b"payload"))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        stored = self._stored_file(c)
+        assert stored.filename is None
+        assert stored.mimetype == "application/octet-stream"
+
+    def test_disabled_callable_is_not_registered(self) -> None:
+        """A disabled callable download must not disclose an executable file id."""
+        invoked = False
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked = True
+            return "secret"
+
+        st.download_button("Download", data=generate_data, disabled=True)
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert c.disabled
+        assert not c.HasField("deferred_file_id")
+        assert c.url == ""
+        assert not invoked
+        assert get_instance().media_file_mgr._deferred_callables == {}
+
+    def test_disabling_callable_drops_previously_registered_entry(self) -> None:
+        """A later run that renders the button disabled revokes the old file id.
+
+        A full script run unmaps session files before widgets render, but the
+        callable stays until orphan cleanup. Rendering disabled must drop it
+        immediately so execute_deferred cannot run the generator.
+        """
+        invoked = 0
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked += 1
+            return "secret"
+
+        enabled = DownloadButtonProto()
+        marshall_file("0", generate_data, enabled, "text/plain")
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+        assert file_id in mgr._deferred_callables
+
+        # Repeat downloads of an enabled button keep working.
+        assert mgr.execute_deferred(file_id).startswith("/media/")
+        assert mgr.execute_deferred(file_id).startswith("/media/")
+        assert invoked == 2
+        assert file_id in mgr._deferred_callables
+
+        # Start of the next full run: mapping is gone, callable is still live.
+        mgr.clear_session_refs()
+        assert file_id in mgr._deferred_callables
+
+        disabled = DownloadButtonProto()
+        marshall_file("0", generate_data, disabled, "text/plain", disabled=True)
+
+        assert not disabled.HasField("deferred_file_id")
+        assert disabled.url == ""
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert invoked == 2
+
+        # Enabling the button again registers a new callable. Repeat downloads
+        # of that new id still run the generator.
+        reenabled = DownloadButtonProto()
+        marshall_file("0", generate_data, reenabled, "text/plain")
+        new_id = reenabled.deferred_file_id
+        assert new_id != file_id
+        assert mgr.execute_deferred(new_id).startswith("/media/")
+        assert mgr.execute_deferred(new_id).startswith("/media/")
+        assert invoked == 4
+
+    def test_disabling_download_button_at_new_path_revokes_old_file_id(self) -> None:
+        """A later disabled st.download_button revokes the earlier file id.
+
+        The second call is at a new delta path, so coordinate matching cannot
+        see the earlier id. This fails if _download_button stops passing
+        element_id through to marshall_file.
+        """
+        invoked = 0
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked += 1
+            return "secret"
+
+        st.download_button("Download", data=generate_data, key="dl")
+        first_msg = self.get_message_from_queue()
+        first = first_msg.delta.new_element.download_button
+        file_id = first.deferred_file_id
+        mgr = get_instance().media_file_mgr
+        assert file_id in mgr._deferred_callables
+
+        # Full rerun unmaps coordinates but keeps the callable. Reset widget
+        # ids so the same key can render again, and leave the cursor advanced
+        # so this button lands on a new path.
+        mgr.clear_session_refs()
+        self.script_run_ctx.shared.reset()
+
+        st.download_button("Download", data=generate_data, key="dl", disabled=True)
+        second_msg = self.get_message_from_queue()
+        second = second_msg.delta.new_element.download_button
+
+        assert list(first_msg.metadata.delta_path) != list(
+            second_msg.metadata.delta_path
+        )
+        assert second.id == first.id
+        assert second.disabled
+        assert not second.HasField("deferred_file_id")
+        assert second.url == ""
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert invoked == 0
+
+    def test_disabling_with_noncallable_data_drops_previous_callable(self) -> None:
+        """Switching a button to disabled static data revokes the old generator."""
+        invoked = False
+
+        def generate_data() -> str:
+            nonlocal invoked
+            invoked = True
+            return "secret"
+
+        enabled = DownloadButtonProto()
+        marshall_file("0", generate_data, enabled, "text/plain")
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+
+        disabled = DownloadButtonProto()
+        marshall_file("0", b"static", disabled, "text/plain", disabled=True)
+
+        assert "/media/" in disabled.url
+        assert not disabled.HasField("deferred_file_id")
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)
+        assert not invoked
+
+    def test_disabling_callable_at_new_delta_path_revokes_old_file_id(self) -> None:
+        """A stable element id disabled at a new delta path revokes the old file id.
+
+        The fixed id stands in for any element id that stays the same across the
+        move, including an unkeyed button whose label and other identity inputs
+        are unchanged. A user key is what keeps the id stable when those change.
+        """
+
+        def generate_data() -> str:
+            return "secret"
+
+        enabled = DownloadButtonProto(id="download-1")
+        marshall_file(
+            "old-path",
+            generate_data,
+            enabled,
+            "text/plain",
+            element_id="download-1",
+        )
+        file_id = enabled.deferred_file_id
+        mgr = get_instance().media_file_mgr
+
+        disabled = DownloadButtonProto(id="download-1")
+        marshall_file(
+            "new-path",
+            generate_data,
+            disabled,
+            "text/plain",
+            disabled=True,
+            element_id="download-1",
+        )
+
+        assert not disabled.HasField("deferred_file_id")
+        assert file_id not in mgr._deferred_callables
+        with pytest.raises(MediaFileStorageError, match="not found"):
+            mgr.execute_deferred(file_id)

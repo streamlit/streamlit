@@ -64,7 +64,7 @@ st.dataframe(
     column_config={
         "revenue": st.column_config.NumberColumn(format="$%,.2f"),
         "progress": st.column_config.ProgressColumn(format="%,d"),
-    }
+    },
 )
 ```
 

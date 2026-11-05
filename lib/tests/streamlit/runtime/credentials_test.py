@@ -93,12 +93,16 @@ class CredentialsClassTest(unittest.TestCase):
     )
     def test_Credentials_load(self):
         """Test Credentials.load()."""
-        data = textwrap.dedent(
-            """
+        data = (
+            textwrap.dedent(
+                """
             [general]
             email = "user@domain.com"
         """
-        ).strip()
+            )
+            .strip()
+            .encode()
+        )
         m = mock_open(read_data=data)
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
@@ -110,12 +114,16 @@ class CredentialsClassTest(unittest.TestCase):
     )
     def test_Credentials_load_empty(self):
         """Test Credentials.load() with empty email"""
-        data = textwrap.dedent(
-            """
+        data = (
+            textwrap.dedent(
+                """
             [general]
             email = ""
         """
-        ).strip()
+            )
+            .strip()
+            .encode()
+        )
         m = mock_open(read_data=data)
         with patch("streamlit.runtime.credentials.open", m, create=True):
             c = Credentials.get_current()
@@ -369,6 +377,8 @@ class CredentialsClassTest(unittest.TestCase):
             creds.activation = _verify_email("some_email")
             creds.save()
             assert len(m.request_history) == 0
+            # Invalid activations are not written. activate() only saves valid ones.
+            assert not Path(creds._conf_file).exists()
 
     @tempdir()
     def test_email_send_exception_handling(self, temp_dir):

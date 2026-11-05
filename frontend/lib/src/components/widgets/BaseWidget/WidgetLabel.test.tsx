@@ -21,7 +21,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
-import { LabelProps, WidgetLabel } from "./WidgetLabel"
+import { type LabelProps, WidgetLabel } from "./WidgetLabel"
 import { WidgetLabelHelpIconInline } from "./WidgetLabelHelpIconInline"
 
 const getProps = (props?: Partial<LabelProps>): LabelProps => ({
@@ -32,10 +32,7 @@ const getProps = (props?: Partial<LabelProps>): LabelProps => ({
 describe("Widget Label", () => {
   it("does not hide help icons from assistive tech", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <WidgetLabel label="My widget">
           <WidgetLabelHelpIconInline
             content="help text"
@@ -56,10 +53,7 @@ describe("Widget Label", () => {
 
   it("does not render nested <label> elements when using inline help wrapper", () => {
     render(
-      <ThemeProvider
-        theme={mockTheme.emotion}
-        baseuiTheme={mockTheme.basewebTheme}
-      >
+      <ThemeProvider theme={mockTheme.emotion}>
         <WidgetLabel label="My widget">
           <WidgetLabelHelpIconInline
             content="help text"
@@ -109,5 +103,61 @@ describe("Widget Label", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle(
       "visibility: hidden"
     )
+  })
+
+  it("shows a required marker when required and the label is visible", () => {
+    render(<WidgetLabel {...getProps({ required: true })} />)
+
+    const marker = screen.getByTestId("stWidgetLabelRequired")
+    expect(marker).toHaveTextContent("(required)")
+    expect(marker).toHaveAttribute("aria-hidden", "true")
+    expect(marker).toHaveStyle("font-size: 0.75rem")
+    expect(marker).toHaveStyle("white-space: nowrap")
+  })
+
+  it("fades the required marker to match a disabled label", () => {
+    render(<WidgetLabel {...getProps({ required: true, disabled: true })} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveStyle(
+      `color: ${mockTheme.emotion.colors.fadedText40}`
+    )
+  })
+
+  it.each([
+    [
+      "the label is hidden",
+      { required: true, labelVisibility: LabelVisibilityOptions.Hidden },
+    ],
+    [
+      "the label is collapsed",
+      { required: true, labelVisibility: LabelVisibilityOptions.Collapsed },
+    ],
+    ["required is false", { required: false }],
+    ["required is omitted", {}],
+  ] as const)("omits the required marker when %s", (_desc, props) => {
+    render(<WidgetLabel {...getProps(props)} />)
+
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps help icons outside aria-hidden when a required marker is shown", () => {
+    render(
+      <ThemeProvider theme={mockTheme.emotion}>
+        <WidgetLabel label="My widget" required>
+          <WidgetLabelHelpIconInline
+            content="help text"
+            ariaLabel="Help for My widget"
+          />
+        </WidgetLabel>
+      </ThemeProvider>
+    )
+
+    const helpButton = screen.getByRole("button", {
+      name: "Help for My widget",
+    })
+    expect(helpButton.closest('[aria-hidden="true"]')).toBeNull()
+    expect(screen.getByTestId("stWidgetLabelRequired")).toBeVisible()
   })
 })

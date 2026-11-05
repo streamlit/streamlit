@@ -1,0 +1,158 @@
+name: Find latest workflow artifact
+description: >-
+  Find the newest unexpired artifact from a successful branch push.
+  Requires the calling job to grant actions read and check out the repository first.
+
+inputs:
+  workflow:
+    description: Workflow file name to inspect
+    required: true
+  artifact_name:
+    description: Artifact name that the selected workflow run must contain
+    required: true
+  branch:
+    description: Branch whose successful push runs should be inspected
+    required: false
+    default: develop
+
+outputs:
+  run_id:
+    description: ID of the workflow run containing the selected artifact, or empty if none was found
+    value: ${{ steps.find-artifact.outputs.run_id }}
+  artifact_size_in_bytes:
+    description: Size of the selected artifact in bytes
+    value: ${{ steps.find-artifact.outputs.artifact_size_in_bytes }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find latest successful branch artifact
+      id: find-artifact
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        TARGET_ARTIFACT_NAME: ${{ inputs.artifact_name }}
+        TARGET_BRANCH: ${{ inputs.branch }}
+        TARGET_WORKFLOW: ${{ inputs.workflow }}
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          // Cap GraphQL pages and REST artifact lookups so a missing baseline cannot
+          // scan unbounded history.
+          const MAX_PAGES = 10;
+          const MAX_CANDIDATE_RUNS = 20;
+          const PAGE_SIZE = 100;
+          let runsScanned = 0;
+          let artifactLookups = 0;
+          let cursor = null;
+
+          // GitHub's REST run filters (branch, status) can return stale results, so page
+          // through GraphQL's explicitly ordered runs and apply branch, event, and success
+          // checks locally. GraphQL can only look up a workflow by node ID, so resolve that
+          // via REST first.
+          const { data: workflow } = await github.rest.actions.getWorkflow({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: process.env.TARGET_WORKFLOW,
+          });
+
+          for (let page = 0; page < MAX_PAGES; page += 1) {
+            const response = await github.graphql(
+              `query($workflowId: ID!, $cursor: String, $pageSize: Int!) {
+                node(id: $workflowId) {
+                  ... on Workflow {
+                    runs(
+                      first: $pageSize
+                      after: $cursor
+                      orderBy: {field: CREATED_AT, direction: DESC}
+                    ) {
+                      nodes {
+                        databaseId
+                        createdAt
+                        event
+                        checkSuite {
+                          branch { name }
+                          conclusion
+                        }
+                      }
+                      pageInfo {
+                        endCursor
+                        hasNextPage
+                      }
+                    }
+                  }
+                }
+              }`,
+              {
+                workflowId: workflow.node_id,
+                cursor,
+                pageSize: PAGE_SIZE,
+              }
+            );
+
+            const runsConnection = response.node?.runs;
+            if (!runsConnection) {
+              throw new Error(
+                `GraphQL did not return runs for workflow ` +
+                `${process.env.TARGET_WORKFLOW} (node ${workflow.node_id}).`
+              );
+            }
+            const { nodes: workflowRuns, pageInfo } = runsConnection;
+            runsScanned += workflowRuns.length;
+
+            // Only successful branch pushes are valid baselines. PR runs build merge
+            // commits rather than the branch tip. Branch and conclusion live on the
+            // check suite because WorkflowRun does not expose them directly.
+            const matchingRuns = workflowRuns.filter(run =>
+              run.event === 'push' &&
+              run.checkSuite?.branch?.name === process.env.TARGET_BRANCH &&
+              run.checkSuite?.conclusion === 'SUCCESS'
+            );
+
+            for (const run of matchingRuns) {
+              if (artifactLookups >= MAX_CANDIDATE_RUNS) {
+                break;
+              }
+              artifactLookups += 1;
+
+              const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: run.databaseId,
+                name: process.env.TARGET_ARTIFACT_NAME,
+              });
+              // Expired artifacts remain listed but cannot be downloaded, so fall back
+              // to an older run. Assert the name client-side in case the REST filter is
+              // not honored.
+              const artifact = artifacts.artifacts.find(candidate =>
+                candidate.name === process.env.TARGET_ARTIFACT_NAME && !candidate.expired
+              );
+
+              if (!artifact) {
+                console.log(
+                  `Run ${run.databaseId} has no unexpired ` +
+                  `${process.env.TARGET_ARTIFACT_NAME} artifact; ` +
+                  'checking the next run.'
+                );
+                continue;
+              }
+
+              console.log(
+                `Selected run ${run.databaseId} from ${run.createdAt} with artifact ${artifact.id}.`
+              );
+              core.setOutput('run_id', String(run.databaseId));
+              core.setOutput('artifact_size_in_bytes', String(artifact.size_in_bytes));
+              return;
+            }
+
+            if (artifactLookups >= MAX_CANDIDATE_RUNS || !pageInfo.hasNextPage) {
+              break;
+            }
+            cursor = pageInfo.endCursor;
+          }
+
+          core.warning(
+            `No unexpired ${process.env.TARGET_ARTIFACT_NAME} artifact was found in a successful ` +
+            `${process.env.TARGET_BRANCH} push among the latest ${runsScanned} ` +
+            `${process.env.TARGET_WORKFLOW} runs (${artifactLookups} matching candidates ` +
+            `checked). Skipping the comparison.`
+          );

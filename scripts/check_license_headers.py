@@ -50,6 +50,7 @@ IGNORE_PATTERN = re.compile(
     r"|\.(json|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
+    r"|^uv\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
     r"|pytest\.ini$"
     r"|\.coveragerc$"

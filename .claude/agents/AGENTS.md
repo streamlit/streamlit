@@ -44,7 +44,7 @@ These agents are the **single source of truth** for agent instructions:
 2. Add the new file to `.claude/.gitignore` (allowlist pattern: `!agents/<name>.md`)
 3. Create a matching command in `.claude/commands/` and add it to `.claude/.gitignore`
 4. Add a Codex config in `.codex/agents/` (auto-discovered by Codex via `.codex/config.toml`; no edit to `config.toml` needed)
-5. Run `uv run scripts/generate_agent_rules.py` to regenerate Cursor/Copilot rules
+5. Run `uv run scripts/generate_agent_rules.py` to regenerate Cursor rules
 
 **When modifying an existing agent:**
 1. Update the agent file — Codex picks up changes via `developer_instructions` reference
@@ -65,17 +65,17 @@ Run the agent-name subagent to [do the task].
 Example for `fixing-pr`:
 ```markdown
 ---
-description: Fix CI failures and address PR review comments
+description: Fix CI failures, resolve merge conflicts with the base branch, and address PR review comments
 ---
 
-Run the fixing-pr subagent to fix CI failures and address PR review comments for the current branch.
+Run the fixing-pr subagent to fix CI failures, resolve merge conflicts with the base branch, and address PR review comments for the current branch.
 ```
 
 ## Agent Inventory
 
 | Agent | Purpose |
 |-------|---------|
-| `fixing-pr` | Fix CI failures and address PR review comments |
+| `fixing-pr` | Fix CI failures, resolve merge conflicts with the base branch, and address PR review comments |
 | `qa-testing-feature` | QA test features using Playwright |
-| `reviewing-local-changes` | Code review for quality, security, best practices |
+| `reviewing-local-changes` | Code review for quality, security, best practices, and product/API alignment |
 | `simplifying-local-changes` | Simplify and refine code changes |

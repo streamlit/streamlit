@@ -57,7 +57,11 @@ MULTI_SELECTION = (
 
 FIRST_POINT_COORDS: Position = {"x": 344.0, "y": 201.0}
 SECOND_POINT_COORDS: Position = {"x": 417.0, "y": 229.0}
-DESELECT_COORDS: Position = {"x": 0.0, "y": 0.0}
+# A spot on the map that holds no object in any layer. Kept inset from the
+# top-left corner because the chart is laid out at a fractional y offset, and
+# Chromium 151+ hit-tests points within ~1px of that edge to the wrapper div
+# instead of deck.gl's view div, so a click at (0, 0) never reaches the chart.
+DESELECT_COORDS: Position = {"x": 20.0, "y": 20.0}
 SCATTERPLOT_POINT_COORDS: Position = {"x": 279.0, "y": 331.0}
 # Coordinates for the form test (slightly different from FIRST_POINT_COORDS)
 FORM_POINT_COORDS: Position = {"x": 326.0, "y": 208.0}

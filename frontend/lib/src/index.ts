@@ -50,6 +50,8 @@ export {
 export type { ScriptRunContextProps } from "./components/core/ScriptRunContext"
 export { SidebarConfigContext } from "./components/core/SidebarConfigContext"
 export type { SidebarConfigContextProps } from "./components/core/SidebarConfigContext"
+export { SkillsInstallContext } from "./components/core/SkillsInstallContext"
+export type { SkillsInstallContextProps } from "./components/core/SkillsInstallContext"
 export { ThemeContext } from "./components/core/ThemeContext"
 export type { ThemeContextProps } from "./components/core/ThemeContext"
 export { default as ThemeProvider } from "./components/core/ThemeProvider"
@@ -72,6 +74,7 @@ export {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "./components/shared/Base/styled-components"
+export { getToggleTrackColor } from "./components/shared/Checkbox/toggleTrackStyles"
 export {
   default as BaseButton,
   BaseButtonKind,
@@ -91,6 +94,7 @@ export {
   ModalFooter,
   ModalHeader,
 } from "./components/shared/Modal/Modal"
+export { getBareEmbedOverlayToolbarPadding } from "./components/shared/Toolbar/overlayToolbarSpacing"
 export { CircularBuffer } from "./components/shared/Profiler/CircularBuffer"
 export { Profiler } from "./components/shared/Profiler/Profiler"
 export { default as CopyButton } from "./components/shared/CopyButton/CopyButton"
@@ -109,6 +113,7 @@ export { FileUploadClient } from "./FileUploadClient"
 export {
   BackendOperationClient,
   CONNECTION_CLOSED_MESSAGE,
+  getBackendOperationReason,
   REQUEST_TIMED_OUT_MESSAGE,
 } from "./BackendOperationClient"
 export type { BackendOperationClientProps } from "./BackendOperationClient"
@@ -131,10 +136,14 @@ export {
 export { useScrollToBottom } from "./hooks/useScrollToBottom"
 export { default as useTimeout } from "./hooks/useTimeout"
 export { default as HostCommunicationManager } from "./hostComm/HostCommunicationManager"
-export { HOST_COMM_VERSION } from "./hostComm/HostCommunicationManager"
+export {
+  HOST_COMM_VERSION,
+  IS_GUEST_TO_HOST_ECHO,
+} from "./hostComm/HostCommunicationManager"
 export type {
   AppConfig,
   DeployedAppMetadata,
+  GuestToHostEnvelope,
   IGuestToHostMessage,
   IHostToGuestMessage,
   IMenuItem,
@@ -188,6 +197,7 @@ export type {
   CachedTheme,
   EmotionTheme,
   IconSize,
+  IconSizeProp,
   PresetThemeName,
   ThemeSelection,
   ThemeConfig,
@@ -226,6 +236,7 @@ export {
   isScrollingHidden,
   isToolbarDisplayed,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,

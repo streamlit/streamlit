@@ -239,8 +239,10 @@ class SessionManager(Protocol):
 
     Notes
     -----
-    Threading: All SessionManager methods are *not* threadsafe -- they must be called
-    from the runtime's eventloop thread.
+    Threading: SessionManager methods are *not* threadsafe -- they must be called
+    from the runtime's eventloop thread. ``mark_session_nonresumable`` is the
+    exception: logout calls it from the script thread, and it must not touch
+    session storage.
     """
 
     @abstractmethod
@@ -376,6 +378,23 @@ class SessionManager(Protocol):
     # SessionManager implementation has a notion of active vs inactive sessions.
     # If left unimplemented in a subclass, the default implementations of these methods
     # call corresponding SessionManager methods in a natural way.
+
+    def mark_session_nonresumable(self, session_id: str) -> None:
+        """Prevent ``session_id`` from being resumed.
+
+        The default does nothing and does not touch session storage. Managers
+        that store disconnected sessions override this so a logout on the
+        script thread is visible before any storage lookup.
+
+        Parameters
+        ----------
+        session_id
+            The session's unique ID.
+
+        Notes
+        -----
+        Threading: SAFE. May be called on any thread.
+        """
 
     def disconnect_session(self, session_id: str) -> None:
         """Disconnect the given session.

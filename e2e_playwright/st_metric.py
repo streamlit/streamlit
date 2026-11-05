@@ -194,3 +194,22 @@ with format_col3:
 with format_col4:
     # Non-numeric string should NOT be formatted
     st.metric("Non-numeric (no format)", "70 °F", delta="+5%", format="compact")
+
+# Icon parameter
+st.metric(
+    "Temperature",
+    "70 °F",
+    "1.2 °F",
+    icon=":material/thermostat:",
+    border=True,
+)
+
+# Empty → data sparkline remount (https://github.com/streamlit/streamlit/issues/16539)
+show_sparkline = st.toggle("Show sparkline data", value=True)
+st.metric(
+    "Sparkline toggle",
+    value=42 if show_sparkline else 0,
+    delta=5 if show_sparkline else 0,
+    chart_data=generate_sparkline_data() if show_sparkline else None,
+    chart_type="bar",
+)

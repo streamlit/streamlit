@@ -14,23 +14,35 @@
  * limitations under the License.
  */
 
-import { FunctionComponent, ReactElement, ReactNode } from "react"
+import {
+  createContext,
+  type FunctionComponent,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+} from "react"
 
 import BaseButton, {
-  BaseButtonProps,
+  type BaseButtonProps,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
+  type ModalPosition,
   StyledDialogClose,
   StyledDialogInner,
   StyledDialogOverlay,
   StyledDialogPanel,
+  StyledDialogResizeHandle,
   StyledModalBody,
   StyledModalButton,
   StyledModalFooter,
   StyledModalHeader,
 } from "./styled-components"
+import { useDrawerResize } from "./useDrawerResize"
+
+const ModalPositionContext = createContext<ModalPosition>("center")
+ModalPositionContext.displayName = "ModalPositionContext"
 
 interface ModalHeaderProps {
   children: ReactNode
@@ -45,7 +57,8 @@ interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  return <StyledModalBody>{children}</StyledModalBody>
+  const position = useContext(ModalPositionContext)
+  return <StyledModalBody $position={position}>{children}</StyledModalBody>
 }
 
 interface ModalFooterProps {
@@ -67,7 +80,7 @@ const ModalButton: FunctionComponent<
 /**
  * Prevents the dialog from closing when the user interacts with an overlay that
  * is rendered outside the dialog's DOM subtree but conceptually belongs to it,
- * e.g. BaseWeb dropdowns/popovers/calendars and the dataframe portal (menus,
+ * such as dropdowns, popovers, calendars, and the dataframe portal (menus and
  * cell editors). These overlay roots are tagged with `data-st-overlay-root`.
  *
  * Those same hosts also carry `data-react-aria-top-layer`, which React Aria's
@@ -87,6 +100,15 @@ interface StreamlitModalProps {
   size?: "auto" | "default" | "medium" | "large"
   /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
   width?: string
+  /**
+   * Allow an explicit width to be narrower than the centered preset floor
+   * (`minPopupWidth`). The panel still cannot be narrower than
+   * `minSidebarWidth`, the side-drawer drag floor. Leave this false for
+   * presets and non-dialog modals so they keep the theme floor.
+   */
+  relaxMinWidth?: boolean
+  /** Placement of the dialog. `"center"` is a modal; `"left"` / `"right"` are full-height drawers. */
+  position?: ModalPosition
   children?: ReactNode
 }
 
@@ -105,10 +127,10 @@ export function calculateModalSize(
   padding?: string,
   largeWidth?: string
 ): string | undefined {
-  if (size === "large" && largeWidth) {
+  if (size === "large" && largeWidth !== undefined) {
     return largeWidth
   }
-  if (size === "medium" && width && padding) {
+  if (size === "medium" && width !== undefined && padding !== undefined) {
     // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
     // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
     // Note: the panel's maxWidth (calc(100% - lg - lg)) keeps this responsive on
@@ -129,15 +151,23 @@ function Modal({
   closeable = true,
   size,
   width,
+  relaxMinWidth = false,
+  position = "center",
   children,
 }: Readonly<StreamlitModalProps>): ReactElement {
   const { sizes, spacing } = useEmotionTheme()
-  const dialogWidth = calculateModalSize(
-    size,
-    sizes.contentMaxWidth,
-    spacing.lg,
-    sizes.dialogLargeWidth
-  )
+  const presetWidth =
+    width ??
+    calculateModalSize(
+      size,
+      sizes.contentMaxWidth,
+      spacing.lg,
+      sizes.dialogLargeWidth
+    )
+  const { dialogWidth, resizeSide, resizeHandleProps } = useDrawerResize({
+    position,
+    presetWidth,
+  })
 
   const handleOpenChange = (open: boolean): void => {
     if (!open) onClose?.()
@@ -152,11 +182,24 @@ function Modal({
       onOpenChange={handleOpenChange}
       className="stDialog"
       data-testid="stDialog"
+      $position={position}
     >
-      <StyledDialogPanel $dialogWidth={width ?? dialogWidth}>
-        <StyledDialogInner>
+      <StyledDialogPanel
+        $dialogWidth={dialogWidth}
+        $position={position}
+        $relaxMinWidth={relaxMinWidth}
+      >
+        {resizeSide !== null && (
+          <StyledDialogResizeHandle
+            $position={resizeSide}
+            data-testid="stDialogResizeHandle"
+            aria-hidden="true"
+            {...resizeHandleProps}
+          />
+        )}
+        <StyledDialogInner $position={position}>
           {({ close }) => (
-            <>
+            <ModalPositionContext.Provider value={position}>
               {closeable && (
                 <StyledDialogClose
                   aria-label="Close"
@@ -180,7 +223,7 @@ function Modal({
                 </StyledDialogClose>
               )}
               {children}
-            </>
+            </ModalPositionContext.Provider>
           )}
         </StyledDialogInner>
       </StyledDialogPanel>

@@ -379,7 +379,7 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       expect(updateWidgetMgrState).toHaveBeenCalledWith(
         element,
         widgetMgr,
-        { value: "default-value", fromUi: true },
+        { value: "default-value", fromUser: true },
         undefined
       )
     })
@@ -410,13 +410,13 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       updateWidgetMgrState.mockClear()
 
       act(() => {
-        result.current[1]({ value: "new-value", fromUi: true })
+        result.current[1]({ value: "new-value", fromUser: true })
       })
 
       expect(updateWidgetMgrState).toHaveBeenCalledWith(
         element,
         widgetMgr,
-        { value: "new-value", fromUi: true },
+        { value: "new-value", fromUser: true },
         fragmentId
       )
     })
@@ -668,5 +668,147 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
 
       expect(registerSpy).toHaveBeenCalledTimes(1)
     })
+  })
+})
+
+describe("useBasicWidgetState - shouldApplyIncomingValue", () => {
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    widgetMgr = new WidgetStateManager({
+      formsDataChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+    })
+  })
+
+  it("skips updateWidgetMgrState when the predicate returns false", () => {
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-skip",
+      value: "initial",
+      default: "default-value",
+    }
+    const shouldApplyIncomingValue = vi.fn(() => false)
+
+    const { rerender } = renderHook(
+      ({ el }: { el: MockProto }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+          shouldApplyIncomingValue,
+        }),
+      { initialProps: { el: element } }
+    )
+
+    updateWidgetMgrState.mockClear()
+    const incoming = {
+      ...element,
+      setValue: true,
+      value: "stale",
+    }
+    rerender({ el: incoming })
+
+    expect(shouldApplyIncomingValue).toHaveBeenCalledWith("stale")
+    expect(updateWidgetMgrState).not.toHaveBeenCalled()
+    expect(incoming.setValue).toBe(false)
+  })
+
+  it("applies incoming values when the predicate returns true", () => {
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-apply",
+      value: "initial",
+      default: "default-value",
+    }
+    const shouldApplyIncomingValue = vi.fn(() => true)
+
+    const { rerender } = renderHook(
+      ({ el }: { el: MockProto }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+          shouldApplyIncomingValue,
+        }),
+      { initialProps: { el: element } }
+    )
+
+    updateWidgetMgrState.mockClear()
+    const incoming = {
+      ...element,
+      setValue: true,
+      value: "fresh",
+    }
+    rerender({ el: incoming })
+
+    expect(shouldApplyIncomingValue).toHaveBeenCalledWith("fresh")
+    expect(updateWidgetMgrState).toHaveBeenCalledWith(
+      incoming,
+      widgetMgr,
+      { value: "fresh", fromUser: false },
+      undefined
+    )
+    expect(incoming.setValue).toBe(false)
+  })
+})
+
+describe("useBasicWidgetState - in-flight value", () => {
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    widgetMgr = new WidgetStateManager({
+      formsDataChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+    })
+  })
+
+  it("returns the committed value on the same render as setValueWithSource", () => {
+    const seen: MockValue[] = []
+    const element: MockProto = {
+      formId: "",
+      setValue: false,
+      id: "widget-inflight",
+      value: "proto",
+      default: "default-value",
+    }
+
+    const { result } = renderHook(() => {
+      const state = useBasicWidgetState({
+        getStateFromWidgetMgr,
+        getCurrStateFromProto,
+        getDefaultStateFromProto,
+        updateWidgetMgrState,
+        element,
+        widgetMgr,
+        fragmentId: undefined,
+        formClearBehavior: "resetValueOnly",
+      })
+      seen.push(state[0])
+      return state
+    })
+
+    seen.length = 0
+    act(() => {
+      result.current[1]({ value: "committed", fromUser: true })
+    })
+
+    // Not "default-value" then "committed": the hook must not lag one effect
+    // behind, or useUpdateUiValue would flash the previous widget value.
+    expect(seen[0]).toBe("committed")
   })
 })

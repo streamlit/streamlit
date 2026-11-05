@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -74,10 +72,10 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid duration value (not "short", "long", "infinite", or int)
-    toast("Message", duration="invalid")  # type: ignore[arg-type]
+    toast("Message", duration="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Invalid icon type (not str or None)
-    toast("Message", icon=123)  # type: ignore[arg-type]
+    toast("Message", icon=123)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # Passing icon as positional argument (should be keyword-only)
-    toast("Message", "icon")  # type: ignore[call-arg]
+    toast("Message", "icon")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

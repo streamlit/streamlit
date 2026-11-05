@@ -28,8 +28,25 @@ import {
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 import { ensureError } from "~lib/util/ErrorHandling"
+import { notNullOrUndefined } from "~lib/util/utils"
 
 const LOG = getLogger("PlotlyChart:CustomTheme")
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+/** Plotly accepts `layout.title` as a string or `{ text, ... }`. */
+function plotlyTitleObject(title: unknown): Record<string, unknown> {
+  if (typeof title === "string") {
+    return { text: title }
+  }
+  if (isRecord(title)) {
+    return title
+  }
+  return {}
+}
+
 /**
  * This applies general layout changes to things such as x axis,
  * y axis, legends, titles, grid changes, background, etc.
@@ -352,10 +369,16 @@ function replaceDivergingColors(
 }
 
 /**
- * Because Template.layout doesn't affect the go(plotly.graph_objects) graphs,
- * we use this method to specifically replace these graph properties.
- * */
-function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
+ * Replaces stand-in colors on graph-object template traces (candlestick,
+ * waterfall, Sankey, table). `Template.layout` does not reach those traces.
+ * When `elementTheme` is `"streamlit"`, the app theme supplies the colors.
+ * Otherwise Plotly's light-theme colors are used.
+ */
+function replaceGOSpecificColors(
+  spec: string,
+  theme: EmotionTheme,
+  elementTheme: string
+): string {
   // All the placeholder constants defined here are matching the placeholders in the python implementation.
   const INCREASING = "#000032"
   const DECREASING = "#000033"
@@ -368,17 +391,34 @@ function replaceGOSpecificColors(spec: string, theme: EmotionTheme): string {
   const FADED_TEXT_05 = "#000039"
   const BG_MIX = "#000040"
 
-  spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
-  spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
-  spec = spec.replaceAll(TOTAL, getBlue80(theme))
+  if (elementTheme === "streamlit") {
+    spec = spec.replaceAll(INCREASING, getIncreasingGreen(theme))
+    spec = spec.replaceAll(DECREASING, getDecreasingRed(theme))
+    spec = spec.replaceAll(TOTAL, getBlue80(theme))
 
-  spec = spec.replaceAll(GRAY_30, getGray30(theme))
-  spec = spec.replaceAll(GRAY_70, getGray70(theme))
-  spec = spec.replaceAll(GRAY_90, getGray90(theme))
+    spec = spec.replaceAll(GRAY_30, getGray30(theme))
+    spec = spec.replaceAll(GRAY_70, getGray70(theme))
+    spec = spec.replaceAll(GRAY_90, getGray90(theme))
 
-  spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
-  spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
-  spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+    spec = spec.replaceAll(BG_COLOR, theme.colors.bgColor)
+    spec = spec.replaceAll(FADED_TEXT_05, theme.colors.fadedText05)
+    spec = spec.replaceAll(BG_MIX, theme.colors.bgMix)
+  } else {
+    // Plotly light-theme colors, so theme=None stays readable on white paper.
+    // - Candlestick increasing/decreasing and waterfall totals: plotly.js supplyDefaults.
+    // - Table fills, lines, and font colors: the built-in "plotly" template.
+    spec = spec.replaceAll(INCREASING, "#3D9970")
+    spec = spec.replaceAll(DECREASING, "#FF4136")
+    spec = spec.replaceAll(TOTAL, "#4499FF")
+
+    spec = spec.replaceAll(GRAY_30, "#B2B5BE")
+    spec = spec.replaceAll(GRAY_70, "#2a3f5f")
+    spec = spec.replaceAll(GRAY_90, "#2a3f5f")
+
+    spec = spec.replaceAll(BG_COLOR, "#EBF0F8")
+    spec = spec.replaceAll(FADED_TEXT_05, "white")
+    spec = spec.replaceAll(BG_MIX, "#C8D4E3")
+  }
   return spec
 }
 
@@ -387,7 +427,7 @@ export function replaceTemporaryColors(
   theme: EmotionTheme,
   elementTheme: string
 ): string {
-  spec = replaceGOSpecificColors(spec, theme)
+  spec = replaceGOSpecificColors(spec, theme, elementTheme)
   spec = replaceCategoricalColors(spec, theme, elementTheme)
   spec = replaceSequentialColors(spec, theme, elementTheme)
   spec = replaceDivergingColors(spec, theme, elementTheme)
@@ -403,55 +443,100 @@ export function applyStreamlitTheme(
   spec: Record<string, unknown>,
   theme: EmotionTheme
 ): void {
+  const layout: Record<string, unknown> = isRecord(spec.layout)
+    ? spec.layout
+    : {}
+  spec.layout = layout
+
+  // Figures sent as raw JSON (or without Python's streamlit template) have no
+  // `layout.template`. Still apply Streamlit colors so `theme="streamlit"`
+  // does not fall through to plotly.js's light defaults.
+  const template: Record<string, unknown> = isRecord(layout.template)
+    ? layout.template
+    : {}
+  layout.template = template
+
+  const templateLayout: Record<string, unknown> = isRecord(template.layout)
+    ? template.layout
+    : {}
+  template.layout = templateLayout
+
   try {
-    const layout = spec.layout as Record<string, unknown>
-    const template = layout.template as Record<string, unknown>
-    applyStreamlitThemeTemplateLayout(
-      template.layout as Record<string, unknown>,
-      theme
-    )
+    applyStreamlitThemeTemplateLayout(templateLayout, theme)
+    // Ensure user-provided `layout.font` overrides Streamlit's trace-level
+    // `textfont` defaults (e.g. Sankey, icicle); otherwise those template
+    // defaults shadow user settings.
+    // See https://github.com/streamlit/streamlit/issues/11031.
+    respectUserFontOnTemplateTraces(spec, theme)
   } catch (e) {
-    const err = ensureError(e)
-    LOG.error(err)
+    LOG.error(ensureError(e))
   }
-  const layout = spec.layout as Record<string, unknown>
-  if ("title" in layout) {
-    const title = layout.title as Record<string, unknown>
-    layout.title = merge(title, {
-      text: `<b>${String(title.text)}</b>`,
+
+  if ("title" in layout && notNullOrUndefined(layout.title)) {
+    const title = plotlyTitleObject(layout.title)
+    const titleText = typeof title.text === "string" ? title.text : ""
+    layout.title = merge({}, title, {
+      text: `<b>${titleText}</b>`,
     })
   }
 }
 
 /**
- * Apply minimum changes to graph to fit streamlit
- * @param layout - spec.layout
- * @param theme - theme from useEmotionTheme()
- * @returns modified spec.layout
+ * Trace-level `textfont.color` values injected by the Streamlit Plotly theme.
+ * These shadow the user's `layout.font.color` and are scrubbed only when their
+ * current value matches the Streamlit-injected default — so a user-owned
+ * custom template that sets a different `textfont.color` on the same trace
+ * type is preserved. Keep in sync with the `textfont=` entries in
+ * `lib/streamlit/elements/lib/streamlit_plotly_theme.py`. Trace types not in
+ * this map are treated as user-owned. `family` is not injected by the
+ * Streamlit theme on any trace type, so `layout.font.family` inherits via
+ * Plotly's normal cascade with no frontend intervention.
  */
-export function layoutWithThemeDefaults(
-  layout: Record<string, unknown>,
+function getStreamlitInjectedTextfontColors(
   theme: EmotionTheme
-): Record<string, unknown> {
-  const { colors, genericFonts } = theme
+): ReadonlyMap<string, string> {
+  return new Map([
+    ["icicle", "white"],
+    ["sankey", getGray70(theme)],
+  ])
+}
 
-  const themeDefaults = {
-    font: {
-      color: colors.bodyText,
-      family: genericFonts.bodyFont,
-    },
-    paper_bgcolor: colors.bgColor,
-    plot_bgcolor: colors.secondaryBg,
+/**
+ * Drops `textfont.color` from Streamlit-owned template traces when the user
+ * provided `layout.font.color`. Plotly prefers template `textfont` over
+ * `layout.font`, so removing Streamlit's trace-level defaults (e.g. Sankey
+ * `textfont.color`) lets the user's layout font be inherited. User-owned
+ * custom traces — including custom `sankey`/`icicle` templates whose
+ * `textfont.color` does not match the Streamlit-injected value — are left
+ * untouched.
+ */
+function respectUserFontOnTemplateTraces(
+  spec: Record<string, unknown>,
+  theme: EmotionTheme
+): void {
+  const layout = spec.layout as Record<string, unknown> | undefined
+  const userFont = layout?.font as Record<string, unknown> | undefined
+  if (userFont?.color === undefined) {
+    return
   }
-
-  // Fill in theme defaults where the user didn't specify layout options.
-  return {
-    ...layout,
-    font: {
-      ...themeDefaults.font,
-      ...(layout.font as Record<string, unknown> | undefined),
-    },
-    paper_bgcolor: layout.paper_bgcolor || themeDefaults.paper_bgcolor,
-    plot_bgcolor: layout.plot_bgcolor || themeDefaults.plot_bgcolor,
+  const template = layout?.template as Record<string, unknown> | undefined
+  const templateData = template?.data as Record<string, unknown[]> | undefined
+  if (!templateData) {
+    return
+  }
+  const injectedColors = getStreamlitInjectedTextfontColors(theme)
+  for (const [traceType, traces] of Object.entries(templateData)) {
+    const injectedColor = injectedColors.get(traceType)
+    if (injectedColor === undefined || !Array.isArray(traces)) {
+      continue
+    }
+    for (const trace of traces) {
+      const textfont = (trace as Record<string, unknown> | null)?.textfont as
+        | Record<string, unknown>
+        | undefined
+      if (textfont?.color === injectedColor) {
+        delete textfont.color
+      }
+    }
   }
 }

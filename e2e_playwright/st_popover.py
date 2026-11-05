@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-import datetime
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -86,8 +86,8 @@ with st.popover("popover 18 (primary)", type="primary"):
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
 
-# A multiselect dropdown (still rendered via BaseWeb) opened inside a popover
-# must paint above the popover body. Regression fixture for
+# A multiselect dropdown opened inside a popover must paint above the popover
+# body. Regression fixture for
 # https://github.com/streamlit/streamlit/issues/15959
 with st.popover(
     "popover 20 (multiselect stacking)", key="multiselect_stacking_popover"
@@ -104,7 +104,7 @@ with st.popover(
 with st.popover("popover 21 (date dismissal)", key="date_dismissal_popover"):
     st.date_input(
         "Date in popover",
-        value=datetime.date(2020, 1, 1),
+        value=date(2020, 1, 1),
         key="date_dismissal",
     )
 
@@ -284,3 +284,13 @@ with st.popover("Multi pop A", key="multi_pop_a", on_change="rerun"):
 
 with st.popover("Multi pop B", key="multi_pop_b", on_change="rerun"):
     st.button("Close B", on_click=close_multi_pop_b, key="close_multi_b_btn")
+
+# wrap=False keeps the trigger on one row and ellipsizes an overflowing label,
+# exposing the full label via a native title while keeping the chevron visible.
+with st.popover(
+    "Regenerate the complete quarterly report now",
+    width=200,
+    wrap=False,
+    key="wrap_false_popover",
+):
+    st.write("wrap popover content")

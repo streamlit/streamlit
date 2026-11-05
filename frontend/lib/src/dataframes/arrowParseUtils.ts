@@ -19,12 +19,12 @@
  */
 
 import {
-  Schema as ArrowSchema,
+  type Schema as ArrowSchema,
   Dictionary,
   Field,
   Int,
   Null,
-  Table,
+  type Table,
   tableFromIPC,
   Vector,
 } from "apache-arrow"
@@ -33,12 +33,12 @@ import { range, unzip } from "lodash-es"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 import {
-  ArrowType,
+  type ArrowType,
   convertVectorToList,
   DataFrameCellType,
-  PandasRangeIndex,
+  type PandasRangeIndex,
   PandasRangeIndexType,
-  PandasSchema,
+  type PandasSchema,
 } from "./arrowTypeUtils"
 
 /**
@@ -71,7 +71,11 @@ export type Data = Table
 function isPandasRangeIndex(
   indexName: string | PandasRangeIndex
 ): indexName is PandasRangeIndex {
-  return typeof indexName === "object" && indexName.kind === "range"
+  return (
+    typeof indexName === "object" &&
+    // pyarrow treats `kind` as open-ended; only "range" has start/stop/step.
+    (indexName as { kind?: unknown }).kind === "range"
+  )
 }
 
 /**
@@ -85,7 +89,17 @@ function parsePandasSchema(table: Table): PandasSchema | undefined {
     // did not touch Pandas during serialization.
     return undefined
   }
-  return JSON.parse(schema)
+  const pandasSchema = JSON.parse(schema) as PandasSchema
+  // A table edited after `pyarrow.Table.from_pandas` (for example, with
+  // `select`) can keep metadata naming index fields it no longer has. Those
+  // entries are skipped so the remaining columns still load.
+  const fieldNames = new Set(table.schema.fields.map(field => field.name))
+  return {
+    ...pandasSchema,
+    index_columns: pandasSchema.index_columns.filter(
+      indexCol => isPandasRangeIndex(indexCol) || fieldNames.has(indexCol)
+    ),
+  }
 }
 
 /** Parse DataFrame's index data values. */
@@ -131,20 +145,32 @@ function parsePandasIndexData(
  * "foo" -> ["foo"]
  * "('1','foo (bar)')" -> ["1", "foo (bar)"]
  */
-function parseHeaderName(name: string, numLevels: number): string[] {
+export function parseHeaderName(name: string, numLevels: number): string[] {
   if (numLevels === 1) {
     return [name]
   }
 
+  const padLevels = (): string[] => [
+    ...Array.from({ length: numLevels - 1 }, () => ""),
+    name,
+  ]
+
   try {
-    return JSON.parse(
-      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
+    const parsed: unknown = JSON.parse(
+      name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replaceAll("'", '"')
     )
+    if (Array.isArray(parsed)) {
+      // pandas/pyarrow stringifies MultiIndex levels as tuple strings like
+      // "('1','red')". Convert non-string levels to display strings so each
+      // level stays a separate header.
+      return parsed.map(part => String(part))
+    }
+    return padLevels()
   } catch {
-    // Add empty strings for the missing levels
-    return [...Array(numLevels - 1).fill(""), name]
+    return padLevels()
   }
 }
+
 /** Parse DataFrame's column header names.
  *
  * This function is used to parse the column header names into a matrix of
@@ -241,7 +267,7 @@ function parsePandasIndexColumnTypes(
       if (isPandasRangeIndex(indexCol)) {
         // Range indices are not part of the arrow schema, so we need to
         // create a new field with the correct type information manually:
-        const indexName = indexCol.name || ""
+        const indexName = indexCol.name ?? ""
         return {
           type: DataFrameCellType.INDEX,
           arrowField: new Field(indexName, new Int(true, 64), true),

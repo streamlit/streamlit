@@ -34,6 +34,7 @@ graph LR;
   app -->|depends on| utils
 
   lib -->|depends on| protobuf
+  lib -->|depends on| connection
   lib -->|depends on| utils
 
   connection -->|depends on| protobuf

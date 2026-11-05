@@ -17,7 +17,9 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
@@ -82,6 +84,21 @@ class ForwardMsgCacheTest(unittest.TestCase):
         populate_hash_if_needed(msg2)
         assert msg1.hash == msg2.hash
 
+    def test_run_identity_metadata(self):
+        """Test that run identity metadata doesn't change the hash"""
+        msg1 = create_dataframe_msg([1, 2, 3], 1)
+        msg1.metadata.run.script_run_id = "run_1"
+        msg2 = create_dataframe_msg([1, 2, 3], 1)
+        msg2.metadata.run.script_run_id = "run_2"
+        msg2.metadata.run.fragment_ids.extend(["fragment_1", "fragment_2"])
+        populate_hash_if_needed(msg1)
+        populate_hash_if_needed(msg2)
+        assert msg1.hash == msg2.hash
+        # Hashing restores the metadata it excluded.
+        assert msg1.metadata.run.script_run_id == "run_1"
+        assert msg2.metadata.run.script_run_id == "run_2"
+        assert list(msg2.metadata.run.fragment_ids) == ["fragment_1", "fragment_2"]
+
     def test_reference_msg(self):
         """Test creation of 'reference' ForwardMsgs"""
         msg = create_dataframe_msg([1, 2, 3], 34)
@@ -91,6 +108,17 @@ class ForwardMsgCacheTest(unittest.TestCase):
         assert msg.hash == ref_msg.ref_hash
         assert msg.metadata == ref_msg.metadata
         assert not ref_msg.metadata.cacheable
+
+    def test_reference_msg_without_hash_returns_original_and_warns(self):
+        """Fall back to the original message (with a warning) when it has no hash."""
+        msg = ForwardMsg()
+        assert msg.hash == ""
+
+        with patch("streamlit.runtime.forward_msg_cache._LOGGER") as mock_logger:
+            result = create_reference_msg(msg)
+
+        assert result is msg
+        mock_logger.warning.assert_called_once()
 
     def test_no_hash_for_reference_msg(self):
         """Test that reference message doesn't get a hash."""

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ColumnConfigProps } from "./useColumnLoader"
+import type { ColumnConfigProps } from "./useColumnLoader"
 
 /**
  * Updates an existing column config mapping with the new type props.

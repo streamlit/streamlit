@@ -9,6 +9,9 @@ This wiki contains documentation for the Streamlit development process.
 - [New Feature Guide](new-feature-guide.md): Implementation order for new elements, widgets, and features.
 - [Running e2e tests and updating snapshots](running-e2e-tests.md): How to run e2e tests and update snapshots.
 - [Pull Requests](pull-requests.md): Branch naming, labeling, writing principles, and PR description guidelines.
+- [Core Release and Patch Process](release-process.md): Cutoff, branching, cherry-picking, publishing, and verification for regular and patch releases.
+- [WCAG command inventory](accessibility-wcag.md): Per-`st.*` command buckets for WCAG 2.2 A/AA (audited media, chart, map, data, embed, and image commands).
+- [WCAG theme & shell chrome inventory](accessibility-theme.md): Default theme tokens and library shell chrome scored against WCAG 1.4.3, 1.4.11, and 2.5.8.
 
 ## Development Guides
 
@@ -18,6 +21,7 @@ Development guides for different parts of the Streamlit codebase. While written 
 - [TypeScript](../frontend/AGENTS.md)
 - [Python](../lib/AGENTS.md)
 - [Streamlit Library (Python)](../lib/streamlit/AGENTS.md)
+- [Embedded Agent Skills](../lib/streamlit/.agents/skills/AGENTS.md)
 - [Python Unit Tests](../lib/tests/AGENTS.md)
 - [Protobuf](../proto/streamlit/proto/AGENTS.md)
 - [E2E Tests](../e2e_playwright/AGENTS.md)

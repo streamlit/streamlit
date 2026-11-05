@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 import streamlit as st
 
 st.set_page_config(layout="wide")
@@ -23,12 +25,23 @@ st.toast(
     icon="🦄",
 )
 
-st.toast("Your edited image was saved!", icon=":material/cabin:")
+# Emit the material-icon toast on demand so the snapshot test can wait for the
+# icon font first. Mounting before the font is ready caused a 1px height flake.
+if st.button("Show material icon toast"):
+    st.toast(
+        "Your edited image was saved!",
+        icon=":material/cabin:",
+        duration="infinite",
+    )
 
 if st.button("Show duration toasts"):
     st.toast("I am a toast with a short duration", duration=2)
     st.toast("I am a toast with a long duration", duration="long")
     st.toast("I am a persistent toast", duration="infinite")
+
+if st.button("Toast and rerun"):
+    st.toast("Toast survives rerun", icon="🚀")
+    st.rerun()
 
 
 @st.dialog("Streamlit Toast Notification")
@@ -39,3 +52,17 @@ def toast_notification():
 
 
 st.button("Trigger dialog", on_click=toast_notification)
+
+
+# The st.toast docstring example for updating a toast in place, with longer
+# sleeps so the test can reliably observe each intermediate state.
+def cook_breakfast() -> None:
+    msg = st.toast("Gathering ingredients...")
+    time.sleep(1.5)
+    msg.toast("Cooking...")
+    time.sleep(1.5)
+    msg.toast("Ready!", icon="🥞")
+
+
+if st.button("Cook breakfast"):
+    cook_breakfast()

@@ -18,13 +18,13 @@ import { type MutableRefObject, useCallback, useMemo } from "react"
 
 import { getCellFromArrow } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
-  BaseColumn,
+  type BaseColumn,
   valuesEqual,
 } from "~lib/components/widgets/DataFrame/columns"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 
-import EditingState from "./EditingState"
+import type EditingState from "./EditingState"
 
 interface UseEditReconciliationParams {
   data: Quiver
@@ -138,6 +138,8 @@ function useEditReconciliation({
     // before the grid repaints, and the data change that triggered the
     // reconciliation gives the grid a fresh `getCellContent` that reflects the
     // reconciled source values.
+    // TypeScript doesn't see the write to hasClearedCells inside forEachEditedCell.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- written in forEach callback
     if (hasClearedCells) {
       syncEditState()
     }

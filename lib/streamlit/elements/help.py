@@ -17,30 +17,27 @@
 from __future__ import annotations
 
 import ast
-import contextlib
 import inspect
+import os
 import re
 import types
 from typing import TYPE_CHECKING, Any, Final, cast
 
 import streamlit
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Help_pb2 import Help as HelpProto
 from streamlit.proto.Help_pb2 import Member as MemberProto
 from streamlit.runtime.caching.cache_utils import CachedFunc
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.scriptrunner.script_runner import (
-    __file__ as SCRIPTRUNNER_FILENAME,  # noqa: N812
-)
 from streamlit.runtime.secrets import Secrets
 from streamlit.string_util import is_mem_address_str
+
+_STREAMLIT_PACKAGE_DIR: Final = os.path.realpath(os.path.dirname(streamlit.__file__))
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
-
-
-CONFUSING_STREAMLIT_SIG_PREFIXES: Final = ("(element, ",)
 
 
 class HelpMixin:
@@ -132,7 +129,17 @@ class HelpMixin:
         layout_config = create_layout_config(width=width)
         _marshall(help_proto, obj)
 
-        return self.dg._enqueue("help_info", help_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "help_info",
+            help_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "help",
+                name=help_proto.name or None,
+                type=help_proto.type or None,
+                doc_string=help_proto.doc_string or None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -185,31 +192,14 @@ def _get_signature(obj: object) -> str | None:
     if not inspect.isclass(obj) and not callable(obj):
         return None
 
-    sig = ""
-
     try:
-        sig = str(inspect.signature(obj))
+        return str(inspect.signature(obj))
     except (ValueError, NameError):
-        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
-        # NameError for TYPE_CHECKING-only imports
-        sig = "(...)"
+        # inspect.signature cannot describe some callables (ValueError). On
+        # Python 3.14+ it can also raise NameError for a TYPE_CHECKING-only annotation.
+        return "(...)"
     except TypeError:
         return None
-
-    is_delta_gen = False
-    with contextlib.suppress(AttributeError):
-        is_delta_gen = obj.__module__ == "streamlit.delta_generator"
-        # Functions such as numpy.minimum don't have a __module__ attribute,
-        # since we're only using it to check if its a DeltaGenerator, its ok
-        # to continue
-
-    if is_delta_gen:
-        for prefix in CONFUSING_STREAMLIT_SIG_PREFIXES:
-            if sig.startswith(prefix):
-                sig = sig.replace(prefix, "(")
-                break
-
-    return sig
 
 
 def _get_docstring(obj: object) -> str | None:
@@ -327,16 +317,16 @@ _NEWLINES = re.compile(r"[\n\r]+")
 
 
 def _get_current_line_of_code_as_str() -> str | None:
-    scriptrunner_frame = _get_scriptrunner_frame()
+    caller_frame = _get_caller_frame()
 
-    if scriptrunner_frame is None:
-        # If there's no ScriptRunner frame, something weird is going on. This
-        # can happen when the script is executed with `python myscript.py`.
-        # Either way, let's bail out nicely just in case there's some valid
-        # edge case where this is OK.
+    if caller_frame is None:
+        # If we can't find the caller, something weird is going on. This can
+        # happen when the script is executed with `python myscript.py`. Either
+        # way, let's bail out nicely just in case there's some valid edge case
+        # where this is OK.
         return None
 
-    code_context = scriptrunner_frame.code_context
+    code_context = caller_frame.code_context
 
     if not code_context:
         # Sometimes a frame has no code_context. This can happen inside certain exec() calls, for
@@ -349,27 +339,34 @@ def _get_current_line_of_code_as_str() -> str | None:
     return re.sub(_NEWLINES, "", code_as_string.strip())
 
 
-def _get_scriptrunner_frame() -> inspect.FrameInfo | None:
-    prev_frame = None
-    scriptrunner_frame = None
+def _get_caller_frame() -> inspect.FrameInfo | None:
+    """Return the innermost user frame that called `st.help(...)`.
 
-    # Look back in call stack to get the variable name passed into st.help().
-    # The frame *before* the ScriptRunner frame is the correct one.
-    # IMPORTANT: This will change if we refactor the code. But hopefully our tests will catch the
-    # issue and we'll fix it before it lands upstream!
+    The user frame is the closest frame on the stack whose source file lives
+    outside the ``streamlit`` package. This correctly handles nested cases —
+    e.g. a page function invoked via ``st.navigation`` / ``page.run()`` — where
+    the frame that literally contains the ``st.help(...)`` call is user code
+    that streamlit machinery is a few frames above.
+    """
     for frame in inspect.stack():
-        # Check if this is running inside a funny "exec()" block that won't provide the info we
-        # need. If so, just quit.
+        # A frame with no code_context can happen inside certain exec() calls;
+        # in that case we can't recover the source line either way.
+        # See https://stackoverflow.com/a/12072941
         if frame.code_context is None:
             return None
 
-        if frame.filename == SCRIPTRUNNER_FILENAME:
-            scriptrunner_frame = prev_frame
-            break
+        if not _is_streamlit_internal_frame(frame):
+            return frame
 
-        prev_frame = frame
+    return None
 
-    return scriptrunner_frame
+
+def _is_streamlit_internal_frame(frame: inspect.FrameInfo) -> bool:
+    try:
+        resolved = os.path.realpath(frame.filename)
+    except (OSError, ValueError):
+        return False
+    return resolved.startswith(_STREAMLIT_PACKAGE_DIR + os.sep)
 
 
 def _is_stcommand(tree: Any, command_name: str) -> bool:

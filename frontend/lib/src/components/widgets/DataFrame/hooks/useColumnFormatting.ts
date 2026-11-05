@@ -17,7 +17,7 @@
 import { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
-import { ColumnConfigProps } from "./useColumnLoader"
+import type { ColumnConfigProps } from "./useColumnLoader"
 
 type ColumnFormattingReturn = {
   // A callback to change the format of a column

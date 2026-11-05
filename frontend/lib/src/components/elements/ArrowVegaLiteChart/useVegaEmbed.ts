@@ -14,29 +14,80 @@
  * limitations under the License.
  */
 
-import { RefObject, useCallback, useEffect, useRef, useState } from "react"
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
+import { isPlainObject } from "lodash-es"
 import { getLogger } from "loglevel"
-import { truthy, View as VegaView } from "vega"
-import embed, { VisualizationSpec } from "vega-embed"
+import { truthy, type View as VegaView } from "vega"
+import embed, { type VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
+import { varName } from "vega-lite"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
-import { Quiver } from "~lib/dataframes/Quiver"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { Quiver } from "~lib/dataframes/Quiver"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  getAliasedDataSets,
   getDataArray,
   getDataArrays,
-  getDataSets,
   getInlineData,
-  VegaLiteChartElement,
-  WrappedNamedDataset,
+  type VegaLiteChartElement,
+  type WrappedNamedDataset,
 } from "./arrowUtils"
+import { bindVegaRangeProgress } from "./styled-components"
 import { useVegaLiteSelections } from "./useVegaLiteSelections"
 
 const DEFAULT_DATA_NAME = "source"
 const LOG = getLogger("useVegaEmbed")
+
+/** Composition keys whose child views can declare their own params. */
+const CHILD_VIEW_KEYS = ["layer", "concat", "hconcat", "vconcat", "spec"]
+
+/**
+ * Returns the selection stores that hold the spec's zoom and pan, so a data
+ * swap can reset them: the `{param}_store` of each interval param bound to
+ * the scales, such as the one Altair's `.interactive()` adds. Params in
+ * `selectionMode` are skipped, because Streamlit reports and restores those
+ * as selections.
+ */
+function getZoomStores(
+  spec: unknown,
+  selectionMode: readonly string[]
+): string[] {
+  const stores = new Set<string>()
+  const visit = (view: unknown): void => {
+    if (!isPlainObject(view)) {
+      return
+    }
+    const viewSpec = view as Record<string, unknown>
+    const params = Array.isArray(viewSpec.params) ? viewSpec.params : []
+    for (const param of params) {
+      const { name, bind } = isPlainObject(param)
+        ? (param as { name?: unknown; bind?: unknown })
+        : {}
+      if (
+        bind === "scales" &&
+        typeof name === "string" &&
+        !selectionMode.includes(name)
+      ) {
+        stores.add(`${varName(name)}_store`)
+      }
+    }
+    for (const key of CHILD_VIEW_KEYS) {
+      const child = viewSpec[key]
+      ;(Array.isArray(child) ? child : [child]).forEach(visit)
+    }
+  }
+  visit(spec)
+  return [...stores]
+}
 
 interface UseVegaEmbedOutput {
   createView: (
@@ -71,31 +122,42 @@ export function useVegaEmbed(
   const defaultDataNameRef = useRef<string>(DEFAULT_DATA_NAME)
   const prevDataRef = useRef<Quiver | null>(null)
   const prevDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // The dataset names compiled into the view, by alias. A data-only rerun of
+  // an Altair chart renames its datasets but keeps the view, so updates write
+  // to the names the view knows.
+  const viewDatasetNamesRef = useRef<Map<string, string>>(new Map())
+  // The selection stores that hold the view's zoom and pan (see getZoomStores).
+  const zoomStoresRef = useRef<string[]>([])
   // Always-up-to-date props for safe access inside stable callbacks to avoid stale closure issues
   const latestDataRef = useRef<Quiver | null>(null)
   const latestDatasetsRef = useRef<WrappedNamedDataset[]>([])
+  // Bumped by finalizeView / each createView so overlapping embeds can detect
+  // they were superseded and must not assign or replay into another view.
+  const createGenerationRef = useRef(0)
   // This is used to prevent the view from being updated while it is being created
   const [isCreatingView, setIsCreatingView] = useState(false)
 
   // Setup interactivity for the chart if it supports selections
-  const { maybeConfigureSelections, onFormCleared } = useVegaLiteSelections(
-    inputElement,
-    widgetMgr,
-    fragmentId
-  )
+  const {
+    maybeConfigureSelections,
+    teardownSelections,
+    onFormCleared,
+    endSelectionRestore,
+  } = useVegaLiteSelections(inputElement, widgetMgr, fragmentId)
 
   useFormClearHelper({ widgetMgr, element: inputElement, onFormCleared })
 
-  const { data, datasets } = inputElement
+  const { data, datasets, selectionMode } = inputElement
 
-  // Keep latest refs in sync and initialize previous refs before first view
+  // Keep latest refs in sync during render so createView (which runs in
+  // useLayoutEffect, before useEffect) can merge named datasets into the
+  // spec before embed.
+  latestDataRef.current = data
+  latestDatasetsRef.current = datasets
+
   useEffect(() => {
-    latestDataRef.current = data
-    latestDatasetsRef.current = datasets
-
-    // Initialize the data and datasets refs with the current data and datasets
-    // This is predominantly used to handle the case where we want to reference
-    // these in createView before the first render.
+    // Initialize previous refs before the first view exists so subsequent
+    // updates have a baseline to diff against.
     if (vegaViewRef.current === null) {
       prevDataRef.current = data
       prevDatasetsRef.current = datasets
@@ -103,13 +165,128 @@ export function useVegaEmbed(
   }, [data, datasets])
 
   const finalizeView = useCallback(() => {
-    if (vegaFinalizerRef.current) {
-      vegaFinalizerRef.current()
-    }
+    // Invalidate in-flight createView work so a superseded embed cannot
+    // assign or replay into a finalized or replacement view.
+    createGenerationRef.current += 1
 
-    vegaFinalizerRef.current = null
-    vegaViewRef.current = null
+    try {
+      vegaFinalizerRef.current?.()
+    } finally {
+      vegaFinalizerRef.current = null
+      vegaViewRef.current = null
+    }
   }, [])
+
+  /** Applies one dataset to the view and returns whether its rows changed. */
+  const updateData = useCallback(
+    (
+      view: VegaView,
+      name: string,
+      prevData: Quiver | null,
+      dataArg: Quiver | null
+    ): boolean => {
+      const hadRows = (prevData?.dimensions.numDataRows ?? 0) > 0
+      if (!dataArg || dataArg.dimensions.numDataRows === 0) {
+        // The new data is empty, so we remove the dataset from the
+        // chart view if the named dataset exists.
+        try {
+          view.remove(name, truthy)
+        } catch {
+          // The dataset was already removed, so we do nothing
+        }
+        return hadRows
+      }
+
+      if (!prevData || !hadRows) {
+        // The previous data was empty, so we just insert the new data.
+        view.insert(name, getDataArray(dataArg))
+        return true
+      }
+
+      if (dataArg.hasSameBytes(prevData)) {
+        return false
+      }
+      // Data has changed, replace the dataset.
+      view.data(name, getDataArray(dataArg))
+      LOG.info(`Replaced the ${name} dataset in Vega view.`)
+      return true
+    },
+    []
+  )
+
+  /**
+   * Applies `inputData`/`inputDatasets` to an existing Vega view by diffing them
+   * against `prevDataRef`/`prevDatasetsRef`. When any rows change, it also
+   * clears the zoom and pan stores (see getZoomStores), as a double-click
+   * would. Callers must advance those refs after the resulting `runAsync()`
+   * resolves.
+   */
+  const syncViewData = useCallback(
+    (
+      view: VegaView,
+      inputData: Quiver | null,
+      inputDatasets: WrappedNamedDataset[]
+    ): void => {
+      const prevData = prevDataRef.current
+      const prevDatasets = prevDatasetsRef.current
+      let isDataChanged = false
+
+      if (prevData || inputData) {
+        isDataChanged = updateData(
+          view,
+          defaultDataNameRef.current,
+          prevData,
+          inputData
+        )
+      }
+
+      // Match datasets by alias rather than name, since Altair renames a
+      // dataset whenever its data changes.
+      const prevDataSets = getAliasedDataSets(prevDatasets)
+      const dataSets = getAliasedDataSets(inputDatasets)
+      // The name the view compiled for this alias. A dataset the view hasn't
+      // seen keeps its own name, and an empty name uses the default dataset.
+      const getViewDatasetName = (alias: string, name: string): string =>
+        (viewDatasetNamesRef.current.get(alias) ?? name) ||
+        defaultDataNameRef.current
+
+      for (const [alias, { name, data: dataset }] of dataSets) {
+        isDataChanged =
+          updateData(
+            view,
+            getViewDatasetName(alias, name),
+            prevDataSets.get(alias)?.data ?? null,
+            dataset
+          ) || isDataChanged
+      }
+
+      // Remove the datasets that the new data no longer sends.
+      for (const [alias, { name, data: prevDataset }] of prevDataSets) {
+        const viewDatasetName = getViewDatasetName(alias, name)
+        if (
+          !dataSets.has(alias) &&
+          viewDatasetName !== defaultDataNameRef.current
+        ) {
+          isDataChanged =
+            updateData(view, viewDatasetName, prevDataset, null) ||
+            isDataChanged
+        }
+      }
+
+      // New data can lie outside a zoomed-in window, which would show an
+      // empty chart. Reset zoom and pan like a double-click does.
+      if (isDataChanged) {
+        for (const store of zoomStoresRef.current) {
+          try {
+            view.remove(store, truthy)
+          } catch {
+            // The view has no such store, so there is nothing to reset.
+          }
+        }
+      }
+    },
+    [updateData]
+  )
 
   const createView = useCallback(
     async (
@@ -119,19 +296,20 @@ export function useVegaEmbed(
       if (containerRef.current === null) {
         throw new Error("Element missing.")
       }
+      const container = containerRef.current
+      // Finalize the previous view so it can be garbage collected. This also
+      // bumps the generation so any overlapping createView bails out.
+      finalizeView()
+      const generation = createGenerationRef.current
       setIsCreatingView(true)
       try {
-        // Finalize the previous view so it can be garbage collected.
-        finalizeView()
-
         const options = {
           // Adds interpreter support for Vega expressions that is compliant with CSP
           ast: true,
           expr: expressionInterpreter,
 
-          // Disable default styles so that vega doesn't inject <style> tags in the
-          // DOM. We set these styles manually for finer control over them and to
-          // avoid inlining styles.
+          // Disable vega-embed's injected default CSS. Container, tooltip, and
+          // parameter-binding styles live in styled-components.ts instead.
           tooltip: { disableDefaultStyle: true },
           defaultStyle: false,
           // Disable all built-in vega-embed action links ("View Source", "Open
@@ -147,21 +325,74 @@ export function useVegaEmbed(
           actions: false,
         }
 
+        // Snapshot the datasets compiled into this view. A rerun can land
+        // during embed; we record this snapshot as prev and replay any
+        // later change after the view exists.
+        const compiledData = latestDataRef.current
+        const compiledDatasets = latestDatasetsRef.current
+
+        // Named Arrow datasets must be in the spec before embed so Vega-Lite
+        // can compile lookups and filters against them. GeoJSON/TopoJSON named
+        // datasets already live on spec.datasets and are preserved.
+        const dataArrays = getDataArrays(compiledDatasets) ?? {}
+        const datasetNames = Object.keys(dataArrays)
+
+        // Copy object specs so the preprocessor spec (also used for
+        // copy-to-clipboard) is not mutated when Arrow rows are merged in.
+        // Leave string specs untouched: vega-embed treats a string as a URL.
+        let specForEmbed: VisualizationSpec | string
+        if (typeof spec === "string") {
+          specForEmbed = spec
+        } else {
+          const objectSpec = { ...spec } as VisualizationSpec & {
+            datasets?: Record<string, unknown>
+          }
+          if (datasetNames.length > 0) {
+            objectSpec.datasets = {
+              ...objectSpec.datasets,
+              ...dataArrays,
+            }
+          }
+          specForEmbed = objectSpec
+        }
+
         const { vgSpec, view, finalize } = await embed(
-          containerRef.current,
-          spec,
+          container,
+          specForEmbed,
           options
         )
 
-        vegaViewRef.current = maybeConfigureSelections(view)
+        if (generation !== createGenerationRef.current) {
+          finalize()
+          return null
+        }
 
-        vegaFinalizerRef.current = finalize
+        const createdView = maybeConfigureSelections(view)
+        vegaViewRef.current = createdView
+        viewDatasetNamesRef.current = new Map(
+          Array.from(
+            getAliasedDataSets(compiledDatasets),
+            ([alias, { name }]) => [alias, name]
+          )
+        )
+        zoomStoresRef.current = getZoomStores(specForEmbed, selectionMode)
 
-        // Load the initial set of data into the chart.
-        const dataArrays = getDataArrays(latestDatasetsRef.current)
+        const unbindRangeProgress = bindVegaRangeProgress(container)
+        vegaFinalizerRef.current = () => {
+          unbindRangeProgress()
+          try {
+            teardownSelections()
+          } finally {
+            finalize()
+          }
+        }
 
-        // Heuristic to determine the default dataset name.
-        const datasetNames = dataArrays ? Object.keys(dataArrays) : []
+        const isSuperseded = (): boolean =>
+          generation !== createGenerationRef.current ||
+          vegaViewRef.current !== createdView
+
+        // Heuristic to determine the default dataset name, from the named
+        // datasets collected above.
         if (datasetNames.length === 1) {
           const [datasetName] = datasetNames
           defaultDataNameRef.current = datasetName
@@ -169,66 +400,78 @@ export function useVegaEmbed(
           defaultDataNameRef.current = DEFAULT_DATA_NAME
         }
 
-        const dataObj = getInlineData(latestDataRef.current)
+        // Unnamed Arrow table data is inserted after embed. Named datasets on
+        // object specs are already in spec.datasets, so inserting them again
+        // would duplicate rows. String specs are URLs, so named Arrow rows
+        // must be inserted here.
+        const dataObj = getInlineData(compiledData)
         if (dataObj) {
-          vegaViewRef.current.insert(defaultDataNameRef.current, dataObj)
+          createdView.insert(defaultDataNameRef.current, dataObj)
         }
-        if (dataArrays) {
-          for (const [name, dataArg] of Object.entries(dataArrays)) {
-            vegaViewRef.current.insert(name, dataArg)
+        if (typeof spec === "string") {
+          for (const [name, rows] of Object.entries(dataArrays)) {
+            createdView.insert(name || defaultDataNameRef.current, rows)
           }
         }
 
-        await vegaViewRef.current.runAsync()
+        await createdView.runAsync()
+        if (isSuperseded()) {
+          return vegaViewRef.current
+        }
 
         // Fix bug where the "..." menu button overlaps with charts where width is
         // set to -1 on first load.
-        await vegaViewRef.current.resize().runAsync()
-
-        // Record the data used to initialize this view so subsequent updates
-        // have an accurate previous state to diff against.
-        prevDataRef.current = latestDataRef.current
-        prevDatasetsRef.current = latestDatasetsRef.current
-
-        return vegaViewRef.current
-      } finally {
-        setIsCreatingView(false)
-      }
-    },
-    [finalizeView, maybeConfigureSelections]
-  )
-
-  const updateData = useCallback(
-    (
-      view: VegaView,
-      name: string,
-      prevData: Quiver | null,
-      dataArg: Quiver | null
-    ): void => {
-      if (!dataArg || dataArg.dimensions.numDataRows === 0) {
-        // The new data is empty, so we remove the dataset from the
-        // chart view if the named dataset exists.
-        try {
-          view.remove(name, truthy)
-        } catch {
-          // The dataset was already removed, so we do nothing
+        await createdView.resize().runAsync()
+        // Keep restore suppression through this first resize so scale-trigger
+        // rewrites cannot emit a widget update. Skip if this createView was
+        // superseded so we do not unsuppress the replacement view.
+        if (isSuperseded()) {
+          return vegaViewRef.current
         }
-        return
-      }
+        endSelectionRestore()
 
-      if (!prevData || prevData.dimensions.numDataRows === 0) {
-        // The previous data was empty, so we just insert the new data.
-        view.insert(name, getDataArray(dataArg))
-        return
-      }
+        prevDataRef.current = compiledData
+        prevDatasetsRef.current = compiledDatasets
 
-      if (dataArg.hash !== prevData.hash) {
-        // Data has changed, replace the dataset.
-        view.data(name, getDataArray(dataArg))
-        LOG.info(`Replaced the ${name} dataset in Vega view.`)
+        // Replay data that arrived during embed or during this replay's
+        // runAsync. updateView is a no-op while isCreatingView is true.
+        while (
+          latestDataRef.current !== prevDataRef.current ||
+          latestDatasetsRef.current !== prevDatasetsRef.current
+        ) {
+          if (isSuperseded()) {
+            return vegaViewRef.current
+          }
+          const pendingData = latestDataRef.current
+          const pendingDatasets = latestDatasetsRef.current
+          syncViewData(createdView, pendingData, pendingDatasets)
+          await createdView.resize().runAsync()
+          if (isSuperseded()) {
+            return vegaViewRef.current
+          }
+          prevDataRef.current = pendingData
+          prevDatasetsRef.current = pendingDatasets
+        }
+
+        return createdView
+      } finally {
+        // End restore for this generation when createView returns or throws
+        // before the resize pulse. A superseded generation must not
+        // unsuppress the replacement view.
+        if (generation === createGenerationRef.current) {
+          endSelectionRestore()
+          setIsCreatingView(false)
+        }
       }
     },
-    []
+    [
+      endSelectionRestore,
+      finalizeView,
+      maybeConfigureSelections,
+      selectionMode,
+      syncViewData,
+      teardownSelections,
+    ]
   )
 
   const updateView = useCallback(
@@ -240,47 +483,15 @@ export function useVegaEmbed(
         return null
       }
 
-      // At this point the previous data should be updated
-      const prevData = prevDataRef.current
-      const prevDatasets = prevDatasetsRef.current
-
-      if (prevData || inputData) {
-        updateData(
-          vegaViewRef.current,
-          defaultDataNameRef.current,
-          prevData,
-          inputData
-        )
-      }
-
-      const prevDataSets = getDataSets(prevDatasets) ?? {}
-      const dataSets = getDataSets(inputDatasets) ?? {}
-
-      for (const [name, dataset] of Object.entries(dataSets)) {
-        const datasetName = name || defaultDataNameRef.current
-        const prevDataset = prevDataSets[datasetName]
-
-        updateData(vegaViewRef.current, datasetName, prevDataset, dataset)
-      }
-
-      // Remove all datasets that are in the previous but not the current datasets.
-      for (const name of Object.keys(prevDataSets)) {
-        if (
-          !Object.hasOwn(dataSets, name) &&
-          name !== defaultDataNameRef.current
-        ) {
-          updateData(vegaViewRef.current, name, null, null)
-        }
-      }
-
-      await vegaViewRef.current?.resize().runAsync()
+      syncViewData(vegaViewRef.current, inputData, inputDatasets)
+      await vegaViewRef.current.resize().runAsync()
 
       prevDataRef.current = inputData
       prevDatasetsRef.current = inputDatasets
 
       return vegaViewRef.current
     },
-    [updateData, isCreatingView]
+    [syncViewData, isCreatingView]
   )
 
   const resizeView = useCallback(
@@ -311,7 +522,13 @@ export function useVegaEmbed(
     }
 
     try {
-      return await vegaViewRef.current.toImageURL("png")
+      // Vega's default PNG export is at 1x, which produces a blurry image on
+      // HiDPI/retina displays where the on-screen canvas is rendered at
+      // `window.devicePixelRatio`. We upscale the PNG to at least 2x so the
+      // exported file matches (or exceeds) the perceived on-screen fidelity.
+      // See https://github.com/streamlit/streamlit/issues/8177.
+      const scaleFactor = Math.max(2, window.devicePixelRatio || 1)
+      return await vegaViewRef.current.toImageURL("png", scaleFactor)
     } catch (error) {
       LOG.warn("Failed to export Vega view as PNG:", error)
       return null

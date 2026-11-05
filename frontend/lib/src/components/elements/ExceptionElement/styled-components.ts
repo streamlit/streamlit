@@ -16,6 +16,8 @@
 
 import styled from "@emotion/styled"
 
+import { StyledAlertContainer } from "~lib/components/shared/AlertContainer/styled-components"
+
 export const StyledStackTraceRow = styled.div(({ theme }) => ({
   marginTop: theme.spacing.sm,
   "&:first-of-type": {
@@ -31,8 +33,14 @@ export const StyledStackTraceTitle = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.sm,
 }))
 
-// This extra div makes sure that we also have a padding on the right side of the stack
-// trace when scrolled to the right.
+/**
+ * Preserve a visible right-side gutter in horizontally scrolled stack
+ * traces. The inner `StyledCode` (rendered with `wrapLines={false}`) carries
+ * its own `padding-right` via `codeBlockStyle`; wrapping it in this
+ * `inline-block` + `minWidth: 100%` div guarantees the code cell always
+ * stretches to at least the outer `<pre>` width so the gutter stays inside
+ * the scrollable content. See issue #8206.
+ */
 export const StyledStackTraceContent = styled.div({
   display: "inline-block",
   minWidth: "100%",
@@ -50,14 +58,171 @@ export const StyledExceptionLinks = styled.div(({ theme }) => ({
   justifyContent: "flex-end",
 }))
 
-export const StyledExceptionCopyButton = styled.button({
+/**
+ * A button that reads as one of the error box's text links (Copy, and the
+ * skills callout's action) rather than as a control: no chrome, inheriting the
+ * surrounding font and color, underlined like the `Ask …` anchors beside it.
+ *
+ * `all: unset` also drops the focus outline, so the ring is restored explicitly
+ * — see the a11y guidance in `frontend/AGENTS.md` about never removing a focus
+ * indicator without replacing it.
+ *
+ * The ring is `currentColor`, not `theme.shadows.focusRing`. That token is
+ * `primary` at 50% alpha, tuned for the app background; on the red-tinted alert
+ * these buttons live in it lands around 1.8:1 — under WCAG 1.4.11's 3:1 for a
+ * focus indicator, i.e. a pink halo on a pink box. Inheriting the box's own text
+ * colour gets the ~4.5:1 that colour is already chosen for, and follows the box
+ * when its kind flips to success or a user re-themes the alert palette.
+ */
+export const StyledExceptionLinkButton = styled.button(({ theme }) => ({
   all: "unset",
   font: "inherit",
+  cursor: "pointer",
   textDecoration: "underline",
-})
+  borderRadius: theme.radii.default,
+  "&:focus-visible": {
+    boxShadow: `0 0 0 ${theme.sizes.focusRingWidth} currentColor`,
+  },
+}))
 
 export const StyledExceptionWrapper = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing.lg,
 }))
+
+/**
+ * Stacks the error box and the optional "install Streamlit skills" callout that
+ * follows it. `spacing.sm` is the design system's XSMALL gap step — one notch
+ * tighter than the SMALL gap Streamlit puts between ordinary elements — so the
+ * two boxes read as an attached pair (the callout belongs to *this* error) rather
+ * than as two unrelated blocks. With no callout there is a single child and this
+ * is a no-op.
+ */
+export const StyledExceptionWithCallout = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.sm,
+}))
+
+/**
+ * The "install Streamlit skills" call-to-action shown below an error box in local
+ * development: its own box, matching the error's tint, corner radius, and padding
+ * because it reuses the same `StyledAlertContainer` the error box is built from.
+ * Sharing that base is what keeps the two boxes aligned — the sparkle icon lines
+ * up with the exception type above it, and a theme change moves both together.
+ *
+ * Deliberately *not* wrapped in `AlertContainer` itself: that component hardcodes
+ * `role="alert"` for error-kind content, which is assertive and wrong for an
+ * unsolicited CTA. The polite live region lives on the copy instead (see
+ * `StyledSkillsInstallCalloutText`).
+ */
+export const StyledSkillsInstallCallout = styled(StyledAlertContainer)(
+  ({ theme }) => ({
+    display: "flex",
+    // Wraps, but only ever between the message and the action — never inside the
+    // message, because the icon and copy are one flex item (see
+    // `StyledSkillsInstallCalloutMessage`). At normal widths everything sits on
+    // one row; in a 200px sidebar or a fifth of a column row, where the action's
+    // fixed label can no longer fit beside the copy, the action drops to its own
+    // line instead of overflowing the box. Without the grouping this would strand
+    // the icon: flex breaks lines on each item's max-content width, so a long
+    // failure reason doesn't fit beside the icon and would be pushed off it.
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  })
+)
+
+/**
+ * Binds the icon to the copy so they are one unbreakable flex item — the icon can
+ * never be stranded on a line of its own, and the pair wraps internally as a unit
+ * while the action stays beside it.
+ *
+ * Grows from a floor rather than from its content. Flex decides line breaks on
+ * each item's max-content width *before* any shrinking, so sizing this from its
+ * content would put a long failure reason over the line's width and push the
+ * action onto a line of its own at every viewport. Basing it on 0 and growing
+ * keeps the action beside the copy; the `min-width` floor is what still lets the
+ * action wrap away when there genuinely isn't room for both, instead of the copy
+ * being squeezed into a one-character column. `100%` caps that floor at the
+ * container so the narrowest layouts can't overflow the box.
+ *
+ * Measured on the failure reason (the longest copy): action stays beside the copy
+ * and right-aligned down to ~300px of container, drops to its own line below
+ * that, and never overflows — checked to 100px, well under a 200px sidebar or a
+ * five-column row.
+ */
+export const StyledSkillsInstallCalloutMessage = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  flex: "1 1 0%",
+  // 8rem is the narrowest copy column still worth reading — roughly a dozen
+  // characters. Below it the action wraps away instead, which reads far better
+  // than a tall one-word column beside a button. No theme token covers a wrap
+  // threshold; it scales with the root font size, so a larger base size moves it
+  // proportionally.
+  minWidth: "min(8rem, 100%)",
+}))
+
+/**
+ * Wraps the callout's decorative sparkle/status icon so it is hidden from the
+ * live region on the copy — otherwise the Material ligature (e.g.
+ * "auto_awesome") would be announced as text before the message.
+ *
+ * A real flex item rather than `display: contents`, so `flex-shrink: 0` applies
+ * to it: the copy beside it is the only thing that should give way when the
+ * message is long.
+ */
+export const StyledSkillsInstallCalloutIcon = styled.span({
+  display: "flex",
+  alignItems: "center",
+  flexShrink: 0,
+})
+
+/**
+ * The callout's copy. Colour comes from the box's kind, so the success
+ * confirmation needs no override here.
+ *
+ * This — not the whole box — carries `role="status"`. `status` implies
+ * `aria-atomic="true"`, so a region spanning the action too would re-read the
+ * entire pitch every time the button's label changed, just to convey one word.
+ * Scoped to the copy, each transition announces only the sentence that changed.
+ */
+export const StyledSkillsInstallCalloutText = styled.div({
+  flex: "0 1 auto",
+  minWidth: 0,
+  // `anywhere`, not `break-word`: only `anywhere` lowers the min-content width,
+  // which is what lets the group's floor collapse to the container on the
+  // narrowest layouts instead of overflowing. The visible effect is the same —
+  // a long install path breaks rather than sticking out of the box.
+  overflowWrap: "anywhere",
+})
+
+/**
+ * The callout's action. Built on the same link-button as the error box's own
+ * `Copy` so the two stay visually identical by construction — the CTA reads as a
+ * peer of those links rather than a filled button. Adds only what's specific to
+ * this callout: it holds its width at the end of the row while the copy beside it
+ * wraps, and its label never breaks mid-phrase.
+ *
+ * Unavailability is `aria-disabled`, never the `disabled` attribute: a disabled
+ * button is not a focusable area, so the browser blurs it mid-interaction and
+ * whoever just pressed Enter is dumped back to the top of the document — with
+ * `Retry` (the same element, re-enabled) now unreachable without tabbing through
+ * the whole page. Styling therefore keys off the attribute. No `opacity` here
+ * either: WCAG only exempts *inactive* controls from contrast, and this one stays
+ * active, so "Installing…" must stay legible. Losing the underline and the
+ * pointer carries the state instead.
+ */
+export const StyledSkillsInstallCalloutButton = styled(
+  StyledExceptionLinkButton
+)({
+  flexShrink: 0,
+  whiteSpace: "nowrap",
+  '&[aria-disabled="true"]': {
+    cursor: "default",
+    textDecoration: "none",
+  },
+})

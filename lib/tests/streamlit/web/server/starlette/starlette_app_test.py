@@ -16,8 +16,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import sys
+import threading
+import time
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -30,16 +33,20 @@ from starlette.middleware import Middleware
 from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit import file_util
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidParameterTypeError
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.openmetrics_data_model_pb2 import COUNTER, HISTOGRAM
 from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
+from streamlit.runtime.caching.cache_metrics import CacheMetrics
+from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
-from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
+from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat, StatsManager
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
@@ -50,9 +57,11 @@ from streamlit.web.server.starlette.starlette_app import (
 )
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
-    _should_bypass_static_gzip,
 )
-from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_routes import (
+    _ExpensiveStatsCache,
+    _stats_to_proto,
+)
 from streamlit.web.server.starlette.starlette_server_config import (
     ANYIO_STATIC_FILE_THREAD_TOKENS,
 )
@@ -62,7 +71,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncGenerator, Iterator
 
     from starlette.requests import Request
 
@@ -122,6 +131,9 @@ class _DummyStatsManager:
             ],
         }
 
+    def registered_families(self) -> list[str]:
+        return list(self._stats.keys())
+
     def get_stats(
         self, family_names: list[str] | None = None
     ) -> dict[str, list[CacheStat | CounterStat | GaugeStat]]:
@@ -167,6 +179,7 @@ class _DummyRuntime:
         self._active_sessions: set[str] = {"session123"}
         self.stopped = False
         self.last_backmsg = None
+        self.deserialization_exceptions: list[BaseException] = []
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
@@ -218,16 +231,21 @@ class _DummyRuntime:
         self.last_existing_session_id = existing_session_id
         return session_id
 
-    def disconnect_session(self, session_id: str) -> None:
+    def disconnect_session(self, session_id: str, client: object | None = None) -> None:
         self._active_sessions.discard(session_id)
 
-    def handle_backmsg(self, session_id: str, msg: object) -> None:
+    def handle_backmsg(
+        self, session_id: str, msg: object, client: object | None = None
+    ) -> None:
         self.last_backmsg = (session_id, msg)
 
     def handle_backmsg_deserialization_exception(
-        self, session_id: str, exc: BaseException
+        self,
+        session_id: str,
+        exc: BaseException,
+        client: object | None = None,
     ) -> None:
-        self.last_backmsg = (session_id, exc)
+        self.deserialization_exceptions.append(exc)
 
     async def start(self) -> None:  # pragma: no cover - lifecycle stub
         return None
@@ -274,35 +292,25 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     assert response.text == "ok"
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    [
-        ("/", True),
-        ("/static/app.123.js", True),
-        ("/app/static/logo.svg", False),
-        ("/assets/theme.css", False),
-        ("/_stcore/metrics", False),
-        ("/media/file", False),
-    ],
-    ids=[
-        "root",
-        "static-bundle",
-        "app-static",
-        "hashed-style",
-        "api-route",
-        "media-route",
-    ],
-)
-def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
-    """Only root and `/static/...` paths should bypass the gzip middleware."""
-    assert _should_bypass_static_gzip(path) is expected
-
-
 def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
     assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_create_streamlit_middleware_forwards_base_url() -> None:
+    """The gzip middleware receives server.baseUrlPath so its path bypass works.
+
+    Guards against a refactor silently dropping ``base_url``, which would break
+    the static/media bypass whenever a base URL path is configured.
+    """
+    with patch_config_options({"server.baseUrlPath": "my-app"}):
+        middleware_list = create_streamlit_middleware()
+
+    gzip_middleware = middleware_list[2]
+    assert gzip_middleware.cls is SelectiveGZipMiddleware
+    assert gzip_middleware.kwargs["base_url"] == "my-app"
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
@@ -518,6 +526,349 @@ def test_metrics_endpoint_protobuf_uses_canonical_family_name(
 
     assert "session_duration_seconds" in family_names
     assert "session_duration_seconds_total" not in family_names
+
+
+class _InstrumentedStatsManager:
+    """A stats manager stub that records call counts and thread identities."""
+
+    def __init__(
+        self,
+        *,
+        delay: float = 0.0,
+        active_sessions_value: int = 3,
+    ) -> None:
+        self._delay = delay
+        self._active_sessions_value = active_sessions_value
+        self.expensive_call_count = 0
+        self.expensive_thread_ids: list[int] = []
+
+    def registered_families(self) -> list[str]:
+        return [
+            "cache_memory_bytes",
+            "active_sessions",
+        ]
+
+    def get_stats(
+        self, family_names: list[str] | None = None
+    ) -> dict[str, list[CacheStat | GaugeStat]]:
+        result: dict[str, list[CacheStat | GaugeStat]] = {}
+        families = (
+            family_names if family_names is not None else self.registered_families()
+        )
+        for family in families:
+            if family == "cache_memory_bytes":
+                self.expensive_call_count += 1
+                self.expensive_thread_ids.append(threading.get_ident())
+                if self._delay:
+                    time.sleep(self._delay)
+                result["cache_memory_bytes"] = [CacheStat("test_cache", "", 42)]
+            elif family == "active_sessions":
+                result["active_sessions"] = [
+                    GaugeStat(
+                        family_name="active_sessions",
+                        value=self._active_sessions_value,
+                        help="Current number of active sessions.",
+                    )
+                ]
+        return result
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_single_flight() -> None:
+    """Two concurrent awaits on _ExpensiveStatsCache trigger exactly one get_stats call.
+
+    The cache must coalesce concurrent requests onto the same in-flight task so
+    that a burst of requests does not fan out into multiple expensive computations.
+    """
+    mgr = _InstrumentedStatsManager(delay=0.05)
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    results = await asyncio.gather(cache.get(), cache.get())
+
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call (single-flight), got {mgr.expensive_call_count}"
+    )
+    assert "cache_memory_bytes" in results[0]
+    assert "cache_memory_bytes" in results[1]
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_survives_waiter_cancellation() -> None:
+    """Cancelling one waiter must not cancel the shared computation or other waiters.
+
+    Bare ``await`` of a shared task propagates cancellation to that task and every
+    other waiter. The cache must shield the shared task so a client disconnect or
+    scraper timeout cannot collapse single-flight protection under a flood.
+    """
+    mgr = _InstrumentedStatsManager(delay=0.1)
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    first = asyncio.create_task(cache.get())
+    # Yield so first starts the shared computation before the second joins.
+    await asyncio.sleep(0)
+    second = asyncio.create_task(cache.get())
+    await asyncio.sleep(0)
+    first.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    result = await second
+
+    assert "cache_memory_bytes" in result
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call after waiter cancel, got {mgr.expensive_call_count}"
+    )
+    # The shared result must still be cached for subsequent callers.
+    await cache.get()
+    assert mgr.expensive_call_count == 1, (
+        f"Expected cached result after cancel, got {mgr.expensive_call_count} calls"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_runs_off_event_loop() -> None:
+    """Assert the expensive get_stats call runs on a worker thread, not the event loop."""
+    event_loop_thread = threading.get_ident()
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+
+    assert mgr.expensive_thread_ids, "get_stats was never called"
+    assert mgr.expensive_thread_ids[0] != event_loop_thread, (
+        "get_stats ran on the event-loop thread instead of a worker thread"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_ttl_hit() -> None:
+    """A second request within the TTL window returns the cached result without recomputing."""
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+    await cache.get()
+
+    assert mgr.expensive_call_count == 1, (
+        f"Expected 1 get_stats call within TTL, got {mgr.expensive_call_count}"
+    )
+
+
+@pytest.mark.anyio
+async def test_metrics_expensive_cache_ttl_expiry() -> None:
+    """After the TTL elapses the expensive family is recomputed on the next request."""
+    mgr = _InstrumentedStatsManager()
+    cache = _ExpensiveStatsCache(mgr)  # type: ignore[arg-type]
+
+    await cache.get()
+    # Expire the cache by rewinding the stored expiry timestamp.
+    cache._expiry = time.monotonic() - 1.0
+    await cache.get()
+
+    assert mgr.expensive_call_count == 2, (
+        f"Expected 2 get_stats calls after TTL expiry, got {mgr.expensive_call_count}"
+    )
+
+
+def test_metrics_cheap_families_stay_live(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Assert cheap families stay live and are not served from the expensive-family cache."""
+    client, runtime = starlette_client
+
+    response = client.get("/_stcore/metrics?families=active_sessions")
+    assert "active_sessions 3" in response.text
+
+    runtime.stats_mgr._stats["active_sessions"] = [
+        GaugeStat(
+            family_name="active_sessions",
+            value=99,
+            help="Current number of active sessions.",
+        )
+    ]
+
+    response2 = client.get("/_stcore/metrics?families=active_sessions")
+    assert "active_sessions 99" in response2.text
+    assert "active_sessions 3" not in response2.text
+
+
+def test_metrics_endpoint_default_returns_all_families(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """No families param returns all registered families including the expensive one."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics")
+    assert response.status_code == 200
+    assert "cache_memory_bytes" in response.text
+    assert "session_events_total" in response.text
+    assert "active_sessions" in response.text
+
+
+def test_metrics_endpoint_unknown_only_families_returns_empty(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Requesting only bogus family names returns an empty (EOF-only) response."""
+    client, _ = starlette_client
+    response = client.get("/_stcore/metrics?families=no_such_family")
+    assert response.status_code == 200
+    assert response.text.strip() == "# EOF"
+    assert "cache_memory_bytes" not in response.text
+
+
+_CACHE_METRICS_FAMILIES = (
+    "cache_lookups",
+    "cache_compute_duration_seconds",
+    "cache_evictions",
+    "cache_background_refreshes",
+)
+
+
+def _install_cache_metrics(runtime: _DummyRuntime) -> None:
+    """Serve a real cache metrics registry with known values from the runtime."""
+    registry = CacheMetrics()
+    metrics = registry.get_function_metrics(CacheType.DATA, "app.load")
+    metrics.enable_background_refresh()
+    for _ in range(3):
+        metrics.record_hit()
+    for seconds in (0.003, 0.3, 75.0):
+        metrics.record_miss()
+        metrics.record_compute_duration(seconds)
+    metrics.record_compute_duration(2.0, trigger="refresh")
+    metrics.record_background_refresh("success")
+    metrics.record_background_refresh("skipped")
+    metrics.record_evictions("ttl", 2)
+    stats_mgr = StatsManager()
+    stats_mgr.register_provider(registry)
+    runtime.stats_mgr = stats_mgr  # type: ignore[assignment]
+
+
+def test_metrics_endpoint_cache_metrics_text(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Cache metrics follow the OpenMetrics counter and histogram text format."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(
+        "/_stcore/metrics?" + "&".join(f"families={f}" for f in _CACHE_METRICS_FAMILIES)
+    )
+
+    assert response.status_code == 200
+    lines = response.text.splitlines()
+    labels = 'cache="app.load",cache_type="st_cache_data"'
+
+    assert "# TYPE cache_lookups counter" in lines
+    assert not any(line.startswith("# UNIT cache_lookups") for line in lines)
+    assert f'cache_lookups_total{{{labels},result="hit"}} 3' in lines
+    assert f'cache_lookups_total{{{labels},result="miss"}} 3' in lines
+
+    assert "# TYPE cache_evictions counter" in lines
+    assert f'cache_evictions_total{{{labels},reason="ttl"}} 2' in lines
+    assert f'cache_evictions_total{{{labels},reason="max_entries"}} 0' in lines
+
+    assert "# TYPE cache_background_refreshes counter" in lines
+    assert f'cache_background_refreshes_total{{{labels},result="success"}} 1' in lines
+    assert f'cache_background_refreshes_total{{{labels},result="error"}} 0' in lines
+    assert f'cache_background_refreshes_total{{{labels},result="skipped"}} 1' in lines
+
+    assert "# TYPE cache_compute_duration_seconds histogram" in lines
+    assert "# UNIT cache_compute_duration_seconds seconds" in lines
+    miss = 'trigger="miss"'
+    miss_bucket_lines = [
+        line
+        for line in lines
+        if line.startswith("cache_compute_duration_seconds_bucket") and miss in line
+    ]
+    assert miss_bucket_lines[0] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="0.005",{miss}}} 1'
+    )
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="0.5",{miss}}} 2' in lines
+    )
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="60.0",{miss}}} 2' in lines
+    )
+    assert miss_bucket_lines[-1] == (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="+Inf",{miss}}} 3'
+    )
+    bucket_counts = [int(line.rsplit(" ", 1)[1]) for line in miss_bucket_lines]
+    assert bucket_counts == sorted(bucket_counts)
+    assert f"cache_compute_duration_seconds_sum{{{labels},{miss}}} 75.303" in lines
+    assert f"cache_compute_duration_seconds_count{{{labels},{miss}}} 3" in lines
+
+    refresh = 'trigger="refresh"'
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="1.0",{refresh}}} 0'
+        in lines
+    )
+    assert (
+        f'cache_compute_duration_seconds_bucket{{{labels},le="2.5",{refresh}}} 1'
+        in lines
+    )
+    assert f"cache_compute_duration_seconds_sum{{{labels},{refresh}}} 2.0" in lines
+    assert f"cache_compute_duration_seconds_count{{{labels},{refresh}}} 1" in lines
+    assert lines[-1] == "# EOF"
+
+
+@pytest.mark.parametrize("family", _CACHE_METRICS_FAMILIES)
+def test_metrics_endpoint_filters_cache_metrics_families(
+    starlette_client: tuple[TestClient, _DummyRuntime], family: str
+) -> None:
+    """Each cache metrics family can be requested on its own."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(f"/_stcore/metrics?families={family}")
+
+    assert response.status_code == 200
+    type_lines = [
+        line for line in response.text.splitlines() if line.startswith("# TYPE")
+    ]
+    assert len(type_lines) == 1
+    assert type_lines[0].startswith(f"# TYPE {family} ")
+
+
+def test_metrics_endpoint_cache_metrics_protobuf(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """The protobuf response carries counter and histogram cache metric points."""
+    client, runtime = starlette_client
+    _install_cache_metrics(runtime)
+
+    response = client.get(
+        "/_stcore/metrics?"
+        + "&".join(f"families={f}" for f in _CACHE_METRICS_FAMILIES),
+        headers={"Accept": "application/x-protobuf"},
+    )
+
+    assert response.status_code == 200
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    families = {family.name: family for family in metric_set.metric_families}
+    assert set(families) == set(_CACHE_METRICS_FAMILIES)
+    assert families["cache_lookups"].type == COUNTER
+    assert families["cache_evictions"].type == COUNTER
+    assert families["cache_background_refreshes"].type == COUNTER
+
+    duration_family = families["cache_compute_duration_seconds"]
+    assert duration_family.type == HISTOGRAM
+    assert duration_family.unit == "seconds"
+    histograms = {}
+    for metric in duration_family.metrics:
+        labels = {label.name: label.value for label in metric.labels}
+        trigger = labels.pop("trigger")
+        assert labels == {"cache": "app.load", "cache_type": "st_cache_data"}
+        histograms[trigger] = metric.metric_points[0].histogram_value
+    assert set(histograms) == {"miss", "refresh"}
+    histogram = histograms["miss"]
+    assert histogram.count == 3
+    assert histogram.double_value == pytest.approx(75.303)
+    bucket_counts = [bucket.count for bucket in histogram.buckets]
+    assert bucket_counts == sorted(bucket_counts)
+    assert histogram.buckets[-1].upper_bound == math.inf
+    assert histogram.buckets[-1].count == 3
+    assert histograms["refresh"].count == 1
+    assert histograms["refresh"].double_value == pytest.approx(2.0)
 
 
 def test_media_endpoint_serves_file(
@@ -1172,6 +1523,125 @@ def test_static_files_fall_back_to_index(tmp_path: Path) -> None:
     monkeypatch.undo()
 
 
+def test_agent_api_route_answers_instead_of_the_app_html(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """With defaults, the agent routes answer rather than falling through to
+    the app's HTML: the interact route refuses a POST and any other method,
+    the MCP route refuses a message with the 400 MCP clients fall back from
+    and any other method, and the schema route reports that the API is off
+    and refuses a POST itself, rather than leaving it to the static files
+    mount.
+    """
+    client, runtime = starlette_client
+
+    posted = client.post("/_stcore/agent/interact", json={})
+    fetched = client.get("/_stcore/agent/interact")
+    mcp_posted = client.post(
+        "/_stcore/agent/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+    )
+    mcp_fetched = client.get("/_stcore/agent/mcp")
+    schema = client.get("/_stcore/agent/openapi.json")
+    schema_posted = client.post("/_stcore/agent/openapi.json")
+
+    assert mcp_posted.status_code == HTTPStatus.BAD_REQUEST
+    assert mcp_posted.json()["error"]["code"] == -32600
+    assert mcp_posted.json()["error"]["message"].startswith("not_available: ")
+    assert mcp_fetched.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert "<html>" not in mcp_fetched.text
+
+    assert posted.status_code == HTTPStatus.FORBIDDEN
+    assert posted.json()["error"]["code"] == "not_available"
+    assert fetched.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert fetched.headers["Allow"] == "POST"
+    assert "<html>" not in fetched.text
+    assert schema.status_code == HTTPStatus.OK
+    assert schema.json()["info"]["x-streamlit-agent-api"] == "disabled"
+    assert schema_posted.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert schema_posted.headers["Allow"] == "GET, HEAD"
+    assert schema_posted.headers["Link"] == '<openapi.json>; rel="service-desc"'
+    assert schema_posted.content == b""
+    assert runtime.last_user_info is None
+
+
+def test_a_reserved_path_refuses_other_methods_by_where_it_is(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """A method the health route does not take keeps the static files' 405 at
+    the app's root, while a reserved path under a page's URL is a 404.
+    """
+    client, _ = starlette_client
+
+    root = client.post("/_stcore/health")
+    under_a_page = client.post("/page2/_stcore/agent/mcp", json={})
+
+    assert root.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert under_a_page.status_code == HTTPStatus.NOT_FOUND
+    assert "<html>" not in under_a_page.text
+
+
+def test_an_unknown_agent_path_is_a_404_beside_the_agent_routes(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """A path under the agent prefix that no route serves is a 404 for every
+    method, while the agent routes beside it keep answering themselves.
+    """
+    client, _ = starlette_client
+
+    fetched = client.get("/_stcore/agent/foo")
+    posted = client.post("/_stcore/agent/foo", json={})
+    route = client.get("/_stcore/agent/interact")
+
+    assert fetched.status_code == HTTPStatus.NOT_FOUND
+    assert "<html>" not in fetched.text
+    assert posted.status_code == HTTPStatus.NOT_FOUND
+    assert route.status_code == HTTPStatus.METHOD_NOT_ALLOWED
+    assert route.headers["Allow"] == "POST"
+
+
+@pytest.mark.parametrize(
+    ("base_url", "mcp_path"),
+    [("", "/_stcore/agent/mcp"), ("app", "/app/_stcore/agent/mcp")],
+)
+def test_the_mcp_url_with_a_trailing_slash_redirects_to_the_route(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, base_url: str, mcp_path: str
+) -> None:
+    """The MCP URL with a trailing slash falls through to the static files
+    mount, whose 308 keeps the POST, so a client that follows it initializes.
+    """
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+    initialize = {"jsonrpc": "2.0", "id": 1, "method": "initialize"}
+
+    with (
+        patch_config_options(
+            {
+                "server.enableAgentApi": True,
+                "server.baseUrlPath": base_url,
+                "global.developmentMode": False,
+            }
+        ),
+        TestClient(create_starlette_app(_DummyRuntime(component_dir))) as client,
+    ):
+        redirected = client.post(
+            f"{mcp_path}/", json=initialize, follow_redirects=False
+        )
+        followed = client.post(f"{mcp_path}/", json=initialize)
+
+    assert redirected.status_code == HTTPStatus.PERMANENT_REDIRECT
+    assert redirected.headers["location"] == "../mcp"
+    assert [response.status_code for response in followed.history] == [
+        HTTPStatus.PERMANENT_REDIRECT
+    ]
+    assert followed.url.path == mcp_path
+    assert followed.status_code == HTTPStatus.OK, followed.text
+    assert followed.json()["result"]["serverInfo"]["name"] == "streamlit"
+
+
 @patch_config_options({"global.developmentMode": False})
 def test_static_files_apply_cache_headers(tmp_path: Path) -> None:
     """Ensure hashed static assets receive long-lived cache headers."""
@@ -1371,6 +1841,38 @@ def test_websocket_allows_debug_shutdown_in_dev_mode(tmp_path: Path) -> None:
     assert runtime.stopped is True
 
 
+def test_websocket_closes_on_malformed_backmsg(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Test that a frame that fails to parse as a BackMsg closes the connection
+    with a protocol error. The server does not report the frame into the session.
+    """
+    client, runtime = starlette_client
+
+    with client.websocket_connect("/_stcore/stream") as websocket:
+        # Send a valid frame first. It shows that only the malformed frame closes
+        # the connection.
+        back_msg = BackMsg()
+        back_msg.rerun_script.query_string = ""
+        websocket.send_bytes(back_msg.SerializeToString())
+
+        websocket.send_bytes(b"\xff")
+
+        # The client waits for a ForwardMsg and gets a disconnect instead.
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            websocket.receive_bytes()
+
+    assert excinfo.value.code == 1002  # 1002 = Protocol Error
+
+    # The valid frame reaches the runtime. The server never routes the malformed
+    # frame into the session, so the session creates no Exception ForwardMsg for
+    # it.
+    assert runtime.last_backmsg is not None
+    _session_id, msg = runtime.last_backmsg
+    assert msg.WhichOneof("type") == "rerun_script"
+    assert runtime.deserialization_exceptions == []
+
+
 # ---------------------------------------------------------------------------
 # Tests for the App class (st.App ASGI entry point)
 # ---------------------------------------------------------------------------
@@ -1475,6 +1977,43 @@ class TestAppRouteValidation:
 
 class TestAppRun:
     """Tests for App.run()."""
+
+    def test_run_reconfigures_cache_budget_created_in_raw_mode(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
+    ) -> None:
+        """App.run applies its cache limit after an earlier raw-mode cache call."""
+        from streamlit import cache_data
+        from streamlit.runtime.caching.cache_data_api import _data_caches
+        from streamlit.runtime.caching.global_cache_budget import (
+            _GLOBAL_CACHE_BUDGET_HOLDER,
+            GlobalCacheBudget,
+        )
+
+        launcher = tmp_path / "app.py"
+        launcher.write_text("import streamlit as st\n")
+        script = tmp_path / "dashboard.py"
+        script.write_text("import streamlit as st\n")
+        monkeypatch.setattr(sys, "argv", [str(launcher)])
+
+        budget = GlobalCacheBudget(max_bytes=None)
+        with patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", budget):
+
+            @cache_data
+            def raw_mode_cached_value() -> bytes:
+                return b"cached before App.run"
+
+            raw_mode_cached_value()
+            app = App(script)
+            with (
+                patch("streamlit.config._on_config_parsed.send"),
+                patch("streamlit.web.bootstrap._prepare_asgi_app_run_context"),
+                patch("streamlit.web.server.starlette.starlette_server.UvicornRunner"),
+            ):
+                app.run(config={"server.maxCacheDataSize": "1KiB"})
+
+            assert budget._max_bytes == 1024
+            assert budget.total_bytes > 0
+            _data_caches.clear_all()
 
     def test_run_uses_existing_app_instance_and_bootstrap_helpers(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, reset_runtime: None
@@ -1707,7 +2246,9 @@ class TestAppRun:
         script.write_text("import streamlit as st\n")
         app = App(script)
 
-        with pytest.raises(StreamlitAPIException, match="config must be a mapping"):
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError, match=r"Invalid `config` type"
+        ):
             app.run(config=["server.port"])  # type: ignore[arg-type]
 
 
@@ -1718,7 +2259,7 @@ class TestAppLifespan:
         """Test that App stores the user-provided lifespan context manager."""
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             yield {"key": "value"}
 
         app = App("main.py", lifespan=lifespan)
@@ -2073,6 +2614,57 @@ class TestAppConfigDiscovery:
     discover the script-level `.streamlit/config.toml`.
     """
 
+    def test_raw_mode_cache_does_not_snapshot_config_before_external_startup(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        reset_runtime: None,
+    ) -> None:
+        """A pre-start cache is activated using the app script's config."""
+        from streamlit import cache_data, config
+        from streamlit.runtime.caching.cache_data_api import _data_caches
+        from streamlit.runtime.caching.global_cache_budget import (
+            _GLOBAL_CACHE_BUDGET_HOLDER,
+            get_global_cache_budget,
+        )
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[server]\nmaxCacheDataSize = "1KiB"\n[theme]\nprimaryColor = "#ff0000"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        with patch.object(_GLOBAL_CACHE_BUDGET_HOLDER, "budget", None):
+
+            @cache_data(show_spinner=False)
+            def raw_mode_cached_value() -> bytes:
+                return b"cached before external App startup"
+
+            try:
+                raw_mode_cached_value()
+                budget = get_global_cache_budget()
+
+                assert budget.max_bytes is None
+                assert config._config_options is None
+
+                app = App("myapp/app.py")
+                # Creating the externally managed lifespan creates Runtime,
+                # which is the explicit cache-budget configuration point.
+                with patch.object(config._on_config_parsed, "send"):
+                    app.lifespan()
+
+                assert budget.max_bytes == 1024
+                assert budget.total_bytes > 0
+                assert config.get_option("theme.primaryColor") == "#ff0000"
+            finally:
+                _data_caches.clear_all()
+
     def test_script_level_config_discovered_with_relative_script_path(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -2266,7 +2858,7 @@ class TestAppAsgi:
         shutdown_count = 0
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             nonlocal startup_count, shutdown_count
             startup_count += 1
             yield {"model": "loaded", "version": "1.0"}
@@ -2349,7 +2941,7 @@ class TestAppAsgi:
         startup_called = False
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[None]:
+        async def lifespan(app: App) -> AsyncGenerator[None, None]:
             nonlocal startup_called
             startup_called = True
             yield
@@ -2756,7 +3348,7 @@ class TestAppSecrets:
         startup_called = False
 
         @asynccontextmanager
-        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+        async def lifespan(app: App) -> AsyncGenerator[dict[str, Any], None]:
             nonlocal startup_called
             startup_called = True
             yield {"loaded": True}

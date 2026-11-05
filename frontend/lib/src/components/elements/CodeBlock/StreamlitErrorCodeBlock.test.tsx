@@ -19,7 +19,7 @@ import { screen } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StreamlitErrorCodeBlock, {
-  StreamlitErrorCodeBlockProps,
+  type StreamlitErrorCodeBlockProps,
 } from "./StreamlitErrorCodeBlock"
 
 // Realistic Python exception traceback example

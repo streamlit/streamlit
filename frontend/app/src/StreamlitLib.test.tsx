@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import { PureComponent, ReactElement } from "react"
+import { PureComponent, type ReactElement } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 
-import {
+import type {
   AppConfig as ConnectionAppConfig,
   LibConfig as ConnectionLibConfig,
   StreamlitEndpoints,
@@ -29,8 +29,8 @@ import {
   ContainerContentsWrapper,
   createFormsData,
   FileUploadClient,
-  FormsData,
-  LibConfigContextProps,
+  type FormsData,
+  type LibConfigContextProps,
   ScriptRunState,
   SessionInfo,
   WidgetStateManager,

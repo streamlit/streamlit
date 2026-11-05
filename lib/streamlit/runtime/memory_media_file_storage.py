@@ -53,6 +53,11 @@ _PARTIAL_HASH_SAMPLE_SIZE: Final = 65_536  # 64 KiB for head, middle, and tail
 PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
     "audio/wav": ".wav",
     "text/vtt": ".vtt",
+    # Only some platforms' MIME tables register `.arrows` for the Arrow stream
+    # format, so it is pinned to none for the agent API's data URLs to look
+    # the same on every server. The pin applies to every media file of this
+    # type, such as a download without a `file_name`, not only data URLs.
+    "application/vnd.apache.arrow.stream": "",
 }
 
 
@@ -208,7 +213,8 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
             raise MediaFileStorageError(f"Error opening '{filename}'") from ex
 
     def get_stats(
-        self, _family_names: Sequence[str] | None = None
+        self,
+        family_names: Sequence[str] | None = None,  # noqa: ARG002
     ) -> dict[str, list[CacheStat]]:
         # We operate on a copy of our dict, to avoid race conditions
         # with other threads that may be manipulating the cache.

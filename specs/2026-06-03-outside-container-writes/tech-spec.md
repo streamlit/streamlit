@@ -48,6 +48,7 @@ Fragments can reference containers created outside their scope:
 ```python
 outside = st.container()
 
+
 @st.fragment
 def my_fragment():
     outside.button("Click me")
@@ -320,7 +321,9 @@ executes, do two things. First, **evict** the registry entries this run will inv
 those whose container is created by this fragment's scope (see the registry lifecycle above):
 
 ```python
-def _evict_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
+def _evict_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
     # Containers this fragment creates are about to be rebuilt; drop their wrappers.
     for key in fragment_storage.outside_wrapper_keys_created_by(fragment_id):
         del fragment_storage._outside_wrappers[key]
@@ -330,7 +333,9 @@ Then **reset** the wrappers this fragment writes through — re-emitting each an
 cursor so reused wrappers survive `ClearStaleNodeVisitor` and start at index 0:
 
 ```python
-def _reset_outside_wrappers(fragment_storage: FragmentStorage, fragment_id: str) -> None:
+def _reset_outside_wrappers(
+    fragment_storage: FragmentStorage, fragment_id: str
+) -> None:
     for key, wrapper in fragment_storage.outside_wrappers_for(fragment_id):
         # Re-emit the wrapper's add_block delta so the frontend updates its
         # scriptRunId — without this, ClearStaleNodeVisitor would GC the wrapper.
@@ -383,10 +388,11 @@ reset — a `LockedCursor` always points to index 0.
 
 **`EVENT` root does not need a wrapper.** `st.toast` and dialogs route to the `EVENT` root,
 which `_needs_outside_wrapper` excludes by design. The delta-level collision exists
-mechanically, but it causes no user-visible loss: toasts are one-shot effects (the frontend
-forces fresh payloads / re-fire and auto-dismiss rather than reusing element payloads), and
-dialogs are modal singletons with no variable-count positional interleaving. Wrapping it
-would serve no purpose and could interfere with one-shot rendering.
+mechanically, but its effect is limited: the frontend identifies a toast by its delta
+path, so a colliding toast with different content replaces (closes early) a still-visible
+toast at that position, and toasts auto-dismiss. Dialogs are modal singletons with no
+variable-count positional interleaving. Wrapping it would serve no purpose and could
+interfere with one-shot rendering.
 
 ## Behavior Decisions
 
@@ -409,9 +415,10 @@ placeholder:
 ```python
 outside = st.container()
 
+
 @st.fragment
 def my_fragment():
-    placeholder = outside.empty()       # claims the slot on every run
+    placeholder = outside.empty()  # claims the slot on every run
     if st.button("Show detail"):
         placeholder.write("Detail...")  # fills it during fragment rerun
 ```

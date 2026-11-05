@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Ellipses, Warning } from "@emotion-icons/open-iconic"
 
 import { ConnectionState } from "@streamlit/connection"

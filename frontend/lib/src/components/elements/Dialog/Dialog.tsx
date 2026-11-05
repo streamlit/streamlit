@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  memo,
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -25,9 +31,10 @@ import Modal, {
   ModalHeader,
 } from "~lib/components/shared/Modal/Modal"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { assertNever } from "~lib/util/assertNever"
 import { notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledDialogIcon, StyledDialogTitle } from "./styled-components"
 
@@ -54,6 +61,44 @@ function mapDialogWidthToModalSize(
   }
 }
 
+/**
+ * Maps the dialog position proto enum to Modal placement.
+ * Match CENTER explicitly: it is 0, so a truthy check would treat centered dialogs as unset.
+ * Treat a missing value as center so payloads that omit the enum still render.
+ */
+function mapDialogPositionToModalPosition(
+  dialogPosition: BlockProto.Dialog.DialogPosition | undefined
+): "left" | "center" | "right" {
+  switch (dialogPosition) {
+    case BlockProto.Dialog.DialogPosition.LEFT:
+      return "left"
+    case BlockProto.Dialog.DialogPosition.RIGHT:
+      return "right"
+    case BlockProto.Dialog.DialogPosition.CENTER:
+    case undefined:
+      return "center"
+    default: {
+      assertNever(dialogPosition)
+      return "center"
+    }
+  }
+}
+
+/**
+ * Convert an explicit pixel width to rem, or return `undefined` when it is
+ * unset or non-positive so the enum preset applies. The root font size is
+ * `baseFontSize` px, so the result renders at exactly `pixelWidth` CSS pixels.
+ */
+function pixelWidthToRem(
+  pixelWidth: number | null | undefined,
+  baseFontSize: number
+): string | undefined {
+  if (!notNullOrUndefined(pixelWidth) || pixelWidth <= 0) {
+    return undefined
+  }
+  return `${pixelWidth / baseFontSize}rem`
+}
+
 export interface Props {
   element: BlockProto.Dialog
   deltaMsgReceivedAt?: number
@@ -67,7 +112,7 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
   children,
   widgetMgr,
   fragmentId,
-}): ReactElement => {
+}): ReactElement | null => {
   const {
     title,
     dismissible,
@@ -75,8 +120,13 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     isOpen: initialIsOpen,
     id,
     icon,
+    position,
+    pixelWidth,
   } = element
-  const [isOpen, setIsOpen] = useState<boolean>(false)
+  const { fontSizes } = useEmotionTheme()
+  // Open on the first paint when the proto says so. Starting closed would
+  // skip the drawer's CSS enter animation.
+  const [isOpen, setIsOpen] = useState<boolean>(() => Boolean(initialIsOpen))
 
   useEffect(() => {
     // Only apply the open state if it was actually set in the proto.
@@ -94,24 +144,31 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
     setIsOpen(false)
 
     // Send widget event if on_dismiss is activated (indicated by presence of id)
-    if (id && widgetMgr) {
-      void widgetMgr.setTriggerValue(
-        { id, formId: "" }, // WidgetInfo object - dialogs are not compatible with forms
-        { fromUi: true },
-        fragmentId
-      )
+    if (id) {
+      // Dialogs are not compatible with forms.
+      void widgetMgr.setTriggerValue(id, {
+        formId: "",
+        fragmentId,
+        fromUser: true,
+      })
     }
   }, [id, widgetMgr, fragmentId])
 
-  // Handler to suppress the R key when dialog is open and non-dismissible
-  // Otherwise, R would allow to dismiss the dialog by rerunning the script.
-  const handleKeyDown = useCallback(
+  // Suppress R while a non-dismissible dialog is open so the app-level
+  // shortcut cannot rerun (and close) the dialog. Capture-phase keydown
+  // must stopImmediatePropagation so GlobalHotkeys never sees the event.
+  const handleRKeySuppress = useCallback(
     (e: KeyboardEvent): void => {
-      if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
-        const target = e.target as HTMLElement
+      // Skip events with a non-string `key` so `toLowerCase` does not throw
+      // (synthetic `Event`s from hosts, extensions, or tests omit `key`).
+      if (typeof e.key !== "string") {
+        return
+      }
 
-        // We don't want to prevent typing in input fields.
-        // This is the same check that is also done by react-hot-keys.
+      if (isOpen && e.key.toLowerCase() === "r" && !element.dismissible) {
+        const target = e.target as HTMLElement | null
+
+        // Allow typing R in inputs, textareas, and contenteditable fields.
         if (
           target &&
           (target.isContentEditable ||
@@ -122,37 +179,43 @@ const Dialog: React.FC<React.PropsWithChildren<Props>> = ({
           return
         }
 
-        // Prevent the R key from bubbling up to the App level
         e.preventDefault()
-        e.stopPropagation()
+        e.stopImmediatePropagation()
       }
     },
     [isOpen, element.dismissible]
   )
 
-  // Set up keyboard event listener when dialog is open
+  // Set up keyboard event listeners when dialog is open
   useEffect(() => {
     if (isOpen && !element.dismissible) {
-      // Add event listener with capture=true to intercept before App level
-      document.addEventListener("keydown", handleKeyDown, true)
+      // capture=true to intercept before App-level hotkeys
+      document.addEventListener("keydown", handleRKeySuppress, true)
 
       return () => {
-        document.removeEventListener("keydown", handleKeyDown, true)
+        document.removeEventListener("keydown", handleRKeySuppress, true)
       }
     }
     return undefined
-  }, [isOpen, element.dismissible, handleKeyDown])
+  }, [isOpen, element.dismissible, handleRKeySuppress])
 
-  // don't use the Modal's isOpen prop as it feels laggy when using it
+  // Unmount when closed so dismiss is immediate. Drawer enter motion is CSS
+  // on mount (`data-entering`); an exit animation would need the overlay to
+  // stay mounted after close.
   if (!isOpen) {
-    return <></>
+    return null
   }
+
+  const cssWidth = pixelWidthToRem(pixelWidth, fontSizes.baseFontSize)
   return (
     <Modal
       isOpen
       closeable={dismissible}
       onClose={handleClose}
       size={mapDialogWidthToModalSize(width)}
+      width={cssWidth}
+      relaxMinWidth={cssWidth !== undefined}
+      position={mapDialogPositionToModalPosition(position)}
     >
       <ModalHeader>
         <StyledDialogTitle>

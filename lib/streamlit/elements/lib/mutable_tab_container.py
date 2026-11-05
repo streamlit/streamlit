@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Literal, Self
 
 from streamlit.delta_generator import DeltaGenerator
 
@@ -37,8 +35,8 @@ class TabContainer(DeltaGenerator):
     ----------
     open : bool or None
         Whether this tab is the currently active tab. This is ``True`` if this
-        tab is active and ``False`` if it is inactive, or ``None`` if state
-        tracking isn't enabled.
+        tab is active and ``False`` if it is inactive, or ``None`` when the tabs
+        don't track state (``on_change="ignore"`` without ``bind="query-params"``).
 
     Examples
     --------
@@ -128,8 +126,8 @@ class TabContainer(DeltaGenerator):
         -------
         bool or None
             ``True`` if this tab is active, ``False`` if inactive, or ``None``
-            if state tracking is not enabled (``on_change`` was not set or
-            set to ``"ignore"``).
+            if the tabs don't track state (``on_change="ignore"`` without
+            ``bind="query-params"``).
         """
         return self._open
 
@@ -137,14 +135,14 @@ class TabContainer(DeltaGenerator):
     def open(self, value: bool | None) -> None:
         self._open = value
 
-    def __enter__(self) -> Self:  # type: ignore[override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
         super().__enter__()
         return self
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: TracebackType | None,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> Literal[False]:
-        return super().__exit__(exc_type, exc_val, exc_tb)
+        return super().__exit__(typ, exc, tb)

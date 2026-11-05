@@ -29,6 +29,7 @@ import pytest
 from parameterized import parameterized
 
 from streamlit import config, config_util, env_util
+from streamlit.byte_util import config_max_cache_data_size_to_bytes
 from streamlit.config import CustomThemeCategories, ShowErrorDetailsConfigOptions
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
@@ -39,6 +40,11 @@ from streamlit.errors import (
 
 SECTION_DESCRIPTIONS = copy.deepcopy(config._section_descriptions)
 CONFIG_OPTIONS = copy.deepcopy(config._config_options)
+
+
+def _warning_text(mock_logger: MagicMock) -> str:
+    """Join every `warning` call on a mock logger into one searchable string."""
+    return " ".join(str(call) for call in mock_logger.warning.call_args_list)
 
 
 class ConfigTest(unittest.TestCase):
@@ -62,6 +68,44 @@ class ConfigTest(unittest.TestCase):
 
         config._delete_option("_test.tomlTest")
 
+    def test_max_cache_data_size_default(self) -> None:
+        """The global cache budget is disabled by default."""
+        value = config.get_option("server.maxCacheDataSize")
+        assert value is None
+        assert config_max_cache_data_size_to_bytes(value) is None
+
+    def test_max_cache_data_size_accepts_toml_disable_sentinel(self) -> None:
+        """TOML accepts numeric or string zero to disable the global budget."""
+        for value in ("0", '"0"'):
+            config._update_config_with_toml(
+                f"[server]\nmaxCacheDataSize = {value}", "<test definition>"
+            )
+
+            assert (
+                config_max_cache_data_size_to_bytes(
+                    config.get_option("server.maxCacheDataSize")
+                )
+                is None
+            )
+
+    def test_max_cache_data_size_rejects_unitless_nonzero_toml_integer(
+        self,
+    ) -> None:
+        """A nonzero global budget requires an explicit binary unit."""
+        config._update_config_with_toml(
+            "[server]\nmaxCacheDataSize = 500", "<test definition>"
+        )
+
+        with pytest.raises(StreamlitAPIException, match="binary-unit"):
+            config_max_cache_data_size_to_bytes(
+                config.get_option("server.maxCacheDataSize")
+            )
+        with pytest.raises(
+            RuntimeError,
+            match=r"`server\.maxCacheDataSize` requires",
+        ):
+            config._check_conflicts()
+
     def _create_theme_config_options(self):
         """Create a list of the valid config options for the [theme] section."""
         valid_general_config_options = self._create_subsection_config_options("theme")
@@ -76,9 +120,6 @@ class ConfigTest(unittest.TestCase):
             "metricValueFontSize",
             "metricValueFontWeight",
             "showSidebarBorder",
-            "chartCategoricalColors",
-            "chartSequentialColors",
-            "chartDivergingColors",
         ]
 
         theme_config_options = [
@@ -101,6 +142,8 @@ class ConfigTest(unittest.TestCase):
             "textColor",
             "baseRadius",
             "buttonRadius",
+            "paddingTop",
+            "paddingBottom",
             "font",
             "headingFont",
             "codeFont",
@@ -116,6 +159,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor",
             "codeBackgroundColor",
             "dataframeHeaderBackgroundColor",
+            "dataframeHeaderTextColor",
             "redColor",
             "orangeColor",
             "yellowColor",
@@ -137,6 +181,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor",
             "violetTextColor",
             "grayTextColor",
+            "chartCategoricalColors",
+            "chartSequentialColors",
+            "chartDivergingColors",
         ]
 
         section_config_options = []
@@ -553,7 +600,7 @@ class ConfigTest(unittest.TestCase):
             config._update_config_with_toml(toml_content, "test")
 
     def test_parsing_invalid_toml(self):
-        """Test that exceptions during toml.loads are caught and logged."""
+        """Test that invalid TOML is logged and leaves the current config unchanged."""
         # Create a dummy default option
         config._create_option(
             "_test.invalidTomlTest",
@@ -718,7 +765,6 @@ class ConfigTest(unittest.TestCase):
                 "global",
                 "logger",
                 "magic",
-                "mapbox",
                 "runner",
                 "secrets",
                 "server",
@@ -779,6 +825,10 @@ class ConfigTest(unittest.TestCase):
                 "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
+                "runner.cacheBackgroundRefreshMaxWorkers",
+                "runner.cacheBackgroundRefreshTTLMultiplier",
+                "runner.cacheHashSeed",
+                "runner.connectionDefaultTTL",
                 "runner.enforceSerializableSessionState",
                 "runner.magicEnabled",
                 "runner.parallelMaxWorkers",
@@ -787,16 +837,20 @@ class ConfigTest(unittest.TestCase):
                 "runner.enumCoercion",
                 "magic.displayRootDocString",
                 "magic.displayLastExprIfNoSemicolon",
-                "mapbox.token",
                 "secrets.files",
                 "server.address",
+                "server.agentMaxSessions",
+                "server.agentPreviewRows",
+                "server.agentSessionTTL",
+                "server.agentWaitTimeout",
+                "server.allowedHosts",
                 "server.allowRunOnSave",
                 "server.baseUrlPath",
                 "server.cookieSecret",
                 "server.corsAllowedOrigins",
                 "server.customComponentBaseUrlPath",
                 "server.disconnectedSessionTTL",
-                "server.enableArrowTruncation",
+                "server.enableAgentApi",
                 "server.enableCORS",
                 "server.enableExpensiveMemoryStats",
                 "server.enableStaticServing",
@@ -808,6 +862,7 @@ class ConfigTest(unittest.TestCase):
                 "server.folderWatchBlacklist",
                 "server.folderWatchList",
                 "server.headless",
+                "server.maxCacheDataSize",
                 "server.maxMessageSize",
                 "server.maxUploadSize",
                 "server.maxWidgetStateSize",
@@ -825,6 +880,18 @@ class ConfigTest(unittest.TestCase):
         keys = sorted(config._config_options.keys())
         assert config_options == keys
 
+    def test_no_expired_deprecated_config_options(self) -> None:
+        """Deprecated config options must be removed once expiration_date has passed."""
+        expired = [
+            opt.key
+            for opt in config._config_options_template.values()
+            if opt.deprecated and opt.is_expired()
+        ]
+        assert expired == [], (
+            "Deprecated config options whose expiration_date has passed "
+            f"must be removed: {expired}"
+        )
+
     def test_check_conflicts_server_port(self):
         config._set_option("global.developmentMode", True, "test")
         config._set_option("server.port", 1234, "test")
@@ -835,12 +902,76 @@ class ConfigTest(unittest.TestCase):
             config._check_conflicts()
 
     @patch("streamlit.logger.get_logger")
-    def test_check_conflicts_server_csrf(self, get_logger):
+    def test_check_conflicts_cors_disabled_does_not_claim_an_override(self, get_logger):
+        """Disabling CORS protection must warn without claiming an override.
+
+        No code path flips server.enableCORS back to true, so the warning must
+        not say it does and _check_conflicts must not mutate the option.
+        """
         config._set_option("server.enableXsrfProtection", True, "test")
-        config._set_option("server.enableCORS", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        mock_logger.warning.assert_called_once()
+        assert mock_logger.warning.call_count == 1
+        warnings = _warning_text(mock_logger)
+        assert "server.enableCORS" in warnings
+        assert "overrid" not in warnings.lower()
+        assert config.get_option("server.enableCORS") is False
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_warns_once_in_development_mode(
+        self, get_logger
+    ):
+        """Development mode must not add a second cross-origin warning."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        assert mock_logger.warning.call_count == 1
+        assert "server.enableCORS" in _warning_text(mock_logger)
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_cors_disabled_without_xsrf_is_silent(self, get_logger):
+        """Disabling both CORS and XSRF protection is a deliberate choice."""
+        config._set_option("server.enableXsrfProtection", False, "test")
+        config._set_option("server.enableCORS", False, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_development_mode_logs_a_debug_note(self, get_logger):
+        """Development mode only relaxes the CORS header, so it must not warn.
+
+        Development mode is on by default in a source checkout, and it leaves
+        the WebSocket origin check in place, so this is a contributor-facing
+        note rather than an operator-facing warning.
+        """
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", True, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
+        debug_messages = " ".join(
+            str(call) for call in mock_logger.debug.call_args_list
+        )
+        assert "global.developmentMode" in debug_messages
+
+    @patch("streamlit.logger.get_logger")
+    def test_check_conflicts_no_warning_when_xsrf_and_cors_both_enabled(
+        self, get_logger
+    ):
+        """XSRF and CORS protection both enabled is not a conflict."""
+        config._set_option("server.enableXsrfProtection", True, "test")
+        config._set_option("server.enableCORS", True, "test")
+        config._set_option("global.developmentMode", False, "test")
+        mock_logger = get_logger()
+        config._check_conflicts()
+        mock_logger.warning.assert_not_called()
 
     @parameterized.expand(["lax", "strict", "none", "Lax", "STRICT", "None"])
     def test_check_conflicts_xsrf_cookie_same_site_valid(self, value):
@@ -878,7 +1009,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.sslCertFile", None, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "xsrfCookieSameSite" in warnings
         assert "HTTPS" in warnings
 
@@ -892,7 +1023,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.enableXsrfProtection", False, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "xsrfCookieSameSite" in warnings
         assert "no effect" in warnings
 
@@ -912,7 +1043,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("server.sslCertFile", None, "test")
         mock_logger = get_logger()
         config._check_conflicts()
-        warnings = " ".join(str(call) for call in mock_logger.warning.call_args_list)
+        warnings = _warning_text(mock_logger)
         assert "no effect" not in warnings
         # It should still warn about the HTTPS/Secure requirement.
         assert "HTTPS" in warnings
@@ -992,6 +1123,48 @@ class ConfigTest(unittest.TestCase):
         assert option.visibility == "hidden"
         assert config.get_option("server.unsafeMetricsUserAttributes") == []
 
+    def test_cache_background_refresh_ttl_multiplier_option_attrs(self) -> None:
+        """The background-refresh TTL multiplier is visible and defaults to 2.0."""
+        option = config._config_options["runner.cacheBackgroundRefreshTTLMultiplier"]
+        assert option.default_val == 2.0
+        assert option.type is float
+        assert option.visibility == "visible"
+        assert config.get_option("runner.cacheBackgroundRefreshTTLMultiplier") == 2.0
+
+    def test_connection_default_ttl_option_attrs(self) -> None:
+        """The connection TTL defaults to unset and is a float option."""
+        ttl_option = config._config_options_template["runner.connectionDefaultTTL"]
+        assert ttl_option.default_val is None
+        assert ttl_option.type is float
+        assert ttl_option.sensitive is False
+        assert ttl_option.env_var == "STREAMLIT_RUNNER_CONNECTION_DEFAULT_TTL"
+
+    def test_connection_default_ttl_flag_overrides_toml(self) -> None:
+        """A CLI flag, which is how ``streamlit run`` delivers the env var, overrides config.toml."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".toml", delete=False, encoding="utf-8"
+        ) as toml_file:
+            toml_file.write("[runner]\nconnectionDefaultTTL = 10\n")
+            toml_path = toml_file.name
+
+        try:
+            with patch("streamlit.config.get_config_files", return_value=[toml_path]):
+                config.get_config_options(force_reparse=True)
+                assert config.get_option("runner.connectionDefaultTTL") == 10
+
+                config.get_config_options(
+                    force_reparse=True,
+                    options_from_flags={"runner.connectionDefaultTTL": 7.0},
+                )
+        finally:
+            os.unlink(toml_path)
+
+        assert config.get_option("runner.connectionDefaultTTL") == 7.0
+        assert (
+            config.get_where_defined("runner.connectionDefaultTTL")
+            == config._DEFINED_BY_FLAG
+        )
+
     def test_unsafe_metrics_user_attributes_parses_from_toml(self):
         toml_content = """
         [server]
@@ -1046,6 +1219,21 @@ class ConfigTest(unittest.TestCase):
         # The default empty list disables the feature and must not raise.
         config._set_option("server.unsafeMetricsUserAttributes", [], "test")
         config._check_metrics_user_attributes()
+
+    def test_agent_api_options_are_visible_with_their_defaults(self) -> None:
+        """The agent API options are public and default to the documented values."""
+        expected_defaults = {
+            "server.enableAgentApi": False,
+            "server.agentWaitTimeout": 30,
+            "server.agentSessionTTL": 900,
+            "server.agentMaxSessions": 100,
+            "server.agentPreviewRows": 100,
+        }
+        for key, default_val in expected_defaults.items():
+            option = config._config_options[key]
+            assert option.visibility == "visible"
+            assert option.default_val == default_val
+            assert config.get_option(key) == default_val
 
     def test_maybe_convert_to_number(self):
         assert config._maybe_convert_to_number("1234") == 1234
@@ -1130,6 +1318,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": None,
             "baseRadius": None,
             "buttonRadius": None,
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": None,
             "backgroundColor": None,
             "textColor": None,
@@ -1151,6 +1341,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
+            "dataframeHeaderTextColor": None,
             "showSidebarBorder": None,
             "headingFontSizes": None,
             "headingFontWeights": None,
@@ -1200,6 +1391,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeTextColor", "#158237", "test")
         config._set_option("theme.codeBackgroundColor", "#29361e", "test")
         config._set_option("theme.dataframeHeaderBackgroundColor", "#29361e", "test")
+        config._set_option("theme.dataframeHeaderTextColor", "#ffffff", "test")
         config._set_option("theme.font", "Inter", "test")
         config._set_option("theme.headingFont", "Inter", "test")
         config._set_option(
@@ -1263,6 +1455,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#1BD760",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
@@ -1288,6 +1482,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "dataframeHeaderTextColor": "#ffffff",
             "fontFaces": [
                 {
                     "family": "Inter",
@@ -1356,6 +1551,7 @@ class ConfigTest(unittest.TestCase):
         config._set_option(
             "theme.sidebar.dataframeHeaderBackgroundColor", "#29361e", "test"
         )
+        config._set_option("theme.sidebar.dataframeHeaderTextColor", "#ffffff", "test")
         config._set_option("theme.sidebar.redColor", "#7d353b", "test")
         config._set_option("theme.sidebar.orangeColor", "#d95a00", "test")
         config._set_option("theme.sidebar.yellowColor", "#916e10", "test")
@@ -1382,6 +1578,8 @@ class ConfigTest(unittest.TestCase):
             "primaryColor": "#FFF000",
             "baseRadius": "1.2rem",
             "buttonRadius": "medium",
+            "paddingTop": None,
+            "paddingBottom": None,
             "secondaryBackgroundColor": "#021A09",
             "backgroundColor": "#001200",
             "textColor": "#DFFDE0",
@@ -1400,6 +1598,7 @@ class ConfigTest(unittest.TestCase):
             "codeTextColor": "#158237",
             "codeBackgroundColor": "#29361e",
             "dataframeHeaderBackgroundColor": "#29361e",
+            "dataframeHeaderTextColor": "#ffffff",
             "redColor": "#7d353b",
             "orangeColor": "#d95a00",
             "yellowColor": "#916e10",
@@ -1421,6 +1620,9 @@ class ConfigTest(unittest.TestCase):
             "greenTextColor": "#3dd56d",
             "violetTextColor": "#9a5dff",
             "grayTextColor": "#a3a8b8",
+            "chartCategoricalColors": None,
+            "chartSequentialColors": None,
+            "chartDivergingColors": None,
         }
         assert config.get_options_for_section("theme.sidebar") == expected
 

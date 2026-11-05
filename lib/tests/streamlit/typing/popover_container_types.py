@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -32,9 +30,10 @@ if TYPE_CHECKING:
     # st.popover returns PopoverContainer
     assert_type(popover("Test"), PopoverContainer)
 
-    # PopoverContainer is a DeltaGenerator (Liskov substitution)
-    pop: DeltaGenerator = popover("Test")
-    assert_type(pop, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _popover_as_delta_generator: DeltaGenerator = popover("Test")
 
     # Context manager returns Self
     with popover("Test") as ctx:
@@ -58,3 +57,22 @@ if TYPE_CHECKING:
 
     # Callback with key is also valid
     popover("Test", key="my_pop", on_change=lambda: None)
+
+    # wrap parameter accepts a bool and returns a PopoverContainer
+    assert_type(popover("Test", wrap=True), PopoverContainer)
+    assert_type(popover("Test", wrap=False), PopoverContainer)
+    assert_type(popover("Test", wrap=None), PopoverContainer)
+
+    # All parameters combined
+    assert_type(
+        popover(
+            "Actions",
+            type="primary",
+            help="Available actions",
+            icon=":material/more_vert:",
+            disabled=False,
+            use_container_width=True,
+            width="stretch",
+        ),
+        PopoverContainer,
+    )

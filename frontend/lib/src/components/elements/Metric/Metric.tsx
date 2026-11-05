@@ -14,20 +14,33 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useId, useRef } from "react"
+import {
+  memo,
+  type ReactElement,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+} from "react"
 
 import { Global } from "@emotion/react"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { ArrowDownward, ArrowUpward } from "@emotion-icons/material-outlined"
-import embed from "vega-embed"
-import { expressionInterpreter } from "vega-interpreter"
-import { TopLevelSpec } from "vega-lite"
+import { getLogger } from "loglevel"
+import type { TopLevelSpec } from "vega-lite"
 
-import { convertRemToPx, EmotionTheme, useEmotionTheme } from "@streamlit/lib"
-import { Metric as MetricProto } from "@streamlit/protobuf"
+import {
+  convertRemToPx,
+  type EmotionTheme,
+  useEmotionTheme,
+} from "@streamlit/lib"
+import { Metric as MetricProto, type streamlit } from "@streamlit/protobuf"
 
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { loadVegaEmbed } from "~lib/components/elements/ArrowVegaLiteChart/loadVegaEmbed"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
@@ -38,15 +51,20 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricColor } from "./metricColors"
 import {
+  METRIC_CHART_HEIGHT,
   StyledDeltaContainer,
   StyledDeltaDescription,
   StyledMetricChart,
   StyledMetricContainer,
   StyledMetricContent,
   StyledMetricDeltaText,
+  StyledMetricIcon,
+  StyledMetricLabelRow,
   StyledMetricLabelText,
   StyledMetricValueText,
 } from "./styled-components"
+
+const LOG = getLogger("Metric")
 
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
@@ -126,9 +144,11 @@ export function getMetricChartSpec(
   const isAreaChart = chartType === MetricProto.ChartType.AREA
 
   const spec: TopLevelSpec = {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    // Keep the schema's major version in sync with the bundled vega-lite
+    // package. vega-embed logs a version mismatch warning otherwise.
+    $schema: "https://vega.github.io/schema/vega-lite/v6.json",
     width: Math.round(availableWidth),
-    height: Math.round(convertRemToPx("3.5rem")),
+    height: Math.round(convertRemToPx(METRIC_CHART_HEIGHT)),
     data: {
       values: data.map((value, index) => ({ x: index, y: value })),
     },
@@ -145,7 +165,7 @@ export function getMetricChartSpec(
           }),
           ...(chartType === MetricProto.ChartType.BAR && {
             type: "bar",
-            cornerRadius: parseFloat(theme.radii.full),
+            cornerRadius: Number.parseFloat(theme.radii.full),
           }),
           ...(chartType === MetricProto.ChartType.AREA && {
             type: "area",
@@ -293,13 +313,25 @@ export function getMetricChartSpec(
 
 export interface MetricProps {
   element: MetricProto
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 }
 
-function Metric({ element }: Readonly<MetricProps>): ReactElement {
+function Metric({
+  element,
+  widthConfig,
+}: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
-  const { width: chartWidth, elementRef: chartContainerRef } =
-    useCalculatedDimensions()
+  const flexContext = useContext(FlexContext)
+
+  // A content-width metric, or one without a fixed width inside a
+  // content-width container, is sized by its value. Print wraps that value
+  // instead of shrinking it to the card.
+  const hasFixedWidth =
+    (widthConfig?.pixelWidth ?? 0) > 0 || (widthConfig?.remWidth ?? 0) > 0
+  const isContentWidth =
+    Boolean(widthConfig?.useContent) ||
+    (!hasFixedWidth && flexContext?.isInContentWidthContainer === true)
 
   const { MetricDirection } = MetricProto
   const {
@@ -315,7 +347,14 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
     chartType,
     format,
     deltaDescription,
+    icon,
   } = element
+
+  const hasChartData = chartData.length > 0
+  // Re-attach ResizeObserver when the chart container remounts. Otherwise an
+  // empty-to-data transition keeps width at the -1 fallback and vega-embed never runs.
+  const { width: chartWidth, elementRef: chartContainerRef } =
+    useCalculatedDimensions([hasChartData])
 
   // Apply number formatting if a format is specified and the value is numeric
   const formattedMetricValue =
@@ -347,22 +386,34 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const deltaA11yId = useId()
 
   useEffect(() => {
+    const chartElement = chartRef.current
     if (
-      chartData &&
-      chartData.length > 0 &&
-      chartRef.current &&
+      chartData.length === 0 ||
+      !chartElement ||
       // Having a chart width <= 0 causes issues with vega-embed:
-      chartWidth > 0
+      chartWidth <= 0
     ) {
-      const spec = getMetricChartSpec(
-        chartData,
-        chartType,
-        chartWidth,
-        theme,
-        color
-      )
+      return
+    }
 
-      void embed(chartRef.current, spec, {
+    const spec = getMetricChartSpec(
+      chartData,
+      chartType,
+      chartWidth,
+      theme,
+      color
+    )
+
+    let isCancelled = false
+    let finalizeEmbed: (() => void) | undefined
+
+    const renderChart = async (): Promise<void> => {
+      // Load Vega here, not at module scope, so metrics without a chart don't
+      // download it.
+      const { embed, expressionInterpreter } = await loadVegaEmbed()
+      if (isCancelled) return
+
+      const result = await embed(chartElement, spec, {
         actions: false,
         renderer: "svg",
         ast: true,
@@ -376,8 +427,27 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           },
         },
       })
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets isCancelled during the await
+      if (isCancelled) {
+        // Embed resolved after this effect was cancelled; drop the view.
+        result.finalize()
+      } else {
+        finalizeEmbed = result.finalize
+      }
     }
-  }, [chartData, color, theme, chartWidth, chartType, chartRef])
+
+    renderChart().catch((error: unknown) => {
+      // Leave the chart empty if Vega fails to load or embed rejects during
+      // teardown. LOG.debug shows the error only when debug logging is enabled.
+      LOG.debug("Failed to embed metric chart:", error)
+    })
+
+    return () => {
+      isCancelled = true
+      finalizeEmbed?.()
+    }
+  }, [chartData, color, theme, chartWidth, chartType])
 
   return (
     <StyledMetricContainer
@@ -390,12 +460,23 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           data-testid="stMetricLabel"
           visibility={labelVisibilityProtoValueToEnum(labelVisibility?.value)}
         >
-          <StreamlitMarkdown
-            source={label}
-            allowHTML={false}
-            isLabel
-            truncate
-          />
+          <StyledMetricLabelRow>
+            {icon && (
+              <StyledMetricIcon>
+                <DynamicIcon
+                  iconValue={icon}
+                  size="lg"
+                  testid="stMetricIcon"
+                />
+              </StyledMetricIcon>
+            )}
+            <StreamlitMarkdown
+              source={label}
+              allowHTML={false}
+              isLabel
+              truncate
+            />
+          </StyledMetricLabelRow>
           {help && (
             <WidgetLabelHelpIconInline
               content={help}
@@ -404,7 +485,15 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
             />
           )}
         </StyledMetricLabelText>
-        <StyledMetricValueText data-testid="stMetricValue">
+        <StyledMetricValueText
+          data-testid="stMetricValue"
+          // Markdown syntax in the value counts as characters, so a styled
+          // value prints smaller than needed. It never overflows, and Markdown
+          // in metric values is rare, so parsing it is not worth the cost.
+          printFitLength={
+            isContentWidth ? undefined : formattedMetricValue.length
+          }
+        >
           <StreamlitMarkdown
             source={formattedMetricValue}
             allowHTML={false}
@@ -461,7 +550,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
           </StyledDeltaContainer>
         )}
       </StyledMetricContent>
-      {chartData && chartData.length > 0 && (
+      {hasChartData && (
         <div ref={chartContainerRef}>
           <Global styles={StyledVegaLiteChartTooltips} />
           <StyledMetricChart

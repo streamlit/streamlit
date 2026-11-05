@@ -32,6 +32,8 @@ import {
 import { getLuminance } from "color2k"
 import { getLogger } from "loglevel"
 
+import { isNullOrEmptyString } from "@streamlit/utils"
+
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
@@ -124,7 +126,7 @@ function extractAccessibilityInfo(source: string): {
     const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/m.exec(source)
     if (multiLineDescr) {
       // Normalize whitespace in multi-line descriptions
-      result.description = multiLineDescr[1].trim().replace(/\s+/g, " ")
+      result.description = multiLineDescr[1].trim().replaceAll(/\s+/g, " ")
     }
   }
 
@@ -132,23 +134,51 @@ function extractAccessibilityInfo(source: string): {
 }
 
 /**
- * Generates accessible alt text for a mermaid diagram.
- * Prefers user-provided accTitle/accDescr directives, falls back to diagram type.
+ * Streamlit-authored accessible name from st.mermaid_chart(alt=...).
+ * Uses a %% comment so every Mermaid grammar ignores it (unlike accTitle).
+ * Value must be on the same line as the marker (do not let whitespace cross
+ * newlines, or an empty %% stAlt: would capture the next source line).
  */
-function getAltText(source: string): string {
+function extractStreamlitAlt(source: string): string | undefined {
+  const match = /^\s*%%\s*stAlt\s*:[^\S\n]*(.+)$/m.exec(source)
+  return match ? match[1].trim() : undefined
+}
+
+/**
+ * Author-provided accessible name for toolbar chrome.
+ * Prefers Streamlit's %% stAlt: marker, then Mermaid accTitle/accDescr.
+ * Omits the type-derived fallback so unlabeled diagrams keep generic
+ * Fullscreen / Download labels.
+ */
+function getAuthorProvidedAltText(source: string): string | undefined {
+  const streamlitAlt = extractStreamlitAlt(source)
+  if (!isNullOrEmptyString(streamlitAlt)) {
+    return streamlitAlt
+  }
+
   const { title, description } = extractAccessibilityInfo(source)
 
-  if (title && description) {
+  if (!isNullOrEmptyString(title) && !isNullOrEmptyString(description)) {
     return `${title}: ${description}`
   }
-  if (title) {
+  if (!isNullOrEmptyString(title)) {
     return title
   }
-  if (description) {
+  if (!isNullOrEmptyString(description)) {
     return description
   }
+  return undefined
+}
 
-  return `Mermaid ${getDiagramTypeFromSource(source)}`
+/**
+ * Accessible alt text for the diagram image: the author-provided name, else a
+ * type-derived fallback.
+ */
+function getAltText(source: string): string {
+  return (
+    getAuthorProvidedAltText(source) ??
+    `Mermaid ${getDiagramTypeFromSource(source)}`
+  )
 }
 
 /**
@@ -157,6 +187,31 @@ function getAltText(source: string): string {
  * tracking explicit, rather than using a separate module-level variable.
  */
 const THEME_CONFIG_KEY = Symbol.for("streamlit.mermaid.themeConfigKey")
+
+/**
+ * Config keys locked against `%%{init}%%` directive overrides.
+ *
+ * Includes Mermaid's documented defaults plus Streamlit hardening keys Mermaid
+ * does not lock. Without the extras, diagram source can re-enable `htmlLabels`
+ * or inject page-wide CSS via `themeCSS`. Mermaid walks nested objects, so
+ * keys like `flowchart.htmlLabels` are covered. Prefer this static list over
+ * deprecated/internal `mermaid.mermaidAPI`.
+ */
+const SECURE_CONFIG_KEYS = [
+  // Mermaid defaults: https://mermaid.js.org/config/schema-docs/config-properties-secure.html
+  "secure",
+  "securityLevel",
+  "startOnLoad",
+  "maxTextSize",
+  "suppressErrorRendering",
+  "maxEdges",
+  // Streamlit hardening beyond Mermaid's defaults
+  "htmlLabels",
+  "themeCSS",
+  "fontFamily",
+  "altFontFamily",
+  "dompurifyConfig",
+]
 
 interface MermaidChartProps {
   /**
@@ -191,7 +246,7 @@ function prepareResponsiveSvg(svg: string): string {
   let intrinsicHeight = 0
 
   const viewBox = svgElement.getAttribute("viewBox")
-  if (viewBox) {
+  if (!isNullOrEmptyString(viewBox)) {
     const [, , vbWidth, vbHeight] = viewBox.split(/[\s,]+/).map(Number)
     if (vbWidth > 0 && vbHeight > 0) {
       intrinsicWidth = vbWidth
@@ -256,6 +311,13 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
   return {
     darkMode: !isLightTheme,
     theme: "base",
+    // Mermaid 12 defaults several diagram types to the "neo" look: drop
+    // shadows, heavier strokes, and taller sequence actors. That skin is not
+    // driven by theme variables, so it sits on top of the flat Streamlit
+    // palette this config tunes. Classic keeps the borders and fills we set.
+    // A diagram can still opt into neo or handDrawn with front-matter `look`.
+    // Layout stays on Mermaid's ELK default; this only selects the skin.
+    look: "classic",
     fontFamily: theme.genericFonts.bodyFont,
     // Slightly smaller than the body font size. Because the SVG is displayed in
     // a sandboxed <img> (which can't access the app's web font), the browser
@@ -468,6 +530,7 @@ const MermaidChart = memo(function MermaidChart({
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
+            secure: SECURE_CONFIG_KEYS,
             suppressErrorRendering: true,
             ...themeConfig,
           })
@@ -477,9 +540,10 @@ const MermaidChart = memo(function MermaidChart({
         // Generate a unique ID for this render. Includes render counter to prevent
         // conflicts when multiple renders overlap (e.g., rapid source changes).
         // Remove colons since mermaid uses it as a CSS selector.
-        const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}-${renderNum}`
+        const diagramId = `mermaid-${uniqueId.replaceAll(":", "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets isCancelled during the await
         if (isCancelled) return
 
         const finalSvg = prepareResponsiveSvg(svg)
@@ -489,16 +553,11 @@ const MermaidChart = memo(function MermaidChart({
           type: "image/svg+xml;charset=utf-8",
         })
         blobUrl = URL.createObjectURL(blob)
-
-        if (!isCancelled) {
-          setSvgBlobUrl(blobUrl)
-          committedToState = true
-          setIsLoading(false)
-        } else {
-          URL.revokeObjectURL(blobUrl)
-        }
+        setSvgBlobUrl(blobUrl)
+        committedToState = true
+        setIsLoading(false)
       } catch (err) {
-        if (blobUrl && !committedToState) {
+        if (blobUrl !== null && !committedToState) {
           URL.revokeObjectURL(blobUrl)
         }
         if (!isCancelled) {
@@ -524,7 +583,10 @@ const MermaidChart = memo(function MermaidChart({
   useEffect(() => {
     currentSvgBlobUrlRef.current = svgBlobUrl
     return () => {
-      if (svgBlobUrl && svgBlobUrl !== downloadingBlobUrlRef.current) {
+      if (
+        svgBlobUrl !== null &&
+        svgBlobUrl !== downloadingBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(svgBlobUrl)
       }
     }
@@ -539,7 +601,7 @@ const MermaidChart = memo(function MermaidChart({
    * Uses a ref to protect the blob URL from being revoked during async image loading.
    */
   const handleDownloadPng = useCallback((): void => {
-    if (!svgBlobUrl) {
+    if (svgBlobUrl === null) {
       return
     }
 
@@ -551,44 +613,55 @@ const MermaidChart = memo(function MermaidChart({
     const releaseDownloadUrl = (): void => {
       const urlToRevoke = downloadingBlobUrlRef.current
       downloadingBlobUrlRef.current = null
-      if (urlToRevoke && urlToRevoke !== currentSvgBlobUrlRef.current) {
+      if (
+        urlToRevoke !== null &&
+        urlToRevoke !== currentSvgBlobUrlRef.current
+      ) {
         URL.revokeObjectURL(urlToRevoke)
       }
     }
 
     const img = new Image()
-    img.onload = () => {
-      // Use natural dimensions from the SVG viewBox (avoids forced reflow)
-      const width = img.naturalWidth || 800
-      const height = img.naturalHeight || 600
+    img.addEventListener(
+      "load",
+      () => {
+        // Use natural dimensions from the SVG viewBox (avoids forced reflow)
+        const width = img.naturalWidth || 800
+        const height = img.naturalHeight || 600
 
-      const canvas = document.createElement("canvas")
-      const scale = 2 // 2x scale for better quality
-      canvas.width = width * scale
-      canvas.height = height * scale
+        const canvas = document.createElement("canvas")
+        const scale = 2 // 2x scale for better quality
+        canvas.width = width * scale
+        canvas.height = height * scale
 
-      const ctx = canvas.getContext("2d")
-      if (!ctx) {
-        downloadingBlobUrlRef.current = null
-        return
-      }
+        const ctx = canvas.getContext("2d")
+        if (!ctx) {
+          downloadingBlobUrlRef.current = null
+          return
+        }
 
-      ctx.fillStyle = theme.colors.bgColor
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.scale(scale, scale)
-      ctx.drawImage(img, 0, 0, width, height)
+        ctx.fillStyle = theme.colors.bgColor
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.scale(scale, scale)
+        ctx.drawImage(img, 0, 0, width, height)
 
-      const link = document.createElement("a")
-      link.download = "mermaid-diagram.png"
-      link.href = canvas.toDataURL("image/png")
-      link.click()
+        const link = document.createElement("a")
+        link.download = "mermaid-diagram.png"
+        link.href = canvas.toDataURL("image/png")
+        link.click()
 
-      releaseDownloadUrl()
-    }
-    img.onerror = () => {
-      LOG.error("Failed to load SVG for PNG export")
-      releaseDownloadUrl()
-    }
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
+    img.addEventListener(
+      "error",
+      () => {
+        LOG.error("Failed to load SVG for PNG export")
+        releaseDownloadUrl()
+      },
+      { once: true }
+    )
     img.src = svgBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
 
@@ -612,7 +685,7 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
-  if (error) {
+  if (!isNullOrEmptyString(error)) {
     return (
       <StyledToolbarElementContainer
         width={containerWidth}
@@ -632,6 +705,8 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
+  const labelContext = getAuthorProvidedAltText(source)
+
   // Render the SVG via an <img> tag with blob URL.
   return (
     <ErrorBoundary>
@@ -645,16 +720,21 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           onExpand={expand}
           onCollapse={collapse}
+          labelContext={labelContext}
         >
           <ToolbarAction
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
           <ToolbarAction
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
+            // Skip context while on the transient copied label so the name
+            // stays "Copied" rather than "Copied: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         </Toolbar>
         <StyledMermaidContainer
@@ -662,7 +742,9 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
+          {svgBlobUrl !== null && (
+            <img src={svgBlobUrl} alt={getAltText(source)} />
+          )}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>

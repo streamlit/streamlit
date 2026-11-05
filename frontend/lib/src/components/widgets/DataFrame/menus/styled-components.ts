@@ -20,6 +20,11 @@ import {
   getOverlayZIndex,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
+import {
+  getCheckboxIndicatorColors,
+  getCheckboxIndicatorLayoutStyles,
+  getCheckboxIndicatorSvgStyles,
+} from "~lib/components/shared/Checkbox/checkboxIndicatorStyles"
 import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 
@@ -116,43 +121,35 @@ export const StyledCheckboxInput = styled.input({
 })
 
 /**
- * Custom visual checkmark square.
- * Checked/indeterminate state is driven by data-checked and data-indeterminate attributes.
- * Styling mirrors StyledCheckboxIndicator from the Checkbox widget.
+ * Custom visual checkmark square for column-visibility rows.
+ *
+ * Colors come from `getCheckboxIndicatorColors` (same helper as `st.checkbox`)
+ * so rest and checked fills cannot drift.
+ *
+ * State is CSS-driven:
+ * - `data-checked` / `data-indeterminate` on this element → primary fill
+ * - The parent row already paints `darkenedBgMix15` on hover. Applying it to
+ *   the mark too would stack the translucent fill and make the square stronger
+ *   than `st.checkbox`.
  */
-export const StyledCheckboxMark = styled.span(({ theme }) => ({
-  flexShrink: 0,
-  width: theme.sizes.checkbox,
-  height: theme.sizes.checkbox,
-  // Vertically center the indicator with the first text line.
-  // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 ≈ 2.5px
-  marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: theme.colors.borderColor,
-  borderRadius: theme.radii.sm,
-  backgroundColor: theme.colors.lightenedBg05,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "background-color 100ms ease, border-color 100ms ease",
-  '&[data-checked="true"], &[data-indeterminate="true"]': {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
-  },
-  "input:focus-visible + &": {
-    boxShadow: theme.shadows.focusRing,
-  },
-  "& svg": {
-    width: "65%",
-    height: "65%",
-    fill: "none",
-    stroke: "white",
-    strokeWidth: "2.5px",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-  },
-}))
+export const StyledCheckboxMark = styled.span(({ theme }) => {
+  const rest = getCheckboxIndicatorColors(theme, { isSelected: false })
+  const selected = getCheckboxIndicatorColors(theme, { isSelected: true })
+
+  return {
+    ...getCheckboxIndicatorLayoutStyles(theme),
+    border: `${theme.sizes.borderWidth} solid ${rest.borderColor}`,
+    backgroundColor: rest.backgroundColor,
+    '&[data-checked="true"], &[data-indeterminate="true"]': {
+      borderColor: selected.borderColor,
+      backgroundColor: selected.backgroundColor,
+    },
+    "input:focus-visible + &": {
+      boxShadow: theme.shadows.focusRing,
+    },
+    "& svg": getCheckboxIndicatorSvgStyles(theme, { isDisabled: false }),
+  }
+})
 
 /**
  * Scrollable inner content div for the ColumnVisibilityMenu panel.
@@ -202,7 +199,7 @@ interface StyledMenuListItemProps {
  * A styled menu list item component used by the column menu.
  */
 export const StyledMenuListItem = styled.div<StyledMenuListItemProps>(
-  ({ theme, isActive, hasSubmenu, allowWrap }) => ({
+  ({ theme, isActive = false, hasSubmenu = false, allowWrap = false }) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-start",
@@ -383,7 +380,7 @@ export const StyledStatisticsBarRow = styled.div(({ theme }) => ({
  * Text label for a compact statistics bar row.
  */
 export const StyledStatisticsBarLabel = styled.span(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -457,7 +454,7 @@ export const StyledStatisticsRow = styled.div(({ theme }) => ({
  * Label for a statistics metric (description term).
  */
 export const StyledStatisticsLabel = styled.dt(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   whiteSpace: "nowrap",
   fontWeight: "normal",
 }))
@@ -484,7 +481,7 @@ export const StyledStatisticsEmpty = styled.div(({ theme }) => ({
   alignItems: "center",
   justifyContent: "center",
   padding: theme.spacing.lg,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   fontSize: theme.fontSizes.sm,
   minWidth: "10rem",
 }))

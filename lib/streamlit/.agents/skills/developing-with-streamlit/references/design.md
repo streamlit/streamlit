@@ -7,6 +7,24 @@ Visual design works hand-in-hand with other references:
 - `selection-widgets.md` — Choosing the right widget (segmented control, pills, toggle)
 - `data-display.md` — Column config, sparklines, bordered metrics
 - `layouts.md` — Containers, alignment, dashboard cards
+- `theme.md` — Colors, fonts, and borders via `config.toml`
+
+## Colors and theming
+
+Do not use custom CSS to polish an app unless the user explicitly asks for it. Set colors, fonts, and borders in `.streamlit/config.toml` instead. Native theming applies consistently across every element and survives Streamlit upgrades; CSS selectors target internal class names that can change.
+
+```python
+# BAD: Injected CSS for a brand color
+st.html("<style>.stButton button { background: #0969da; }</style>")
+```
+
+```toml
+# GOOD: Configure theme tokens in .streamlit/config.toml
+[theme]
+primaryColor = "#0969da"
+```
+
+Read `theme.md` — start with **Choose a config shape** and the **Cheat sheet**. Use deeper sections and templates when the ask needs them. CSS only when the user explicitly asks.
 
 ## Page config
 
@@ -51,6 +69,8 @@ Format: `:material/icon_name:`
 
 Find icons: https://fonts.google.com/icons
 
+Full list of icons available in Streamlit: [material_icon_names.py](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py)
+
 **Popular icons by category:**
 
 | Category | Icons |
@@ -84,7 +104,10 @@ Avoid the old verbose syntax:
 st.markdown(":orange-background[:orange[Pending]]")
 ```
 
-## Spacing: remove dividers
+## Spacing
+
+- **Page / sidebar chrome:** `paddingTop` (gap under the header, or before the first sidebar widget) and `paddingBottom` (bottom inset) in `.streamlit/config.toml` — see Content padding in `theme.md`. Do not inject CSS for `.block-container`.
+- **Between widgets or sections:** see below (and `layouts.md` for container `gap`).
 
 Dividers (`st.divider()` or `---`) look heavy. Just remove them—Streamlit's default spacing is usually enough.
 
@@ -103,10 +126,10 @@ st.header("Section 2")
 
 If you genuinely need spacing:
 ```python
-st.space("small")   # Small gap
+st.space("small")  # Small gap
 st.space("medium")  # Medium gap
-st.space("large")   # Large gap
-st.space(50)        # Custom pixels for fine-tuning
+st.space("large")  # Large gap
+st.space(50)  # Custom pixels for fine-tuning
 ```
 
 **Don't** systematically replace dividers with `st.space()`—it can look weird too.
@@ -152,7 +175,7 @@ Use `text_alignment` for text elements:
 
 ```python
 st.title("Centered title", text_alignment="center")
-st.write("Right aligned", text_alignment="right")
+st.markdown("Right aligned", text_alignment="right")
 st.caption("Justified text", text_alignment="justify")
 ```
 
@@ -160,11 +183,15 @@ Options: `"left"` (default), `"center"`, `"right"`, `"justify"`
 
 **Note:** `horizontal_alignment` on containers positions elements but also sets their `text_alignment`. If you need different text alignment within a horizontally-aligned container, override `text_alignment` on the text element itself.
 
-## Icons in callouts and expanders
+## Icons in headings, callouts, and expanders
 
-Material Symbols can make callouts and expanders look nicer:
+Material Symbols can make headings, callouts, and expanders look nicer:
 
 ```python
+st.title("Dashboard", icon=":material/dashboard:")
+st.header("Sales overview", icon=":material/bar_chart:")
+st.subheader("Recent orders", icon=":material/receipt_long:")
+
 st.info("Processing complete", icon=":material/check_circle:")
 st.warning("Rate limit approaching", icon=":material/warning:")
 st.error("Connection failed", icon=":material/error:")
@@ -184,3 +211,4 @@ Other elements like `st.button` and `st.tabs` also support icons—worth conside
 - [st.space](https://docs.streamlit.io/develop/api-reference/layout/st.space)
 - [st.markdown](https://docs.streamlit.io/develop/api-reference/text/st.markdown)
 - [st.toast](https://docs.streamlit.io/develop/api-reference/status/st.toast)
+- [Theming](https://docs.streamlit.io/develop/concepts/configuration/theming)

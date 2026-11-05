@@ -37,7 +37,7 @@ describe("ComponentRegistry", () => {
 
   it("Dispatches messages to listeners", () => {
     const registry = new ComponentRegistry(mockEndpoints())
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
 
     // Create some mocks
@@ -170,7 +170,7 @@ describe("ComponentRegistry", () => {
 
   it("ignores postMessage data that does not own isStreamlitMessage", () => {
     const registry = new ComponentRegistry(mockEndpoints())
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
     const source = {} as MessageEventSource
     const listener = vi.fn()
@@ -186,7 +186,7 @@ describe("ComponentRegistry", () => {
 
   it("ignores postMessage data where isStreamlitMessage is only inherited", () => {
     const registry = new ComponentRegistry(mockEndpoints())
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
     const source = {} as MessageEventSource
     const listener = vi.fn()
@@ -203,7 +203,7 @@ describe("ComponentRegistry", () => {
     const logger = getLogger("ComponentRegistry")
     const warnSpy = vi.spyOn(logger, "warn")
     const registry = new ComponentRegistry(mockEndpoints())
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
     const data = { isStreamlitMessage: true, type: "setComponentValue" }
     onMessageEvent(new MessageEvent("message", { source: null, data }))
@@ -218,7 +218,7 @@ describe("ComponentRegistry", () => {
     const logger = getLogger("ComponentRegistry")
     const warnSpy = vi.spyOn(logger, "warn")
     const registry = new ComponentRegistry(mockEndpoints())
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
     const source = {} as MessageEventSource
     registry.registerListener(source, vi.fn())
@@ -241,7 +241,7 @@ describe("ComponentRegistry", () => {
       msgListeners: Map<MessageEventSource, unknown>
     }
     corrupted.msgListeners.set(source, "not-a-function")
-    // @ts-expect-error
+    // @ts-expect-error - onMessageEvent is private
     const { onMessageEvent } = registry
     const data = { isStreamlitMessage: true, type: "setComponentValue" }
     onMessageEvent(new MessageEvent("message", { source, data }))

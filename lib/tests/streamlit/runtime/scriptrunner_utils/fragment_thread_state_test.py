@@ -25,8 +25,11 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    RunLocation,
     ScriptRunContext,
     ThreadState,
+    is_fragment_callback_warning_suppressed,
+    suppress_fragment_callback_warning,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 
@@ -41,17 +44,19 @@ class ThreadStateUnitTest(unittest.TestCase):
         assert ts.delta_path is None
         assert ts.in_fragment_callback is False
         assert ts.active_script_hash == ""
+        assert ts.command_tracking_deactivated is False
 
     def test_initialize_with_kwargs(self):
         ThreadState.initialize(
             fragment_id="frag-1",
             delta_path=(0, 1, 2),
-            in_fragment_callback=True,
+            run_location=RunLocation.CALLBACK,
             active_script_hash="hash123",
         )
         ts = ThreadState.get()
         assert ts.fragment_id == "frag-1"
         assert ts.delta_path == (0, 1, 2)
+        assert ts.run_location is RunLocation.CALLBACK
         assert ts.in_fragment_callback is True
         assert ts.active_script_hash == "hash123"
 
@@ -90,6 +95,22 @@ class ThreadStateUnitTest(unittest.TestCase):
         parent_ts = ThreadState.get()
         assert parent_ts.fragment_id == "parent"
         assert parent_ts.active_script_hash == "parent_hash"
+
+    def test_command_tracking_deactivated_is_context_local(self):
+        """Updates to the nesting flag stay inside the copied context."""
+        ThreadState.initialize(command_tracking_deactivated=True)
+        child_ctx = contextvars.copy_context()
+        try:
+
+            def run_in_child():
+                ThreadState.update(command_tracking_deactivated=False)
+                assert ThreadState.get().command_tracking_deactivated is False
+
+            child_ctx.run(run_in_child)
+
+            assert ThreadState.get().command_tracking_deactivated is True
+        finally:
+            ThreadState.initialize()
 
     def test_scoped_overrides_and_restores(self):
         ThreadState.initialize(fragment_id="outer", active_script_hash="hash1")
@@ -194,3 +215,21 @@ class ThreadStateResetIntegrationTest(unittest.TestCase):
         assert ts.fragment_id is None
         assert ts.in_fragment_callback is False
         assert ts.delta_path is None
+        assert ts.command_tracking_deactivated is False
+
+
+class FragmentCallbackWarningSuppressionTest(unittest.TestCase):
+    def test_suppression_resets_after_exit_and_after_an_exception(self):
+        """The suppression flag is false again after the block exits, including when the block raises."""
+        assert is_fragment_callback_warning_suppressed() is False
+
+        with suppress_fragment_callback_warning():
+            assert is_fragment_callback_warning_suppressed() is True
+
+        assert is_fragment_callback_warning_suppressed() is False
+
+        with pytest.raises(RuntimeError):
+            with suppress_fragment_callback_warning():
+                raise RuntimeError
+
+        assert is_fragment_callback_warning_suppressed() is False

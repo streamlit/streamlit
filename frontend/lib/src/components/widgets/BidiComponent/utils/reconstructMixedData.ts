@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Table, tableFromIPC } from "apache-arrow"
+import { type Table, tableFromIPC } from "apache-arrow"
 
 import { ARROW_REF_KEY } from "~lib/components/widgets/BidiComponent/constants"
 
@@ -36,20 +36,36 @@ type ParsedData =
   | Table
 
 /**
+ * Returns the Arrow bytes for `refId`, or undefined when that ref is absent.
+ * The index signature types every key as `Uint8Array`, so a bare lookup looks
+ * non-nullish. `Object.hasOwn` also skips inherited keys such as `constructor`.
+ */
+function arrowBytesForRef(
+  arrowBlobs: { [key: string]: Uint8Array<ArrayBufferLike> },
+  refId: string
+): Uint8Array<ArrayBufferLike> | undefined {
+  if (!Object.hasOwn(arrowBlobs, refId)) {
+    return undefined
+  }
+  return arrowBlobs[refId]
+}
+
+/**
  * Reconstruct data by replacing Arrow references with actual Arrow Tables
  * (first level of object only).
  */
 export const reconstructMixedData = (
-  data: string | MixedData | Record<string, unknown> | Array<unknown>,
+  data: unknown,
   arrowBlobs: {
     [key: string]: Uint8Array<ArrayBufferLike>
   }
 ): ParsedData => {
   // If the data itself is an Arrow reference, replace it
   if (data && typeof data === "object" && !Array.isArray(data)) {
-    if (typeof data[ARROW_REF_KEY] === "string") {
-      const refId = data[ARROW_REF_KEY]
-      const arrowBytes = arrowBlobs[refId]
+    const record = data as Record<string, unknown>
+    if (typeof record[ARROW_REF_KEY] === "string") {
+      const refId = record[ARROW_REF_KEY]
+      const arrowBytes = arrowBytesForRef(arrowBlobs, refId)
       if (arrowBytes) {
         try {
           // Parse Arrow bytes and return Arrow Table
@@ -63,7 +79,7 @@ export const reconstructMixedData = (
 
     // Process only first-level properties for Arrow references
     const result: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(record)) {
       if (
         value &&
         typeof value === "object" &&
@@ -71,7 +87,7 @@ export const reconstructMixedData = (
         typeof (value as MixedData)[ARROW_REF_KEY] === "string"
       ) {
         const refId = (value as MixedData)[ARROW_REF_KEY]
-        const arrowBytes = arrowBlobs[refId]
+        const arrowBytes = arrowBytesForRef(arrowBlobs, refId)
         if (arrowBytes) {
           try {
             result[key] = tableFromIPC(arrowBytes)
@@ -88,5 +104,5 @@ export const reconstructMixedData = (
     return result
   }
 
-  return data
+  return data as ParsedData
 }

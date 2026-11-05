@@ -16,20 +16,20 @@ from __future__ import annotations
 
 import os
 import threading
-from collections.abc import Callable, ItemsView, Iterator, KeysView, Mapping, ValuesView
+from collections.abc import ItemsView, Iterator, KeysView, Mapping, ValuesView
 from copy import deepcopy
 from typing import (
     Any,
     Final,
+    Never,
     NoReturn,
 )
-
-from blinker import Signal
 
 import streamlit.watcher.path_watcher
 from streamlit import config, runtime
 from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.logger import get_logger
+from streamlit.signal_util import Signal
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -85,100 +85,6 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
         )
 
 
-class SecretErrorMessages:
-    """SecretErrorMessages stores all error messages we use for secrets to allow customization
-    for different environments.
-
-    For example Streamlit Cloud can customize the message to be different than the open source.
-
-    For internal use, may change in future releases without notice.
-    """
-
-    def __init__(self) -> None:
-        self.missing_attr_message: Callable[[str], str] = lambda attr_name: (
-            f'st.secrets has no attribute "{attr_name}". '
-            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
-            "on Streamlit Cloud? More info: "
-            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
-        )
-        self.missing_key_message: Callable[[str], str] = lambda key: (
-            f'st.secrets has no key "{key}". '
-            "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
-            "on Streamlit Cloud? More info: "
-            "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
-        )
-        self.no_secrets_found: Callable[[list[str]], str] = lambda file_paths: (
-            f"No secrets found. Valid paths for a secrets.toml file or secret directories are: {', '.join(file_paths)}"
-        )
-        self.error_parsing_file_at_path: Callable[[str, Exception], str] = (
-            lambda path, ex: f"Error parsing secrets file at {path}: {ex}"
-        )
-        self.subfolder_path_is_not_a_folder: Callable[[str], str] = (
-            lambda sub_folder_path: (
-                f"{sub_folder_path} is not a folder. "
-                "To use directory based secrets, mount every secret in a subfolder under the secret directory"
-            )
-        )
-        self.invalid_secret_path: Callable[[str], str] = lambda path: (
-            f"Invalid secrets path: {path}: path is not a .toml file or a directory"
-        )
-
-    def set_missing_attr_message(self, message: Callable[[str], str]) -> None:
-        """Set the missing attribute error message."""
-        self.missing_attr_message = message
-
-    def set_missing_key_message(self, message: Callable[[str], str]) -> None:
-        """Set the missing key error message."""
-        self.missing_key_message = message
-
-    def set_no_secrets_found_message(self, message: Callable[[list[str]], str]) -> None:
-        """Set the no secrets found error message."""
-        self.no_secrets_found = message
-
-    def set_error_parsing_file_at_path_message(
-        self, message: Callable[[str, Exception], str]
-    ) -> None:
-        """Set the error parsing file at path error message."""
-        self.error_parsing_file_at_path = message
-
-    def set_subfolder_path_is_not_a_folder_message(
-        self, message: Callable[[str], str]
-    ) -> None:
-        """Set the subfolder path is not a folder error message."""
-        self.subfolder_path_is_not_a_folder = message
-
-    def set_invalid_secret_path_message(self, message: Callable[[str], str]) -> None:
-        """Set the invalid secret path error message."""
-        self.invalid_secret_path = message
-
-    def get_missing_attr_message(self, attr_name: str) -> str:
-        """Get the missing attribute error message."""
-        return self.missing_attr_message(attr_name)
-
-    def get_missing_key_message(self, key: str) -> str:
-        """Get the missing key error message."""
-        return self.missing_key_message(key)
-
-    def get_no_secrets_found_message(self, file_paths: list[str]) -> str:
-        """Get the no secrets found error message."""
-        return self.no_secrets_found(file_paths)
-
-    def get_error_parsing_file_at_path_message(self, path: str, ex: Exception) -> str:
-        """Get the error parsing file at path error message."""
-        return self.error_parsing_file_at_path(path, ex)
-
-    def get_subfolder_path_is_not_a_folder_message(self, sub_folder_path: str) -> str:
-        """Get the subfolder path is not a folder error message."""
-        return self.subfolder_path_is_not_a_folder(sub_folder_path)
-
-    def get_invalid_secret_path_message(self, path: str) -> str:
-        """Get the invalid secret path error message."""
-        return self.invalid_secret_path(path)
-
-
-secret_error_messages_singleton: Final = SecretErrorMessages()
-
-
 def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
     """Convert Mapping or AttrDict objects to dictionaries."""
     if isinstance(obj, AttrDict):
@@ -186,12 +92,19 @@ def _convert_to_dict(obj: Mapping[str, Any] | AttrDict) -> dict[str, Any]:
     return {k: v.to_dict() if isinstance(v, AttrDict) else v for k, v in obj.items()}
 
 
+_MISSING_ENTRY_HINT: Final = (
+    "Did you forget to add it to secrets.toml, mount it to secret directory, or the app settings "
+    "on Streamlit Cloud? More info: "
+    "https://docs.streamlit.io/deploy/streamlit-community-cloud/deploy-your-app/secrets-management"
+)
+
+
 def _missing_attr_error_message(attr_name: str) -> str:
-    return secret_error_messages_singleton.get_missing_attr_message(attr_name)
+    return f'st.secrets has no attribute "{attr_name}". {_MISSING_ENTRY_HINT}'
 
 
 def _missing_key_error_message(key: str) -> str:
-    return secret_error_messages_singleton.get_missing_key_message(key)
+    return f'st.secrets has no key "{key}". {_MISSING_ENTRY_HINT}'
 
 
 class AttrDict(Mapping[str, Any]):
@@ -231,11 +144,15 @@ class AttrDict(Mapping[str, Any]):
     def __repr__(self) -> str:
         return repr(self.__nested_secrets__)
 
-    def __setitem__(self, key: str, value: Any) -> NoReturn:
+    # ``Never`` makes writes and deletion a type error. These methods always raise.
+    def __setitem__(self, key: str, value: Never) -> NoReturn:
         raise TypeError("Secrets does not support item assignment.")
 
-    def __setattr__(self, key: str, value: Any) -> NoReturn:
+    def __setattr__(self, key: str, value: Never) -> NoReturn:
         raise TypeError("Secrets does not support attribute assignment.")
+
+    def __delitem__(self, key: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item deletion.")
 
     def to_dict(self) -> dict[str, Any]:
         return deepcopy(self.__nested_secrets__)
@@ -251,21 +168,22 @@ class Secrets(Mapping[str, Any]):
     def __init__(self) -> None:
         # Our secrets dict.
         self._secrets: Mapping[str, Any] | None = None
-        self._lock = threading.RLock()
-        self._file_watchers_installed = False
+        self._lock: threading.RLock = threading.RLock()
+        self._file_watchers_installed: bool = False
         # Store programmatic secrets separately so they survive file-change reloads
         self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
-        self.file_change_listener = Signal(
-            doc="Emitted when a `secrets.toml` file has been changed."
-        )
+        # Fires when a `secrets.toml` file has changed.
+        self.file_change_listener: Signal = Signal()
 
     def load_if_toml_exists(self) -> bool:
-        """Load secrets.toml files from disk if they exists. If none exist,
-        no exception will be raised. (If a file exists but is malformed,
-        an exception *will* be raised.).
+        """Load secrets.toml files from disk if they exist.
 
-        Returns True if a secrets.toml file was successfully parsed, False otherwise.
+        Returns True if a secrets.toml file was successfully parsed. Returns
+        False when no secrets file is present, or when a configured path
+        cannot be loaded (parse error, invalid path, or a directory entry
+        that is not a folder). Callers use this as a boolean availability
+        probe and must not rely on it to raise.
 
         Thread-safe.
         """
@@ -274,15 +192,9 @@ class Secrets(Mapping[str, Any]):
 
             return True
         except StreamlitSecretNotFoundError:
-            # No secrets.toml files exist. That's fine.
+            # Treat missing and unloadable secrets alike; startup logs load
+            # errors separately.
             return False
-
-    def set_suppress_print_error_on_exception(
-        self, suppress_print_error_on_exception: bool
-    ) -> None:
-        """Left in place for compatibility with integrations until integration
-        code can be updated.
-        """
 
     def _reset(self) -> None:
         """Clear the secrets dictionary and remove any secrets that were
@@ -296,7 +208,7 @@ class Secrets(Mapping[str, Any]):
 
             for k, v in self._secrets.items():
                 self._maybe_delete_environment_variable(k, v)
-            self._secrets = None
+            self._secrets = None  # ty: ignore[invalid-assignment]
 
     def _parse_toml_file(self, path: str) -> tuple[Mapping[str, Any], bool]:
         """Parse a TOML file and return the secrets as a dictionary."""
@@ -312,17 +224,17 @@ class Secrets(Mapping[str, Any]):
             # the default config for secrets contains two paths. It's likely one of will not have secrets file.
             return {}, False
 
-        import toml
+        import tomllib
 
         try:
-            secrets.update(toml.loads(secrets_file_str))
-        except (TypeError, toml.TomlDecodeError) as ex:
-            msg = (
-                secret_error_messages_singleton.get_error_parsing_file_at_path_message(
-                    path, ex
-                )
-            )
-            raise StreamlitSecretNotFoundError(msg) from ex
+            secrets.update(tomllib.loads(secrets_file_str))
+        except (TypeError, tomllib.TOMLDecodeError) as ex:
+            raise StreamlitSecretNotFoundError(
+                "Error parsing secrets file at {path}: {error}",
+                path=path,
+                error=str(ex),
+                error_id="failed-parsing-secrets-file",
+            ) from ex
 
         return secrets, found_secrets_file
 
@@ -347,10 +259,12 @@ class Secrets(Mapping[str, Any]):
         for dirname in os.listdir(path):
             sub_folder_path = os.path.join(path, dirname)
             if not os.path.isdir(sub_folder_path):
-                error_msg = secret_error_messages_singleton.get_subfolder_path_is_not_a_folder_message(
-                    sub_folder_path
+                raise StreamlitSecretNotFoundError(
+                    "{sub_folder_path} is not a folder. "
+                    "To use directory based secrets, mount every secret in a subfolder under the secret directory",
+                    sub_folder_path=sub_folder_path,
+                    error_id="secrets-directory-entry-not-folder",
                 )
-                raise StreamlitSecretNotFoundError(error_msg)
             sub_secrets = {}
 
             for filename in os.listdir(sub_folder_path):
@@ -379,10 +293,11 @@ class Secrets(Mapping[str, Any]):
         if os.path.isdir(path):
             return self._parse_directory(path)
 
-        error_msg = secret_error_messages_singleton.get_invalid_secret_path_message(
-            path
+        raise StreamlitSecretNotFoundError(
+            "Invalid secrets path: {path}: path is not a .toml file or a directory",
+            path=path,
+            error_id="invalid-secrets-path",
         )
-        raise StreamlitSecretNotFoundError(error_msg)
 
     def _parse(self) -> Mapping[str, Any]:
         """Parse our secrets.toml files if they're not already parsed.
@@ -390,8 +305,10 @@ class Secrets(Mapping[str, Any]):
 
         Raises
         ------
-            StreamlitSecretNotFoundError
-            Raised if secrets.toml doesn't exist.
+        StreamlitSecretNotFoundError
+            Raised when no secrets file exists, or when a configured path
+            cannot be loaded (parse error, invalid path, or a directory
+            entry that is not a folder).
 
         """
         # Avoid taking a lock for the common case where secrets are already
@@ -414,17 +331,16 @@ class Secrets(Mapping[str, Any]):
                 secrets.update(path_secrets)
 
             if not found_secrets_file:
-                error_msg = (
-                    secret_error_messages_singleton.get_no_secrets_found_message(
-                        file_paths
-                    )
+                raise StreamlitSecretNotFoundError(
+                    "No secrets found. Valid paths for a secrets.toml file or secret directories are: {file_paths}",
+                    file_paths=", ".join(file_paths),
+                    error_id="no-secrets-found",
                 )
-                raise StreamlitSecretNotFoundError(error_msg)
 
             for k, v in secrets.items():
                 self._maybe_set_environment_variable(k, v)
 
-            self._secrets = secrets
+            self._secrets = secrets  # ty: ignore[invalid-assignment]
             self._maybe_install_file_watchers()
 
             return self._secrets
@@ -470,7 +386,7 @@ class Secrets(Mapping[str, Any]):
 
         with self._lock:
             # Store programmatic secrets so they survive file-change reloads
-            self._programmatic_secrets = programmatic_secrets
+            self._programmatic_secrets = programmatic_secrets  # ty: ignore[invalid-assignment]
             self._apply_programmatic_secrets(programmatic_secrets)
 
     def _apply_programmatic_secrets(
@@ -501,7 +417,7 @@ class Secrets(Mapping[str, Any]):
             # Promote to os.environ if appropriate
             self._maybe_set_environment_variable(key, value)
 
-        self._secrets = current_secrets
+        self._secrets = current_secrets  # ty: ignore[invalid-assignment]
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
@@ -542,7 +458,7 @@ class Secrets(Mapping[str, Any]):
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
-                except (StreamlitMaxRetriesError, FileNotFoundError):  # noqa: PERF203
+                except (StreamlitMaxRetriesError, FileNotFoundError):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
                     # watcher on the nonexistent ones.
@@ -550,7 +466,7 @@ class Secrets(Mapping[str, Any]):
 
             # We set file_watchers_installed to True even if the installation attempt
             # failed to avoid repeatedly trying to install it.
-            self._file_watchers_installed = True
+            self._file_watchers_installed = True  # ty: ignore[invalid-assignment]
 
     def _on_secrets_changed(self, changed_file_path: str) -> None:
         with self._lock:
@@ -595,13 +511,19 @@ class Secrets(Mapping[str, Any]):
         except KeyError:
             raise KeyError(_missing_key_error_message(key))
 
-    def __setattr__(self, key: str, value: Any) -> None:
-        # Allow internal attributes to be set
+    def __setitem__(self, key: str, value: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item assignment.")
+
+    def __delitem__(self, key: Never) -> NoReturn:
+        raise TypeError("Secrets does not support item deletion.")
+
+    def __setattr__(self, key: str, value: Never) -> None:
+        # Secret-name assignment is a type error. The allowlist below still
+        # sets loader attributes at runtime; ty flags those writes.
         if key in {
             "_secrets",
             "_lock",
             "_file_watchers_installed",
-            "_suppress_print_error_on_exception",
             "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",

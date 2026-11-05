@@ -127,6 +127,7 @@ import streamlit as st
 picture = st.camera_input("Scan QR code", resolution="720p")
 if picture:
     from PIL import Image
+
     img = Image.open(picture)
     st.write(f"Captured: {img.size}")
     # Width varies by camera aspect ratio:

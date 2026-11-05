@@ -17,9 +17,12 @@ from __future__ import annotations
 import json
 import types
 from collections import ChainMap, UserDict
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.errors import StreamlitInvalidParameterTypeError
+from streamlit.logger import get_logger
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
@@ -36,12 +39,27 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
+_LOGGER: Final = get_logger(__name__)
+
 
 def _ensure_serialization(o: object) -> str | list[Any]:
     """A repr function for json.dumps default arg, which tries to serialize sets
     as lists.
     """
     return list(o) if isinstance(o, set) else repr(o)
+
+
+def _described_body(body: str) -> Any:
+    """The JSON value the body encodes, for the agent API.
+
+    The proto carries it serialized, which would make a client parse JSON out
+    of a JSON string. `NaN` and infinities become null, as in table previews;
+    a string body that is not valid JSON is reported as written.
+    """
+    try:
+        return json.loads(body, parse_constant=lambda _constant: None)
+    except ValueError:
+        return body
 
 
 class JsonMixin:
@@ -137,10 +155,15 @@ class JsonMixin:
                 # Serialize body to string and try to interpret sets as lists
                 body = json.dumps(body, default=_ensure_serialization)
             except TypeError as err:
-                self.dg.warning(
-                    "Warning: this data structure was not fully serializable as "
+                # Incomplete JSON still gets an in-app warning; also log it
+                # with a stack trace so CLI and agent users can find the call
+                # site.
+                warning_message = (
+                    "this data structure was not fully serializable as "
                     f"JSON due to one or more unexpected keys.  (Error was: {err})"
                 )
+                _LOGGER.warning("%s", warning_message, stack_info=True)
+                self.dg.warning(f"Warning: {warning_message}")
                 body = json.dumps(body, skipkeys=True, default=_ensure_serialization)
 
         json_proto = JsonProto()
@@ -152,14 +175,28 @@ class JsonMixin:
             json_proto.expanded = True
             json_proto.max_expand_depth = expanded
         else:
-            raise TypeError(
-                f"The type {type(expanded)} of `expanded` is not supported"
-                ", must be bool or int."
+            raise StreamlitInvalidParameterTypeError(
+                "expanded",
+                type(expanded).__name__,
+                ["bool", "int"],
             )
 
         layout_config = create_layout_config(width=width)
 
-        return self.dg._enqueue("json", json_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "json",
+            json_proto,
+            layout_config=layout_config,
+            # Guarded before the call, because reading the body off the proto
+            # copies it.
+            agent_props=agent_spec.element(
+                "json",
+                body=agent_spec.Content(_described_body(json_proto.body)),
+                expanded=expanded,
+            )
+            if agent_spec.is_recording()
+            else None,
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

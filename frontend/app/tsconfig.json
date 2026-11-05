@@ -14,8 +14,10 @@
   },
   "include": [
     "src/**/*",
+    "vite-plugins/**/*",
     "../lib/declarations.d.ts",
     "../lib/emotion.d.ts",
-    "../test-globals.d.ts"
+    "../test-globals.d.ts",
+    "../vitest-jest-dom.d.ts"
   ]
 }

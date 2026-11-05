@@ -22,7 +22,7 @@
  * `menuitemradio` elements.
  */
 
-import { MetricsManager } from "@streamlit/app/src/MetricsManager"
+import type { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {
   AUTO_THEME_NAME,
   CUSTOM_THEME_AUTO_NAME,
@@ -31,8 +31,8 @@ import {
   darkTheme,
   getThemeSelectionFromThemeConfig,
   lightTheme,
-  ThemeConfig,
-  ThemeSelection,
+  type ThemeConfig,
+  type ThemeSelection,
 } from "@streamlit/lib"
 
 import type { MenuSection } from "./MainMenu"

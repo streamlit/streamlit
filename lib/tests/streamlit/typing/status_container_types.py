@@ -16,9 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -32,9 +30,10 @@ if TYPE_CHECKING:
     # st.status returns StatusContainer
     assert_type(status("Test"), StatusContainer)
 
-    # StatusContainer is a DeltaGenerator (Liskov substitution)
-    s: DeltaGenerator = status("Test")
-    assert_type(s, DeltaGenerator)
+    # Check that the container is usable anywhere a DeltaGenerator is expected.
+    # The annotated assignment is the subtype check: assert_type here would only
+    # see the DeltaGenerator annotation, so it could never fail.
+    _status_as_delta_generator: DeltaGenerator = status("Test")
 
     # Context manager returns Self
     with status("Test") as ctx:
@@ -45,6 +44,7 @@ if TYPE_CHECKING:
     assert_type(status("Test", state="complete"), StatusContainer)
     assert_type(status("Test", state="error"), StatusContainer)
 
-    # type parameter accepts "default" or "compact"
+    # type parameter accepts "default", "compact", or "step"
     assert_type(status("Test", type="default"), StatusContainer)
     assert_type(status("Test", type="compact"), StatusContainer)
+    assert_type(status("Test", type="step"), StatusContainer)

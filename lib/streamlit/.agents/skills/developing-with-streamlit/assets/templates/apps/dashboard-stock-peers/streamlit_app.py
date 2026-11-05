@@ -15,8 +15,8 @@
 """Stock peer analysis dashboard for comparing a set of tickers over time."""
 
 from collections.abc import Iterable
+from typing import Any
 
-import altair as alt
 import pandas as pd
 import yfinance as yf
 
@@ -139,22 +139,19 @@ STOCKS = [
 DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
 
 
-if "tickers_input" not in st.session_state:
-    st.session_state.tickers_input = st.query_params.get(
-        "stocks", ",".join(DEFAULT_STOCKS)
-    ).split(",")
-
-
 top_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
 
 with top_left_cell:
-    # Selectbox for stock tickers
+    # Multiselect for stock tickers. bind="query-params" keeps the selection in
+    # the URL so the dashboard is shareable — no manual st.query_params plumbing.
     tickers = st.multiselect(
         "Stock tickers",
-        options=sorted(set(STOCKS) | set(st.session_state.tickers_input)),
-        default=st.session_state.tickers_input,
+        options=STOCKS,
+        default=DEFAULT_STOCKS,
+        key="stocks",  # repeated params: ?stocks=AAPL&stocks=MSFT
+        bind="query-params",
         placeholder="Choose stocks to compare. Example: NVDA",
         accept_new_options=True,
     )
@@ -186,13 +183,6 @@ if horizon is None:
 
 tickers = [t.upper() for t in tickers]
 
-# Update query param when text input changes
-if tickers:
-    st.query_params["stocks"] = ",".join(tickers)
-else:
-    # Clear the param if input is empty
-    st.query_params.pop("stocks", None)
-
 if not tickers:
     top_left_cell.info("Pick some stocks to compare", icon=":material/info:")
     st.stop()
@@ -218,7 +208,6 @@ try:
     data = load_data(tickers, horizon_map[horizon])
 except yf.exceptions.YFRateLimitError:
     st.warning("YFinance is rate-limiting us :(\nTry again later.")
-    load_data.clear()  # Remove the bad cache entry.
     st.stop()
     raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
@@ -233,25 +222,40 @@ if empty_columns:
 # don't get normalized to NaN.
 normalized = data.div(data.bfill().iloc[0])
 
+# ECharts reads dataframe columns from ``dataset.source`` but not the index, so
+# move the dates into a column. Dropping the exchange timezone keeps each point
+# on its trading day instead of converting it to UTC.
+chart_data = normalized.reset_index()
+chart_data["Date"] = chart_data["Date"].dt.tz_localize(None)
+
 # Build list of (normalized_value, ticker) tuples for safe comparison
 # (using a dict with float keys could silently drop tickers with identical values).
 ticker_values = [(normalized[ticker].iloc[-1], ticker) for ticker in tickers]
 max_norm_value = max(ticker_values)
 min_norm_value = min(ticker_values)
 
+# Summary for the price chart's alt text. A single stock is both best and worst.
+if len(tickers) > 1:
+    price_summary = (
+        f"{max_norm_value[1]} best at {max_norm_value[0] - 1:+.0%}, "
+        f"{min_norm_value[1]} worst at {min_norm_value[0] - 1:+.0%}"
+    )
+else:
+    price_summary = f"{max_norm_value[1]} at {max_norm_value[0] - 1:+.0%}"
+
 bottom_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
 
 with bottom_left_cell:
-    cols = st.columns(2)
-    cols[0].metric(
+    metric_cols = st.columns(2)
+    metric_cols[0].metric(
         "Best stock",
         max_norm_value[1],
         delta=f"{round((max_norm_value[0] - 1) * 100)}%",
         width="content",
     )
-    cols[1].metric(
+    metric_cols[1].metric(
         "Worst stock",
         min_norm_value[1],
         delta=f"{round((min_norm_value[0] - 1) * 100)}%",
@@ -259,21 +263,31 @@ with bottom_left_cell:
     )
 
 
+def line_series(column: str, **extra: Any) -> dict[str, Any]:
+    """An ECharts line series that plots ``column`` of ``dataset.source``."""
+    return {
+        "type": "line",
+        "name": column,
+        "encode": {"x": "Date", "y": column},
+        "showSymbol": False,
+        **extra,
+    }
+
+
 # Plot normalized prices
 with right_cell:
-    st.altair_chart(
-        alt.Chart(
-            normalized.reset_index().melt(
-                id_vars=["Date"], var_name="Stock", value_name="Normalized price"
-            )
-        )
-        .mark_line()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Normalized price:Q").scale(zero=False),
-            alt.Color("Stock:N"),
-        )
-        .properties(height=400)
+    st.echarts_chart(
+        {
+            "dataset": {"source": chart_data},
+            "legend": {"type": "scroll"},
+            "tooltip": {"trigger": "axis", "valueFormatter": "%.2f"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "scale": True},
+            "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+            "series": [line_series(ticker) for ticker in tickers],
+        },
+        height=400,
+        alt=f"Normalized prices over {horizon.lower()}: {price_summary}",
     )
 
 st.space("medium")
@@ -291,61 +305,54 @@ if len(tickers) <= 1:
     st.stop()
 
 NUM_COLS = 4
-cols = st.columns(NUM_COLS)
+chart_cols = st.columns(NUM_COLS)
 
 for i, ticker in enumerate(tickers):
-    # Calculate peer average (excluding current stock)
-    peers = normalized.drop(columns=[ticker])
-    peer_avg = peers.mean(axis=1)
-
-    # Create DataFrame with peer average.
+    # Peer average excludes the current stock.
     plot_data = pd.DataFrame(
         {
-            "Date": normalized.index,
-            ticker: normalized[ticker],
-            "Peer average": peer_avg,
+            "Date": chart_data["Date"],
+            ticker: chart_data[ticker],
+            "Peer average": chart_data.drop(columns=["Date", ticker]).mean(axis=1),
         }
-    ).melt(id_vars=["Date"], var_name="Series", value_name="Price")
-
-    chart = (
-        alt.Chart(plot_data)
-        .mark_line()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Price:Q").scale(zero=False),
-            alt.Color(
-                "Series:N",
-                scale=alt.Scale(domain=[ticker, "Peer average"], range=["red", "gray"]),
-                legend=alt.Legend(orient="bottom"),
-            ),
-            alt.Tooltip(["Date", "Series", "Price"]),
-        )
-        .properties(title=f"{ticker} vs peer average", height=300)
     )
+    plot_data["Delta"] = plot_data[ticker] - plot_data["Peer average"]
+    latest = plot_data.iloc[-1]
 
-    cell = cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.altair_chart(chart)
-
-    # Create Delta chart
-    plot_data = pd.DataFrame(
+    cell = chart_cols[(i * 2) % NUM_COLS].container(border=True)
+    cell.echarts_chart(
         {
-            "Date": normalized.index,
-            "Delta": normalized[ticker] - peer_avg,
-        }
+            "title": {"text": f"{ticker} vs peer average"},
+            "dataset": {"source": plot_data},
+            "legend": {},
+            "tooltip": {"trigger": "axis", "valueFormatter": "%.2f"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "scale": True},
+            "series": [
+                line_series(ticker),
+                line_series("Peer average", lineStyle={"type": "dashed"}),
+            ],
+        },
+        height=300,
+        alt=(
+            f"{ticker} ends at {latest[ticker]:.2f} versus a peer average of "
+            f"{latest['Peer average']:.2f} (normalized)"
+        ),
     )
 
-    chart = (
-        alt.Chart(plot_data)
-        .mark_area()
-        .encode(
-            alt.X("Date:T"),
-            alt.Y("Delta:Q").scale(zero=False),
-        )
-        .properties(title=f"{ticker} minus peer average", height=300)
+    cell = chart_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
+    cell.echarts_chart(
+        {
+            "title": {"text": f"{ticker} minus peer average"},
+            "dataset": {"source": plot_data},
+            "tooltip": {"trigger": "axis", "valueFormatter": "%+.2f"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "scale": True},
+            "series": [line_series("Delta", areaStyle={})],
+        },
+        height=300,
+        alt=f"{ticker} minus peer average, ending at {latest['Delta']:+.2f}",
     )
-
-    cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.altair_chart(chart)
 
 st.space("medium")
 
@@ -353,4 +360,4 @@ st.space("medium")
 ## Raw data
 """
 
-st.dataframe(data)
+st.dataframe(data, alt="Selected stock price history")

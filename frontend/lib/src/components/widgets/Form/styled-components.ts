@@ -16,6 +16,11 @@
 
 import styled from "@emotion/styled"
 
+import {
+  PRINT_CHART_CARD_SELECTOR,
+  printKeepTogetherRules,
+} from "~lib/components/shared/printPageBreak"
+
 export const StyledFormSubmitContent = styled.div({
   display: "flex",
 })
@@ -23,17 +28,26 @@ export const StyledFormSubmitContent = styled.div({
 interface StyledFormProps {
   border: boolean
   overflow: React.CSSProperties["overflow"]
+  isStretchHeight: boolean
 }
 
 export const StyledForm = styled.div<StyledFormProps>(
-  ({ theme, border, overflow }) => ({
+  ({ theme, border, overflow, isStretchHeight }) => ({
     ...(border && {
       border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
       borderRadius: theme.radii.default,
       padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      "@media print": {
+        [PRINT_CHART_CARD_SELECTOR]: printKeepTogetherRules,
+      },
     }),
     width: "100%",
-    height: "100%",
+    // A stretch form fills its layout wrapper through flex. An auto height
+    // keeps it from shrinking below its content, so taller content grows the
+    // form instead of spilling past its border.
+    ...(isStretchHeight
+      ? { height: "auto", flex: "1 1 0%" }
+      : { height: "100%" }),
     overflow: overflow,
   })
 )

@@ -46,6 +46,44 @@ describe("ClearStaleNodeVisitor", () => {
       expect(result).toBeUndefined()
     })
 
+    it("preserves a stale toast node instead of pruning it (issue #7740)", () => {
+      // Toasts emitted right before st.rerun() carry the interrupted run's
+      // scriptRunId. They must not be pruned as stale, otherwise the toast node
+      // can be removed before its component mounts and registers the toast.
+      const currentRunId = "current_run"
+      const staleToast = new ElementNode(
+        makeProto(Element, { toast: { body: "Toast survives rerun" } }),
+        ForwardMsgMetadata.create(),
+        "old_run",
+        "script_hash"
+      )
+      const visitor = new ClearStaleNodeVisitor(currentRunId)
+
+      const result = visitor.visitElementNode(staleToast)
+
+      expect(result).toBe(staleToast)
+    })
+
+    it("preserves a stale toast node during a fragment run", () => {
+      const currentRunId = "current_run"
+      const staleToast = new ElementNode(
+        makeProto(Element, { toast: { body: "Toast survives rerun" } }),
+        ForwardMsgMetadata.create(),
+        "old_run",
+        "script_hash",
+        "fragment1"
+      )
+      const visitor = new ClearStaleNodeVisitor(
+        currentRunId,
+        ["fragment1"],
+        "fragment1"
+      )
+
+      const result = visitor.visitElementNode(staleToast)
+
+      expect(result).toBe(staleToast)
+    })
+
     describe("when running fragments", () => {
       it("returns element if it doesn't have a fragment ID", () => {
         const currentRunId = "current_run"

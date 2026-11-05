@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import shutil
-import tempfile
-from pathlib import Path
 from typing import Any
 
 import pytest
-from playwright.sync_api import FilePayload, Page, Route, expect
+from playwright.sync_api import FileChooser, FilePayload, Page, Route, expect
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
@@ -37,15 +34,22 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-NUM_FILE_UPLOADERS = 21
+NUM_FILE_UPLOADERS = 22
 
 
-def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
+def create_temp_directory_with_files(
+    tmp_path_factory: pytest.TempPathFactory, file_data: list[dict[str, Any]]
+) -> str:
     """
     Create a temporary directory with files for directory upload testing.
 
     Parameters
     ----------
+    tmp_path_factory : pytest.TempPathFactory
+        Supplies a base directory that is unique per call, so that callers
+        running concurrently in separate xdist workers cannot clobber each
+        other's files. Also lets pytest garbage-collect the trees.
+
     file_data : list[dict[str, Any]]
         List of dict with 'path' and 'content' keys
 
@@ -54,19 +58,9 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
     str
         Path to the temporary directory
     """
-    # Use a deterministic directory name for consistent test results
-    temp_base = tempfile.gettempdir()
-    # Create a nested structure so the uploaded directory preserves relative paths
-    test_base_dir = os.path.join(temp_base, "streamlit_e2e_test_base")
-    temp_dir = os.path.join(test_base_dir, "upload_dir")
-    temp_path = Path(temp_dir)
-
-    # Clean up any existing directory
-    base_path = Path(test_base_dir)
-    if base_path.exists():
-        shutil.rmtree(base_path)
-
-    # Create the directory
+    # Nest the files under "upload_dir": the browser reports that name in
+    # webkitRelativePath, and the chip-title assertions expect the prefix.
+    temp_path = tmp_path_factory.mktemp("streamlit_e2e_upload") / "upload_dir"
     temp_path.mkdir(parents=True, exist_ok=True)
 
     for file_info in file_data:
@@ -74,7 +68,7 @@ def create_temp_directory_with_files(file_data: list[dict[str, Any]]) -> str:
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_bytes(file_info["content"])
 
-    return str(temp_dir)
+    return str(temp_path)
 
 
 def verify_uploaded_files_in_widget(
@@ -103,6 +97,24 @@ def verify_uploaded_files_in_widget(
                 f'[data-testid="stFileChipName"][title*="{expected_file}"]'
             ).first
         ).to_be_visible()
+
+
+def choose_directory(file_chooser: FileChooser, directory: str) -> None:
+    """Select a directory in a file chooser, ignoring a lost Playwright acknowledgement.
+
+    Playwright sometimes applies the directory files but never answers
+    `set_files`, so the call times out even though the upload already finished.
+    Ignore that timeout; callers must still assert that the upload succeeded.
+    Drop this helper once Playwright's directory `setInputFiles` reliably
+    resolves (see #16772 for the evidence).
+    """
+    try:
+        file_chooser.set_files(files=[directory], timeout=10000)
+    except PlaywrightTimeoutError:
+        # Print instead of failing: the timeout may have some other cause, and
+        # pytest surfaces this output only when a later assertion fails, which
+        # is exactly when someone needs to know set_files was involved.
+        print(f"set_files timed out for {directory}; continuing to the assertions")
 
 
 def test_file_uploader_render_correctly(
@@ -352,8 +364,9 @@ def test_compact_uploader_with_files_snapshot(
     assert_snapshot(file_uploader, name="st_file_uploader-compact_with_files")
 
 
-@pytest.mark.flaky(reruns=3)
-def test_uploads_directory_with_multiple_files(app: Page):
+def test_uploads_directory_with_multiple_files(
+    app: Page, tmp_path_factory: pytest.TempPathFactory
+):
     """Test that directory upload works correctly with multiple files.
 
     Note: We don't test the visual order of files in the widget because
@@ -367,7 +380,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
         {"path": "folder/subfolder/file3.md", "content": b"# Markdown"},
     ]
 
-    temp_dir = create_temp_directory_with_files(directory_data)
+    temp_dir = create_temp_directory_with_files(tmp_path_factory, directory_data)
 
     uploader_index = 3  # Directory uploader index
 
@@ -379,8 +392,7 @@ def test_uploads_directory_with_multiple_files(app: Page):
     with app.expect_file_chooser() as fc_info:
         file_uploader_dropzone.click()
 
-    file_chooser = fc_info.value
-    file_chooser.set_files(files=[temp_dir])
+    choose_directory(fc_info.value, temp_dir)
 
     wait_for_app_run(app, wait_delay=1000)
 
@@ -403,8 +415,9 @@ def test_uploads_directory_with_multiple_files(app: Page):
     expect(uploader_text).to_contain_text("Directory contains 2 files:")
 
 
-@pytest.mark.flaky(reruns=3)
-def test_directory_upload_with_file_type_filtering(app: Page):
+def test_directory_upload_with_file_type_filtering(
+    app: Page, tmp_path_factory: pytest.TempPathFactory
+):
     """Test that directory upload correctly filters files by type.
 
     Note: We don't test the visual order of files in the widget because
@@ -421,15 +434,14 @@ def test_directory_upload_with_file_type_filtering(app: Page):
         {"path": "nested/deep/file.txt", "content": b"nested file"},
     ]
 
-    temp_dir = create_temp_directory_with_files(directory_data)
+    temp_dir = create_temp_directory_with_files(tmp_path_factory, directory_data)
     file_dropzone = app.get_by_test_id("stFileUploaderDropzone").nth(uploader_index)
     expect(file_dropzone).to_be_visible()
 
     with app.expect_file_chooser() as fc_info:
         file_dropzone.click()
 
-    file_chooser = fc_info.value
-    file_chooser.set_files(files=[temp_dir])
+    choose_directory(fc_info.value, temp_dir)
 
     wait_for_app_run(app, wait_delay=1000)
 
@@ -1050,3 +1062,88 @@ def test_file_uploader_extension_deduplication(app: Page):
     # Should NOT show the alternate forms
     expect(multiple_paired_instructions).not_to_contain_text("JPEG")
     expect(multiple_paired_instructions).not_to_contain_text("TIFF")
+
+
+def test_file_uploader_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore file value:", "None")
+
+    ignore_uploader = get_element_by_key(app, "ignore_file")
+
+    file_name1 = "file1.txt"
+    file_content1 = b"file1content"
+    file_name2 = "file2.txt"
+    file_content2 = b"file2content"
+
+    with app.expect_file_chooser() as fc_info:
+        ignore_uploader.get_by_test_id("stFileUploaderDropzone").click()
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name1, mimeType="text/plain", buffer=file_content1)
+        ]
+    )
+
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name1, use_inner_text=True
+    )
+    expect_prefixed_markdown(app, "Ignore file value:", "None")
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore file value: file1.txt", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: file1.txt", exact=True)
+    ).to_be_visible()
+
+    with app.expect_file_chooser() as fc_info:
+        ignore_uploader.get_by_test_id("stFileUploaderDropzone").click()
+    file_chooser = fc_info.value
+    file_chooser.set_files(
+        files=[
+            FilePayload(name=file_name2, mimeType="text/plain", buffer=file_content2)
+        ]
+    )
+
+    expect(ignore_uploader.get_by_test_id("stFileChipName")).to_have_text(
+        file_name2, use_inner_text=True
+    )
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 3", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore file value: file1.txt", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore file value: file2.txt", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: file2.txt", exact=True)
+    ).to_be_visible()
+
+    ignore_uploader.get_by_test_id("stFileChipDeleteBtn").click()
+    expect(ignore_uploader.get_by_test_id("stFileChip")).not_to_be_visible()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(app.get_by_text("Ignore file value: file2.txt", exact=True)).to_be_visible()
+
+    app.get_by_role("button", name="Apply ignore file", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Ignore file value: None", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore file value: None", exact=True)
+    ).to_be_visible()

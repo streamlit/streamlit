@@ -31,25 +31,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set Python version vars
-        uses: ./.github/actions/build_info
-
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-
-      - name: Install Python deps for release automation
-        run: |
-          uv pip install --system packaging semver requests
+      # Sync before checking out the nightly tag. The selected tag may predate
+      # this automation group, so later Python commands use --no-sync.
+      - name: Setup Python automation environment
+        uses: ./.github/actions/setup_automation
 
       - name: Configure Git
         env:
@@ -97,6 +87,16 @@ jobs:
         run: |
           git fetch --prune --tags --force origin
 
+      # Save the current (develop) release script before checking out the
+      # nightly tag. The nightly tag may predate the uv.lock migration, so its
+      # historical copy of create_release_branch.sh would lack the `uv lock` /
+      # `git add uv.lock` steps. Running the preserved copy guarantees the
+      # release branch always gets a freshly generated lock.
+      - name: Preserve current release script
+        run: |
+          set -euo pipefail
+          cp scripts/create_release_branch.sh "${RUNNER_TEMP}/create_release_branch.sh"
+
       - name: Checkout nightly tag (detached HEAD)
         env:
           NIGHTLY_TAG: ${{ inputs.nightly_tag }}
@@ -130,11 +130,11 @@ jobs:
           RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
-          chmod +x scripts/create_release_branch.sh
+          chmod +x "${RUNNER_TEMP}/create_release_branch.sh"
           if [ "$DRY_RUN" = "true" ]; then
-            echo "[DRY RUN] Would run: ./scripts/create_release_branch.sh $RELEASE_VERSION"
+            echo "[DRY RUN] Would run: scripts/create_release_branch.sh $RELEASE_VERSION"
           else
-            bash scripts/create_release_branch.sh "$RELEASE_VERSION"
+            bash "${RUNNER_TEMP}/create_release_branch.sh" "$RELEASE_VERSION"
           fi
 
       - name: Write step summary
@@ -162,4 +162,4 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RELEASE_BASE_REF: ${{ inputs.nightly_tag }}
         run: |
-          python scripts/slack_notifications.py release_automation branch_created
+          uv run --no-sync python scripts/slack_notifications.py release_automation branch_created

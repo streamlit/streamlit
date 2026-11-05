@@ -192,6 +192,16 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
         self.storage.set("some-key", b"some-value")
         assert self.storage.get("some-key") == b"some-value"
 
+    def test_storage_has_does_not_read_value(self):
+        assert self.storage.has("some-key") is False
+        self.storage.set("some-key", b"some-value")
+
+        with patch(
+            "streamlit.runtime.caching.storage.local_disk_cache_storage.streamlit_read"
+        ) as mock_read:
+            assert self.storage.has("some-key") is True
+            mock_read.assert_not_called()
+
     def test_storage_set(self):
         """Test that storage.set() writes the correct value to disk."""
         self.storage.set("new-key", b"new-value")
@@ -270,3 +280,31 @@ class LocalDiskPersistCacheStorageTest(unittest.TestCase):
     def test_storage_close(self):
         """Test that storage.close() does not raise any exception."""
         self.storage.close()
+
+    def test_ttl_and_max_entries_default_to_infinity_when_unset(self) -> None:
+        """Unset TTL and max-entries are treated as unlimited."""
+        context = CacheStorageContext(
+            function_key="func-key",
+            function_display_name="func-display-name",
+            persist="disk",
+            ttl_seconds=None,
+            max_entries=None,
+        )
+        storage = LocalDiskCacheStorage(context)
+        assert storage.ttl_seconds == math.inf
+        assert storage.max_entries == math.inf
+
+    def test_storage_delete_logs_unexpected_os_error(self) -> None:
+        """Unexpected errors while deleting a cache file are logged, not raised."""
+        self.storage.set("new-key", b"new-value")
+        with (
+            patch("os.remove", side_effect=OSError("permission denied")),
+            self.assertLogs(
+                "streamlit.runtime.caching.storage.local_disk_cache_storage",
+                level=logging.ERROR,
+            ) as logs,
+        ):
+            self.storage.delete("new-key")
+        assert any(
+            "Unable to remove a file from the disk cache" in msg for msg in logs.output
+        )

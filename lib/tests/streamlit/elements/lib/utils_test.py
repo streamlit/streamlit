@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit.elements.lib import utils
+from streamlit.errors import StreamlitValueError
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
@@ -42,8 +43,8 @@ def test_get_label_visibility_proto_value(input_value: str, expected: int) -> No
 
 
 def test_get_label_visibility_proto_value_invalid() -> None:
-    """Verify invalid label visibility raises ValueError."""
-    with pytest.raises(ValueError, match="Unknown label visibility value"):
+    """Verify invalid label visibility raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `label_visibility` value"):
         utils.get_label_visibility_proto_value("invalid")  # type: ignore[arg-type]
 
 
@@ -64,9 +65,55 @@ def test_get_chat_input_accept_file_proto_value(
 
 
 def test_get_chat_input_accept_file_proto_value_invalid() -> None:
-    """Verify invalid accept_file value raises ValueError."""
-    with pytest.raises(ValueError, match="Unknown accept file value"):
+    """Verify invalid accept_file value raises StreamlitValueError."""
+    with pytest.raises(StreamlitValueError, match=r"Invalid `accept_file` value"):
         utils.get_chat_input_accept_file_proto_value("invalid")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("alt", "allow_empty", "expected"),
+    [
+        (None, False, None),
+        (None, True, None),
+        ("A description", False, "A description"),
+        ("  padded  ", False, "padded"),
+        ("", False, None),
+        ("   ", False, None),
+        ("", True, ""),
+        ("   ", True, None),
+        (123, False, "123"),
+    ],
+)
+def test_normalize_alt(
+    alt: object | None, allow_empty: bool, expected: str | None
+) -> None:
+    """Verify normalize_alt strip / empty / decorative contract."""
+    assert utils.normalize_alt(alt, allow_empty=allow_empty) == expected
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_logs_empty(mock_warning: MagicMock) -> None:
+    """Empty alt on non-decorative commands must be logged."""
+    assert utils.normalize_alt("") is None
+    mock_warning.assert_called_once()
+    assert "empty or whitespace-only" in mock_warning.call_args.args[1]
+    assert mock_warning.call_args.kwargs["stack_info"] is True
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_logs_whitespace(mock_warning: MagicMock) -> None:
+    """Whitespace-only alt must be logged even when allow_empty is True."""
+    assert utils.normalize_alt("   ", allow_empty=True) is None
+    mock_warning.assert_called_once()
+
+
+@patch("streamlit.elements.lib.utils._LOGGER.warning")
+def test_normalize_alt_decorative_empty_does_not_log(
+    mock_warning: MagicMock,
+) -> None:
+    """Decorative empty string on image/pyplot must not log."""
+    assert utils.normalize_alt("", allow_empty=True) == ""
+    mock_warning.assert_not_called()
 
 
 @pytest.mark.parametrize("element_id", ["", None])

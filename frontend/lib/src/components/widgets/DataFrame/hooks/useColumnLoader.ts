@@ -13,12 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 
-import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
+import { isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
@@ -26,9 +35,9 @@ import {
   initEmptyIndexColumn,
 } from "~lib/components/widgets/DataFrame/arrowUtils"
 import {
-  BaseColumn,
-  BaseColumnProps,
-  ColumnCreator,
+  type BaseColumn,
+  type BaseColumnProps,
+  type ColumnCreator,
   ColumnTypes,
   ObjectColumn,
 } from "~lib/components/widgets/DataFrame/columns"
@@ -36,7 +45,7 @@ import {
   getConfiguredWidth,
   shouldUseContainerWidth,
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import type { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
@@ -128,12 +137,12 @@ const mergeColumnConfig = (
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
   const customMergeArrays = (
-    _objValue: object,
-    srcValue: object
-  ): object | undefined => {
+    _objValue: unknown,
+    srcValue: unknown
+  ): unknown[] | undefined => {
     // If the new value is an array, just return it as is (overwriting the old)
-    if (isArray(srcValue)) {
-      return srcValue
+    if (Array.isArray(srcValue)) {
+      return srcValue as unknown[]
     }
     return undefined
   }
@@ -153,11 +162,6 @@ export function applyColumnConfig(
   columnProps: BaseColumnProps,
   columnConfigMapping: Map<string | number, ColumnConfigProps>
 ): BaseColumnProps {
-  if (!columnConfigMapping) {
-    // No column config configured
-    return columnProps
-  }
-
   let columnConfig: ColumnConfigProps = {}
 
   // Merge all possible ways to provide column config for a specific column:
@@ -243,7 +247,8 @@ export function getColumnConfig(
     return new Map()
   }
   try {
-    return new Map(Object.entries(JSON.parse(configJson)))
+    const parsed: unknown = JSON.parse(configJson)
+    return new Map(Object.entries(parsed as Record<string, ColumnConfigProps>))
   } catch (error) {
     // This is not expected to happen, but if it does, we'll return an empty map
     // and log the error to the console.
@@ -307,7 +312,7 @@ function useColumnLoader(
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
-  widthConfig?: streamlit.IWidthConfig | null
+  widthConfig?: streamlit.WidthConfig.$Properties | null
 ): ColumnLoaderReturn {
   const theme = useEmotionTheme()
 
@@ -375,7 +380,7 @@ function useColumnLoader(
 
       if (
         element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-        updatedColumn.isEditable == true
+        updatedColumn.isEditable
       ) {
         // Set editable icon for all editable columns:
         updatedColumn = {
@@ -385,7 +390,7 @@ function useColumnLoader(
 
         // Make sure that required columns are not hidden when editing mode is dynamic:
         if (
-          updatedColumn.isRequired &&
+          updatedColumn.isRequired === true &&
           element.editingMode === DataframeProto.EditingMode.DYNAMIC
         ) {
           updatedColumn = {
@@ -433,7 +438,7 @@ function useColumnLoader(
 
         if (
           element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
-          updatedColumn.isEditable == true
+          updatedColumn.isEditable
         ) {
           // Set editable icon for all editable columns:
           updatedColumn = {
@@ -443,7 +448,7 @@ function useColumnLoader(
 
           // Make sure that required columns are not hidden when editing mode is dynamic:
           if (
-            updatedColumn.isRequired &&
+            updatedColumn.isRequired === true &&
             element.editingMode === DataframeProto.EditingMode.DYNAMIC
           ) {
             updatedColumn = {
@@ -463,7 +468,7 @@ function useColumnLoader(
     const pinnedColumns: BaseColumn[] = []
     const unpinnedColumns: BaseColumn[] = []
 
-    if (columnOrder?.length) {
+    if (columnOrder.length) {
       // The column order list can contain either column names - if configured by the user -
       // or column ids - if configured by the frontend component.
 

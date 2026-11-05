@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { createContext, RefObject } from "react"
+import { createContext, type RefObject } from "react"
 
-import { Logo, PageConfig } from "@streamlit/protobuf"
+import { type Logo, PageConfig } from "@streamlit/protobuf"
 
 export interface SidebarConfigContextProps {
   /**

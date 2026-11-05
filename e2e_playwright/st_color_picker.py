@@ -142,3 +142,16 @@ bound_color_custom = st.color_picker(
     bind="query-params",
 )
 st.write("bound color red value:", bound_color_custom)
+
+# --- on_change="ignore" color picker ---
+ignore_color = st.color_picker(
+    "Ignore change color picker",
+    value="#ff0000",
+    key="ignore_color",
+    on_change="ignore",
+    bind="query-params",
+)
+st.write("Ignore color value:", ignore_color)
+
+if st.button("Apply ignore color", key="apply_ignore_color"):
+    st.write("Applied ignore color value:", ignore_color)

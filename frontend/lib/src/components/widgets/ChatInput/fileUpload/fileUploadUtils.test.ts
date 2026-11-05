@@ -256,7 +256,8 @@ describe("fileUploadUtils", () => {
         inputProps,
         AcceptFileValue.Single
       )
-      expect(result).toEqual(inputProps)
+      expect(result.accept).toBe(".pdf")
+      expect(result.multiple).toBe(false)
       expect(result.webkitdirectory).toBeUndefined()
     })
 
@@ -266,8 +267,28 @@ describe("fileUploadUtils", () => {
         inputProps,
         AcceptFileValue.Multiple
       )
-      expect(result).toEqual(inputProps)
+      expect(result.accept).toBe(".jpg,.png")
+      expect(result.multiple).toBe(true)
       expect(result.webkitdirectory).toBeUndefined()
     })
+
+    it.each([
+      AcceptFileValue.None,
+      AcceptFileValue.Single,
+      AcceptFileValue.Multiple,
+      AcceptFileValue.Directory,
+    ])(
+      "keeps the hidden input out of flow via position: absolute for %s",
+      acceptFile => {
+        // react-dropzone renders the hidden input in-flow (display: block),
+        // which would shift the chat input controls. We override it to
+        // position: absolute so it has no layout impact.
+        const result = configureFileInputProps(
+          { style: { display: "block" } },
+          acceptFile
+        )
+        expect(result.style).toMatchObject({ position: "absolute" })
+      }
+    )
   })
 })

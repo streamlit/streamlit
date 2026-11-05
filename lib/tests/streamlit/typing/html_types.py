@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -76,7 +74,7 @@ if TYPE_CHECKING:
     # =====================================================================
 
     # Invalid width value (not "stretch", "content", or int)
-    html("<p>Text</p>", width="invalid")  # type: ignore[arg-type]
+    html("<p>Text</p>", width="invalid")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     # width is keyword-only (cannot be passed positionally)
-    html("<p>Text</p>", "stretch")  # type: ignore[call-arg]
+    html("<p>Text</p>", "stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]

@@ -19,8 +19,8 @@ applications with any ASGI server (uvicorn, hypercorn, etc.).
 
 Example
 -------
->>> from streamlit.starlette import App
->>> app = App("main.py")
+>>> import streamlit as st
+>>> app = st.App("main.py")
 
 Run with uvicorn:
 

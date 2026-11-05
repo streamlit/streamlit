@@ -51,7 +51,7 @@ Add two separate parameters to widgets:
 
 ```python
 st.widget(..., bind="query-params")
-st.widget(..., persist_state=None|"page"|"session")
+st.widget(..., persist_state=None | "page" | "session")
 ```
 
 **Notes:**
@@ -86,8 +86,12 @@ a single parameter:
 st.widget(..., persist=None)  # no persistence, default
 st.widget(..., persist="query-params")  # binds widget state to query params
 st.widget(..., persist="page")  # keep state if not rendered, delete on page switch
-st.widget(..., persist="session")  # keep state for the session (even if not rendered / across pages)
-st.widget(..., persist=["query-params", "session"])  # binds to query params + persists for the entire session
+st.widget(
+    ..., persist="session"
+)  # keep state for the session (even if not rendered / across pages)
+st.widget(
+    ..., persist=["query-params", "session"]
+)  # binds to query params + persists for the entire session
 ```
 
 **Notes:**
@@ -144,7 +148,7 @@ st.widget(..., key=st.query_params.bind("foo"))
 For state persistence, add a parameter to widgets, similar to option 0:
 
 ```python
-st.widget(..., persist_state=None|"page"|"session")
+st.widget(..., persist_state=None | "page" | "session")
 ```
 
 **Notes:**

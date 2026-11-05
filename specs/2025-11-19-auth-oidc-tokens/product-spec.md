@@ -86,11 +86,11 @@ import requests
 st.login()
 
 if st.user:
-  api_url = "https://api.example.com/me"
-  resp = requests.get(api_url, headers={
-    "Authorization": f"Bearer {st.user.tokens.access}"
-  })
-  st.json(resp.json())
+    api_url = "https://api.example.com/me"
+    resp = requests.get(
+        api_url, headers={"Authorization": f"Bearer {st.user.tokens.access}"}
+    )
+    st.json(resp.json())
 ```
 
 ### Data storage and cookie model

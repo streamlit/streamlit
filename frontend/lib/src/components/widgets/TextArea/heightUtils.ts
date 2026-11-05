@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
+import type { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import {
   LabelVisibilityOptions,
@@ -35,7 +35,7 @@ export const getTextAreaHeight = (
   element: TextAreaProto
 ): string => {
   let height = "auto"
-  if (outerElement.heightConfig?.useStretch) {
+  if (outerElement.heightConfig?.useStretch === true) {
     height = "100%"
   } else if (
     outerElement.heightConfig?.pixelHeight &&

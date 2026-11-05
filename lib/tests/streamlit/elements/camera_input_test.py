@@ -14,6 +14,7 @@
 
 """camera_input unit test."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,7 +22,11 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.camera_input import CameraInputSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.uploaded_file_manager import (
@@ -62,11 +67,11 @@ class CameraInputResolutionTest(DeltaGeneratorTestCase):
         ]
     )
     def test_resolution_invalid_raises_exception(self, invalid_resolution):
-        """Test that an invalid resolution raises StreamlitAPIException and no element is enqueued."""
+        """Test that an invalid resolution raises StreamlitValueError and no element is enqueued."""
         queue_length_before = len(self.forward_msg_queue._queue)
-        with pytest.raises(StreamlitAPIException) as exc_info:
+        with pytest.raises(StreamlitValueError) as exc_info:
             st.camera_input("the label", resolution=invalid_resolution)
-        assert "Invalid resolution" in str(exc_info.value)
+        assert "Invalid `resolution` value" in str(exc_info.value)
         assert len(self.forward_msg_queue._queue) == queue_length_before
 
     def test_stable_id_with_key_and_resolution(self):
@@ -131,11 +136,11 @@ class CameraInputTest(DeltaGeneratorTestCase):
         assert c.label_visibility.value == proto_value
 
     def test_label_visibility_wrong_value(self):
-        with pytest.raises(StreamlitAPIException) as e:
+        with pytest.raises(StreamlitValueError) as e:
             st.camera_input("the label", label_visibility="wrong_value")
         assert (
             str(e.value)
-            == "Unsupported label_visibility option 'wrong_value'. Valid values are 'visible', 'hidden' or 'collapsed'."
+            == "Invalid `label_visibility` value. Supported values: 'visible', 'hidden', 'collapsed'."
         )
 
     def test_cached_widget_replay_warning(self):
@@ -288,3 +293,50 @@ class CameraInputSerdeTest(DeltaGeneratorTestCase):
 
         # Should return empty state for deleted file
         assert len(result.uploaded_file_info) == 0
+
+
+class CameraInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.camera_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.camera_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.camera_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.camera_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.camera_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.camera_input
+        assert c.ignore_rerun is True

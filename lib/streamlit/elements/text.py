@@ -16,10 +16,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.lib.layout_utils import create_layout_config
+from streamlit.elements.lib import agent_spec
+from streamlit.elements.lib.layout_utils import create_layout_config, validate_wrap
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text
+from streamlit.string_util import clean_text, to_help_str
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -36,6 +37,7 @@ class TextMixin:
         help: str | None = None,
         width: Width = "content",
         text_alignment: TextAlignment = "left",
+        wrap: bool = True,
     ) -> DeltaGenerator:
         r"""Write text without Markdown or HTML parsing.
 
@@ -86,6 +88,18 @@ class TextMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
+        wrap : bool
+            Whether the text can wrap onto multiple lines. This can be one
+            of the following:
+
+            - ``True`` (default): If the text is too wide for the element, it
+              wraps onto additional lines.
+            - ``False``: The text stays on one line. Overflow is truncated
+              with an ellipsis. Newlines in the body are not shown as extra
+              lines. Truncation only appears when the element is
+              narrower than its text. Hovering truncated text reveals
+              the full text, including when ``help`` is set.
+
         Examples
         --------
         >>> import streamlit as st
@@ -97,10 +111,13 @@ class TextMixin:
             height: 220px
 
         """
+        validate_wrap(wrap)
         text_proto = TextProto()
-        text_proto.body = clean_text(body)
+        body_text = clean_text(body)
+        text_proto.body = body_text
+        text_proto.wrap = wrap
         if help:
-            text_proto.help = help
+            text_proto.help = to_help_str(help)
 
         layout_config = create_layout_config(
             width=width,
@@ -108,7 +125,14 @@ class TextMixin:
             allow_content_width=True,
         )
 
-        return self.dg._enqueue("text", text_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "text",
+            text_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "text", body=body_text, help=text_proto.help or None
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

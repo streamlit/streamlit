@@ -35,3 +35,17 @@
  * positioned independently via explicit coordinates.
  */
 export const DATAFRAME_PORTAL_ID = "portal"
+
+/**
+ * The DOM `id` of the shared, app-level host for `@floating-ui/react`'s
+ * `FloatingPortal` mounts (e.g. the `st.popover` body).
+ *
+ * The host is created once by `PortalProvider` and portaled to `document.body`,
+ * tagged with `data-react-aria-top-layer` so React Aria's dialog does not mark
+ * it (or its subtree) as `inert` when the dialog is open — which would
+ * otherwise make widgets inside a popover-in-dialog unclickable (see #16005) —
+ * and with `data-st-overlay-root` so interacting with its children does not
+ * dismiss the enclosing dialog or popover. The host has no dimensions of its
+ * own; each floating child positions itself and carries its own `z-index`.
+ */
+export const FLOATING_OVERLAY_PORTAL_ID = "stFloatingOverlayPortal"

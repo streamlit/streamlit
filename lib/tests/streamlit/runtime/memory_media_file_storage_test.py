@@ -16,9 +16,10 @@
 
 from __future__ import annotations
 
+import mimetypes
 import unittest
 from unittest import mock
-from unittest.mock import MagicMock, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from parameterized import parameterized
@@ -272,6 +273,15 @@ class MemoryMediaFileStorageUtilTest(unittest.TestCase):
     def test_get_extension_for_mimetype(self, mimetype: str, expected_extension: str):
         result = get_extension_for_mimetype(mimetype)
         assert expected_extension == result
+
+    def test_arrow_stream_has_no_extension_even_where_mimetypes_knows_one(self):
+        """The Arrow stream type stays extensionless on a platform whose MIME
+        table registers `.arrows` for it.
+        """
+        with patch.object(mimetypes, "guess_extension", return_value=".arrows"):
+            assert (
+                get_extension_for_mimetype("application/vnd.apache.arrow.stream") == ""
+            )
 
 
 class CalculateFileIdTest(unittest.TestCase):

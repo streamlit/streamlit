@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, type ReactElement, useCallback, useEffect } from "react"
 
-import { Button as ButtonProto } from "@streamlit/protobuf"
+import type { Button as ButtonProto } from "@streamlit/protobuf"
 
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { Box } from "~lib/components/shared/Base/styled-components"
@@ -27,9 +27,10 @@ import BaseButton, {
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 export interface Props {
   disabled: boolean
@@ -43,7 +44,12 @@ export const FormSubmitButton = memo(function FormSubmitButton(
 ): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
-  const shortcut = element.shortcut ? element.shortcut : undefined
+  const shortcut = element.shortcut || undefined
+
+  // When wrap resolves to no-wrap, reveal the full label on hover via a native
+  // title, skipped when help is set since help provides the tooltip.
+  const wrap = useResolvedWrap(element.wrap)
+  const addTitleTooltip = !wrap && !element.help
 
   const { formsData } = useRequiredContext(FormsContext)
   const hasInProgressUpload = formsData.formsWithUploads.has(formId)
@@ -91,6 +97,8 @@ export const FormSubmitButton = memo(function FormSubmitButton(
             iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
+            wrap={wrap}
+            addTitleTooltip={addTitleTooltip}
           />
         </BaseButton>
       </BaseButtonTooltip>

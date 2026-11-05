@@ -14,46 +14,51 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
 import { colors } from "~lib/theme/primitives/colors"
 
-// NOTE: Updates to the color below MUST be reflected in the mockTheme.ts file
-// to ensure the mock theme used for tests is consistent with expected theme colors.
-const requiredThemeColors = {
-  bgColor: colors.white,
-  secondaryBg: colors.gray20,
-  bodyText: colors.gray85,
+/** Light-theme defaults shared by `emotionBaseTheme` and `mockTheme`. */
+export const requiredThemeColors = {
+  // Built-in page surfaces. Literals so they can diverge from the primitives scale.
+  bgColor: "#FFFFFF",
+  secondaryBg: "#F8F8F7",
+  bodyText: "#2F2D2B",
 
-  primary: colors.red70,
+  primary: "#C53948",
   secondary: colors.blue70, // Used in progress bar
 
-  // Default main theme colors (light theme)
-  redColor: colors.red70,
-  orangeColor: colors.orange70,
-  yellowColor: colors.yellow80,
-  blueColor: colors.blue70,
-  greenColor: colors.green70,
-  violetColor: colors.purple70,
-  grayColor: colors.gray60,
+  // Named palette defaults (main / background / text) are design-defined
+  // values, independent of the primitives scale. Backgrounds are opaque and
+  // tuned for the default `bgColor`.
+  redColor: "#D94A57",
+  orangeColor: "#E0682B",
+  yellowColor: "#BB8300",
+  blueColor: "#3B82F6",
+  greenColor: "#079464",
+  violetColor: "#9B5DE5",
+  grayColor: "#6B7280",
 
-  // Default background theme colors (light theme)
-  redBackgroundColor: transparentize(colors.red80, 0.9),
-  orangeBackgroundColor: transparentize(colors.orange70, 0.9),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.9),
-  blueBackgroundColor: transparentize(colors.blue65, 0.9),
-  greenBackgroundColor: transparentize(colors.green70, 0.9),
-  violetBackgroundColor: transparentize(colors.purple60, 0.9),
-  grayBackgroundColor: transparentize(colors.gray85, 0.9),
+  redBackgroundColor: "#FFF1F2",
+  orangeBackgroundColor: "#FFF6ED",
+  yellowBackgroundColor: "#FFFAE5",
+  blueBackgroundColor: "#EDF5FF",
+  greenBackgroundColor: "#F1FBF6",
+  violetBackgroundColor: "#F8F2FF",
+  grayBackgroundColor: "#F5F4F2",
 
-  // Default text theme colors (light theme)
-  redTextColor: colors.red90,
-  orangeTextColor: colors.orange95,
-  yellowTextColor: colors.yellow115,
-  blueTextColor: colors.blue90,
-  greenTextColor: colors.green90,
-  violetTextColor: colors.purple90,
-  grayTextColor: transparentize(colors.gray85, 0.4),
+  redTextColor: "#9E303B",
+  orangeTextColor: "#9B4519",
+  yellowTextColor: "#956B0F",
+  blueTextColor: "#244FB4",
+  greenTextColor: "#0C5A44",
+  violetTextColor: "#6F33B8",
+  grayTextColor: "#686255",
+
+  // Stock main chrome (opaque). Sidebar variants live in stockSidebarChrome.
+  borderColor: "#DCD8D4",
+  dataframeBorderColor: "#E8E5E2",
+  dataframeHeaderBackgroundColor: "#F7F7F6",
+  codeBackgroundColor: "#F7F7F6",
+  codeTextColor: "#2F2D2B",
 }
 
 export type RequiredThemeColors = Record<
