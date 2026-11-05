@@ -15,6 +15,7 @@
  */
 
 import { transparentize } from "color2k"
+import * as echarts from "echarts"
 import { isPlainObject, omit } from "lodash-es"
 
 import {
@@ -65,17 +66,52 @@ const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
   useGrouping: true,
 })
 
+/** Label templates at day and second precision, matching ECharts' own. */
+const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
+const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
+
+/**
+ * The datetime strings that dataframe sources hold: ISO-8601 to the
+ * millisecond, with a trailing ``Z`` when timezone-aware. Any tooltip string
+ * of this shape is formatted, including one written inline in the option.
+ */
+const MILLISECOND_ISO_DATETIME =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
+
+/**
+ * Format a time value as its date when it is exactly midnight, and as its
+ * date and time to the second otherwise.
+ */
+export function formatTimeLabel(value: unknown, useUTC: boolean): string {
+  const date = echarts.time.parse(value)
+  // Format through ECharts so the check uses the label's UTC or local clock.
+  // Milliseconds count, so 00:00:00.250 is not midnight.
+  const isMidnight =
+    echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
+  return echarts.time.format(
+    date,
+    isMidnight ? DATE_LABEL_TEMPLATE : DATE_TIME_LABEL_TEMPLATE,
+    useUTC
+  )
+}
+
 /**
  * Format one tooltip value as plain text.
  *
- * Shortens numbers, renders blank and unsupported values as ``-``, and passes
- * other strings and booleans through.
+ * Shortens numbers, shows dataframe datetimes like time axis labels, renders
+ * blank and unsupported values as ``-``, and passes other strings and
+ * booleans through.
  */
 export function formatTooltipItem(value: unknown): string {
   if (typeof value === "number") {
     return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
   }
   if (typeof value === "string") {
+    if (MILLISECOND_ISO_DATETIME.test(value)) {
+      // In local time, as on a time axis without ``useUTC``. ECharts reads a
+      // naive datetime as local time, so it keeps its wall-clock time.
+      return formatTimeLabel(value, false)
+    }
     // Blank text is missing. Other strings, including numeric ones, pass
     // through so an id or year is not grouped.
     return value.trim() === "" ? "-" : value
@@ -251,18 +287,54 @@ function buildOnFillLabelStyle(theme: EmotionTheme): {
   }
 }
 
+/** ECharts' default gap between a title's text and its subtext. */
+const ECHARTS_TITLE_ITEM_GAP_PX = 10
+
+/** ECharts' default treemap breadcrumb height. */
+const ECHARTS_BREADCRUMB_HEIGHT_PX = 22
+
 /**
- * Vertical offset for a legend lifted under a top title.
+ * Treemap insets for the Streamlit theme.
  *
- * Legend ``top`` is measured from the container, not the title box, so this
- * covers ECharts' title inset (~``spacing.lg``), the title font, and the
- * title's bottom padding.
+ * ECharts insets a treemap 20px at the sides and 50px at the top and bottom,
+ * which leaves a wide empty band in a short chart. ``bottom`` keeps room for
+ * the breadcrumb, which sits ``inset`` above the container edge.
  */
-function liftedLegendTopPx(theme: EmotionTheme): number {
+function buildTreemapInsets(theme: EmotionTheme): {
+  inset: number
+  bottom: number
+} {
+  const inset = convertRemToPx(theme.spacing.sm)
+  return { inset, bottom: inset + ECHARTS_BREADCRUMB_HEIGHT_PX + inset }
+}
+
+/**
+ * Vertical offset that clears a top title, for a legend or treemap under it.
+ *
+ * Legend and treemap ``top`` are measured from the container, not the title
+ * box, so this covers ECharts' title inset (~``spacing.lg``), the title font,
+ * a subtext line when a top title has one, and the title's bottom padding.
+ */
+function belowTopTitlePx(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): number {
+  const { spacing, fontSizes } = theme
+  const hasSubtext = toComponentList(option.title).some(
+    title =>
+      title.show !== false &&
+      !isTitleAtBottom(title) &&
+      typeof title.subtext === "string" &&
+      title.subtext !== ""
+  )
+  const subtextPx = hasSubtext
+    ? ECHARTS_TITLE_ITEM_GAP_PX + convertRemToPx(fontSizes.twoSm)
+    : 0
   return (
-    convertRemToPx(theme.spacing.lg) +
-    convertRemToPx(theme.fontSizes.sm) +
-    convertRemToPx(theme.spacing.lg)
+    convertRemToPx(spacing.lg) +
+    convertRemToPx(fontSizes.sm) +
+    subtextPx +
+    convertRemToPx(spacing.lg)
   )
 }
 
@@ -282,6 +354,7 @@ export function buildStreamlitEChartsTheme(
 ): Record<string, unknown> {
   const { colors, genericFonts, fontSizes } = theme
   const bodyFontSize = convertRemToPx(fontSizes.twoSm)
+  const treemapInsets = buildTreemapInsets(theme)
   const labelColor = getGray70(theme)
   const axisLineColor = getGray30(theme)
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
@@ -557,9 +630,15 @@ export function buildStreamlitEChartsTheme(
         fontFamily: genericFonts.bodyFont,
       },
     },
-    // Treemap: theme the breadcrumb trail and the parent-node header band
-    // (their default light-gray surfaces clash with the app background).
+    // Treemap: tighten the layout insets, and theme the breadcrumb trail and
+    // the parent-node header band (their default light-gray surfaces clash
+    // with the app background). A top title, a top-anchored breadcrumb, or a
+    // hidden breadcrumb adjusts the insets per series (see `withTreemapInsets`).
     treemap: {
+      left: treemapInsets.inset,
+      right: treemapInsets.inset,
+      top: treemapInsets.inset,
+      bottom: treemapInsets.bottom,
       // `upperLabel` (the parent header text) is deliberately absent: ECharts
       // resolves it from its own defaults and ignores the themed value, so it
       // stays white. It is only legible on darker tiles, but fixing it would
@@ -568,6 +647,7 @@ export function buildStreamlitEChartsTheme(
         borderColor: colors.bgColor,
       },
       breadcrumb: {
+        bottom: treemapInsets.inset,
         itemStyle: {
           color: colors.secondaryBg,
           borderColor: colors.borderColor,
@@ -928,6 +1008,25 @@ function roamInstallsWheelListener(roam: unknown): boolean {
   return roam === true || roam === "scale" || roam === "zoom"
 }
 
+/** Series whose ``roam`` defaults to ``false`` but can install wheel roam. */
+const OPT_IN_ROAM_SERIES_TYPES: ReadonlySet<unknown> = new Set([
+  "map",
+  "graph",
+  "tree",
+  "sankey",
+])
+
+function seriesHasWheelRoam(series: Record<string, unknown>): boolean {
+  if (series.type === "treemap") {
+    // ECharts' treemap defaults to ``roam: true``.
+    return roamInstallsWheelListener(series.roam ?? true)
+  }
+  return (
+    OPT_IN_ROAM_SERIES_TYPES.has(series.type) &&
+    roamInstallsWheelListener(series.roam)
+  )
+}
+
 function targetHasWheelRoam(option: EChartsOptionObject): boolean {
   if (
     toComponentList(option.geo).some(geo =>
@@ -936,21 +1035,19 @@ function targetHasWheelRoam(option: EChartsOptionObject): boolean {
   ) {
     return true
   }
-  return toComponentList(option.series).some(
-    series =>
-      (series.type === "map" || series.type === "graph") &&
-      roamInstallsWheelListener(series.roam)
-  )
+  return toComponentList(option.series).some(seriesHasWheelRoam)
 }
 
 /**
- * True when ``geo``, a map series, or a graph series turns on wheel roam.
+ * True when ``geo`` or a series turns on wheel roam: any treemap that keeps
+ * its default ``roam: true``, or a map, graph, tree, or sankey series that
+ * opts in.
  *
  * ``RoamController`` registers a mousewheel listener for ``roam: true``,
  * ``"scale"``, and ``"zoom"``. ``"move"`` and ``"pan"`` are drag-only.
- * That listener is separate from inside ``dataZoom``, so a wheel the zoom
- * would ignore must still count as consumed and reach ECharts after the
- * pointer rests.
+ * That listener is separate from inside ``dataZoom``. After the pointer
+ * rests, the guard still delivers a wheel that ``dataZoom`` would ignore so
+ * this listener can zoom.
  */
 export function optionHasWheelRoam(
   option: EChartsOptionObject | null
@@ -970,8 +1067,9 @@ export function optionHasWheelRoam(
 /**
  * True when a pinch should roam immediately.
  *
- * Wheel roam defaults ``zoomOnMouseWheel`` to ``true``, so a pinch
- * (``ctrlKey``) skips the rest timer. An ordinary wheel still waits.
+ * ``RoamController`` defaults ``zoomOnMouseWheel`` to ``true`` (series
+ * options do not set it), so a pinch (``ctrlKey``) skips the rest timer. An
+ * ordinary wheel still waits.
  */
 export function wheelRoamSkipsSettle(
   option: EChartsOptionObject | null,
@@ -1093,24 +1191,49 @@ function isDefaultBottomLegend(legend: Record<string, unknown>): boolean {
 }
 
 /**
- * Copy ``legend`` with ``top`` filled in for default-bottom entries. Legend,
- * dataZoom, visualMap, and timeline are positioned against the chart
- * container, not the grid, so extra ``grid.bottom`` cannot unstack them.
+ * True when a legend sits in the top strip that ECharts' default title uses:
+ * visible, horizontal, pinned to the top edge, and horizontally centered.
+ * A legend placed to one side or lower down usually doesn't overlap a title.
+ * The title's own alignment isn't checked, so any visible top title moves
+ * such a legend below it.
  */
-function withLegendLiftedToTop(
+function isLegendInTitleStrip(legend: Record<string, unknown>): boolean {
+  const centered =
+    legend.left === "center" ||
+    (legend.left === undefined && legend.right === undefined)
+  return (
+    legend.show !== false &&
+    legend.orient !== "vertical" &&
+    (legend.top === "top" || legend.top === 0) &&
+    centered
+  )
+}
+
+/**
+ * Copy ``legend`` with ``top`` set on the entries ``shouldMove`` selects.
+ * Legend, dataZoom, visualMap, and timeline are positioned against the chart
+ * container, not the grid, so extra ``grid`` margins cannot unstack them.
+ */
+function withLegendsMovedTo(
   option: EChartsOptionObject,
-  legendTop: number
+  legendTop: number,
+  shouldMove: (legend: Record<string, unknown>) => boolean
 ): EChartsOptionObject {
   const legends = toComponentList(option.legend)
   if (legends.length === 0) {
-    if (option.legend !== undefined && option.legend !== false) {
+    // A non-object legend (for example ``true``) uses ECharts' defaults.
+    if (
+      option.legend !== undefined &&
+      option.legend !== false &&
+      shouldMove({})
+    ) {
       return { ...option, legend: { top: legendTop } }
     }
     return option
   }
 
   const next = legends.map(legend =>
-    isDefaultBottomLegend(legend) ? { ...legend, top: legendTop } : legend
+    shouldMove(legend) ? { ...legend, top: legendTop } : legend
   )
   // Return the original option when no legend was replaced.
   if (next.every((legend, i) => legend === legends[i])) {
@@ -1237,24 +1360,50 @@ function stackBottomAnchoredControls(
 }
 
 /**
- * Move a default-bottom legend off the footer when bottom-anchored controls
- * are present, then stack those controls if more than one shares the strip.
+ * Lay out the legend and chart controls around the plot.
+ *
+ * A default-bottom legend moves off the footer when bottom-anchored controls
+ * are present. In a cartesian chart with a single grid, a legend in the top
+ * title strip also moves below the title, and ``stackedTop`` is the height of
+ * that title and legend stack, used as ``grid.top``. Other charts keep the
+ * legend in the strip, since their series (pie, funnel, ...) and array grids
+ * don't move down to clear it. Bottom-anchored controls are then stacked if
+ * more than one shares the strip.
  */
 function applyControlLayout(
   option: EChartsOptionObject,
   theme: EmotionTheme
-): { option: EChartsOptionObject; stackedBottom?: number } {
+): {
+  option: EChartsOptionObject
+  stackedTop?: number
+  stackedBottom?: number
+} {
+  const titleAtTop = titlePlacement(option).occupiesTop
+  const hasDefaultGrid =
+    ("xAxis" in option || "yAxis" in option) && !Array.isArray(option.grid)
+  const legendTop = titleAtTop ? belowTopTitlePx(option, theme) : 0
   let next = option
   if (
     hasBottomAnchoredComponent(next) &&
     legendPlacement(next).occupiesBottom
   ) {
-    const legendTop = titlePlacement(next).occupiesTop
-      ? liftedLegendTopPx(theme)
-      : 0
-    next = withLegendLiftedToTop(next, legendTop)
+    next = withLegendsMovedTo(next, legendTop, isDefaultBottomLegend)
   }
-  return stackBottomAnchoredControls(next, theme)
+  let stackedTop: number | undefined
+  if (titleAtTop && hasDefaultGrid) {
+    next = withLegendsMovedTo(next, legendTop, isLegendInTitleStrip)
+    // Either move above can place a legend under the title.
+    if (next !== option) {
+      // Assume one legend row (ECharts' 14px item plus 5px padding on each
+      // side), then a small gap above the plot. A wrapped legend needs an
+      // explicit grid.top.
+      stackedTop =
+        legendTop +
+        convertRemToPx(theme.spacing.twoXL) +
+        convertRemToPx(theme.spacing.twoXS)
+    }
+  }
+  return { ...stackBottomAnchoredControls(next, theme), stackedTop }
 }
 
 /**
@@ -1267,9 +1416,10 @@ function applyControlLayout(
  * the plot. On a side that *does* carry a title, legend, or bottom-anchored
  * control we leave the margin unset so ECharts' generous default reserves room
  * for it (guessing a fixed pixel value risks clipping a title+subtitle, a
- * multi-item legend, or a dataZoom slider). When Streamlit has stacked more
- * than one bottom-anchored control, ``stackedBottom`` is that stack's height
- * and is written as ``grid.bottom`` so the plot sits above the stack.
+ * multi-item legend, or a dataZoom slider). When Streamlit has placed a legend
+ * under a top title, ``stackedTop`` is that stack's height and is written as
+ * ``grid.top``. When it has stacked more than one bottom-anchored control,
+ * ``stackedBottom`` is that stack's height and is written as ``grid.bottom``.
  *
  * Insets are rem spacing tokens converted to pixels so they track the
  * configured base font size like axis labels. ECharts only accepts pixel
@@ -1282,7 +1432,10 @@ function applyControlLayout(
 function buildDefaultGrid(
   option: EChartsOptionObject,
   theme: EmotionTheme,
-  stackedBottom?: number
+  {
+    stackedTop,
+    stackedBottom,
+  }: { stackedTop?: number; stackedBottom?: number }
 ): Record<string, unknown> {
   const { occupiesTop: titleAtTop, occupiesBottom: titleAtBottom } =
     titlePlacement(option)
@@ -1296,6 +1449,8 @@ function buildDefaultGrid(
   }
   if (!titleAtTop && !legendAtTop) {
     grid.top = convertRemToPx(theme.spacing.lg)
+  } else if (stackedTop !== undefined) {
+    grid.top = stackedTop
   }
   if (
     !titleAtBottom &&
@@ -1312,14 +1467,16 @@ function buildDefaultGrid(
 /**
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
- * ``grid`` layout, stacking of bottom-anchored chart controls, and the style
- * of inside funnel and pie labels).
+ * ``grid`` layout, legend placement around titles and stacking of
+ * bottom-anchored chart controls, the style of inside funnel and pie labels,
+ * treemap insets around a title or breadcrumb, and the label position
+ * of horizontal markLines).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, control stacking, and inside labels are purely
- * visual, so they only run under ``theme="streamlit"``.
+ * choice. The other defaults are purely visual, so they only run under
+ * ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
@@ -1358,7 +1515,187 @@ export function applyStreamlitOptionDefaults(
         ),
       }
     : fillOptionDefaults(option, applyVisualDefaults, theme)
-  return applyVisualDefaults ? withInsideLabelStyle(filled, theme) : filled
+  if (!applyVisualDefaults) {
+    return filled
+  }
+  return withHorizontalMarkLineLabels(
+    withTreemapInsets(withInsideLabelStyle(filled, theme), theme)
+  )
+}
+
+/**
+ * Fit a treemap's insets to the title and breadcrumb around it.
+ *
+ * The theme's treemap insets assume a bottom breadcrumb and nothing above the
+ * tiles, and the theme can't branch on the spec. A top title gets room above
+ * the tiles, a top-anchored breadcrumb takes its room from the top instead of
+ * the bottom, and a hidden breadcrumb drops its room. A series that sets
+ * ``height``, or the inset in question, keeps its own layout.
+ */
+function withTreemapInsets(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): EChartsOptionObject {
+  const { inset, bottom: breadcrumbRoom } = buildTreemapInsets(theme)
+  const chart = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const titleRoom = titlePlacement(chart).occupiesTop
+    ? belowTopTitlePx(chart, theme)
+    : undefined
+  return mapOptionSeries(option, series => {
+    if (series.type !== "treemap" || series.height !== undefined) {
+      return series
+    }
+    const breadcrumb = isPlainObject(series.breadcrumb)
+      ? (series.breadcrumb as Record<string, unknown>)
+      : {}
+    const showsBreadcrumb = breadcrumb.show !== false
+    const breadcrumbAtTop =
+      showsBreadcrumb &&
+      breadcrumb.top !== undefined &&
+      breadcrumb.top !== "bottom"
+    let top: number | undefined
+    if (series.top === undefined) {
+      top = breadcrumbAtTop ? breadcrumbRoom : titleRoom
+    }
+    const bottom =
+      series.bottom === undefined && (!showsBreadcrumb || breadcrumbAtTop)
+        ? inset
+        : undefined
+    if (top === undefined && bottom === undefined) {
+      return series
+    }
+    return {
+      ...series,
+      ...(top !== undefined && { top }),
+      ...(bottom !== undefined && { bottom }),
+    }
+  })
+}
+
+/** markLine ``type`` values that draw a line at a computed axis value. */
+const STAT_MARK_LINE_TYPES: ReadonlySet<string> = new Set([
+  "min",
+  "max",
+  "average",
+  "median",
+])
+
+/** A cartesian axis' type, defaulted like ECharts' ``getAxisType``. */
+function cartesianAxisType(axis: Record<string, unknown>): unknown {
+  if (axis.type !== undefined) {
+    return axis.type
+  }
+  return axis.data ? "category" : "value"
+}
+
+/**
+ * True when ``min``/``max``/``average``/``median`` markLine entries measure
+ * the y axis, so they draw horizontal lines.
+ *
+ * ECharts measures the axis opposite the base axis, which is the first
+ * category axis, else the first time axis, else x. Charts with more than one
+ * x or y axis return false.
+ */
+function statMarkLinesAreHorizontal(option: EChartsOptionObject): boolean {
+  const xAxes = toComponentList(option.xAxis)
+  const yAxes = toComponentList(option.yAxis)
+  if (xAxes.length !== 1 || yAxes.length !== 1) {
+    return false
+  }
+  const xType = cartesianAxisType(xAxes[0])
+  const yType = cartesianAxisType(yAxes[0])
+  const baseAxisIsY =
+    (yType === "category" && xType !== "category") ||
+    (yType === "time" && xType !== "category" && xType !== "time")
+  return !baseAxisIsY
+}
+
+/**
+ * True for a single-value markLine entry that draws a horizontal line.
+ *
+ * ``yAxis`` wins over ``xAxis`` in ECharts. Two-point segments (arrays) and
+ * statistic entries that pick their own value dimension are skipped.
+ */
+function drawsHorizontalMarkLine(
+  entry: unknown,
+  statLinesHorizontal: boolean
+): boolean {
+  if (!isPlainObject(entry)) {
+    return false
+  }
+  const { xAxis, yAxis, type, valueDim, valueIndex } = entry as Record<
+    string,
+    unknown
+  >
+  if (yAxis !== undefined && yAxis !== null) {
+    return true
+  }
+  if (xAxis !== undefined && xAxis !== null) {
+    return false
+  }
+  return (
+    statLinesHorizontal &&
+    typeof type === "string" &&
+    STAT_MARK_LINE_TYPES.has(type) &&
+    valueDim === undefined &&
+    valueIndex === undefined
+  )
+}
+
+/**
+ * Keep horizontal reference-line labels inside the plot.
+ *
+ * A markLine label defaults to ``position: "end"``, past the line's right end,
+ * where Streamlit's tight ``grid.right`` clips it. Horizontal lines on
+ * cartesian series get ``"insideEndTop"`` instead, unless the entry or the
+ * markLine sets a label position. Vertical lines keep ``"end"``, which sits
+ * above the plot.
+ */
+function withHorizontalMarkLineLabels(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  const chart = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const statLinesHorizontal = statMarkLinesAreHorizontal(chart)
+  const needsInsideLabel = (entry: unknown): boolean =>
+    drawsHorizontalMarkLine(entry, statLinesHorizontal) &&
+    getLabelObject(entry).position === undefined
+
+  return mapOptionSeries(option, series => {
+    const { markLine, coordinateSystem } = series
+    if (
+      !isPlainObject(markLine) ||
+      (coordinateSystem !== undefined && coordinateSystem !== "cartesian2d")
+    ) {
+      return series
+    }
+    const markLineObject = markLine as Record<string, unknown>
+    const { data } = markLineObject
+    if (
+      getLabelObject(markLineObject).position !== undefined ||
+      !Array.isArray(data) ||
+      !data.some(needsInsideLabel)
+    ) {
+      return series
+    }
+    return {
+      ...series,
+      markLine: {
+        ...markLineObject,
+        data: data.map((entry: unknown) =>
+          needsInsideLabel(entry)
+            ? {
+                ...(entry as Record<string, unknown>),
+                label: { ...getLabelObject(entry), position: "insideEndTop" },
+              }
+            : entry
+        ),
+      },
+    }
+  })
 }
 
 /**
@@ -1467,7 +1804,11 @@ function fillOptionDefaults(
   }
 
   const titled = withTitleStyleDefaults(result, theme)
-  const { option: laidOut, stackedBottom } = applyControlLayout(titled, theme)
+  const {
+    option: laidOut,
+    stackedTop,
+    stackedBottom,
+  } = applyControlLayout(titled, theme)
 
   // For cartesian charts, default the grid so the plot fills its container and
   // axis labels and names stay inside it. Any grid key the user set wins; we
@@ -1475,7 +1816,10 @@ function fillOptionDefaults(
   const hasCartesianAxis = "xAxis" in laidOut || "yAxis" in laidOut
   const grid = laidOut.grid
   if (hasCartesianAxis && !Array.isArray(grid)) {
-    const defaults = buildDefaultGrid(laidOut, theme, stackedBottom)
+    const defaults = buildDefaultGrid(laidOut, theme, {
+      stackedTop,
+      stackedBottom,
+    })
     if (grid === undefined) {
       laidOut.grid = defaults
     } else if (isPlainObject(grid)) {

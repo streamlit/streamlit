@@ -1237,11 +1237,14 @@ describe("EChartsChart", () => {
       "stream"
     )
     const SALES_ROWS = [
-      { product: "Matcha", sales: 43.3 },
-      { product: "Latte", sales: 83.1 },
+      ["Matcha", 43.3],
+      ["Latte", 83.1],
     ]
-    const COST_BYTES = tableToIPC(
-      new Table({ cost: vectorFromArray([1.5, 2.5], new Float64()) }),
+    const NEW_SALES_BYTES = tableToIPC(
+      new Table({
+        sales: vectorFromArray([1.5, 2.5], new Float64()),
+        product: vectorFromArray(["Mocha", "Chai"], new Utf8()),
+      }),
       "stream"
     )
 
@@ -1359,15 +1362,16 @@ describe("EChartsChart", () => {
         <Wrapper
           element={createDatasetElement({
             spec: datasetSpec({ name: "h2" }),
-            datasets: [namedDataset("h2", COST_BYTES)],
+            datasets: [namedDataset("h2", NEW_SALES_BYTES)],
           })}
         />
       )
       expect(mockChart.setOption).toHaveBeenCalledTimes(2)
       const [appliedOption] = mockChart.setOption.mock.calls[1]
+      // Rows follow the spec's dimensions, not the dataframe's column order.
       expect(appliedOption.dataset.source).toEqual([
-        { cost: 1.5 },
-        { cost: 2.5 },
+        ["Mocha", 1.5],
+        ["Chai", 2.5],
       ])
       expect(mockChart.dispose).not.toHaveBeenCalled()
     })
@@ -1812,6 +1816,63 @@ describe("EChartsChart", () => {
       const chart = renderChart([{ type: "inside", zoomLock: true }])
       const stopped = dispatchWheel(chart)
       expect(stopped).not.toHaveBeenCalled()
+    })
+
+    const renderRoamChart = (series: Record<string, unknown>): HTMLElement => {
+      render(
+        <Wrapper
+          element={createElement({
+            spec: JSON.stringify({ series: [series] }),
+          })}
+        />
+      )
+      return screen.getByTestId("stEChartsChart")
+    }
+
+    it("guards a default treemap without a dataZoom", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart)).toHaveBeenCalled()
+
+      now += 1_000
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
+    it("lets a pinch roam a treemap before the pointer has rested", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart, { ctrlKey: true })).not.toHaveBeenCalled()
+    })
+
+    it("guards a graph with wheel roam", () => {
+      const chart = renderRoamChart({ type: "graph", roam: true, data: [] })
+      chart.dispatchEvent(new Event("pointerenter"))
+
+      expect(dispatchWheel(chart)).toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when a treemap turns roam off", () => {
+      const chart = renderRoamChart({
+        type: "treemap",
+        roam: false,
+        data: [{ name: "a", value: 1 }],
+      })
+      chart.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
+    })
+
+    it("does not intercept wheel when graph roam is drag-only", () => {
+      const chart = renderRoamChart({ type: "graph", roam: "move", data: [] })
+      chart.dispatchEvent(new Event("pointerenter"))
+      expect(dispatchWheel(chart)).not.toHaveBeenCalled()
     })
 
     it("waits again after the pointer leaves and re-enters", () => {

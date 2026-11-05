@@ -395,12 +395,25 @@ export const useLayoutStyles = ({
         assertNever(heightConfig)
     }
 
-    const flex = getFlex(
+    let flex = getFlex(
       widthConfig,
       heightConfig,
       direction,
       minStretchBehavior
     )
+
+    // A pixel `row_height` cell is a definite-height column. Stretch
+    // children take the leftover space (`flex-basis: 0%`) so a heading
+    // above a chart does not make the chart 100% of the whole cell.
+    // Horizontal stretch keeps the min/max heights set above.
+    if (
+      flexContext?.verticalStretchGrows === true &&
+      direction === Direction.VERTICAL &&
+      heightConfig.type === DimensionType.STRETCH
+    ) {
+      flex = "1 1 0%"
+      minHeight = 0
+    }
 
     const textAlign = getTextAlignmentStyle(
       "textAlignmentConfig" in element

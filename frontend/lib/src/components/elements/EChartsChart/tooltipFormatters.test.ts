@@ -261,6 +261,7 @@ describe("applyTooltipFormatters", () => {
       expect(valueFormatter("1234.5")).toBe("$1,234.50")
       expect(valueFormatter([1, 2.5])).toEqual(["$1.00", "$2.50"])
       expect(valueFormatter("N/A")).toBe("N/A")
+      expect(valueFormatter("2026-01-02T00:00:00.000")).toBe("2026-01-02")
       expect(valueFormatter("")).toBe("-")
       expect(valueFormatter(Number.NaN)).toBe("-")
       expect(valueFormatter(null)).toBe("-")

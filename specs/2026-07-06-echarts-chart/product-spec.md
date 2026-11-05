@@ -160,7 +160,16 @@ dataset object **or** on every entry of a dataset list (`[{"source": df1}, {"sou
 the same spirit as `st.vega_lite_chart` accepting a `data` argument. Streamlit sends each frame
 as an Apache Arrow table next to the JSON option, and the browser turns it into ECharts `source`
 rows before rendering. Column order is preserved via `dataset.dimensions` when the user hasn't set
-it. The dataframe index is not included (use `df.reset_index()` to plot it). Cell values become:
+it. The dataframe index is not included (use `df.reset_index()` to plot it). Rows are arrays with
+one entry per dimension, because ECharts' default tooltip labels `encode.tooltip` values with
+their dimension names only for array rows. A user-set `dataset.dimensions` picks and orders the
+columns by name (a numeric name matches the column of that integer label; a name that matches no
+column reads as `null`). Because rows are positional, `series[i].dimensions` and a timeline
+`options[i].dataset.dimensions` without `source` must list the columns in the dataset's order;
+reorder columns with `dataset.dimensions` instead. `sourceHeader` defaults to `false` so a first
+row of strings is not taken as column names; leave it unset for dataframe sources, since
+`"auto"` drops a first all-string row. `seriesLayoutBy` is passed to ECharts as for any array
+source. Cell values become:
 
 - Numbers and booleans: native values. Missing values and `±Infinity`: `null`.
 - Naive datetimes: ISO-8601 without a timezone suffix (`2020-01-01T00:00:00.000`), so ECharts
@@ -265,7 +274,13 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
   components aren't clipped. When more than one of those bottom-anchored controls would share
   the footer, Streamlit stacks them; a default-bottom legend that would sit on the same strip
-  is moved to the top. Explicit `top`/`bottom` values in the spec are preserved.
+  is moved to the top. In cartesian charts with a single grid, a centered legend pinned to the
+  top edge (`top: 0` or `"top"`) moves below a top title (and its subtext), and the plot then
+  starts below both unless the spec sets `grid.top`. This assumes a one-row legend; a wrapped
+  legend needs an explicit `grid.top`. Other explicit `top`/`bottom` values in the spec are
+  preserved. Treemaps get tighter insets with room for a top title and the breadcrumb.
+  Horizontal `markLine` labels default to `insideEndTop`, so they aren't clipped past the
+  plot's right edge.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
   (via ECharts' `darkMode` plus themed colors), with no Python rerun required. Light/dark
   re-theming uses `chart.setTheme(...)` on the bundled ECharts `^6.1.0`, which preserves the
@@ -333,6 +348,14 @@ Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOpt
 `options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
 arrays aren't walked.
 
+The Streamlit theme's default `valueFormatter` and the number formats above also show the
+datetime strings of dataframe sources like [time labels](#theming): a midnight value as its date,
+others as date and time to the second. They use local time, like a time axis without `useUTC`,
+so a naive datetime keeps its wall-clock time. The formatters don't know the chart's `useUTC`,
+so with `useUTC: true` a tooltip datetime (naive or timezone-aware) can differ from its axis
+label. `{@...}`
+placeholders insert values as they are.
+
 Options considered:
 
 - **Extend the ECharts keys (chosen).** No new syntax and no Python parameter, and the number
@@ -348,7 +371,7 @@ Also not included:
 - `{value}` templates in `valueFormatter` (e.g. `"{value} €"`, by analogy with
   `axisLabel.formatter`). Strings without a `%` are dropped, which leaves room to adopt them,
   or an upstream meaning, later. Use printf instead: `"%.2f €"`.
-- Per-dimension formats, date/time formats for tooltip values, number formats for axis labels,
+- Per-dimension formats, custom date/time formats for tooltip values, number formats for axis labels,
   and coordinate-system tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings
   on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
 
@@ -608,6 +631,11 @@ renderer switch requires, just as it does after a `setTheme`.
   Note that `NaN`/`NaT`/`±Infinity` *inside* a `dataset.source` dataframe become `null`
   (ECharts' own "no value" marker) rather than being rejected; only non-finite floats the user
   writes directly into the option raise.
+- **Inline values** — NumPy and pandas scalars, datetimes, durations, and `Decimal` values
+  anywhere else in the option (for example `markLine` values or `xAxis.data`) are converted like
+  `dataset.source` values: datetimes become ISO-8601 strings (UTC with `Z` if timezone-aware),
+  durations become milliseconds, and `Decimal` becomes a float. Missing values (`NaN`, `pd.NaT`,
+  `pd.NA`) and arrays, Series, or dataframes outside `dataset.source` still raise.
 - **Runtime errors** — rendering errors from ECharts are surfaced as a styled error message in the
   chart area rather than crashing the app.
 
@@ -997,6 +1025,8 @@ Required coverage for the implementation PR (not this spec-only diff):
 - Tooltip formatting: string `valueFormatter` number formats (named, printf, arrays, numeric
   strings, invalid strings dropped with a warning) and `{@dim}` / `{@[n]}` expansion (array and
   object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
+  An item tooltip with `encode.tooltip` over a dataframe source labels each column and shows a
+  midnight datetime as a date.
 - Time labels: midnight values show as dates in the axis tooltip header; other values keep
   their time; `useUTC` and timeline `baseOption` handled; author formatters, non-time axes, and
   `theme=None` left alone.

@@ -2818,6 +2818,68 @@ describe("WebsocketConnection state machine", () => {
     ws.disconnect()
   })
 
+  // clearTimeout is a no-op here so the guards in setConnectionTimeout and
+  // schedulePingServer still run when a cancelled timer fires.
+  describe("when clearTimeout fails to cancel a timer", () => {
+    let clearTimeoutSpy: MockInstance
+
+    beforeEach(() => {
+      clearTimeoutSpy = vi
+        .spyOn(globalThis, "clearTimeout")
+        .mockImplementation(() => undefined)
+    })
+
+    afterEach(() => {
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it("does not probe the server when a stale reconnect timer fires after disconnect", async () => {
+      const { ws, socket, args } = await createConnectedClient()
+      socket.dispatch("close", ABNORMAL_CLOSE_EVENT)
+      ws.disconnect()
+      vi.mocked(args.onConnectionStateChange).mockClear()
+
+      await vi.advanceTimersByTimeAsync(RECONNECT_BASE_RETRY_PERIOD_MS)
+
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      expect(pingServerSpy).not.toHaveBeenCalled()
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+    })
+
+    it("does not let a replaced socket's connection timeout close the new socket", async () => {
+      const { ws, socket, args } = await createConnectingClient()
+      socket.dispatch("error")
+      await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS / 2)
+
+      stepFsm(ws, "SERVER_PING_SUCCEEDED")
+      await vi.advanceTimersByTimeAsync(0)
+      const newSocket = sockets.at(-1)
+      expect(newSocket).not.toBe(socket)
+      vi.mocked(args.onConnectionStateChange).mockClear()
+      vi.mocked(args.sendClientError).mockClear()
+
+      // The original socket's timeout fires now; the new socket is only
+      // halfway through its own.
+      await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS / 2)
+
+      expect(newSocket?.readyState).toBe(0)
+      expect(args.sendClientError).not.toHaveBeenCalled()
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+      // The new socket's own timeout fires now.
+      await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS / 2)
+
+      expect(args.sendClientError).toHaveBeenCalledWith(
+        "Websocket connection timed out",
+        "ws://localhost:1234/_stcore/stream timed out",
+        "Websocket Connection"
+      )
+      expect(newSocket?.readyState).toBe(3)
+
+      ws.disconnect()
+    })
+  })
+
   describe("ping cycle failures", () => {
     afterEach(() => {
       vi.mocked(doInitPings).mockReset()

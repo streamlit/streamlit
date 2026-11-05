@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 32
+_EXPECTED_CHART_COUNT = 37
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -387,6 +387,22 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(daily_tooltip).not_to_contain_text("00:00")
 
 
+def test_encode_tooltip_labels_dataframe_columns(app: Page):
+    """An item tooltip names each ``encode.tooltip`` column of a dataframe
+    source next to its value, and shows a midnight datetime as a date.
+    """
+    chart = _get_chart(app, "c_encode_tooltip")
+    expect(chart.locator("svg")).to_be_visible()
+    chart.hover()
+    tooltip = chart.locator(".echarts-encode-tooltip")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text(re.compile(r"pct\s*4\.5%"))
+    expect(tooltip).to_contain_text(re.compile(r"date\s*2026-01-02"))
+    expect(tooltip).to_contain_text(re.compile(r"sha\s*aaa1111"))
+    # Must NOT happen: the raw ISO string of the naive datetime.
+    expect(tooltip).not_to_contain_text("T00:00")
+
+
 def test_toolbar_actions(app: Page):
     """Download and fullscreen toolbar actions work on a single page load."""
     png_container = get_element_by_key(app, "c_custom_colors")
@@ -507,6 +523,12 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Funnel stage separators must follow the app background instead of
         # ECharts' white lines, and outside labels must stay legible on it.
         "c_funnel": "st_echarts_chart-funnel",
+        # Layout defaults: the top legend sits below the title and subtitle,
+        # the treemap fills the chart above its breadcrumb, and horizontal
+        # reference-line labels stay inside the plot.
+        "c_title_top_legend": "st_echarts_chart-title_top_legend",
+        "c_treemap_layout": "st_echarts_chart-treemap",
+        "c_reference_lines": "st_echarts_chart-reference_lines",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
@@ -602,3 +624,23 @@ def test_narrow_time_axis_hides_overlapping_labels(app: Page):
         if left["right"] > right["left"]
     ]
     assert overlapping == [], f"Overlapping time axis labels: {overlapping}"
+
+
+def test_wheel_over_treemap_scrolls_page(app: Page):
+    """A wheel right after the pointer enters a treemap scrolls the page.
+
+    ECharts turns on wheel roam for treemaps by default and would otherwise
+    zoom the treemap and block the page scroll.
+    """
+    chart = _get_chart(app, "c_treemap")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_have_attribute("aria-busy", "false")
+    main = app.get_by_test_id("stMain")
+    scroll_before = main.evaluate("el => el.scrollTop")
+    assert scroll_before > 0
+
+    chart.hover()
+    for _ in range(3):
+        app.mouse.wheel(0, -200)
+
+    wait_until(app, lambda: main.evaluate("el => el.scrollTop") < scroll_before)

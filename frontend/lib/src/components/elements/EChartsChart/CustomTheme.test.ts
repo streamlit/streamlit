@@ -50,6 +50,12 @@ const gridBottom = convertRemToPx(theme.spacing.sm)
 const controlBand = convertRemToPx(theme.spacing.threeXL)
 const controlGap = convertRemToPx(theme.spacing.xs)
 const controlEdge = convertRemToPx(theme.spacing.sm)
+const legendBelowTitle =
+  convertRemToPx(theme.spacing.lg) +
+  convertRemToPx(theme.fontSizes.sm) +
+  convertRemToPx(theme.spacing.lg)
+const legendRow =
+  convertRemToPx(theme.spacing.twoXL) + convertRemToPx(theme.spacing.twoXS)
 
 describe("buildStreamlitEChartsTheme", () => {
   it("maps the Emotion palette, fonts, and dark mode", () => {
@@ -629,6 +635,35 @@ describe("Streamlit theme resolved by ECharts", () => {
     )
   })
 
+  it("insets a treemap over ECharts' series defaults unless the spec sets them", () => {
+    const { spacing } = darkTheme.emotion
+    const inset = convertRemToPx(spacing.sm)
+    const data = [{ name: "A", value: 1 }]
+    const { series } = renderThemed({
+      series: [
+        { type: "treemap", data },
+        { type: "treemap", breadcrumb: { show: false }, data },
+        { type: "treemap", top: 40, left: 0, data },
+        { type: "treemap", height: 100, breadcrumb: { show: false }, data },
+      ],
+    })
+
+    const layoutOf = (index: number): unknown[] =>
+      ["left", "right", "top", "bottom"].map(key => series(index).get(key))
+    // ECharts' own defaults are 20px at the sides and 50px at the top/bottom.
+    // The bottom keeps room for the 22px breadcrumb.
+    expect(layoutOf(0)).toEqual([inset, inset, inset, inset + 22 + inset])
+    expect(series(0).get(["breadcrumb", "bottom"])).toBe(inset)
+    // Without a breadcrumb, the bottom drops its room.
+    expect(layoutOf(1)).toEqual([inset, inset, inset, inset])
+    // Spec values win, and the remaining keys stay themed.
+    expect(layoutOf(2)).toEqual([0, inset, 40, inset + 22 + inset])
+    // A spec height keeps ECharts anchoring it to the themed top.
+    expect(series(3).get("top")).toBe(inset)
+    expect(series(3).get("height")).toBe(100)
+    expect(series(3).get("bottom")).toBeUndefined()
+  })
+
   it("themes the global axis pointer label that cross tooltips inherit", () => {
     const { component } = renderThemed({
       tooltip: { trigger: "axis", axisPointer: { type: "cross" } },
@@ -723,8 +758,32 @@ describe("formatEChartsTooltipValue", () => {
   it.each([
     ["2026", "2026"],
     ["76.23801738559538", "76.23801738559538"],
+    ["2026-01-02", "2026-01-02"],
+    ["2026-01-02T10:00:00", "2026-01-02T10:00:00"],
   ])("leaves the string %s unchanged", (value, expected) => {
     expect(formatEChartsTooltipValue(value)).toBe(expected)
+  })
+
+  describe("dataframe datetimes", () => {
+    beforeEach(() => {
+      // A zone behind UTC, so local and UTC midnight differ.
+      process.env.TZ = "America/New_York"
+    })
+
+    afterEach(() => {
+      process.env.TZ = "UTC"
+    })
+
+    it.each([
+      ["a naive midnight", "2026-01-02T00:00:00.000", "2026-01-02"],
+      ["a naive time", "2026-01-02T14:30:05.250", "2026-01-02 14:30:05"],
+      ["almost midnight", "2026-01-02T00:00:00.001", "2026-01-02 00:00:00"],
+      // Timezone-aware values show in local time, like a time axis.
+      ["a UTC instant", "2026-01-02T05:00:00.000Z", "2026-01-02"],
+      ["UTC midnight", "2026-01-02T00:00:00.000Z", "2026-01-01 19:00:00"],
+    ])("formats %s like a time axis label", (_label, value, expected) => {
+      expect(formatEChartsTooltipValue(value)).toBe(expected)
+    })
   })
 
   it.each([
@@ -1137,13 +1196,138 @@ describe("applyStreamlitOptionDefaults", () => {
       series: [],
     })
 
-    expect(result.legend).toEqual({
-      data: ["a"],
-      top:
-        convertRemToPx(theme.spacing.lg) +
-        convertRemToPx(theme.fontSizes.sm) +
-        convertRemToPx(theme.spacing.lg),
+    expect(result.legend).toEqual({ data: ["a"], top: legendBelowTitle })
+    // The plot starts below the title and legend stack.
+    expect((result.grid as Record<string, unknown>).top).toBe(
+      legendBelowTitle + legendRow
+    )
+  })
+
+  it.each([
+    ["top: 'top'", { top: "top" }],
+    ["top: 0", { top: 0 }],
+    ["an explicit center", { top: 0, left: "center" }],
+  ])("moves a legend at %s below a top title", (_name, legend) => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: { text: "Sales" },
+      legend,
+      series: [],
     })
+
+    expect(result.legend).toEqual({ ...legend, top: legendBelowTitle })
+    expect((result.grid as Record<string, unknown>).top).toBe(
+      legendBelowTitle + legendRow
+    )
+  })
+
+  it("leaves room for a title's subtext above a moved legend", () => {
+    const subtextRoom = 10 + convertRemToPx(theme.fontSizes.twoSm)
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: [
+        { text: "Sales", subtext: "per day" },
+        // Must NOT count: a hidden or bottom title's subtext.
+        { text: "Hidden", subtext: "x", show: false },
+        { text: "Bottom", subtext: "y", bottom: 0 },
+      ],
+      legend: [{ top: "top" }, { top: 0, right: 0 }],
+      series: [],
+    })
+
+    expect(result.legend).toEqual([
+      { top: legendBelowTitle + subtextRoom },
+      { top: 0, right: 0 },
+    ])
+    expect((result.grid as Record<string, unknown>).top).toBe(
+      legendBelowTitle + subtextRoom + legendRow
+    )
+  })
+
+  it.each([
+    ["sits to one side", { top: 0, right: 0 }],
+    ["is left-aligned", { top: 0, left: "left" }],
+    ["sits lower down", { top: 40 }],
+    ["is vertical", { top: 0, orient: "vertical" }],
+    ["is hidden", { top: 0, show: false }],
+  ])("leaves a top legend that %s in place", (_name, legend) => {
+    const result = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: { text: "Sales" },
+      legend,
+      series: [],
+    })
+
+    expect(result.legend).toEqual(legend)
+    // Nothing was stacked, so the title keeps ECharts' default top margin.
+    expect((result.grid as Record<string, unknown>).top).toBeUndefined()
+  })
+
+  it("keeps a top legend in place without a top title, a single grid, or theme Streamlit, and keeps a spec grid.top", () => {
+    const noTitle = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      legend: { top: 0 },
+      series: [],
+    })
+    expect(noTitle.legend).toEqual({ top: 0 })
+    expect((noTitle.grid as Record<string, unknown>).top).toBeUndefined()
+
+    const bottomTitle = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: { text: "Sales", bottom: 0 },
+      legend: { top: 0 },
+      series: [],
+    })
+    expect(bottomTitle.legend).toEqual({ top: 0 })
+
+    // Pie and funnel series don't move down to clear a moved legend.
+    const pie = applyDefaults({
+      title: { text: "Share" },
+      legend: { top: 0 },
+      series: [{ type: "pie", data: [] }],
+    })
+    expect(pie.legend).toEqual({ top: 0 })
+
+    // Array grids aren't given a grid.top, so the legend stays put.
+    const multiGrid = applyDefaults({
+      xAxis: [{}, { gridIndex: 1 }],
+      yAxis: [{}, { gridIndex: 1 }],
+      grid: [{ bottom: "55%" }, { top: "55%" }],
+      title: { text: "Price" },
+      legend: { top: 0 },
+      series: [],
+    })
+    expect(multiGrid.legend).toEqual({ top: 0 })
+
+    // The legend still moves, but the spec's grid.top wins.
+    const userGridTop = applyDefaults({
+      xAxis: {},
+      yAxis: {},
+      title: { text: "Sales" },
+      legend: { top: 0 },
+      grid: { top: 120 },
+      series: [],
+    })
+    expect(userGridTop.legend).toEqual({ top: legendBelowTitle })
+    expect((userGridTop.grid as Record<string, unknown>).top).toBe(120)
+
+    const unthemed = applyDefaults(
+      {
+        xAxis: {},
+        yAxis: {},
+        title: { text: "Sales" },
+        legend: { top: 0 },
+        series: [],
+      },
+      ""
+    )
+    expect(unthemed.legend).toEqual({ top: 0 })
+    expect(unthemed.grid).toBeUndefined()
   })
 
   it("does not lift a legend the user pinned to the bottom", () => {
@@ -1404,6 +1588,235 @@ describe("applyStreamlitOptionDefaults", () => {
     expect((unthemed.series as unknown[])[0]).toBe(funnel)
   })
 
+  it("drops the breadcrumb room only from a treemap without a breadcrumb", () => {
+    const shown = { type: "treemap", data: [] }
+    const pinned = {
+      type: "treemap",
+      breadcrumb: { show: false },
+      bottom: 30,
+      data: [],
+    }
+    const sized = {
+      type: "treemap",
+      breadcrumb: { show: false },
+      height: 100,
+      data: [],
+    }
+    const hidden = { type: "treemap", breadcrumb: { show: false }, data: [] }
+    const result = applyDefaults({
+      series: [shown, pinned, sized, hidden],
+    })
+
+    const series = result.series as Array<Record<string, unknown>>
+    // The theme covers a treemap with a breadcrumb.
+    expect(series[0]).toBe(shown)
+    // Must NOT happen: a spec bottom or height is rewritten.
+    expect(series[1]).toBe(pinned)
+    expect(series[2]).toBe(sized)
+    expect(series[3]).toEqual({
+      ...hidden,
+      bottom: convertRemToPx(theme.spacing.sm),
+    })
+
+    const unthemed = applyDefaults({ series: [hidden] }, "")
+    expect((unthemed.series as unknown[])[0]).toBe(hidden)
+  })
+
+  it("moves a treemap's top inset below a top title or breadcrumb", () => {
+    const inset = convertRemToPx(theme.spacing.sm)
+    const breadcrumbRoom = inset + 22 + inset
+    const plain = { type: "treemap", data: [] }
+    const topBreadcrumb = { type: "treemap", breadcrumb: { top: 0 }, data: [] }
+    const pinnedTop = { type: "treemap", top: 30, data: [] }
+
+    const titled = applyDefaults({
+      title: { text: "Files" },
+      series: [plain, topBreadcrumb, pinnedTop],
+    })
+    const titledSeries = titled.series as Array<Record<string, unknown>>
+    expect(titledSeries[0]).toEqual({ ...plain, top: legendBelowTitle })
+    // A top breadcrumb takes the breadcrumb room from the bottom to the top.
+    expect(titledSeries[1]).toEqual({
+      ...topBreadcrumb,
+      top: breadcrumbRoom,
+      bottom: inset,
+    })
+    // Must NOT happen: a spec top is rewritten.
+    expect(titledSeries[2]).toBe(pinnedTop)
+
+    const timeline = applyDefaults({
+      baseOption: { title: { text: "Files" }, timeline: {} },
+      options: [{ series: [plain] }],
+    })
+    expect(
+      (timeline.options as Array<{ series: unknown[] }>)[0].series
+    ).toEqual([{ ...plain, top: legendBelowTitle }])
+
+    const bottomTitle = applyDefaults({
+      title: { text: "Files", bottom: 0 },
+      series: [plain],
+    })
+    expect((bottomTitle.series as unknown[])[0]).toBe(plain)
+  })
+
+  describe("markLine labels", () => {
+    const markLineData = (
+      result: EChartsOptionObject,
+      seriesIndex = 0
+    ): unknown[] =>
+      (
+        (result.series as Array<Record<string, unknown>>)[seriesIndex]
+          .markLine as { data: unknown[] }
+      ).data
+
+    it("keeps horizontal line labels inside the plot", () => {
+      const target = { yAxis: 0.04, name: "target" }
+      const result = applyDefaults({
+        xAxis: { type: "time" },
+        yAxis: { type: "value" },
+        series: [
+          {
+            type: "line",
+            markLine: {
+              label: { formatter: "{b}" },
+              data: [
+                target,
+                { xAxis: "2026-01-02", name: "deploy" },
+                { type: "average" },
+                { yAxis: 1, label: { color: "red" } },
+              ],
+            },
+          },
+        ],
+      })
+
+      expect(markLineData(result)).toEqual([
+        { ...target, label: { position: "insideEndTop" } },
+        // A vertical line's end label sits above the plot.
+        { xAxis: "2026-01-02", name: "deploy" },
+        { type: "average", label: { position: "insideEndTop" } },
+        { yAxis: 1, label: { color: "red", position: "insideEndTop" } },
+      ])
+      expect(target).toEqual({ yAxis: 0.04, name: "target" })
+      // The markLine's own label keys stay as written.
+      expect(
+        (
+          (result.series as Array<Record<string, unknown>>)[0].markLine as {
+            label: unknown
+          }
+        ).label
+      ).toEqual({ formatter: "{b}" })
+    })
+
+    it("keeps author label positions and leaves segments alone", () => {
+      const segment = [{ coord: [0, 1] }, { coord: [1, 2] }]
+      const positioned = { yAxis: 1, label: { position: "middle" } }
+      const statByDim = { type: "max", valueDim: "x" }
+      const series = [
+        {
+          type: "line",
+          markLine: { data: [segment, positioned, statByDim] },
+        },
+        {
+          type: "line",
+          markLine: { label: { position: "start" }, data: [{ yAxis: 1 }] },
+        },
+        {
+          type: "line",
+          coordinateSystem: "polar",
+          markLine: { data: [{ yAxis: 1 }] },
+        },
+      ]
+      const result = applyDefaults({
+        xAxis: { type: "category" },
+        yAxis: { type: "value" },
+        series,
+      })
+
+      const resultSeries = result.series as unknown[]
+      expect(resultSeries[0]).toBe(series[0])
+      expect(resultSeries[1]).toBe(series[1])
+      expect(resultSeries[2]).toBe(series[2])
+
+      const unthemed = applyDefaults(
+        {
+          xAxis: { type: "category" },
+          yAxis: { type: "value" },
+          series: [{ type: "line", markLine: { data: [{ yAxis: 1 }] } }],
+        },
+        ""
+      )
+      expect(markLineData(unthemed)).toEqual([{ yAxis: 1 }])
+    })
+
+    it.each([
+      [
+        "a horizontal bar chart",
+        { type: "value" },
+        { type: "category", data: ["A"] },
+        false,
+      ],
+      ["a category x axis", { data: ["A"] }, { type: "value" }, true],
+      ["two value axes", { type: "value" }, {}, true],
+      ["a time y axis", { type: "value" }, { type: "time" }, false],
+      ["several y axes", { type: "category" }, [{}, {}], false],
+    ])(
+      "orients statistic lines on %s like ECharts",
+      (_name, xAxis, yAxis, horizontal) => {
+        const result = applyDefaults({
+          xAxis,
+          yAxis,
+          series: [
+            {
+              type: "bar",
+              markLine: { data: [{ type: "average" }, { xAxis: 1 }] },
+            },
+          ],
+        })
+
+        expect(markLineData(result)[0]).toEqual(
+          horizontal
+            ? { type: "average", label: { position: "insideEndTop" } }
+            : { type: "average" }
+        )
+        // An `xAxis` entry is always a vertical line.
+        expect(markLineData(result)[1]).toEqual({ xAxis: 1 })
+      }
+    )
+
+    it("labels a category line on a horizontal bar chart inside the plot", () => {
+      const result = applyDefaults({
+        xAxis: { type: "value" },
+        yAxis: { type: "category", data: ["A", "B"] },
+        series: [{ type: "bar", markLine: { data: [{ yAxis: "B" }] } }],
+      })
+
+      expect(markLineData(result)).toEqual([
+        { yAxis: "B", label: { position: "insideEndTop" } },
+      ])
+    })
+
+    it("labels horizontal lines in timeline variants", () => {
+      const markLine = { data: [{ type: "max" }] }
+      const result = applyDefaults({
+        baseOption: {
+          xAxis: { type: "category" },
+          yAxis: { type: "value" },
+          series: [{ type: "line", markLine }],
+        },
+        options: [{ series: [{ markLine: { data: [{ yAxis: 2 }] } }] }],
+      })
+
+      const expected = { label: { position: "insideEndTop" } }
+      expect(markLineData(result.baseOption as EChartsOptionObject)).toEqual([
+        { type: "max", ...expected },
+      ])
+      expect(
+        markLineData((result.options as EChartsOptionObject[])[0])
+      ).toEqual([{ yAxis: 2, ...expected }])
+    })
+  })
+
   it("leaves an array of grids untouched", () => {
     const grids = [{ left: 1 }, { left: 2 }]
     const result = applyDefaults(
@@ -1650,6 +2063,40 @@ describe("optionHasWheelRoam", () => {
     ).toBe(true)
   })
 
+  it("counts a treemap's default roam and explicit wheel roam", () => {
+    expect(optionHasWheelRoam({ series: [{ type: "treemap" }] })).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "scale" }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: false }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "move" }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "treemap", roam: "pan" }] })
+    ).toBe(false)
+    expect(
+      optionHasWheelRoam({ baseOption: { series: [{ type: "treemap" }] } })
+    ).toBe(true)
+  })
+
+  it("counts tree and sankey only when they opt into wheel roam", () => {
+    expect(optionHasWheelRoam({ series: [{ type: "tree" }] })).toBe(false)
+    expect(optionHasWheelRoam({ series: [{ type: "sankey" }] })).toBe(false)
+    expect(optionHasWheelRoam({ series: [{ type: "graph" }] })).toBe(false)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "tree", roam: "zoom" }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "sankey", roam: true }] })
+    ).toBe(true)
+    expect(
+      optionHasWheelRoam({ series: [{ type: "sankey", roam: "move" }] })
+    ).toBe(false)
+  })
+
   it("ignores drag-only roam and charts without it", () => {
     expect(optionHasWheelRoam(null)).toBe(false)
     expect(optionHasWheelRoam({ geo: { roam: false } })).toBe(false)
@@ -1675,6 +2122,9 @@ describe("optionHasWheelRoam", () => {
     expect(wheelRoamSkipsSettle(roam, pinch)).toBe(true)
     expect(wheelRoamSkipsSettle(roam, plain)).toBe(false)
     expect(wheelRoamSkipsSettle({ geo: { roam: "move" } }, pinch)).toBe(false)
+    expect(
+      wheelRoamSkipsSettle({ series: [{ type: "treemap" }] }, pinch)
+    ).toBe(true)
     expect(wheelRoamSkipsSettle(null, pinch)).toBe(false)
   })
 })

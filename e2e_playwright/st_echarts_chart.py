@@ -612,6 +612,47 @@ with st.container(key="c_daily_time_tooltip"):
         height=_HEIGHT,
     )
 
+# An item tooltip that lists several dataframe columns through
+# ``encode.tooltip``. The single symbol is large enough to cover the plot
+# center, so hovering the chart opens its tooltip.
+with st.container(key="c_encode_tooltip"):
+    st.echarts_chart(
+        {
+            "dataset": {
+                "source": pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(["2026-01-02"]),
+                        "pct": [0.045],
+                        "size": [10_545_470.2],
+                        "sha": ["aaa1111"],
+                    }
+                )
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "min": 0, "max": 0.09},
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-encode-tooltip",
+                "valueFormatter": "percent",
+            },
+            "series": [
+                {
+                    "type": "scatter",
+                    "symbolSize": 150,
+                    "encode": {
+                        "x": "date",
+                        "y": "pct",
+                        "tooltip": ["pct", "date", "sha"],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="encode_tooltip",
+        height=_HEIGHT,
+        renderer="svg",
+    )
+
 # Large-data defaults. The SVG renderer makes the drawn shapes countable: large
 # mode draws a bar series as a few paths, and hidden line symbols draw nothing.
 _dense_rng = np.random.default_rng(17)
@@ -710,5 +751,88 @@ with st.container(key="c_narrow_time_axis", width=320):
             **_NO_ANIM,
         },
         renderer="svg",
+        height=_HEIGHT,
+    )
+
+# A default treemap. ECharts turns on wheel roam for treemaps unless the spec
+# sets ``roam: false``.
+with st.container(key="c_treemap"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "Alpha", "value": 40},
+                        {"name": "Beta", "value": 30},
+                        {"name": "Gamma", "value": 20},
+                        {"name": "Delta", "value": 10},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# Layout defaults: a top legend moves below a centered title and subtitle, a
+# treemap fills the chart above its breadcrumb, and a horizontal reference
+# line keeps its end label inside the plot.
+with st.container(key="c_title_top_legend"):
+    st.echarts_chart(
+        {
+            "title": {"text": "Revenue", "subtext": "per quarter"},
+            "legend": {"top": "top"},
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {"name": "Revenue", "type": "line", "data": [820, 932, 901, 934]},
+                {"name": "Cost", "type": "line", "data": [500, 610, 550, 700]},
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_treemap_layout"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "vendor", "value": 60},
+                        {"name": "app", "value": 25},
+                        {"name": "lib", "value": 15},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_reference_lines"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {
+                    "type": "line",
+                    "data": [820, 932, 901, 934],
+                    "markLine": {
+                        "symbol": "none",
+                        "label": {"formatter": "{b}"},
+                        "data": [
+                            {"yAxis": 750, "name": "target"},
+                            {"type": "average", "name": "average"},
+                            {"xAxis": "Q3", "name": "launch"},
+                        ],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
         height=_HEIGHT,
     )
