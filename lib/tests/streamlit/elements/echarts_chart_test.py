@@ -1383,6 +1383,7 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
         (np.uint32(7), 7),
         (np.float32(1.5), 1.5),
         (np.bool_(False), False),
+        # np.str_ subclasses str, so json encodes it without the conversion hook.
         (np.str_("a"), "a"),
         (decimal.Decimal("1.25"), 1.25),
         # Naive datetimes keep their wall-clock time without an offset.
@@ -1402,6 +1403,8 @@ def test_serialize_option_rejects_arbitrary_object() -> None:
         (dt.date(2024, 1, 2), "2024-01-02"),
         (dt.time(3, 4, 5), "03:04:05"),
         (dt.time(3, 4, 5, 250000), "03:04:05.250"),
+        # A timezone-aware time drops its tzinfo; a time has no date to shift.
+        (dt.time(3, 4, 5, tzinfo=dt.UTC), "03:04:05"),
         # Durations become milliseconds.
         (dt.timedelta(seconds=1.5), 1500.0),
         (pd.Timedelta(minutes=1), 60000.0),
