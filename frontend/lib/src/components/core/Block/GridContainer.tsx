@@ -702,15 +702,14 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           <FlexContextProvider
             direction={Direction.VERTICAL}
             isDirectlyInColumn
-            fillAvailableHeight={hasFixedRowHeight}
-            fillJustify={
-              hasFixedRowHeight
-                ? gridCellJustifyContent(verticalAlignment)
-                : undefined
-            }
-            // Direct children of a fixed-height cell (not wrapped in
-            // grid.cell()) still need a definite height so stretch charts
-            // fill the track instead of falling back to their default size.
+            // A grid.cell() block fills its cell in both row-height modes,
+            // so stretch containers in it match the row like direct
+            // children do. It then aligns its own children.
+            fillAvailableHeight
+            fillJustify={gridCellJustifyContent(verticalAlignment)}
+            // Only a fixed row height is definite. Stretch charts in a
+            // content row keep their default size, because the row's
+            // height comes from its content.
             hasFixedHeight={hasFixedRowHeight}
             parentContext={parentContext}
           >

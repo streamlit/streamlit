@@ -1982,6 +1982,43 @@ describe("GridContainer Component", () => {
     expect(label).not.toHaveStyle({ flex: "1 1 0%" })
   })
 
+  function makeGridCellWithChildren(children: AppNode[]): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        vertical: {},
+        gridCell: {},
+      })
+    )
+  }
+
+  it.each([
+    ["a content", BlockProto.GridContainer.RowHeightMode.CONTENT, "false"],
+    ["a fixed", BlockProto.GridContainer.RowHeightMode.FIXED, "true"],
+  ])(
+    "gives grid.cell() children a definite height only in %s row",
+    (_label, rowHeightMode, expected) => {
+      const collectElements = vi
+        .spyOn(RenderNodeVisitor, "collectReactElements")
+        .mockReturnValue([<DefiniteHeightProbe key="probe" />])
+      try {
+        const block = makeGridBlock(
+          { rowHeightMode, rowHeightConfig: { pixelHeight: 240 } },
+          [makeGridCellWithChildren([makeTextElement("body")])]
+        )
+        renderWithContexts(makeGridNodeRendererComponent(block))
+
+        expect(screen.getByTestId("definiteHeightProbe")).toHaveTextContent(
+          expected
+        )
+      } finally {
+        collectElements.mockRestore()
+      }
+    }
+  )
+
   function mockMeasuredHeights(): () => void {
     const spy = vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
@@ -2221,35 +2258,31 @@ describe("GridContainer Component", () => {
     }
   })
 
-  it("keeps a grid.cell() block content-sized when the row height is content", () => {
-    const cell = new BlockNode(
-      FAKE_SCRIPT_HASH,
-      [makeTextElement("Short")],
-      new BlockProto({
-        allowEmpty: true,
-        vertical: {},
-        gridCell: {},
-      })
-    )
+  it("fills a content row with a grid.cell() block and keeps the alignment", () => {
     const block = makeGridBlock(
       {
         rowHeightMode: BlockProto.GridContainer.RowHeightMode.CONTENT,
         verticalAlignment: BlockProto.GridContainer.VerticalAlignment.CENTER,
       },
-      [cell]
+      [makeGridCellWithChildren([makeTextElement("chart", true)])]
     )
     renderWithContexts(makeGridNodeRendererComponent(block))
 
     const gridCell = screen.getByTestId("stGridCell")
     expect(within(gridCell).getByTestId("stLayoutWrapper")).toHaveStyle({
-      height: "auto",
+      flex: "1 1 auto",
+      minHeight: "0",
     })
     const cellBlock = within(gridCell).getByTestId("stVerticalBlock")
-    expect(cellBlock).not.toHaveStyle({
-      height: "100%",
-    })
-    // A content-height block prints as normal flow.
-    expect(printDeclarations(cellBlock)).toContain("display:block")
+    expect(cellBlock).toHaveStyle({ justifyContent: "safe center" })
+    // The row stretches the cell, like a column, so print keeps the flex
+    // alignment.
+    expect(printDeclarations(cellBlock)).not.toContain("display:block")
+    // A content row has no definite height, so stretch children keep their
+    // own flex instead of sharing the cell.
+    expect(within(gridCell).getByTestId("stElementContainer")).not.toHaveStyle(
+      { flex: "1 1 0%" }
+    )
     expect(screen.getByTestId("stGridCellBody")).toHaveStyle(
       "display: contents"
     )

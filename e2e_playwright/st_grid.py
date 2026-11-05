@@ -72,3 +72,23 @@ with stretch_grid.cell():
     st.subheader("Revenue")
     st.line_chart({"a": [1, 3, 2], "b": [2, 1, 4]}, height="stretch")
 stretch_grid.cell().bar_chart({"a": [1, 3, 2]}, height="stretch")
+
+# Content rows: a stretch container fills the row both as a direct grid child
+# and inside grid.cell().
+st.subheader("Stretch inside a content-height cell")
+content_grid = st.grid(3, key="content_stretch")
+with content_grid.cell(column_span=2).container(
+    border=True, height="stretch", key="wide"
+):
+    st.write("one line")
+with content_grid.container(border=True, height="stretch", key="tall"):
+    for i in range(6):
+        st.write(f"line {i}")
+
+# vertical_alignment still moves short grid.cell() content in a content row.
+aligned_grid = st.grid(2, vertical_alignment="bottom", key="content_aligned")
+with aligned_grid.cell(), st.container(key="short"):
+    st.write("short")
+with aligned_grid.container(border=True, key="aligned_tall"):
+    for i in range(6):
+        st.write(f"row {i}")
