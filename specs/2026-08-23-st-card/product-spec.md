@@ -18,7 +18,7 @@ fill the height of their row by default, so side-by-side cards line up in `st.co
 
 Dashboards are built from panels: a chart or table with a short title, a line of context,
 and a few compact controls on the right of the title row. Streamlit apps build each panel
-by hand. The [BI dashboard demo](https://github.com/streamlit/feature-demos/tree/main/bi-dashboard)
+by hand. The [business intelligence (BI) dashboard demo](https://github.com/streamlit/feature-demos/tree/main/bi-dashboard)
 uses this helper for all 13 of its panels:
 
 ```python
@@ -141,9 +141,11 @@ st.card(
 | `width` | Same values and behavior as `st.container`. |
 | `height` | Same values as `st.container`, with a `"stretch"` default. |
 
-`label` is the only positional parameter. As with `st.expander`, `None` raises
-`StreamlitMissingRequiredParameterError`. As with widget labels, an empty string logs the
-standard accessibility warning. An untitled bordered group is `st.container(border=True)`.
+`label` is the only positional parameter. `None` raises
+`StreamlitMissingRequiredParameterError`, as in `st.expander`. An empty string logs the
+standard label accessibility warning, as for widget labels. An empty or whitespace-only
+`caption` or `help` counts as not set. For an untitled bordered group, use
+`st.container(border=True)`.
 
 `CardContainer` is a container with one extra member, `actions`, the header's controls
 slot. `card.actions` always refers to the same container. Like other containers, the card
@@ -166,21 +168,22 @@ A card has two regions:
    right.
 2. **Body:** the elements written to the card, with normal element spacing.
 
-A card with an empty body renders only its header, without an empty padded body. A body
-that holds only a pending skeleton or fragment counts as content, so the card keeps its
-size while it loads.
+A card with an empty body renders only its header, without an empty padded body. A
+skeleton in the body counts as content, so it can hold the body's height while the data
+loads (see [Loading and fragments](#loading-and-fragments)).
 
 ### Header layout and overflow
 
-The design target is a card about 200 pixels wide, the default minimum column width of
-`st.grid`.
+The header layout must work in a card about `12.5rem` wide (200 pixels at the default
+font size), the default minimum column width of `st.grid`. At that width, actions wider
+than an icon button usually move to their own row (see narrow cards below).
 
 | Part | Behavior |
 | --- | --- |
 | Label | One line. An overflowing label ends in an ellipsis. The icon and help icon stay visible. |
 | Caption | Below the label, in the `st.caption` style. It wraps to at most two lines, then ends in an ellipsis. |
 | Actions | At the top right, next to the label. A control taller than the label extends down beside the caption instead of pushing it down, so actions stay next to the title when the caption wraps. |
-| Height | The header is at least one standard widget height (`2.5rem`), so adding a button or segmented control does not make it taller. |
+| Height | The header is at least one standard widget height (`2.5rem`), so a button or segmented control beside the label does not make it taller. |
 | Narrow cards | The label keeps a minimum width (about `8rem`; the final value comes from design). Below that, the actions move to their own row under the caption. |
 | Print | The label and caption wrap instead of ending in an ellipsis, as `st.metric` does. |
 
@@ -214,7 +217,7 @@ These rules keep cards in a row aligned:
   `st.download_button`, `st.link_button`, `st.menu_button`, `st.popover`,
   `st.segmented_control`, `st.pills`, and `st.toggle`. Other elements are not rejected, but
   they can break the header layout. If the items do not fit on one row, they wrap within
-  the actions area.
+  the actions area. An empty `card.actions` takes no width and adds no row.
 - **Many controls:** Icon-only tertiary buttons with `help` keep a busy header compact, and
   an `st.menu_button` can collect the rest in a "More" menu. A second row of controls, or
   `st.tabs` that switch between a chart, its data, and its query, goes at the top of the
@@ -295,11 +298,12 @@ parameters.
 
 ### Visual language
 
-The card reuses the `st.expander` frame (border, radius, padding, and icon placement)
-without any expander interaction. It has no chevron, hover state, or pointer cursor. The
-label uses the body font size with a semibold weight. It is not a heading, so it has no
-anchor and is not part of the page's heading outline. Exact spacing and tokens are finalized
-in the design system.
+The card's border, radius, and padding are those of `st.container(border=True)`, as
+described in [Surface](#surface). From `st.expander`, the card takes only the icon
+placement in the header, without any expander interaction: it has no chevron, hover state,
+or pointer cursor. The label uses the body font size with a semibold weight. It is not a
+heading, so it has no anchor and is not part of the page's heading outline. Exact spacing
+and tokens are finalized in the design system.
 
 ### Sizing and layout
 
@@ -311,21 +315,27 @@ in the design system.
   sidebar, and tabs, it is as tall as its content. Stretch never clips or scrolls content.
 - `height="content"` grows with the content.
 - An integer height creates a fixed-height card. The header stays pinned and the body
-  scrolls. This differs from `st.container`, which has no header and scrolls as a whole.
+  scrolls. Body elements with `height="stretch"` fill the space below the header. This
+  differs from `st.container`, which has no header and scrolls as a whole.
 
 In `st.grid`, each card is one cell: `grid.card(...)`. A wide card uses
 `grid.cell(column_span=2).card(...)`. For the wide card to match its neighbors in a
-content-height row, `grid.cell()` must fill the row the way direct grid children do; a grid
-fix for this is in progress. Fixed uneven splits use `st.columns([3, 2])`.
+content-height row, `grid.cell()` must fill the row the way direct grid children do, which
+[#17891](https://github.com/streamlit/streamlit/pull/17891) fixes. Fixed uneven splits use
+`st.columns([3, 2])`.
 
 ### Loading and fragments
 
 Cards fit the layout-first loading model proposed in
 [#17756](https://github.com/streamlit/streamlit/pull/17756):
 
-- **The header paints with the layout.** A card created in the main script draws its
-  header right away. The body can then load in a fragment or a `with st.skeleton()` block,
-  and the card keeps its size.
+- **The header shows first.** A card created in the main script shows its header as soon
+  as the script reaches it. The body can load afterward in a fragment or behind a
+  skeleton.
+- **Only a known height reserves space.** A pending fragment reserves no space, and
+  `with st.skeleton()` shows its placeholder only after a short delay. To keep the card's
+  height while the body loads, use a standalone `st.skeleton(height=...)`, an integer card
+  height, or a grid row with a fixed `row_height`.
 - **Header controls can rerun just the body.** Give the body fragment a `key` and trigger
   it from the control with an
   [event-scoped rerun](../2026-06-23-event-scoped-fragment-reruns/product-spec.md). The
@@ -358,8 +368,12 @@ with st.card("MRR by plan", caption="Monthly recurring revenue in $K") as card:
 
 ### Accessibility
 
-- The card is a group whose accessible name is the label and whose accessible description
-  is the caption.
+- The card is a group. Its accessible name is the plain text of the label and its
+  accessible description is the plain text of the caption, without Markdown syntax or
+  icon shortcodes, as for other labels.
+- The card is not a heading or a landmark region. A dashboard can hold a dozen or more
+  cards, and listing each one would crowd the page's heading and landmark lists. Headings
+  such as `st.subheader` above a group of cards give the page a structure to skim.
 - The card itself is not focusable. Actions and body elements keep their own names and
   focus behavior.
 - Truncated text follows the rules in [Header layout and overflow](#header-layout-and-overflow).
@@ -388,13 +402,14 @@ With the theme above, this renders white, equal-height cards on a gray page.
 import streamlit as st
 
 with st.card("Upcoming renewals", caption="Next 90 days, soonest first") as card:
-    with st.skeleton(height=340):
-        renewals = load_renewals()
-        st.dataframe(renewals, height=340)
+    table = st.skeleton(height=340)
+    renewals = load_renewals()
+    table.dataframe(renewals, height=340)
     card.actions.badge(f"{len(renewals)} accounts", color="gray")
 ```
 
-The header appears immediately. The table and badge appear when the data is ready.
+The header and a 340-pixel skeleton appear immediately. When the data is ready, the table
+replaces the skeleton and the badge appears.
 
 ## Alternatives considered
 
@@ -432,8 +447,9 @@ and it can be filled after the body loads.
 - **A `header, body = st.card(...)` tuple**, like `st.columns`, is awkward with `with`.
   Every card would also pay for a header container it may not use.
 
-The slot is named `actions`, the term Material Design uses. `card.header` is taken, since
-every container exposes `st.header` as a method. `toolbar` would be confused with element
+The slot is named `actions`, matching the header `action` slot of MUI's `CardHeader` and
+the `action` proposed for `st.metric` in #13212. `card.header` is taken, since every
+container exposes `st.header` as a method. `toolbar` would be confused with element
 toolbars.
 
 ### Surface: outline by default vs. adaptive fill
