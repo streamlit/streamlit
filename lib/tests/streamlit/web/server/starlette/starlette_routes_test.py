@@ -558,7 +558,7 @@ class TestEnsureXsrfCookie:
             "server.xsrfCookiePartitioned": True,
         }
     )
-    def test_partitioned_sets_no_cookie_when_xsrf_disabled(self) -> None:
+    def test_partitioned_does_not_set_cookie_when_xsrf_disabled(self) -> None:
         """Partitioned does not cause a cookie to be set when XSRF is off."""
         request = MagicMock()
         request.cookies = {}

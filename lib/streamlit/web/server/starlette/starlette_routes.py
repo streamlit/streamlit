@@ -362,12 +362,11 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         else "lax",
         "Lax",
     )
-    # Browsers reject SameSite=None cookies without the Secure flag, so force
-    # Secure in that case.
     # Only a real True enables Partitioned; config validation rejects other
     # values, and this keeps a stray value from being coerced into it.
     partitioned = config.get_option("server.xsrfCookiePartitioned") is True
-    # Browsers also reject Partitioned cookies without the Secure flag.
+    # Browsers reject SameSite=None and Partitioned cookies without the Secure
+    # flag, so force Secure in both cases.
     secure = (
         bool(config.get_option("server.sslCertFile"))
         or same_site == "None"
@@ -428,7 +427,8 @@ def _set_unquoted_cookie(
         Whether to add the Secure flag (should be True when using HTTPS).
     partitioned
         Whether to add the Partitioned attribute. Browsers drop a partitioned
-        cookie that is not also Secure, so `secure` must be True when this is.
+        cookie that is not also Secure, so `secure` must be True when this is
+        True.
     """
     if partitioned and not secure:
         raise ValueError("A Partitioned cookie must also be Secure.")
