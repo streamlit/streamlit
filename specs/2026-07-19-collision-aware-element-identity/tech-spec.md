@@ -15,9 +15,9 @@ autoplay media.
 
 This spec proposes collision-aware identity resolution for **keyless, frontend-state
 elements**. The existing content-derived ID remains unchanged for every non-colliding app.
-When identical elements coexist at different rendered placements, later instances receive a
-deterministic placement-derived ID; repeated writes to the same placement reuse one ID and
-behave as an update. Explicit keys and backend widgets retain today's strict uniqueness
+When identical elements coexist, later instances receive a deterministic ID derived from
+their *placement* (page, writing fragment, and final delta path); repeated writes of the same
+element to the same placement reuse one ID and behave as an update. Explicit keys and backend widgets retain today's strict uniqueness
 rules. The change requires no public parameters, configuration, or protobuf fields.
 
 ## Problem
@@ -28,7 +28,8 @@ rules. The change requires no public parameters, configuration, or protobuf fiel
 two jobs synchronously:
 
 1. It hashes the element type, user key, active script hash, and command-specific stable
-   parameters. For keyless widgets it also incorporates the form and root container.
+   parameters. When a `DeltaGenerator` is passed (and an explicit key doesn't replace the
+   command kwargs), it also incorporates the form ID and the root container (main or sidebar).
 2. It registers the resulting `$$ID-<hash>-<user_key>` in the current
    `ScriptRunContext`. Reusing either the generated ID or a user key during the run raises.
 
@@ -72,13 +73,15 @@ structural placement only to resolve a collision that cannot otherwise render to
 
 ## Goals and invariants
 
-1. Existing apps that produce no duplicate IDs keep byte-for-byte identical IDs and state.
+1. Existing apps that produce no duplicate IDs keep byte-for-byte identical IDs and state,
+   including when a unique element moves because other content appears above it.
 2. Duplicate explicit user keys continue to raise `StreamlitDuplicateElementKey`.
 3. Backend widgets at different placements continue to raise
    `StreamlitDuplicateElementId` when their automatic IDs collide.
 4. Keyless frontend-state elements can coexist without sharing browser-local state.
-5. Repeated keyless frontend-state writes to the same logical placement are allowed and use
-   one ID.
+5. Repeated keyless writes of an identical frontend-state element to the same placement are
+   allowed and use one ID. Writing different content (a different figure, spec, or config)
+   produces a different base ID and resets frontend state, exactly as today.
 6. Resolved IDs stay stable across full reruns, fragment reruns, cached-message replay, and
    parallel initial execution as long as the element's placement is stable.
 7. Failed or interrupted runs do not discard valid identity assignments.
@@ -109,10 +112,14 @@ class ElementIdentityDomain(Enum):
 - `FRONTEND` means the ID exists for React preservation, frontend-local state, shortcuts,
   or similar browser behavior, but is not registered through `register_widget`.
 
-An explicit `user_key` is always strict, regardless of domain. The domain is an internal
-argument or descriptor and is not exposed in an `st.*` signature.
+An explicit `user_key` is always strict, regardless of domain: keyed calls keep using the
+existing synchronous `compute_and_register_element_id` path and its shared per-run
+`widget_user_keys_this_run` / `widget_ids_this_run` sets. This keeps keys unique across
+element types and raises `StreamlitDuplicateElementKey` before side effects such as media
+file registration. The domain is an internal argument or descriptor and is not exposed in an
+`st.*` signature.
 
-Initial `FRONTEND` call sites:
+Initial `FRONTEND` call sites (keyless calls only):
 
 - `st.plotly_chart(..., on_select="ignore")`
 - `st.audio(..., autoplay=True)`
@@ -133,8 +140,7 @@ wrapper, and final delta path:
 @dataclass(frozen=True)
 class FrontendElementIdentity:
     element_type: str
-    base_id: str
-    user_key: str | None
+    base_id: str  # Computed exactly as today, always keyless.
 ```
 
 `DeltaGenerator._enqueue` resolves the descriptor immediately before it copies the element
@@ -142,22 +148,34 @@ proto into a `ForwardMsg`, writes the resolved ID to that copy, and advances the
 ensures the placement is the path actually sent to the frontend, including writes through
 fragment outside-container wrappers.
 
+Elements without a descriptor skip this step with a single attribute check, and the registry
+lock is taken only for frontend-identity elements, so the `_enqueue` hot path is unchanged
+for everything else. Without a `ScriptRunContext` (bare execution), the descriptor resolves
+to its base ID without registration, matching today's behavior.
+
 This also makes cached replay correct. `ElementMsgData` in
 `cached_message_replay.py` stores the unresolved descriptor alongside the message. Every
 replay resolves the identity against its current target instead of reusing the resolved ID
 from the cache miss's original location. The cached proto remains immutable.
+
+This is a behavior change for cache hits: today replay reuses the stored ID without
+registering it, so a cached chart replayed next to an identical uncached chart silently sends
+duplicate IDs. The stored `base_id` still embeds the cache miss's page hash, form, and root
+container; placement disambiguates any resulting collision, so this needs no further handling.
 
 No protobuf change is needed: the browser continues to receive a normal resolved ID in the
 existing element-specific `id` field.
 
 ### 3. Resolve keyless frontend collisions by structural placement
 
-Add a thread-safe `FrontendElementIdRegistry` owned by `AppSession` and passed by reference
-through each `ScriptRunner` to its `ScriptRunContext`. `AppSession` ownership matters because
-fast reruns can replace the `ScriptRunner`; storing the registry only on the run context would
-lose assignments even though the browser's frontend-local state is still alive. The registry
-persists for the session so assignments made during a full run remain available when only one
-fragment reruns.
+Add a thread-safe `FrontendElementIdRegistry`. `AppSession` is its single owner and passes
+it by reference to every `ScriptRunner`, which hands it to each run's `ScriptRunContext`.
+`AppSession` ownership matters because fast reruns replace the `ScriptRunner` and every run
+builds a fresh `ScriptRunContext`; a registry stored on either would lose assignments even
+though the browser's frontend-local state is still alive. The registry persists for the
+session so assignments made during a full run remain available when only one fragment reruns.
+`AppTest` has no `AppSession`, so the `AppTest` instance owns the registry and passes it to
+the `LocalScriptRunner` it creates for each `run()`.
 
 A placement is:
 
@@ -170,67 +188,112 @@ makes the ownership boundary explicit. `writing_fragment_id` distinguishes two e
 owners accidentally targeting one path; a repeated write is valid only when both placement
 and owner match.
 
-Resolution is atomic:
+The registry holds `committed` assignments (`base_id -> {placement: resolved_id}`) from
+earlier runs. Each run records its own `claims` in the same shape. Every run has a *scope*:
+the whole app for a full run, or the rerunning fragment and its descendant fragments for a
+fragment run. Committed placements outside the scope stay rendered and keep their IDs.
+
+Resolution runs under the registry lock:
 
 ```python
-def resolve(run_token, descriptor, placement):
-    if descriptor.user_key is not None:
-        register_key_strictly(descriptor.user_key, descriptor.base_id)
-        return descriptor.base_id
+def resolve(run, descriptor, placement):
+    base_id = descriptor.base_id
+    committed = registry.committed.get(base_id, {})
+    claims = run.claims[base_id]
 
-    group = assignments_for(run_token)[descriptor.base_id]
+    if placement in claims:
+        # Repeated write of the same element to one placement.
+        return claims[placement]
 
-    if placement in group:
-        resolved_id = group[placement]
-    elif not group:
-        # Preserve the legacy ID for every non-colliding element.
-        resolved_id = descriptor.base_id
-        group[placement] = resolved_id
-    else:
-        # Keep the standard $$ID-<hash>-None wire format.
-        resolved_id = hash_id(descriptor.base_id, placement)
-        group[placement] = resolved_id
+    # IDs already rendered by this run or by placements outside its scope.
+    held = set(claims.values()) | {
+        resolved for p, resolved in committed.items() if not run.scope_owns(p)
+    }
 
-    register_frontend_claim_for_this_run(resolved_id, placement)
+    resolved_id = committed.get(placement)
+    if resolved_id is None and base_id not in held:
+        # A unique element keeps its legacy ID even after it moves.
+        resolved_id = base_id
+    if resolved_id is None or resolved_id in held:
+        resolved_id = derive_id(base_id, placement)
+
+    claims[placement] = resolved_id
     return resolved_id
 ```
 
-The per-run claim registry allows the same resolved ID to be claimed repeatedly by the same
-placement. A claim from a different placement remains an error, protecting against hash
-collisions and internal routing bugs.
+`derive_id` keeps the standard `$$ID-<hash>-None` wire format. It hashes `base_id` together
+with a canonical, length-prefixed encoding of the placement fields using
+`util.create_fast_hasher`. If a derived ID is ever claimed by a different placement, the run
+raises as an internal error; this guards against hash collisions and routing bugs.
 
-The first rendered instance retains its legacy base ID. Additional instances get IDs derived
-from the base ID and placement. Consequently, unique elements retain their current ability to
-move without losing state, while an ambiguous duplicate group uses positional identity—the
-same fallback React would use for an unkeyed list.
+The rule gives three properties:
+
+- **Unique elements are unchanged.** Only one claim exists per group, so it always receives
+  the legacy base ID, wherever it renders. A chart that moves below a newly shown
+  `st.success()` keeps its ID and frontend state, as it does today.
+- **Stable duplicates keep their IDs.** A placement with a committed assignment reuses it
+  unless an earlier claim in the same run already took that ID (see the trade-offs below).
+  A surviving derived placement is never promoted to the base ID, because that would reset
+  its state.
+- **New duplicates are derived.** Once the base ID is held, every further instance gets an ID
+  derived from its placement—the same positional fallback React uses for an unkeyed list.
+
+#### Accepted trade-offs of positional identity
+
+Within a duplicate group, identity follows claim order and placement, not the Python object:
+
+```python
+if show_extra:
+    st.plotly_chart(fig)  # Duplicate inserted above
+st.plotly_chart(fig)      # Original chart
+```
+
+When `show_extra` becomes true, the inserted chart claims first and takes the base ID; the
+original chart moves to a derived ID and loses its zoom/pan state. Appending the duplicate
+below the original does not have this effect. Likewise, when layout shifts inside a duplicate
+group, one instance can inherit another's assignment. Group members share figure, spec, and
+config, so the impact is limited, and these cases cannot render at all today. Apps that need
+item-stable identity across reordering can pass `key=` to `st.plotly_chart`.
 
 ### 4. Preserve assignments across partial and concurrent reruns
 
-The registry keeps committed assignments plus an isolated provisional overlay for each active
-run. It must not be a set that resets on every script run:
+Each run's `claims` are isolated until the run ends; the committed state is never reset
+wholesale. `ScriptRunner` manages the lifecycle of every run:
 
-- **Run generations:** claims are tagged with a monotonically increasing run token. Parallel
-  workers for one run share one overlay. Cleanup and new assignments are committed only for
-  the latest successfully accepted run in the affected scope. A stopped runner from a
-  fast-rerun handoff cannot reserve the base ID or clean assignments for its replacement.
-- **Full rerun:** all active placements are observed. After a successful run, remove an
-  entire base-ID group only when none of its placements remains active. Do not promote a
-  surviving derived placement to the legacy base ID, because that would reset its state.
-- **Fragment rerun:** reuse assignments from the full run. Only placements owned by the
-  rerunning fragment are eligible for scoped cleanup; assignments belonging to the main
-  script or other fragments remain untouched.
-- **Parallel full run:** resolve claims under one lock. Which new placement receives the
-  legacy base ID may depend on first execution during a brand-new session, but no prior state
-  exists then; the assignment is persisted before later interactions. Existing assignments
-  always win regardless of execution order.
+1. **Start:** the run obtains a monotonically increasing run token and an empty `claims`
+   overlay. Parallel workers for one run share the token and overlay.
+2. **Supersede check:** only the newest run for a scope (the full app or one fragment) may
+   commit. A runner stopped for a fast-rerun handoff cannot commit or clean up for its
+   replacement.
+3. **Finish:** the outcome decides what is committed, mirroring when the frontend clears
+   stale nodes and inactive element state:
+   - *Completed normally:* replace all committed placements in the run's scope with the
+     run's claims. This adds new assignments, prunes in-scope placements that were not
+     rendered (including stale entries inside a still-live group), and drops empty groups.
+   - *Stopped early* (`st.stop()`, uncaught exception; `premature_stop=True` even though
+     `SCRIPT_STOPPED_WITH_SUCCESS` / `FRAGMENT_STOPPED_WITH_SUCCESS` is emitted): merge the
+     claims into the committed state, because the rendered elements stay on screen. Drop
+     only committed placements whose ID the run assigned to a different placement; do not
+     prune anything else.
+   - *Stopped for rerun* (`st.rerun()`, fast rerun) or superseded: discard the claims.
+     Previously committed assignments stay untouched.
+
+Scope-specific notes:
+
+- **Fragment rerun:** the scope covers placements whose `writing_fragment_id` is the
+  rerunning fragment or any descendant fragment that it executed or evicted during the run.
+  Assignments of the main script and unrelated fragments remain untouched.
+- **Parallel execution:** claims resolve under one lock. A unique element has one claim per
+  run, and a duplicate group whose placements are unchanged reuses its committed
+  assignments, so execution order does not matter in either case. Order only matters when a
+  duplicate group gains or moves members within one run; then which instance takes the base
+  ID can depend on worker order, which is the same trade-off described above.
 - **Fast rerun / runner replacement:** the new `ScriptRunner` receives the same
   `AppSession`-owned registry, just as it receives the same session state.
-- **Failed or stopped run:** discard its provisional overlay but retain all previously
-  committed assignments, matching cleanup behavior after premature stops.
 
-The registry stores only identity groups that have been observed in the session. Stale groups
-can be removed after successful full runs. A defensive fixed upper bound can evict the oldest
-fully inactive groups; it is an internal memory safeguard, not a user-facing configuration.
+Because completed runs prune in-scope placements, the committed state is bounded by the
+frontend-identity elements currently rendered in the session; no separate eviction cap is
+needed.
 
 ### 5. Keep widget and explicit-key errors strict
 
@@ -285,7 +348,8 @@ slot.plotly_chart(fig)
 ```
 
 Both calls resolve to the same placement and ID. The later delta replaces the earlier delta,
-and the run does not raise.
+and the run does not raise. This applies to identical content only: drawing a different
+figure into `slot` yields a different base ID, so its frontend state starts fresh, as today.
 
 #### Interactive chart
 
@@ -327,21 +391,23 @@ into structural fallback IDs.
 ### Backend
 
 - `lib/streamlit/runtime/app_session.py`
-  - Own one frontend identity registry for the browser session and provide it to every new
-    `ScriptRunner`, including fast-rerun replacements.
-  - Commit generation-aware cleanup only for events from the active runner.
+  - Create the session's registry and pass it to every new `ScriptRunner`, including
+    fast-rerun replacements.
 - `lib/streamlit/runtime/scriptrunner/script_runner.py`
-  - Attach the shared registry to each `ScriptRunContext` and finalize scoped cleanup only
-    after successful runs.
+  - Obtain a run token per run, attach the registry and run state to each
+    `ScriptRunContext`, and commit or discard the run's claims when the run finishes
+    (section 4). This is the only place that commits or cleans up.
+- `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
+  - Expose the registry reference, run token, and scope to `_enqueue`. Do not create or clear
+    the registry in `reset()`.
 - `lib/streamlit/elements/lib/utils.py`
-  - Keep widget computation and strict registration behavior.
+  - Keep widget computation and strict registration behavior, including keyed frontend calls.
   - Add the frontend identity descriptor and pure base-ID computation path.
 - `lib/streamlit/delta_generator.py`
   - Extract final target resolution so identity and enqueue use the exact same active DG.
   - Resolve a frontend identity before copying the proto and advancing the cursor.
-- `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
-  - Own the session-persistent, thread-safe frontend identity registry.
-  - Coordinate full-run and fragment-scoped lifecycle cleanup.
+- `lib/streamlit/testing/v1/app_test.py`
+  - Own a registry per `AppTest` instance and pass it to each `LocalScriptRunner`.
 - `lib/streamlit/runtime/caching/cached_message_replay.py`
   - Store and replay unresolved frontend identity descriptors.
 - `lib/streamlit/elements/plotly_chart.py`
@@ -364,16 +430,24 @@ updated to document identity domains and collision resolution.
 ### Unit tests
 
 - A unique frontend-state element receives exactly its current base ID.
+- A unique element keeps its exact base ID after its delta path changes (for example, a
+  conditional element is inserted above it).
 - Two equal base IDs at different placements receive different valid IDs.
 - Repeated claims from the same placement reuse the same ID.
-- A duplicate explicit key raises regardless of placement or identity domain.
+- A duplicate explicit key raises regardless of placement or identity domain, including a
+  widget and a passive chart sharing one key.
 - Duplicate widget IDs continue to raise, including at different paths.
 - Assignments survive `ScriptRunContext.reset()` and a fragment-only rerun.
-- Assignments survive a fast rerun that creates a new `ScriptRunner`.
-- Full-run and fragment-scoped cleanup do not remove another scope's assignments.
-- Failed runs do not clean assignments.
+- Assignments survive a fast rerun that creates a new `ScriptRunner`, and the stopped runner
+  commits nothing.
+- Full-run and fragment-scoped cleanup do not remove another scope's assignments; nested
+  child fragments are pruned with their parent.
+- Completed runs prune stale placements inside a still-live group.
+- Early-stopped runs merge claims without pruning; runs stopped for rerun commit nothing.
 - Parallel claims are atomic and result in one stable assignment per placement.
 - Cached-message replay resolves an ID at the replay target rather than the cache-miss target.
+- A cached passive chart replayed next to an identical uncached chart gets distinct IDs.
+- Assignments persist across `AppTest.run()` calls; bare execution falls back to the base ID.
 - Existing identity-input audit cases remain covered for all widgets.
 
 ### Element tests
@@ -382,9 +456,12 @@ updated to document identity domains and collision resolution.
 - Equal interactive Plotly charts still raise.
 - Multiple equal autoplay audio and video elements render without an exception.
 - Repeated passive Plotly writes to one `st.empty()` render the last chart without raising.
+- Writing a different figure into the same `st.empty()` produces a different ID.
 
 ### End-to-end tests
 
+- Zoom a unique passive Plotly chart, show a conditional element above it, and verify the
+  zoom is kept.
 - Interact with two identical passive Plotly charts independently, trigger a rerun/remount,
   and verify each placement recovers its own figure state.
 - Render identical passive elements in two fragments, rerun one fragment, and verify neither
@@ -470,9 +547,10 @@ Rejected for this work. Adding keys to more elements can remain an independent A
 | New public parameters or commands | None |
 | New user-facing configuration | None |
 | Protobuf changes | None |
-| Existing non-colliding IDs | Unchanged |
+| Existing non-colliding IDs | Unchanged, including when the element moves |
 | Explicit-key uniqueness | Unchanged and strict |
 | Backend widget uniqueness | Unchanged and strict |
+| Cached-message replay | Now resolves and registers frontend IDs per replay target |
 | Frontend-only state cleanup | Uses existing active-ID cleanup |
 | Parallel execution | Registry is thread-safe; assignments persist across reruns |
 | SiS / Community Cloud / embedded apps | Uses existing backend/frontend identity transport |
