@@ -4331,7 +4331,7 @@ wheels = [
 
 [[package]]
 name = "streamlit"
-version = "1.66.1"
+version = "1.67.0"
 source = { editable = "lib" }
 dependencies = [
     { name = "altair" },
