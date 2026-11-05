@@ -4673,6 +4673,10 @@ describe("App", () => {
   })
 
   describe("App.handleDeltaMessage", () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
     it("renders something on the screen", async () => {
       renderApp(getProps())
       // Need to set up a Script ID
@@ -4702,6 +4706,69 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
     })
+
+    it.each([
+      ["no metadata", null],
+      ["an empty delta path", { deltaPath: [] }],
+      ["a delta path without an index", { deltaPath: [0] }],
+    ])(
+      "logs and drops a delta with %s without unmounting the app",
+      async (_description, metadata) => {
+        const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+        renderApp(getProps())
+        sendNewSession(NEW_SESSION_JSON)
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "First element", help: "" },
+            },
+          },
+          { deltaPath: [0, 0] }
+        )
+        expect(await screen.findByText("First element")).toBeVisible()
+
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "Malformed element", help: "" },
+            },
+          },
+          metadata
+        )
+
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Dropping a newElement delta with a missing or invalid delta path."
+        )
+        expect(screen.queryByText("Malformed element")).not.toBeInTheDocument()
+        expect(screen.getByTestId("stApp")).toBeVisible()
+        expect(screen.getByText("First element")).toBeVisible()
+
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "Second element", help: "" },
+            },
+          },
+          { deltaPath: [0, 1] }
+        )
+
+        expect(await screen.findByText("Second element")).toBeVisible()
+        expect(screen.getByText("First element")).toBeVisible()
+      }
+    )
   })
 
   describe("AppSkeleton rendering and styling", () => {
