@@ -1161,7 +1161,7 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.metadata as ForwardMsgMetadata | null | undefined,
             msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
@@ -2288,12 +2288,23 @@ export class App extends PureComponent<Props, State> {
    * Update pendingElementsBuffer with the given Delta and set up a timer to
    * update state.elements. This buffer allows us to process Deltas quickly
    * without spamming React with too many of render() calls.
+   *
+   * A delta without a delta path is logged and dropped. The state updater
+   * runs outside handleMessage's try/catch, so letting applyDelta throw there
+   * would unmount the whole app.
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata,
+    metadataMsg: ForwardMsgMetadata | null | undefined,
     elementHash?: string
   ): void => {
+    if (!metadataMsg?.deltaPath.length) {
+      LOG.error(
+        `Dropping a ${deltaMsg.type} delta without a delta path in its metadata.`
+      )
+      return
+    }
+
     // A delta belongs to the run of the most recent new_session before it.
     // Reading scriptRunId from prevState (not this.state) keeps that true,
     // because React applies queued updaters in order.

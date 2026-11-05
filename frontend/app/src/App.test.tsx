@@ -4702,6 +4702,69 @@ describe("App", () => {
         expect(screen.getByText("Here is some text")).toBeInTheDocument()
       })
     })
+
+    it.each([
+      ["no metadata", null],
+      ["an empty delta path", { deltaPath: [] }],
+    ])(
+      "logs and drops a delta with %s without unmounting the app",
+      async (_description, metadata) => {
+        const logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
+        renderApp(getProps())
+        sendNewSession(NEW_SESSION_JSON)
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "First element", help: "" },
+            },
+          },
+          { deltaPath: [0, 0] }
+        )
+        expect(await screen.findByText("First element")).toBeVisible()
+
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "Malformed element", help: "" },
+            },
+          },
+          metadata
+        )
+
+        expect(logErrorSpy).toHaveBeenCalledWith(
+          "Dropping a newElement delta without a delta path in its metadata."
+        )
+        expect(screen.queryByText("Malformed element")).not.toBeInTheDocument()
+        expect(screen.getByTestId("stApp")).toBeVisible()
+        expect(screen.getByText("First element")).toBeVisible()
+
+        sendForwardMessage(
+          "delta",
+          {
+            type: "newElement",
+            newElement: {
+              type: "text",
+              text: { body: "Second element", help: "" },
+            },
+          },
+          { deltaPath: [0, 1] }
+        )
+
+        expect(await screen.findByText("Second element")).toBeVisible()
+        expect(screen.getByText("First element")).toBeVisible()
+        logErrorSpy.mockRestore()
+      }
+    )
   })
 
   describe("AppSkeleton rendering and styling", () => {
