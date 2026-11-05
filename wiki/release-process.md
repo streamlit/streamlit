@@ -136,7 +136,8 @@ Follow the Snowflake-internal
 before continuing:
 
 1. Run the workflow in preprod.
-2. Verify that the static assets load and render correctly.
+2. Verify that the static assets load: the instructions' preprod `index.css`
+   and `index.js` requests return 200.
 3. Run the workflow in production.
 
 ### 6. Build and publish

@@ -49,6 +49,11 @@ FEEDSTOCK_REPO = "conda-forge/streamlit-feedstock"
 VERSION_COMMIT_PREFIX = "Up version to "
 ASSET_HOSTS = {"preprod": "preprod.app.snowflake.com", "prod": "app.snowflake.com"}
 ASSET_PATHS = ("static/css/index.css", "static/js/index.js")
+# Agents can't submit on this controller, so the board links it for the user.
+PROD_ASSETS_JOB = (
+    "https://prod-001.jenkins.jenkinsprod1.us-west-2.aws-dev.app.snowflake.com"
+    "/job/Streamlit/job/streamlit-build/build?delay=0sec"
+)
 # The SiS CDN answers 403 to urllib's default user agent.
 USER_AGENT = "streamlit-release-status/1.0"
 
@@ -313,6 +318,7 @@ def status(version: str) -> dict[str, Any]:
             MANUAL,
             "preprod 200 · prod missing (run the prod Jenkins job)",
         )
+        astep.links.append(PROD_ASSETS_JOB)
     else:
         astep.detail = "preprod missing · prod missing"
     steps.append(astep)
