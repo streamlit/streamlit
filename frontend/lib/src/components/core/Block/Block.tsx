@@ -246,11 +246,11 @@ interface FlexBoxContainerProps extends BaseBlockProps {
 }
 
 /**
- * Whether a `grid.cell()` block fills its definite-height grid cell.
+ * Whether a `grid.cell()` block fills its grid cell.
  *
  * The cell block has no height of its own, so without this its stretch
- * children collapse to 0. Content rows stay content-sized so
- * `vertical_alignment` can still move the cell.
+ * children would size to their content instead of matching the row. The
+ * filling block applies the grid's `vertical_alignment` to its children.
  */
 function shouldFillGridCell(
   deltaBlock: BlockProto,
@@ -285,6 +285,10 @@ export const FlexBoxContainer = (
   const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
   const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
+  // Only a fixed row height is definite. In a content row, the cell grows
+  // with the row, and stretch charts keep their default height as a minimum.
+  const fillDefiniteGridCell =
+    fillGridCell && parentContext?.hasDefiniteHeight === true
 
   const styles: StyledFlexContainerBlockProps = {
     gap:
@@ -351,13 +355,15 @@ export const FlexBoxContainer = (
         notNullOrUndefined(props.node.deltaBlock.column) ||
         notNullOrUndefined(props.node.deltaBlock.gridCell)
       }
-      // Stretch children of this cell take leftover space.
-      verticalStretchGrows={fillGridCell}
+      // Stretch children of a definite-height cell take leftover space.
+      verticalStretchGrows={fillDefiniteGridCell}
       {...heightContextProps}
-      // A filling grid cell is a definite-height column even though the cell
-      // block has no height config of its own. Set this after the height
+      // A fixed-height grid cell is a definite-height column even though the
+      // cell block has no height config of its own. Set this after the height
       // props so it wins over a content-sized cell.
-      hasFixedHeight={fillGridCell || heightContextProps.hasFixedHeight}
+      hasFixedHeight={
+        fillDefiniteGridCell || heightContextProps.hasFixedHeight
+      }
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock

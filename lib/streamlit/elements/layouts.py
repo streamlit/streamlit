@@ -1123,7 +1123,10 @@ class LayoutsMixin:
             The height of each row. This can be one of the following:
 
             - ``"content"`` (default): Each row is as tall as its
-              tallest cell.
+              tallest cell. An element or container with
+              ``height="stretch"`` fills the row, either as a direct
+              child of the grid or inside ``grid.cell()``. A stretch
+              chart or dataframe is at least its default height.
             - A positive integer: Every row is that many pixels.
               Content that is taller scrolls inside the cell. Content
               does not stretch automatically. Pass ``height="stretch"``

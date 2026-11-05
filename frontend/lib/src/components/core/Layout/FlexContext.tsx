@@ -52,9 +52,10 @@ export interface IFlexContext {
    */
   isInContentWidthContainer: boolean
   /**
-   * True inside a definite-height `st.grid` cell (pixel `row_height`). A
-   * `grid.cell()` block fills that cell so `height="stretch"` descendants
-   * resolve. Nested providers do not inherit this.
+   * True inside an `st.grid` cell. A `grid.cell()` block fills that cell, so
+   * stretch descendants match the row. Without `hasDefiniteHeight` (content
+   * rows), stretch charts keep their default height as a minimum. Nested
+   * providers do not inherit this.
    */
   fillAvailableHeight?: boolean
   /**
@@ -63,9 +64,10 @@ export interface IFlexContext {
    */
   fillJustify?: { fallback: CSSProperties["justifyContent"]; safe?: string }
   /**
-   * Set by a filling `grid.cell()` block for its own children. Stretch-height
-   * elements take leftover space in the cell instead of 100% of the whole
-   * cell (which overflows siblings). Nested providers do not inherit this.
+   * Set by a `grid.cell()` block that fills a definite-height cell for its
+   * own children. Stretch-height elements take leftover space in the cell
+   * instead of 100% of the whole cell (which overflows siblings). Nested
+   * providers do not inherit this.
    */
   verticalStretchGrows?: boolean
   /**
@@ -73,7 +75,7 @@ export interface IFlexContext {
    * height to fill:
    * - true for pixel- and rem-height containers, and for stretch-height
    *   containers whose own parent has a definite height. Tab panels use their
-   *   tab container's height. A filling `st.grid` cell counts too.
+   *   tab container's height. A fixed-height `st.grid` cell counts too.
    * - false (or unset) for the root and content-height containers, where
    *   stretch elements size to their content.
    */
@@ -138,8 +140,8 @@ export function getHasDefiniteHeight({
  *   a fixed pixel width.
  * @returns isInContentWidthContainer: Whether this element is inside a content-width
  *   container, unless a closer fixed-width container overrides it.
- * @returns fillAvailableHeight: Whether a `grid.cell()` block should fill a
- *   definite-height grid cell.
+ * @returns fillAvailableHeight: Whether a `grid.cell()` block should fill its
+ *   grid cell.
  * @returns hasDefiniteHeight: Whether stretch-height children get a definite
  *   height from this container.
  *

@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import check_top_level_class, get_element_b
 def test_grid_renders(app: Page):
     """Test that all grids render correctly."""
     grids = app.get_by_test_id("stGrid")
-    expect(grids).to_have_count(5)
+    expect(grids).to_have_count(8)
     check_top_level_class(app, "stGrid")
 
 
@@ -146,6 +146,70 @@ def test_stretch_chart_fills_fixed_row_cell(app: Page):
             return height < 300 and height / cell_box["height"] > 0.45
 
         wait_until(app, chart_is_stretched)
+
+
+def test_stretch_container_fills_content_row_cell(app: Page):
+    """height=stretch inside grid.cell() fills a content row.
+
+    A spanning grid.cell() container and a stretch chart match their taller
+    neighbors, and vertical_alignment still moves a short grid.cell() in a
+    content row.
+    """
+    wide = get_element_by_key(app, "wide")
+    tall = get_element_by_key(app, "tall")
+    short = get_element_by_key(app, "short")
+    aligned_tall = get_element_by_key(app, "aligned_tall")
+    expect(get_element_by_key(app, "content_stretch")).to_have_attribute(
+        "data-test-column-count", "3"
+    )
+
+    def stretch_matches_neighbor() -> bool:
+        wide_box = wide.bounding_box()
+        tall_box = tall.bounding_box()
+        if wide_box is None or tall_box is None:
+            return False
+        return (
+            tall_box["height"] > 150
+            and abs(wide_box["height"] - tall_box["height"]) < 1
+            and abs(wide_box["y"] - tall_box["y"]) < 1
+            # The spanning cell is wider than its one-column neighbor.
+            and wide_box["width"] > tall_box["width"] * 1.5
+        )
+
+    wait_until(app, stretch_matches_neighbor)
+
+    def short_cell_is_bottom_aligned() -> bool:
+        short_box = short.bounding_box()
+        tall_box = aligned_tall.bounding_box()
+        if short_box is None or tall_box is None:
+            return False
+        short_bottom = short_box["y"] + short_box["height"]
+        tall_bottom = tall_box["y"] + tall_box["height"]
+        return (
+            abs(short_bottom - tall_bottom) < 1
+            # Content-height children do not stretch with the cell.
+            and short_box["height"] < tall_box["height"] / 2
+        )
+
+    wait_until(app, short_cell_is_bottom_aligned)
+
+    # A stretch chart has no definite height in a content row, so it starts
+    # at its default height and then fills the taller row.
+    chart = get_element_by_key(app, "content_chart").get_by_test_id("stVegaLiteChart")
+    chart_neighbor = get_element_by_key(app, "chart_neighbor")
+
+    def chart_fills_taller_row() -> bool:
+        chart_box = chart.bounding_box()
+        neighbor_box = chart_neighbor.bounding_box()
+        if chart_box is None or neighbor_box is None:
+            return False
+        # The default chart height is 21.875rem (~350px).
+        return (
+            neighbor_box["height"] > 400
+            and abs(chart_box["height"] - neighbor_box["height"]) < 1
+        )
+
+    wait_until(app, chart_fills_taller_row)
 
 
 def test_grid_visual_snapshot(app: Page, assert_snapshot: ImageCompareFunction):

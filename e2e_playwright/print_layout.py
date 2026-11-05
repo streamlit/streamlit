@@ -182,3 +182,13 @@ with st.container(key="table_row"):
     table_column, text_column = st.columns(2)
     table_column.table(pd.DataFrame({"name": ["a", "b"], "value": [1, 2]}))
     text_column.markdown("Beside the table")
+
+# A grid.cell() fills its content-height row and keeps flex in print, like a
+# column.
+grid_cell_grid = st.grid(2, key="grid_cell_chart")
+with grid_cell_grid.cell():
+    st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
+    st.markdown("Below the grid cell chart")
+grid_cell_grid.markdown("Beside the grid cell chart")
+
+st.markdown("After the grid cell chart")
