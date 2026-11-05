@@ -245,7 +245,7 @@ Within a duplicate group, identity follows claim order and placement, not the Py
 ```python
 if show_extra:
     st.plotly_chart(fig)  # Duplicate inserted above
-st.plotly_chart(fig)      # Original chart
+st.plotly_chart(fig)  # Original chart
 ```
 
 When `show_extra` becomes true, the inserted chart claims first and takes the base ID; the
