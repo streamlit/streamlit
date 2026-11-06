@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import * as echarts from "echarts"
+import type { EChartsOption } from "echarts"
 import { getLogger } from "loglevel"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -122,6 +124,212 @@ describe("applyTooltipFormatters", () => {
           })
         )
       ).toBe("Tue 12:00: 321")
+    })
+
+    describe.each(["pie", "funnel"])(
+      "on a %s series, which gets no dimensionNames",
+      seriesType => {
+        const dataset = {
+          source: [
+            ["Fintech", 120.5],
+            ["Media", 40.1],
+          ],
+          dimensions: ["industry", "mrr"],
+          sourceHeader: false,
+        }
+        const template = "{b}: mrr={@mrr} i1={@[1]}"
+        const params = itemParams({
+          name: "Media",
+          value: ["Media", 40.1],
+          dimensionNames: [],
+          seriesIndex: 0,
+        })
+
+        it("reads names from the dataset in a top-level tooltip", () => {
+          const formatter = formatterOf(
+            applyTooltipFormatters({
+              dataset,
+              tooltip: { trigger: "item", formatter: template },
+              series: [{ type: seriesType }],
+            })
+          )
+
+          expect(formatter(params)).toBe("Media: mrr=40.1 i1=40.1")
+        })
+
+        it("reads names from the dataset in a series tooltip", () => {
+          const result = applyTooltipFormatters({
+            dataset,
+            series: [{ type: seriesType, tooltip: { formatter: template } }],
+          })
+          const [series] = result.series as EChartsOptionObject[]
+
+          expect(formatterOf(series)(params)).toBe("Media: mrr=40.1 i1=40.1")
+        })
+      }
+    )
+
+    it.each([
+      {
+        case: "the series' own dimensions",
+        option: {
+          dataset: { dimensions: ["x", "y"] },
+          series: [{ dimensions: ["y", { name: "x" }] }],
+        },
+        expected: "2/1",
+      },
+      {
+        case: "the dataset at datasetIndex, which wins over datasetId",
+        option: {
+          dataset: [
+            { id: "first", dimensions: ["y", "x"] },
+            { dimensions: ["x", "y"] },
+          ],
+          series: [{ datasetIndex: 1, datasetId: "first" }],
+        },
+        expected: "1/2",
+      },
+      {
+        case: "the dataset with datasetId",
+        option: {
+          dataset: [
+            { dimensions: ["x", "y"] },
+            { id: 7, dimensions: ["y", "x"] },
+          ],
+          series: [{ datasetId: "7" }],
+        },
+        expected: "2/1",
+      },
+      {
+        case: "the upstream dataset of a transform",
+        option: {
+          dataset: [
+            { dimensions: ["y", "x"] },
+            { dimensions: ["x", "y"] },
+            { transform: { type: "sort" }, fromDatasetIndex: 1 },
+          ],
+          series: [{ datasetIndex: 2 }],
+        },
+        expected: "1/2",
+      },
+      {
+        case: "the upstream dataset of a transform that sets dimensions",
+        option: {
+          dataset: [
+            { dimensions: ["x", "y"] },
+            { dimensions: ["y", "x"], transform: { type: "filter" } },
+          ],
+          series: [{ datasetIndex: 1 }],
+        },
+        expected: "1/2",
+      },
+      {
+        case: "the upstream dataset of a list of transforms",
+        option: {
+          dataset: [
+            { id: "raw", dimensions: ["x", "y"] },
+            {
+              transform: [{ type: "echarts:filter" }, { type: "sort" }],
+              fromDatasetId: "raw",
+            },
+          ],
+          series: [{ datasetIndex: 1 }],
+        },
+        expected: "1/2",
+      },
+      {
+        case: "no dataset for a transform that renames dimensions",
+        option: {
+          dataset: [
+            { dimensions: ["x", "y"] },
+            { transform: [{ type: "sort" }, { type: "boxplot" }] },
+          ],
+          series: [{ datasetIndex: 1 }],
+        },
+        expected: "/",
+      },
+      {
+        case: "no dataset for transforms that form a cycle",
+        option: {
+          dataset: [
+            { transform: { type: "sort" }, fromDatasetIndex: 1 },
+            { transform: { type: "filter" }, fromDatasetIndex: 0 },
+          ],
+          series: [{}],
+        },
+        expected: "/",
+      },
+      {
+        case: "no dataset for a series with its own data",
+        option: {
+          dataset: { dimensions: ["x", "y"] },
+          series: [{ data: [] }],
+        },
+        expected: "/",
+      },
+      {
+        case: "no dataset for a transform without an upstream dataset",
+        option: {
+          dataset: [{ transform: { type: "sort" }, fromDatasetId: "nowhere" }],
+          series: [{}],
+        },
+        expected: "/",
+      },
+    ])("finds dimension names from $case", ({ option, expected }) => {
+      const formatter = formatterOf(
+        applyTooltipFormatters({
+          ...option,
+          tooltip: { formatter: "{@y}/{@x}" },
+        })
+      )
+
+      expect(
+        formatter(
+          itemParams({ value: [2, 1], dimensionNames: [], seriesIndex: 0 })
+        )
+      ).toBe(expected)
+    })
+
+    it("reads the dataset of the item's series and prefers ECharts' names", () => {
+      const formatter = formatterOf(
+        applyTooltipFormatters({
+          dataset: [{ dimensions: ["a", "b"] }, { dimensions: ["b", "a"] }],
+          tooltip: { formatter: "{@a}" },
+          series: [{ type: "pie" }, { type: "pie", datasetIndex: 1 }],
+        })
+      )
+      const value = [1, 2]
+
+      expect(formatter(itemParams({ value, seriesIndex: 0 }))).toBe("1")
+      expect(formatter(itemParams({ value, seriesIndex: 1 }))).toBe("2")
+      expect(formatter(itemParams({ value, seriesIndex: 2 }))).toBe("")
+      // Names ECharts passes win over the option's.
+      expect(
+        formatter(
+          itemParams({ value, seriesIndex: 0, dimensionNames: ["b", "a"] })
+        )
+      ).toBe("2")
+    })
+
+    it("reads a timeline tick's series from the base option", () => {
+      const result = applyTooltipFormatters({
+        baseOption: {
+          dataset: { dimensions: ["industry", "mrr"] },
+          series: [{ type: "pie" }],
+        },
+        options: [{ tooltip: { formatter: "{@mrr}" } }],
+      })
+      const [tick] = result.options as EChartsOptionObject[]
+
+      expect(
+        formatterOf(tick)(
+          itemParams({
+            value: ["Media", 40.1],
+            dimensionNames: [],
+            seriesIndex: 0,
+          })
+        )
+      ).toBe("40.1")
     })
 
     it("treats a number-like name as an index unless a dimension has it", () => {
@@ -355,6 +563,83 @@ describe("applyTooltipFormatters", () => {
 
     expect(result).toBe(option)
     expect(dataItem.tooltip.valueFormatter).toBe("dollar")
+  })
+
+  describe("with the params of a rendered chart", () => {
+    const charts: echarts.ECharts[] = []
+
+    afterEach(() => {
+      charts.splice(0).forEach(chart => chart.dispose())
+    })
+
+    interface RenderedSeries {
+      getDataParams: (dataIndex: number) => unknown
+      getFormattedLabel: (dataIndex: number, status: string) => string
+    }
+
+    /**
+     * Render ``option`` and return the model of its first series, through
+     * ECharts' internal ``getModel()`` API. If these tests fail after an
+     * ECharts upgrade, ECharts may now pass ``dimensionNames`` itself, so the
+     * option fallback in ``getSeriesDimensionNames`` may no longer be needed.
+     */
+    function renderFirstSeries(option: EChartsOptionObject): RenderedSeries {
+      const chart = echarts.init(null, null, {
+        renderer: "svg",
+        ssr: true,
+        width: 400,
+        height: 300,
+      })
+      charts.push(chart)
+      chart.setOption(option as EChartsOption)
+      return (
+        chart as unknown as {
+          getModel: () => {
+            getSeriesByIndex: (index: number) => RenderedSeries
+          }
+        }
+      )
+        .getModel()
+        .getSeriesByIndex(0)
+    }
+
+    it.each(["pie", "funnel", "gauge"])(
+      "expands the dimensions a %s label shows",
+      seriesType => {
+        // Shaped like a dataset Streamlit hydrates from a dataframe.
+        const dataset = {
+          source: [
+            ["Fintech", 120.5, 3],
+            ["Retail", 80.2, 2],
+            ["Media", 40.1, 1],
+          ],
+          dimensions: ["industry", "mrr", "rank"],
+          sourceHeader: false,
+        }
+        const template = "{@mrr} {@[1]} #{@rank}"
+        const result = applyTooltipFormatters({
+          dataset,
+          tooltip: { trigger: "item", formatter: template },
+          series: [
+            {
+              type: seriesType,
+              encode: { itemName: "industry", value: "mrr" },
+              label: { formatter: template },
+              tooltip: { formatter: template },
+            },
+          ],
+        })
+        const [seriesOption] = result.series as EChartsOptionObject[]
+        const series = renderFirstSeries(result)
+        const params = series.getDataParams(2)
+
+        // ECharts gives these series no names, so the tooltip reads the option's.
+        expect(params).toMatchObject({ dimensionNames: [] })
+        expect(series.getFormattedLabel(2, "normal")).toBe("40.1 40.1 #1")
+        expect(formatterOf(result)(params)).toBe("40.1 40.1 #1")
+        expect(formatterOf(seriesOption)(params)).toBe("40.1 40.1 #1")
+      }
+    )
   })
 })
 
