@@ -566,7 +566,12 @@ describe("applyTooltipFormatters", () => {
       getFormattedLabel: (dataIndex: number, status: string) => string
     }
 
-    /** Render ``option`` and return the model of its first series. */
+    /**
+     * Render ``option`` and return the model of its first series, through
+     * ECharts' internal ``getModel()`` API. If these tests fail after an
+     * ECharts upgrade, ECharts may now pass ``dimensionNames`` itself, so the
+     * option fallback in ``getSeriesDimensionNames`` may no longer be needed.
+     */
     function renderFirstSeries(option: EChartsOptionObject): RenderedSeries {
       const chart = echarts.init(null, null, {
         renderer: "svg",

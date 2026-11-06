@@ -58,7 +58,8 @@ interface TooltipItemParams {
 type FormatTplParams = Parameters<typeof echarts.format.formatTpl>[1]
 
 /**
- * The option's dimension names for a tooltip item's series. A series tooltip
+ * Return the option's dimension names for the series of a tooltip item.
+ * The getter built for a ``series[i].tooltip`` already knows its series, so it
  * ignores ``seriesIndex``.
  */
 type SeriesDimensionNamesGetter = (seriesIndex: unknown) => unknown[]
@@ -78,11 +79,15 @@ function keepsDimensions(transform: unknown): boolean {
 }
 
 /**
- * The dimension names an option declares for a series' data: the series'
- * ``dimensions``, else those of the dataset it reads (``datasetIndex``, else
- * ``datasetId``, else the first). A ``filter`` or ``sort`` dataset without
- * ``dimensions`` keeps those of its upstream dataset. Other transforms, and a
- * dataset that names its dimensions in a header row, give no names.
+ * Return the dimension names the option declares for a series' data:
+ *
+ * - The series' own ``dimensions``.
+ * - Else the ``dimensions`` of the dataset it reads (``datasetIndex``, else
+ *   ``datasetId``, else the first). A ``filter`` or ``sort`` dataset without
+ *   ``dimensions`` uses its upstream dataset's.
+ *
+ * Other transforms, and datasets that name dimensions in a header row, give no
+ * names.
  */
 function getSeriesDimensionNames(
   series: unknown,

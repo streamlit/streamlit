@@ -571,8 +571,9 @@ with st.container(key="c_tooltip_template"):
         height=_HEIGHT,
     )
 
-# A pie series reads ``{@mrr}`` by the dataframe's column name. ECharts passes
-# no dimension names to pie tooltips, unlike the heatmap above.
+# A pie series reads ``{@mrr}`` by the dataframe's column name. ECharts gives
+# pie tooltips no dimension names (cartesian series such as the heatmap get
+# them), so Streamlit reads them from the dataset.
 with st.container(key="c_tooltip_pie_template"):
     st.echarts_chart(
         {
