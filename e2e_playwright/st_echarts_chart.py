@@ -860,3 +860,77 @@ with st.container(key="c_reference_lines"):
         },
         height=_HEIGHT,
     )
+
+# A heatmap with ECharts' default bottom-left vertical visualMap. The plot must
+# leave room for the piece labels instead of drawing over them.
+_cells = pd.DataFrame(
+    [(str(x), str(y), (x * 7 + y * 3) % 10) for x in range(8) for y in range(5)],
+    columns=["x", "y", "value"],
+)
+with st.container(key="c_piecewise_heatmap"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": _cells},
+            "xAxis": {"type": "category"},
+            "yAxis": {"type": "category"},
+            "visualMap": {"type": "piecewise", "min": 0, "max": 9},
+            "series": [
+                {
+                    "type": "heatmap",
+                    "encode": {"x": "x", "y": "y", "value": "value"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# A multi-series scatter whose visualMap maps only the symbol size. Each series
+# must keep its categorical color, matching the legend.
+_bubble_rng = np.random.default_rng(1)
+_bubbles = pd.DataFrame(
+    {
+        "x": _bubble_rng.uniform(0, 100, 60),
+        "y": _bubble_rng.uniform(0, 100, 60),
+        "size": _bubble_rng.uniform(0, 1, 60),
+        "group": np.repeat(["A", "B", "C"], 20),
+    }
+)
+with st.container(key="c_size_visual_map"):
+    st.echarts_chart(
+        {
+            "legend": {},
+            "dataset": [
+                {"source": _bubbles},
+                *(
+                    {
+                        "transform": {
+                            "type": "filter",
+                            "config": {"dimension": "group", "=": group},
+                        }
+                    }
+                    for group in "ABC"
+                ),
+            ],
+            "visualMap": {
+                "show": False,
+                "dimension": "size",
+                "min": 0,
+                "max": 1,
+                "inRange": {"symbolSize": [6, 30]},
+            },
+            "xAxis": {},
+            "yAxis": {},
+            "series": [
+                {
+                    "name": group,
+                    "type": "scatter",
+                    "datasetIndex": index + 1,
+                    "encode": {"x": "x", "y": "y"},
+                }
+                for index, group in enumerate("ABC")
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
