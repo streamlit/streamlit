@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 39
+_EXPECTED_CHART_COUNT = 40
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -356,8 +356,9 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
 
 
 def test_tooltip_formatting_without_javascript(app: Page):
-    """Tooltip templates expand ``{@[n]}``, ``valueFormatter`` formats numbers,
-    and a daily time axis heads its tooltip with a plain date.
+    """Tooltip templates expand ``{@[n]}`` and, on a pie, ``{@column}``;
+    ``valueFormatter`` formats numbers; and a daily time axis heads its tooltip
+    with a plain date.
     """
     template_chart = _get_chart(app, "c_tooltip_template")
     # Heatmaps draw on two canvas layers.
@@ -369,6 +370,13 @@ def test_tooltip_formatting_without_javascript(app: Page):
     )
     # Must NOT happen: the expanded payload turned into markup.
     expect(template_tooltip.locator("img")).to_have_count(0)
+
+    pie_chart = _get_chart(app, "c_tooltip_pie_template")
+    expect(pie_chart.locator("canvas")).to_be_visible()
+    pie_chart.hover()
+    expect(pie_chart.locator(".echarts-pie-template-tooltip")).to_have_text(
+        "Media: 40.1 · 40.1"
+    )
 
     format_chart = _get_chart(app, "c_tooltip_value_format")
     expect(format_chart.locator("canvas")).to_be_visible()

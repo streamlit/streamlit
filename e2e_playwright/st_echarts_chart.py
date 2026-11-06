@@ -571,6 +571,30 @@ with st.container(key="c_tooltip_template"):
         height=_HEIGHT,
     )
 
+# A pie series reads ``{@mrr}`` by the dataframe's column name. ECharts gives
+# pie tooltips no dimension names (cartesian series such as the heatmap get
+# them), so Streamlit reads them from the dataset.
+with st.container(key="c_tooltip_pie_template"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": pd.DataFrame({"industry": ["Media"], "mrr": [40.1]})},
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-pie-template-tooltip",
+            },
+            "series": [
+                {
+                    "type": "pie",
+                    "encode": {"itemName": "industry", "value": "mrr"},
+                    "tooltip": {"formatter": "{b}: {@mrr} · {@[1]}"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="tooltip_pie_template",
+        height=_HEIGHT,
+    )
+
 with st.container(key="c_tooltip_value_format"):
     st.echarts_chart(
         {
