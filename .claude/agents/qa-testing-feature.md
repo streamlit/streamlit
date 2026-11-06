@@ -73,7 +73,8 @@ Collect all documentation related to the feature being tested:
 
 5. **Read related tests:**
    - Examine existing E2E tests in `e2e_playwright/` for the feature
-   - Note what scenarios are already covered
+   - Note what scenarios are already covered, so the test plan targets scenarios these tests miss
+   - Do not run these tests; CI runs the full E2E suite on every PR
 
 6. **Understand expected behavior:**
    - Compile a list of documented behaviors and requirements
