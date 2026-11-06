@@ -41,7 +41,9 @@ from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.SelectWidgetFilterMode_pb2 import (
     SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
 )
+from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.testing.v1.app_test import AppTest
+from streamlit.testing.v1.element_tree import Multiselect
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -1157,3 +1159,100 @@ class MultiselectOnChangeModeTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue(1).new_element.multiselect
         assert c.ignore_rerun is True
+
+
+@pytest.mark.parametrize(
+    "live_label",
+    [
+        pytest.param(False, id="label_fixed_per_run"),
+        # Like a format_func that reads the clock: even the previous run's
+        # format_func already returns the new labels.
+        pytest.param(True, id="label_read_live"),
+    ],
+)
+def test_multiselect_resends_new_labels_when_format_func_output_changes(
+    live_label: bool,
+) -> None:
+    """A label change re-sends fresh labels for every selected option, in the
+    selection order. Regression test for gh-17175."""
+
+    # The count the label shows. It moves on when a run starts, after the
+    # client sent its label, the way time passes between reruns.
+    clock = {"count": 2, "next": 2}
+
+    def script(live_label: bool, clock: dict[str, int]) -> None:
+        import streamlit as st
+
+        clock["count"] = clock["next"]
+        count = clock["count"]
+
+        def label(option: str) -> str:
+            return f"{option} ({clock['count'] if live_label else count})"
+
+        st.multiselect(
+            "Pick some",
+            ["D", "E", "F"],
+            format_func=label,
+            key="picker",
+        )
+
+    at = AppTest.from_function(
+        script, kwargs={"live_label": live_label, "clock": clock}
+    ).run()
+    at = at.multiselect(key="picker").select("F").select("D").run()
+    assert at.multiselect(key="picker").value == ["F", "D"]
+
+    clock["next"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["F", "D"]
+    assert picker.proto.set_value is True
+    assert list(picker.proto.raw_values) == ["F (3)", "D (3)"]
+
+    # With the labels unchanged, nothing is re-sent.
+    at = at.run()
+    assert at.multiselect(key="picker").value == ["F", "D"]
+    assert at.multiselect(key="picker").proto.set_value is False
+
+
+def test_multiselect_label_change_does_not_rewrite_user_entered_values(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """User-entered values (accept_new_options) are never re-sent with format_func
+    applied, even when the option labels change."""
+
+    def frontend_widget_state(self: Multiselect) -> WidgetState:
+        # AppTest formats every value; the frontend sends user-entered text as is.
+        ws = WidgetState(id=self.id)
+        for v in self.value:
+            label = self.format_func(v)
+            ws.string_array_value.data.append(
+                label if label in self.options else str(v)
+            )
+        return ws
+
+    monkeypatch.setattr(Multiselect, "_widget_state", property(frontend_widget_state))
+
+    def script():
+        import streamlit as st
+
+        count = st.session_state.get("count", 2)
+        st.multiselect(
+            "Pick some",
+            ["D", "E"],
+            format_func=lambda x: f"{x} ({count})",
+            accept_new_options=True,
+            key="picker",
+        )
+
+    at = AppTest.from_function(script).run()
+    at = at.multiselect(key="picker").set_value(["custom"]).run()
+    assert at.multiselect(key="picker").value == ["custom"]
+
+    at.session_state["count"] = 3
+    at = at.run()
+
+    picker = at.multiselect(key="picker")
+    assert picker.value == ["custom"]
+    assert picker.proto.set_value is False
