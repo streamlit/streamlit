@@ -241,6 +241,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   // Reconciles active key & tab name when tab list changes.
   // When isPassivelyKeyed, also check elementStates so that the persisted
   // label survives even if the tracked active label no longer matches a tab.
+  // The fallback is not persisted: a block shifted to a new delta path briefly
+  // renders with the tabs it inherited from that path, and persisting a
+  // fallback then would overwrite the user's selection.
   useEffect(() => {
     if (isPassivelyKeyed) {
       const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
@@ -253,12 +256,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
     const newTabKey = allTabLabels.indexOf(activeTabNameRef.current ?? "0")
     if (newTabKey === -1) {
-      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      activeTabNameRef.current = fallbackLabel
-      if (isPassivelyKeyed) {
-        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
-      }
+      activeTabNameRef.current = allTabLabels[defaultTabIndex]
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
@@ -300,12 +299,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(newTabKey)
       activeTabNameRef.current = allTabLabels[newTabKey]
     } else {
-      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      activeTabNameRef.current = fallbackLabel
-      if (isPassivelyKeyed) {
-        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
-      }
+      activeTabNameRef.current = allTabLabels[defaultTabIndex]
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-run when tab count changes; other deps are stable across renders
   }, [node.children.length])
