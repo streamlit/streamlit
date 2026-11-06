@@ -44,6 +44,8 @@ update-notices            Update the notices file (licenses of frontend assets a
 update-headers            Update all license headers.
 update-min-deps           Update minimum dependency constraints file.
 debug-e2e-test            Run a playwright e2e test in debug mode. Use it via `make debug-e2e-test st_command_test.py`.
+bi-performance-short      Run the canonical focused BI dashboard benchmark tier in Chromium.
+bi-performance-extended   Run the large-payload focused BI dashboard benchmark tier in Chromium.
 run-e2e-test              Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
 trace-e2e-test            Run e2e test with tracing and view it. Use via `make trace-e2e-test <test_file.py>::<test_func>`.
 lighthouse-tests          Run Lighthouse performance tests.
