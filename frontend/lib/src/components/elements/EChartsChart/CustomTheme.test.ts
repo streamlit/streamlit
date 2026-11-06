@@ -1342,6 +1342,13 @@ describe("applyStreamlitOptionDefaults", () => {
         withLabel(7),
       ],
       [
+        "an empty piece label as its bounds",
+        { pieces: [{ min: 0, max: 1000, label: "" }] },
+        "left",
+        // "0 - 1000"
+        withLabel(8),
+      ],
+      [
         "a map pinned to the right edge",
         { right: 0, padding: 4, itemWidth: 60 },
         "right",

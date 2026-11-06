@@ -989,7 +989,8 @@ function pieceLabels(visualMap: Record<string, unknown>): string[] {
         lt,
         max: high,
       } = piece as Record<string, unknown>
-      const text = label ?? value
+      // ECharts draws the formatted value or bounds for an empty label.
+      const text = label === "" ? value : (label ?? value)
       if (typeof text === "string" || typeof text === "number") {
         return String(text)
       }
@@ -1028,11 +1029,13 @@ function estimateVerticalVisualMapWidth(
   defaultFontSizePx: number
 ): number {
   const { padding, text, showLabel, calculable } = visualMap
-  let paddingPx = 2 * numberOr(padding, VISUAL_MAP_DEFAULT_PADDING_PX)
+  let paddingPx: number
   if (Array.isArray(padding)) {
     // CSS order: [top, right, bottom, left], [vertical, horizontal], or [all].
     const [top, right = top, , left = right] = padding as unknown[]
     paddingPx = (Number(left) || 0) + (Number(right) || 0)
+  } else {
+    paddingPx = 2 * numberOr(padding, VISUAL_MAP_DEFAULT_PADDING_PX)
   }
   const fontSize = numberOr(
     get(visualMap, ["textStyle", "fontSize"]),
@@ -1056,12 +1059,14 @@ function estimateVerticalVisualMapWidth(
         textWidth(pieceLabels(visualMap))
     }
   } else if (calculable === true) {
-    // The handle overhangs both bar edges, and its value label starts one
-    // handle width past the bar's center.
+    // The handle's value label starts past the handle's overhang of the bar
+    // edge, the bar's center, and then one handle width.
+    const labelStartPx =
+      barPx *
+      ((VISUAL_MAP_HANDLE_SCALE - 1) / 2 + 0.5 + VISUAL_MAP_HANDLE_SCALE)
     const precision = numberOr(visualMap.precision, 0)
     contentPx =
-      barPx *
-        ((VISUAL_MAP_HANDLE_SCALE - 1) / 2 + 0.5 + VISUAL_MAP_HANDLE_SCALE) +
+      labelStartPx +
       textWidth(
         [
           numberOr(visualMap.min, 0),
@@ -1096,10 +1101,10 @@ function verticalVisualMapRoom(
 }
 
 /**
- * Give each ``visualMap`` whose series would fall back to the root
- * ``gradientColor`` the spec's own ``gradientColor``. ECharts merges the
- * theme's ``gradientColor`` into the spec's entry by entry, so a shorter spec
- * scale would otherwise continue with Streamlit's palette.
+ * Copy the spec's root ``gradientColor`` onto each ``visualMap`` whose series
+ * would fall back to it. ECharts fills a shorter spec ``gradientColor`` with
+ * the theme's palette entry by entry, so without the copy the scale would
+ * continue in Streamlit's colors.
  */
 function withSpecGradientColor(
   option: EChartsOptionObject
@@ -1662,15 +1667,15 @@ function applyControlLayout(
  * ECharts' built-in grid reserves large margins (``left: '15%'``,
  * ``right: '10%'``, ``top: 65``, ``bottom: 80``), which leaves charts heavily
  * inset compared to other Streamlit charts. We tighten the side margins to fill
- * the width, except that a side with a vertical ``visualMap`` keeps the map's
- * estimated width. We tighten the top/bottom only on a side that carries
- * nothing but the plot. On a side that *does* carry a title, legend, or
- * bottom-anchored control we leave the margin unset so ECharts' generous
- * default reserves room for it (guessing a fixed pixel value risks clipping a
- * title+subtitle, a multi-item legend, or a dataZoom slider). When Streamlit
- * has placed a legend under a top title, ``stackedTop`` is that stack's height
- * and is written as ``grid.top``. When it has stacked more than one
- * bottom-anchored control, ``stackedBottom`` is that stack's height and is
+ * the width, except that a side with a vertical ``visualMap`` reserves at
+ * least the map's estimated width. We tighten the top/bottom only on a side
+ * that carries nothing but the plot. On a side that *does* carry a title,
+ * legend, or bottom-anchored control we leave the margin unset so ECharts'
+ * generous default reserves room for it (guessing a fixed pixel value risks
+ * clipping a title+subtitle, a multi-item legend, or a dataZoom slider). When
+ * Streamlit has placed a legend under a top title, ``stackedTop`` is that
+ * stack's height and is written as ``grid.top``. When it has stacked more than
+ * one bottom-anchored control, ``stackedBottom`` is that stack's height and is
  * written as ``grid.bottom``.
  *
  * Insets are rem spacing tokens converted to pixels so they track the
