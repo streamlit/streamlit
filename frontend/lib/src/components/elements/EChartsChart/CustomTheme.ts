@@ -902,6 +902,11 @@ const VISUAL_MAP_HANDLE_SCALE = 1.2
  */
 const AVERAGE_GLYPH_WIDTH_EM = 0.55
 
+/** True if a position is unset. ECharts reads ``"auto"`` as unset too. */
+function isUnsetPosition(value: unknown): boolean {
+  return isNullOrUndefined(value) || value === "auto"
+}
+
 /**
  * The plot side a vertical ``visualMap`` sits on and its pixel offset from
  * that edge. Only an unpositioned map (ECharts' default is bottom-left) or one
@@ -919,8 +924,8 @@ function verticalVisualMapEdge(
   if (left === "right") {
     return { side: "right", offsetPx: 0 }
   }
-  if (isNullOrUndefined(left)) {
-    if (isNullOrUndefined(right)) {
+  if (isUnsetPosition(left)) {
+    if (isUnsetPosition(right)) {
       return { side: "left", offsetPx: 0 }
     }
     return typeof right === "number"

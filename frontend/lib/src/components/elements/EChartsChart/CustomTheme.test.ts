@@ -1348,6 +1348,18 @@ describe("applyStreamlitOptionDefaults", () => {
         68,
       ],
       ["a map offset from the right edge", { right: 10 }, "right", 60],
+      [
+        "an auto left beside a right offset",
+        { left: "auto", right: 10 },
+        "right",
+        60,
+      ],
+      [
+        "a map with auto positions",
+        { left: "auto", right: "auto" },
+        "left",
+        50,
+      ],
     ] as const)("fits %s", (_name, visualMap, side, expectedPx) => {
       const result = applyDefaults(
         { xAxis: {}, yAxis: {}, visualMap, series: [] },
