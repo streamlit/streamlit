@@ -162,11 +162,24 @@ describe("applyBarRounding", () => {
     expect((horizontal.itemStyle as Series).borderRadius).toEqual([0, R, R, 0])
   })
 
+  it("rounds a single series object without wrapping it in a list", () => {
+    const option = barChart()
+    const rounded = applyBarRounding(
+      { ...option, series: (option.series as Series[])[0] },
+      STREAMLIT_THEME,
+      theme
+    ).series as Series
+
+    expect(Array.isArray(rounded)).toBe(false)
+    expect((rounded.itemStyle as Series).borderRadius).toEqual([R, R, 0, 0])
+  })
+
   it.each([
     ["a stacked series", barChart({ stack: "total" })],
     ["a polar series", barChart({ coordinateSystem: "polar" })],
     ["a histogram without a category gap", barChart({ barCategoryGap: "0%" })],
     ["a numeric zero category gap", barChart({ barCategoryGap: 0 })],
+    ["a large-mode series", barChart({ large: true })],
     ["a negative value", barChart({ data: [3, -5, 2] })],
     ["a negative numeric string", barChart({ data: ["3", "-5"] })],
     ["a negative value in a data item", barChart({ data: [{ value: -1 }] })],
@@ -197,6 +210,10 @@ describe("applyBarRounding", () => {
     ["a missing axis", barChart({ xAxisIndex: 2 })],
     ["an author border radius", barChart({ itemStyle: { borderRadius: 0 } })],
     ["a non-bar series", barChart({ type: "line" })],
+    [
+      "a single non-bar series object",
+      barChart({}, { series: { type: "line", data: [1] } }),
+    ],
   ])("keeps square bars for %s", (_, option) => {
     expect(applyBarRounding(option, STREAMLIT_THEME, theme)).toBe(option)
   })

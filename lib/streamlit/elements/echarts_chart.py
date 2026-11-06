@@ -1291,10 +1291,12 @@ class EChartsMixin:
             ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
             note above). Time, value, and log axes hide tick labels that would
             overlap. To show every label on an axis, add
-            ``"hideOverlap": False`` to its ``axisLabel``. Unstacked bars
-            without negative values get rounded outer corners that scale with
-            the ``theme.baseRadius`` configuration option. To keep square bars,
-            add ``"borderRadius": 0`` to the series' ``itemStyle``.
+            ``"hideOverlap": False`` to its ``axisLabel``. Unstacked bars get
+            rounded outer corners that scale with the ``theme.baseRadius``
+            configuration option. Bars with a negative value, on a log axis, or
+            without a category gap (such as a histogram) stay square. To keep
+            square bars, add ``"borderRadius": 0`` to the series'
+            ``itemStyle``.
 
             On a time ``xAxis`` or ``yAxis``, the axis tooltip header and axis
             pointer label show a midnight value as a date (for example

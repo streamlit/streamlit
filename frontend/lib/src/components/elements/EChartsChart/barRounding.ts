@@ -40,8 +40,9 @@ export function getBarRadiusPx(theme: EmotionTheme): number {
 
 /**
  * Whether a data item or dataset row has a negative number or numeric string
- * in any field. Checking every field avoids resolving ``encode``; a negative
- * label offset only keeps bars square.
+ * in any field. Every field is checked instead of resolving ``encode``, so a
+ * negative value in a column the series doesn't plot, or a negative label
+ * offset, also keeps the bars square.
  */
 function hasNegativeValue(value: unknown): boolean {
   if (typeof value === "number" || typeof value === "string") {
@@ -66,6 +67,7 @@ function hasNegativeValue(value: unknown): boolean {
  * - Non-cartesian series, such as polar bars.
  * - Series without a category gap, such as histograms, whose touching bars
  *   would show notches.
+ * - Large-mode series, which ECharts draws without corner radii.
  * - Series with negative values, on a log axis, or on an axis with a
  *   ``startValue``, whose bars can grow toward the base axis.
  * - Series that pick their axes by id, whose axes are missing, or whose data
@@ -89,6 +91,7 @@ function withRoundedBarEnds(
     seriesOption.stack !== undefined ||
     (seriesOption.coordinateSystem ?? "cartesian2d") !== "cartesian2d" ||
     Number.parseFloat(String(seriesOption.barCategoryGap)) === 0 ||
+    seriesOption.large === true ||
     seriesOption.xAxisId !== undefined ||
     seriesOption.yAxisId !== undefined ||
     "borderRadius" in itemStyle
@@ -136,9 +139,10 @@ function withRoundedBarEnds(
  * Round the outer end of bars under the Streamlit theme, scaled with the
  * theme's base radius (``baseRadius="none"`` keeps square bars).
  *
- * Only top-level ``series`` change. Timeline charts, which nest their series
- * in ``baseOption``, keep square bars, and ``media`` overrides inherit the
- * rounding of the series they merge into.
+ * Only top-level ``series`` change, whether a list or a single object.
+ * Timeline charts, which nest their series in ``baseOption``, keep square
+ * bars, and ``media`` overrides inherit the rounding of the series they merge
+ * into.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
@@ -153,7 +157,14 @@ export function applyBarRounding(
 ): EChartsOptionObject {
   const { series } = option
   const radius = getBarRadiusPx(theme)
-  if (themeStr !== STREAMLIT_THEME || radius <= 0 || !Array.isArray(series)) {
+  if (themeStr !== STREAMLIT_THEME || radius <= 0) {
+    return option
+  }
+  if (isPlainObject(series)) {
+    const updated = withRoundedBarEnds(series, option, radius)
+    return updated === series ? option : { ...option, series: updated }
+  }
+  if (!Array.isArray(series)) {
     return option
   }
   const updated = series.map(entry =>

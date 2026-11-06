@@ -270,9 +270,10 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   get themed defaults.
 - **Bar corners** — bars on cartesian axes round the end away from their category (or time)
   axis, with a radius of half the theme's `baseRadius`, so `baseRadius="none"` keeps them
-  square. Stacked series, series with a negative value, a log value axis, or no category gap
-  (histograms), timeline charts, and series whose data Streamlit can't read stay square. A
-  series' own `itemStyle.borderRadius` wins.
+  square. These stay square: stacked series; series with a negative value, on a log value axis
+  or one with a `startValue`, with no category gap (histograms), or with axes picked by id;
+  timeline charts; and series whose data Streamlit can't read. A series' own
+  `itemStyle.borderRadius` wins.
 - **Plot margins** — for cartesian charts, Streamlit fills in a default `grid` (tighter side
   margins than ECharts' percentage-based defaults, and axis labels and names kept inside them) so
   the plot fills its container like other Streamlit charts. A vertical `visualMap` beside the

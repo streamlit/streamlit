@@ -1850,9 +1850,9 @@ function cartesianAxisType(axis: Record<string, unknown>): unknown {
 }
 
 /**
- * True when ECharts picks the y axis as a grid's base axis, the axis bars grow
- * from. The base axis is the first category axis, else the first time axis,
- * else x.
+ * Whether ECharts uses the y axis as the base axis that bars grow from. The
+ * base axis is the first category axis, otherwise the first time axis,
+ * otherwise x.
  */
 export function isYBaseAxis(
   xAxis: Record<string, unknown>,

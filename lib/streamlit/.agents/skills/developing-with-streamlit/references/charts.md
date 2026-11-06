@@ -148,7 +148,7 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error.
 - **Numbers on a category axis are positions.** A marker at `{"xAxis": 2023}` means category index 2023 (0-based), not the label `2023`, so a year axis drops it. Pass labels as strings, and cast numeric category columns such as years with `.astype(str)`.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
-- **Leave bar corners to the theme.** Unstacked bars without negative values get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. For square bars, set `"borderRadius": 0`.
+- **Leave bar corners to the theme.** Unstacked bars get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. Bars with negative values, log axes, or no category gap (histograms) stay square on purpose. For square bars, set `"borderRadius": 0`.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 
 ## Chart selections
