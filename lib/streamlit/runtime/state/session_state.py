@@ -1514,6 +1514,37 @@ class SessionState:
         """Return the latest metadata retained for a widget id, if any."""
         return self._get_widget_metadata(widget_id)
 
+    def widget_has_callback(self, widget_id: str) -> bool:
+        """Return whether a change to ``widget_id`` may dispatch a callback.
+
+        Unknown widgets report True, since their callbacks cannot be ruled out.
+        """
+        metadata = self._get_widget_metadata(widget_id)
+        if metadata is None:
+            return True
+        return metadata.callback is not None or bool(metadata.callbacks)
+
+    def dispatched_trigger_replay(
+        self,
+        fresh_widget_states: WidgetStatesProto | None,
+        replay_trigger_states: WidgetStatesProto | None,
+        replay_trigger_values: Mapping[str, Any] | None,
+    ) -> tuple[WidgetStatesProto | None, Mapping[str, Any] | None]:
+        """Return the active triggers a just-committed interaction made visible.
+
+        Call after ``on_script_will_rerun``. The result lets a later body
+        observe these triggers without dispatching their callbacks again.
+        """
+        fresh_triggers = self._filter_active_trigger_widget_states(fresh_widget_states)
+        states = _coalesce_replay_trigger_states(replay_trigger_states, fresh_triggers)
+        values = _coalesce_replay_trigger_values(
+            new_states=fresh_triggers,
+            old_values=replay_trigger_values,
+            new_values=self._capture_replay_trigger_values(fresh_triggers),
+            coalesced_states=states,
+        )
+        return states, values
+
     def get_widget_id_from_key(self, user_key: str) -> str | None:
         """Return the element ID the widget with ``user_key`` last registered under.
 
