@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import builtins
 import keyword
+import re
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -59,7 +60,7 @@ from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.state.common import TESTING_KEY, user_key_from_element_id
-from streamlit.testing.v1.errors import AppTestError
+from streamlit.testing.v1.errors import AppTestError, AppTestLookupError
 
 if TYPE_CHECKING:
     from pandas import DataFrame as PandasDataframe
@@ -552,6 +553,159 @@ class Widget(Element, ABC):
 
 El_co = TypeVar("El_co", bound=Element, covariant=True)
 
+# For each ``label=`` / ``text=`` lookup filter, the element types that support
+# it and the attribute holding the string it matches.
+_LOOKUP_FILTER_ATTRS: Final[dict[str, dict[str, str]]] = {
+    "label": {"button": "label", "text_input": "label"},
+    "text": {"markdown": "value"},
+}
+_MAX_LOOKUP_CANDIDATES: Final = 10
+_MAX_LOOKUP_CANDIDATE_LENGTH: Final = 80
+
+
+def _lookup_filter_support(filter_name: str) -> str:
+    """Return a sentence naming the element types that support this filter."""
+    supported = ", ".join(_LOOKUP_FILTER_ATTRS[filter_name])
+    return f"AppTest supports {filter_name}= on: {supported}."
+
+
+def _lookup_filter_value(element: Element, filter_name: str) -> str:
+    """Return the whitespace-collapsed string that a lookup filter matches.
+
+    Raises ``AppTestError`` if the element type does not support the filter.
+    """
+    attr = _LOOKUP_FILTER_ATTRS[filter_name].get(element.type)
+    if attr is None:
+        raise AppTestError(
+            f"{filter_name}= lookups are not supported for {element.type}. "
+            f"{_lookup_filter_support(filter_name)} "
+            "Look up this element by key or index instead."
+        )
+    return " ".join(str(getattr(element, attr)).split())
+
+
+def _check_lookup_query(filter_name: str, query: object, *, exact: bool) -> None:
+    """Validate a ``label=`` or ``text=`` query before matching.
+
+    Raises ``TypeError`` if the query is not a string or a regex compiled from
+    a string. Raises ``AppTestError`` for a blank ``exact=False`` string or an
+    empty regex: both match every value, so they would select the only element
+    of a one-element collection without naming it. They usually come from an
+    empty variable. A regex such as ``.*`` is an explicit choice and is allowed.
+    """
+    if isinstance(query, re.Pattern):
+        if not isinstance(query.pattern, str):
+            raise TypeError(
+                f"{filter_name}= must be a str or a compiled regular expression. "
+                "Got a bytes regular expression. Compile a str pattern instead."
+            )
+        if not query.pattern:
+            raise AppTestError(
+                f"{filter_name}= cannot be an empty regular expression because "
+                "it matches every element."
+            )
+    elif not isinstance(query, str):
+        raise TypeError(
+            f"{filter_name}= must be a str or a compiled regular expression. "
+            f"Got {type(query).__name__}."
+        )
+    elif not exact and not query.strip():
+        raise AppTestError(
+            f"{filter_name}= cannot be blank with exact=False because it "
+            "matches every element."
+        )
+
+
+def _lookup_filter_matches(
+    value: str, query: str | re.Pattern[str], *, exact: bool
+) -> bool:
+    """Return whether a whitespace-collapsed value matches a lookup filter.
+
+    Search a regex with ``re.search``. Compare a string for equality or, when
+    ``exact`` is false, as a case-insensitive substring.
+    """
+    if isinstance(query, re.Pattern):
+        return query.search(value) is not None
+    query = " ".join(query.split())
+    if exact:
+        return value == query
+    return query.casefold() in value.casefold()
+
+
+def _lookup_candidates(
+    elements: Sequence[Element], filter_name: str, *, show_keys: bool
+) -> str:
+    """Return the elements' filter values as a bounded, comma-separated list."""
+    candidates = []
+    for e in elements[:_MAX_LOOKUP_CANDIDATES]:
+        # ElementList.__call__ already read this filter from every element,
+        # so an unsupported type would have raised there.
+        value = _lookup_filter_value(e, filter_name)
+        if len(value) > _MAX_LOOKUP_CANDIDATE_LENGTH:
+            value = value[: _MAX_LOOKUP_CANDIDATE_LENGTH - 3] + "..."
+        candidates.append(
+            f"(key={e.key!r}, {filter_name}={value!r})"
+            if show_keys
+            else f"{filter_name}={value!r}"
+        )
+    if len(elements) > _MAX_LOOKUP_CANDIDATES:
+        candidates.append(f"and {len(elements) - _MAX_LOOKUP_CANDIDATES} more")
+    return ", ".join(candidates)
+
+
+def _lookup_failure_message(
+    elements: Sequence[Element],
+    matches: Sequence[Element],
+    value_matches: Sequence[Element],
+    *,
+    key: str | None,
+    filters: dict[str, str | re.Pattern[str]],
+    exact: bool,
+) -> str:
+    """Return the message for a lookup that matched zero or several elements.
+
+    ``value_matches`` are the elements that match every filter, ignoring
+    ``key``. ``matches`` are those of them that also have the given key.
+    """
+    lookup_parts = [f"key={key!r}"] if key is not None else []
+    lookup_parts += [f"{name}={query!r}" for name, query in filters.items()]
+    # A regex ignores exact=, so show it only when a string filter used it.
+    if not exact and any(isinstance(query, str) for query in filters.values()):
+        lookup_parts.append("exact=False")
+    lookup_repr = ", ".join(lookup_parts)
+    if not elements:
+        # An empty collection cannot tell which filters its type supports, so
+        # name the supported types instead.
+        support = " ".join(_lookup_filter_support(name) for name in filters)
+        return f"No element matches {lookup_repr}. The collection is empty. {support}"
+    element_type = elements[0].type
+    name = next(iter(filters))
+    if matches:
+        # Of the filterable types, only widgets accept a user key, so only
+        # widget matches show their keys.
+        is_widget = isinstance(elements[0], Widget)
+        narrow_hint = (
+            "Add key= or scope the lookup to a container to select one."
+            if is_widget
+            else "Use a more specific value or regex, or scope the lookup to a "
+            "container to select one."
+        )
+        matched = _lookup_candidates(matches, name, show_keys=is_widget)
+        return (
+            f"{len(matches)} {element_type} elements match {lookup_repr}: "
+            f"{matched}. {narrow_hint}"
+        )
+    if key is None:
+        candidates = _lookup_candidates(elements, name, show_keys=False)
+    else:
+        # With key=, show each candidate's key so a candidate with the right
+        # value but a different key is recognizable. List those candidates
+        # first so the candidate limit cannot drop them.
+        value_match_ids = {id(e) for e in value_matches}
+        ranked = sorted(elements, key=lambda e: id(e) not in value_match_ids)
+        candidates = _lookup_candidates(ranked, name, show_keys=True)
+    return f"No {element_type} matches {lookup_repr}. Candidates: {candidates}."
+
 
 class ElementList(Generic[El_co]):
     def __init__(self, els: Sequence[El_co]) -> None:
@@ -589,17 +743,115 @@ class ElementList(Generic[El_co]):
     def __hash__(self) -> int:
         return hash(tuple(self._list))
 
-    def __call__(self, key: str) -> El_co:
-        """Return the first element in this collection with the given user key.
+    def __call__(
+        self,
+        key: str | None = None,
+        *,
+        label: str | re.Pattern[str] | None = None,
+        text: str | re.Pattern[str] | None = None,
+        exact: bool = True,
+    ) -> El_co:
+        """Return an element in this collection by user key, label, or text.
 
-        The same key can appear on different element types, so this returns the
-        first match in this collection. Use ``get_by_key`` when an ambiguous
-        key should raise.
+        With only ``key``, this returns the first element with that user key.
+        The same key can appear on different element types, so use
+        ``get_by_key`` when an ambiguous key should raise.
+
+        With ``label`` or ``text``, the lookup is strict: exactly one element
+        must match every given filter. ``label`` is supported on ``button`` and
+        ``text_input`` collections. ``text`` is supported on ``markdown``
+        collections.
+
+        Parameters
+        ----------
+        key : str or None
+            The user key of the element. If this is ``None`` (default), only
+            ``label`` and ``text`` select the element.
+        label : str, re.Pattern, or None
+            The widget's ``label`` argument. Markdown written in that string,
+            such as ``**Save**`` or ``:material/save:``, is matched as stored.
+            If this is ``None`` (default), labels are not compared.
+        text : str, re.Pattern, or None
+            The text of the element. For ``st.markdown``, this is the Markdown
+            source, including syntax such as ``**``. If this is ``None``
+            (default), text is not compared.
+        exact : bool
+            Full-value matching for a string ``label`` or ``text``. If this is
+            ``True`` (default), the strings must be equal. If this is
+            ``False``, the string must appear anywhere in the value, ignoring
+            case. Both modes collapse and trim whitespace in the query and the
+            value. A compiled regular expression is matched with ``re.search``
+            against the collapsed value and ignores ``exact``.
+
+        Returns
+        -------
+        Element
+            The matching element, typed as this collection's element class,
+            such as ``Button``.
+
+        Raises
+        ------
+        TypeError
+            If none of ``key``, ``label``, or ``text`` is given, if
+            ``exact=False`` is given without ``label`` or ``text``, or if
+            ``label`` or ``text`` is neither a string nor a regular expression
+            compiled from a string.
+        KeyError
+            If only ``key`` is given and no element has that key.
+        AppTestLookupError
+            If ``label`` or ``text`` is given and zero or several elements
+            match. An empty collection raises this error even when its element
+            type does not support the filter, and the message names the
+            element types that do.
+        AppTestError
+            If the collection's element type does not support ``label`` or
+            ``text``, or if a query matches every value: a blank string with
+            ``exact=False`` or an empty regular expression.
         """
+        if label is None and text is None:
+            if key is None:
+                raise TypeError("Pass a key, label=, or text= to look up an element.")
+            if not exact:
+                raise TypeError("exact= applies only to label= and text= lookups.")
+            for e in self._list:
+                if getattr(e, "key", None) == key:
+                    return e
+            raise KeyError(key)
+
+        filters = {
+            name: query
+            for name, query in (("label", label), ("text", text))
+            if query is not None
+        }
+        for name, query in filters.items():
+            _check_lookup_query(name, query, exact=exact)
+        value_matches: list[El_co] = []
         for e in self._list:
-            if getattr(e, "key", None) == key:
-                return e
-        raise KeyError(key)
+            # Read every filtered value first so an unsupported filter raises
+            # even when another filter would exclude the element.
+            values = {name: _lookup_filter_value(e, name) for name in filters}
+            if all(
+                _lookup_filter_matches(values[name], query, exact=exact)
+                for name, query in filters.items()
+            ):
+                value_matches.append(e)
+        matches = (
+            value_matches
+            if key is None
+            else [e for e in value_matches if getattr(e, "key", None) == key]
+        )
+        if len(matches) == 1:
+            return matches[0]
+        raise AppTestLookupError(
+            _lookup_failure_message(
+                self._list,
+                matches,
+                value_matches,
+                key=key,
+                filters=filters,
+                exact=exact,
+            )
+        )
 
     @property
     def values(self) -> Sequence[Any]:
