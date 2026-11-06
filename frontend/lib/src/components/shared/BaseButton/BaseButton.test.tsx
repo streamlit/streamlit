@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import { getContrast } from "color2k"
+import { darken, getContrast } from "color2k"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
@@ -124,7 +124,7 @@ describe("Button element", () => {
     expect(buttonWidget).not.toHaveAttribute("aria-label")
   })
 
-  it("keeps the tertiary active color while its overlay is open", () => {
+  it("applies the tertiary active color when aria-expanded is true", () => {
     const activeColor = getTertiaryActiveColor(mockTheme.emotion)
     render(
       <>
@@ -157,9 +157,27 @@ describe("Button element", () => {
 })
 
 describe("getTertiaryActiveColor", () => {
+  const midGrayTheme = {
+    ...darkTheme.emotion,
+    colors: {
+      ...darkTheme.emotion.colors,
+      bgColor: "#b0b0b0",
+      primary: "#004080",
+    },
+  }
+
+  it("keeps the darkened primary color in the light theme", () => {
+    const { primary } = lightTheme.emotion.colors
+
+    expect(getTertiaryActiveColor(lightTheme.emotion)).toBe(
+      darken(primary, 0.25)
+    )
+  })
+
   it.each([
     ["light", lightTheme.emotion],
     ["dark", darkTheme.emotion],
+    ["mid-gray background with dark primary", midGrayTheme],
   ] as const)(
     "has more contrast against the background than the primary color (%s theme)",
     (_name, theme) => {
