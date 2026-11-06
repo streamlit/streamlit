@@ -529,15 +529,16 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         "c_title_top_legend": "st_echarts_chart-title_top_legend",
         "c_treemap_layout": "st_echarts_chart-treemap",
         "c_reference_lines": "st_echarts_chart-reference_lines",
-        # A default vertical visualMap gets room beside the plot, and an
-        # unmapped heatmap uses the sequential palette.
+        # A default vertical piecewise visualMap gets room beside the plot, and
+        # the heatmap uses the sequential palette.
         "c_piecewise_heatmap": "st_echarts_chart-piecewise_heatmap",
         # A visualMap that maps only symbol size keeps each series' own color.
         "c_size_visual_map": "st_echarts_chart-size_visual_map",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
-        # Some charts draw more than one canvas layer.
+        # ECharts can add a second canvas layer. Playwright strict mode rejects a
+        # locator that matches both, so wait on the first canvas.
         expect(chart.locator("canvas").first).to_be_visible()
         assert_snapshot(chart, name=name)
 

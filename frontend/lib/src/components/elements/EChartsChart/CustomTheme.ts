@@ -897,8 +897,8 @@ const VISUAL_MAP_HANDLE_SCALE = 1.2
 
 /**
  * Average glyph width of digits, separators, and short words, as a share of
- * the font size. Used to estimate label widths without measuring text, so
- * labels in wider scripts, such as CJK, are underestimated.
+ * the font size. The width estimate uses this instead of measuring text, so
+ * it underestimates labels in wider scripts, such as CJK.
  */
 const AVERAGE_GLYPH_WIDTH_EM = 0.55
 
@@ -921,6 +921,7 @@ function verticalVisualMapEdge(
     return undefined
   }
   const { left, right } = visualMap
+  // ECharts also accepts the edge keywords "left" and "right" as a `left` value.
   if (left === "right") {
     return { side: "right", offsetPx: 0 }
   }
@@ -1011,8 +1012,8 @@ function pieceLabels(visualMap: Record<string, unknown>): string[] {
   while (+step.toFixed(precision) !== step && precision < 5) {
     precision++
   }
-  // Width proxies, not the drawn labels: no split label is wider than the
-  // wider end bound written on both sides of " - ".
+  // Width proxy, not the drawn label: the widest split is no wider than the
+  // longer end bound repeated on both sides of " - ".
   return [min, max].map(bound => {
     const text = bound.toFixed(precision)
     return `${text} - ${text}`
@@ -1118,11 +1119,11 @@ function withSpecGradientColor(
       return item
     }
     const entry = item as Record<string, unknown>
-    const fallsBack =
+    const usesGradientFallback =
       entry.inRange === undefined &&
       get(entry, ["target", "inRange"]) === undefined &&
       !Array.isArray(entry.color)
-    return fallsBack
+    return usesGradientFallback
       ? { ...entry, inRange: { color: [...gradientColor] } }
       : entry
   }
