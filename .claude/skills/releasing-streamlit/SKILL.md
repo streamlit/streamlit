@@ -23,12 +23,11 @@ uv run --no-project python .claude/skills/releasing-streamlit/scripts/release_st
 It derives each step's state from GitHub, PyPI, and the SiS asset CDN. Nothing is stored locally, so rerunning the skill after a break, a crash, or someone else's manual step resumes correctly. Trust the board over your memory of the conversation, and show it to the user so they can see where things stand.
 
 - `✗` on any row means stop. Show the row and ask the user how to proceed. Do not repair state automatically: a contradictory state (a tag that is not at the branch head, a build running on an old commit) usually means someone acted by hand, and guessing can publish the wrong commit.
-- `…` means something is in flight. Attach to it and watch; never dispatch the same workflow again.
+- `…` means a run is in flight. Attach to it and watch; never dispatch the same workflow again. On the branch, cherry-pick, and tag rows the API can't show which version a run is for, so open the link and check before acting.
 - `»` means the next step needs a human or a source the script can't read. On the cherry-picks row before tagging, it lists what's on the branch so far; it is not a decision.
 - `⚠` means the board can't confirm the step (a red nightly, a branch base that matches no nightly, a successful build PyPI doesn't show yet). Show the row and ask before acting on it.
-- A `…` on the branch, cherry-pick, or tag row means a run of that workflow is unfinished. The API can't show which version a run is for, so open the link and check before doing anything.
 - The script exits with code 2 if a lookup failed (network, `gh` auth, rate limit). Report it and retry later; do not read a failed lookup as "not done".
-- The board enforces the runbook's "one release in the publish phase at a time": another open `release/*` PR shows as a problem on the tag row.
+- The board enforces the runbook's "one release in the publish phase at a time": another open `release/*` PR is `⚠` on the tag row until this release has a branch, then `✗`.
 
 ## Things the agent never does
 
@@ -61,9 +60,12 @@ Every write needs its own confirmation that names it: dispatching a workflow, su
 
 Step numbers match the runbook.
 
-1. **Cutoff nightly.** Nightly tags are named for the day *before* the 04:30 UTC run, so the run on Nov 5 publishes `x.y.z.dev20261104`. Confirm the nightly workflow is green. For SiS e2e, read the jenkins bot posts in Slack `#e2e-tests-sis-oss` (through Glean if available) for runs after the nightly published. Read the `Run`/`Passed` counts, not the PASSED/FAILED header, which has said PASSED at 1/5. Note if the suite has shrunk. If no run has covered the nightly yet, ask whether to wait, use the previous nightly, or pause. If you can't read Slack, ask the user to check the channel or the Datadog dashboard linked in the runbook. Ask the user whether specific PRs must be in the release, and confirm each by merge commit; a PR merged into another PR's branch only lands through that PR.
-2. **Release branch.** Dispatch with the exact nightly tag. Afterwards, the diff from `<nightly>^` should be only the version bump and `uv.lock`. Stop if it isn't.
-3. **Cherry-picks.** Ask whether any are needed before tagging. One SHA per run. On a conflict, hand off. If `@streamlit/component-v2-lib` needs a version bump this release, its commit must be on the branch before tagging (runbook, "Separately versioned component packages").
+1. **Cutoff nightly.** Nightly tags are named for the day *before* the 04:30 UTC run, so the run on Nov 5 publishes `x.y.z.dev20261104`.
+   1. Confirm the nightly workflow is green.
+   2. For SiS e2e, read the jenkins bot posts in Slack `#e2e-tests-sis-oss` (through Glean if available) for runs after the nightly published. Read the `Run`/`Passed` counts, not the PASSED/FAILED header, which has said PASSED at 1/5, and note if the suite has shrunk. If no run has covered the nightly yet, ask whether to wait, use the previous nightly, or pause. If you can't read Slack, ask the user to check the channel or the Datadog dashboard linked in the runbook.
+   3. Ask the user whether specific PRs must be in the release, and confirm each by merge commit. A PR merged into another PR's branch only lands through that PR.
+2. **Release branch.** Dispatch with the exact nightly tag. Afterwards, the diff from `<nightly>^` should be a single `Up version to <version>` commit touching the package version files (`lib/pyproject.toml`, the frontend `package.json` files) and `uv.lock`. Stop if it's anything else.
+3. **Cherry-picks.** Ask whether any are needed before tagging. One full 40-character SHA per run; the workflow rejects short SHAs. On a conflict, hand off. If `@streamlit/component-v2-lib` needs a version bump this release, its commit must be on the branch before tagging (runbook, "Separately versioned component packages").
 4. **Tag and merge-back PR.** Leave the PR open until publishing completes; Build Release looks for it.
 5. **SiS static assets.** In this order:
    1. Ask whether any SiS static-asset patches landed since the branch point. If so, the internal Static Assets doc's patch instructions apply (that is when `is_internal_patch` is set); walk through them with the user. Otherwise leave it unchecked.

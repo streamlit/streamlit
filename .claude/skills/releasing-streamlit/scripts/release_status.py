@@ -344,9 +344,10 @@ def status(version: str) -> dict[str, Any]:
         gh_api(f"repos/{REPO}/pulls?state=all&head=streamlit:{branch}&per_page=5") or []
     )
     pr = prs[0] if prs else None
+    open_prs = recent_prs(REPO, state="open", pages=3)
     others = [
         str(p["number"])
-        for p in recent_prs(REPO, state="open", pages=3)
+        for p in open_prs
         if p["head"]["ref"].startswith("release/")
         and (not pr or p["number"] != pr["number"])
     ]
@@ -375,17 +376,28 @@ def status(version: str) -> dict[str, Any]:
     if not on_pypi and (running := active_runs("release-tag-and-pr-creation.yml")):
         # A running Tag + PR explains a missing tag or PR, but not a tag off the
         # branch head or a closed PR. The run may also be for another version.
-        if tstep.state != FAIL or pr_pending:
+        if tstep.state == TODO or pr_pending:
             tstep.state = RUNNING
-        tstep.detail = (tstep.detail + " · " if tstep.detail else "") + (
-            "tag + PR run in progress; attach to it, don't dispatch again"
-        )
+            note = "tag + PR run in progress; attach to it, don't dispatch again"
+        else:
+            note = "a tag + PR run is in progress, likely for another version"
+        tstep.detail = (tstep.detail + " · " if tstep.detail else "") + note
         tstep.links += [r["html_url"] for r in running]
     if others and not on_pypi:
-        # Tag + PR would open a second release PR, which Build Release can't tell apart.
-        tstep.state = FAIL
+        # Tag + PR would open a second release PR, which Build Release can't tell
+        # apart. Before this release has a branch it's only a heads-up.
+        tstep.state = FAIL if branch_sha else WARN
         note = f"other open release/* PRs: {', '.join('#' + n for n in others)}"
         tstep.detail = f"{tstep.detail} · {note}" if tstep.detail else note
+    # scripts/get_release_branch.py reads only the first page (30 newest) of open PRs.
+    if pr and pr["state"] == "open" and not on_pypi:
+        first_page = {p["number"] for p in open_prs[:30]}
+        if pr["number"] not in first_page and tstep.state != FAIL:
+            tstep.state = WARN
+            tstep.detail += (
+                " · release PR is not among the 30 newest open PRs, so Build Release"
+                " won't find it"
+            )
     steps.append(tstep)
 
     # 5. SiS static assets
@@ -469,11 +481,13 @@ def status(version: str) -> dict[str, Any]:
             if r["status"] != "completed" and tag_sha and r["head_sha"] != tag_sha
         ]
         if stale:
-            rstep.state = FAIL
-            rstep.detail = (
+            note = (
                 f"in-flight run on {stale[0]['head_sha'][:9]} but tag {version} "
                 f"is {tag_sha[:9]}. Cancel it; do not approve it."
             )
+            # Keep an earlier stop (a succeeded run PyPI may not list yet) visible.
+            rstep.detail = f"{rstep.detail} · {note}" if rstep.state == FAIL else note
+            rstep.state = FAIL
             rstep.links = [r["html_url"] for r in stale] + rstep.links
     steps.append(rstep)
 
@@ -511,6 +525,9 @@ def status(version: str) -> dict[str, Any]:
                 dstep.detail += (
                     " · confirm any example apps in the docs PR are deployed"
                 )
+            elif state == "closed":
+                dstep.state = FAIL
+                dstep.detail = f"PR #{num} was closed without merging"
             else:
                 dstep.state, dstep.detail = (
                     RUNNING,
@@ -558,12 +575,23 @@ def status(version: str) -> dict[str, Any]:
 
 
 def next_action(steps: list[Step]) -> str:
+    # Stops first, then anything in flight (so a resumed session attaches instead
+    # of dispatching again), then the first open step. Rows that only wait on a
+    # person don't hide later automated work.
     for s in steps:
         if s.state == FAIL:
             return f"Stop: {s.title}: {s.detail}"
+    running = [s for s in steps if s.state == RUNNING]
+    if running:
+        return "Watch: " + "; ".join(f"{s.title}: {s.detail}" for s in running)
     for s in steps:
-        if s.state in {TODO, RUNNING, MANUAL, WARN}:
+        if s.state in {TODO, WARN}:
             return f"{s.title}: {s.detail or 'not started'}"
+    manual = [s for s in steps if s.state == MANUAL]
+    if manual:
+        return "Confirm with the user: " + "; ".join(
+            f"{s.title}: {s.detail}" for s in manual
+        )
     return "All steps done."
 
 

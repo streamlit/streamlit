@@ -82,8 +82,8 @@ branch. Cherry-pick only changes that are necessary and low risk, such as:
 - a small correction to documentation for a feature already in the release.
 
 For each commit, run [Cherry-Pick to Release Branch](https://github.com/streamlit/streamlit/actions/workflows/cherry-pick-to-release-branch.yml)
-with the target release version and one commit SHA. The workflow accepts a
-7-to-40-character SHA, checks out `release/<version>`, cherry-picks the commit,
+with the target release version and one commit SHA. The workflow requires the
+full 40-character SHA, checks out `release/<version>`, cherry-picks the commit,
 and pushes the branch.
 
 If the workflow reports a conflict, it aborts without pushing. Resolve the
