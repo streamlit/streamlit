@@ -167,6 +167,23 @@ class CachedDataFuncInfo(CachedFuncInfo[P, R]):
         )
 
 
+def _has_params(
+    cache: DataCache[Any],
+    fresh_ttl_seconds: float | None,
+    max_entries: int | None,
+    max_size_bytes: int | None,
+    persist: CachePersistType,
+    refresh_mode: RefreshMode,
+) -> bool:
+    return (
+        cache.fresh_ttl_seconds == fresh_ttl_seconds
+        and cache.max_entries == max_entries
+        and cache.max_size_bytes == max_size_bytes
+        and cache.persist == persist
+        and cache.refresh_mode == refresh_mode
+    )
+
+
 class DataCaches(StatsProvider):
     """Manages all DataCache instances."""
 
@@ -211,6 +228,17 @@ class DataCaches(StatsProvider):
         else:
             session_id = get_session_id_or_throw()
 
+        # Every call on every cached function looks up its cache here, so reuse
+        # skips the registry lock. Dict reads are atomic, and the cache returned is
+        # one a locked lookup could also have returned just before a concurrent
+        # replacement or clear.
+        session_caches = self._function_caches.get(session_id)
+        cache = session_caches.get(key) if session_caches is not None else None
+        if cache is not None and _has_params(
+            cache, fresh_ttl_seconds, max_entries, max_size_bytes, persist, refresh_mode
+        ):
+            return cache
+
         # Get the existing cache, if it exists, and validate that its params
         # haven't changed.
         with self._caches_lock:
@@ -219,13 +247,13 @@ class DataCaches(StatsProvider):
                 session_caches = self._function_caches[session_id] = {}
 
             cache = session_caches.get(key)
-            if (
-                cache is not None
-                and cache.fresh_ttl_seconds == fresh_ttl_seconds
-                and cache.max_entries == max_entries
-                and cache.max_size_bytes == max_size_bytes
-                and cache.persist == persist
-                and cache.refresh_mode == refresh_mode
+            if cache is not None and _has_params(
+                cache,
+                fresh_ttl_seconds,
+                max_entries,
+                max_size_bytes,
+                persist,
+                refresh_mode,
             ):
                 return cache
 

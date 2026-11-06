@@ -296,6 +296,49 @@ def test_concurrent_hits_are_all_counted(
     }
 
 
+def test_hits_from_more_threads_than_counters_are_all_counted() -> None:
+    """Threads sharing a hit counter lose no increments, and concurrent scrapes
+    only ever see the hit count grow.
+    """
+    metrics = FunctionCacheMetrics(CacheType.DATA, "module.load")
+    threads = 40
+    hits_per_thread = 2_000
+    start = threading.Barrier(threads)
+    writers_done = threading.Event()
+    scraped: list[int] = []
+
+    def hit_many() -> None:
+        start.wait()
+        for _ in range(hits_per_thread):
+            metrics.record_hit()
+
+    def scrape_until_done() -> None:
+        while not writers_done.is_set():
+            scraped.append(_hit_count(metrics))
+
+    scraper = threading.Thread(target=scrape_until_done)
+    scraper.start()
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        for future in [executor.submit(hit_many) for _ in range(threads)]:
+            future.result()
+    writers_done.set()
+    scraper.join()
+
+    assert _hit_count(metrics) == threads * hits_per_thread
+    assert scraped == sorted(scraped)
+
+
+def _hit_count(metrics: FunctionCacheMetrics) -> int:
+    stats = metrics.get_stats([CACHE_LOOKUPS_FAMILY])[CACHE_LOOKUPS_FAMILY]
+    return next(
+        stat.value
+        for stat in stats
+        if isinstance(stat, CounterStat)
+        and stat.labels is not None
+        and stat.labels["result"] == "hit"
+    )
+
+
 @patch(
     "streamlit.runtime.caching.cache_background_refresh.get_background_refresh_manager"
 )

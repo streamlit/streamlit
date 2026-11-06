@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import pickle
 import threading
 import time
 import unittest
@@ -1600,6 +1601,126 @@ class CommonCacheThreadingTest(unittest.TestCase):
 
         # Sanity check: ensure we can still call our cached function.
         assert foo() == 42
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_concurrent_hits_and_clears_return_correct_values(self, _, cache_decorator):
+        """Hits racing whole-cache and per-key clears return the right values, and
+        a clear that finishes after them still takes effect.
+        """
+        computed: list[int] = []
+
+        @cache_decorator(show_spinner=False)
+        def foo(x: int) -> int:
+            computed.append(x)
+            return x * 10
+
+        def hit_or_clear(thread_index: int) -> None:
+            for i in range(300):
+                if thread_index == 0 and i % 50 == 0:
+                    foo.clear()
+                elif thread_index == 1 and i % 50 == 0:
+                    foo.clear(i % 4)
+                else:
+                    assert foo(i % 4) == (i % 4) * 10
+
+        call_on_threads(hit_or_clear, num_threads=8, timeout=30)
+
+        foo.clear()
+        computed.clear()
+        assert [foo(x) for x in range(4)] == [0, 10, 20, 30]
+        assert computed == [0, 1, 2, 3]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    def test_concurrent_hits_keep_max_entries_lru_order(self, _, cache_decorator):
+        """Concurrent hits refresh recency, so the next write evicts the entry no
+        thread read.
+        """
+        computed: list[int] = []
+
+        @cache_decorator(max_entries=3, show_spinner=False)
+        def foo(x: int) -> int:
+            computed.append(x)
+            return x
+
+        for x in (0, 1, 2):
+            foo(x)
+
+        def hit_recent(thread_index: int) -> None:
+            for _ in range(300):
+                assert foo(1 + thread_index % 2) == 1 + thread_index % 2
+
+        call_on_threads(hit_recent, num_threads=8, timeout=30)
+        assert computed == [0, 1, 2]
+
+        foo(3)
+        assert [foo(1), foo(2), foo(3)] == [1, 2, 3]
+        assert computed == [0, 1, 2, 3]
+        foo(0)
+        assert computed == [0, 1, 2, 3, 0]
+
+    def test_concurrent_hits_keep_max_size_lru_order(self):
+        """Concurrent hits refresh recency for ``max_size`` eviction too."""
+        computed: list[int] = []
+
+        def entry_size(value: int) -> int:
+            return len(
+                pickle.dumps(CachedResult(value, [], st._main._id, st.sidebar._id))
+            )
+
+        @cache_data(max_size=3 * entry_size(0), show_spinner=False)
+        def foo(x: int) -> int:
+            computed.append(x)
+            return x
+
+        for x in (0, 1, 2):
+            foo(x)
+
+        def hit_recent(thread_index: int) -> None:
+            for _ in range(300):
+                assert foo(1 + thread_index % 2) == 1 + thread_index % 2
+
+        call_on_threads(hit_recent, num_threads=8, timeout=30)
+        assert computed == [0, 1, 2]
+
+        foo(3)
+        assert [foo(1), foo(2), foo(3)] == [1, 2, 3]
+        assert computed == [0, 1, 2, 3]
+        foo(0)
+        assert computed == [0, 1, 2, 3, 0]
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_concurrent_hits_keep_ttl_expiry(
+        self, _, cache_decorator, timer_patch: Mock
+    ):
+        """Concurrent hits neither extend an entry's ttl nor recompute it early."""
+        computed: list[int] = []
+        timer_patch.return_value = 0
+
+        @cache_decorator(ttl=100, show_spinner=False)
+        def foo() -> int:
+            computed.append(1)
+            return 42
+
+        foo()
+
+        def hit(_: int) -> None:
+            for _ in range(300):
+                assert foo() == 42
+
+        timer_patch.return_value = 99
+        call_on_threads(hit, num_threads=8, timeout=30)
+        assert len(computed) == 1
+
+        timer_patch.return_value = 100
+        call_on_threads(hit, num_threads=8, timeout=30)
+        assert len(computed) == 2
 
 
 def test_arrow_replay():

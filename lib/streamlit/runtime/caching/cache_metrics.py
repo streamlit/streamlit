@@ -91,6 +91,21 @@ _EVICTION_REASONS: Final[dict[CacheType, tuple[EvictionReason, ...]]] = {
 }
 
 
+# Concurrent hits on one function would all contend for one lock, so hits are
+# spread over a fixed number of counters picked by OS thread id and summed when
+# stats are read. Per-thread counters would grow without bound, because every
+# script run starts a new thread.
+_HIT_COUNTER_STRIPES: Final = 16
+
+
+class _LockedCounter:
+    __slots__ = ("count", "lock")
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.count = 0
+
+
 class _DurationHistogram:
     """Mutable state for one compute-duration histogram series."""
 
@@ -111,7 +126,9 @@ class FunctionCacheMetrics:
     labels.
 
     Each update holds a dedicated lock only for the integer additions, so
-    recording never extends the scope of a cache lock.
+    recording never extends the scope of a cache lock. Hit counts are read
+    separately from the other counters, so one scrape may see a hit without a
+    concurrent miss or eviction, or the reverse.
     """
 
     def __init__(self, cache_type: CacheType, display_name: str) -> None:
@@ -120,7 +137,9 @@ class FunctionCacheMetrics:
             "cache": display_name,
         }
         self._lock = threading.Lock()
-        self._hits = 0
+        self._hit_counters = tuple(
+            _LockedCounter() for _ in range(_HIT_COUNTER_STRIPES)
+        )
         self._misses = 0
         self._durations: dict[ComputeTrigger, _DurationHistogram] = {
             "miss": _DurationHistogram(),
@@ -142,8 +161,18 @@ class FunctionCacheMetrics:
             self._background_refresh = True
 
     def record_hit(self) -> None:
-        with self._lock:
-            self._hits += 1
+        # get_native_id, unlike get_ident, is not page-aligned, so the modulo
+        # spreads threads over all counters.
+        counter = self._hit_counters[threading.get_native_id() % _HIT_COUNTER_STRIPES]
+        with counter.lock:
+            counter.count += 1
+
+    def _total_hits(self) -> int:
+        total = 0
+        for counter in self._hit_counters:
+            with counter.lock:
+                total += counter.count
+        return total
 
     def record_miss(self) -> None:
         with self._lock:
@@ -183,8 +212,8 @@ class FunctionCacheMetrics:
         want_evictions = requested(CACHE_EVICTIONS_FAMILY)
         want_refreshes = requested(CACHE_BACKGROUND_REFRESHES_FAMILY)
 
+        hits = self._total_hits() if want_lookups else 0
         with self._lock:
-            hits = self._hits
             misses = self._misses
             background_refresh = self._background_refresh
             durations: dict[ComputeTrigger, tuple[list[int], float, int]] = {}
