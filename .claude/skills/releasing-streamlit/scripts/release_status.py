@@ -68,6 +68,10 @@ class Step:
     state: str = TODO
     detail: str = ""
     links: list[str] = field(default_factory=list)
+    # A workflow run of this step is in flight: attach to it before anything else.
+    active: bool = False
+    # Only a person's confirmation is left; later steps can proceed meanwhile.
+    confirm_only: bool = False
 
 
 class UnavailableError(Exception):
@@ -308,6 +312,7 @@ def status(version: str) -> dict[str, Any]:
         bstep.state, bstep.detail = DONE, f"{branch} @ {branch_sha[:9]}"
     elif running := active_runs(branch_wf):
         bstep.state = RUNNING
+        bstep.active = True
         bstep.detail = (
             f"{branch_wf} run in progress; attach to it, don't dispatch again"
         )
@@ -332,6 +337,7 @@ def status(version: str) -> dict[str, Any]:
             pstep.detail += " so far · ask whether more are needed before tagging"
     if not on_pypi and (running := active_runs("cherry-pick-to-release-branch.yml")):
         pstep.state = RUNNING
+        pstep.active = True
         pstep.detail = (
             pstep.detail + " · " if pstep.detail else ""
         ) + "cherry-pick run in progress"
@@ -378,6 +384,7 @@ def status(version: str) -> dict[str, Any]:
         # branch head or a closed PR. The run may also be for another version.
         if tstep.state == TODO or pr_pending:
             tstep.state = RUNNING
+            tstep.active = True
             note = "tag + PR run in progress; attach to it, don't dispatch again"
         else:
             note = "a tag + PR run is in progress, likely for another version"
@@ -468,6 +475,7 @@ def status(version: str) -> dict[str, Any]:
                     or []
                 )
                 rstep.state = RUNNING
+                rstep.active = True
                 rstep.detail = (
                     "waiting for `release` approval"
                     if pending
@@ -519,6 +527,7 @@ def status(version: str) -> dict[str, Any]:
                 )
                 # The board can't see Community Cloud deploys, so a person confirms.
                 dstep.state = MANUAL if sitemap else RUNNING
+                dstep.confirm_only = bool(sitemap)
                 dstep.detail = f"PR #{num} merged · sitemap " + (
                     f"#{sitemap} merged" if sitemap else "pending"
                 )
@@ -559,6 +568,7 @@ def status(version: str) -> dict[str, Any]:
     if pr_merged and feed_merged:
         # The rest is outside what the board can see.
         cstep.state = MANUAL
+        cstep.confirm_only = True
         cstep.detail += (
             " · confirm the Anaconda request in #anaconda-snowflake-technical"
             " and issue/forum follow-ups"
@@ -575,22 +585,23 @@ def status(version: str) -> dict[str, Any]:
 
 
 def next_action(steps: list[Step]) -> str:
-    # Stops first, then anything in flight (so a resumed session attaches instead
-    # of dispatching again), then the first open step. Rows that only wait on a
-    # person don't hide later automated work.
+    """Stops first, then in-flight workflow runs (attach instead of dispatching
+    again), then the first unfinished step in release order. Steps that only
+    need a person to confirm don't hold up later steps, so they come last.
+    """
     for s in steps:
         if s.state == FAIL:
             return f"Stop: {s.title}: {s.detail}"
-    running = [s for s in steps if s.state == RUNNING]
-    if running:
-        return "Watch: " + "; ".join(f"{s.title}: {s.detail}" for s in running)
+    active = [s for s in steps if s.active]
+    if active:
+        return "Watch: " + "; ".join(f"{s.title}: {s.detail}" for s in active)
     for s in steps:
-        if s.state in {TODO, WARN}:
+        if s.state not in {DONE, NA} and not s.confirm_only:
             return f"{s.title}: {s.detail or 'not started'}"
-    manual = [s for s in steps if s.state == MANUAL]
-    if manual:
+    confirm = [s for s in steps if s.confirm_only]
+    if confirm:
         return "Confirm with the user: " + "; ".join(
-            f"{s.title}: {s.detail}" for s in manual
+            f"{s.title}: {s.detail}" for s in confirm
         )
     return "All steps done."
 
