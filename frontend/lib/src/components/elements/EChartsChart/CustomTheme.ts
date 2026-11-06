@@ -16,7 +16,9 @@
 
 import { transparentize } from "color2k"
 import * as echarts from "echarts"
-import { isPlainObject, omit } from "lodash-es"
+import { get, isPlainObject, omit } from "lodash-es"
+
+import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
   getDecreasingRed,
@@ -678,11 +680,12 @@ export function buildStreamlitEChartsTheme(
       monthLabel: bodyTextStyle,
       yearLabel: bodyTextStyle,
     },
-    // Continuous color scale for visualMap-driven charts (e.g. heatmaps).
+    // Default color scale for a visualMap without `inRange` or `color` (e.g. a
+    // heatmap). ECharts deep-merges a component theme into every visualMap,
+    // so a themed `visualMap.inRange.color` would also recolor visualMaps
+    // that map only another channel, such as `symbolSize`.
+    gradientColor: [...colors.chartSequentialColors],
     visualMap: {
-      inRange: {
-        color: [...colors.chartSequentialColors],
-      },
       textStyle: bodyTextStyle,
     },
     // Timeline: ECharts' defaults are a fixed light blue-gray that reads as
@@ -877,6 +880,259 @@ function horizontalVisualMaps(
   return toComponentList(option.visualMap).filter(
     visualMap => visualMap.orient === "horizontal"
   )
+}
+
+/**
+ * ECharts' ``visualMap`` defaults (``VisualMapModel``, ``PiecewiseModel``,
+ * ``ContinuousModel``) that decide how wide a vertical map is drawn. A
+ * continuous map's drag handles are 120% of the bar width. Recheck these
+ * when upgrading ECharts.
+ */
+const VISUAL_MAP_DEFAULT_PADDING_PX = 15
+const VISUAL_MAP_DEFAULT_ITEM_WIDTH_PX = 20
+const VISUAL_MAP_DEFAULT_TEXT_GAP_PX = 10
+const VISUAL_MAP_DEFAULT_MAX = 200
+const VISUAL_MAP_DEFAULT_SPLIT_NUMBER = 5
+const VISUAL_MAP_HANDLE_SCALE = 1.2
+
+/**
+ * Average glyph width of digits, separators, and short words, as a share of
+ * the font size. The width estimate uses this instead of measuring text, so
+ * it underestimates labels in wider scripts, such as CJK.
+ */
+const AVERAGE_GLYPH_WIDTH_EM = 0.55
+
+/** True if a position is unset. ECharts reads ``"auto"`` as unset too. */
+function isUnsetPosition(value: unknown): boolean {
+  return isNullOrUndefined(value) || value === "auto"
+}
+
+/**
+ * The plot side a vertical ``visualMap`` sits on and its pixel offset from
+ * that edge. Only an unpositioned map (ECharts' default is bottom-left) or one
+ * offset in pixels from the left or right edge counts. Other positions, such
+ * as ``"center"`` or a percentage, are left to the spec and return
+ * ``undefined``.
+ */
+function verticalVisualMapEdge(
+  visualMap: Record<string, unknown>
+): { side: "left" | "right"; offsetPx: number } | undefined {
+  if (visualMap.show === false || visualMap.orient === "horizontal") {
+    return undefined
+  }
+  const { left, right } = visualMap
+  // ECharts also accepts the edge keywords "left" and "right" as a `left` value.
+  if (left === "right") {
+    return { side: "right", offsetPx: 0 }
+  }
+  if (isUnsetPosition(left)) {
+    if (isUnsetPosition(right)) {
+      return { side: "left", offsetPx: 0 }
+    }
+    return typeof right === "number"
+      ? { side: "right", offsetPx: right }
+      : undefined
+  }
+  if (left === "left") {
+    return { side: "left", offsetPx: 0 }
+  }
+  return typeof left === "number"
+    ? { side: "left", offsetPx: left }
+    : undefined
+}
+
+/** ``value`` if it is a number, else ``fallback``. */
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" ? value : fallback
+}
+
+/**
+ * True if ECharts draws this ``visualMap`` as piecewise. An explicit ``type``
+ * wins. Otherwise ``categories`` select piecewise, as do ``pieces`` or a
+ * positive ``splitNumber`` unless ``calculable`` is set.
+ */
+function isPiecewiseVisualMap(visualMap: Record<string, unknown>): boolean {
+  const { type, categories, pieces, splitNumber, calculable } = visualMap
+  if (type !== undefined) {
+    return type === "piecewise"
+  }
+  const hasPieces = Array.isArray(pieces)
+    ? pieces.length > 0
+    : numberOr(splitNumber, 0) > 0
+  return Boolean(categories) || (hasPieces && !calculable)
+}
+
+/**
+ * Strings as wide as the piece labels ECharts draws beside a piecewise
+ * ``visualMap``, approximated from its default formatting. They are used
+ * only to estimate width. Custom formatters are not evaluated.
+ */
+function pieceLabels(visualMap: Record<string, unknown>): string[] {
+  const { categories, pieces } = visualMap
+  const min = numberOr(visualMap.min, 0)
+  const max = numberOr(visualMap.max, VISUAL_MAP_DEFAULT_MAX)
+  let precision = numberOr(visualMap.precision, 0)
+
+  if (Array.isArray(categories)) {
+    return categories.map(String)
+  }
+  if (Array.isArray(pieces)) {
+    return pieces.map((entry: unknown) => {
+      // ECharts reads a primitive entry as ``{ value: entry }``.
+      const piece = isPlainObject(entry) ? entry : { value: entry }
+      const {
+        label,
+        value,
+        gte,
+        gt,
+        min: low,
+        lte,
+        lt,
+        max: high,
+      } = piece as Record<string, unknown>
+      // ECharts draws the formatted value or bounds for an empty label.
+      const text = label === "" ? value : (label ?? value)
+      if (typeof text === "string" || typeof text === "number") {
+        return String(text)
+      }
+      const ends = [gte ?? gt ?? low, lte ?? lt ?? high]
+        .filter(bound => typeof bound === "number")
+        .map(bound => bound.toFixed(precision))
+      // ECharts writes an open-ended piece as "< 5", "≥ 5", and so on; the
+      // symbol doesn't change the width.
+      return ends.length === 2 ? ends.join(" - ") : `< ${ends.join("")}`
+    })
+  }
+  // Even splits. ECharts raises the precision until the step is exact.
+  const splitNumber = numberOr(
+    visualMap.splitNumber,
+    VISUAL_MAP_DEFAULT_SPLIT_NUMBER
+  )
+  const step = (max - min) / Math.max(Math.floor(splitNumber), 1)
+  while (+step.toFixed(precision) !== step && precision < 5) {
+    precision++
+  }
+  // Width proxy, not the drawn label: the widest split is no wider than the
+  // longer end bound repeated on both sides of " - ".
+  return [min, max].map(bound => {
+    const text = bound.toFixed(precision)
+    return `${text} - ${text}`
+  })
+}
+
+/**
+ * Estimated pixel width of a vertical ``visualMap``: its padding, the color
+ * bar or piece symbols with the labels beside them, and the end ``text``
+ * centered above and below.
+ */
+function estimateVerticalVisualMapWidth(
+  visualMap: Record<string, unknown>,
+  defaultFontSizePx: number
+): number {
+  const { padding, text, showLabel, calculable } = visualMap
+  let paddingPx: number
+  if (Array.isArray(padding)) {
+    // CSS order: [top, right, bottom, left], [vertical, horizontal], or [all].
+    const [top, right = top, , left = right] = padding as unknown[]
+    paddingPx = (Number(left) || 0) + (Number(right) || 0)
+  } else {
+    paddingPx = 2 * numberOr(padding, VISUAL_MAP_DEFAULT_PADDING_PX)
+  }
+  const fontSize = numberOr(
+    get(visualMap, ["textStyle", "fontSize"]),
+    defaultFontSizePx
+  )
+  const textWidth = (texts: unknown[]): number =>
+    Math.max(0, ...texts.map(entry => String(entry).length)) *
+    fontSize *
+    AVERAGE_GLYPH_WIDTH_EM
+  const endTexts = Array.isArray(text) ? text : []
+  const barPx = numberOr(visualMap.itemWidth, VISUAL_MAP_DEFAULT_ITEM_WIDTH_PX)
+
+  let contentPx = barPx
+  if (isPiecewiseVisualMap(visualMap)) {
+    // ECharts hides the piece labels when the map has end text.
+    if (
+      isNullOrUndefined(showLabel) ? endTexts.length === 0 : showLabel === true
+    ) {
+      contentPx +=
+        numberOr(visualMap.textGap, VISUAL_MAP_DEFAULT_TEXT_GAP_PX) +
+        textWidth(pieceLabels(visualMap))
+    }
+  } else if (calculable === true) {
+    // The handle's value label starts past the handle's overhang of the bar
+    // edge, the bar's center, and then one handle width.
+    const labelStartPx =
+      barPx *
+      ((VISUAL_MAP_HANDLE_SCALE - 1) / 2 + 0.5 + VISUAL_MAP_HANDLE_SCALE)
+    const precision = numberOr(visualMap.precision, 0)
+    contentPx =
+      labelStartPx +
+      textWidth(
+        [
+          numberOr(visualMap.min, 0),
+          numberOr(visualMap.max, VISUAL_MAP_DEFAULT_MAX),
+        ].map(bound => bound.toFixed(precision))
+      )
+  }
+  return Math.ceil(paddingPx + Math.max(contentPx, textWidth(endTexts)))
+}
+
+/**
+ * The room each side of the plot needs for vertical ``visualMap``s beside it.
+ * ECharts positions a ``visualMap`` against the container, not the grid, so
+ * the grid has to leave that room or the map is drawn over the axis labels.
+ */
+function verticalVisualMapRoom(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): { left: number; right: number } {
+  const fontSizePx = convertRemToPx(theme.fontSizes.twoSm)
+  const room = { left: 0, right: 0 }
+  for (const visualMap of toComponentList(option.visualMap)) {
+    const edge = verticalVisualMapEdge(visualMap)
+    if (edge !== undefined) {
+      room[edge.side] = Math.max(
+        room[edge.side],
+        edge.offsetPx + estimateVerticalVisualMapWidth(visualMap, fontSizePx)
+      )
+    }
+  }
+  return room
+}
+
+/**
+ * Copy the spec's root ``gradientColor`` onto each ``visualMap`` whose series
+ * would fall back to it. ECharts fills a shorter spec ``gradientColor`` with
+ * the theme's palette entry by entry, so without the copy the scale would
+ * continue in Streamlit's colors.
+ */
+function withSpecGradientColor(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  const { gradientColor, visualMap } = option
+  if (!Array.isArray(gradientColor) || visualMap === undefined) {
+    return option
+  }
+  const withColor = (item: unknown): unknown => {
+    if (!isPlainObject(item)) {
+      return item
+    }
+    const entry = item as Record<string, unknown>
+    const usesGradientFallback =
+      entry.inRange === undefined &&
+      get(entry, ["target", "inRange"]) === undefined &&
+      !Array.isArray(entry.color)
+    return usesGradientFallback
+      ? { ...entry, inRange: { color: [...gradientColor] } }
+      : entry
+  }
+  return {
+    ...option,
+    visualMap: Array.isArray(visualMap)
+      ? visualMap.map(withColor)
+      : withColor(visualMap),
+  }
 }
 
 /**
@@ -1412,14 +1668,16 @@ function applyControlLayout(
  * ECharts' built-in grid reserves large margins (``left: '15%'``,
  * ``right: '10%'``, ``top: 65``, ``bottom: 80``), which leaves charts heavily
  * inset compared to other Streamlit charts. We tighten the side margins to fill
- * the width, and tighten the top/bottom only on a side that carries nothing but
- * the plot. On a side that *does* carry a title, legend, or bottom-anchored
- * control we leave the margin unset so ECharts' generous default reserves room
- * for it (guessing a fixed pixel value risks clipping a title+subtitle, a
- * multi-item legend, or a dataZoom slider). When Streamlit has placed a legend
- * under a top title, ``stackedTop`` is that stack's height and is written as
- * ``grid.top``. When it has stacked more than one bottom-anchored control,
- * ``stackedBottom`` is that stack's height and is written as ``grid.bottom``.
+ * the width, except that a side with a vertical ``visualMap`` reserves at
+ * least the map's estimated width. We tighten the top/bottom only on a side
+ * that carries nothing but the plot. On a side that *does* carry a title,
+ * legend, or bottom-anchored control we leave the margin unset so ECharts'
+ * generous default reserves room for it (guessing a fixed pixel value risks
+ * clipping a title+subtitle, a multi-item legend, or a dataZoom slider). When
+ * Streamlit has placed a legend under a top title, ``stackedTop`` is that
+ * stack's height and is written as ``grid.top``. When it has stacked more than
+ * one bottom-anchored control, ``stackedBottom`` is that stack's height and is
+ * written as ``grid.bottom``.
  *
  * Insets are rem spacing tokens converted to pixels so they track the
  * configured base font size like axis labels. ECharts only accepts pixel
@@ -1442,9 +1700,10 @@ function buildDefaultGrid(
   const { occupiesTop: legendAtTop, occupiesBottom: legendAtBottom } =
     legendPlacement(option)
 
+  const visualMapRoom = verticalVisualMapRoom(option, theme)
   const grid: Record<string, unknown> = {
-    left: convertRemToPx(theme.spacing.sm),
-    right: convertRemToPx(theme.spacing.twoXL),
+    left: Math.max(convertRemToPx(theme.spacing.sm), visualMapRoom.left),
+    right: Math.max(convertRemToPx(theme.spacing.twoXL), visualMapRoom.right),
     outerBoundsMode: "same",
   }
   if (!titleAtTop && !legendAtTop) {
@@ -1469,8 +1728,8 @@ function buildDefaultGrid(
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
  * ``grid`` layout, legend placement around titles and stacking of
  * bottom-anchored chart controls, the style of inside funnel and pie labels,
- * treemap insets around a title or breadcrumb, and the label position
- * of horizontal markLines).
+ * treemap insets around a title or breadcrumb, the label position
+ * of horizontal markLines, and a spec ``gradientColor`` for its visualMaps).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
@@ -1803,7 +2062,7 @@ function fillOptionDefaults(
     return result
   }
 
-  const titled = withTitleStyleDefaults(result, theme)
+  const titled = withSpecGradientColor(withTitleStyleDefaults(result, theme))
   const {
     option: laidOut,
     stackedTop,

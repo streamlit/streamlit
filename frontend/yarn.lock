@@ -2315,9 +2315,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.43":
-  version: 1.31.43
-  resolution: "@microlink/react-json-view@npm:1.31.43"
+"@microlink/react-json-view@npm:^1.31.44":
+  version: 1.31.44
+  resolution: "@microlink/react-json-view@npm:1.31.44"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2325,7 +2325,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/8b848e1703210daf6e8a45ab9502b24649ceb9514cffadafd87eaa9d4767307549b9fa3d8f9790e878867a3a4a89744828b7d5981be2a1832d1adf983326a0c2
+  checksum: 10c0/c4866103b810f9393f36092cbd8a1d1a4a4e42dea056b0be4715e43c6b74bf09fd994438da4bdc7c6386b7d3cda0296d88b199fba044317eebde91cc027c6f3b
   languageName: node
   linkType: hard
 
@@ -3128,15 +3128,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/cli@npm:^0.1.22":
-  version: 0.1.22
-  resolution: "@playwright/cli@npm:0.1.22"
+"@playwright/cli@npm:^0.1.23":
+  version: 0.1.23
+  resolution: "@playwright/cli@npm:0.1.23"
   dependencies:
-    playwright: "npm:1.64.0-alpha-1790635538000"
-    playwright-core: "npm:1.64.0-alpha-1790635538000"
+    playwright: "npm:1.65.0-alpha-2026-10-30"
+    playwright-core: "npm:1.65.0-alpha-2026-10-30"
   bin:
     playwright-cli: playwright-cli.js
-  checksum: 10c0/7df3fd71d7fa483ffaaeb3300caef32f22b4f6891254f172780b7c07fd71a3e962e63a9931a13b9b5b04d603d9cd55d734ebe070e0225f0a08cb703e31bbad85
+  checksum: 10c0/4bc9f0757c1433417fc81985e3313d92b90fd7aca98b31dc4f82853ffb8da8a05dc9bbc4028fd58871445a159760df20706d0b48d2bf1632908a8d836d902fdd
   languageName: node
   linkType: hard
 
@@ -3524,7 +3524,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^20.0.0"
+    "@swc/plugin-emotion": "npm:^20.0.1"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -3627,13 +3627,13 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.43"
+    "@microlink/react-json-view": "npm:^1.31.44"
     "@sindresorhus/slugify": "npm:^3.0.1"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^20.0.0"
+    "@swc/plugin-emotion": "npm:^20.0.1"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -3661,7 +3661,7 @@ __metadata:
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    hotkeys-js: "npm:^4.0.9"
+    hotkeys-js: "npm:^4.0.10"
     immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
@@ -3717,7 +3717,7 @@ __metadata:
     vite-plugin-dts: "npm:^5.1.2"
     vitest: "npm:^5.0.5"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^8.0.3"
+    wavesurfer.js: "npm:^8.0.4"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -3909,12 +3909,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^20.0.0":
-  version: 20.0.0
-  resolution: "@swc/plugin-emotion@npm:20.0.0"
+"@swc/plugin-emotion@npm:^20.0.1":
+  version: 20.0.1
+  resolution: "@swc/plugin-emotion@npm:20.0.1"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/7d24a03b78454c4721ed1284aa2be3ca0e62864d9757bf284b81bbf2f8864673f9b7c2364c22ca2fcd1395e2f99bdbaa64420d26b3c196348e8fb061dd991e2e
+  checksum: 10c0/c27e3d9224078ad9ec77ec27da2ae717ecf087660981d5e9ee2faa86506b0ca2456addf50ed386ef87c46c53d0aeafd333cfe84695e0f663fdf0fea2396ad7ed
   languageName: node
   linkType: hard
 
@@ -9267,10 +9267,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.0.9":
-  version: 4.0.9
-  resolution: "hotkeys-js@npm:4.0.9"
-  checksum: 10c0/0376cec403cc5be513aab23a8c444ada5159d81eea562347fce1319f35a3411dfde8ec2a023f930f7d60c6f038ae8cf4f818ff9a91ab430e501fea75a6c10290
+"hotkeys-js@npm:^4.0.10":
+  version: 4.0.10
+  resolution: "hotkeys-js@npm:4.0.10"
+  checksum: 10c0/5fc01bea9e16c159b13d5d891c25a760764240ea9f30a26a7a623b4aca985f6c9d727fa9bfe4f9d5f30ada7de80e2e963dc884c8c6df46100d81f39f989daf09
   languageName: node
   linkType: hard
 
@@ -10073,9 +10073,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.44.0":
-  version: 6.44.0
-  resolution: "knip@npm:6.44.0"
+"knip@npm:^6.44.1":
+  version: 6.44.1
+  resolution: "knip@npm:6.44.1"
   dependencies:
     formatly: "npm:^0.11.4"
     get-tsconfig: "npm:4.14.3"
@@ -10092,7 +10092,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/786d294307ed2dde126852c06993f96a517ed3c8a3277281f4eb5b69773eba6b5f0d4ff875923c58a667cdff200299f8bd7bcfad13dd0add08b4cc45fac22ce0
+  checksum: 10c0/587b7f5c5278d06eb1b908c8df6e1dc375e32abaaaab6d5be8ab0e86acf2910c9be1f7c8157b0ae51328c95029f08b7acd27353205aa240a26c5872297da2b68
   languageName: node
   linkType: hard
 
@@ -12541,23 +12541,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.64.0-alpha-1790635538000":
-  version: 1.64.0-alpha-1790635538000
-  resolution: "playwright-core@npm:1.64.0-alpha-1790635538000"
+"playwright-core@npm:1.65.0-alpha-2026-10-30":
+  version: 1.65.0-alpha-2026-10-30
+  resolution: "playwright-core@npm:1.65.0-alpha-2026-10-30"
   bin:
     playwright-core: cli.js
-  checksum: 10c0/aa88cd7d507bb20eb42440e736a13206cf155521ced2f34a84344998eacbae1ad2bd69a2097f74b778b330b23b1af296727270eb9b6d6d6d64d8246b2e7547dc
+  checksum: 10c0/280e892e0a14617dba97f5ba2274c24677b2b11cba73d49c24acd6fde7e4d4ffef8eff6b6580788c5648892220263251b7b3e473ff3dcb64f062e4625c0be5ff
   languageName: node
   linkType: hard
 
-"playwright@npm:1.64.0-alpha-1790635538000":
-  version: 1.64.0-alpha-1790635538000
-  resolution: "playwright@npm:1.64.0-alpha-1790635538000"
+"playwright@npm:1.65.0-alpha-2026-10-30":
+  version: 1.65.0-alpha-2026-10-30
+  resolution: "playwright@npm:1.65.0-alpha-2026-10-30"
   dependencies:
-    playwright-core: "npm:1.64.0-alpha-1790635538000"
+    playwright-core: "npm:1.65.0-alpha-2026-10-30"
   bin:
     playwright: cli.js
-  checksum: 10c0/1ccbc03284b7fe6855c5d8354484e0a20657df5405b0b30419662a4e4736c653bbac1f631d3b7e2b574467b5a7e18fba1cf88aa05289317cac8e089b9691cf77
+  checksum: 10c0/3b479f7fdd682d2ade38294e3f5221779544f65a73f786654586da0e46db2663aafbca630a46614af6e407ec6efe308a2c121068d01bd727065f3b3ee75e2b95
   languageName: node
   linkType: hard
 
@@ -14219,7 +14219,7 @@ __metadata:
     "@eslint-react/eslint-plugin": "npm:^5.28.8"
     "@eslint/compat": "npm:^2.1.1"
     "@eslint/js": "npm:^10.0.1"
-    "@playwright/cli": "npm:^0.1.22"
+    "@playwright/cli": "npm:^0.1.23"
     "@testing-library/dom": "npm:^10.4.2"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
@@ -14236,7 +14236,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.13.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.44.0"
+    knip: "npm:^6.44.1"
     oxfmt: "npm:^0.75.0"
     oxlint: "npm:^1.90.0"
     react: "npm:^18.2.0"
@@ -16092,10 +16092,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^8.0.3":
-  version: 8.0.3
-  resolution: "wavesurfer.js@npm:8.0.3"
-  checksum: 10c0/5b0743197f7c28893f23ca0dbe15793b08032afafd33c1ae3292b38a6e766c78b0ccd345e43803fac3249bd545e021fed3c54077bfff49d64c34437527dadc9b
+"wavesurfer.js@npm:^8.0.4":
+  version: 8.0.4
+  resolution: "wavesurfer.js@npm:8.0.4"
+  checksum: 10c0/d6195abf7a8b8086d9707960161f191c22fdc653e8d429ea90f0197bd49f732fc18234d77c7714ddb57dd8f6b5539f5e5e40474a2598b8dd1ad0b42edc2437da
   languageName: node
   linkType: hard
 
