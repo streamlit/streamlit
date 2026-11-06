@@ -25,6 +25,7 @@ import {
 } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+import { getDimensionName } from "./arrowDataset"
 import {
   type EChartsOptionObject,
   formatTimeLabel,
@@ -49,6 +50,7 @@ type TooltipValueFormatter = (value: unknown) => string | string[]
 interface TooltipItemParams {
   value?: unknown
   dimensionNames?: unknown
+  seriesIndex?: unknown
   axisType?: unknown
   axisValue?: unknown
 }
@@ -56,19 +58,101 @@ interface TooltipItemParams {
 type FormatTplParams = Parameters<typeof echarts.format.formatTpl>[1]
 
 /**
- * Read one dimension of a tooltip item the way ECharts reads it for a label
- * placeholder. ``dimension`` is a dimension name or a bracketed index such as
- * ``[2]`` (``[]`` means index 0, as in ECharts). As in ECharts, a number-like
- * name such as ``1`` is an index unless a dimension has that name.
+ * The option's dimension names for a tooltip item's series. A series tooltip
+ * ignores ``seriesIndex``.
+ */
+type SeriesDimensionNamesGetter = (seriesIndex: unknown) => unknown[]
+
+/** The ECharts dataset transforms whose output keeps the input's dimensions. */
+const DIMENSION_KEEPING_TRANSFORMS = new Set([
+  "filter",
+  "sort",
+  "echarts:filter",
+  "echarts:sort",
+])
+
+/** Whether one dataset ``transform`` entry outputs its input's dimensions. */
+function keepsDimensions(transform: unknown): boolean {
+  const type: unknown = get(transform, "type")
+  return typeof type === "string" && DIMENSION_KEEPING_TRANSFORMS.has(type)
+}
+
+/**
+ * The dimension names an option declares for a series' data: the series'
+ * ``dimensions``, else those of the dataset it reads (``datasetIndex``, else
+ * ``datasetId``, else the first). A ``filter`` or ``sort`` dataset without
+ * ``dimensions`` keeps those of its upstream dataset. Other transforms, and a
+ * dataset that names its dimensions in a header row, give no names.
+ */
+function getSeriesDimensionNames(
+  series: unknown,
+  datasets: unknown
+): unknown[] {
+  if (!isPlainObject(series)) {
+    return []
+  }
+  const seriesObject = series as Record<string, unknown>
+  if (Array.isArray(seriesObject.dimensions)) {
+    return seriesObject.dimensions.map(getDimensionName)
+  }
+  // A series with its own ``data`` doesn't read a dataset.
+  if (!isNullOrUndefined(seriesObject.data)) {
+    return []
+  }
+  const datasetList: unknown[] = Array.isArray(datasets)
+    ? datasets
+    : [datasets]
+  const findDataset = (index: unknown, id: unknown): unknown => {
+    if (typeof index === "number") {
+      return datasetList[index]
+    }
+    if (typeof id !== "string" && typeof id !== "number") {
+      return datasetList[0]
+    }
+    // ECharts matches ids as strings, so ``7`` and ``"7"`` are the same id.
+    return datasetList.find(entry => {
+      const entryId: unknown = get(entry, "id")
+      return (
+        (typeof entryId === "string" || typeof entryId === "number") &&
+        String(entryId) === String(id)
+      )
+    })
+  }
+
+  let dataset = findDataset(seriesObject.datasetIndex, seriesObject.datasetId)
+  // At most one step per dataset, so transforms that form a cycle still end.
+  for (let step = 0; step < datasetList.length; step++) {
+    if (!isPlainObject(dataset)) {
+      break
+    }
+    const { dimensions, transform, fromDatasetIndex, fromDatasetId } =
+      dataset as Record<string, unknown>
+    if (Array.isArray(dimensions)) {
+      return dimensions.map(getDimensionName)
+    }
+    const transforms: unknown[] = Array.isArray(transform)
+      ? transform
+      : [transform]
+    if (!transforms.every(keepsDimensions)) {
+      break
+    }
+    dataset = findDataset(fromDatasetIndex, fromDatasetId)
+  }
+  return []
+}
+
+/**
+ * Read one dimension of a tooltip item's ``value`` the way ECharts reads it
+ * for a label placeholder. ``dimension`` is a dimension name or a bracketed
+ * index such as ``[2]`` (``[]`` means index 0, as in ECharts). As in ECharts,
+ * a number-like name such as ``1`` is an index unless a dimension has that
+ * name.
  */
 function readDimensionValue(
-  item: TooltipItemParams,
+  value: unknown,
+  dimensionNames: unknown[],
   dimension: string
 ): unknown {
-  const { value } = item
-  const dimensionNames = Array.isArray(item.dimensionNames)
-    ? (item.dimensionNames as unknown[])
-    : []
   let index: number | undefined
   if (dimension.startsWith("[") && dimension.endsWith("]")) {
     index = Number(dimension.slice(1, -1))
@@ -103,6 +187,10 @@ function readDimensionValue(
  * - ``{@...}``, read from the first item (an axis tooltip's first series, as
  *   with ``{c}``).
  *
+ * Series such as pie, funnel, and gauge get no ``dimensionNames`` in their
+ * tooltip params, though their labels still resolve names. For them, names are
+ * read from the option with ``getDimensionNames``.
+ *
  * Tooltips are HTML, so the formatter escapes every inserted value and keeps
  * only the author's template markup. As in labels, ``{@...}`` expands last, so
  * a series name that contains ``{@...}`` text is expanded too (and still
@@ -110,7 +198,8 @@ function readDimensionValue(
  */
 function buildTemplateFormatter(
   template: string,
-  useUTC: boolean
+  useUTC: boolean,
+  getDimensionNames: SeriesDimensionNamesGetter
 ): TooltipFormatterCallback {
   return (params: unknown): string => {
     const paramsList = (
@@ -132,10 +221,19 @@ function buildTemplateFormatter(
       paramsList as unknown as FormatTplParams,
       true
     )
+    const dimensionNames =
+      Array.isArray(firstItem.dimensionNames) &&
+      firstItem.dimensionNames.length > 0
+        ? (firstItem.dimensionNames as unknown[])
+        : getDimensionNames(firstItem.seriesIndex)
     return html.replaceAll(
       DIMENSION_PLACEHOLDER,
       (_placeholder, dimension: string) => {
-        const value = readDimensionValue(firstItem, dimension)
+        const value = readDimensionValue(
+          firstItem.value,
+          dimensionNames,
+          dimension
+        )
         // The formatter prints nothing for a missing value, a nested object,
         // or an array.
         return typeof value === "string" ||
@@ -208,10 +306,14 @@ function withProperty(
 }
 
 /** Convert the string formatters of a tooltip config or a list of them. */
-function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
+function withTooltipFormatters(
+  tooltip: unknown,
+  useUTC: boolean,
+  getDimensionNames: SeriesDimensionNamesGetter
+): unknown {
   if (Array.isArray(tooltip)) {
     return mapPreservingIdentity(tooltip, entry =>
-      withTooltipFormatters(entry, useUTC)
+      withTooltipFormatters(entry, useUTC, getDimensionNames)
     )
   }
   if (!isPlainObject(tooltip)) {
@@ -223,7 +325,7 @@ function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
   if (typeof formatter === "string" && formatter.includes("{@")) {
     result = {
       ...result,
-      formatter: buildTemplateFormatter(formatter, useUTC),
+      formatter: buildTemplateFormatter(formatter, useUTC, getDimensionNames),
     }
   }
 
@@ -250,7 +352,8 @@ function withTooltipFormatters(tooltip: unknown, useUTC: boolean): unknown {
 /** Convert the tooltip formatters of one series config. */
 function withSeriesTooltipFormatters(
   series: unknown,
-  useUTC: boolean
+  useUTC: boolean,
+  datasets: unknown
 ): unknown {
   if (!isPlainObject(series)) {
     return series
@@ -259,22 +362,39 @@ function withSeriesTooltipFormatters(
   return withProperty(
     seriesObject,
     "tooltip",
-    withTooltipFormatters(seriesObject.tooltip, useUTC)
+    withTooltipFormatters(seriesObject.tooltip, useUTC, () =>
+      getSeriesDimensionNames(seriesObject, datasets)
+    )
   )
 }
 
-/** Convert the top-level and series tooltip formatters of one option variant. */
+/**
+ * Convert the top-level and series tooltip formatters of one option variant.
+ * Series and datasets the variant doesn't declare, such as in a timeline tick
+ * or ``media`` override, are read from ``chartOption``.
+ */
 function convertOptionTooltips(
   target: EChartsOptionObject,
-  useUTC: boolean
+  useUTC: boolean,
+  chartOption: EChartsOptionObject
 ): EChartsOptionObject {
   const { tooltip, series } = target
+  const datasets = target.dataset ?? chartOption.dataset
+  const seriesList = series ?? chartOption.series
+  const getDimensionNames = (seriesIndex: unknown): unknown[] => {
+    if (!Array.isArray(seriesList)) {
+      return getSeriesDimensionNames(seriesList, datasets)
+    }
+    return typeof seriesIndex === "number"
+      ? getSeriesDimensionNames(seriesList[seriesIndex], datasets)
+      : []
+  }
   const convertSeries = (entry: unknown): unknown =>
-    withSeriesTooltipFormatters(entry, useUTC)
+    withSeriesTooltipFormatters(entry, useUTC, datasets)
   const withTooltip = withProperty(
     target,
     "tooltip",
-    withTooltipFormatters(tooltip, useUTC)
+    withTooltipFormatters(tooltip, useUTC, getDimensionNames)
   )
   return withProperty(
     withTooltip,
@@ -288,9 +408,10 @@ function convertOptionTooltips(
 /** Convert an option variant plus its responsive ``media[*].option`` overrides. */
 function convertOptionAndMediaTooltips(
   target: EChartsOptionObject,
-  useUTC: boolean
+  useUTC: boolean,
+  chartOption: EChartsOptionObject
 ): EChartsOptionObject {
-  const result = convertOptionTooltips(target, useUTC)
+  const result = convertOptionTooltips(target, useUTC, chartOption)
   const { media } = result
   if (!Array.isArray(media)) {
     return result
@@ -306,7 +427,8 @@ function convertOptionAndMediaTooltips(
           "option",
           convertOptionTooltips(
             mediaEntry.option as EChartsOptionObject,
-            useUTC
+            useUTC,
+            chartOption
           )
         )
       : mediaEntry
@@ -347,9 +469,10 @@ export function applyTooltipFormatters(
     : undefined
   // A declared ``baseOption`` holds the chart, so ECharts reads ``useUTC``
   // only from there and ignores the root.
-  const useUTC = (baseOption ? baseOption.useUTC : option.useUTC) === true
+  const chartOption = baseOption ?? option
+  const useUTC = chartOption.useUTC === true
   const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
-    convertOptionAndMediaTooltips(variant, useUTC)
+    convertOptionAndMediaTooltips(variant, useUTC, chartOption)
 
   // Convert every location Python's ``_iter_option_variants`` warns about, so
   // both sides agree. That includes the root tooltips and ``baseOption.media``,
