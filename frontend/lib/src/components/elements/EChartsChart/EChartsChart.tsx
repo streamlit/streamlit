@@ -57,6 +57,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { hydrateArrowDatasetSources } from "./arrowDataset"
+import { applyBarRounding } from "./barRounding"
 import {
   applyAltToOption,
   applyStreamlitOptionDefaults,
@@ -420,6 +421,7 @@ export function EChartsChart({
 
   // The option handed to setOption:
   // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
+  // - Under the Streamlit theme, rounded outer bar corners.
   // - Streamlit theme defaults.
   // - Tooltip string formatters turned into functions.
   // - Under the Streamlit theme, time axis labels that show midnight values
@@ -429,16 +431,21 @@ export function EChartsChart({
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
   // or configured base font size change — not on every new theme object (a
   // light/dark switch would re-apply the option and replay entry animations).
-  const { spacing, fontSizes } = theme
+  const { spacing, fontSizes, radii } = theme
   const preparedOption = useMemo(() => {
     if (!option) {
       return null
     }
+    const withSeriesDefaults = applyBarRounding(
+      applyLargeDataDefaults(option, element.selectionActivated),
+      element.theme,
+      theme
+    )
     let prepared = configureSelectionOption(
       applyTimeLabelFormatters(
         applyTooltipFormatters(
           applyStreamlitOptionDefaults(
-            applyLargeDataDefaults(option, element.selectionActivated),
+            withSeriesDefaults,
             element.theme,
             theme
           )
@@ -453,8 +460,9 @@ export function EChartsChart({
     }
     return prepared
     // Rebuild only when layout tokens change. `theme` is read for rem→px insets
-    // (spacing, title size, baseFontSize) and for the inside funnel and pie
-    // label colors, which are the same in light and dark mode.
+    // (spacing, title size, baseFontSize), the bar corner radius, and the
+    // inside funnel and pie label colors, which are the same in light and dark
+    // mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,
@@ -468,6 +476,7 @@ export function EChartsChart({
     spacing.twoXL,
     fontSizes.sm,
     fontSizes.baseFontSize,
+    radii.sm,
   ])
 
   const hasValidSpec = option !== null

@@ -42,7 +42,7 @@ export const LARGE_MODE_THRESHOLDS: ReadonlyMap<string, number> = new Map([
 export const LINE_SYMBOL_THRESHOLD = 2000
 
 /** The series' data items or dataset rows, or ``undefined`` if unknown. */
-function getSeriesRows(
+export function getSeriesRows(
   series: SeriesOption,
   option: EChartsOptionObject
 ): unknown[] | undefined {
