@@ -155,10 +155,12 @@ Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` 
 
 ### 12. Final AI review
 
-After the review loop, apply `ai-final-review` once. Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
+After the review loop, apply `ai-final-review` once. If the PR is a user-facing feature (labeled both `change:feature` and `impact:users`), also apply `ai-qa-test` to trigger AI QA testing. Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
 
 ```bash
 gh pr edit --add-label "ai-final-review"
+# User-facing features only:
+gh pr edit --add-label "ai-qa-test"
 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status queued
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
