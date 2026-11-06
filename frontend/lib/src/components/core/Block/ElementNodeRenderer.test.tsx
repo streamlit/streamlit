@@ -32,6 +32,7 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
+import type { ScriptRunContextProps } from "~lib/components/core/ScriptRunContext"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
@@ -1027,6 +1028,148 @@ describe("ElementNodeRenderer Block Component", () => {
       const config = await renderAndGetContainerConfig("textArea", widgetProto)
       expect(config.minStretchWidth).toBe(MinStretchWidth.MEDIUM)
       expect(config.styleOverrides).toEqual({ height: "auto", flex: "" })
+    })
+  })
+
+  describe("memoization", () => {
+    const RUN_ID = "RUN_ID"
+
+    function makeTextNode(body: string, fragmentId?: string): ElementNode {
+      return new ElementNode(
+        { type: "text", text: { body } } as unknown as Element,
+        ForwardMsgMetadata.create({}),
+        RUN_ID,
+        FAKE_SCRIPT_HASH,
+        fragmentId
+      )
+    }
+
+    /**
+     * Renders the element, clears the ElementContainer render count, and
+     * returns a function that re-renders it with new props or script run
+     * context values.
+     */
+    function renderElement(
+      node: ElementNode,
+      scriptRunContext: Partial<ScriptRunContextProps> = {
+        scriptRunId: RUN_ID,
+      }
+    ): (
+      nextScriptRunContext?: Partial<ScriptRunContextProps>,
+      propOverrides?: Partial<ElementNodeRendererProps>
+    ) => void {
+      const props = getProps({ node })
+      const { rerenderWithContexts } = renderWithContexts(
+        <ElementNodeRenderer {...props} />,
+        { scriptRunContext }
+      )
+      mockElementContainer.mockClear()
+      return (nextScriptRunContext, propOverrides) =>
+        rerenderWithContexts(
+          <ElementNodeRenderer {...props} {...propOverrides} />,
+          { scriptRunContext: nextScriptRunContext }
+        )
+    }
+
+    it("does not re-render an unchanged element when its run starts and finishes", () => {
+      const rerender = renderElement(makeTextNode("Hello"))
+
+      rerender({ scriptRunState: ScriptRunState.RUNNING })
+      rerender({
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+        scriptRunFinishedSequence: 1,
+      })
+
+      expect(mockElementContainer).not.toHaveBeenCalled()
+      expect(screen.getByText("Hello")).toBeVisible()
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-stale",
+        "false"
+      )
+    })
+
+    it("does not re-render when its parent re-renders with equal props", () => {
+      const rerender = renderElement(makeTextNode("Hello"))
+
+      rerender()
+
+      expect(mockElementContainer).not.toHaveBeenCalled()
+    })
+
+    it("re-renders an element that becomes stale", () => {
+      const rerender = renderElement(makeTextNode("Hello"))
+
+      rerender({
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "NEXT_RUN_ID",
+      })
+
+      expect(mockElementContainer).toHaveBeenCalledOnce()
+      expect(mockElementContainer.mock.calls[0][0].isStale).toBe(true)
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-stale",
+        "true"
+      )
+    })
+
+    it("re-renders a stale element when the run finishes", () => {
+      const rerender = renderElement(makeTextNode("Hello"), {
+        scriptRunState: ScriptRunState.RUNNING,
+        scriptRunId: "NEXT_RUN_ID",
+      })
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-stale",
+        "true"
+      )
+
+      rerender({ scriptRunState: ScriptRunState.NOT_RUNNING })
+
+      expect(mockElementContainer).toHaveBeenCalledOnce()
+      expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+        "data-stale",
+        "false"
+      )
+    })
+
+    it.each([
+      { fragmentId: undefined, isStale: false, renders: 0 },
+      { fragmentId: "other_fragment", isStale: false, renders: 0 },
+      { fragmentId: "running_fragment", isStale: true, renders: 1 },
+    ])(
+      "re-renders an element with fragmentId $fragmentId only if a fragment run makes it stale",
+      ({ fragmentId, isStale, renders }) => {
+        const rerender = renderElement(makeTextNode("Hello", fragmentId))
+
+        rerender({
+          scriptRunState: ScriptRunState.RUNNING,
+          scriptRunId: "FRAGMENT_RUN_ID",
+          fragmentIdsThisRun: ["running_fragment"],
+        })
+
+        expect(mockElementContainer).toHaveBeenCalledTimes(renders)
+        expect(screen.getByTestId("stElementContainer")).toHaveAttribute(
+          "data-stale",
+          String(isStale)
+        )
+      }
+    )
+
+    it("re-renders when the element node changes", () => {
+      const rerender = renderElement(makeTextNode("Hello"))
+
+      rerender(undefined, { node: makeTextNode("World") })
+
+      expect(mockElementContainer).toHaveBeenCalledOnce()
+      expect(screen.getByText("World")).toBeVisible()
+      expect(screen.queryByText("Hello")).not.toBeInTheDocument()
+    })
+
+    it("re-renders when widgetsDisabled changes", () => {
+      const rerender = renderElement(makeTextNode("Hello"))
+
+      rerender(undefined, { widgetsDisabled: true })
+
+      expect(mockElementContainer).toHaveBeenCalledOnce()
     })
   })
 })
