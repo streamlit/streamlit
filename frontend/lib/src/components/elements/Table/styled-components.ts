@@ -18,6 +18,10 @@ import styled, { type CSSObject } from "@emotion/styled"
 
 import { Table } from "@streamlit/protobuf"
 
+import {
+  printAllowSplitRules,
+  printTableSplitRules,
+} from "~lib/components/shared/printPageBreak"
 import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -36,6 +40,15 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   overflow: "clip",
   // Use block display to let table expand naturally
   display: "block",
+
+  "@media print": {
+    // A scroll or clip box cannot fragment across pages. Release both so a
+    // tall table continues instead of jumping and leaving a blank strip.
+    ...printAllowSplitRules,
+    height: "auto",
+    maxHeight: "none",
+    overflow: "visible",
+  },
 }))
 
 export const StyledTableCaption = styled.div(({ theme }) => ({
@@ -75,6 +88,13 @@ export const StyledTableBorder = styled.div<{
   display: "block",
   // This prevents accidental overscrolling that triggers the browser's Back button.
   overscrollBehaviorX: "contain",
+
+  "@media print": {
+    ...printAllowSplitRules,
+    height: "auto",
+    maxHeight: "none",
+    overflow: "visible",
+  },
 }))
 
 export const StyledTable = styled.table<{
@@ -93,6 +113,13 @@ export const StyledTable = styled.table<{
   // - hasScrollableWidth is true (fixed pixel width with horizontal scroll)
   // In both cases, table should size to content and scroll if needed.
   minWidth: useContentWidth || hasScrollableWidth ? undefined : "100%",
+
+  "@media print": {
+    // `inline-table` can refuse to fragment in some print engines. A table
+    // box splits cleanly and repeats the header after each page break.
+    display: "table",
+    ...printTableSplitRules,
+  },
 }))
 
 const styleCellFunction = (
