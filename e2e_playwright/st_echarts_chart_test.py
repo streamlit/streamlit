@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 37
+_EXPECTED_CHART_COUNT = 39
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -529,10 +529,16 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         "c_title_top_legend": "st_echarts_chart-title_top_legend",
         "c_treemap_layout": "st_echarts_chart-treemap",
         "c_reference_lines": "st_echarts_chart-reference_lines",
+        # A default vertical visualMap gets room beside the plot, and an
+        # unmapped heatmap uses the sequential palette.
+        "c_piecewise_heatmap": "st_echarts_chart-piecewise_heatmap",
+        # A visualMap that maps only symbol size keeps each series' own color.
+        "c_size_visual_map": "st_echarts_chart-size_visual_map",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
-        expect(chart.locator("canvas")).to_be_visible()
+        # Some charts draw more than one canvas layer.
+        expect(chart.locator("canvas").first).to_be_visible()
         assert_snapshot(chart, name=name)
 
 

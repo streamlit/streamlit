@@ -270,9 +270,10 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   get themed defaults.
 - **Plot margins** — for cartesian charts, Streamlit fills in a default `grid` (tighter side
   margins than ECharts' percentage-based defaults, and axis labels and names kept inside them) so
-  the plot fills its container like other Streamlit charts. Margins on a side that carries a
-  title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to ECharts so those
-  components aren't clipped. When more than one of those bottom-anchored controls would share
+  the plot fills its container like other Streamlit charts. A vertical `visualMap` beside the
+  plot (ECharts' default) widens the margin on its side by its estimated width. Margins on a side
+  that carries a title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to
+  ECharts so those components aren't clipped. When more than one of those bottom-anchored controls would share
   the footer, Streamlit stacks them; a default-bottom legend that would sit on the same strip
   is moved to the top. In cartesian charts with a single grid, a centered legend pinned to the
   top edge (`top: 0` or `"top"`) moves below a top title (and its subtext), and the plot then
