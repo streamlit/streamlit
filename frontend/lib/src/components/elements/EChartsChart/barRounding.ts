@@ -21,6 +21,7 @@ import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   type EChartsOptionObject,
+  isYBaseAxis,
   STREAMLIT_THEME,
   toComponentList,
 } from "./CustomTheme"
@@ -28,18 +29,20 @@ import { getSeriesRows } from "./largeDataDefaults"
 
 type SeriesOption = Record<string, unknown>
 
-/** The bar corner radius in pixels, derived from the theme's base radius. */
+/**
+ * The bar corner radius in pixels: the theme's small radius, which is half of
+ * ``baseRadius`` and may be set in px or rem.
+ */
 export function getBarRadiusPx(theme: EmotionTheme): number {
   const { sm } = theme.radii
   return sm.endsWith("px") ? Number.parseFloat(sm) : convertRemToPx(sm)
 }
 
-/** ECharts makes an axis without ``type`` a category axis if it has ``data``. */
-function getAxisType(axis: Record<string, unknown>): unknown {
-  return axis.type ?? (axis.data === undefined ? "value" : "category")
-}
-
-/** Whether a data item or dataset row contains a negative number. */
+/**
+ * Whether a data item or dataset row has a negative number or numeric string
+ * in any field. Checking every field avoids resolving ``encode``; a negative
+ * label offset only keeps bars square.
+ */
 function hasNegativeValue(value: unknown): boolean {
   if (typeof value === "number" || typeof value === "string") {
     return Number(value) < 0
@@ -54,15 +57,20 @@ function hasNegativeValue(value: unknown): boolean {
 }
 
 /**
- * The series with its outer bar corners rounded, or the same object if it
- * keeps square bars.
+ * The series with the outer end of its bars rounded, or the same object if
+ * its bars stay square.
  *
- * A bar grows from its category (or time) axis along the value axis, which
- * ECharts picks the same way: the first category axis, then the first time
- * axis, else the x-axis. Only the end away from that axis is rounded.
- * Stacked series, series without a category gap, series with negative
- * values, series whose data can't be read, and series that set their own
- * ``borderRadius`` keep square bars.
+ * Bars grow away from the base axis (see ``isYBaseAxis``). These series keep
+ * square bars:
+ * - Stacked series, whose inner segments would get rounded corners too.
+ * - Non-cartesian series, such as polar bars.
+ * - Series without a category gap, such as histograms, whose touching bars
+ *   would show notches.
+ * - Series with negative values, on a log axis, or on an axis with a
+ *   ``startValue``, whose bars can grow toward the base axis.
+ * - Series that pick their axes by id, whose axes are missing, or whose data
+ *   can't be read.
+ * - Series that set their own ``borderRadius``.
  */
 function withRoundedBarEnds(
   series: unknown,
@@ -80,8 +88,9 @@ function withRoundedBarEnds(
     seriesOption.type !== "bar" ||
     seriesOption.stack !== undefined ||
     (seriesOption.coordinateSystem ?? "cartesian2d") !== "cartesian2d" ||
-    // Touching bars, as in a histogram, would show notches between them.
     Number.parseFloat(String(seriesOption.barCategoryGap)) === 0 ||
+    seriesOption.xAxisId !== undefined ||
+    seriesOption.yAxisId !== undefined ||
     "borderRadius" in itemStyle
   ) {
     return series
@@ -93,22 +102,21 @@ function withRoundedBarEnds(
   const yAxis = toComponentList(option.yAxis).at(
     typeof seriesOption.yAxisIndex === "number" ? seriesOption.yAxisIndex : 0
   )
+  if (xAxis === undefined || yAxis === undefined) {
+    return series
+  }
+  const isHorizontal = isYBaseAxis(xAxis, yAxis)
+  const valueAxis = isHorizontal ? xAxis : yAxis
   const rows = getSeriesRows(seriesOption, option)
   if (
-    xAxis === undefined ||
-    yAxis === undefined ||
+    valueAxis.type === "log" ||
+    valueAxis.startValue !== undefined ||
     rows === undefined ||
     rows.some(hasNegativeValue)
   ) {
     return series
   }
 
-  const xType = getAxisType(xAxis)
-  const yType = getAxisType(yAxis)
-  const isHorizontal =
-    xType !== "category" &&
-    (yType === "category" || (xType !== "time" && yType === "time"))
-  const valueAxis = isHorizontal ? xAxis : yAxis
   const growsBackward = valueAxis.inverse === true
   // Corners in ECharts order: top-left, top-right, bottom-right, bottom-left.
   let borderRadius: number[]
@@ -128,8 +136,9 @@ function withRoundedBarEnds(
  * Round the outer end of bars under the Streamlit theme, scaled with the
  * theme's base radius (``baseRadius="none"`` keeps square bars).
  *
- * Only top-level ``series`` are changed; timeline and media variants keep
- * square bars.
+ * Only top-level ``series`` change. Timeline charts, which nest their series
+ * in ``baseOption``, keep square bars, and ``media`` overrides inherit the
+ * rounding of the series they merge into.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).

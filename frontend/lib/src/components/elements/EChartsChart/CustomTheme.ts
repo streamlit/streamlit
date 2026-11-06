@@ -1850,12 +1850,28 @@ function cartesianAxisType(axis: Record<string, unknown>): unknown {
 }
 
 /**
+ * True when ECharts picks the y axis as a grid's base axis, the axis bars grow
+ * from. The base axis is the first category axis, else the first time axis,
+ * else x.
+ */
+export function isYBaseAxis(
+  xAxis: Record<string, unknown>,
+  yAxis: Record<string, unknown>
+): boolean {
+  const xType = cartesianAxisType(xAxis)
+  const yType = cartesianAxisType(yAxis)
+  return (
+    (yType === "category" && xType !== "category") ||
+    (yType === "time" && xType !== "category" && xType !== "time")
+  )
+}
+
+/**
  * True when ``min``/``max``/``average``/``median`` markLine entries measure
  * the y axis, so they draw horizontal lines.
  *
- * ECharts measures the axis opposite the base axis, which is the first
- * category axis, else the first time axis, else x. Charts with more than one
- * x or y axis return false.
+ * ECharts measures the axis opposite the base axis (see ``isYBaseAxis``).
+ * Charts with more than one x or y axis return false.
  */
 function statMarkLinesAreHorizontal(option: EChartsOptionObject): boolean {
   const xAxes = toComponentList(option.xAxis)
@@ -1863,12 +1879,7 @@ function statMarkLinesAreHorizontal(option: EChartsOptionObject): boolean {
   if (xAxes.length !== 1 || yAxes.length !== 1) {
     return false
   }
-  const xType = cartesianAxisType(xAxes[0])
-  const yType = cartesianAxisType(yAxes[0])
-  const baseAxisIsY =
-    (yType === "category" && xType !== "category") ||
-    (yType === "time" && xType !== "category" && xType !== "time")
-  return !baseAxisIsY
+  return !isYBaseAxis(xAxes[0], yAxes[0])
 }
 
 /**
