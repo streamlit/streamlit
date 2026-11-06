@@ -564,15 +564,17 @@ def status(version: str) -> dict[str, Any]:
         cstep.links.append(feed["html_url"])
     else:
         parts.append("conda-forge PR not yet opened")
+    # The Anaconda request can go out as soon as the release is on PyPI.
+    if on_pypi:
+        parts.append(
+            "send the Anaconda request in #anaconda-snowflake-technical"
+            " and do issue/forum follow-ups"
+        )
     cstep.detail = " · ".join(parts)
     if pr_merged and feed_merged:
         # The rest is outside what the board can see.
         cstep.state = MANUAL
         cstep.confirm_only = True
-        cstep.detail += (
-            " · confirm the Anaconda request in #anaconda-snowflake-technical"
-            " and issue/forum follow-ups"
-        )
     elif on_pypi:
         cstep.state = RUNNING
     steps.append(cstep)
