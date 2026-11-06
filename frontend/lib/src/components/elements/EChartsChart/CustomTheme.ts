@@ -885,7 +885,8 @@ function horizontalVisualMaps(
 /**
  * ECharts' ``visualMap`` defaults (``VisualMapModel``, ``PiecewiseModel``,
  * ``ContinuousModel``) that decide how wide a vertical map is drawn. A
- * continuous map's drag handles are 120% of the bar width.
+ * continuous map's drag handles are 120% of the bar width. Recheck these
+ * when upgrading ECharts.
  */
 const VISUAL_MAP_DEFAULT_PADDING_PX = 15
 const VISUAL_MAP_DEFAULT_ITEM_WIDTH_PX = 20
@@ -896,16 +897,17 @@ const VISUAL_MAP_HANDLE_SCALE = 1.2
 
 /**
  * Average glyph width of digits, separators, and short words, as a share of
- * the font size. Used to estimate label widths without measuring text.
+ * the font size. Used to estimate label widths without measuring text, so
+ * labels in wider scripts, such as CJK, are underestimated.
  */
 const AVERAGE_GLYPH_WIDTH_EM = 0.55
 
 /**
  * The plot side a vertical ``visualMap`` sits on and its pixel offset from
- * that edge, when it is unpositioned (ECharts' default is bottom-left) or
- * positioned by a pixel offset from the left or right edge. Other positions,
- * such as ``"center"`` or a percentage, are the spec's choice and are left
- * alone.
+ * that edge. Only an unpositioned map (ECharts' default is bottom-left) or one
+ * offset in pixels from the left or right edge counts. Other positions, such
+ * as ``"center"`` or a percentage, are left to the spec and return
+ * ``undefined``.
  */
 function verticalVisualMapEdge(
   visualMap: Record<string, unknown>
@@ -938,7 +940,11 @@ function numberOr(value: unknown, fallback: number): number {
   return typeof value === "number" ? value : fallback
 }
 
-/** ECharts' subtype defaulter for a ``visualMap`` without ``type``. */
+/**
+ * True if ECharts draws this ``visualMap`` as piecewise. An explicit ``type``
+ * wins. Otherwise ``categories`` select piecewise, as do ``pieces`` or a
+ * positive ``splitNumber`` unless ``calculable`` is set.
+ */
 function isPiecewiseVisualMap(visualMap: Record<string, unknown>): boolean {
   const { type, categories, pieces, splitNumber, calculable } = visualMap
   if (type !== undefined) {
@@ -951,9 +957,9 @@ function isPiecewiseVisualMap(visualMap: Record<string, unknown>): boolean {
 }
 
 /**
- * The piece labels ECharts draws beside a piecewise ``visualMap``,
- * approximated from its default formatting. Custom formatters are not
- * evaluated.
+ * Strings as wide as the piece labels ECharts draws beside a piecewise
+ * ``visualMap``, approximated from its default formatting. They are used
+ * only to estimate width. Custom formatters are not evaluated.
  */
 function pieceLabels(visualMap: Record<string, unknown>): string[] {
   const { categories, pieces } = visualMap
@@ -965,7 +971,9 @@ function pieceLabels(visualMap: Record<string, unknown>): string[] {
     return categories.map(String)
   }
   if (Array.isArray(pieces)) {
-    return pieces.filter(isPlainObject).map(piece => {
+    return pieces.map((entry: unknown) => {
+      // ECharts reads a primitive entry as ``{ value: entry }``.
+      const piece = isPlainObject(entry) ? entry : { value: entry }
       const {
         label,
         value,
@@ -997,6 +1005,8 @@ function pieceLabels(visualMap: Record<string, unknown>): string[] {
   while (+step.toFixed(precision) !== step && precision < 5) {
     precision++
   }
+  // Width proxies, not the drawn labels: no split label is wider than the
+  // wider end bound written on both sides of " - ".
   return [min, max].map(bound => {
     const text = bound.toFixed(precision)
     return `${text} - ${text}`
@@ -1043,10 +1053,10 @@ function estimateVerticalVisualMapWidth(
   } else if (calculable === true) {
     // The handle overhangs both bar edges, and its value label starts one
     // handle width past the bar's center.
-    const handleScale = VISUAL_MAP_HANDLE_SCALE
     const precision = numberOr(visualMap.precision, 0)
     contentPx =
-      barPx * ((handleScale - 1) / 2 + 0.5 + handleScale) +
+      barPx *
+        ((VISUAL_MAP_HANDLE_SCALE - 1) / 2 + 0.5 + VISUAL_MAP_HANDLE_SCALE) +
       textWidth(
         [
           numberOr(visualMap.min, 0),
@@ -1081,10 +1091,10 @@ function verticalVisualMapRoom(
 }
 
 /**
- * Give each ``visualMap`` that would fall back to the root ``gradientColor``
- * the spec's own ``gradientColor``. ECharts merges the theme's
- * ``gradientColor`` into the spec's entry by entry, so a shorter spec scale
- * would otherwise continue with Streamlit's palette.
+ * Give each ``visualMap`` whose series would fall back to the root
+ * ``gradientColor`` the spec's own ``gradientColor``. ECharts merges the
+ * theme's ``gradientColor`` into the spec's entry by entry, so a shorter spec
+ * scale would otherwise continue with Streamlit's palette.
  */
 function withSpecGradientColor(
   option: EChartsOptionObject
@@ -1098,7 +1108,11 @@ function withSpecGradientColor(
       return item
     }
     const entry = item as Record<string, unknown>
-    return entry.inRange === undefined && !Array.isArray(entry.color)
+    const fallsBack =
+      entry.inRange === undefined &&
+      get(entry, ["target", "inRange"]) === undefined &&
+      !Array.isArray(entry.color)
+    return fallsBack
       ? { ...entry, inRange: { color: [...gradientColor] } }
       : entry
   }

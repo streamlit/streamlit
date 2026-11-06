@@ -130,7 +130,8 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(echartsTheme.gradientColor).toEqual([
       ...theme.colors.chartSequentialColors,
     ])
-    // Must NOT happen: a themed inRange merges into every visualMap.
+    // Must NOT happen: the theme sets an inRange, which ECharts would merge
+    // into every visualMap, including size-only ones.
     expect(echartsTheme.visualMap).not.toHaveProperty("inRange")
   })
 
@@ -825,6 +826,7 @@ describe("Streamlit theme resolved by ECharts", () => {
       visualMap: [
         { min: 0, max: 1 },
         { min: 0, max: 1, inRange: { symbolSize: [6, 30] } },
+        { min: 0, max: 1, target: { inRange: { symbolSize: [6, 30] } } },
       ],
       series: [],
     })
@@ -833,9 +835,11 @@ describe("Streamlit theme resolved by ECharts", () => {
       component("visualMap", 0).get(["target", "inRange", "color"])
     ).toEqual(["#ffffff", "#ff0000"])
     // Must NOT happen: a size-only visualMap picks up the gradient.
-    expect(
-      component("visualMap", 1).get(["target", "inRange", "color"])
-    ).toBeUndefined()
+    for (const index of [1, 2]) {
+      expect(
+        component("visualMap", index).get(["target", "inRange", "color"])
+      ).toBeUndefined()
+    }
   })
 })
 
@@ -1324,13 +1328,18 @@ describe("applyStreamlitOptionDefaults", () => {
         withLabel(6),
       ],
       [
-        "piece labels, including open-ended ones",
+        "piece labels, including open-ended and primitive ones",
         {
-          pieces: [{ min: 0, max: 10 }, { gt: 10 }, { value: 5, label: "x" }],
+          pieces: [
+            { min: 0, max: 10 },
+            { gt: 10 },
+            { value: 5, label: "x" },
+            1000000,
+          ],
         },
         "left",
-        // "0 - 10"
-        withLabel(6),
+        // "1000000"
+        withLabel(7),
       ],
       [
         "a map pinned to the right edge",

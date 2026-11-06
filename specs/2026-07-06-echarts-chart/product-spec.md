@@ -273,13 +273,14 @@ When `theme="streamlit"` (default), the chart automatically matches the active S
   the plot fills its container like other Streamlit charts. A vertical `visualMap` beside the
   plot (ECharts' default) widens the margin on its side by its estimated width. Margins on a side
   that carries a title, legend, or bottom-anchored `dataZoom`/`visualMap`/`timeline` are left to
-  ECharts so those components aren't clipped. When more than one of those bottom-anchored controls would share
-  the footer, Streamlit stacks them; a default-bottom legend that would sit on the same strip
-  is moved to the top. In cartesian charts with a single grid, a centered legend pinned to the
-  top edge (`top: 0` or `"top"`) moves below a top title (and its subtext), and the plot then
-  starts below both unless the spec sets `grid.top`. This assumes a one-row legend; a wrapped
-  legend needs an explicit `grid.top`. Other explicit `top`/`bottom` values in the spec are
-  preserved. Treemaps get tighter insets with room for a top title and the breadcrumb.
+  ECharts so those components aren't clipped. When more than one of those bottom-anchored
+  controls would share the footer, Streamlit stacks them; a default-bottom legend that would sit
+  on the same strip is moved to the top. In cartesian charts with a single grid, a centered
+  legend pinned to the top edge (`top: 0` or `"top"`) moves below a top title (and its subtext),
+  and the plot then starts below both unless the spec sets `grid.top`. This assumes a one-row
+  legend; a wrapped legend needs an explicit `grid.top`. Other explicit `top`/`bottom` values in
+  the spec are preserved. Treemaps get tighter insets with room for a top title and the
+  breadcrumb.
   Horizontal `markLine` labels default to `insideEndTop`, so they aren't clipped past the
   plot's right edge.
 - **Dark / light mode** — the chart re-themes automatically when the user toggles the theme
