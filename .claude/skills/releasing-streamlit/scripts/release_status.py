@@ -150,6 +150,21 @@ def ref_sha(ref: str) -> str | None:
     return data or None
 
 
+def compare(base: str, head: str) -> dict[str, Any]:
+    cmp = gh_api(f"repos/{REPO}/compare/{base}...{head}")
+    if cmp is None:
+        raise UnavailableError(f"compare {base}...{head} returned 404")
+    return cmp
+
+
+def active_runs(workflow: str) -> list[dict[str, Any]]:
+    """Unfinished runs of a workflow. The API can't filter by dispatch inputs,
+    so a run here may be for another version.
+    """
+    runs = gh_api(f"repos/{REPO}/actions/workflows/{workflow}/runs?per_page=10") or {}
+    return [r for r in runs.get("workflow_runs") or [] if r["status"] != "completed"]
+
+
 def expected_version_check(version: str, published: list[str]) -> Step:
     step = Step("version", "Version")
     target = parse(version)
@@ -165,7 +180,10 @@ def expected_version_check(version: str, published: list[str]) -> Step:
     if patch == 0:
         expected = (latest[0], latest[1] + 1, 0)
         ok = target == expected
-        why = f"next minor after {'.'.join(map(str, latest))} is {'.'.join(map(str, expected))}"
+        why = (
+            f"next minor after {'.'.join(map(str, latest))} is "
+            f"{'.'.join(map(str, expected))} (major releases aren't supported)"
+        )
     else:
         ok = (maj, minor, patch - 1) in parsed
         why = f"a patch must follow {maj}.{minor}.{patch - 1}, which is not on PyPI"
@@ -208,11 +226,9 @@ def nightly_tags(prev: tuple[int, int, int]) -> list[str]:
 def find_cutoff_nightly(base_sha: str, prev: tuple[int, int, int]) -> str | None:
     """Return the nightly tag whose parent commit is the release branch's base."""
     for name in nightly_tags(prev)[:30]:
-        sha = ref_sha(f"refs/tags/{name}")
-        if (
-            sha
-            and gh_api(f"repos/{REPO}/commits/{sha}", jq=".parents[0].sha") == base_sha
-        ):
+        # commits/<tag> peels annotated tags and includes the parents.
+        parent = gh_api(f"repos/{REPO}/commits/refs/tags/{name}", jq=".parents[0].sha")
+        if parent == base_sha:
             return name
     return None
 
@@ -252,7 +268,7 @@ def status(version: str) -> dict[str, Any]:
         base_ref = f"{target[0]}.{target[1]}.{target[2] - 1}"
         cutoff.state, cutoff.detail = DONE, f"base tag {base_ref}"
     elif tag_sha or branch_sha:
-        cmp = gh_api(f"repos/{REPO}/compare/develop...{tag_sha or branch_sha}")
+        cmp = compare("develop", tag_sha or branch_sha)
         base_sha = cmp["merge_base_commit"]["sha"]
         nightly = find_cutoff_nightly(base_sha, prev)
         if nightly:
@@ -283,21 +299,43 @@ def status(version: str) -> dict[str, Any]:
 
     # 2. Branch
     bstep = Step("branch", "Release branch")
+    branch_wf = (
+        "patch-release-branch-creation.yml"
+        if is_patch
+        else "release-branch-creation.yml"
+    )
     if branch_sha:
         bstep.state, bstep.detail = DONE, f"{branch} @ {branch_sha[:9]}"
+    elif running := active_runs(branch_wf):
+        bstep.state = RUNNING
+        bstep.detail = (
+            f"{branch_wf} run in progress; attach to it, don't dispatch again"
+        )
+        bstep.links += [r["html_url"] for r in running]
     steps.append(bstep)
 
     # 3. Cherry-picks
     pstep = Step("picks", "Cherry-picks")
     head_sha = tag_sha or branch_sha
     if head_sha and base_ref:
-        cmp = gh_api(f"repos/{REPO}/compare/{base_ref}...{head_sha}")
+        cmp = compare(base_ref, head_sha)
         heads = [c["commit"]["message"].split("\n")[0] for c in cmp["commits"]]
         picks = [h for h in heads if not h.startswith(VERSION_COMMIT_PREFIX)]
-        pstep.state = DONE
         pstep.detail = f"{len(picks)}: " + "; ".join(picks[:5]) if picks else "none"
         if len(picks) > 5:
             pstep.detail += f"; … {len(picks) - 5} more"
+        # Before tagging, the list is not a decision: ask whether more are needed.
+        if tag_sha:
+            pstep.state = DONE
+        else:
+            pstep.state = MANUAL
+            pstep.detail += " so far · ask whether more are needed before tagging"
+    if not on_pypi and (running := active_runs("cherry-pick-to-release-branch.yml")):
+        pstep.state = RUNNING
+        pstep.detail = (
+            pstep.detail + " · " if pstep.detail else ""
+        ) + "cherry-pick run in progress"
+        pstep.links += [r["html_url"] for r in running]
     steps.append(pstep)
 
     # 4. Tag + merge-back PR
@@ -331,8 +369,15 @@ def status(version: str) -> dict[str, Any]:
                 tstep.detail += ", but it must stay open until publishing"
         elif not on_pypi:
             tstep.state, tstep.detail = FAIL, tstep.detail + " · no merge-back PR"
+    if not on_pypi and (running := active_runs("release-tag-and-pr-creation.yml")):
+        tstep.state = RUNNING
+        tstep.detail = (tstep.detail + " · " if tstep.detail else "") + (
+            "tag + PR run in progress; attach to it, don't dispatch again"
+        )
+        tstep.links += [r["html_url"] for r in running]
     if others and not on_pypi:
-        tstep.state = FAIL if tstep.state != TODO else WARN
+        # Tag + PR would open a second release PR, which Build Release can't tell apart.
+        tstep.state = FAIL
         note = f"other open release/* PRs: {', '.join('#' + n for n in others)}"
         tstep.detail = f"{tstep.detail} · {note}" if tstep.detail else note
     steps.append(tstep)
@@ -377,11 +422,19 @@ def status(version: str) -> dict[str, Any]:
             rstep.links.append(run["html_url"])
             if run["status"] == "completed":
                 if tag_sha and run["head_sha"] != tag_sha:
-                    # The tag moved after this run; a new run is the next step.
-                    rstep.detail = (
-                        f"last run {run['conclusion']} on {run['head_sha'][:9]}, "
-                        f"before tag {version} moved to {tag_sha[:9]}"
-                    )
+                    if run["conclusion"] == "success":
+                        # It may already have uploaded; PyPI's JSON API can lag.
+                        rstep.state = FAIL
+                        rstep.detail = (
+                            f"a run on {run['head_sha'][:9]} succeeded but tag {version} "
+                            f"is {tag_sha[:9]}. Check PyPI before anything else."
+                        )
+                    else:
+                        # The tag moved after this run; a new run is the next step.
+                        rstep.detail = (
+                            f"last run {run['conclusion']} on {run['head_sha'][:9]}, "
+                            f"before tag {version} moved to {tag_sha[:9]}"
+                        )
                 elif run["conclusion"] == "success":
                     # PyPI's JSON API can lag the upload by a few minutes.
                     rstep.state = WARN
@@ -424,13 +477,10 @@ def status(version: str) -> dict[str, Any]:
     else:
         dstep = Step("docs", "Docs", detail="no docs PR found")
         docs_prs = recent_prs(DOCS_REPO, pages=2)
-        # The release PR is titled "Update docs for Streamlit <v> release"; later
-        # follow-ups also mention the version, so prefer the release title.
+        # Match only the release PR ("Update docs for Streamlit <v> release");
+        # follow-up PRs also mention the version and must not count as done.
         release_re = re.compile(rf"Streamlit {re.escape(version)} release")
-        any_re = re.compile(rf"\b{re.escape(version)}\b")
-        doc = next(
-            (p for p in docs_prs if release_re.search(p["title"])), None
-        ) or next((p for p in docs_prs if any_re.search(p["title"])), None)
+        doc = next((p for p in docs_prs if release_re.search(p["title"])), None)
         if doc:
             num, state, merged_at = doc["number"], doc["state"], doc["merged_at"]
             dstep.links.append(doc["html_url"])
@@ -447,11 +497,14 @@ def status(version: str) -> dict[str, Any]:
                     if after
                     else None
                 )
-                dstep.state = DONE if sitemap else RUNNING
+                # The board can't see Community Cloud deploys, so a person confirms.
+                dstep.state = MANUAL if sitemap else RUNNING
                 dstep.detail = f"PR #{num} merged · sitemap " + (
                     f"#{sitemap} merged" if sitemap else "pending"
                 )
-                dstep.detail += " · example apps: check the docs PR description"
+                dstep.detail += (
+                    " · confirm any example apps in the docs PR are deployed"
+                )
             else:
                 dstep.state, dstep.detail = (
                     RUNNING,
@@ -464,7 +517,7 @@ def status(version: str) -> dict[str, Any]:
     parts = []
     pr_merged = bool(pr and pr.get("merged_at"))
     parts.append(
-        "release PR " + ("merged" if pr_merged else "open" if pr else "not opened")
+        "release PR " + ("merged" if pr_merged else pr["state"] if pr else "not opened")
     )
     feed = next(
         (p for p in recent_prs(FEEDSTOCK_REPO) if p["title"].endswith(f"v{version}")),
@@ -479,10 +532,14 @@ def status(version: str) -> dict[str, Any]:
         cstep.links.append(feed["html_url"])
     else:
         parts.append("conda-forge PR not yet opened")
-    parts.append("Anaconda request: check #anaconda-snowflake-technical")
     cstep.detail = " · ".join(parts)
     if pr_merged and feed_merged:
-        cstep.state = DONE
+        # The rest is outside what the board can see.
+        cstep.state = MANUAL
+        cstep.detail += (
+            " · confirm the Anaconda request in #anaconda-snowflake-technical"
+            " and issue/forum follow-ups"
+        )
     elif on_pypi:
         cstep.state = RUNNING
     steps.append(cstep)
