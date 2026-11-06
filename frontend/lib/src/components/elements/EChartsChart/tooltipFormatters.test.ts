@@ -213,6 +213,17 @@ describe("applyTooltipFormatters", () => {
         expected: "1/2",
       },
       {
+        case: "the upstream dataset of a transform that sets dimensions",
+        option: {
+          dataset: [
+            { dimensions: ["x", "y"] },
+            { dimensions: ["y", "x"], transform: { type: "filter" } },
+          ],
+          series: [{ datasetIndex: 1 }],
+        },
+        expected: "1/2",
+      },
+      {
         case: "the upstream dataset of a list of transforms",
         option: {
           dataset: [

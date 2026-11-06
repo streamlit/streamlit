@@ -83,8 +83,9 @@ function keepsDimensions(transform: unknown): boolean {
  *
  * - The series' own ``dimensions``.
  * - Else the ``dimensions`` of the dataset it reads (``datasetIndex``, else
- *   ``datasetId``, else the first). A ``filter`` or ``sort`` dataset without
- *   ``dimensions`` uses its upstream dataset's.
+ *   ``datasetId``, else the first). A ``filter`` or ``sort`` dataset uses its
+ *   upstream dataset's, since ECharts ignores a transform dataset's own
+ *   ``dimensions``.
  *
  * Other transforms, and datasets that name dimensions in a header row, give no
  * names.
@@ -107,6 +108,7 @@ function getSeriesDimensionNames(
   const datasetList: unknown[] = Array.isArray(datasets)
     ? datasets
     : [datasets]
+  /** Find a dataset by index, else id, else the first (ECharts' default). */
   const findDataset = (index: unknown, id: unknown): unknown => {
     if (typeof index === "number") {
       return datasetList[index]
@@ -132,8 +134,8 @@ function getSeriesDimensionNames(
     }
     const { dimensions, transform, fromDatasetIndex, fromDatasetId } =
       dataset as Record<string, unknown>
-    if (Array.isArray(dimensions)) {
-      return dimensions.map(getDimensionName)
+    if (isNullOrUndefined(transform)) {
+      return Array.isArray(dimensions) ? dimensions.map(getDimensionName) : []
     }
     const transforms: unknown[] = Array.isArray(transform)
       ? transform
@@ -192,9 +194,9 @@ function readDimensionValue(
  * - ``{@...}``, read from the first item (an axis tooltip's first series, as
  *   with ``{c}``).
  *
- * Series such as pie, funnel, and gauge get no ``dimensionNames`` in their
- * tooltip params, though their labels still resolve names. For them, names are
- * read from the option with ``getDimensionNames``.
+ * ECharts passes no ``dimensionNames`` to pie, funnel, and gauge tooltips,
+ * though it still resolves names in their labels. For those series, the
+ * formatter reads names from the option through ``getDimensionNames``.
  *
  * Tooltips are HTML, so the formatter escapes every inserted value and keeps
  * only the author's template markup. As in labels, ``{@...}`` expands last, so
