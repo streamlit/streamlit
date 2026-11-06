@@ -85,7 +85,9 @@ structural placement only to resolve a collision that cannot otherwise render to
    produces a different base ID and resets frontend state, exactly as today.
 6. Resolved IDs stay stable across full reruns, fragment reruns, cached-message replay, and
    parallel initial execution as long as the element's placement is stable.
-7. Failed or interrupted runs do not discard valid identity assignments.
+7. Runs the frontend does not apply (`st.rerun()`, a fast-rerun handoff, a compile error)
+   leave committed assignments in place. A finished run, including `st.stop()` and an
+   uncaught exception, drops assignments for elements it did not render.
 8. Assignments survive replacement of a `ScriptRunner`, including fast reruns.
 9. No public API, configuration, or protobuf change is introduced.
 
@@ -100,13 +102,10 @@ structural placement only to resolve a collision that cannot otherwise render to
 
 ### 1. Declare the identity domain internally
 
-Separate the current generic concept of an "element ID" into two internal domains:
-
-```python
-class ElementIdentityDomain(Enum):
-    WIDGET = "widget"
-    FRONTEND = "frontend"
-```
+Separate the current generic concept of an "element ID" into two internal domains. The domain
+is implied by the call path, so no enum is needed: a call site is `FRONTEND` when it passes a
+`FrontendElementIdentity` to `_enqueue` (section 2), and `WIDGET` when it keeps calling
+`compute_and_register_element_id`.
 
 - `WIDGET` means the ID participates in backend widget registration. Its uniqueness
   semantics remain unchanged.
@@ -140,7 +139,7 @@ wrapper, and final delta path:
 ```python
 @dataclass(frozen=True)
 class FrontendElementIdentity:
-    element_type: str
+    element_type: str  # Only used in internal-error messages.
     base_id: str  # Computed exactly as today, always keyless.
 ```
 
@@ -188,9 +187,9 @@ A placement is:
 ```
 
 `active_script_hash` is already part of the base ID, but keeping it in the placement type
-makes the ownership boundary explicit. `writing_fragment_id` distinguishes two execution
-owners accidentally targeting one path; a repeated write is valid only when both placement
-and owner match.
+makes the ownership boundary explicit. `writing_fragment_id` separates writes from different
+fragments, or from the main script, that land on the same delta path. A repeated write reuses
+an ID only when the whole placement matches.
 
 The registry holds `committed` assignments (`base_id -> {placement: resolved_id}`) from
 earlier runs. Each run records its own `claims` in the same shape. Every run has a *scope*,
@@ -227,6 +226,10 @@ def resolve(run, descriptor, placement):
     return resolved_id
 ```
 
+The pseudocode rebuilds `held` for clarity. The implementation keeps it incremental (a
+per-run held set per `base_id`, updated on each claim), so rendering many identical elements
+in one run stays amortized O(1) per claim instead of O(N²).
+
 `derive_id` keeps the standard `$$ID-<hash>-None` wire format. It hashes `base_id` together
 with a canonical, length-prefixed encoding of the placement fields using
 `util.create_fast_hasher`. If a derived ID is ever claimed by a different placement, the run
@@ -261,6 +264,14 @@ below the original does not have this effect. Likewise, when layout shifts insid
 group, one instance can inherit another's assignment. Group members share figure, spec, and
 config, so the impact is limited, and these cases cannot render at all today. Apps that need
 item-stable identity across reordering can pass `key=` to `st.plotly_chart`.
+
+Autoplay media has a sharper version of this trade-off. `Audio.tsx` and `Video.tsx` key their
+autoplay guard by element ID, and audio/video are excluded from frontend retention. When a
+displaced duplicate receives a derived ID it has never had before (for example, separated
+duplicates that both shift, or a shift of two or more slots), it gets a fresh guard and
+autoplays again. The base-ID holder never replays. This is rare and still better than
+today's exception; `key=` on `st.audio` / `st.video` is not available, so apps that need
+strict once-only playback should avoid identical autoplay players.
 
 The no-promotion rule has one intended exception: when a group shrinks to one member in the
 same run that moves it to a placement with no committed assignment, that member takes the
@@ -308,8 +319,8 @@ Scope-specific notes:
   `AppSession`-owned registry, just as it receives the same session state.
 
 Because every finished run, including one stopped early, prunes its scope, the committed
-state is bounded by the frontend-identity elements currently rendered in the session; no
-separate eviction cap is needed.
+state is bounded by the frontend-identity elements claimed in each scope's latest finished
+run; no separate eviction cap is needed.
 
 ### 5. Keep widget and explicit-key errors strict
 
@@ -412,7 +423,7 @@ into structural fallback IDs.
 - `lib/streamlit/runtime/scriptrunner/script_runner.py`
   - Register each run's `RunDescriptor` with the registry, attach the registry and run state
     to each `ScriptRunContext`, and commit or discard the run's claims when the run finishes
-    (section 4). This is the only place that commits or cleans up.
+    (section 4) through one shared commit helper.
 - `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
   - Expose the registry reference, `RunDescriptor`, and scope to `_enqueue`. Do not create or
     clear the registry in `reset()`.
@@ -424,6 +435,8 @@ into structural fallback IDs.
   - Resolve a frontend identity before copying the proto and advancing the cursor.
 - `lib/streamlit/testing/v1/app_test.py`
   - Own a registry per `AppTest` instance and pass it to each `LocalScriptRunner`.
+    `LocalScriptRunner._on_script_finished` overrides the base method without calling
+    `super()`, so it must call the same commit helper as `ScriptRunner`.
 - `lib/streamlit/runtime/caching/cached_message_replay.py`
   - Store and replay unresolved frontend identity descriptors.
 - `lib/streamlit/elements/plotly_chart.py`
@@ -447,7 +460,7 @@ collision resolution as follows:
   remounts. This matches the accepted trade-offs in section 3.
 - Audio and video are excluded from retention so hidden media cannot keep playing. Autoplay
   elements still remount when displaced; their autoplay guard is keyed by ID in
-  `elementStates`, which retention does not affect.
+  `elementStates`, so a displaced duplicate with a new derived ID can replay (section 3).
 
 The architecture reference in
 `.claude/skills/understanding-streamlit-architecture/references/element-identity.md` should be
@@ -499,8 +512,9 @@ updated to document identity domains and collision resolution.
   ID changes.
 - Cover the same case during a parallel initial fragment run.
 - Replay the same cached passive element into two locations and verify that both render.
-- Render two identical autoplay `st.audio` elements, trigger a rerun that displaces them, and
-  verify that neither restarts playback.
+- Render two identical autoplay `st.audio` elements, trigger a rerun that does not displace
+  them, and verify that neither restarts playback. Then insert an element above both and
+  verify that the base-ID holder does not restart.
 
 ## Alternatives Considered
 
