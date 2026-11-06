@@ -14,11 +14,12 @@ elements whose IDs only isolate frontend-local state, such as passive Plotly cha
 autoplay media.
 
 This spec proposes collision-aware identity resolution for **keyless, frontend-state
-elements**. The existing content-derived ID remains unchanged for every non-colliding app.
-When identical elements coexist, later instances receive a deterministic ID derived from
-their *placement* (page, writing fragment, and final delta path); repeated writes of the same
-element to the same placement reuse one ID and behave as an update. Explicit keys and backend widgets retain today's strict uniqueness
-rules. The change requires no public parameters, configuration, or protobuf fields.
+elements**. These elements keep today's content-derived ID whenever that ID is unique,
+including when the element moves. Streamlit derives an ID from the *placement* (page, writing
+fragment, and final delta path) only for another instance of the same element, and it reuses
+that ID when the same element is written to the same placement again. Explicit keys and
+backend widgets retain today's strict uniqueness rules. The change requires no public
+parameters, configuration, or protobuf fields.
 
 ## Problem
 
@@ -148,10 +149,13 @@ proto into a `ForwardMsg`, writes the resolved ID to that copy, and advances the
 ensures the placement is the path actually sent to the frontend, including writes through
 fragment outside-container wrappers.
 
-Elements without a descriptor skip this step with a single attribute check, and the registry
-lock is taken only for frontend-identity elements, so the `_enqueue` hot path is unchanged
-for everything else. Without a `ScriptRunContext` (bare execution), the descriptor resolves
-to its base ID without registration, matching today's behavior.
+Python protobuf messages reject arbitrary attributes, so the descriptor travels next to the
+proto rather than on it: `_enqueue` gains a private `frontend_identity=None` keyword argument,
+`marshall_audio` / `marshall_video` return the descriptor instead of only setting `proto.id`,
+and `save_element_message` receives it for the cache. `_enqueue` skips resolution with one
+`is None` check and takes the registry lock only for frontend-identity elements, so other
+elements see no added work. Without a `ScriptRunContext` (bare execution), the descriptor
+resolves to its base ID without registration, matching today's behavior.
 
 This also makes cached replay correct. `ElementMsgData` in
 `cached_message_replay.py` stores the unresolved descriptor alongside the message. Every
@@ -189,9 +193,11 @@ owners accidentally targeting one path; a repeated write is valid only when both
 and owner match.
 
 The registry holds `committed` assignments (`base_id -> {placement: resolved_id}`) from
-earlier runs. Each run records its own `claims` in the same shape. Every run has a *scope*:
-the whole app for a full run, or the rerunning fragment and its descendant fragments for a
-fragment run. Committed placements outside the scope stay rendered and keep their IDs.
+earlier runs. Each run records its own `claims` in the same shape. Every run has a *scope*,
+the set of placements it may replace: the whole app for a full run, or, for a fragment run,
+placements written by the fragments in its `RunDescriptor.fragment_ids` (one run can rerun
+several) plus any descendant fragments they executed or evicted. Committed placements outside
+the scope stay rendered and keep their IDs.
 
 Resolution runs under the registry lock:
 
@@ -205,7 +211,7 @@ def resolve(run, descriptor, placement):
         # Repeated write of the same element to one placement.
         return claims[placement]
 
-    # IDs already rendered by this run or by placements outside its scope.
+    # IDs this run has already assigned, plus IDs still held by placements outside its scope.
     held = set(claims.values()) | {
         resolved for p, resolved in committed.items() if not run.scope_owns(p)
     }
@@ -233,10 +239,11 @@ The rule gives three properties:
   `st.success()` keeps its ID and frontend state, as it does today.
 - **Stable duplicates keep their IDs.** A placement with a committed assignment reuses it
   unless an earlier claim in the same run already took that ID (see the trade-offs below).
-  A surviving derived placement is never promoted to the base ID, because that would reset
-  its state.
+  A duplicate that already has a derived ID keeps it, even after the base-ID holder
+  disappears; promoting it would reset its frontend state.
 - **New duplicates are derived.** Once the base ID is held, every further instance gets an ID
-  derived from its placement—the same positional fallback React uses for an unkeyed list.
+  derived from its placement—a structural fallback analogous to React's index-based identity
+  for unkeyed siblings.
 
 #### Accepted trade-offs of positional identity
 
@@ -255,6 +262,10 @@ group, one instance can inherit another's assignment. Group members share figure
 config, so the impact is limited, and these cases cannot render at all today. Apps that need
 item-stable identity across reordering can pass `key=` to `st.plotly_chart`.
 
+The no-promotion rule has one intended exception: when a group shrinks to one member in the
+same run that moves it to a placement with no committed assignment, that member takes the
+free base ID and its frontend state resets once. This is uncommon and needs no extra state.
+
 ### 4. Preserve assignments across partial and concurrent reruns
 
 Each run's `claims` are isolated until the run ends; the committed state is never reset
@@ -264,28 +275,30 @@ wholesale. `ScriptRunner` manages the lifecycle of every run:
    `ScriptRunner`) with the registry, which records it as the newest run for its scope and
    opens an empty `claims` overlay. Parallel workers for one run share the descriptor and
    overlay.
-2. **Supersede check:** only the newest run for a scope (the full app or one fragment) may
-   commit. `RunDescriptor` IDs are random, so recency comes from the registry's start
-   order, not from the ID. A runner stopped for a fast-rerun handoff cannot commit or clean
-   up for its replacement.
-3. **Finish:** the outcome decides what is committed, mirroring when the frontend clears
-   stale nodes and inactive element state:
-   - *Completed normally:* replace all committed placements in the run's scope with the
-     run's claims. This adds new assignments, prunes in-scope placements that were not
-     rendered (including stale entries inside a still-live group), and drops empty groups.
-   - *Stopped early* (`st.stop()`, uncaught exception; `premature_stop=True` even though
-     `SCRIPT_STOPPED_WITH_SUCCESS` / `FRAGMENT_STOPPED_WITH_SUCCESS` is emitted): merge the
-     claims into the committed state, because the rendered elements stay on screen. Drop
-     only committed placements whose ID the run assigned to a different placement; do not
-     prune anything else.
-   - *Stopped for rerun* (`st.rerun()`, fast rerun) or superseded: discard the claims.
-     Previously committed assignments stay untouched.
+2. **Supersede check:** only the newest run whose scope covers a placement may commit it. A
+   newer full-app run supersedes every older run, including fragment runs; a newer fragment
+   run supersedes older runs of the same fragments. `RunDescriptor` IDs are random, so
+   recency comes from the registry's start order, not from the ID. A runner stopped for a
+   fast-rerun handoff cannot commit or clean up for its replacement.
+3. **Finish:** the registry follows the frontend, which clears stale nodes and inactive
+   element state after every finished run except one interrupted for a rerun:
+   - *Finished* (`SCRIPT_STOPPED_WITH_SUCCESS` / `FRAGMENT_STOPPED_WITH_SUCCESS`, which also
+     covers `st.stop()` and uncaught exceptions): replace all committed placements in the
+     run's scope with the run's claims. This adds new assignments, prunes in-scope
+     placements that were not rendered (including stale entries inside a still-live group),
+     and drops empty groups. `premature_stop` only controls backend `SessionState` cleanup
+     and plays no role here.
+   - *Stopped for rerun* (`st.rerun()`, fast rerun), superseded, or a compile error: discard
+     the claims. Previously committed assignments stay untouched.
+
+   The commit is a no-op when the run made no claims and the registry is empty, so apps
+   without frontend-identity elements pay nothing per run.
 
 Scope-specific notes:
 
-- **Fragment rerun:** the scope covers placements whose `writing_fragment_id` is the
-  rerunning fragment or any descendant fragment that it executed or evicted during the run.
-  Assignments of the main script and unrelated fragments remain untouched.
+- **Fragment rerun:** only placements in the run's scope (section 3) are replaced, matching
+  the fragment-scoped `clearStaleNodes` in the frontend. Assignments of the main script and
+  unrelated fragments remain untouched.
 - **Parallel execution:** claims resolve under one lock. A unique element has one claim per
   run, and a duplicate group whose placements are unchanged reuses its committed
   assignments, so execution order does not matter in either case. Order only matters when a
@@ -294,9 +307,9 @@ Scope-specific notes:
 - **Fast rerun / runner replacement:** the new `ScriptRunner` receives the same
   `AppSession`-owned registry, just as it receives the same session state.
 
-Because completed runs prune in-scope placements, the committed state is bounded by the
-frontend-identity elements currently rendered in the session; no separate eviction cap is
-needed.
+Because every finished run, including one stopped early, prunes its scope, the committed
+state is bounded by the frontend-identity elements currently rendered in the session; no
+separate eviction cap is needed.
 
 ### 5. Keep widget and explicit-key errors strict
 
@@ -458,7 +471,10 @@ updated to document identity domains and collision resolution.
 - Full-run and fragment-scoped cleanup do not remove another scope's assignments; nested
   child fragments are pruned with their parent.
 - Completed runs prune stale placements inside a still-live group.
-- Early-stopped runs merge claims without pruning; runs stopped for rerun commit nothing.
+- A full run that hits `st.stop()` before a previously assigned chart prunes that placement;
+  runs stopped for rerun commit nothing.
+- A single run that reruns two fragments replaces both fragments' placements and leaves the
+  main script's assignments untouched.
 - Parallel claims are atomic and result in one stable assignment per placement.
 - Cached-message replay resolves an ID at the replay target rather than the cache-miss target.
 - A cached passive chart replayed next to an identical uncached chart gets distinct IDs.
@@ -483,6 +499,8 @@ updated to document identity domains and collision resolution.
   ID changes.
 - Cover the same case during a parallel initial fragment run.
 - Replay the same cached passive element into two locations and verify that both render.
+- Render two identical autoplay `st.audio` elements, trigger a rerun that displaces them, and
+  verify that neither restarts playback.
 
 ## Alternatives Considered
 
@@ -503,7 +521,18 @@ Rejected because it breaks working apps and undermines logical identity.
 
 Rejected because state restoration and autoplay guards are expected behavior.
 
-### Option 3: Derive identity from Python call sites
+### Option 3: Resolve collisions per run only
+
+Keep the resolution rule but store claims only on the current `ScriptRunContext`.
+
+- Pros: No session-scoped registry, supersede ordering, or `AppSession` / `AppTest` wiring.
+- Cons: A fragment rerun cannot see that a main-script duplicate already holds the base ID,
+  so the fragment's copy would also take it and alias state. Fast-rerun runner replacement
+  would also forget derived assignments and reset their state.
+
+Rejected because fragment reruns are a primary use case for repeated passive charts.
+
+### Option 4: Derive identity from Python call sites
 
 Use the user filename, qualified code object, and bytecode/source position as an implicit
 salt.
@@ -516,7 +545,7 @@ Not selected for the initial implementation. A call-site token could later repla
 placement segments if it proves stable enough, but it should not be required to solve passive
 element collisions.
 
-### Option 4: Use a per-type or per-base-ID occurrence counter
+### Option 5: Use a per-type or per-base-ID occurrence counter
 
 - Pros: Very small implementation and fixes loops.
 - Cons: IDs shift when an earlier conditional instance appears or disappears; fragment-only
@@ -524,7 +553,7 @@ element collisions.
 
 Rejected because final structural placement is a more accurate and observable fallback.
 
-### Option 5: Automatically disambiguate backend widgets too
+### Option 6: Automatically disambiguate backend widgets too
 
 - Pros: Removes the exception for repeated widgets and identical widgets in columns.
 - Cons: No automatic discriminator can preserve item identity when a dynamic list reorders.
@@ -534,7 +563,7 @@ Rejected for the initial scope. A safe future subset may use stable existing sco
 the IDs of keyed ancestor containers, but must not fall back to raw occurrence order for
 backend state.
 
-### Option 6: Add `key` parameters or a configuration switch
+### Option 7: Add `key` parameters or a configuration switch
 
 - Pros: Explicit and under user control.
 - Cons: Requires app changes, does not improve the default, and violates this proposal's
