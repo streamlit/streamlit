@@ -350,6 +350,7 @@ def status(version: str) -> dict[str, Any]:
         if p["head"]["ref"].startswith("release/")
         and (not pr or p["number"] != pr["number"])
     ]
+    pr_pending = False
     if tag_sha:
         if branch_sha and tag_sha != branch_sha and not on_pypi:
             tstep.state = FAIL
@@ -368,9 +369,14 @@ def status(version: str) -> dict[str, Any]:
                 tstep.state = FAIL
                 tstep.detail += ", but it must stay open until publishing"
         elif not on_pypi:
+            # Only a missing PR on a correctly placed tag can be a run in progress.
+            pr_pending = tstep.state == DONE
             tstep.state, tstep.detail = FAIL, tstep.detail + " · no merge-back PR"
     if not on_pypi and (running := active_runs("release-tag-and-pr-creation.yml")):
-        tstep.state = RUNNING
+        # A running Tag + PR explains a missing tag or PR, but not a tag off the
+        # branch head or a closed PR. The run may also be for another version.
+        if tstep.state != FAIL or pr_pending:
+            tstep.state = RUNNING
         tstep.detail = (tstep.detail + " · " if tstep.detail else "") + (
             "tag + PR run in progress; attach to it, don't dispatch again"
         )
