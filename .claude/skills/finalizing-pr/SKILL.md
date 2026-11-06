@@ -168,7 +168,7 @@ gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Tell it not to wait on the `ai-qa-testing.yml` run; that workflow posts its report as a PR comment and adds `do-not-merge` on `FAIL` for a maintainer to triage. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
+Run `/fixing-pr` exactly once, whether step 11 was approved or ran out of iterations, so it can wait for CI and address comments. Tell `/fixing-pr` to skip `ai-qa-testing.yml` when polling CI; that workflow posts its report as a PR comment for a maintainer to review and adds `do-not-merge` on `FAIL`. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
 
 ### 13. Post agent metrics
 
