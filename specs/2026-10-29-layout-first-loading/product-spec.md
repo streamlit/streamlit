@@ -183,7 +183,8 @@ even when the worker is queued or deferred (change 4).
 ```python
 @st.fragment(parallel=True, loading="skeleton")
 def revenue_body(region):
-    st.bar_chart(load_revenue(region), height=260)  # First visible element ends the skeleton
+    # The first visible element ends the skeleton
+    st.bar_chart(load_revenue(region), height=260)
 
 
 with st.container(border=True):

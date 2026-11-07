@@ -46,5 +46,9 @@ describe("index.html", () => {
     // The one operation is named too, so a reader can start without first
     // fetching the description.
     expect(text).toContain("POST _stcore/agent/interact")
+    // The MCP server is named too, so a reader can add it to an AI
+    // application by its URL.
+    expect(text).toContain("MCP server")
+    expect(text).toContain("_stcore/agent/mcp")
   })
 })

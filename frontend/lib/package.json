@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/lib",
-  "version": "1.66.1",
+  "version": "1.67.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -66,7 +66,7 @@
     "@luma.gl/core": "^9.4.2",
     "@luma.gl/engine": "^9.4.2",
     "@luma.gl/shadertools": "^9.4.2",
-    "@microlink/react-json-view": "^1.31.43",
+    "@microlink/react-json-view": "^1.31.44",
     "@sindresorhus/slugify": "^3.0.1",
     "@streamlit/component-v2-lib": "workspace:^",
     "@streamlit/connection": "workspace:^",
@@ -80,7 +80,7 @@
     "dompurify": "^3.4.17",
     "echarts": "^6.1.0",
     "hoist-non-react-statics": "^3.3.2",
-    "hotkeys-js": "^4.0.8",
+    "hotkeys-js": "^4.0.10",
     "immer": "^11.2.9",
     "json5": "^2.2.3",
     "katex": "^0.16.47",
@@ -93,11 +93,11 @@
     "mermaid": "^12.2.0",
     "moment": "^2.31.0",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.6.5",
+    "moment-timezone": "^0.6.6",
     "native-file-system-adapter": "^3.0.1",
     "node-emoji": "^2.2.0",
     "numbro": "^2.5.0",
-    "plotly.js": "^4.1.2",
+    "plotly.js": "^4.2.0",
     "protobufjs": "^8.8.1",
     "query-string": "^10.0.0",
     "re-resizable": "^6.11.2",
@@ -130,7 +130,7 @@
     "vega-interpreter": "^2.3.2",
     "vega-lite": "6.5.0",
     "vfile": "^6.0.0",
-    "wavesurfer.js": "^8.0.3",
+    "wavesurfer.js": "^8.0.4",
     "xxhashjs": "^0.2.2"
   },
   "peerDependencies": {
@@ -144,7 +144,7 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "@swc/plugin-emotion": "^20.0.0",
+    "@swc/plugin-emotion": "^20.0.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

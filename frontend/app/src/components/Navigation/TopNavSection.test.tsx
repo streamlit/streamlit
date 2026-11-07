@@ -439,4 +439,81 @@ describe("TopNavSection", () => {
       expect(screen.getByRole("button", { name: "Outside" })).toHaveFocus()
     })
   })
+
+  describe("page help", () => {
+    const HELP_SECTION: AppPage.$Properties[][] = [
+      [
+        { ...page("page_a", "Page A"), help: "About page A." },
+        page("page_b", "Page B"),
+      ],
+    ]
+
+    it("describes each menu item with its page's help", async () => {
+      const user = userEvent.setup()
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: HELP_SECTION })} />
+      )
+      const popover = await openPopover(user)
+
+      expect(
+        within(popover).getByRole("menuitem", { name: "Page A" })
+      ).toHaveAccessibleDescription("About page A.")
+      expect(
+        within(popover).getByRole("menuitem", { name: "Page B" })
+      ).not.toHaveAttribute("aria-describedby")
+    })
+
+    it("opens the focused item's tooltip when the keyboard moves into the menu", async () => {
+      const user = userEvent.setup()
+      renderWithContexts(
+        <TopNavSection {...getDefaultProps({ sections: HELP_SECTION })} />
+      )
+      screen.getByTestId("stTopNavSection").focus()
+      await user.keyboard("{ArrowDown}")
+
+      expect(screen.getByText("Page A").closest("a")).toHaveFocus()
+      expect(await screen.findByTestId("stTooltipContent")).toHaveTextContent(
+        "About page A."
+      )
+
+      await user.keyboard("{ArrowDown}")
+      expect(screen.getByText("Page B").closest("a")).toHaveFocus()
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    })
+
+    it("keeps the menu open when a link in an item's help tooltip is pressed", async () => {
+      const user = userEvent.setup()
+      renderWithContexts(
+        <div>
+          <TopNavSection
+            {...getDefaultProps({
+              sections: [
+                [
+                  {
+                    ...page("page_a", "Page A"),
+                    help: "See the [docs](https://docs.streamlit.io).",
+                  },
+                ],
+              ],
+            })}
+          />
+          <button type="button">Outside</button>
+        </div>
+      )
+      screen.getByTestId("stTopNavSection").focus()
+      await user.keyboard("{ArrowDown}")
+      const tooltipContent = await screen.findByTestId("stTooltipContent")
+      const helpLink = within(tooltipContent).getByText("docs")
+
+      // Press without release, so jsdom does not try to open the link.
+      await user.pointer({ keys: "[MouseLeft>]", target: helpLink })
+      expect(screen.getByTestId("stTopNavPopover")).toBeVisible()
+      expect(screen.getByTestId("stTooltipContent")).toContainElement(helpLink)
+      await user.pointer({ keys: "[/MouseLeft]", target: tooltipContent })
+
+      // A press elsewhere outside the menu still closes it.
+      await user.click(screen.getByRole("button", { name: "Outside" }))
+      expect(screen.queryByTestId("stTopNavPopover")).not.toBeInTheDocument()
+    })
+  })
 })

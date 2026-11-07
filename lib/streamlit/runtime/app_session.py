@@ -53,6 +53,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -155,11 +156,6 @@ class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
-
-
-def _generate_scriptrun_id() -> str:
-    """Randomly generate a unique ID for a script execution."""
-    return str(uuid.uuid4())
 
 
 class AppSession:
@@ -581,8 +577,10 @@ class AppSession:
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
-        This can be called on both the main thread and a ScriptRunner
-        run thread.
+        Call this only on this session's event loop (``self._event_loop``).
+        ForwardMsgQueue is not thread-safe, so callers on other threads, such
+        as ScriptRunner or file-watcher threads, must schedule the call with
+        ``_call_soon_on_event_loop``.
 
         Parameters
         ----------
@@ -638,16 +636,22 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
+        # Ends whatever run was in progress. Only that run's ScriptRunner knows
+        # its descriptor, so this script_finished carries no run identity.
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
+        error_run_descriptor = RunDescriptor.create()
         self._on_scriptrunner_event(
             self._scriptrunner,
             ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=error_run_descriptor,
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            run_descriptor=error_run_descriptor,
         )
 
         # Send an Exception message to the frontend.
@@ -978,6 +982,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -995,6 +1000,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                run_descriptor,
             )
         )
 
@@ -1022,6 +1028,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -1058,6 +1065,28 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        pages : dict[PageHash, PageInfo] | None
+            The app's pages at the start of the run. Set only for the
+            SCRIPT_STARTED event.
+
+        run_descriptor : RunDescriptor | None
+            The run that the event starts or finishes, which AppSession copies
+            into the new_session or script_finished metadata.
+
+            - ScriptRunner always sends it, on SCRIPT_STARTED and on that
+              run's finish event.
+            - It is None only when the server fails to handle a request from
+              the browser, for example a rerun or "Clear caches" request that
+              raises. The app then replaces its content with the error, and
+              handle_backmsg_exception first ends whatever run was in progress
+              with a SCRIPT_STOPPED_WITH_SUCCESS. Only that run's ScriptRunner
+              holds its descriptor.
+
+            A script_finished without it has no metadata.run, so nothing can
+            tell which run it ended. Neither the frontend nor the agent client
+            reads run identity from script_finished, so they handle it like
+            any other finish.
         """
 
         if (
@@ -1086,6 +1115,10 @@ class AppSession:
                 raise RuntimeError(
                     "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
                 )
+            if run_descriptor is None:  # pragma: no cover - defensive
+                raise RuntimeError(
+                    "run_descriptor must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -1097,7 +1130,7 @@ class AppSession:
             self._clear_queue(fragment_ids_this_run)
 
             msg = self._create_new_session_message(
-                page_script_hash, fragment_ids_this_run, pages
+                page_script_hash, run_descriptor, pages
             )
 
             self._enqueue_forward_msg(msg)
@@ -1117,7 +1150,9 @@ class AppSession:
             else:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            self._enqueue_forward_msg(self._create_script_finished_message(status))
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(status, run_descriptor)
+            )
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -1147,7 +1182,7 @@ class AppSession:
             self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(
                 self._create_script_finished_message(
-                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN, run_descriptor
                 )
             )
             if self._local_sources_watcher:
@@ -1206,20 +1241,17 @@ class AppSession:
     def _create_new_session_message(
         self,
         page_script_hash: str,
-        fragment_ids_this_run: list[str] | None = None,
+        run_descriptor: RunDescriptor,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
+        _set_run_identity(msg, run_descriptor)
 
-        msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._pages_manager.main_script_path
         msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
-
-        if fragment_ids_this_run:
-            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
         self._populate_app_pages(
             msg.new_session, pages or self._pages_manager.get_pages()
@@ -1343,10 +1375,14 @@ class AppSession:
             return False, ""
 
     def _create_script_finished_message(
-        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
+        self,
+        status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
-        """Create and return a script_finished ForwardMsg."""
+        """Create a script_finished ForwardMsg, tagged with run_descriptor's run when given."""
         msg = ForwardMsg()
+        if run_descriptor is not None:
+            _set_run_identity(msg, run_descriptor)
         msg.script_finished = status
         return msg
 
@@ -1521,6 +1557,12 @@ class AppSession:
             page_proto.page_name = page_info["page_name"].replace("_", " ")
             page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
+
+
+def _set_run_identity(msg: ForwardMsg, run_descriptor: RunDescriptor) -> None:
+    """Tag a lifecycle message (new_session or script_finished) with its run."""
+    msg.metadata.run.script_run_id = run_descriptor.script_run_id
+    msg.metadata.run.fragment_ids.extend(run_descriptor.fragment_ids)
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so

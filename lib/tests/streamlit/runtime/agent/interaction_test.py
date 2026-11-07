@@ -42,8 +42,9 @@ if TYPE_CHECKING:
 
 def _new_session(run_id: str, fragment_ids: list[str] | None = None) -> ForwardMsg:
     msg = ForwardMsg()
-    msg.new_session.script_run_id = run_id
-    msg.new_session.fragment_ids_this_run.extend(fragment_ids or [])
+    msg.new_session.SetInParent()
+    msg.metadata.run.script_run_id = run_id
+    msg.metadata.run.fragment_ids.extend(fragment_ids or [])
     return msg
 
 
@@ -233,6 +234,44 @@ def test_client_outer_fragment_run_drops_a_nested_fragments_old_content() -> Non
     assert _bodies(client) == ["app", "outer", "row 0"]
 
 
+def test_client_keeps_a_dropped_fragments_content_until_its_own_rerun() -> None:
+    """A fragment whose output the server dropped from a finished run keeps
+    its older content, as the browser does, until its own rerun replaces it.
+    """
+    client = interaction.AgentSessionClient()
+    finished = _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
+    finished.metadata.delivery.dropped_fragment_ids.append("inner")
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "app"),
+        *_nested_fragment_run("row 0", "row 1"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+        _new_session("r2", fragment_ids=["outer", "inner"]),
+        _block([0, 1], fragment_id="outer"),
+        _markdown([0, 1, 0], "outer v2", fragment_id="outer"),
+        finished,
+    )
+
+    outer = tree.merge_deltas(client.messages).children[0].children[1]
+    inner = outer.children[1]
+    assert outer.children[0].element.markdown.body == "outer v2"
+    assert [row.element.markdown.body for row in inner.children.values()] == [
+        "row 0",
+        "row 1",
+    ]
+
+    _write_all(
+        client,
+        _new_session("r3", fragment_ids=["inner"]),
+        _block([0, 1, 1], fragment_id="inner"),
+        _markdown([0, 1, 1, 0], "row 0 v2", fragment_id="inner"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["app", "outer v2", "row 0 v2"]
+
+
 def test_client_inner_fragment_run_keeps_the_outer_fragment() -> None:
     """A nested fragment's own rerun replaces only its container's contents."""
     client = interaction.AgentSessionClient()
@@ -311,7 +350,7 @@ def test_client_keeps_the_latest_message_per_type_and_session_event() -> None:
     new_sessions = [msg for msg in messages if msg.HasField("new_session")]
     finishes = [msg for msg in messages if msg.HasField("script_finished")]
     events = [msg for msg in messages if msg.HasField("session_event")]
-    assert [msg.new_session.script_run_id for msg in new_sessions] == ["r2"]
+    assert [msg.metadata.run.script_run_id for msg in new_sessions] == ["r2"]
     assert [msg.script_finished for msg in finishes] == [
         ForwardMsg.FINISHED_WITH_COMPILE_ERROR
     ]
@@ -364,6 +403,39 @@ def test_client_write_forward_msg_swallows_and_logs_a_failure() -> None:
         client.write_forward_msg(_new_session("r1"))
 
     log_exception.assert_called_once()
+
+
+def test_client_new_session_without_run_identity_starts_full_run_with_empty_id() -> (
+    None
+):
+    """A `new_session` missing its run identity logs a warning and starts a
+    full run with an empty run ID, so the previous run's deltas go stale.
+    """
+    client = interaction.AgentSessionClient()
+    no_identity = ForwardMsg()
+    no_identity.new_session.SetInParent()
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "first"),
+    )
+
+    with (
+        patch.object(interaction._LOGGER, "warning") as log_warning,
+        patch.object(interaction._LOGGER, "exception") as log_exception,
+    ):
+        client.write_forward_msg(no_identity)
+
+    log_warning.assert_called_once()
+    log_exception.assert_not_called()
+    _write_all(
+        client,
+        _markdown([0, 1], "second"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+    )
+    new_sessions = [msg for msg in client.messages if msg.HasField("new_session")]
+    assert [msg.HasField("metadata") for msg in new_sessions] == [False]
+    assert _bodies(client) == ["second"]
 
 
 def test_request_context_withholds_credentials_and_cookies() -> None:
@@ -469,7 +541,10 @@ def test_validate_refuses_navigation_with_widget_changes(
         ({"context": "Europe/Berlin"}, "`context` must be an object"),
         ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
         ({"session_id": "s_1", "widget_state": []}, "`widget_state` must be an object"),
-        ({"session_id": "s_1", "trigger": "x"}, "`trigger` must be an object"),
+        (
+            {"session_id": "s_1", "trigger": "x"},
+            "`trigger` must be an object, `{key, value?}`",
+        ),
         ({"session_id": "s_1", "trigger": {}}, "string `key`"),
         ({"session_id": "s_1", "trigger": {"key": 1}}, "string `key`"),
         (
@@ -639,7 +714,12 @@ def test_parse_context_accepts_only_language_tags(locale: str, accepted: bool) -
             interaction._parse_context({"locale": locale})
 
 
-def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
+def _page(
+    url_pathname: str | None,
+    name: str = "",
+    icon: str = "",
+    help: str | None = None,
+) -> PageInfo:
     info: PageInfo = {
         "script_path": f"{url_pathname or 'main'}.py",
         "page_script_hash": "h",
@@ -650,12 +730,15 @@ def _page(url_pathname: str | None, name: str = "", icon: str = "") -> PageInfo:
         info["page_name"] = name
     if icon:
         info["icon"] = icon
+    if help is not None:
+        info["help"] = help
     return info
 
 
 _NAVIGATION_PAGES: Final[dict[str, PageInfo]] = {
-    "home_hash": _page("", "Home"),
-    "report_hash": _page("report", "Report", ":material/table:"),
+    # st.navigation registers help for every page, "" when the page has none.
+    "home_hash": _page("", "Home", help=""),
+    "report_hash": _page("report", "Report", ":material/table:", "Quarterly sales."),
 }
 
 
@@ -704,7 +787,12 @@ def test_resolve_page_refuses_an_unknown_page_once_pages_are_declared() -> None:
     assert raised.value.details == {
         "pages": [
             {"url_path": "", "title": "Home"},
-            {"url_path": "report", "title": "Report", "icon": ":material/table:"},
+            {
+                "url_path": "report",
+                "title": "Report",
+                "icon": ":material/table:",
+                "help": "Quarterly sales.",
+            },
         ]
     }
 
@@ -856,7 +944,7 @@ def test_duration_phrases_whole_minutes_and_singulars(
     seconds: float, expected: str
 ) -> None:
     """Error messages name a limit in whole minutes where it is one."""
-    assert interaction._duration(seconds) == expected
+    assert interaction.format_duration(seconds) == expected
 
 
 def test_a_session_the_runtime_closed_frees_its_slot() -> None:

@@ -418,7 +418,7 @@ class _SnapshotBuilder:
             # The type and label name the entry, so a client can tell generated
             # `$$ID-...` keys apart; what to send stays on the element.
             entry: dict[str, Any] = {
-                "key": _public_key(element_id),
+                "key": public_key(element_id),
                 "kind": str(action),
                 "type": command,
             }
@@ -434,7 +434,7 @@ class _SnapshotBuilder:
 
         element_id = description.get("key")
         if element_id:
-            result["key"] = _public_key(element_id)
+            result["key"] = public_key(element_id)
 
         props = description.get("props") or {}
         if props:
@@ -482,7 +482,7 @@ def _max_items(description: dict[str, Any], props: dict[str, Any]) -> int | None
     return limit
 
 
-def _public_key(element_id: str) -> str:
+def public_key(element_id: str) -> str:
     """The key a client sends back: the author's key, or the opaque element ID.
 
     A widget's element ID embeds the author's key. Forms, containers, and
@@ -819,6 +819,10 @@ def _pages(
         }
         if page.icon:
             entry["icon"] = page.icon
+        if page.help:
+            entry["help"] = page.help
+        if page.is_hidden:
+            entry["hidden"] = True
         pages.append(entry)
         if page.page_script_hash == current_hash:
             # A copy, so a caller can change `page` without changing `pages`.

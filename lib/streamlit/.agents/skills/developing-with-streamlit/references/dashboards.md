@@ -5,7 +5,7 @@ Compose metrics, charts, and data into clean dashboard layouts.
 
 ## Cards with borders
 
-Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, and `st.form`:
+Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, `st.grid`, and `st.form`:
 
 ```python
 # Container card
@@ -49,7 +49,20 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
+
+Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
+
+```python
+# A pixel row height also gives every row the same height.
+with st.grid(4, row_height=160, gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%", border=True, height="stretch")
+    st.metric("Users", "762k", "+12%", border=True, height="stretch")
+    st.metric("Orders", "1.4k", border=True, height="stretch")
+    st.metric("Conversion", "3.2%", "+0.1%", border=True, height="stretch")
+```
+
+For a side-by-side comparison of `st.columns`, `st.grid`, and horizontal containers, see "Side by side: columns vs grid vs horizontal container" in `layouts.md`.
 
 ## Zero deltas
 
@@ -226,10 +239,11 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 ## References
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
-- `layouts.md` — Columns, containers, tabs, dialogs
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
 - `charts.md` — Choosing chart commands, consistent charts, chart selections
 - `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)

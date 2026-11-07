@@ -295,6 +295,18 @@ class SnapshotDataTest(SnapshotCase):
             assert node["data"]["complete"] is True
             assert _MEDIA_URL.fullmatch(node["data"]["url"])
         assert editor["support"] == "action_unsupported"
+        assert "caption" not in table.get("props", {})
+
+    def test_a_table_reports_its_styler_caption(self) -> None:
+        """`st.table` shows a Styler's caption below the table; `st.dataframe` does not."""
+        styler = _frame(2).style.set_caption("Units per region")
+        st.table(styler)
+        st.dataframe(styler)
+
+        document = self._build().document
+
+        assert _one(document, "table")["props"]["caption"] == "Units per region"
+        assert "caption" not in _one(document, "dataframe").get("props", {})
 
     def test_plotly_drops_its_theme_and_expands_typed_arrays(self) -> None:
         """A figure is complete: its theme is dropped and named, its arrays are numbers."""
@@ -497,6 +509,19 @@ class SnapshotDataTest(SnapshotCase):
         assert data.keys() == {"spec", "complete"}
         assert data["complete"] is True
         assert len(data["spec"]["layers"]) == 2
+        assert "tooltip" not in data["spec"]
+
+    def test_pydeck_reports_its_tooltip_in_the_spec(self) -> None:
+        """The tooltip the browser shows travels beside the spec; it is put back."""
+        tooltip = {"text": "{name}: {count}"}
+        st.pydeck_chart(
+            pdk.Deck(
+                layers=[pdk.Layer("ScatterplotLayer", data=[{"p": [0, 0]}])],
+                tooltip=tooltip,
+            )
+        )
+
+        assert self._data("pydeck_chart")["spec"]["tooltip"] == tooltip
 
     def test_a_map_reports_the_deck_gl_spec_its_browser_renders(self) -> None:
         """`st.map` reports its generated Deck.gl spec as a complete chart, like

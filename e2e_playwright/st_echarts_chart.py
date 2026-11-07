@@ -571,6 +571,30 @@ with st.container(key="c_tooltip_template"):
         height=_HEIGHT,
     )
 
+# A pie series reads ``{@mrr}`` by the dataframe's column name. ECharts gives
+# pie tooltips no dimension names (cartesian series such as the heatmap get
+# them), so Streamlit reads them from the dataset.
+with st.container(key="c_tooltip_pie_template"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": pd.DataFrame({"industry": ["Media"], "mrr": [40.1]})},
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-pie-template-tooltip",
+            },
+            "series": [
+                {
+                    "type": "pie",
+                    "encode": {"itemName": "industry", "value": "mrr"},
+                    "tooltip": {"formatter": "{b}: {@mrr} · {@[1]}"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="tooltip_pie_template",
+        height=_HEIGHT,
+    )
+
 with st.container(key="c_tooltip_value_format"):
     st.echarts_chart(
         {
@@ -610,6 +634,47 @@ with st.container(key="c_daily_time_tooltip"):
         },
         key="daily_time_tooltip",
         height=_HEIGHT,
+    )
+
+# An item tooltip that lists several dataframe columns through
+# ``encode.tooltip``. The single symbol is large enough to cover the plot
+# center, so hovering the chart opens its tooltip.
+with st.container(key="c_encode_tooltip"):
+    st.echarts_chart(
+        {
+            "dataset": {
+                "source": pd.DataFrame(
+                    {
+                        "date": pd.to_datetime(["2026-01-02"]),
+                        "pct": [0.045],
+                        "size": [10_545_470.2],
+                        "sha": ["aaa1111"],
+                    }
+                )
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value", "min": 0, "max": 0.09},
+            "tooltip": {
+                "trigger": "item",
+                "className": "echarts-encode-tooltip",
+                "valueFormatter": "percent",
+            },
+            "series": [
+                {
+                    "type": "scatter",
+                    "symbolSize": 150,
+                    "encode": {
+                        "x": "date",
+                        "y": "pct",
+                        "tooltip": ["pct", "date", "sha"],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
+        key="encode_tooltip",
+        height=_HEIGHT,
+        renderer="svg",
     )
 
 # Large-data defaults. The SVG renderer makes the drawn shapes countable: large
@@ -690,3 +755,182 @@ _dataset_rows = [
 ]
 _selected_days = ", ".join(_selection_df.iloc[_dataset_rows]["day"]) or "none"
 st.write(f"echarts dataset selection: {_selected_days}")
+
+# A per-minute time axis in a narrow container. ECharts spaces time ticks by
+# the data range, not the chart width, so the theme's `hideOverlap` default
+# has to drop the labels that would collide.
+_minutes = pd.DataFrame(
+    {
+        "minute": pd.date_range("2026-11-03 13:25", periods=30, freq="min"),
+        "orders": np.arange(30) % 7 + 20,
+    }
+)
+with st.container(key="c_narrow_time_axis", width=320):
+    st.echarts_chart(
+        {
+            "dataset": {"source": _minutes},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "encode": {"x": "minute", "y": "orders"}}],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )
+
+# A default treemap. ECharts turns on wheel roam for treemaps unless the spec
+# sets ``roam: false``.
+with st.container(key="c_treemap"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "Alpha", "value": 40},
+                        {"name": "Beta", "value": 30},
+                        {"name": "Gamma", "value": 20},
+                        {"name": "Delta", "value": 10},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# Layout defaults: a top legend moves below a centered title and subtitle, a
+# treemap fills the chart above its breadcrumb, and a horizontal reference
+# line keeps its end label inside the plot.
+with st.container(key="c_title_top_legend"):
+    st.echarts_chart(
+        {
+            "title": {"text": "Revenue", "subtext": "per quarter"},
+            "legend": {"top": "top"},
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {"name": "Revenue", "type": "line", "data": [820, 932, 901, 934]},
+                {"name": "Cost", "type": "line", "data": [500, 610, 550, 700]},
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_treemap_layout"):
+    st.echarts_chart(
+        {
+            "series": [
+                {
+                    "type": "treemap",
+                    "data": [
+                        {"name": "vendor", "value": 60},
+                        {"name": "app", "value": 25},
+                        {"name": "lib", "value": 15},
+                    ],
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+with st.container(key="c_reference_lines"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4"]},
+            "yAxis": {"type": "value"},
+            "series": [
+                {
+                    "type": "line",
+                    "data": [820, 932, 901, 934],
+                    "markLine": {
+                        "symbol": "none",
+                        "label": {"formatter": "{b}"},
+                        "data": [
+                            {"yAxis": 750, "name": "target"},
+                            {"type": "average", "name": "average"},
+                            {"xAxis": "Q3", "name": "launch"},
+                        ],
+                    },
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# A heatmap with ECharts' default bottom-left vertical visualMap. The plot must
+# leave room for the piece labels instead of drawing over them.
+_cells = pd.DataFrame(
+    [(str(x), str(y), (x * 7 + y * 3) % 10) for x in range(8) for y in range(5)],
+    columns=["x", "y", "value"],
+)
+with st.container(key="c_piecewise_heatmap"):
+    st.echarts_chart(
+        {
+            "dataset": {"source": _cells},
+            "xAxis": {"type": "category"},
+            "yAxis": {"type": "category"},
+            "visualMap": {"type": "piecewise", "min": 0, "max": 9},
+            "series": [
+                {
+                    "type": "heatmap",
+                    "encode": {"x": "x", "y": "y", "value": "value"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# A multi-series scatter whose visualMap maps only the symbol size. Each series
+# must keep its categorical color, matching the legend.
+_bubble_rng = np.random.default_rng(1)
+_bubbles = pd.DataFrame(
+    {
+        "x": _bubble_rng.uniform(0, 100, 60),
+        "y": _bubble_rng.uniform(0, 100, 60),
+        "size": _bubble_rng.uniform(0, 1, 60),
+        "group": np.repeat(["A", "B", "C"], 20),
+    }
+)
+with st.container(key="c_size_visual_map"):
+    st.echarts_chart(
+        {
+            "legend": {},
+            "dataset": [
+                {"source": _bubbles},
+                *(
+                    {
+                        "transform": {
+                            "type": "filter",
+                            "config": {"dimension": "group", "=": group},
+                        }
+                    }
+                    for group in "ABC"
+                ),
+            ],
+            "visualMap": {
+                "show": False,
+                "dimension": "size",
+                "min": 0,
+                "max": 1,
+                "inRange": {"symbolSize": [6, 30]},
+            },
+            "xAxis": {},
+            "yAxis": {},
+            "series": [
+                {
+                    "name": group,
+                    "type": "scatter",
+                    "datasetIndex": index + 1,
+                    "encode": {"x": "x", "y": "y"},
+                }
+                for index, group in enumerate("ABC")
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
