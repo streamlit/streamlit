@@ -75,7 +75,12 @@ def data() -> None:
 st.navigation(
     [
         st.Page(home, title="Home", default=True),
-        st.Page(report, title="Report", url_path="report"),
+        st.Page(
+            report,
+            title="Report",
+            url_path="report",
+            help="Quarterly figures for one **region**.",
+        ),
         st.Page(slow, title="Slow", url_path="slow"),
         st.Page(data, title="Data", url_path="data"),
     ]

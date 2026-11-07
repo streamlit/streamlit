@@ -14,6 +14,8 @@
 
 import math
 
+import pytest
+
 from streamlit.runtime.caching.ttl_cleanup_cache import TTLCleanupCache
 
 
@@ -158,3 +160,45 @@ class TestTTLCleanupCache:
         test_cache.safe_del(3)
         assert released_items == [11, 13]
         assert list(test_cache.keys()) == [0, 2, 4]
+
+    def test_on_evict_is_forwarded(self):
+        """Automatic evictions are reported; release-hook clears are not."""
+        evictions: list[tuple[str, int]] = []
+        test_cache = TTLCleanupCache(
+            maxsize=1,
+            ttl=math.inf,
+            timer=fake_timer,
+            on_release=lambda _: None,
+            on_evict=lambda reason, count: evictions.append((reason, count)),
+        )
+
+        test_cache[0] = 10
+        test_cache[1] = 11
+        test_cache.clear()
+
+        assert evictions == [("max_entries", 1)]
+
+    def test_capacity_eviction_reported_when_release_raises(self):
+        """The eviction is reported before the release hook, which runs once."""
+        evictions: list[tuple[str, int]] = []
+        released_items: list[int] = []
+
+        def on_release(item: int) -> None:
+            released_items.append(item)
+            raise RuntimeError("cleanup failed")
+
+        test_cache = TTLCleanupCache(
+            maxsize=1,
+            ttl=math.inf,
+            timer=fake_timer,
+            on_release=on_release,
+            on_evict=lambda reason, count: evictions.append((reason, count)),
+        )
+
+        test_cache[0] = 10
+        with pytest.raises(RuntimeError, match="cleanup failed"):
+            test_cache[1] = 11
+
+        assert evictions == [("max_entries", 1)]
+        assert released_items == [10]
+        assert 0 not in test_cache

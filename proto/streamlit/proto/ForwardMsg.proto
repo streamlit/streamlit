@@ -202,7 +202,37 @@ message ForwardMsgMetadata {
   // metadata so it does not affect the ForwardMsg hash.
   optional string agent_props = 5;
 
+  // The run that this message starts (new_session) or ends (script_finished).
+  // - Deltas never set it: a delta belongs to the most recent new_session
+  //   before it.
+  // - A script_finished omits it when the backend doesn't know which run
+  //   finished.
+  RunIdentity run = 6;
+
+  // Which of the finished run's fragments had their output dropped before
+  // delivery. Set only on script_finished.
+  RunDelivery delivery = 7;
+
   reserved 3;
+}
+
+// Identifies one script run: a full-app rerun, or a rerun of one or more
+// fragments. The frontend uses it to tell which elements are stale after a run.
+message RunIdentity {
+  string script_run_id = 1;
+
+  // Fragments this run reruns, with parent fragments before nested ones. Empty
+  // for a full-app run.
+  repeated string fragment_ids = 2;
+}
+
+// Which of the finished run's fragments had their output dropped before
+// delivery. Set only on script_finished.
+message RunDelivery {
+  // Fragments in run.fragment_ids whose deltas the server dropped before
+  // sending this finish, because those fragments rerun next. Empty means the
+  // server delivered every fragment's output.
+  repeated string dropped_fragment_ids = 1;
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message

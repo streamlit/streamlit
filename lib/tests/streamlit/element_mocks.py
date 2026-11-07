@@ -294,4 +294,5 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("empty", lambda: st.empty()),
     ("skeleton", lambda: st.skeleton()),
     ("dialog", lambda: st.dialog("Dialog")),
+    ("grid", lambda: st.grid()),
 ]

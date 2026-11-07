@@ -1215,6 +1215,43 @@ _create_option(
 )
 
 _create_option(
+    "server.xsrfCookiePartitioned",
+    description="""
+        Whether to add the ``Partitioned`` attribute to the cookie Streamlit
+        uses for Cross-Site Request Forgery (XSRF) protection. Enable this when
+        your app is embedded in an iframe on a different site and
+        ``st.file_uploader`` fails because the browser blocks third-party
+        cookies.
+
+        The attribute opts the cookie into partitioned storage (CHIPS, Cookies
+        Having Independent Partitioned State), so the browser keeps a separate
+        copy of the cookie for each top-level site that embeds your app. This
+        only has an effect when XSRF protection is enabled (via
+        ``server.enableXsrfProtection`` or an ``[auth]`` section in your
+        secrets). It does not affect authentication cookies.
+
+        This option requires ``server.xsrfCookieSameSite`` to be "none",
+        because the browser never sends a Lax or Strict cookie in a cross-site
+        context. Browsers also require partitioned cookies to be ``Secure``,
+        so Streamlit sets ``Secure`` automatically and your app must be served
+        over HTTPS (either directly or via a TLS-terminating proxy).
+
+        Notes:
+        - Browsers store a partitioned cookie separately from an existing
+          unpartitioned cookie with the same name. A browser that still holds
+          the old cookie may send both until its session ends. Both normally
+          carry the same token, but in rare cases requests can be rejected.
+        - Safari 18.5 through 26.1 (including iOS) do not support
+          ``Partitioned`` cookies, and Safari 18.5 is reported to reject
+          cookies that carry the attribute, so uploads can fail in those
+          versions while this option is on. Support returns in Safari 26.2.
+          Leave this option off if you need to support those versions.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "server.maxUploadSize",
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
@@ -1302,9 +1339,9 @@ _create_option(
     "server.enableAgentApi",
     description="""
         Enable the agent API, which lets a non-browser client drive the app
-        over HTTP at `/_stcore/agent/interact`.
-        `/_stcore/agent/openapi.json` describes the protocol, and reports
-        whether the API is on.
+        over HTTP at `/_stcore/agent/interact`, or as a remote MCP server at
+        `/_stcore/agent/mcp`. `/_stcore/agent/openapi.json` describes the
+        protocol, and reports whether the API is on.
 
         The API is off by default. Once on, it is served wherever the app is,
         with the same Host allow-list as the app's WebSocket, and a caller gets
@@ -3449,6 +3486,23 @@ WebSocket connection.
             "Invalid value for config option server.xsrfCookieSameSite: "
             f'"{xsrf_cookie_same_site}". '
             'Valid values are "lax", "strict", and "none".'
+        )
+
+    # Partitioned only matters for cookies sent cross-site, which requires
+    # SameSite=None, so reject combinations where it would silently do nothing.
+    # As with SameSite, require a real bool rather than coercing.
+    xsrf_cookie_partitioned = get_option("server.xsrfCookiePartitioned")
+    if not isinstance(xsrf_cookie_partitioned, bool):
+        raise RuntimeError(
+            "Invalid value for config option server.xsrfCookiePartitioned: "
+            f'"{xsrf_cookie_partitioned}". Valid values are true and false.'
+        )
+    if xsrf_cookie_partitioned and xsrf_cookie_same_site.lower() != "none":
+        raise RuntimeError(
+            "The config option 'server.xsrfCookiePartitioned=true' requires "
+            "'server.xsrfCookieSameSite=\"none\"'. Browsers never send a Lax "
+            "or Strict cookie in a cross-site context, so a partitioned cookie "
+            "would have no effect."
         )
 
     # Warn about combinations where SameSite="none" silently has no effect or

@@ -23,7 +23,6 @@ updates:
       - "impact:internal"
       - "autofix"
       - "update-snapshots"
-      - "never-stale"
 
     ignore:
       - dependency-name: "iframe-resizer"
@@ -155,7 +154,6 @@ updates:
       - "impact:internal"
       - "autofix"
       - "update-snapshots"
-      - "never-stale"
 
     # Skip versions we intentionally cap out via upper bounds (`<`) in pyproject.toml,
     # so Dependabot doesn't open PRs that only fight that cap. The manifest constraint
@@ -236,7 +234,6 @@ updates:
       - "impact:users"
       - "autofix"
       - "update-snapshots"
-      - "never-stale"
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -249,7 +246,6 @@ updates:
       - "impact:internal"
       - "autofix"
       - "update-snapshots"
-      - "never-stale"
 
     groups:
       github-actions-minor-patch:
@@ -275,7 +271,6 @@ updates:
       - "impact:internal"
       - "autofix"
       - "update-snapshots"
-      - "never-stale"
 
     ignore:
       - dependency-name: "https://github.com/astral-sh/ruff-pre-commit"

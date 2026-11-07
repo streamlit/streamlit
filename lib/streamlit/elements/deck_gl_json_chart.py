@@ -683,7 +683,7 @@ class PydeckMixin:
                     # A callback reaches the server too, so it is "rerun".
                     on_select="rerun",
                     alt=pydeck_proto.alt or None,
-                    data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
+                    data_builder=lambda: _pydeck_data(pydeck_proto),
                 ),
             )
 
@@ -697,7 +697,7 @@ class PydeckMixin:
                 "pydeck_chart",
                 key=key,
                 alt=pydeck_proto.alt or None,
-                data_builder=lambda: agent_data.raw_spec(pydeck_proto.json),
+                data_builder=lambda: _pydeck_data(pydeck_proto),
             ),
         )
 
@@ -705,6 +705,21 @@ class PydeckMixin:
     def dg(self) -> DeltaGenerator:
         """The associated DeltaGenerator."""
         return cast("DeltaGenerator", self)
+
+
+def _pydeck_data(pydeck_proto: PydeckProto) -> dict[str, Any] | None:
+    """A Deck.gl chart's agent ``data``: its spec, with the tooltip it shows.
+
+    The tooltip travels beside the spec in its own proto field, so it is put
+    back under the `pdk.Deck` argument's name, ``tooltip``.
+    """
+    data = agent_data.raw_spec(pydeck_proto.json)
+    if data is None or not pydeck_proto.tooltip:
+        return data
+    spec = data["spec"]
+    if isinstance(spec, dict):
+        data["spec"] = {**spec, "tooltip": json.loads(pydeck_proto.tooltip)}
+    return data
 
 
 def _get_pydeck_width(pydeck_obj: Deck | None) -> int | None:

@@ -36,7 +36,7 @@ import streamlit as st
 from streamlit import config
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_metrics, cache_utils
 from streamlit.runtime.caching.cache_errors import CacheKeyNotFoundError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
@@ -783,6 +783,9 @@ class ResourceCache(Cache[R]):
 
         self.key = key
         self.display_name = display_name
+        self._metrics = cache_metrics.get_cache_metrics().get_function_metrics(
+            CacheType.RESOURCE, display_name
+        )
         self._mem_cache: TTLCleanupCache[str, CachedResult[R]] = TTLCleanupCache(
             maxsize=max_entries,
             # In background mode this is the configured hard-expiration bound; freshness
@@ -790,6 +793,7 @@ class ResourceCache(Cache[R]):
             ttl=ttl_seconds,
             timer=cache_utils.TTLCACHE_TIMER,
             on_release=wrapped_on_release,
+            on_evict=self._metrics.record_evictions,
         )
         self._mem_cache_lock = threading.Lock()
         self.validate = validate
@@ -817,9 +821,11 @@ class ResourceCache(Cache[R]):
         Hard-expired keys never reach this method: the storage layer treats them as
         missing.
         """
-        # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
-        # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
-        if self.refresh_mode != "background" or result.stored_at is None:
+        if (
+            self.refresh_mode != "background"
+            or result.stored_at is None
+            or self.fresh_ttl_seconds is None
+        ):
             return False
         return (
             cache_utils.TTLCACHE_TIMER() - result.stored_at
@@ -839,6 +845,7 @@ class ResourceCache(Cache[R]):
             if self.validate is not None and not self.validate(result.value):
                 # Validate failed: delete the entry and raise an error.
                 del self._mem_cache[value_key]
+                self._metrics.record_evictions("validate")
                 raise CacheKeyNotFoundError()
 
             return result
@@ -886,14 +893,15 @@ class ResourceCache(Cache[R]):
         *,
         expected_generation: int,
         expected_key_generation: int,
-    ) -> None:
+    ) -> bool:
         """Write back a background-refreshed resource unless it is orphaned.
 
         On a successful write the replaced resource's ``on_release`` fires, unless the
         refresh returned the same object that is now cached (then it is left intact).
         On a discard the freshly produced resource is released so it doesn't leak. Any
         ``on_release`` failure is logged rather than propagated so it can't turn a
-        successful compute into a failed refresh.
+        successful compute into a failed refresh. Returns whether the resource was
+        written.
         """
         # st._main and st.sidebar are process-global DeltaGenerator singletons, so
         # reading their _id is safe here on the background refresh thread even though
@@ -960,6 +968,7 @@ class ResourceCache(Cache[R]):
                     "background cache refresh.",
                     exc_info=True,
                 )
+        return not discard
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:

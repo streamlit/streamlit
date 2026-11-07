@@ -60,10 +60,11 @@
         The protocol is described at
         <a href="./_stcore/agent/openapi.json">_stcore/agent/openapi.json</a>
         under the app's root URL, not under a page's URL. That document also
-        says whether this app offers it. The protocol has one operation,
+        says whether this app offers it. The protocol has one HTTP operation,
         <code>POST _stcore/agent/interact</code>: a JSON body of
         <code>{}</code> starts a session and returns the app's contents as
-        JSON.
+        JSON. The same protocol is also an MCP server at
+        <code>_stcore/agent/mcp</code> under the app's root URL.
       </p>
     </noscript>
     <div id="root"></div>

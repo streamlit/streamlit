@@ -25,7 +25,7 @@ import math
 import threading
 import time
 from abc import abstractmethod
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from typing import (
@@ -51,7 +51,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_background_refresh
+from streamlit.runtime.caching import cache_background_refresh, cache_metrics
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
@@ -342,6 +342,10 @@ def get_session_id_or_throw() -> str:
 class Cache(Generic[R]):
     """Function cache interface. Caches persist across script runs."""
 
+    # How long an entry stays fresh before a background refresh is due, or None for
+    # no freshness limit. Set by subclasses.
+    fresh_ttl_seconds: float | None
+
     def __init__(self) -> None:
         self._value_locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
         self._value_locks_lock = threading.Lock()
@@ -367,6 +371,11 @@ class Cache(Generic[R]):
         self._invalidation_lock = threading.Lock()
         # Maps value_key -> monotonic time until which a failed refresh won't retry.
         self._refresh_cooldowns: dict[str, float] = {}
+        # Maps value_key -> (trigger time, write time) of the latest background refresh
+        # that wrote its result, in write order. A cached entry stored before the
+        # trigger time was already replaced, so a caller holding it must not refresh
+        # again.
+        self._refresh_written: OrderedDict[str, tuple[float, float]] = OrderedDict()
 
     @property
     def is_active(self) -> bool:
@@ -476,7 +485,7 @@ class Cache(Generic[R]):
         *,
         expected_generation: int,
         expected_key_generation: int,
-    ) -> None:
+    ) -> bool:
         """Write back the result of a background refresh, unless it is orphaned.
 
         The write is discarded (not applied) if the cache was detached, the whole
@@ -484,6 +493,7 @@ class Cache(Generic[R]):
         entry is no longer present (hard-evicted, LRU-evicted, or cleared).
         ``cache_resource`` also releases the replaced resource on success and the
         freshly produced resource on a discard so nothing leaks.
+        Returns whether the result was written.
         """
         raise NotImplementedError
 
@@ -537,6 +547,41 @@ class Cache(Generic[R]):
         """Clear any failure cooldown for a key after a successful refresh."""
         with self._invalidation_lock:
             self._refresh_cooldowns.pop(value_key, None)
+
+    def record_refresh_written(self, value_key: str, triggered_at: float) -> None:
+        """Record that a background refresh triggered at ``triggered_at`` wrote its
+        result, and drop records older than one fresh TTL.
+        """
+        lifetime = self.fresh_ttl_seconds
+        with self._invalidation_lock:
+            records = self._refresh_written
+            now = TTLCACHE_TIMER()
+            records.pop(value_key, None)
+            records[value_key] = (triggered_at, now)
+            if lifetime is None:
+                return
+            # Keep each record for one fresh TTL after its write. After that, the
+            # entry the refresh wrote is stale too, so the record can no longer flag
+            # a duplicate. Records are in write order, so expired ones are at the
+            # front.
+            while records:
+                oldest_key, (_, written_at) = next(iter(records.items()))
+                if now - written_at < lifetime:
+                    break
+                del records[oldest_key]
+
+    def refreshed_since(self, value_key: str, stored_at: float) -> bool:
+        """Whether an entry stored at ``stored_at`` was already replaced by a
+        background refresh.
+
+        Lets a caller that read a stale entry tell a lock that is free because an
+        earlier refresh already finished from one where no refresh has run yet.
+        """
+        with self._invalidation_lock:
+            record = self._refresh_written.get(value_key)
+            # Strictly before the trigger: the value this refresh wrote is stamped at
+            # or after triggered_at and must stay eligible for a later refresh.
+            return record is not None and stored_at < record[0]
 
     def compute_value_lock(self, value_key: str) -> threading.Lock:
         """Return the lock that should be held while computing a new cached value.
@@ -599,10 +644,12 @@ class Cache(Generic[R]):
                     self._generation += 1
                     self._refresh_cooldowns.clear()
                     self._key_generations.clear()
+                    self._refresh_written.clear()
                 else:
                     # A per-key clear invalidates only earlier writes for this key.
                     self._key_generations[key] = self._key_generations.get(key, 0) + 1
                     self._refresh_cooldowns.pop(key, None)
+                    self._refresh_written.pop(key, None)
         self._clear(key=key)
 
     @abstractmethod
@@ -720,6 +767,11 @@ class CachedFunc(Generic[P, R]):
     def __init__(self, info: CachedFuncInfo[P, R]) -> None:
         self._info = info
         self._function_key = _make_function_key(info.cache_type, info.func)
+        self._metrics = cache_metrics.get_cache_metrics().get_function_metrics(
+            info.cache_type, info.display_name
+        )
+        if info.refresh_mode == "background":
+            self._metrics.enable_background_refresh()
 
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
@@ -777,18 +829,23 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
+        # Each call counts as exactly one lookup, decided by this first read. The
+        # re-read under the compute lock belongs to the same call, so a caller that
+        # waits for another caller's computation still counts as a miss.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:
             # Hard miss (never computed or past the hard-eviction bound): fall through
             # to a blocking foreground compute below.
-            pass
+            self._metrics.record_miss()
         else:
+            # A stale value served during a background refresh is still a hit.
+            self._metrics.record_hit()
             if read.is_stale:
                 # Background mode, stale grace window: return the stale value now and
                 # kick off a single deduplicated background refresh (no spinner).
                 self._maybe_trigger_background_refresh(
-                    cache, value_key, func_args, func_kwargs
+                    cache, value_key, read.result.stored_at, func_args, func_kwargs
                 )
             return self._handle_cache_hit(read.result)
 
@@ -869,10 +926,16 @@ class CachedFunc(Generic[P, R]):
                 pass
 
             # We acquired the lock before any other thread. Compute the value!
-            with self._info.cached_message_replay_ctx.calling_cached_function(
-                self._info.func
-            ):
-                computed_value = self._info.func(*func_args, **func_kwargs)
+            compute_start = time.perf_counter()
+            try:
+                with self._info.cached_message_replay_ctx.calling_cached_function(
+                    self._info.func
+                ):
+                    computed_value = self._info.func(*func_args, **func_kwargs)
+            finally:
+                self._metrics.record_compute_duration(
+                    time.perf_counter() - compute_start
+                )
 
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, computed_value
@@ -969,12 +1032,14 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
+        # As in the sync path, this first read alone decides the call's lookup result.
         try:
             cached_result = cache.read_result(value_key)
         except CacheKeyNotFoundError:
             # Hard miss: fall through to the awaiting compute below.
-            pass
+            self._metrics.record_miss()
         else:
+            self._metrics.record_hit()
             return self._handle_cache_hit(cached_result)
 
         is_nested_cache_function = in_cached_function.get()
@@ -1036,14 +1101,20 @@ class CachedFunc(Generic[P, R]):
                     raise RuntimeError(
                         "Async computation owner has no invalidation token"
                     )
-                with self._info.cached_message_replay_ctx.calling_cached_function(
-                    self._info.func
-                ):
-                    # `is_async` guarantees the call returns a coroutine; cast so the
-                    # type checker allows awaiting it (the wrapper's `R` is the coroutine
-                    # type for an `async def`, not the awaited value type).
-                    computed_value = await cast(
-                        "Any", self._info.func(*func_args, **func_kwargs)
+                compute_start = time.perf_counter()
+                try:
+                    with self._info.cached_message_replay_ctx.calling_cached_function(
+                        self._info.func
+                    ):
+                        # `is_async` guarantees the call returns a coroutine; cast so
+                        # the type checker allows awaiting it (the wrapper's `R` is the
+                        # coroutine type for an `async def`, not the awaited value type).
+                        computed_value = await cast(
+                            "Any", self._info.func(*func_args, **func_kwargs)
+                        )
+                finally:
+                    self._metrics.record_compute_duration(
+                        time.perf_counter() - compute_start
                     )
 
                 return self._store_computed_value(
@@ -1059,15 +1130,17 @@ class CachedFunc(Generic[P, R]):
         self,
         cache: Cache[R],
         value_key: str,
+        stale_stored_at: float | None,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
     ) -> None:
         """Trigger a deduplicated background refresh for a stale entry.
 
-        Skips the refresh if a recent failure's cooldown is still active or another
-        compute/refresh already holds the per-key lock. The per-key compute lock
-        doubles as the "refresh in flight" flag and is handed to the worker, which
-        releases it when done.
+        Skips the refresh if a recent failure's cooldown is still active, another
+        compute/refresh already holds the per-key lock, or a refresh already replaced
+        the stale entry (stored at ``stale_stored_at``) after this caller read it. The
+        per-key compute lock doubles as the "refresh in flight" flag and is handed to
+        the worker, which releases it when done.
         """
         if cache.in_refresh_cooldown(value_key):
             return
@@ -1078,11 +1151,18 @@ class CachedFunc(Generic[P, R]):
         if not lock.acquire(blocking=False):
             return
 
+        if stale_stored_at is not None and cache.refreshed_since(
+            value_key, stale_stored_at
+        ):
+            lock.release()
+            return
+
         # Triggering must never fail the stale-serve path or leak the per-key lock. When
         # the task is scheduled, the worker owns the lock and releases it; otherwise we
         # release it here (in the finally) so the key can be retried on a later access.
         scheduled = False
         try:
+            triggered_at = TTLCACHE_TIMER()
             expected_generation = cache.generation
             expected_key_generation = cache.key_generation(value_key)
             scheduled = (
@@ -1093,6 +1173,7 @@ class CachedFunc(Generic[P, R]):
                         func_args,
                         func_kwargs,
                         lock,
+                        triggered_at,
                         expected_generation,
                         expected_key_generation,
                     )
@@ -1107,6 +1188,7 @@ class CachedFunc(Generic[P, R]):
                 # Saturated pool, degraded runtime, or scheduling error: keep serving
                 # stale and retry on a later access.
                 lock.release()
+                self._metrics.record_background_refresh("skipped")
 
     def _run_background_refresh(
         self,
@@ -1115,6 +1197,7 @@ class CachedFunc(Generic[P, R]):
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
         lock: threading.Lock,
+        triggered_at: float,
         expected_generation: int,
         expected_key_generation: int,
     ) -> None:
@@ -1126,19 +1209,30 @@ class CachedFunc(Generic[P, R]):
         compute lock is always released.
         """
         try:
-            new_value = self._info.func(*func_args, **func_kwargs)
+            compute_start = time.perf_counter()
+            try:
+                new_value = self._info.func(*func_args, **func_kwargs)
+            finally:
+                self._metrics.record_compute_duration(
+                    time.perf_counter() - compute_start, trigger="refresh"
+                )
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, new_value
             )
-            cache.write_background_refresh_result(
+            if cache.write_background_refresh_result(
                 value_key,
                 new_value,
                 expected_generation=expected_generation,
                 expected_key_generation=expected_key_generation,
-            )
+            ):
+                # Record the write before releasing the compute lock so the next
+                # caller that acquires it sees the record.
+                cache.record_refresh_written(value_key, triggered_at)
             cache.clear_refresh_cooldown(value_key)
+            self._metrics.record_background_refresh("success")
         except Exception as ex:
             cache.mark_refresh_failed(value_key)
+            self._metrics.record_background_refresh("error")
             _LOGGER.warning(
                 "Background cache refresh failed for %s: %s",
                 getattr(self._info.func, "__qualname__", "?"),
