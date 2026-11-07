@@ -131,7 +131,7 @@ be used because it renders no DOM node to draw the overlay on.
 
 ```proto
 // Block.proto
-optional Loading loading = 18;
+optional Loading loading = 20;
 
 message Loading {
   // Skeleton size while the block has nothing to keep (first load).
