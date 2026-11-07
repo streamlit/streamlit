@@ -73,6 +73,7 @@ from streamlit.runtime.caching.hashing import HashFuncsDict, update_hash
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_run_yield_check,
     in_cached_function,
+    is_in_skeleton_slot,
 )
 
 if TYPE_CHECKING:
@@ -790,7 +791,10 @@ class CachedFunc(Generic[P, R]):
         spinner_message: str | None = None
         if isinstance(self._info.show_spinner, str):
             spinner_message = self._info.show_spinner
-        elif self._info.show_spinner is True:
+        elif self._info.show_spinner is True and not is_in_skeleton_slot():
+            # Inside a skeleton slot, the skeleton is already the loading
+            # indicator, so the generated text would only add noise. Custom
+            # text is still shown, as the skeleton's label.
             name = cast("FunctionType", self._info.func).__qualname__
             if len(args) == 0 and len(kwargs) == 0:
                 spinner_message = f"Running `{name}()`."

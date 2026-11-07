@@ -18,6 +18,7 @@ import { act, screen, waitFor } from "@testing-library/react"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
+import { PendingSkeletonContext } from "~lib/components/core/Block/PendingSkeletonContext"
 import { render } from "~lib/test_util"
 
 import Spinner, { type SpinnerProps } from "./Spinner"
@@ -48,6 +49,29 @@ describe("Spinner component", () => {
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
     expect(spinnerContainer).toHaveClass("stSpinner")
+  })
+
+  it("renders nothing while a skeleton shows its text as the label", () => {
+    render(
+      <PendingSkeletonContext.Provider value>
+        <Spinner {...getProps({}, { inSkeletonSlot: true })} />
+      </PendingSkeletonContext.Provider>
+    )
+
+    expect(screen.queryByTestId("stSpinner")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["it wasn't created in a skeleton slot", false, true],
+    ["its skeleton no longer shows", true, false],
+  ])("renders normally when %s", (_, inSkeletonSlot, isInPendingSkeleton) => {
+    render(
+      <PendingSkeletonContext.Provider value={isInPendingSkeleton}>
+        <Spinner {...getProps({}, { inSkeletonSlot })} />
+      </PendingSkeletonContext.Provider>
+    )
+
+    expect(screen.getByText("Loading...")).toBeVisible()
   })
 
   it("sets the text and width correctly", () => {

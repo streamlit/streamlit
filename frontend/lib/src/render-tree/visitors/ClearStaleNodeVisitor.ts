@@ -41,6 +41,11 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * output from this run because the fragment is about to rerun, so its existing
  * content stays until its own rerun cleans it up.
  *
+ * If a skeleton from this run is still waiting on a node (`pendingSkeleton`),
+ * the visitor replaces that node with the skeleton. The agent API's buffer
+ * already holds the skeleton there, because the skeleton's delta replaced
+ * that path.
+ *
  * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
  * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
  * the agent API's message buffer. The agent API checks writes against what
@@ -88,6 +93,12 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   visitBlockNode(node: BlockNode): AppNode | undefined {
     if (this.isPreserved(node)) {
       return node
+    }
+
+    // No new content replaced the skeleton this run, so the skeleton takes
+    // over the slot from the previous run's content.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
     }
 
     let clearStaleNodeVisitor: ClearStaleNodeVisitor | null = null
@@ -189,6 +200,12 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
 
     if (this.isPreserved(node)) {
       return node
+    }
+
+    // No new content replaced the skeleton this run, so the skeleton takes
+    // over the slot from the previous run's content.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
     }
 
     if (this.isFragmentRun) {

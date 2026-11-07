@@ -23,6 +23,13 @@ from streamlit.errors import NoSessionContext
 from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.proto.Spinner_pb2 import Spinner as SpinnerProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    is_in_skeleton_slot,
+)
 from streamlit.string_util import clean_text
 
 if TYPE_CHECKING:
@@ -47,6 +54,11 @@ class SpinnerMixin:
         width: Width = "content",
     ) -> Generator[None, None, None]:
         """Display a loading spinner while executing a block of code.
+
+        Inside a ``with st.skeleton()`` block or a fragment with
+        ``loading="skeleton"``, the spinner's text is shown on the skeleton
+        while the skeleton is displayed, instead of as a second loading
+        indicator.
 
         Parameters
         ----------
@@ -103,6 +115,9 @@ class SpinnerMixin:
         spinner_proto.text = clean_text(text)
         spinner_proto.cache = _cache
         spinner_proto.show_time = show_time
+        # Inside a skeleton slot, the frontend shows the text on the skeleton
+        # instead of adding a second loading indicator.
+        spinner_proto.in_skeleton_slot = is_in_skeleton_slot()
         element_proto = ElementProto()
         element_proto.spinner.CopyFrom(spinner_proto)
 
@@ -127,7 +142,11 @@ class SpinnerMixin:
                 with display_message_lock:
                     if display_message:
                         # Ignore the DeltaGenerator conveniences because Transients are special
-                        enqueue_message(create_transient())
+                        with contextlib.suppress(StopException, RerunException):
+                            # The timer thread inherits the run's context, so a
+                            # stopped parallel fragment run raises here. The run
+                            # is ending, so its spinner has nothing to show.
+                            enqueue_message(create_transient())
 
             timer = threading.Timer(DELAY_SECS, set_message)
             add_script_run_ctx(timer)

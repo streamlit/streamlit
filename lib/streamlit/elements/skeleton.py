@@ -81,16 +81,24 @@ class SkeletonMixin:
         is shown immediately and can be replaced with content later by calling
         an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
 
-        **Context manager mode** (like ``st.spinner()``, recommended): The
-        skeleton is shown while the ``with`` block runs (after a short delay)
-        and automatically clears when the block exits, whether normally or due
-        to an exception. Like ``st.spinner``, any ``st.*`` calls made inside the
-        ``with`` block are written to the parent container and remain visible
-        after the skeleton clears.
+        **Context manager mode** (recommended): Elements written inside the
+        ``with`` block fill the skeleton's slot and stack vertically, like in
+        ``st.container()``, even inside a horizontal container. To lay them
+        out in a row, put an ``st.container(horizontal=True)`` inside the
+        block. The skeleton stays until the first element is drawn. If nothing
+        is written inside the block, or the block raises an exception, the
+        skeleton clears when the block exits.
+
+        In both modes, content from the previous run stays in place during a
+        rerun. The skeleton only covers it if the new content takes longer
+        than half a second, so reruns that hit the cache don't flash it. A
+        cached function's spinner inside the ``with`` block doesn't add a
+        second loading indicator: Streamlit hides its default text and shows
+        custom text on the skeleton.
 
         .. note::
-            Context manager mode is recommended. Use standalone mode only when
-            you need to reserve a slot and fill it later (like ``st.empty()``).
+            Draw the slow element first inside the ``with`` block. Any element,
+            even a caption, ends the skeleton when it is drawn.
 
         Parameters
         ----------
@@ -115,7 +123,8 @@ class SkeletonMixin:
         -------
         SkeletonPlaceholder
             A placeholder object that can be used to replace the skeleton with
-            other content, or as a context manager.
+            other content, or as a context manager whose content fills the
+            skeleton's slot.
 
         Examples
         --------
@@ -135,7 +144,7 @@ class SkeletonMixin:
            https://doc-skeleton-standalone.streamlit.app/
            height: 300px
 
-        **Context manager mode** - skeleton auto-clears when block exits:
+        **Context manager mode** - the content replaces the skeleton:
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -144,11 +153,8 @@ class SkeletonMixin:
            import time
 
            with st.skeleton(height=100):
-               # Expensive computation runs here
-               time.sleep(2)
-
-           # Skeleton clears, show results below
-           st.success("Data loaded!")
+               time.sleep(2)  # Expensive computation runs here
+               st.success("Data loaded!")  # Replaces the skeleton in its slot
 
         .. output::
            https://doc-skeleton-context.streamlit.app/

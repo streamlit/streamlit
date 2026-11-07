@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from unittest.mock import patch
 
@@ -24,6 +25,7 @@ from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from streamlit.runtime.scriptrunner_utils.exceptions import StopException
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -155,37 +157,86 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
 class SkeletonContextManagerTest(DeltaGeneratorTestCase):
     """Test st.skeleton context manager functionality."""
 
-    def test_context_manager_uses_transient_elements(self) -> None:
-        """Test that context manager mode uses transient elements (0.5s delay pattern)."""
-        # Patch the delay to a smaller value for faster tests.
-        # Use 0.1s with 0.3s sleep (200ms buffer) to avoid CI flakiness.
-        # A 10ms buffer (0.01s delay, 0.02s sleep) is too tight under load.
-        with patch("streamlit.elements.lib.skeleton_placeholder._DELAY_SECS", 0.1):
-            with st.skeleton():
-                # Sleep longer than the patched delay to ensure timer fires
-                time.sleep(0.3)
-                # Check the skeleton element was enqueued as a transient
-                create_delta = self.get_delta_from_queue()
-                assert create_delta.HasField("new_transient")
-                assert create_delta.new_transient.elements[0].HasField("skeleton")
+    def _loading_block_messages(self) -> list:
+        return [
+            msg
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta") and msg.delta.HasField("add_block")
+        ]
 
-            # After exiting, the clear message should be in the queue
-            clear_delta = self.get_delta_from_queue()
-            assert clear_delta.HasField("new_transient")
-            # Clear message has empty elements list
-            assert len(clear_delta.new_transient.elements) == 0
+    def test_context_manager_writes_into_loading_block(self) -> None:
+        """Elements written inside the block fill the skeleton's slot."""
+        with st.skeleton(height=120):
+            st.markdown("Loaded")
+
+        block_msgs = self._loading_block_messages()
+        # Content was drawn, so the frontend clears the skeleton itself and the
+        # block isn't re-sent.
+        assert len(block_msgs) == 1
+        block = block_msgs[0].delta.add_block
+        assert block.loading.skeleton_height.pixel_height == 120
+        assert block.allow_empty
+
+        markdown_msg = self.get_message_from_queue()
+        assert markdown_msg.delta.new_element.markdown.body == "Loaded"
+        assert list(markdown_msg.metadata.delta_path) == [
+            *block_msgs[0].metadata.delta_path,
+            0,
+        ]
+
+    def test_context_manager_replaces_skeleton_slot(self) -> None:
+        """The loading block takes the skeleton's own position."""
+        st.markdown("Before")
+        with st.skeleton():
+            st.markdown("Loaded")
+        st.markdown("After")
+
+        # The skeleton at [0, 1] is replaced in place by the loading block (the
+        # queue merges the two deltas for the same path).
+        block_msg = self._loading_block_messages()[0]
+        assert list(block_msg.metadata.delta_path) == [0, 1]
+        after_msg = self.get_message_from_queue()
+        assert list(after_msg.metadata.delta_path) == [0, 2]
+
+    def test_context_manager_clears_skeleton_when_nothing_is_written(self) -> None:
+        """A block that draws nothing re-sends the block without the skeleton."""
+        with st.skeleton():
+            pass
+
+        first, last = self._loading_block_messages()
+        assert first.delta.add_block.HasField("loading")
+        assert not last.delta.add_block.HasField("loading")
+        # The cleared block is hidden while empty, so it doesn't add a gap.
+        assert not last.delta.add_block.allow_empty
+        assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
+
+    def test_context_manager_stretch_height_fills_parent(self) -> None:
+        """A stretch skeleton's block stretches too, also once it's cleared."""
+        with st.skeleton(height="stretch"):
+            pass
+
+        first, last = self._loading_block_messages()
+        assert first.delta.add_block.loading.skeleton_height.use_stretch
+        assert first.delta.add_block.height_config.use_stretch
+        assert last.delta.add_block.height_config.use_stretch
+
+    def test_context_manager_pixel_height_keeps_content_height_block(self) -> None:
+        """A pixel skeleton height sizes the skeleton, not the block."""
+        with st.skeleton(height=120):
+            pass
+
+        first = self._loading_block_messages()[0]
+        assert first.delta.add_block.height_config.use_content
 
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""
-        try:
+        with pytest.raises(ValueError, match="Test exception"):
             with st.skeleton():
+                st.markdown("Partial")
                 raise ValueError("Test exception")
-        except ValueError:
-            pass
 
-        # Should still have the transient clear message
-        delta = self.get_delta_from_queue()
-        assert delta.HasField("new_transient")
+        last = self._loading_block_messages()[-1]
+        assert not last.delta.add_block.HasField("loading")
 
     def test_context_manager_propagates_exception(self) -> None:
         """Test that exceptions are propagated from context manager."""
@@ -199,37 +250,89 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.skeleton():
                 raise StopException()
 
+    def test_context_manager_marks_skeleton_slot(self) -> None:
+        """Code inside the block runs in a skeleton slot, and only there."""
+        assert not ThreadState.get().in_skeleton_slot
+        with st.skeleton():
+            assert ThreadState.get().in_skeleton_slot
+            with st.skeleton():
+                assert ThreadState.get().in_skeleton_slot
+            assert ThreadState.get().in_skeleton_slot
+        assert not ThreadState.get().in_skeleton_slot
+
+    def test_placeholder_methods_write_into_block_inside_context(self) -> None:
+        """Calling methods on the placeholder inside the block fills the slot."""
+        with st.skeleton() as placeholder:
+            placeholder.markdown("Loaded")
+
+        block_msg = self._loading_block_messages()[0]
+        markdown_msg = self.get_message_from_queue()
+        assert list(markdown_msg.metadata.delta_path) == [
+            *block_msg.metadata.delta_path,
+            0,
+        ]
+
     def test_context_manager_after_standalone_is_allowed(self) -> None:
         """Test that entering the context manager after standalone use does not
         raise; the context manager simply takes over the placeholder's slot."""
         placeholder = st.skeleton()
         placeholder.markdown("Hello")  # Use in standalone mode first
 
-        # Mixing modes is permissive (no error); the context manager takes over.
         with placeholder:
             pass
 
-        # On exit, the transient skeleton is cleared (context-manager mode ran).
-        delta = self.get_delta_from_queue()
-        assert delta.HasField("new_transient")
-        assert len(delta.new_transient.elements) == 0
+        last = self._loading_block_messages()[-1]
+        assert not last.delta.add_block.HasField("loading")
 
-    def test_context_manager_reuse_shows_skeleton_again(self) -> None:
-        """Test that reusing the same placeholder as a context manager shows the
-        delayed skeleton again (the display flag is reset on re-entry)."""
-        placeholder = st.skeleton()
+    def test_spinner_inside_skeleton_is_marked_as_label(self) -> None:
+        """A spinner in a skeleton slot labels the skeleton instead of stacking."""
+        with patch("streamlit.elements.spinner.DELAY_SECS", 0.01):
+            with st.skeleton():
+                with st.spinner("Fetching data..."):
+                    time.sleep(0.2)
+                    transient = self.get_delta_from_queue().new_transient
+                    spinner = transient.elements[0].spinner
+                    assert spinner.text == "Fetching data..."
+                    assert spinner.in_skeleton_slot
 
-        with patch("streamlit.elements.lib.skeleton_placeholder._DELAY_SECS", 0.1):
-            # First use of the context manager.
-            with placeholder:
-                time.sleep(0.3)
+    def test_spinner_timer_ignores_a_stopped_run(self) -> None:
+        """A spinner timer that fires after its run was stopped shows nothing.
 
-            # Second use of the same placeholder must show the skeleton again.
-            with placeholder:
-                time.sleep(0.3)
-                create_delta = self.get_delta_from_queue()
-                assert create_delta.HasField("new_transient")
-                assert create_delta.new_transient.elements[0].HasField("skeleton")
+        The timer thread inherits the run's context, so enqueueing from it
+        raises when a parallel fragment run is being stopped.
+        """
+        errors: list[BaseException | None] = []
+        test_thread = threading.current_thread()
+
+        def raise_on_timer_thread(_msg: object) -> None:
+            if threading.current_thread() is not test_thread:
+                raise StopException()
+
+        previous_hook = threading.excepthook
+        threading.excepthook = lambda args: errors.append(args.exc_value)
+        try:
+            with (
+                patch("streamlit.elements.spinner.DELAY_SECS", 0.01),
+                patch(
+                    "streamlit.elements.spinner.enqueue_message",
+                    side_effect=raise_on_timer_thread,
+                ) as enqueue,
+            ):
+                with st.spinner("Fetching data..."):
+                    time.sleep(0.2)
+        finally:
+            threading.excepthook = previous_hook
+
+        assert enqueue.called
+        assert errors == []
+
+    def test_spinner_outside_skeleton_is_not_marked_as_label(self) -> None:
+        """A spinner outside a skeleton slot renders on its own."""
+        with patch("streamlit.elements.spinner.DELAY_SECS", 0.01):
+            with st.spinner("Fetching data..."):
+                time.sleep(0.2)
+                spinner = self.get_delta_from_queue().new_transient.elements[0]
+                assert not spinner.spinner.in_skeleton_slot
 
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):

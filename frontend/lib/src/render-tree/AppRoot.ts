@@ -35,6 +35,7 @@ import {
 import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { keepPreviousContentForSkeleton } from "./skeletonUtils"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
@@ -439,12 +440,22 @@ export class AppRoot {
       fragmentId,
       elementHash
     )
+    // A skeleton never unmounts content from a previous run. That content
+    // stays mounted until new content arrives, and is covered by the skeleton
+    // only after a grace period, so cached reruns don't flash the skeleton.
+    const nodeToSet =
+      element.type === "skeleton"
+        ? (keepPreviousContentForSkeleton(
+            GetNodeByDeltaPathVisitor.getNodeAtPath(this.root, deltaPath),
+            elementNode
+          ) ?? elementNode)
+        : elementNode
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(
         this.root,
         deltaPath,
-        elementNode,
+        nodeToSet,
         scriptRunId
       ) as BlockNode,
       this.appLogo

@@ -14,10 +14,18 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useEffect, useRef, useState } from "react"
+import {
+  memo,
+  type ReactElement,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import type { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
+import { PendingSkeletonContext } from "~lib/components/core/Block/PendingSkeletonContext"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
@@ -33,8 +41,9 @@ export interface SpinnerProps {
   element: SpinnerProto
 }
 
-function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
-  const { cache, showTime } = element
+function Spinner({ element }: Readonly<SpinnerProps>): ReactElement | null {
+  const { cache, showTime, inSkeletonSlot } = element
+  const isInPendingSkeleton = useContext(PendingSkeletonContext)
   const [elapsedTime, setElapsedTime] = useState(0)
   const initialTimeRef = useRef<number | null>(null)
 
@@ -60,6 +69,12 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
 
     return () => clearInterval(timer)
   }, [showTime])
+
+  // A spinner created in a skeleton slot is shown as the skeleton's label
+  // while the skeleton is visible, instead of as a second loading indicator.
+  if (inSkeletonSlot && isInPendingSkeleton) {
+    return null
+  }
 
   return (
     <StyledSpinner
