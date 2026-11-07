@@ -38,7 +38,8 @@ export const FAKE_SCRIPT_HASH = "fake_script_hash"
 export function text(
   textArg: string,
   scriptRunId = NO_SCRIPT_RUN_ID,
-  elementHash?: string
+  elementHash?: string,
+  replacedDifferentContent = false
 ): ElementNode {
   const element = makeProto(Element, { text: { body: textArg } })
   return new ElementNode(
@@ -47,7 +48,8 @@ export function text(
     scriptRunId,
     FAKE_SCRIPT_HASH,
     undefined,
-    elementHash
+    elementHash,
+    replacedDifferentContent
   )
 }
 

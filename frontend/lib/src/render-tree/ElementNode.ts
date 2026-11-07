@@ -40,6 +40,14 @@ export class ElementNode implements AppNode {
   // The hash of this element's payload for content-based deduplication.
   public readonly elementHash?: string
 
+  /**
+   * Whether the write that created this node filled an empty slot or replaced
+   * different content. RenderNodeVisitor hides a stale copy in the next slot
+   * only when this is true, so an unchanged rewrite of identical neighbors
+   * stays visible.
+   */
+  public readonly replacedDifferentContent: boolean
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
@@ -47,7 +55,8 @@ export class ElementNode implements AppNode {
     scriptRunId: string,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    replacedDifferentContent = false
   ) {
     this.element = element
     this.metadata = metadata
@@ -55,6 +64,7 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
+    this.replacedDifferentContent = replacedDifferentContent
   }
 
   /**
