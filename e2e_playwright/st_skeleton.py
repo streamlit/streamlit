@@ -106,7 +106,9 @@ def load_report(version: int) -> str:
     return f"Report version {version}"
 
 
-if st.toggle("Show cached report"):
+# The cache is shared by every test run on the same server, so clear it to make
+# the first load and the next version cache misses in each run.
+if st.toggle("Show cached report", on_change=load_report.clear):
     if st.button("Load next report version"):
         st.session_state.report_version = st.session_state.get("report_version", 0) + 1
     st.button("Rerun skeleton report")
