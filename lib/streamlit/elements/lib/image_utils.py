@@ -91,6 +91,23 @@ def _image_is_gif(image: PILImage) -> bool:
     return image.format == "GIF"
 
 
+def _open_image_bytes(image_data: bytes) -> PILImage:
+    """Open encoded image bytes with Pillow, rejecting EPS images."""
+    from PIL import Image
+
+    pil_image = Image.open(io.BytesIO(image_data))
+    # Pillow only renders EPS when Ghostscript is installed, so support would
+    # differ between environments. Opening only parses the header, so this
+    # check runs before anything loads the pixels.
+    if pil_image.format == "EPS":
+        raise StreamlitAPIException(
+            "EPS images are not supported. Convert the image to a format such as "
+            "PNG or JPEG first.",
+            error_id="image-eps-not-supported",
+        )
+    return pil_image
+
+
 def _validate_image_format_string(
     image_data: bytes | PILImage, format: str
 ) -> ImageFormat:
@@ -110,9 +127,7 @@ def _validate_image_format_string(
 
     pil_image: PILImage
     if isinstance(image_data, bytes):
-        from PIL import Image
-
-        pil_image = Image.open(io.BytesIO(image_data))
+        pil_image = _open_image_bytes(image_data)
     else:
         pil_image = image_data
 
@@ -191,7 +206,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image: PILImage = Image.open(io.BytesIO(image_data))
+    pil_image = _open_image_bytes(image_data)
     actual_width, actual_height = pil_image.size
 
     target_width = (
