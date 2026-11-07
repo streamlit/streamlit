@@ -386,9 +386,9 @@ export const FlexBoxContainer = (
         $isSkeletonSlot={skeletonSlot.isSkeletonSlot}
         $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
         aria-busy={
-          skeletonSlot.showsInlineSkeleton || skeletonSlot.showsOverlay
-            ? true
-            : undefined
+          skeletonSlot.showsInlineSkeleton ||
+          skeletonSlot.showsOverlay ||
+          undefined
         }
       >
         <SkeletonSlotContents slot={skeletonSlot}>

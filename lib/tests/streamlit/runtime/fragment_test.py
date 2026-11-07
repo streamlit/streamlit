@@ -2888,11 +2888,21 @@ def test_fragment_identity_different_definitions_diverge() -> None:
     assert first.fragment_id != second.fragment_id
 
 
+@pytest.mark.parametrize(
+    ("is_parallel_worker", "expected_defer"),
+    [(False, True), (True, False)],
+    ids=["script_thread_defers", "nested_in_worker_starts_immediately"],
+)
 @patch("streamlit.runtime.fragment.get_script_run_ctx")
-def test_parallel_fragment_defers_start_from_script_thread(
+def test_parallel_fragment_defers_only_when_dispatched_by_script_thread(
     patched_get_script_run_ctx: MagicMock,
+    is_parallel_worker: bool,
+    expected_defer: bool,
 ) -> None:
-    """A parallel fragment called by the script thread starts after the script."""
+    """A parallel fragment called by the script thread starts after the script.
+
+    One dispatched by a worker (a nested parallel fragment) starts immediately.
+    """
     ctx = MagicMock()
     ctx.fragment_storage = MemoryFragmentStorage()
     ctx.fragment_ids_this_run = None
@@ -2902,7 +2912,7 @@ def test_parallel_fragment_defers_start_from_script_thread(
     ctx.parallel_coordinator = mock_coordinator
     patched_get_script_run_ctx.return_value = ctx
 
-    ThreadState.initialize()
+    ThreadState.initialize(is_parallel_worker=is_parallel_worker)
 
     @fragment(parallel=True)
     def my_parallel_fragment() -> None:
@@ -2910,32 +2920,7 @@ def test_parallel_fragment_defers_start_from_script_thread(
 
     my_parallel_fragment()
 
-    assert mock_coordinator.submit.call_args.kwargs["defer"] is True
-
-
-@patch("streamlit.runtime.fragment.get_script_run_ctx")
-def test_nested_parallel_fragment_starts_immediately(
-    patched_get_script_run_ctx: MagicMock,
-) -> None:
-    """A parallel fragment dispatched by a worker isn't deferred."""
-    ctx = MagicMock()
-    ctx.fragment_storage = MemoryFragmentStorage()
-    ctx.fragment_ids_this_run = None
-    ctx.shared = SharedRunState()
-    ctx.cursors = {}
-    mock_coordinator = MagicMock()
-    ctx.parallel_coordinator = mock_coordinator
-    patched_get_script_run_ctx.return_value = ctx
-
-    ThreadState.initialize(is_parallel_worker=True)
-
-    @fragment(parallel=True)
-    def my_parallel_fragment() -> None:
-        pass
-
-    my_parallel_fragment()
-
-    assert mock_coordinator.submit.call_args.kwargs["defer"] is False
+    assert mock_coordinator.submit.call_args.kwargs["defer"] is expected_defer
 
 
 class FragmentLoadingSkeletonTest(DeltaGeneratorTestCase):

@@ -849,7 +849,9 @@ def _fragment(
             ctx.enqueue(msg)
 
         if parallel and not ctx.fragment_ids_this_run:
-            _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment, loading)
+            _dispatch_parallel_fragment(
+                ctx, fragment_id, wrapped_fragment, loading=loading
+            )
             return None
         return wrapped_fragment()
 
@@ -1148,6 +1150,7 @@ def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
     wrapped_fragment: Callable[[], Any],
+    *,
     loading: Literal["skeleton"] | None = None,
 ) -> None:
     """Dispatch a parallel fragment to the coordinator's thread pool.

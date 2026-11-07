@@ -444,12 +444,12 @@ export class AppRoot {
     // stays mounted until new content arrives, and is covered by the skeleton
     // only after a grace period, so cached reruns don't flash the skeleton.
     const nodeToSet =
-      (element.type === "skeleton"
-        ? keepPreviousContentForSkeleton(
+      element.type === "skeleton"
+        ? (keepPreviousContentForSkeleton(
             GetNodeByDeltaPathVisitor.getNodeAtPath(this.root, deltaPath),
             elementNode
-          )
-        : undefined) ?? elementNode
+          ) ?? elementNode)
+        : elementNode
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(

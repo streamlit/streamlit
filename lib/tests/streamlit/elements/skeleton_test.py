@@ -170,6 +170,8 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             st.markdown("Loaded")
 
         block_msgs = self._loading_block_messages()
+        # Content was drawn, so the frontend clears the skeleton itself and the
+        # block isn't re-sent.
         assert len(block_msgs) == 1
         block = block_msgs[0].delta.add_block
         assert block.loading.skeleton_height.pixel_height == 120
@@ -205,13 +207,6 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         assert first.delta.add_block.HasField("loading")
         assert not last.delta.add_block.HasField("loading")
         assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
-
-    def test_context_manager_keeps_skeleton_when_content_was_written(self) -> None:
-        """When content was drawn, the frontend clears the skeleton itself."""
-        with st.skeleton():
-            st.markdown("Loaded")
-
-        assert len(self._loading_block_messages()) == 1
 
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""
@@ -275,13 +270,8 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.skeleton():
                 with st.spinner("Fetching data..."):
                     time.sleep(0.2)
-                    spinner_msg = next(
-                        msg
-                        for msg in self.forward_msg_queue._queue
-                        if msg.delta.HasField("new_transient")
-                        and len(msg.delta.new_transient.elements) > 0
-                    )
-                    spinner = spinner_msg.delta.new_transient.elements[0].spinner
+                    transient = self.get_delta_from_queue().new_transient
+                    spinner = transient.elements[0].spinner
                     assert spinner.text == "Fetching data..."
                     assert spinner.skeleton_label
 
@@ -317,7 +307,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         assert errors == []
 
     def test_spinner_outside_skeleton_is_not_marked_as_label(self) -> None:
-        """A spinner outside a skeleton slot renders on its own, as before."""
+        """A spinner outside a skeleton slot renders on its own."""
         with patch("streamlit.elements.spinner.DELAY_SECS", 0.01):
             with st.spinner("Fetching data..."):
                 time.sleep(0.2)

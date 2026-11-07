@@ -23,10 +23,8 @@ from streamlit.elements.lib.loading_block import (
     make_loading_block_proto,
     open_loading_block,
 )
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
-    enqueue_message,
     get_script_run_ctx,
 )
 
@@ -86,8 +84,9 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config
 
-        # The loading block that replaces the skeleton in context manager
-        # mode, and whether the slot flag was set before entering it.
+        # In context manager mode: the loading block that replaces the
+        # skeleton, and the enclosing `in_skeleton_slot` value to restore on
+        # exit.
         self._block_dg: DeltaGenerator | None = None
         self._outer_in_skeleton_slot: bool | None = None
 
@@ -149,7 +148,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> Literal[False]:
-        """Leave the loading block, clearing the skeleton if nothing was drawn."""
+        """Leave the loading block; clear the skeleton if it drew nothing or raised."""
         block_dg = self._block_dg
         if block_dg is None:  # pragma: no cover - defensive
             raise RuntimeError("__exit__ called without __enter__")
@@ -160,22 +159,20 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             ThreadState.update(in_skeleton_slot=self._outer_in_skeleton_slot)
             self._outer_in_skeleton_slot = None
 
-        # Anything written into the block, including the container of a
-        # parallel fragment dispatched inside it, advances its cursor. The
-        # frontend then clears the skeleton when the first visible element
-        # arrives. Otherwise, re-send the block without the skeleton. A
-        # re-sent block of the same type keeps its children on the frontend.
+        # Re-send the block without the skeleton if nothing was written into it
+        # or it raised. Otherwise, the frontend clears the skeleton when the
+        # first visible element arrives. Anything written into the block,
+        # including the container of a parallel fragment dispatched inside it,
+        # advances its cursor. A re-sent block of the same type keeps its
+        # children on the frontend.
         cursor = block_dg._cursor
-        nothing_written = cursor is None or cursor.index == 0
-        if (nothing_written or typ is not None) and cursor is not None:
-            msg = ForwardMsg()
-            msg.metadata.delta_path[:] = block_dg._block_delta_path
-            msg.delta.add_block.CopyFrom(
-                make_loading_block_proto(width=self._skeleton_width(), loading=False)
+        if cursor is not None and (cursor.index == 0 or typ is not None):
+            from streamlit.delta_generator import _enqueue_add_block
+
+            _enqueue_add_block(
+                block_dg._block_delta_path,
+                make_loading_block_proto(width=self._skeleton_width(), loading=False),
+                agent_props=agent_spec.block("container"),
             )
-            agent_props = agent_spec.block("container")
-            if agent_props is not None:
-                msg.metadata.agent_props = agent_props
-            enqueue_message(msg)
 
         return False

@@ -17,7 +17,7 @@
 import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
-export const pulseAnimation = keyframes`
+const pulseAnimation = keyframes`
   0%, 100% {
     opacity: 0.5;
   }
@@ -27,7 +27,7 @@ export const pulseAnimation = keyframes`
   }
 `
 
-const ANIMATION_STYLES = {
+export const ANIMATION_STYLES = {
   animationDuration: "750ms",
   animationName: pulseAnimation,
   animationTimingFunction: "ease-in",

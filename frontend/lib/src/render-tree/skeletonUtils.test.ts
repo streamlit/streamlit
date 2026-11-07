@@ -271,7 +271,7 @@ describe("AppRoot with skeletons", () => {
     expect((nodeAtPath(root) as ElementNode).element.type).toBe("skeleton")
   })
 
-  it("replaces content from the current run as before", () => {
+  it("lets the skeleton replace content from the current run", () => {
     const root = applySkeleton(rootWith(text("chart", CURRENT_RUN)))
 
     const node = nodeAtPath(root) as ElementNode

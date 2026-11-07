@@ -177,6 +177,7 @@ class ParallelFragmentCoordinator:
         self._start(tracked)
 
     def _start(self, tracked: Callable[[], None]) -> None:
+        """Run ``tracked`` on the pool, dropping its count if the pool is shut down."""
         try:
             self._executor.submit(tracked)
         except RuntimeError:
@@ -288,7 +289,7 @@ class ParallelFragmentCoordinator:
         """
         self._stop_event.set()
         with self._join_condition:
-            # Work that never started has nothing to clean up.
+            # Drop held work. It never started, so there is nothing to cancel.
             self._outstanding -= len(self._deferred)
             self._deferred = []
             self._deferred_released = True

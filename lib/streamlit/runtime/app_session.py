@@ -405,6 +405,7 @@ class AppSession:
         -----
         Threading: UNSAFE. Must be called on the session's event loop.
         """
+        # Release script threads blocked in `_wait_for_browser_flush`.
         if self._flush_waiters and self._browser_queue.is_empty():
             for flushed in self._flush_waiters:
                 flushed.set()

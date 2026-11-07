@@ -26,7 +26,7 @@ import {
   STEP_FOLLOWED_BY_STEP_SELECTOR,
 } from "~lib/components/core/Layout/stepConnector"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { pulseAnimation } from "~lib/components/elements/Skeleton/styled-components"
+import { ANIMATION_STYLES as SKELETON_PULSE_STYLES } from "~lib/components/elements/Skeleton/styled-components"
 import {
   PRINT_CHART_CARD_SELECTOR,
   PRINT_VISIBLE_FILTER,
@@ -770,13 +770,6 @@ export const StyledPendingSkeletonOverlay = styled.div(({ theme }) => ({
   visibility: "hidden",
   animation: `${pendingSkeletonReveal} 150ms ease-in ${PENDING_SKELETON_DELAY_MS}ms forwards`,
 }))
-
-const SKELETON_PULSE_STYLES = {
-  animation: `${pulseAnimation} 750ms ease-in infinite`,
-  "@media (prefers-reduced-motion: reduce)": {
-    animation: "none",
-  },
-}
 
 /** The pulsing skeleton surface of a placeholder. */
 export const StyledSkeletonSurface = styled.div(({ theme }) => ({
