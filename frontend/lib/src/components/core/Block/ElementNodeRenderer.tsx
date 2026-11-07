@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { lazy, type ReactElement, useContext } from "react"
+import { lazy, memo, type ReactElement, useContext } from "react"
 
 import {
   type Alert as AlertProto,
@@ -1315,10 +1315,42 @@ const RawElementNodeRenderer = (
   }
 }
 
-// Render ElementNodes (i.e. leaf nodes) wrapped in Maybe for conditional rendering.
-const ElementNodeRenderer = (
+interface ElementNodeContentProps extends RawElementNodeRendererProps {
+  enable: boolean
+}
+
+/**
+ * Renders an element for its resolved run state.
+ *
+ * Memoized so that a script run state change only re-renders elements whose
+ * `enable` or `isStale` value actually changed.
+ */
+const ElementNodeContent = memo(function ElementNodeContent({
+  enable,
+  ...props
+}: ElementNodeContentProps): ReactElement {
+  // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
+  // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
+  // stable hash of some sort.
+  return (
+    <RetainedElementContext.Provider value={props.isRetained === true}>
+      <Maybe enable={enable}>
+        <RawElementNodeRenderer {...props} />
+      </Maybe>
+    </RetainedElementContext.Provider>
+  )
+})
+
+/**
+ * Render ElementNodes (i.e. leaf nodes) wrapped in Maybe for conditional rendering.
+ *
+ * Memoized so that an unchanged element skips rendering when its parent block
+ * re-renders. Nodes are immutable, so an equal `node` prop means the element
+ * did not change.
+ */
+const ElementNodeRenderer = memo(function ElementNodeRenderer(
   props: ElementNodeRendererProps
-): ReactElement => {
+): ReactElement {
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const { node } = props
@@ -1334,16 +1366,7 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
-  // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
-  // stable hash of some sort.
-  return (
-    <RetainedElementContext.Provider value={props.isRetained === true}>
-      <Maybe enable={enable}>
-        <RawElementNodeRenderer {...props} isStale={isStale} />
-      </Maybe>
-    </RetainedElementContext.Provider>
-  )
-}
+  return <ElementNodeContent {...props} enable={enable} isStale={isStale} />
+})
 
 export default ElementNodeRenderer
