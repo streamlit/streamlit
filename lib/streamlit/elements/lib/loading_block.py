@@ -48,22 +48,27 @@ def make_loading_block_proto(
     width: WidthWithoutContent = "stretch",
     loading: bool = True,
 ) -> BlockProto:
-    """Build a vertical container proto, laid out like ``st.container()``.
+    """Build the proto of a loading block: a vertical container, laid out like
+    ``st.container()``, that shows a skeleton until content arrives.
 
     Parameters
     ----------
     skeleton_height
         The skeleton's height while the block has no content to keep. If
-        ``None``, the frontend uses its default height.
+        ``None``, the frontend uses its default height. ``"stretch"`` also
+        makes the block fill a bounded parent.
     width
         The block's width.
     loading
-        Whether the block shows the skeleton. ``False`` re-sends the block
-        without it, which clears the skeleton and keeps the block's children.
+        Whether the block shows the skeleton. Pass ``False`` to build the
+        cleared block that ``SkeletonPlaceholder.__exit__`` re-sends. The
+        frontend keeps that block's children, and hides it while it has none.
     """
     block_proto = BlockProto()
-    # Loading blocks render while empty so the skeleton can reserve space.
-    block_proto.allow_empty = True
+    # A loading block renders while empty so the skeleton can reserve space.
+    # A cleared block is hidden while empty, like `st.container()`, so it
+    # doesn't add a gap.
+    block_proto.allow_empty = loading
     block_proto.flex_container.border = False
     block_proto.flex_container.wrap = False
     block_proto.flex_container.gap_config.CopyFrom(get_gap_config("small"))
@@ -71,7 +76,9 @@ def make_loading_block_proto(
     block_proto.flex_container.justify = get_justify("top")
     block_proto.flex_container.align = get_align("left")
     block_proto.width_config.CopyFrom(get_width_config(width))
-    block_proto.height_config.CopyFrom(get_height_config("content"))
+    block_proto.height_config.CopyFrom(
+        get_height_config("stretch" if skeleton_height == "stretch" else "content")
+    )
     if loading:
         block_proto.loading.SetInParent()
         if skeleton_height is not None:
@@ -90,6 +97,7 @@ def open_loading_block(
     """Insert a loading block at ``dg``'s next position and return it."""
     return dg._block(
         make_loading_block_proto(skeleton_height=skeleton_height, width=width),
-        # The skeleton is presentation; a non-visual client sees a container.
+        # The agent API reports a plain container; the skeleton is
+        # presentation only.
         agent_props=agent_spec.block("container"),
     )

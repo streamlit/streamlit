@@ -159,19 +159,24 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             ThreadState.update(in_skeleton_slot=self._outer_in_skeleton_slot)
             self._outer_in_skeleton_slot = None
 
-        # Re-send the block without the skeleton if nothing was written into it
-        # or it raised. Otherwise, the frontend clears the skeleton when the
-        # first visible element arrives. Anything written into the block,
-        # including the container of a parallel fragment dispatched inside it,
-        # advances its cursor. A re-sent block of the same type keeps its
-        # children on the frontend.
+        # Clear the skeleton by re-sending the block without `loading` when:
+        # - nothing was written into the block (its cursor never advanced), or
+        # - the block raised.
+        # Otherwise the frontend clears it on the first visible element. A
+        # parallel fragment's container also advances the cursor, so its
+        # skeleton stays until the worker draws. A re-sent block of the same
+        # type keeps its children on the frontend.
         cursor = block_dg._cursor
         if cursor is not None and (cursor.index == 0 or typ is not None):
             from streamlit.delta_generator import _enqueue_add_block
 
             _enqueue_add_block(
                 block_dg._block_delta_path,
-                make_loading_block_proto(width=self._skeleton_width(), loading=False),
+                make_loading_block_proto(
+                    skeleton_height=self._skeleton_height(),
+                    width=self._skeleton_width(),
+                    loading=False,
+                ),
                 agent_props=agent_spec.block("container"),
             )
 

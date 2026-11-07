@@ -115,7 +115,9 @@ class ParallelFragmentCoordinator:
         self._yield_check = yield_check
         self._poll_interval = poll_interval
         self._wait_for_flush = wait_for_flush
-        # Deferred work, started by join(). Guarded by _join_condition.
+        # Deferred work, started by join(). `_deferred_released` turns True
+        # when join() starts it, so later deferred submits start right away.
+        # Both are guarded by _join_condition.
         self._deferred: list[Callable[[], None]] = []
         self._deferred_released = False
 

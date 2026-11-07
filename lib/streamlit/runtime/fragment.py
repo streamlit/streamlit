@@ -783,13 +783,13 @@ def _fragment(
             # Set delta_path initial value to None. When the fragment container
             # is established below, this will be initialized with the fragment's
             # delta path. Without this, we would inherit the delta path from the
-            # parent scope. A fragment with a skeleton is also a skeleton slot for
-            # its body, so spinners inside it label the skeleton instead of
-            # stacking.
+            # parent scope.
             with ThreadState.scoped(
                 fragment_id=fragment_id,
                 delta_path=None,
                 run_location=RunLocation.FRAGMENT,
+                # The body of a fragment with a skeleton is a skeleton slot:
+                # spinners in it label the skeleton instead of stacking.
                 in_skeleton_slot=loading is not None or ts.in_skeleton_slot,
             ):
                 result = None
@@ -1013,8 +1013,11 @@ def fragment(
           second. For a parallel fragment, the skeleton is part of the app's
           first paint, even before the fragment starts running.
 
-        Draw the slow element first in the fragment. Any element, even a
-        title, ends the skeleton when it is drawn.
+        On a first load, the skeleton has the standard element height. To
+        reserve the content's height instead, call the fragment inside
+        ``with st.skeleton(height=...)``. Draw the slow element first in the
+        fragment. Any element, even a title, ends the skeleton when it is
+        drawn.
 
     Examples
     --------
@@ -1134,7 +1137,9 @@ def _prepare_dg_stack_for_worker(
 def _open_fragment_container(
     loading: Literal["skeleton"] | None,
 ) -> DeltaGenerator:
-    """Open the container a fragment renders into at the current position."""
+    """Open the fragment's container at the current position: a loading block
+    when ``loading`` is set, else ``st.container()``.
+    """
     import streamlit as st
 
     if loading is None:

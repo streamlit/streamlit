@@ -206,7 +206,27 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         first, last = self._loading_block_messages()
         assert first.delta.add_block.HasField("loading")
         assert not last.delta.add_block.HasField("loading")
+        # The cleared block is hidden while empty, so it doesn't add a gap.
+        assert not last.delta.add_block.allow_empty
         assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
+
+    def test_context_manager_stretch_height_fills_parent(self) -> None:
+        """A stretch skeleton's block stretches too, also once it's cleared."""
+        with st.skeleton(height="stretch"):
+            pass
+
+        first, last = self._loading_block_messages()
+        assert first.delta.add_block.loading.skeleton_height.use_stretch
+        assert first.delta.add_block.height_config.use_stretch
+        assert last.delta.add_block.height_config.use_stretch
+
+    def test_context_manager_pixel_height_keeps_content_height_block(self) -> None:
+        """A pixel skeleton height sizes the skeleton, not the block."""
+        with st.skeleton(height=120):
+            pass
+
+        first = self._loading_block_messages()[0]
+        assert first.delta.add_block.height_config.use_content
 
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""
@@ -273,7 +293,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
                     transient = self.get_delta_from_queue().new_transient
                     spinner = transient.elements[0].spinner
                     assert spinner.text == "Fetching data..."
-                    assert spinner.skeleton_label
+                    assert spinner.in_skeleton_slot
 
     def test_spinner_timer_ignores_a_stopped_run(self) -> None:
         """A spinner timer that fires after its run was stopped shows nothing.
@@ -312,7 +332,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.spinner("Fetching data..."):
                 time.sleep(0.2)
                 spinner = self.get_delta_from_queue().new_transient.elements[0]
-                assert not spinner.spinner.skeleton_label
+                assert not spinner.spinner.in_skeleton_slot
 
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):

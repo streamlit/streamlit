@@ -42,7 +42,7 @@ export interface SpinnerProps {
 }
 
 function Spinner({ element }: Readonly<SpinnerProps>): ReactElement | null {
-  const { cache, showTime, skeletonLabel } = element
+  const { cache, showTime, inSkeletonSlot } = element
   const isInPendingSkeleton = useContext(PendingSkeletonContext)
   const [elapsedTime, setElapsedTime] = useState(0)
   const initialTimeRef = useRef<number | null>(null)
@@ -72,7 +72,7 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement | null {
 
   // A spinner created in a skeleton slot is shown as the skeleton's label
   // while the skeleton is visible, instead of as a second loading indicator.
-  if (skeletonLabel && isInPendingSkeleton) {
+  if (inSkeletonSlot && isInPendingSkeleton) {
     return null
   }
 

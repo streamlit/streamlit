@@ -64,7 +64,7 @@ function labeledSpinner(
   scriptRunId = CURRENT_RUN
 ): ElementNode {
   return elementNode(
-    { spinner: { text: label, skeletonLabel: true } },
+    { spinner: { text: label, inSkeletonSlot: true } },
     scriptRunId
   )
 }
@@ -117,14 +117,32 @@ describe("keepPreviousContentForSkeleton", () => {
     ).toBeUndefined()
   })
 
-  it("looks through a transient wrapper to its anchor", () => {
+  it("keeps a transient wrapper's anchor and its running spinner", () => {
     const previous = text("chart", PREVIOUS_RUN)
-    const wrapped = new TransientNode(CURRENT_RUN, previous, [])
+    const spinner = labeledSpinner("Loading...")
+    const wrapped = new TransientNode(CURRENT_RUN, previous, [spinner])
 
     const kept = keepPreviousContentForSkeleton(wrapped, skeleton())
 
-    expect((kept as ElementNode).element).toBe(previous.element)
+    expect(kept).toBeInstanceOf(TransientNode)
+    const keptTransient = kept as TransientNode
+    expect(keptTransient.transientNodes).toEqual([spinner])
+    expect((keptTransient.anchor as ElementNode).element).toBe(
+      previous.element
+    )
+    expect((keptTransient.anchor as ElementNode).pendingSkeleton).toBeDefined()
   })
+
+  it.each(["toast", "balloons", "snow"])(
+    "lets the skeleton replace a previous run's %s",
+    elementType => {
+      const previous = elementNode({ [elementType]: {} }, PREVIOUS_RUN)
+
+      expect(
+        keepPreviousContentForSkeleton(previous, skeleton())
+      ).toBeUndefined()
+    }
+  )
 })
 
 describe("hasVisibleContentFromRun", () => {
@@ -149,7 +167,7 @@ describe("getLoadingBlockState", () => {
   it("is pending while the run hasn't drawn into the block", () => {
     const node = loadingBlock([])
 
-    expect(getLoadingBlockState(node, CURRENT_RUN, true)).toEqual({
+    expect(getLoadingBlockState(node, CURRENT_RUN, true, [])).toEqual({
       isPending: true,
       hasPreviousContent: false,
       label: undefined,
@@ -159,7 +177,7 @@ describe("getLoadingBlockState", () => {
   it("keeps a previous run's content and reports it", () => {
     const node = loadingBlock([text("chart", PREVIOUS_RUN)])
 
-    const state = getLoadingBlockState(node, CURRENT_RUN, true)
+    const state = getLoadingBlockState(node, CURRENT_RUN, true, [])
 
     expect(state.isPending).toBe(true)
     expect(state.hasPreviousContent).toBe(true)
@@ -168,7 +186,9 @@ describe("getLoadingBlockState", () => {
   it("stops pending once the run draws visible content", () => {
     const node = loadingBlock([text("chart", CURRENT_RUN)])
 
-    expect(getLoadingBlockState(node, CURRENT_RUN, true).isPending).toBe(false)
+    expect(getLoadingBlockState(node, CURRENT_RUN, true, []).isPending).toBe(
+      false
+    )
   })
 
   it.each([
@@ -186,9 +206,9 @@ describe("getLoadingBlockState", () => {
       true,
     ],
   ])("is not pending when %s", (_, node, scriptRunId, isRunning) => {
-    expect(getLoadingBlockState(node, scriptRunId, isRunning).isPending).toBe(
-      false
-    )
+    expect(
+      getLoadingBlockState(node, scriptRunId, isRunning, []).isPending
+    ).toBe(false)
   })
 
   it("labels the skeleton with a spinner from this run", () => {
@@ -198,7 +218,7 @@ describe("getLoadingBlockState", () => {
       ]),
     ])
 
-    expect(getLoadingBlockState(node, CURRENT_RUN, true).label).toBe(
+    expect(getLoadingBlockState(node, CURRENT_RUN, true, []).label).toBe(
       "Fetching data..."
     )
   })
@@ -210,8 +230,32 @@ describe("getLoadingBlockState", () => {
       ]),
     ])
 
-    expect(getLoadingBlockState(node, CURRENT_RUN, true).label).toBeUndefined()
+    expect(
+      getLoadingBlockState(node, CURRENT_RUN, true, []).label
+    ).toBeUndefined()
   })
+
+  it.each([
+    ["a running fragment's block", "running_fragment", true],
+    ["a block outside the running fragments", "other_fragment", false],
+    ["a block outside any fragment", undefined, false],
+  ])(
+    "during a fragment run, makes %s pending: %s",
+    (_, fragmentId, isPending) => {
+      const node = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [text("chart", PREVIOUS_RUN)],
+        makeProto(BlockProto, { flexContainer: {}, loading: {} }),
+        CURRENT_RUN,
+        fragmentId
+      )
+
+      expect(
+        getLoadingBlockState(node, CURRENT_RUN, true, ["running_fragment"])
+          .isPending
+      ).toBe(isPending)
+    }
+  )
 })
 
 describe("AppRoot with skeletons", () => {

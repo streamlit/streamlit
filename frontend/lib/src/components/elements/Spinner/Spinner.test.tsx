@@ -54,7 +54,7 @@ describe("Spinner component", () => {
   it("renders nothing while a skeleton shows its text as the label", () => {
     render(
       <PendingSkeletonContext.Provider value>
-        <Spinner {...getProps({}, { skeletonLabel: true })} />
+        <Spinner {...getProps({}, { inSkeletonSlot: true })} />
       </PendingSkeletonContext.Provider>
     )
 
@@ -64,10 +64,10 @@ describe("Spinner component", () => {
   it.each([
     ["it wasn't created in a skeleton slot", false, true],
     ["its skeleton no longer shows", true, false],
-  ])("renders normally when %s", (_, skeletonLabel, isInPendingSkeleton) => {
+  ])("renders normally when %s", (_, inSkeletonSlot, isInPendingSkeleton) => {
     render(
       <PendingSkeletonContext.Provider value={isInPendingSkeleton}>
-        <Spinner {...getProps({}, { skeletonLabel })} />
+        <Spinner {...getProps({}, { inSkeletonSlot })} />
       </PendingSkeletonContext.Provider>
     )
 

@@ -19,15 +19,25 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
 
-/** Element types that hold a slot without being content a user waits for. */
-const PLACEHOLDER_ELEMENT_TYPES = new Set(["skeleton", "empty"])
+/**
+ * Element types that take no space in the layout, so they are not content a
+ * user waits for: placeholders that hold a slot, and elements that render
+ * outside the layout.
+ */
+const NON_CONTENT_ELEMENT_TYPES = new Set([
+  "skeleton",
+  "empty",
+  "toast",
+  "balloons",
+  "snow",
+])
 
 /**
  * Whether `node` contains visible content that satisfies `isMatch`.
  *
- * Visible content is any element other than a skeleton or an empty
- * placeholder. Transient elements, such as spinners, never count; only a
- * transient node's anchor does.
+ * Visible content is any element that takes space in the layout, other than
+ * a skeleton or an empty placeholder. Transient elements, such as spinners,
+ * never count; only a transient node's anchor does.
  */
 function containsVisibleContent(
   node: AppNode | undefined,
@@ -35,7 +45,7 @@ function containsVisibleContent(
 ): boolean {
   if (node instanceof ElementNode) {
     return (
-      !PLACEHOLDER_ELEMENT_TYPES.has(node.element.type ?? "") && isMatch(node)
+      !NON_CONTENT_ELEMENT_TYPES.has(node.element.type ?? "") && isMatch(node)
     )
   }
   if (node instanceof BlockNode) {
@@ -84,7 +94,7 @@ function findSkeletonLabel(
     const spinner = node.transientNodes.find(
       transient =>
         transient.scriptRunId === scriptRunId &&
-        transient.element.spinner?.skeletonLabel === true
+        transient.element.spinner?.inSkeletonSlot === true
     )
     return (
       spinner?.element.spinner?.text ??
@@ -119,16 +129,24 @@ const NOT_PENDING: LoadingBlockState = {
  * A loading block is pending while that run is in progress and has not drawn
  * any visible content into it. Once the run ends, the block shows whatever it
  * holds, so a fragment that draws nothing doesn't keep its skeleton.
+ *
+ * During a fragment run, only loading blocks of the running fragments are
+ * pending. A write gives every block on its path the run's ID, so without
+ * this check a fragment rerun would also cover the loading block that the
+ * fragment renders in.
  */
 export function getLoadingBlockState(
   node: BlockNode,
   scriptRunId: string,
-  isRunning: boolean
+  isRunning: boolean,
+  fragmentIdsThisRun: readonly string[]
 ): LoadingBlockState {
   if (
     !node.deltaBlock.loading ||
     !isRunning ||
     node.scriptRunId !== scriptRunId ||
+    (fragmentIdsThisRun.length > 0 &&
+      !fragmentIdsThisRun.includes(node.fragmentId ?? "")) ||
     hasVisibleContentFromRun(node, scriptRunId)
   ) {
     return NOT_PENDING
@@ -159,15 +177,22 @@ export function keepPreviousContentForSkeleton(
   if (!(anchor instanceof ElementNode || anchor instanceof BlockNode)) {
     return undefined
   }
-  if (anchor.pendingSkeleton !== undefined) {
+  const waitsForContent =
     // The slot already waits for content; keep waiting under the new skeleton.
-    return anchor.withPendingSkeleton(skeleton)
-  }
-  if (anchor.scriptRunId === skeleton.scriptRunId) {
+    anchor.pendingSkeleton !== undefined ||
+    (anchor.scriptRunId !== skeleton.scriptRunId && hasVisibleContent(anchor))
+  if (!waitsForContent) {
     return undefined
   }
-  if (!hasVisibleContent(anchor)) {
-    return undefined
-  }
-  return anchor.withPendingSkeleton(skeleton)
+  const kept = anchor.withPendingSkeleton(skeleton)
+  // Keep the slot's transient elements, such as a running spinner, which the
+  // backend doesn't send again.
+  return existingNode instanceof TransientNode
+    ? new TransientNode(
+        existingNode.scriptRunId,
+        kept,
+        existingNode.transientNodes,
+        existingNode.deltaMsgReceivedAt
+      )
+    : kept
 }

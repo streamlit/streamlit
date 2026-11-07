@@ -4039,6 +4039,23 @@ def test_flush_waiter_is_released_once_queued_messages_are_sent() -> None:
     assert flushed.is_set()
 
 
+def test_flush_waiter_added_mid_send_waits_for_the_send_to_finish() -> None:
+    """An emptied queue doesn't release a waiter while its messages are sent."""
+    session = _create_test_session()
+    msg = ForwardMsg()
+    msg.delta.new_element.markdown.body = "Layout"
+    session._enqueue_forward_msg(msg)
+
+    # The Runtime takes the messages out of the queue before sending them.
+    assert session.flush_browser_queue()
+    flushed = threading.Event()
+    session._add_flush_waiter(flushed)
+    assert not flushed.is_set()
+
+    session.on_flushed_messages_sent()
+    assert flushed.is_set()
+
+
 def test_wait_for_browser_flush_returns_right_away_with_an_empty_queue() -> None:
     """With nothing left to send, waiting for a flush doesn't block."""
     event_loop = MagicMock()

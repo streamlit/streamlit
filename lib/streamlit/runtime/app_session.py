@@ -272,8 +272,10 @@ class AppSession:
         # that every message the chain enqueued has been sent to the client.
         self._settle_pending = False
         # Script threads waiting until their enqueued messages have been sent
-        # (see `_wait_for_browser_flush`). Only touched on the event loop.
+        # (see `_wait_for_browser_flush`), and whether the Runtime is still
+        # sending the messages of the last flush. Only touched on the event loop.
         self._flush_waiters: list[threading.Event] = []
+        self._is_sending_flush = False
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.runtime.state import SessionState
@@ -390,7 +392,10 @@ class AppSession:
             be delivered to the browser.
 
         """
-        return self._browser_queue.flush()
+        msgs = self._browser_queue.flush()
+        if msgs:
+            self._is_sending_flush = True
+        return msgs
 
     def on_flushed_messages_sent(self) -> None:
         """Settle a tracked session once its last run chain's messages are sent.
@@ -405,6 +410,7 @@ class AppSession:
         -----
         Threading: UNSAFE. Must be called on the session's event loop.
         """
+        self._is_sending_flush = False
         # Release script threads blocked in `_wait_for_browser_flush`.
         if self._flush_waiters and self._browser_queue.is_empty():
             for flushed in self._flush_waiters:
@@ -436,11 +442,15 @@ class AppSession:
     def _add_flush_waiter(self, flushed: threading.Event) -> None:
         """Release ``flushed`` once the browser queue has been sent.
 
+        The Runtime empties the queue before it sends the messages, one per
+        event loop turn, so an empty queue only means "sent" once that send has
+        finished.
+
         Notes
         -----
         Threading: UNSAFE. Must be called on the session's event loop.
         """
-        if self._browser_queue.is_empty():
+        if self._browser_queue.is_empty() and not self._is_sending_flush:
             flushed.set()
         else:
             self._flush_waiters.append(flushed)

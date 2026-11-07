@@ -20,6 +20,7 @@ import {
   type ReactNode,
   useContext,
   useMemo,
+  useState,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -245,6 +246,11 @@ export const ContainerContentsWrapper = (
 
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
+  /**
+   * The run in which the block's renderer mounted. A skeleton slot uses it to
+   * tell a new slot from one that existed in an earlier run.
+   */
+  firstRunId?: string
 }
 
 /**
@@ -269,7 +275,7 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
-  const skeletonSlot = useSkeletonSlot(props.node)
+  const skeletonSlot = useSkeletonSlot(props.node, props.firstRunId)
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -413,6 +419,9 @@ export const BlockNodeRenderer = (
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
+  // Kept while the block is hidden for being empty, so a cleared skeleton
+  // slot still counts as an existing slot on the next run.
+  const [firstRunId] = useState(scriptRunId)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
@@ -515,7 +524,9 @@ export const BlockNodeRenderer = (
   )
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    containerElement = <FlexBoxContainer {...childProps} />
+    containerElement = (
+      <FlexBoxContainer {...childProps} firstRunId={firstRunId} />
+    )
   }
 
   if (node.deltaBlock.gridContainer) {

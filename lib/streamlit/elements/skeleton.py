@@ -82,10 +82,10 @@ class SkeletonMixin:
         an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
 
         **Context manager mode** (recommended): Elements written inside the
-        ``with`` block fill the skeleton's slot, like ``st.container()``. The
-        skeleton stays until the first of them is drawn. If the block exits
-        without drawing anything, whether normally or due to an exception, the
-        skeleton clears.
+        ``with`` block fill the skeleton's slot and stack vertically, like in
+        ``st.container()``. The skeleton stays until the first of them is
+        drawn. If nothing is written inside the block, or the block raises an
+        exception, the skeleton clears when the block exits.
 
         In both modes, content from the previous run stays in place during a
         rerun. The skeleton only covers it if the new content takes longer

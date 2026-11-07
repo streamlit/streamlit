@@ -37,7 +37,8 @@ const tablePortal = popup + 50
 const tablePortalTooltip = tablePortal + 10
 const cacheSpinner = sidebar + 1
 // Skeletons that cover an element's or container's previous content. Above
-// the content's own layers, below st.bottom and the sidebar.
+// the content's own layers, below st.bottom and the sidebar. Cache spinners
+// (`cacheSpinner`) still render above it.
 const skeletonOverlay = bottom - 1
 // Toasts should overlap chatInput container and show above dialog.
 const toast = popup + 2

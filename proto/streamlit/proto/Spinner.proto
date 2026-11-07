@@ -29,5 +29,5 @@ message Spinner {
   // Whether the spinner was created inside a skeleton slot. While that
   // skeleton is shown, the text is rendered as the skeleton's label instead
   // of as a separate spinner.
-  bool skeleton_label = 4;
+  bool in_skeleton_slot = 4;
 }

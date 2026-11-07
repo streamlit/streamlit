@@ -781,20 +781,29 @@ export const StyledSkeletonSurface = styled.div(({ theme }) => ({
 }))
 
 interface StyledLoadingBlockSkeletonProps {
-  height: CSSProperties["height"]
+  height?: CSSProperties["height"]
+  /**
+   * Whether the skeleton fills its loading block, which stretches to a
+   * bounded parent. In an unbounded parent, it keeps the standard element
+   * height.
+   */
+  $fillsBlock: boolean
 }
 
 /** The skeleton a loading block shows while it has no content to keep. */
 export const StyledLoadingBlockSkeleton =
-  styled.div<StyledLoadingBlockSkeletonProps>(({ height }) => ({
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    height,
-    flexShrink: 0,
-  }))
+  styled.div<StyledLoadingBlockSkeletonProps>(
+    ({ theme, height, $fillsBlock }) => ({
+      position: "relative",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+      ...($fillsBlock
+        ? { flex: "1 1 auto", minHeight: theme.sizes.minElementHeight }
+        : { height, flexShrink: 0 }),
+    })
+  )
 
 /** Text shown on a skeleton, taken from a spinner in its slot. */
 export const StyledSkeletonLabel = styled.div(({ theme }) => ({

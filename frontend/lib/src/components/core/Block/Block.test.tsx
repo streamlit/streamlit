@@ -1433,7 +1433,7 @@ describe("loading blocks", () => {
   it("shows a spinner's text on the skeleton instead of the spinner", async () => {
     const spinner = new ElementNode(
       makeProto(ElementProto, {
-        spinner: { text: "Fetching data...", skeletonLabel: true },
+        spinner: { text: "Fetching data...", inSkeletonSlot: true },
       }),
       ForwardMsgMetadata.create(),
       CURRENT_RUN,

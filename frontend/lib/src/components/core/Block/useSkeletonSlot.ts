@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useContext, useMemo, useRef, useState } from "react"
+import { useCallback, useContext, useMemo, useState } from "react"
 
 import type { streamlit } from "@streamlit/protobuf"
 
@@ -56,14 +56,22 @@ export interface SkeletonSlot {
  * content stays mounted and the overlay covers it after the grace period.
  * A standalone skeleton that waits on the container's previous content
  * (`BlockNode.pendingSkeleton`) also shows the overlay.
+ *
+ * `firstRunId` is the run in which the block's renderer mounted. It defaults
+ * to the run in which this hook mounted.
  */
-export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
-  const { scriptRunId, scriptRunState } = useContext(ScriptRunContext)
+export function useSkeletonSlot(
+  node: BlockNode,
+  firstRunId?: string
+): SkeletonSlot {
+  const { scriptRunId, scriptRunState, fragmentIdsThisRun } =
+    useContext(ScriptRunContext)
   const isInPendingSkeleton = useContext(PendingSkeletonContext)
   const isRunning = scriptRunState === ScriptRunState.RUNNING
   const loadingState = useMemo(
-    () => getLoadingBlockState(node, scriptRunId, isRunning),
-    [node, scriptRunId, isRunning]
+    () =>
+      getLoadingBlockState(node, scriptRunId, isRunning, fragmentIdsThisRun),
+    [node, scriptRunId, isRunning, fragmentIdsThisRun]
   )
 
   // An enclosing loading block that shows its skeleton already covers this one.
@@ -76,11 +84,15 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   // quickly, or that never receives content, doesn't flash it. A block that
   // is new in this run reserves its space right away. A CSS delay can't do
   // this, because a hidden skeleton would still take up its height.
-  const mountedRunIdRef = useRef(scriptRunId)
-  const existedInEarlierRun = mountedRunIdRef.current !== scriptRunId
-  const [graceOverRunId, setGraceOverRunId] = useState<string>()
+  const [mountedRunId] = useState(scriptRunId)
+  const existedInEarlierRun = (firstRunId ?? mountedRunId) !== scriptRunId
+  const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()
+  const handleGraceElapsed = useCallback(
+    () => setGraceElapsedRunId(scriptRunId),
+    [scriptRunId]
+  )
   useTimeout(
-    () => setGraceOverRunId(scriptRunId),
+    handleGraceElapsed,
     wantsInlineSkeleton && existedInEarlierRun
       ? PENDING_SKELETON_DELAY_MS
       : null
@@ -92,7 +104,7 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
       notNullOrUndefined(node.deltaBlock.loading) || hasPendingSkeleton,
     showsInlineSkeleton:
       wantsInlineSkeleton &&
-      (!existedInEarlierRun || graceOverRunId === scriptRunId),
+      (!existedInEarlierRun || graceElapsedRunId === scriptRunId),
     showsOverlay:
       !isInPendingSkeleton &&
       ((loadingState.isPending && loadingState.hasPreviousContent) ||

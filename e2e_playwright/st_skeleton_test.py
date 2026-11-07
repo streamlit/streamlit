@@ -235,3 +235,21 @@ def test_fragment_loading_skeleton_covers_content_on_fragment_rerun(app: Page):
     expect(overlay).not_to_be_attached()
     # The report element was updated in place instead of being remounted.
     expect(report).to_have_attribute("data-test-kept", "true")
+
+
+def test_skeleton_holds_slot_for_parallel_fragment(app: Page):
+    """A parallel fragment called inside a skeleton keeps it until it draws.
+
+    The main script sends the skeleton with the layout, so it shows at its
+    height while the fragment runs, and the fragment's content replaces it.
+    """
+    get_toggle(app, "Show parallel report").click()
+    container = get_element_by_key(app, "parallel_skeleton_container")
+
+    skeleton = container.get_by_test_id("stLoadingBlockSkeleton")
+    expect(skeleton).to_be_visible()
+    expect(skeleton).to_have_css("height", "120px")
+    expect(container.get_by_text("Parallel report loaded")).not_to_be_attached()
+
+    expect(container.get_by_text("Parallel report loaded")).to_be_visible(timeout=5000)
+    expect(skeleton).not_to_be_attached()

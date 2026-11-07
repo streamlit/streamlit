@@ -102,7 +102,7 @@ st.subheader("Skeleton keeps previous content")
 
 @st.cache_data(show_spinner="Loading report...")
 def load_report(version: int) -> str:
-    time.sleep(1.5)
+    time.sleep(2.5)
     return f"Report version {version}"
 
 
@@ -123,7 +123,7 @@ st.subheader("Fragment with a loading skeleton")
 
 @st.cache_data(show_spinner=False)
 def load_fragment_report(version: int) -> str:
-    time.sleep(1.5)
+    time.sleep(2.5)
     return f"Fragment report version {version}"
 
 
@@ -142,3 +142,20 @@ def fragment_report() -> None:
 if st.toggle("Show fragment report", on_change=load_fragment_report.clear):
     with st.container(key="fragment_skeleton_container"):
         fragment_report()
+
+
+# Parallel fragment inside a skeleton: the main script sends the skeleton with
+# the layout, and it holds the slot until the fragment draws.
+st.subheader("Parallel fragment in a skeleton")
+
+
+@st.fragment(parallel=True)
+def parallel_report_body() -> None:
+    time.sleep(2)
+    st.write("Parallel report loaded")
+
+
+if st.toggle("Show parallel report"):
+    with st.container(key="parallel_skeleton_container"):
+        with st.skeleton(height=120):
+            parallel_report_body()

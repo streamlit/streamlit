@@ -87,8 +87,8 @@ export const PendingSkeletonOverlay = memo(function PendingSkeletonOverlay({
 })
 
 /**
- * Convert a loading block's skeleton height to CSS. Without a height, the
- * skeleton uses the standard element height, like `st.skeleton()`.
+ * Convert a loading block's fixed skeleton height to CSS. Without a height,
+ * the skeleton uses the standard element height, like `st.skeleton()`.
  */
 function getSkeletonHeight(
   heightConfig: streamlit.HeightConfig.$Properties | null | undefined,
@@ -99,9 +99,6 @@ function getSkeletonHeight(
   }
   if (heightConfig?.remHeight) {
     return `${heightConfig.remHeight}rem`
-  }
-  if (heightConfig?.useStretch === true) {
-    return "100%"
   }
   return defaultHeight
 }
@@ -116,11 +113,19 @@ const LoadingBlockSkeleton = memo(function LoadingBlockSkeleton({
   label,
 }: Readonly<LoadingBlockSkeletonProps>): ReactElement {
   const theme = useEmotionTheme()
+  // A stretch skeleton fills its loading block, which the backend also
+  // stretches.
+  const fillsBlock = heightConfig?.useStretch === true
   return (
     <StyledLoadingBlockSkeleton
       className="stSkeleton"
       data-testid="stLoadingBlockSkeleton"
-      height={getSkeletonHeight(heightConfig, theme.sizes.minElementHeight)}
+      height={
+        fillsBlock
+          ? undefined
+          : getSkeletonHeight(heightConfig, theme.sizes.minElementHeight)
+      }
+      $fillsBlock={fillsBlock}
       aria-hidden={label ? undefined : true}
     >
       <StyledSkeletonSurface />
