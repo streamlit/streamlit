@@ -5,7 +5,7 @@ description: Triages failed CI runs for a commit merged into develop and resolve
 
 # Fixing CI on develop
 
-Every push to `develop` runs the same CI workflows that PRs run. A merged PR can still turn `develop` red. Most failures are transient: outages, network errors, and flaky tests. Real breakages usually come from a PR whose last CI run predates a change on `develop`, such as a new lint rule, a theme change that invalidates new snapshots, or a file length limit. Others come from a runner image or external service change.
+Pushes to `develop` run the PR CI workflows, plus Performance Suite and Load Testing, which PRs run only with a label. A merged PR can still turn `develop` red. Most failures are transient: outages, network errors, and flaky tests. Real breakages usually come from a PR whose last CI run predates a change on `develop`, such as a new lint rule, a theme change that invalidates new snapshots, or a file length limit. Others come from a workflow the PR did not run, or from a runner image or external service change.
 
 Most workflows cancel the run for an older commit when a newer one lands, so the newest run of each workflow decides whether `develop` is green. Green `develop` runs are also the baselines that PR wheel-size and coverage comments compare against.
 
@@ -27,9 +27,9 @@ A commit SHA on `develop`, or the URL of one of its failed runs. Without one, us
 
 ### 1. Collect the failure
 
-- List the commit's push runs (`gh run list --commit <sha> --event push`) and pick the failed ones.
+- List the commit's push runs (`gh run list --commit <full-sha> --event push`; a short SHA matches nothing) and pick the failed ones.
 - For each failed run, list the failed jobs and steps of its latest attempt, and find the first real error in each failed job. Ignore cascading failures and skipped jobs.
-- Start with the check-run annotations (`gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations`). They usually name the error, cost less than logs, and outlast them: logs expire after about 90 days. Read the failed logs (`gh run view <id> --log-failed`) when the annotations are not enough.
+- Start with the check-run annotations (`gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations`). They usually name the error and cost less than logs. Read the failed logs (`gh run view <id> --log-failed`) when the annotations are not enough.
 - A failed run whose jobs all show `cancelled`, with a "not acquired by Runner" annotation, is a runner outage.
 - Note which variants failed: Python version, browser, OS, test file.
 - For Playwright failures, the run uploads a `playwright_test_results_*` artifact with traces and a `snapshot-updates/` folder holding the CI-rendered images. Download artifacts into `work-tmp/`, never into tracked folders.
@@ -45,9 +45,9 @@ A commit SHA on `develop`, or the URL of one of its failed runs. Without one, us
 
 | Decision | Signals |
 |----------|---------|
-| **rerun** (transient) | Errors in `Set up job` or `Setup virtual env`. Network or registry errors (yarn, uv, pip, apt, a `curl` 5xx while downloading tools, GitHub API 5xx, `ECONNRESET`). A runner that was lost, shut down, or never acquired. Artifact upload or download errors, including a 403 on finalize. Job timeouts with no test failure. A brief outage of an external service such as CodeQL ("No server is currently available"), Snowflake, or S3. A single test failing on one browser or Python version that passes elsewhere in the run and in other recent runs. |
-| **fix** (real breakage) | The same failure across browsers, Python versions, matrix jobs, or attempts. Lint, format, type, pre-commit, or build errors. Snapshot mismatches in every browser, or on files touched by a visual or theme PR merged shortly before. A flaky test that also failed on the previous non-cancelled runs. Many tests failing with OS-level errors (time zones, missing shared libraries) after a runner image update. The failure reproduces on current `develop`. Tests that depend on the current date and break on a specific day also count. |
-| **report** (needs a maintainer) | Missing or invalid secrets (for example, a Snowflake login error), missing permissions, or rate limits on the bot account. An external outage that will not clear soon. A fix that needs a `.github/workflows/` change. The rerun limit is reached and no clear fix exists. A newer `develop` run of the same workflow passed, or `develop` or an open PR already fixes the failure. Only reverting the introducing PR would fix it. |
+| **rerun** (transient) | Network or registry errors, including in `Set up job` or `Setup virtual env` (yarn, uv, pip, apt, a `curl` 5xx while downloading tools, GitHub API 5xx, `ECONNRESET`). A runner that was lost, shut down, or never acquired. Artifact upload or download errors, including a 403 on finalize. Job timeouts with no test failure. A brief outage of an external service such as CodeQL ("No server is currently available"), Snowflake, or S3. A single test failing on one browser or Python version that passes elsewhere in the run and in other recent runs. |
+| **fix** (real breakage) | The same failure across browsers, Python versions, matrix jobs, or attempts. Lint, format, type, pre-commit, or build errors, including `uv lock --check`, Node version, or protobuf errors in `Setup virtual env`. Snapshot mismatches in every browser, or on files touched by a visual or theme PR merged shortly before. A flaky test that also failed on the previous non-cancelled runs. Many tests failing with OS-level errors (time zones, missing shared libraries) after a runner image update. The failure reproduces on current `develop`. Tests that depend on the current date and break on a specific day also count. |
+| **report** (needs a maintainer) | Missing or invalid secrets (for example, a Snowflake login error), missing permissions, or rate limits on the bot account. An external outage that will not clear soon. A fix that needs a `.github/workflows/` change. The rerun limit is reached and no clear fix exists. A newer `develop` run of the same workflow passed or is still running, or `develop` or an open PR already fixes the failure. Only reverting the introducing PR would fix it. |
 
 Keep these in mind:
 
@@ -58,7 +58,7 @@ Keep these in mind:
 
 ### 4. Act on the decision
 
-**rerun:** Outside CI, rerun only the failed jobs of each failed run (`gh run rerun <id> --failed`). In CI, record the decision and let the workflow rerun the jobs.
+**rerun:** Rerun only runs that are still the newest `develop` run of their workflow. A rerun joins that workflow's concurrency group, so rerunning an older run cancels the newer one. Outside CI, rerun only the failed jobs of each such run (`gh run rerun <id> --failed`). In CI, record the decision and let the workflow rerun the jobs.
 
 **fix:**
 

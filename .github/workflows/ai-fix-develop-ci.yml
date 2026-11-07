@@ -4,8 +4,9 @@
 # Every completed push run of a watched workflow triggers this workflow, but triage
 # starts only once all watched runs for that commit have finished. A commit with
 # several failed workflows gets one triage. A failed run is skipped when a newer
-# develop run of the same workflow exists: that run decides whether develop is green,
-# and this workflow triages it when it finishes.
+# develop run of the same workflow is running, passed, or failed: that run decides
+# whether develop is green, and this workflow triages it when it finishes. A manual
+# dispatch skips this check, so a past failure can be triaged in a dry run.
 #
 # The agent runs with a read-only token and writes a decision. Later jobs act on it:
 # - rerun: reruns the failed jobs of each failed run, up to MAX_RUN_ATTEMPTS attempts per run.
@@ -161,11 +162,22 @@ jobs:
               return;
             }
 
-            const unfinished = runs.filter((run) => run.status !== 'completed');
-            if (unfinished.length > 0) {
-              const names = unfinished.map((run) => run.name).join(', ');
-              core.notice(`Waiting for ${names}. The last run to finish starts the triage.`);
-              return;
+            // The run list can lag behind, so confirm by ID that a run is still unfinished.
+            // Otherwise the last run to finish could see itself as running and never triage.
+            for (const [index, run] of runs.entries()) {
+              if (run.status === 'completed') {
+                continue;
+              }
+              const { data: fresh } = await github.rest.actions.getWorkflowRun({
+                owner,
+                repo,
+                run_id: run.id,
+              });
+              if (fresh.status !== 'completed') {
+                core.notice(`Waiting for ${run.name}. The last run to finish starts the triage.`);
+                return;
+              }
+              runs[index] = fresh;
             }
 
             const failed = runs.filter((run) => failedConclusions.includes(run.conclusion));
@@ -177,8 +189,7 @@ jobs:
             // Skip a failed run when a newer develop commit has a run of the same workflow
             // that is still running, passed, or failed. That run decides whether develop is
             // green, and its failure gets its own triage. A cancelled run decides nothing.
-            const toTriage = [];
-            for (const run of failed) {
+            async function findNewerRun(run) {
               const { data } = await github.rest.actions.listWorkflowRuns({
                 owner,
                 repo,
@@ -187,7 +198,7 @@ jobs:
                 event: 'push',
                 per_page: 20,
               });
-              const newer = data.workflow_runs.find(
+              return data.workflow_runs.find(
                 (other) =>
                   isDevelopPush(other) &&
                   other.id > run.id &&
@@ -196,6 +207,11 @@ jobs:
                     other.conclusion === 'success' ||
                     failedConclusions.includes(other.conclusion))
               );
+            }
+
+            const toTriage = [];
+            for (const run of failed) {
+              const newer = context.eventName === 'workflow_dispatch' ? null : await findNewerRun(run);
               if (newer) {
                 core.notice(`${run.name} failed, but the newer run ${newer.html_url} supersedes it.`);
               } else {
@@ -214,6 +230,7 @@ jobs:
               JSON.stringify(
                 toTriage.map((run) => ({
                   id: run.id,
+                  workflow_id: run.workflow_id,
                   name: run.name,
                   attempt: run.run_attempt,
                   url: run.html_url,
@@ -234,10 +251,11 @@ jobs:
       issues: read
       pull-requests: read
     concurrency:
-      # One triage at a time, so each agent sees the reruns and fix PRs of the one
-      # before. GitHub keeps only the newest pending job in a group, which is fine
-      # because newer runs supersede older ones.
-      group: ${{ github.workflow }}
+      # One triage at a time: an agent starts only after the previous one finishes, so it
+      # usually sees that triage's rerun or fix PR. GitHub keeps one pending job per group
+      # and cancels older pending ones, which newer runs supersede. Dry runs queue
+      # separately so they cannot cancel a pending real triage.
+      group: ${{ github.workflow }}${{ inputs.dry_run && '-dry-run' || '' }}
       cancel-in-progress: false
     outputs:
       develop_sha: ${{ steps.get-sha.outputs.sha }}
@@ -426,7 +444,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "## Develop CI Rerun" >> "$GITHUB_STEP_SUMMARY"
-          while IFS=$'\t' read -r id attempt name url; do
+          while IFS=$'\t' read -r id workflow_id attempt name url; do
             read -r status current_attempt < <(
               gh api "repos/$GH_REPO/actions/runs/$id" --jq '"\(.status) \(.run_attempt)"'
             )
@@ -435,9 +453,17 @@ jobs:
               echo "::notice::$name run $id is now attempt $current_attempt ($status). Not rerunning it again."
               continue
             fi
+            # A rerun keeps refs/heads/develop and joins the workflow's cancel-in-progress
+            # concurrency group, so rerunning an older run would cancel a newer commit's run.
+            latest="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?branch=develop&event=push&per_page=1" \
+              --jq '.workflow_runs[0].id')"
+            if [[ "$latest" != "$id" ]]; then
+              echo "::notice::A newer develop run of $name exists. Not rerunning $url."
+              continue
+            fi
             gh run rerun "$id" --failed
             echo "- Reran the failed jobs of $name ($url) as attempt $((attempt + 1))." >> "$GITHUB_STEP_SUMMARY"
-          done < <(jq -r '.[] | [.id, .attempt, .name, .url] | @tsv' <<< "$RUNS")
+          done < <(jq -r '.[] | [.id, .workflow_id, .attempt, .name, .url] | @tsv' <<< "$RUNS")
 
   create-pr:
     needs: [prepare, ai-fix-develop-ci]
