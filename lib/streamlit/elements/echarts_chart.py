@@ -1130,7 +1130,10 @@ class EChartsMixin:
             raise an error: ``custom`` series (which require a ``renderItem``
             callback), map and geo charts (which require registering GeoJSON map
             data), and 3D or WebGL charts from the ECharts GL extension
-            (``bar3D``, ``scatter3D``, ``globe``, and similar).
+            (``bar3D``, ``scatter3D``, ``globe``, and similar). For range bars
+            such as Gantt charts, use a ``lines`` series with
+            ``"coordinateSystem": "cartesian2d"`` and set ``xAxis.min`` and
+            ``xAxis.max`` instead of a ``custom`` series.
 
         .. note::
             Strings in the option object (``title.text``, legend names, labels)
