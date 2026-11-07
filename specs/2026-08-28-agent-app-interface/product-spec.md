@@ -1426,7 +1426,7 @@ than ranked, and say where one builds on another.
     into `invalid_value` refusals, leaving the removed and re-keyed cases for this list.
 12. **A link to the observed view.** The revenue example in [Problem](#problem) ends in
     an answer that cites the app, page, and applied filters, but a snapshot gives the
-    agent nothing a human can open. The snapshot carries one: the page and its
+    agent nothing a human can open. The snapshot carries a link: the page and its
     `query_params` as a URL relative to the request, like every URL the API hands out,
     and whether opening it reproduces the inputs the snapshot was observed with:
 
@@ -1437,29 +1437,32 @@ than ranked, and say where one builds on another.
     `complete` works like `data.complete`, so a link never looks like it reproduces
     inputs it does not. It is `true` when every widget on the page that holds something
     other than its default is bound to a parameter in the URL that restores its value,
-    and otherwise `missing` names the keys the link leaves out. It cannot see session
-    state that no widget holds, such as a value a callback wrote to `st.session_state`.
-    The link reopens the inputs, not the result, so a citation gives it with
-    `observed_at`. It builds on #8: while setting a bound widget drops its parameter,
-    the link would leave out exactly what the agent changed. On Community Cloud the
-    relative URL resolves under the `/~/+/` prefix rather than the app's public URL, so a
-    link for humans needs the platform, as discovery does.
+    and otherwise `missing` names the keys the link leaves out. `complete` cannot see
+    session state that no widget holds, such as a value a callback wrote to
+    `st.session_state`. A widget left at a default the app computes at run time, such as
+    today's date or a value from `st.user`, counts as unchanged and reopens at the
+    opener's default. The link restores the inputs, not the result, so an answer that
+    cites it also gives `observed_at`. It builds on #8: until setting a bound widget
+    rewrites its parameter, the link leaves out the value the agent just changed. On
+    Community Cloud the relative URL resolves under the `/~/+/` prefix, not to the app's
+    public URL, so a link for humans needs the platform to translate it, as discovery
+    needs the platform to carry its hint.
 
     Bound parameters are the right carrier, and authoring guidance should say to bind
     the filters a colleague would want to share. A bound widget reads its parameter when
     it registers, in script order, so a dependent chain such as region → country → city
-    settles in one run, where a `widget_state` batch is checked against the previous
-    run's options and refuses the dependent values. Encoding every widget's value into
-    one parameter instead is held back for three reasons. `bind` is the author's consent
-    to a URL setting a widget, and a blob would make every widget settable by a link
-    that runs under whoever opens it. Generated keys must not be persisted, so a blob
-    could carry only authored keys, which mostly overlap with `bind`. And an opaque blob
-    shows a reader no filters. If demand appears, it should be an author opt-in that
-    carries authored keys only, is read at registration like a bound parameter, never
-    fires a trigger, and tells the user which keys did not apply. Views behind a
-    trigger, state that callbacks wrote outside widgets, open dialogs, and uploads stay
-    unreachable by any link; replaying the actions that led there would repeat their
-    side effects.
+    settles in one run. A `widget_state` batch cannot: it is checked against the
+    previous run's options and refuses the dependent values. Encoding every widget's
+    value into one parameter instead is held back for three reasons. `bind` is the
+    author's consent to a URL setting a widget, and a blob would make every widget
+    settable by a link that runs under whoever opens it. Generated keys must not be
+    persisted, so a blob could carry only authored keys, which mostly overlap with
+    `bind`. And an opaque blob shows a reader no filters. If demand appears, it should be
+    an author opt-in that carries authored keys only, is read at registration like a
+    bound parameter, never fires a trigger, and tells the user which keys did not apply.
+    Views behind a trigger, state that callbacks wrote outside widgets, open dialogs, and
+    uploads stay unreachable by any link: none of them is URL state, and replaying the
+    actions that led there would repeat their side effects.
 
 Smaller potential follow-ups and alternatives considered:
 
