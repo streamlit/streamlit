@@ -202,6 +202,10 @@ Every node tracks:
 
 Stale nodes are cleared after `scriptFinished`.
 
+### Skeleton slots
+- A loading block (`Block.loading`, set by `with st.skeleton()` and `@st.fragment(loading="skeleton")`) shows a skeleton until the current run draws its first visible element into it (`useSkeletonSlot`).
+- A skeleton delta that lands on visible content from a previous run does not replace it. The node stays mounted with the skeleton in `pendingSkeleton` (on `BlockNode` and `ElementNode`) and is covered after a grace period. New content at that path replaces the node; otherwise `ClearStaleNodeVisitor` swaps in the skeleton. Visitors that rebuild a node must carry `pendingSkeleton` over. See `render-tree/skeletonUtils.ts`.
+
 ### Lazy loading
 Components use `React.lazy()` for code splitting, deferring load until first render.
 
