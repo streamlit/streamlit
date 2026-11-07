@@ -50,6 +50,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Use `concurrency` to prevent duplicate runs
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
+- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
 
 ## Shared Composite Actions
 
@@ -110,7 +111,7 @@ runner's system Python.
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
 | `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
-| `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
+| `snapshot-hygiene.yml` | Push to `develop`, PR (`e2e_playwright/` changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 
 ### Security & Analysis

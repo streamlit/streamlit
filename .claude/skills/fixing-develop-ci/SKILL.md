@@ -5,9 +5,9 @@ description: Triages failed CI runs for a commit merged into develop and resolve
 
 # Fixing CI on develop
 
-Every push to `develop` runs the same CI workflows that PRs run. A merged PR can still turn `develop` red. Most real breakages come from a PR whose last CI run predates a change on `develop`, such as a new lint rule, a theme change that invalidates new snapshots, or a file length limit. Others come from a runner image or external service change. Most failures, though, are transient: outages, network errors, and flaky tests.
+Every push to `develop` runs the same CI workflows that PRs run. A merged PR can still turn `develop` red. Most failures are transient: outages, network errors, and flaky tests. Real breakages usually come from a PR whose last CI run predates a change on `develop`, such as a new lint rule, a theme change that invalidates new snapshots, or a file length limit. Others come from a runner image or external service change.
 
-Each workflow cancels the run for an older commit when a newer one lands, so the newest run of each workflow decides whether `develop` is green. Green `develop` runs are also the baselines that PR wheel-size and coverage comments compare against.
+Most workflows cancel the run for an older commit when a newer one lands, so the newest run of each workflow decides whether `develop` is green. Green `develop` runs are also the baselines that PR wheel-size and coverage comments compare against.
 
 The goal is a green `develop` with the least work: rerun what was transient, fix what is broken, and hand the rest to a maintainer.
 
@@ -28,7 +28,8 @@ A commit SHA on `develop`, or the URL of one of its failed runs. Without one, us
 ### 1. Collect the failure
 
 - List the commit's push runs (`gh run list --commit <sha> --event push`) and pick the failed ones.
-- For each failed run, list the failed jobs and steps of its latest attempt. Find the first real error in each failed job. Check-run annotations (`gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations`) usually name it and are cheaper than logs. They also outlast logs, which expire after about 90 days. Then read the failed logs (`gh run view <id> --log-failed`) as needed. Ignore cascading failures and skipped jobs.
+- For each failed run, list the failed jobs and steps of its latest attempt, and find the first real error in each failed job. Ignore cascading failures and skipped jobs.
+- Start with the check-run annotations (`gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations`). They usually name the error, cost less than logs, and outlast them: logs expire after about 90 days. Read the failed logs (`gh run view <id> --log-failed`) when the annotations are not enough.
 - A failed run whose jobs all show `cancelled`, with a "not acquired by Runner" annotation, is a runner outage.
 - Note which variants failed: Python version, browser, OS, test file.
 - For Playwright failures, the run uploads a `playwright_test_results_*` artifact with traces and a `snapshot-updates/` folder holding the CI-rendered images. Download artifacts into `work-tmp/`, never into tracked folders.

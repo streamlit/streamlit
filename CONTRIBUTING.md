@@ -109,7 +109,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
-| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `fixing-streamlit-ci` | When CI checks fail on your branch or PR and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
 | `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
 | `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |

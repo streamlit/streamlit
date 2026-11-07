@@ -129,8 +129,7 @@ jobs:
             ]
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
+            const { owner, repo } = context.repo;
             const sha = process.env.HEAD_SHA;
             const watched = JSON.parse(process.env.WATCHED_WORKFLOWS);
             const maxAttempts = Number(process.env.MAX_RUN_ATTEMPTS);
@@ -146,6 +145,7 @@ jobs:
               return run.event === 'push' && run.head_branch === 'develop';
             }
 
+            // GitHub's REST run filters are not always reliable, so check them again locally.
             const runs = (
               await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
                 owner,
@@ -174,9 +174,10 @@ jobs:
               return;
             }
 
-            // A newer develop commit's run of the same workflow decides whether develop
-            // is green. If it is still running or failed, triage happens for that commit.
-            const current = [];
+            // Skip a failed run when a newer develop commit has a run of the same workflow
+            // that is still running, passed, or failed. That run decides whether develop is
+            // green, and its failure gets its own triage. A cancelled run decides nothing.
+            const toTriage = [];
             for (const run of failed) {
               const { data } = await github.rest.actions.listWorkflowRuns({
                 owner,
@@ -198,10 +199,10 @@ jobs:
               if (newer) {
                 core.notice(`${run.name} failed, but the newer run ${newer.html_url} supersedes it.`);
               } else {
-                current.push(run);
+                toTriage.push(run);
               }
             }
-            if (current.length === 0) {
+            if (toTriage.length === 0) {
               core.notice(`Newer develop runs supersede every failed run for ${sha}. Nothing to triage.`);
               return;
             }
@@ -211,7 +212,7 @@ jobs:
             core.setOutput(
               'runs',
               JSON.stringify(
-                current.map((run) => ({
+                toTriage.map((run) => ({
                   id: run.id,
                   name: run.name,
                   attempt: run.run_attempt,
@@ -219,7 +220,7 @@ jobs:
                 }))
               )
             );
-            core.setOutput('can_rerun', String(current.every((run) => run.run_attempt < maxAttempts)));
+            core.setOutput('can_rerun', String(toTriage.every((run) => run.run_attempt < maxAttempts)));
 
   ai-fix-develop-ci:
     needs: prepare
@@ -234,7 +235,7 @@ jobs:
       pull-requests: read
     concurrency:
       # One triage at a time, so each agent sees the reruns and fix PRs of the one
-      # before. A newer pending triage replaces an older pending one, which is fine
+      # before. GitHub keeps only the newest pending job in a group, which is fine
       # because newer runs supersede older ones.
       group: ${{ github.workflow }}
       cancel-in-progress: false
@@ -426,12 +427,12 @@ jobs:
           set -euo pipefail
           echo "## Develop CI Rerun" >> "$GITHUB_STEP_SUMMARY"
           while IFS=$'\t' read -r id attempt name url; do
-            read -r status current < <(
+            read -r status current_attempt < <(
               gh api "repos/$GH_REPO/actions/runs/$id" --jq '"\(.status) \(.run_attempt)"'
             )
             # A maintainer may have rerun the workflow while the agent was working.
-            if [[ "$status" != "completed" || "$current" != "$attempt" ]]; then
-              echo "::notice::$name run $id is now attempt $current ($status). Not rerunning it again."
+            if [[ "$status" != "completed" || "$current_attempt" != "$attempt" ]]; then
+              echo "::notice::$name run $id is now attempt $current_attempt ($status). Not rerunning it again."
               continue
             fi
             gh run rerun "$id" --failed
