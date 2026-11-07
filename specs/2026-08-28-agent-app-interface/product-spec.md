@@ -1373,7 +1373,7 @@ than ranked, and say where one builds on another.
    `st.chat_input` attachments; `st.data_editor` edits; dataframe button columns;
    deferred downloads; and the
    browser's half of forms and bound parameters — applying `clear_on_submit` and
-   rewriting a bound parameter when its widget is set.
+   rewriting a bound parameter when its widget is set, which #12's link needs.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
    already use, instead of staying inline: an oversized figure specification, option
    list, or text body — a long Markdown document, or its raw copy in a collapsed
@@ -1424,6 +1424,40 @@ than ranked, and say where one builds on another.
     a re-keyed key), and stays silent when every value landed.
     [#16203](https://github.com/streamlit/streamlit/issues/16203) then turns most resets
     into `invalid_value` refusals, leaving the removed and re-keyed cases for this list.
+12. **A link to the observed view.** The revenue example in [Problem](#problem) ends in
+    an answer that cites the app, page, and applied filters, but a snapshot gives the
+    agent nothing a human can open. The snapshot carries one: the page and its
+    `query_params` as a URL relative to the request, like every URL the API hands out,
+    and whether opening it reproduces the inputs the snapshot was observed with:
+
+    ```json
+    "link": { "url": "../../revenue?region=Europe", "complete": false, "missing": ["threshold"] }
+    ```
+
+    `complete` follows `data.complete`, so a link never looks like it reproduces a view
+    it does not. It is `true` when every widget on the page that holds something other
+    than its default is bound to a parameter, and otherwise `missing` names the keys the
+    link leaves out. State that no widget holds, such as a value a callback wrote to
+    `st.session_state`, cannot be detected. The link reopens the inputs, not the result,
+    so a citation gives it with `observed_at`. It builds on #8: while setting a bound
+    widget drops its parameter, the link would leave out exactly what the agent
+    changed. On Community Cloud the relative URL resolves under the `/~/+/` prefix rather
+    than the app's public URL, so a link for humans needs the platform, as discovery does.
+
+    Bound parameters are the right carrier, and authoring guidance should say to bind
+    the filters a colleague would want to share. A bound widget reads its parameter when
+    it registers, in script order, so a dependent chain such as region → country → city
+    settles in one run, where a `widget_state` batch is checked against the previous
+    run's options and refuses the dependent values. Encoding every widget's value into
+    one parameter instead is held back: `bind` is the author's consent to a URL setting
+    a widget, and a blob would make every widget settable by a link that runs under
+    whoever opens it; generated keys must not be persisted, so it could carry only
+    authored keys, which mostly overlaps with `bind`; and an opaque blob shows a reader
+    no filters. If demand appears, it should be an author opt-in that carries authored
+    keys only, is read at registration like a bound parameter, never fires a trigger,
+    and tells the user which keys did not apply. Views behind a trigger, state callbacks
+    wrote outside widgets, open dialogs, and uploads stay unreachable by any link;
+    replaying the actions that led there would repeat their side effects.
 
 Smaller potential follow-ups and alternatives considered:
 
