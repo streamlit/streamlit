@@ -667,6 +667,30 @@ def test_submit_after_join_started_runs_immediately() -> None:
     assert events == ["child"]
 
 
+def test_rerun_during_flush_wait_keeps_deferred_work_from_starting() -> None:
+    """A rerun requested while join() waits for the flush starts no work."""
+    worker = MagicMock()
+    rerun_requested = threading.Event()
+
+    def yield_check() -> None:
+        if rerun_requested.is_set():
+            raise RerunException(RerunData())
+
+    c = ParallelFragmentCoordinator(
+        yield_check=yield_check,
+        wait_for_flush=lambda _timeout: rerun_requested.set(),
+    )
+    c.submit(worker, None, defer=True)
+
+    with pytest.raises(RerunException):
+        c.join()
+    c.drain()
+
+    worker.assert_not_called()
+    with c._join_condition:
+        assert c._outstanding == 0
+
+
 def test_drain_drops_deferred_work() -> None:
     """Work that never started is dropped and doesn't block a later join()."""
     worker = MagicMock()

@@ -186,15 +186,21 @@ class ParallelFragmentCoordinator:
             raise
 
     def _start_deferred(self) -> None:
-        """Wait for the layout flush, then start the held work."""
+        """Wait for the layout flush, then start the held work.
+
+        A rerun or stop requested during the wait raises from ``yield_check``
+        before the held work starts, and :meth:`drain` then drops that work.
+        """
+        with self._join_condition:
+            has_deferred = bool(self._deferred)
+        if has_deferred:
+            if self._wait_for_flush is not None:
+                self._wait_for_flush(_FLUSH_GATE_TIMEOUT_SECS)
+            self._yield_check()
         with self._join_condition:
             deferred = self._deferred
             self._deferred = []
             self._deferred_released = True
-        if not deferred:
-            return
-        if self._wait_for_flush is not None:
-            self._wait_for_flush(_FLUSH_GATE_TIMEOUT_SECS)
         for tracked in deferred:
             self._start(tracked)
 

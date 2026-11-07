@@ -2970,6 +2970,28 @@ class FragmentLoadingSkeletonTest(DeltaGeneratorTestCase):
         assert slot_flags == [True]
         assert not ThreadState.get().in_skeleton_slot
 
+    def test_parallel_loading_skeleton_is_sent_with_the_dispatch(self) -> None:
+        """A parallel fragment's skeleton is sent before its worker starts."""
+        coordinator = MagicMock()
+        self.script_run_ctx.parallel_coordinator = coordinator
+
+        @st.fragment(parallel=True, loading="skeleton")
+        def body() -> None:
+            st.markdown("Loaded")
+
+        body()
+
+        block_msgs = self._block_messages()
+        assert len(block_msgs) == 1
+        assert block_msgs[0].delta.add_block.HasField("loading")
+        assert coordinator.submit.call_args.kwargs["defer"] is True
+        # The body runs on a worker, so the script thread drew nothing else.
+        assert all(
+            not msg.delta.HasField("new_element")
+            for msg in self.forward_msg_queue._queue
+            if msg.HasField("delta")
+        )
+
     def test_fragment_without_loading_uses_plain_container(self) -> None:
         """Without ``loading``, the fragment's container has no skeleton."""
         slot_flags: list[bool] = []

@@ -20,8 +20,6 @@ import {
   type ReactNode,
   useContext,
   useMemo,
-  useRef,
-  useState,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -53,20 +51,12 @@ import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import useTimeout from "~lib/hooks/useTimeout"
-import { getLoadingBlockState } from "~lib/render-tree/skeletonUtils"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
-import { PendingSkeletonContext } from "./PendingSkeletonContext"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
+import { SkeletonSlotContents } from "./SkeletonPlaceholders"
 import {
-  LoadingBlockSkeleton,
-  PendingSkeletonOverlay,
-} from "./SkeletonPlaceholders"
-import {
-  PENDING_SKELETON_DELAY_MS,
   PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
   StyledDialogContentEndPad,
@@ -74,6 +64,7 @@ import {
   type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
+import { useSkeletonSlot } from "./useSkeletonSlot"
 import {
   assignDividerColor,
   type BaseBlockProps,
@@ -278,47 +269,7 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
-  const theme = useEmotionTheme()
-  const { scriptRunId, scriptRunState } = useContext(ScriptRunContext)
-  const isInPendingSkeleton = useContext(PendingSkeletonContext)
-
-  // A loading block shows a skeleton until this run draws its first visible
-  // element into it. A standalone skeleton can also wait on this block.
-  const isLoadingBlock = notNullOrUndefined(props.node.deltaBlock.loading)
-  const loadingState = useMemo(
-    () =>
-      getLoadingBlockState(
-        props.node,
-        scriptRunId,
-        scriptRunState === ScriptRunState.RUNNING
-      ),
-    [props.node, scriptRunId, scriptRunState]
-  )
-  // An enclosing loading block that shows its skeleton already covers this one.
-  const showInlineSkeleton =
-    loadingState.isPending &&
-    !loadingState.hasPreviousContent &&
-    !isInPendingSkeleton
-  // A block that already existed in an earlier run waits for the grace
-  // period before showing its inline skeleton. A slot that a cached rerun
-  // fills quickly, or that never receives content, then doesn't flash it.
-  // A block that is new in this run reserves its space right away.
-  const firstRunIdRef = useRef(scriptRunId)
-  const existedInEarlierRun = firstRunIdRef.current !== scriptRunId
-  const [graceOverRunId, setGraceOverRunId] = useState<string>()
-  useTimeout(
-    () => setGraceOverRunId(scriptRunId),
-    showInlineSkeleton && existedInEarlierRun
-      ? PENDING_SKELETON_DELAY_MS
-      : null
-  )
-  const renderInlineSkeleton =
-    showInlineSkeleton &&
-    (!existedInEarlierRun || graceOverRunId === scriptRunId)
-  const showSkeletonOverlay =
-    !isInPendingSkeleton &&
-    ((loadingState.isPending && loadingState.hasPreviousContent) ||
-      notNullOrUndefined(props.node.pendingSkeleton))
+  const skeletonSlot = useSkeletonSlot(props.node)
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -432,56 +383,20 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
-        $showsInlineSkeleton={renderInlineSkeleton}
-        $isSkeletonSlot={
-          isLoadingBlock || notNullOrUndefined(props.node.pendingSkeleton)
+        $isSkeletonSlot={skeletonSlot.isSkeletonSlot}
+        $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
+        aria-busy={
+          skeletonSlot.showsInlineSkeleton || skeletonSlot.showsOverlay
+            ? true
+            : undefined
         }
-        aria-busy={renderInlineSkeleton || showSkeletonOverlay || undefined}
       >
-        {renderInlineSkeleton && (
-          <LoadingBlockSkeleton
-            height={getSkeletonHeight(
-              props.node.deltaBlock.loading?.skeletonHeight,
-              theme.sizes.minElementHeight
-            )}
-            label={loadingState.label}
-          />
-        )}
-        {isLoadingBlock ? (
-          <PendingSkeletonContext.Provider
-            value={isInPendingSkeleton || loadingState.isPending}
-          >
-            <ChildRenderer {...props} />
-          </PendingSkeletonContext.Provider>
-        ) : (
+        <SkeletonSlotContents slot={skeletonSlot}>
           <ChildRenderer {...props} />
-        )}
-        {showSkeletonOverlay && (
-          <PendingSkeletonOverlay label={loadingState.label} />
-        )}
+        </SkeletonSlotContents>
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
-}
-
-/**
- * Convert a loading block's skeleton height to CSS. Without a height, the
- * skeleton uses the standard element height, like `st.skeleton()`.
- */
-function getSkeletonHeight(
-  heightConfig: streamlit.HeightConfig.$Properties | null | undefined,
-  defaultHeight: string
-): React.CSSProperties["height"] {
-  if (heightConfig?.pixelHeight) {
-    return `${heightConfig.pixelHeight}px`
-  }
-  if (heightConfig?.remHeight) {
-    return `${heightConfig.remHeight}rem`
-  }
-  if (heightConfig?.useStretch === true) {
-    return "100%"
-  }
-  return defaultHeight
 }
 
 export interface BlockPropsWithoutWidth extends BaseBlockProps {

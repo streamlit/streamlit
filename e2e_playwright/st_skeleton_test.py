@@ -201,3 +201,37 @@ def test_skeleton_keeps_previous_content_while_reloading(app: Page):
     click_button(app, "Rerun skeleton report")
     expect(container.get_by_text("Report version 1")).to_be_visible()
     expect(overlay).not_to_be_attached()
+
+
+def test_fragment_loading_skeleton_covers_content_on_fragment_rerun(app: Page):
+    """A fragment with loading="skeleton" covers its content on a slow rerun.
+
+    The first load shows the skeleton in place of the fragment. A fragment-only
+    rerun that misses the cache keeps the previous content mounted under the
+    skeleton overlay and updates it in place.
+    """
+    container = get_element_by_key(app, "fragment_skeleton_container")
+    # Click without waiting for the run, so the first-load skeleton is observable.
+    get_toggle(app, "Show fragment report").click()
+
+    skeleton = container.get_by_test_id("stLoadingBlockSkeleton")
+    expect(skeleton).to_be_visible()
+    expect(container.get_by_text("Fragment report version 0")).to_be_visible(
+        timeout=5000
+    )
+    expect(skeleton).not_to_be_attached()
+
+    report = container.get_by_test_id("stMarkdown")
+    report.evaluate("element => { element.dataset.testKept = 'true' }")
+
+    get_button(app, "Load next fragment report").click()
+    overlay = container.get_by_test_id("stPendingSkeleton")
+    expect(overlay).to_be_visible(timeout=3000)
+    expect(container.get_by_text("Fragment report version 0")).to_be_attached()
+
+    expect(container.get_by_text("Fragment report version 1")).to_be_visible(
+        timeout=5000
+    )
+    expect(overlay).not_to_be_attached()
+    # The report element was updated in place instead of being remounted.
+    expect(report).to_have_attribute("data-test-kept", "true")

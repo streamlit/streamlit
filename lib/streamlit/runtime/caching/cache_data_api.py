@@ -639,6 +639,11 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+            Inside a ``with st.skeleton()`` block or a fragment with
+            ``loading="skeleton"``, the skeleton is the loading indicator. The
+            default spinner is hidden there, and custom text is shown on the
+            skeleton.
+
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is
             ``False`` (default), no time is displayed. If this is ``True``,

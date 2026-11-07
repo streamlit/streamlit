@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-import { type CSSProperties, memo, type ReactElement } from "react"
+import {
+  type CSSProperties,
+  memo,
+  type ReactElement,
+  type ReactNode,
+} from "react"
+
+import type { streamlit } from "@streamlit/protobuf"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
+import { PendingSkeletonContext } from "./PendingSkeletonContext"
 import {
   StyledLoadingBlockSkeleton,
   StyledPendingSkeletonOverlay,
   StyledSkeletonLabel,
   StyledSkeletonSurface,
 } from "./styled-components"
+import type { SkeletonSlot } from "./useSkeletonSlot"
 
 interface SkeletonLabelProps {
   /** Spinner text to show on the skeleton. */
@@ -76,20 +86,41 @@ export const PendingSkeletonOverlay = memo(function PendingSkeletonOverlay({
   )
 })
 
+/**
+ * Convert a loading block's skeleton height to CSS. Without a height, the
+ * skeleton uses the standard element height, like `st.skeleton()`.
+ */
+function getSkeletonHeight(
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined,
+  defaultHeight: string
+): CSSProperties["height"] {
+  if (heightConfig?.pixelHeight) {
+    return `${heightConfig.pixelHeight}px`
+  }
+  if (heightConfig?.remHeight) {
+    return `${heightConfig.remHeight}rem`
+  }
+  if (heightConfig?.useStretch === true) {
+    return "100%"
+  }
+  return defaultHeight
+}
+
 interface LoadingBlockSkeletonProps extends PendingSkeletonOverlayProps {
-  height: CSSProperties["height"]
+  heightConfig: streamlit.HeightConfig.$Properties | null | undefined
 }
 
 /** The skeleton a loading block shows while it has no content to keep. */
-export const LoadingBlockSkeleton = memo(function LoadingBlockSkeleton({
-  height,
+const LoadingBlockSkeleton = memo(function LoadingBlockSkeleton({
+  heightConfig,
   label,
 }: Readonly<LoadingBlockSkeletonProps>): ReactElement {
+  const theme = useEmotionTheme()
   return (
     <StyledLoadingBlockSkeleton
       className="stSkeleton"
       data-testid="stLoadingBlockSkeleton"
-      height={height}
+      height={getSkeletonHeight(heightConfig, theme.sizes.minElementHeight)}
       aria-hidden={label ? undefined : true}
     >
       <StyledSkeletonSurface />
@@ -97,3 +128,38 @@ export const LoadingBlockSkeleton = memo(function LoadingBlockSkeleton({
     </StyledLoadingBlockSkeleton>
   )
 })
+
+interface SkeletonSlotContentsProps {
+  /** The container's skeleton state, from `useSkeletonSlot`. */
+  slot: SkeletonSlot
+  /** The container's children. */
+  children: ReactNode
+}
+
+/**
+ * Render a container's children with the skeleton of its slot: the inline
+ * skeleton before them, or the overlay on top of them.
+ *
+ * The context provider is always rendered, so the children keep their place
+ * in the React tree, and stay mounted, when a container becomes a loading
+ * block or stops being one.
+ */
+export function SkeletonSlotContents({
+  slot,
+  children,
+}: Readonly<SkeletonSlotContentsProps>): ReactElement {
+  return (
+    <>
+      {slot.showsInlineSkeleton && (
+        <LoadingBlockSkeleton
+          heightConfig={slot.skeletonHeight}
+          label={slot.label}
+        />
+      )}
+      <PendingSkeletonContext.Provider value={slot.isChildrenPending}>
+        {children}
+      </PendingSkeletonContext.Provider>
+      {slot.showsOverlay && <PendingSkeletonOverlay label={slot.label} />}
+    </>
+  )
+}

@@ -55,6 +55,11 @@ class SpinnerMixin:
     ) -> Generator[None, None, None]:
         """Display a loading spinner while executing a block of code.
 
+        Inside a ``with st.skeleton()`` block or a fragment with
+        ``loading="skeleton"``, the spinner's text is shown on the skeleton
+        while the skeleton is displayed, instead of as a second loading
+        indicator.
+
         Parameters
         ----------
         text : str
