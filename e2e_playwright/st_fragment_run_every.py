@@ -49,5 +49,7 @@ def outer_nested_demo():
 
         middle()
 
+    st.write("after nested")
+
 
 outer_nested_demo()
