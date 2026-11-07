@@ -249,8 +249,8 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
       : {}),
     ...(elementType === "spinner"
       ? {
-          // A spinner shown as a skeleton's label renders nothing in its own
-          // slot, which must not add a flexbox gap either.
+          // A spinner shown as the skeleton's label renders nothing in its own
+          // slot. Hide that empty slot so it doesn't leave a gap.
           "&:empty": {
             display: "none",
           },

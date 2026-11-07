@@ -961,10 +961,10 @@ def fragment(
         Whether to execute the fragment in parallel during full app reruns.
         If ``True``, the fragment is dispatched to a thread pool and may execute
         concurrently with other parallel fragments. Parallel fragments start
-        after the rest of the app script has finished and its elements have
-        been sent to the browser, so the app's layout appears before slow
-        fragments run. If ``False`` (default), the fragment executes inline on
-        the main thread.
+        after the rest of the app script has finished. Streamlit first waits
+        briefly for the script's elements to be sent to the browser, so the
+        app's layout appears before slow fragments run. If ``False``
+        (default), the fragment executes inline on the main thread.
 
         Parallel fragments are useful for independent, slow operations that
         should not block overall app throughput. Full app reruns may run

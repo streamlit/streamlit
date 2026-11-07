@@ -83,16 +83,18 @@ class SkeletonMixin:
 
         **Context manager mode** (recommended): Elements written inside the
         ``with`` block fill the skeleton's slot and stack vertically, like in
-        ``st.container()``. The skeleton stays until the first of them is
-        drawn. If nothing is written inside the block, or the block raises an
-        exception, the skeleton clears when the block exits.
+        ``st.container()``, even inside a horizontal container. To lay them
+        out in a row, put an ``st.container(horizontal=True)`` inside the
+        block. The skeleton stays until the first element is drawn. If nothing
+        is written inside the block, or the block raises an exception, the
+        skeleton clears when the block exits.
 
         In both modes, content from the previous run stays in place during a
         rerun. The skeleton only covers it if the new content takes longer
         than half a second, so reruns that hit the cache don't flash it. A
         cached function's spinner inside the ``with`` block doesn't add a
-        second loading indicator: its default text is hidden, and custom text
-        is shown on the skeleton.
+        second loading indicator: Streamlit hides its default text and shows
+        custom text on the skeleton.
 
         .. note::
             Draw the slow element first inside the ``with`` block. Any element,

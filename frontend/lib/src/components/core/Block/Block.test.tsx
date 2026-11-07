@@ -1411,6 +1411,22 @@ describe("loading blocks", () => {
     expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
   })
 
+  it("renders an empty nested loading block while its run is in progress", () => {
+    renderLoadingBlock(makeVerticalBlock([loadingBlock([])]))
+
+    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
+    expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
+  })
+
+  it("hides an empty nested loading block once its run has ended", () => {
+    renderLoadingBlock(makeVerticalBlock([loadingBlock([])]), false)
+
+    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(1)
+    expect(
+      screen.queryByTestId("stLoadingBlockSkeleton")
+    ).not.toBeInTheDocument()
+  })
+
   it("shows a single skeleton for nested loading blocks", () => {
     renderLoadingBlock(loadingBlock([loadingBlock([])]))
 

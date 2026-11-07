@@ -35,7 +35,10 @@ export interface SkeletonSlot {
    * the containing block of the absolutely positioned overlay.
    */
   isSkeletonSlot: boolean
-  /** Whether the container shows its inline skeleton instead of its children. */
+  /**
+   * Whether the container shows its inline skeleton. Its other children stay
+   * mounted but hidden.
+   */
   showsInlineSkeleton: boolean
   /** Whether the container covers its children with the skeleton overlay. */
   showsOverlay: boolean

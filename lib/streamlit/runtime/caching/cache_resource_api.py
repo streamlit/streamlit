@@ -505,9 +505,9 @@ class CacheResourceAPI:
             value of show_spinner param will be used for spinner text.
 
             Inside a ``with st.skeleton()`` block or a fragment with
-            ``loading="skeleton"``, the skeleton is the loading indicator. The
-            default spinner is hidden there, and custom text is shown on the
-            skeleton.
+            ``loading="skeleton"``, the skeleton is the loading indicator.
+            Streamlit hides the default spinner there, even after the
+            skeleton has cleared, and shows custom text on the skeleton.
 
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is

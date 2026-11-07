@@ -46,7 +46,7 @@ def make_loading_block_proto(
     *,
     skeleton_height: HeightWithoutContent | None = None,
     width: WidthWithoutContent = "stretch",
-    loading: bool = True,
+    show_skeleton: bool = True,
 ) -> BlockProto:
     """Build the proto of a loading block: a vertical container, laid out like
     ``st.container()``, that shows a skeleton until content arrives.
@@ -59,7 +59,7 @@ def make_loading_block_proto(
         makes the block fill a bounded parent.
     width
         The block's width.
-    loading
+    show_skeleton
         Whether the block shows the skeleton. Pass ``False`` to build the
         cleared block that ``SkeletonPlaceholder.__exit__`` re-sends. The
         frontend keeps that block's children, and hides it while it has none.
@@ -68,7 +68,7 @@ def make_loading_block_proto(
     # A loading block renders while empty so the skeleton can reserve space.
     # A cleared block is hidden while empty, like `st.container()`, so it
     # doesn't add a gap.
-    block_proto.allow_empty = loading
+    block_proto.allow_empty = show_skeleton
     block_proto.flex_container.border = False
     block_proto.flex_container.wrap = False
     block_proto.flex_container.gap_config.CopyFrom(get_gap_config("small"))
@@ -79,7 +79,7 @@ def make_loading_block_proto(
     block_proto.height_config.CopyFrom(
         get_height_config("stretch" if skeleton_height == "stretch" else "content")
     )
-    if loading:
+    if show_skeleton:
         block_proto.loading.SetInParent()
         if skeleton_height is not None:
             block_proto.loading.skeleton_height.CopyFrom(

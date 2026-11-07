@@ -175,7 +175,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
                 make_loading_block_proto(
                     skeleton_height=self._skeleton_height(),
                     width=self._skeleton_width(),
-                    loading=False,
+                    show_skeleton=False,
                 ),
                 agent_props=agent_spec.block("container"),
             )

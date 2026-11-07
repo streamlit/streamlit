@@ -52,6 +52,8 @@ import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
+import { getLoadingBlockState } from "~lib/render-tree/skeletonUtils"
+import { ScriptRunState } from "~lib/ScriptRunState"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
@@ -451,7 +453,20 @@ export const BlockNodeRenderer = (
 
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
-  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
+  // An empty loading block holds its slot only while it waits for content.
+  // Once its run ends, it is hidden like an empty `st.container()`, so a
+  // skeleton fragment that draws nothing leaves no gap.
+  if (
+    node.isEmpty &&
+    (!node.deltaBlock.allowEmpty ||
+      (notNullOrUndefined(node.deltaBlock.loading) &&
+        !getLoadingBlockState(
+          node,
+          scriptRunId,
+          scriptRunState === ScriptRunState.RUNNING,
+          fragmentIdsThisRun
+        ).isPending))
+  ) {
     return null
   }
 
