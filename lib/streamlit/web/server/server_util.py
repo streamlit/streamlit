@@ -58,10 +58,11 @@ def is_allowed_origin(origin: str) -> bool:
 def is_url_from_allowed_origins(url: str) -> bool:
     """Return True if URL is from allowed origins (for CORS purpose).
 
-    Allowed origins:
+    Only the hostname is compared; scheme and port are ignored. Allowed
+    origins:
     1. localhost
-    2. The origins in `server.corsAllowedOrigins`.
-    3. The manually set `browser.serverAddress`.
+    2. The hostnames in `server.corsAllowedOrigins`.
+    3. The hostname of a manually set `browser.serverAddress`.
     4. The internal and external IP addresses of the machine where this
        function was called from.
 
@@ -82,8 +83,8 @@ def is_url_from_allowed_origins(url: str) -> bool:
         "localhost",
         "0.0.0.0",  # noqa: S104
         "127.0.0.1",
-        # Check the configured origins before the IP lookups below, which can
-        # block the event loop on HTTP requests.
+        # Check the configured origins before the IP lookups below, so they
+        # never wait on a blocking lookup.
         *allowlisted_domains,
         _get_server_address_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
