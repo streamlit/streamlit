@@ -110,8 +110,7 @@ class SpinnerMixin:
         spinner_proto.text = clean_text(text)
         spinner_proto.cache = _cache
         spinner_proto.show_time = show_time
-        # Inside a skeleton slot, the frontend shows the text on the skeleton
-        # instead of adding a second loading indicator.
+        # The frontend shows the text on the skeleton instead of a second spinner.
         spinner_proto.in_skeleton_slot = is_in_skeleton_slot()
         element_proto = ElementProto()
         element_proto.spinner.CopyFrom(spinner_proto)

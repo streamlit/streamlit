@@ -17,10 +17,8 @@
 import { createContext } from "react"
 
 /**
- * True inside a loading block that currently shows its skeleton.
- *
- * Spinners created in a skeleton slot render as the skeleton's label instead
- * of on their own, and nested loading blocks don't add a second skeleton.
+ * True inside a loading block that shows its skeleton. Spinners created there
+ * render as its label, and nested loading blocks don't add a second skeleton.
  */
 export const PendingSkeletonContext = createContext(false)
 PendingSkeletonContext.displayName = "PendingSkeletonContext"

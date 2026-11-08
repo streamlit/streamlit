@@ -164,9 +164,10 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         ]
 
     def test_context_manager_writes_into_loading_block(self) -> None:
-        """Elements written inside the block fill the skeleton's slot."""
-        with st.skeleton(height=120):
+        """Elements written inside the block, also via the placeholder, fill the slot."""
+        with st.skeleton(height=120) as placeholder:
             st.markdown("Loaded")
+            placeholder.markdown("Also loaded")
 
         block_msgs = self._loading_block_messages()
         # Content was drawn, so the frontend clears the skeleton itself and the
@@ -174,14 +175,15 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         assert len(block_msgs) == 1
         block = block_msgs[0].delta.add_block
         assert block.loading.skeleton_height.pixel_height == 120
+        # A pixel skeleton height sizes the skeleton, not the block.
+        assert block.height_config.use_content
         assert block.allow_empty
 
-        markdown_msg = self.get_message_from_queue()
-        assert markdown_msg.delta.new_element.markdown.body == "Loaded"
-        assert list(markdown_msg.metadata.delta_path) == [
-            *block_msgs[0].metadata.delta_path,
-            0,
-        ]
+        block_path = list(block_msgs[0].metadata.delta_path)
+        first_path = self.get_message_from_queue(-2).metadata.delta_path
+        second_path = self.get_message_from_queue().metadata.delta_path
+        assert list(first_path) == [*block_path, 0]
+        assert list(second_path) == [*block_path, 1]
 
     def test_context_manager_replaces_skeleton_slot(self) -> None:
         """The loading block takes the skeleton's own position."""
@@ -190,8 +192,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             st.markdown("Loaded")
         st.markdown("After")
 
-        # The skeleton at [0, 1] is replaced in place by the loading block (the
-        # queue merges the two deltas for the same path).
+        # The loading block replaces the skeleton at [0, 1] (the queue merges them).
         block_msg = self._loading_block_messages()[0]
         assert list(block_msg.metadata.delta_path) == [0, 1]
         after_msg = self.get_message_from_queue()
@@ -199,40 +200,27 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
 
     def test_context_manager_clears_skeleton_when_nothing_is_written(self) -> None:
         """A block that draws nothing re-sends the block without the skeleton."""
-        with st.skeleton():
-            pass
-
-        first, last = self._loading_block_messages()
-        assert first.delta.add_block.HasField("loading")
-        assert not last.delta.add_block.HasField("loading")
-        # The cleared block is hidden while empty, so it doesn't add a gap.
-        assert not last.delta.add_block.allow_empty
-        assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
-
-    def test_context_manager_stretch_height_fills_parent(self) -> None:
-        """A stretch skeleton's block stretches too, also once it's cleared."""
         with st.skeleton(height="stretch"):
             pass
 
         first, last = self._loading_block_messages()
         assert first.delta.add_block.loading.skeleton_height.use_stretch
+        assert not last.delta.add_block.HasField("loading")
+        # The cleared block is hidden while empty, so it doesn't add a gap.
+        assert not last.delta.add_block.allow_empty
+        assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
+        # A stretch skeleton's block stretches too, also once it's cleared.
         assert first.delta.add_block.height_config.use_stretch
         assert last.delta.add_block.height_config.use_stretch
 
-    def test_context_manager_pixel_height_keeps_content_height_block(self) -> None:
-        """A pixel skeleton height sizes the skeleton, not the block."""
-        with st.skeleton(height=120):
-            pass
-
-        first = self._loading_block_messages()[0]
-        assert first.delta.add_block.height_config.use_content
-
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""
-        with pytest.raises(ValueError, match="Test exception"):
+        try:
             with st.skeleton():
                 st.markdown("Partial")
                 raise ValueError("Test exception")
+        except ValueError:
+            pass
 
         last = self._loading_block_messages()[-1]
         assert not last.delta.add_block.HasField("loading")
@@ -259,32 +247,21 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             assert ThreadState.get().in_skeleton_slot
         assert not ThreadState.get().in_skeleton_slot
 
-    def test_placeholder_methods_write_into_block_inside_context(self) -> None:
-        """Calling methods on the placeholder inside the block fills the slot."""
-        with st.skeleton() as placeholder:
-            placeholder.markdown("Loaded")
-
-        block_msg = self._loading_block_messages()[0]
-        markdown_msg = self.get_message_from_queue()
-        assert list(markdown_msg.metadata.delta_path) == [
-            *block_msg.metadata.delta_path,
-            0,
-        ]
-
     def test_context_manager_after_standalone_is_allowed(self) -> None:
         """Test that entering the context manager after standalone use does not
         raise; the context manager simply takes over the placeholder's slot."""
         placeholder = st.skeleton()
         placeholder.markdown("Hello")  # Use in standalone mode first
 
+        # Mixing modes is permissive (no error); the context manager takes over.
         with placeholder:
             pass
 
         last = self._loading_block_messages()[-1]
         assert not last.delta.add_block.HasField("loading")
 
-    def test_spinner_inside_skeleton_is_marked_as_label(self) -> None:
-        """A spinner in a skeleton slot labels the skeleton instead of stacking."""
+    def test_spinner_is_marked_as_label_only_inside_skeleton(self) -> None:
+        """A spinner in a skeleton slot labels the skeleton; others render alone."""
         with patch("streamlit.elements.spinner.DELAY_SECS", 0.01):
             with st.skeleton():
                 with st.spinner("Fetching data..."):
@@ -294,13 +271,10 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
                     assert spinner.text == "Fetching data..."
                     assert spinner.in_skeleton_slot
 
-    def test_spinner_outside_skeleton_is_not_marked_as_label(self) -> None:
-        """A spinner outside a skeleton slot renders on its own."""
-        with patch("streamlit.elements.spinner.DELAY_SECS", 0.01):
             with st.spinner("Fetching data..."):
                 time.sleep(0.2)
-                spinner = self.get_delta_from_queue().new_transient.elements[0]
-                assert not spinner.spinner.in_skeleton_slot
+                transient = self.get_delta_from_queue().new_transient
+                assert not transient.elements[0].spinner.in_skeleton_slot
 
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):

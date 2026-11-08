@@ -22,9 +22,8 @@ import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
 
 /**
- * Element types that don't count as content a user waits for: placeholders
- * that hold a slot (skeleton, empty), and elements that render outside the
- * layout (toast, balloons, snow).
+ * Element types that aren't content a user waits for: slot placeholders
+ * (skeleton, empty) and elements outside the layout (toast, balloons, snow).
  */
 const NON_CONTENT_ELEMENT_TYPES = new Set([
   "skeleton",
@@ -35,51 +34,30 @@ const NON_CONTENT_ELEMENT_TYPES = new Set([
 ])
 
 /**
- * Whether `node` contains visible content that satisfies `isMatch`.
- *
- * Visible content is any element that takes space in the layout, other than
- * a skeleton or an empty placeholder. Transient elements, such as spinners,
- * never count; only a transient node's anchor does.
+ * Whether `node` contains visible content, from any run or only from the run
+ * `scriptRunId`. Transient elements, such as spinners, never count; only a
+ * transient node's anchor does.
  */
-function containsVisibleContent(
+function hasVisibleContent(
   node: AppNode | undefined,
-  isMatch: (element: ElementNode) => boolean
+  scriptRunId?: string
 ): boolean {
   if (node instanceof ElementNode) {
     return (
-      !NON_CONTENT_ELEMENT_TYPES.has(node.element.type ?? "") && isMatch(node)
+      !NON_CONTENT_ELEMENT_TYPES.has(node.element.type ?? "") &&
+      (scriptRunId === undefined || node.scriptRunId === scriptRunId)
     )
   }
   if (node instanceof BlockNode) {
-    return node.children.some(child => containsVisibleContent(child, isMatch))
+    return node.children.some(child => hasVisibleContent(child, scriptRunId))
   }
   if (node instanceof TransientNode) {
-    return containsVisibleContent(node.anchor, isMatch)
+    return hasVisibleContent(node.anchor, scriptRunId)
   }
   return false
 }
 
-/** Whether `node` contains visible content from any run. */
-function hasVisibleContent(node: AppNode | undefined): boolean {
-  return containsVisibleContent(node, () => true)
-}
-
-/** Whether `node` contains visible content drawn by the run `scriptRunId`. */
-export function hasVisibleContentFromRun(
-  node: AppNode | undefined,
-  scriptRunId: string
-): boolean {
-  return containsVisibleContent(
-    node,
-    element => element.scriptRunId === scriptRunId
-  )
-}
-
-/**
- * Return a spinner from the run `scriptRunId` that was created inside a
- * skeleton slot, so the skeleton can show its text and elapsed time as its
- * label.
- */
+/** Find a spinner from the run `scriptRunId` that labels the slot's skeleton. */
 function findSkeletonLabel(
   node: AppNode | undefined,
   scriptRunId: string
@@ -87,11 +65,8 @@ function findSkeletonLabel(
   if (node instanceof BlockNode) {
     for (const child of node.children) {
       const label = findSkeletonLabel(child, scriptRunId)
-      if (label !== undefined) {
-        return label
-      }
+      if (label !== undefined) return label
     }
-    return undefined
   }
   if (node instanceof TransientNode) {
     const spinner = node.transientNodes.find(
@@ -109,9 +84,8 @@ export interface LoadingBlockState {
   /** Whether the block waits for its first visible element of this run. */
   isPending: boolean
   /**
-   * Whether the block still holds a previous run's content. That content stays
-   * mounted and is covered after a grace period; otherwise the skeleton shows
-   * right away.
+   * Whether the block still holds a previous run's content, which stays
+   * mounted and is covered after a grace period.
    */
   hasPreviousContent: boolean
   /** The spinner to show on the skeleton as its label. */
@@ -124,20 +98,15 @@ const NOT_PENDING: LoadingBlockState = {
 }
 
 /**
- * Compute the skeleton state of `node` for the run `scriptRunId`.
+ * Compute the skeleton state of `node` for the run `scriptRunId`. A loading
+ * block is pending until that run draws visible content into it or ends, so a
+ * fragment that draws nothing doesn't keep its skeleton.
  *
- * A loading block is pending while that run is in progress and has not drawn
- * any visible content into it. Once the run ends, the block shows whatever it
- * holds, so a fragment that draws nothing doesn't keep its skeleton.
- *
- * During a fragment run, only loading blocks of the running fragments are
- * pending. A write gives every block on its path the run's ID, so without
- * this check a fragment rerun would also cover the loading block that the
- * fragment renders in. A nested fragment that its parent's rerun calls
- * inline writes with its own fragment ID, which isn't in
- * `fragmentIdsThisRun`, so its loading blocks don't show a skeleton during
- * that rerun. Their previous content stays in place until the new content
- * arrives.
+ * During a fragment run, only the running fragments' loading blocks are
+ * pending. A write gives every block on its path the run's ID, so without this
+ * check a fragment rerun would also cover the loading block it renders in. A
+ * nested fragment that its parent's rerun calls inline writes with its own
+ * fragment ID, so its blocks keep their previous content instead.
  */
 export function getLoadingBlockState(
   node: BlockNode,
@@ -151,7 +120,7 @@ export function getLoadingBlockState(
     node.scriptRunId !== scriptRunId ||
     (fragmentIdsThisRun.length > 0 &&
       !fragmentIdsThisRun.includes(node.fragmentId ?? "")) ||
-    hasVisibleContentFromRun(node, scriptRunId)
+    hasVisibleContent(node, scriptRunId)
   ) {
     return NOT_PENDING
   }
@@ -163,14 +132,12 @@ export function getLoadingBlockState(
 }
 
 /**
- * Decide how a skeleton element that arrives at a slot treats the slot's
- * current node.
+ * Return the node to set at a slot that receives `skeleton`, or `undefined` to
+ * let the skeleton replace the slot as usual.
  *
- * If the slot holds visible content from a previous run, that content stays
- * mounted with the skeleton attached as its pending skeleton, so the frontend
- * can cover it after a grace period instead of unmounting it. Returns the
- * node to set at the slot, or `undefined` if the skeleton should replace the
- * slot as usual.
+ * Visible content from a previous run stays mounted with the skeleton attached
+ * as its pending skeleton, so the frontend can cover it after a grace period
+ * instead of unmounting it.
  */
 export function keepPreviousContentForSkeleton(
   existingNode: AppNode | undefined,

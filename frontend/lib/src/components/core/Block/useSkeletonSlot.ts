@@ -30,37 +30,28 @@ import { PENDING_SKELETON_DELAY_MS } from "./styled-components"
 
 /** How a container renders the skeleton of its slot right now. */
 export interface SkeletonSlot {
-  /**
-   * Whether a skeleton can cover the container. The container then becomes
-   * the containing block of the absolutely positioned overlay.
-   */
+  /** Whether a skeleton can cover the container, which then positions it. */
   isSkeletonSlot: boolean
-  /**
-   * Whether the container shows its inline skeleton. Its other children stay
-   * mounted but hidden.
-   */
+  /** Whether the container shows its inline skeleton and hides its children. */
   showsInlineSkeleton: boolean
   /** Whether the container covers its children with the skeleton overlay. */
   showsOverlay: boolean
   /** Whether the container's children are inside a skeleton that is shown. */
   isChildrenPending: boolean
-  /** The inline skeleton's height while the block has no content to keep. */
   skeletonHeight?: streamlit.HeightConfig.$Properties | null
-  /** The spinner to show on the skeleton as its label. */
   label?: SpinnerProto.$Properties
 }
 
 /**
  * Compute how a container shows the skeleton of its slot.
  *
- * A loading block (`Block.loading`) shows a skeleton until the current run
- * draws its first visible element into it. Without previous content, it
- * shows an inline skeleton at `skeletonHeight`. With previous content, the
- * content stays mounted and the overlay covers it after the grace period.
- * A standalone skeleton that waits on the container's previous content
- * (`BlockNode.pendingSkeleton`) also shows the overlay.
+ * - A loading block (`Block.loading`) without previous content shows an inline
+ *   skeleton until the current run draws its first visible element into it.
+ * - With previous content, the content stays mounted and the overlay covers
+ *   it after the grace period. A standalone skeleton waiting on the
+ *   container's content (`BlockNode.pendingSkeleton`) does the same.
  *
- * `firstRunId` is the run in which the block's renderer mounted. It defaults
+ * `firstRunId` is the run in which the block's renderer mounted, and defaults
  * to the run in which this hook mounted.
  */
 export function useSkeletonSlot(
@@ -82,11 +73,10 @@ export function useSkeletonSlot(
     loadingState.isPending &&
     !loadingState.hasPreviousContent &&
     !isInPendingSkeleton
-  // A block that already existed in an earlier run waits for the grace period
-  // before it shows its inline skeleton, so a slot that a cached rerun fills
-  // quickly, or that never receives content, doesn't flash it. A block that
-  // is new in this run reserves its space right away. A CSS delay can't do
-  // this, because a hidden skeleton would still take up its height.
+  // A block from an earlier run waits for the grace period before it shows its
+  // inline skeleton, so a slot that a cached rerun fills quickly, or that gets
+  // no content, doesn't flash it. A new block reserves its space right away.
+  // A CSS delay can't do this: a hidden skeleton still takes up its height.
   const [mountedRunId] = useState(scriptRunId)
   const existedInEarlierRun = (firstRunId ?? mountedRunId) !== scriptRunId
   const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()

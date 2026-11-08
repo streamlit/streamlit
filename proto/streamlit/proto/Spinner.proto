@@ -26,8 +26,7 @@ message Spinner {
   // Whether to show elapsed time next to the spinner text.
   bool show_time = 3;
 
-  // Whether the spinner was created inside a skeleton slot. While that
-  // skeleton is shown, the frontend renders the spinner as the skeleton's
-  // label instead of as a separate spinner.
+  // Whether the spinner was created inside a skeleton slot. While that skeleton
+  // shows, the frontend renders the spinner as its label.
   bool in_skeleton_slot = 4;
 }

@@ -41,9 +41,8 @@ export class ElementNode implements AppNode {
   public readonly elementHash?: string
 
   /**
-   * A skeleton from the current run that is waiting for this slot's new
-   * content. This node is the previous run's content, which stays mounted and
-   * is covered by the skeleton after a grace period.
+   * A skeleton from the current run that waits for this slot's new content.
+   * Until then, this previous content stays mounted under the skeleton.
    */
   public readonly pendingSkeleton?: ElementNode
 

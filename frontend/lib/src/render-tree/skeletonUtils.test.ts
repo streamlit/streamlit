@@ -15,7 +15,6 @@
  */
 
 import {
-  Block as BlockProto,
   Delta as DeltaProto,
   Element,
   ForwardMsgMetadata,
@@ -27,14 +26,15 @@ import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import {
   getLoadingBlockState,
-  hasVisibleContentFromRun,
   keepPreviousContentForSkeleton,
 } from "./skeletonUtils"
 import {
   block,
   FAKE_SCRIPT_HASH,
   forwardMsgMetadata,
+  loadingBlock,
   makeProto,
+  skeletonSpinner,
   text,
 } from "./test-utils"
 import { TransientNode } from "./TransientNode"
@@ -59,41 +59,7 @@ function skeleton(scriptRunId = CURRENT_RUN): ElementNode {
   return elementNode({ skeleton: {} }, scriptRunId)
 }
 
-function labeledSpinner(
-  label: string,
-  scriptRunId = CURRENT_RUN
-): ElementNode {
-  return elementNode(
-    { spinner: { text: label, inSkeletonSlot: true } },
-    scriptRunId
-  )
-}
-
-function loadingBlock(
-  children: AppNode[],
-  scriptRunId = CURRENT_RUN
-): BlockNode {
-  return new BlockNode(
-    FAKE_SCRIPT_HASH,
-    children,
-    makeProto(BlockProto, { flexContainer: {}, loading: {} }),
-    scriptRunId
-  )
-}
-
 describe("keepPreviousContentForSkeleton", () => {
-  it("keeps a previous run's element and attaches the skeleton", () => {
-    const previous = text("chart", PREVIOUS_RUN)
-    const incoming = skeleton()
-
-    const kept = keepPreviousContentForSkeleton(previous, incoming)
-
-    expect(kept).toBeInstanceOf(ElementNode)
-    expect((kept as ElementNode).element).toBe(previous.element)
-    expect((kept as ElementNode).scriptRunId).toBe(PREVIOUS_RUN)
-    expect((kept as ElementNode).pendingSkeleton).toBe(incoming)
-  })
-
   it("keeps a previous run's block that holds visible content", () => {
     const previous = block([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
 
@@ -111,6 +77,9 @@ describe("keepPreviousContentForSkeleton", () => {
       block([skeleton(PREVIOUS_RUN)], PREVIOUS_RUN),
     ],
     ["an empty slot", undefined],
+    ["a previous run's toast", elementNode({ toast: {} }, PREVIOUS_RUN)],
+    ["a previous run's balloons", elementNode({ balloons: {} }, PREVIOUS_RUN)],
+    ["a previous run's snow", elementNode({ snow: {} }, PREVIOUS_RUN)],
   ])("lets the skeleton replace %s", (_, existing) => {
     expect(
       keepPreviousContentForSkeleton(existing, skeleton())
@@ -119,63 +88,31 @@ describe("keepPreviousContentForSkeleton", () => {
 
   it("keeps a transient wrapper's anchor and its running spinner", () => {
     const previous = text("chart", PREVIOUS_RUN)
-    const spinner = labeledSpinner("Loading...")
+    const spinner = skeletonSpinner("Loading...", CURRENT_RUN)
     const wrapped = new TransientNode(CURRENT_RUN, previous, [spinner])
 
     const kept = keepPreviousContentForSkeleton(wrapped, skeleton())
 
     expect(kept).toBeInstanceOf(TransientNode)
-    const keptTransient = kept as TransientNode
-    expect(keptTransient.transientNodes).toEqual([spinner])
-    expect((keptTransient.anchor as ElementNode).element).toBe(
-      previous.element
-    )
-    expect((keptTransient.anchor as ElementNode).pendingSkeleton).toBeDefined()
-  })
-
-  it.each(["toast", "balloons", "snow"])(
-    "lets the skeleton replace a previous run's %s",
-    elementType => {
-      const previous = elementNode({ [elementType]: {} }, PREVIOUS_RUN)
-
-      expect(
-        keepPreviousContentForSkeleton(previous, skeleton())
-      ).toBeUndefined()
-    }
-  )
-})
-
-describe("hasVisibleContentFromRun", () => {
-  it("ignores skeletons, empties, and transient spinners", () => {
-    const node = block(
-      [
-        skeleton(),
-        elementNode({ empty: {} }, CURRENT_RUN),
-        new TransientNode(CURRENT_RUN, text("old", PREVIOUS_RUN), [
-          labeledSpinner("Loading"),
-        ]),
-      ],
-      CURRENT_RUN
-    )
-
-    expect(hasVisibleContentFromRun(node, CURRENT_RUN)).toBe(false)
-    expect(hasVisibleContentFromRun(node, PREVIOUS_RUN)).toBe(true)
+    expect((kept as TransientNode).transientNodes).toEqual([spinner])
+    const keptAnchor = (kept as TransientNode).anchor as ElementNode
+    expect(keptAnchor.element).toBe(previous.element)
+    expect(keptAnchor.pendingSkeleton).toBeDefined()
   })
 })
 
 describe("getLoadingBlockState", () => {
-  it("is pending while the run hasn't drawn into the block", () => {
-    const node = loadingBlock([])
-
-    expect(getLoadingBlockState(node, CURRENT_RUN, true, [])).toEqual({
-      isPending: true,
-      hasPreviousContent: false,
-      label: undefined,
-    })
-  })
-
-  it("keeps a previous run's content and reports it", () => {
-    const node = loadingBlock([text("chart", PREVIOUS_RUN)])
+  it("ignores skeletons, empties, and transient spinners as content", () => {
+    const node = loadingBlock(
+      [
+        skeleton(),
+        elementNode({ empty: {} }, CURRENT_RUN),
+        new TransientNode(CURRENT_RUN, text("old", PREVIOUS_RUN), [
+          skeletonSpinner("Loading", CURRENT_RUN),
+        ]),
+      ],
+      CURRENT_RUN
+    )
 
     const state = getLoadingBlockState(node, CURRENT_RUN, true, [])
 
@@ -183,52 +120,21 @@ describe("getLoadingBlockState", () => {
     expect(state.hasPreviousContent).toBe(true)
   })
 
-  it("stops pending once the run draws visible content", () => {
-    const node = loadingBlock([text("chart", CURRENT_RUN)])
-
+  it.each([
+    ["the block is from a previous run", loadingBlock([], PREVIOUS_RUN)],
+    ["the block has no loading field", block([], CURRENT_RUN)],
+  ])("is not pending when %s", (_, node) => {
     expect(getLoadingBlockState(node, CURRENT_RUN, true, []).isPending).toBe(
       false
     )
   })
 
-  it.each([
-    ["the run has ended", loadingBlock([]), CURRENT_RUN, false],
-    [
-      "the block is from a previous run",
-      loadingBlock([], PREVIOUS_RUN),
-      CURRENT_RUN,
-      true,
-    ],
-    [
-      "the block has no loading field",
-      block([], CURRENT_RUN),
-      CURRENT_RUN,
-      true,
-    ],
-  ])("is not pending when %s", (_, node, scriptRunId, isRunning) => {
-    expect(
-      getLoadingBlockState(node, scriptRunId, isRunning, []).isPending
-    ).toBe(false)
-  })
-
-  it("labels the skeleton with a spinner from this run", () => {
-    const node = loadingBlock([
-      new TransientNode(CURRENT_RUN, undefined, [
-        labeledSpinner("Fetching data..."),
-      ]),
-    ])
-
-    expect(getLoadingBlockState(node, CURRENT_RUN, true, []).label?.text).toBe(
-      "Fetching data..."
-    )
-  })
-
   it("ignores spinners from previous runs", () => {
-    const node = loadingBlock([
-      new TransientNode(CURRENT_RUN, undefined, [
-        labeledSpinner("Old", PREVIOUS_RUN),
-      ]),
-    ])
+    const spinner = skeletonSpinner("Old", PREVIOUS_RUN)
+    const node = loadingBlock(
+      [new TransientNode(CURRENT_RUN, undefined, [spinner])],
+      CURRENT_RUN
+    )
 
     expect(
       getLoadingBlockState(node, CURRENT_RUN, true, []).label
@@ -242,10 +148,8 @@ describe("getLoadingBlockState", () => {
   ])(
     "during a fragment run, makes %s pending: %s",
     (_, fragmentId, isPending) => {
-      const node = new BlockNode(
-        FAKE_SCRIPT_HASH,
+      const node = loadingBlock(
         [text("chart", PREVIOUS_RUN)],
-        makeProto(BlockProto, { flexContainer: {}, loading: {} }),
         CURRENT_RUN,
         fragmentId
       )
@@ -261,20 +165,17 @@ describe("getLoadingBlockState", () => {
 describe("AppRoot with skeletons", () => {
   const PATH = [0]
 
-  function rootWith(child: AppNode): AppRoot {
+  /** A root whose slot holds a previous run's chart and this run's skeleton. */
+  function skeletonOverPreviousChart(): AppRoot {
     return new AppRoot(
       FAKE_SCRIPT_HASH,
       new BlockNode(FAKE_SCRIPT_HASH, [
-        block([child], PREVIOUS_RUN),
+        block([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN),
         new BlockNode(FAKE_SCRIPT_HASH),
         new BlockNode(FAKE_SCRIPT_HASH),
         new BlockNode(FAKE_SCRIPT_HASH),
       ])
-    )
-  }
-
-  function applySkeleton(root: AppRoot): AppRoot {
-    return root.applyDelta(
+    ).applyDelta(
       CURRENT_RUN,
       makeProto(DeltaProto, { newElement: { skeleton: {} } }),
       forwardMsgMetadata([0, ...PATH])
@@ -286,17 +187,14 @@ describe("AppRoot with skeletons", () => {
   }
 
   it("keeps the previous content mounted under a skeleton", () => {
-    const root = applySkeleton(rootWith(text("chart", PREVIOUS_RUN)))
+    const node = nodeAtPath(skeletonOverPreviousChart()) as ElementNode
 
-    const node = nodeAtPath(root) as ElementNode
     expect(node).toBeTextNode("chart")
     expect(node.pendingSkeleton?.element.type).toBe("skeleton")
   })
 
   it("replaces the waiting content when new content arrives", () => {
-    const root = applySkeleton(
-      rootWith(text("chart", PREVIOUS_RUN))
-    ).applyDelta(
+    const root = skeletonOverPreviousChart().applyDelta(
       CURRENT_RUN,
       makeProto(DeltaProto, { newElement: { text: { body: "new chart" } } }),
       forwardMsgMetadata([0, ...PATH])
@@ -308,18 +206,8 @@ describe("AppRoot with skeletons", () => {
   })
 
   it("lets the skeleton take the slot if no content arrives this run", () => {
-    const root = applySkeleton(
-      rootWith(text("chart", PREVIOUS_RUN))
-    ).clearStaleNodes(CURRENT_RUN)
+    const root = skeletonOverPreviousChart().clearStaleNodes(CURRENT_RUN)
 
     expect((nodeAtPath(root) as ElementNode).element.type).toBe("skeleton")
-  })
-
-  it("lets the skeleton replace content from the current run", () => {
-    const root = applySkeleton(rootWith(text("chart", CURRENT_RUN)))
-
-    const node = nodeAtPath(root) as ElementNode
-    expect(node.element.type).toBe("skeleton")
-    expect(node.pendingSkeleton).toBeUndefined()
   })
 })

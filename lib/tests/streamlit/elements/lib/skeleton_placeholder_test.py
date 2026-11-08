@@ -64,11 +64,8 @@ def test_dir_returns_delta_generator_members() -> None:
 
 
 def test_context_manager_without_session_context_skips_thread_state() -> None:
-    """Without a script run context, the context manager still opens its block.
-
-    Outside a script thread there is no ``FragmentThreadState`` to mark as a
-    skeleton slot, so entering and exiting must not touch it.
-    """
+    """Without a script run context, there is no ``FragmentThreadState`` to mark,
+    but the context manager still opens its block."""
     placeholder = _make_skeleton_placeholder()
 
     with placeholder as result:

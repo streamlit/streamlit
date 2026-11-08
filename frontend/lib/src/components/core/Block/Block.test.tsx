@@ -24,7 +24,6 @@ import {
   Button as ButtonProto,
   Delta as DeltaProto,
   type Element,
-  Element as ElementProto,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
@@ -41,7 +40,9 @@ import { STEP_BLOCK_ATTRIBUTE } from "~lib/components/core/Layout/stepConnector"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import {
   forwardMsgMetadata,
+  loadingBlock,
   makeProto,
+  skeletonSpinner,
   text,
   textInput,
 } from "~lib/render-tree/test-utils"
@@ -1347,47 +1348,63 @@ describe("BlockNodeRenderer container types", () => {
 
 describe("loading blocks", () => {
   const CURRENT_RUN = "current-run"
+  const PREVIOUS_RUN = "previous-run"
 
-  function loadingBlock(
-    children: AppNode[],
+  function runContext(
+    isRunning = true,
     scriptRunId = CURRENT_RUN
-  ): BlockNode {
-    return new BlockNode(
-      FAKE_SCRIPT_HASH,
-      children,
-      new BlockProto({
-        allowEmpty: true,
-        flexContainer: {
-          direction: BlockProto.FlexContainer.Direction.VERTICAL,
-        },
-        loading: { skeletonHeight: { pixelHeight: 200 } },
-      }),
-      scriptRunId
-    )
-  }
-
-  function renderLoadingBlock(node: BlockNode, isRunning = true): void {
-    renderWithContexts(makeVerticalBlockComponent(node), {
+  ): Parameters<typeof renderWithContexts>[1] {
+    return {
       scriptRunContext: {
         scriptRunState: isRunning
           ? ScriptRunState.RUNNING
           : ScriptRunState.NOT_RUNNING,
-        scriptRunId: CURRENT_RUN,
-        fragmentIdsThisRun: [],
+        scriptRunId,
       },
-    })
+    }
   }
 
-  it("reserves the skeleton height while the run hasn't drawn into it", () => {
-    renderLoadingBlock(loadingBlock([]))
+  function renderBlock(
+    node: BlockNode,
+    isRunning = true,
+    scriptRunId = CURRENT_RUN
+  ): ReturnType<typeof renderWithContexts> {
+    return renderWithContexts(
+      makeVerticalBlockComponent(node),
+      runContext(isRunning, scriptRunId)
+    )
+  }
+
+  /** Render a loading block that holds a spinner from its skeleton slot. */
+  function renderWithSkeletonSpinner(showTime = false): HTMLElement {
+    const spinner = skeletonSpinner("Fetching data...", CURRENT_RUN, showTime)
+    renderBlock(
+      loadingBlock(
+        [new TransientNode(CURRENT_RUN, undefined, [spinner])],
+        CURRENT_RUN
+      )
+    )
+    return screen.getByTestId("stLoadingBlockSkeleton")
+  }
+
+  it("reserves the skeleton height and marks the block busy while it waits", () => {
+    renderBlock(loadingBlock([], CURRENT_RUN))
 
     const skeleton = screen.getByTestId("stLoadingBlockSkeleton")
     expect(skeleton).toHaveStyle({ height: "200px" })
+    // An unlabeled skeleton is decorative.
+    expect(skeleton).toHaveAttribute("aria-hidden", "true")
+    expect(screen.getByTestId("stVerticalBlock")).toHaveAttribute(
+      "aria-busy",
+      "true"
+    )
     expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
   })
 
   it("keeps previous content mounted under an overlay", () => {
-    renderLoadingBlock(loadingBlock([text("previous chart", "previous-run")]))
+    renderBlock(
+      loadingBlock([text("previous chart", PREVIOUS_RUN)], CURRENT_RUN)
+    )
 
     expect(screen.getByText("previous chart")).toBeInTheDocument()
     expect(screen.getByTestId("stPendingSkeleton")).toBeInTheDocument()
@@ -1400,7 +1417,7 @@ describe("loading blocks", () => {
     ["the run drew content", [text("chart", CURRENT_RUN)], true],
     ["the run has ended", [], false],
   ])("shows no skeleton once %s", (_, children, isRunning) => {
-    renderLoadingBlock(loadingBlock(children), isRunning)
+    renderBlock(loadingBlock(children, CURRENT_RUN), isRunning)
 
     expect(screen.getByTestId("stVerticalBlock")).not.toHaveAttribute(
       "aria-busy"
@@ -1411,24 +1428,26 @@ describe("loading blocks", () => {
     expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
   })
 
-  it("renders an empty nested loading block while its run is in progress", () => {
-    renderLoadingBlock(makeVerticalBlock([loadingBlock([])]))
+  it.each([
+    ["while its run is in progress", true, 2, 1],
+    ["once its run has ended", false, 1, 0],
+  ])(
+    "renders an empty nested loading block only while needed: %s",
+    (_, isRunning, blockCount, skeletonCount) => {
+      renderBlock(
+        makeVerticalBlock([loadingBlock([], CURRENT_RUN)]),
+        isRunning
+      )
 
-    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(2)
-    expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
-  })
-
-  it("hides an empty nested loading block once its run has ended", () => {
-    renderLoadingBlock(makeVerticalBlock([loadingBlock([])]), false)
-
-    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(1)
-    expect(
-      screen.queryByTestId("stLoadingBlockSkeleton")
-    ).not.toBeInTheDocument()
-  })
+      expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(blockCount)
+      expect(screen.queryAllByTestId("stLoadingBlockSkeleton")).toHaveLength(
+        skeletonCount
+      )
+    }
+  )
 
   it("shows a single skeleton for nested loading blocks", () => {
-    renderLoadingBlock(loadingBlock([loadingBlock([])]))
+    renderBlock(loadingBlock([loadingBlock([], CURRENT_RUN)], CURRENT_RUN))
 
     expect(screen.getAllByTestId("stLoadingBlockSkeleton")).toHaveLength(1)
     expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
@@ -1437,33 +1456,9 @@ describe("loading blocks", () => {
     expect(innerBlock).not.toBeVisible()
   })
 
-  it("marks the block as busy and hides an unlabeled skeleton", () => {
-    renderLoadingBlock(loadingBlock([]))
-
-    expect(screen.getByTestId("stVerticalBlock")).toHaveAttribute(
-      "aria-busy",
-      "true"
-    )
-    expect(screen.getByTestId("stLoadingBlockSkeleton")).toHaveAttribute(
-      "aria-hidden",
-      "true"
-    )
-  })
-
   it("shows a spinner's text on the skeleton instead of the spinner", async () => {
-    const spinner = new ElementNode(
-      makeProto(ElementProto, {
-        spinner: { text: "Fetching data...", inSkeletonSlot: true },
-      }),
-      ForwardMsgMetadata.create(),
-      CURRENT_RUN,
-      FAKE_SCRIPT_HASH
-    )
-    renderLoadingBlock(
-      loadingBlock([new TransientNode(CURRENT_RUN, undefined, [spinner])])
-    )
+    const skeleton = renderWithSkeletonSpinner()
 
-    const skeleton = screen.getByTestId("stLoadingBlockSkeleton")
     expect(await within(skeleton).findByRole("status")).toHaveTextContent(
       "Fetching data..."
     )
@@ -1473,23 +1468,8 @@ describe("loading blocks", () => {
   })
 
   it("shows a timed spinner's elapsed time on the skeleton", async () => {
-    const spinner = new ElementNode(
-      makeProto(ElementProto, {
-        spinner: {
-          text: "Fetching data...",
-          inSkeletonSlot: true,
-          showTime: true,
-        },
-      }),
-      ForwardMsgMetadata.create(),
-      CURRENT_RUN,
-      FAKE_SCRIPT_HASH
-    )
-    renderLoadingBlock(
-      loadingBlock([new TransientNode(CURRENT_RUN, undefined, [spinner])])
-    )
+    const skeleton = renderWithSkeletonSpinner(true)
 
-    const skeleton = screen.getByTestId("stLoadingBlockSkeleton")
     expect(await within(skeleton).findByText("(0.0 seconds)")).toBeVisible()
     expect(screen.queryByTestId("stSpinner")).not.toBeInTheDocument()
   })
@@ -1497,22 +1477,15 @@ describe("loading blocks", () => {
   it("waits for the grace period before a block from an earlier run shows its skeleton", () => {
     vi.useFakeTimers()
     try {
-      const { rerenderWithContexts } = renderWithContexts(
-        makeVerticalBlockComponent(loadingBlock([], "previous-run")),
-        {
-          scriptRunContext: {
-            scriptRunState: ScriptRunState.NOT_RUNNING,
-            scriptRunId: "previous-run",
-            fragmentIdsThisRun: [],
-          },
-        }
+      const { rerenderWithContexts } = renderBlock(
+        loadingBlock([], PREVIOUS_RUN),
+        false,
+        PREVIOUS_RUN
       )
-      rerenderWithContexts(makeVerticalBlockComponent(loadingBlock([])), {
-        scriptRunContext: {
-          scriptRunState: ScriptRunState.RUNNING,
-          scriptRunId: CURRENT_RUN,
-        },
-      })
+      rerenderWithContexts(
+        makeVerticalBlockComponent(loadingBlock([], CURRENT_RUN)),
+        runContext()
+      )
 
       expect(
         screen.queryByTestId("stLoadingBlockSkeleton")
@@ -1529,37 +1502,18 @@ describe("loading blocks", () => {
   })
 
   it("keeps the children mounted when a container becomes a loading block", () => {
-    const chart = text("previous chart", "previous-run")
-    const { rerenderWithContexts } = renderWithContexts(
-      makeVerticalBlockComponent(
-        new BlockNode(
-          FAKE_SCRIPT_HASH,
-          [chart],
-          new BlockProto({
-            allowEmpty: true,
-            flexContainer: {
-              direction: BlockProto.FlexContainer.Direction.VERTICAL,
-            },
-          }),
-          "previous-run"
-        )
-      ),
-      {
-        scriptRunContext: {
-          scriptRunState: ScriptRunState.NOT_RUNNING,
-          scriptRunId: "previous-run",
-          fragmentIdsThisRun: [],
-        },
-      }
+    const chart = text("previous chart", PREVIOUS_RUN)
+    const { rerenderWithContexts } = renderBlock(
+      makeVerticalBlock([chart]),
+      false,
+      PREVIOUS_RUN
     )
     const chartNode = screen.getByText("previous chart")
 
-    rerenderWithContexts(makeVerticalBlockComponent(loadingBlock([chart])), {
-      scriptRunContext: {
-        scriptRunState: ScriptRunState.RUNNING,
-        scriptRunId: CURRENT_RUN,
-      },
-    })
+    rerenderWithContexts(
+      makeVerticalBlockComponent(loadingBlock([chart], CURRENT_RUN)),
+      runContext()
+    )
 
     expect(screen.getByTestId("stPendingSkeleton")).toBeInTheDocument()
     expect(screen.getByText("previous chart")).toBe(chartNode)

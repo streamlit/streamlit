@@ -147,8 +147,8 @@ interface StyledElementContainerProps {
   maxHeight?: React.CSSProperties["maxHeight"]
   contain?: React.CSSProperties["contain"]
   /**
-   * Whether a skeleton waits to replace this element's content. The content
-   * keeps its full opacity so the skeleton overlay on top isn't faded with it.
+   * Whether a skeleton overlay covers this element. The element then skips
+   * the stale fade, which would also fade the overlay.
    */
   hasPendingSkeleton?: boolean
 }
@@ -247,15 +247,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           display: "none",
         }
       : {}),
-    ...(elementType === "spinner"
-      ? {
-          // A spinner shown as the skeleton's label renders nothing in its own
-          // slot. Hide that empty slot so it doesn't leave a gap.
-          "&:empty": {
-            display: "none",
-          },
-        }
-      : {}),
+    // A spinner shown as the skeleton's label leaves its own slot empty. Hide
+    // that slot so it doesn't leave a gap.
+    ...(elementType === "spinner" && { "&:empty": { display: "none" } }),
     ...(elementType === "space"
       ? {
           // Space elements should have minimal cross-axis dimensions.
@@ -432,15 +426,11 @@ export interface StyledFlexContainerBlockProps {
    * definite-height parent, which this style cannot see).
    */
   hasDefiniteHeight?: boolean
-  /**
-   * Whether the block can show a skeleton over its content. It then becomes
-   * the containing block of the absolutely positioned skeleton overlay.
-   */
+  /** Whether the block positions a skeleton overlay over its content. */
   $isSkeletonSlot?: boolean
   /**
-   * Whether the block shows its inline skeleton. Its other children hold no
-   * visible content yet, so they leave the layout instead of adding gaps (for
-   * example, a spinner shown as the skeleton's label).
+   * Whether the block shows its inline skeleton. Its other children have no
+   * visible content yet, so they leave the layout instead of adding gaps.
    */
   $showsInlineSkeleton?: boolean
 }
@@ -457,18 +447,11 @@ function isFixedLengthHeight(
 
 interface StyledLoadingBlockSkeletonProps {
   height?: CSSProperties["height"]
-  /**
-   * Whether the skeleton fills its loading block, which stretches to a
-   * bounded parent. In an unbounded parent, it keeps the standard element
-   * height.
-   */
+  /** Whether the skeleton fills its loading block, which stretches. */
   $fillsBlock: boolean
 }
 
-/**
- * The skeleton a loading block shows while it has no content to keep.
- * Defined before `StyledFlexContainerBlock`, which selects it.
- */
+/** Defined before `StyledFlexContainerBlock`, which selects it. */
 export const StyledLoadingBlockSkeleton =
   styled.div<StyledLoadingBlockSkeletonProps>(
     ({ theme, height, $fillsBlock }) => ({
@@ -769,22 +752,12 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
  */
 export const PENDING_SKELETON_DELAY_MS = 500
 
-const pendingSkeletonReveal = keyframes`
-  from {
-    opacity: 0;
-    visibility: hidden;
-  }
+const pendingSkeletonReveal = keyframes({
+  from: { opacity: 0, visibility: "hidden" },
+  to: { opacity: 1, visibility: "visible" },
+})
 
-  to {
-    opacity: 1;
-    visibility: visible;
-  }
-`
-
-/**
- * Covers a slot's previous content once the grace period has passed. The
- * opaque background hides the content, which stays mounted underneath.
- */
+/** Hides previous content, which stays mounted, under an opaque background. */
 export const StyledPendingSkeletonOverlay = styled.div(({ theme }) => ({
   position: "absolute",
   inset: 0,

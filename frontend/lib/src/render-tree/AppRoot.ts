@@ -440,9 +440,8 @@ export class AppRoot {
       fragmentId,
       elementHash
     )
-    // A skeleton never unmounts content from a previous run. That content
-    // stays mounted until new content arrives, and is covered by the skeleton
-    // only after a grace period, so cached reruns don't flash the skeleton.
+    // A skeleton keeps a previous run's content mounted until new content
+    // arrives, so cached reruns don't flash the skeleton.
     const nodeToSet =
       element.type === "skeleton"
         ? (keepPreviousContentForSkeleton(

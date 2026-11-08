@@ -15,12 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    click_button,
-    get_button,
-    get_element_by_key,
-    get_toggle,
-)
+from e2e_playwright.shared.app_utils import get_button, get_element_by_key, get_toggle
 
 
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
@@ -171,11 +166,8 @@ def test_skeleton_in_form(app: Page):
 
 
 def test_skeleton_keeps_previous_content_while_reloading(app: Page):
-    """A skeleton covers the previous run's content instead of replacing it.
-
-    On a cache miss, the previous content stays mounted under the skeleton and
-    is updated in place. The cached function's spinner text becomes the
-    skeleton's label instead of a second loading indicator.
+    """On a cache miss, a skeleton covers the previous content, which stays
+    mounted, and shows the cached function's spinner text as its label.
     """
     container = get_element_by_key(app, "cached_skeleton_container")
     # Click without waiting for the run, so the first-load skeleton is observable.
@@ -197,21 +189,19 @@ def test_skeleton_keeps_previous_content_while_reloading(app: Page):
     expect(container.get_by_text("Report version 1")).to_be_visible(timeout=5000)
     expect(overlay).not_to_be_attached()
 
-    # Cached rerun: the report updates in place without a skeleton.
+    # Cached rerun: the report element updates in place, without a skeleton.
     report = container.get_by_test_id("stMarkdown")
     report.evaluate("element => { element.dataset.testKept = 'true' }")
-    click_button(app, "Rerun skeleton report")
+    get_button(app, "Rerun skeleton report").click()
+    wait_for_app_run(app)
     expect(container.get_by_text("Report version 1")).to_be_visible()
     expect(overlay).not_to_be_attached()
-    # The report element was updated in place instead of being remounted.
     expect(report).to_have_attribute("data-test-kept", "true")
 
 
 def test_skeleton_holds_slot_for_parallel_fragment(app: Page):
-    """A parallel fragment called inside a skeleton keeps it until it draws.
-
-    The main script sends the skeleton with the layout, so it shows at its
-    height while the fragment runs, and the fragment's content replaces it.
+    """A parallel fragment called inside a skeleton keeps it, at its height,
+    until the fragment draws.
     """
     get_toggle(app, "Show parallel report").click()
     container = get_element_by_key(app, "parallel_skeleton_container")

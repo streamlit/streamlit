@@ -56,16 +56,12 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
     This class wraps a ``DeltaGenerator`` and can be used in two modes:
 
     **Standalone mode**: The skeleton is shown immediately when created.
-    Call methods like ``.write()``, ``.dataframe()``, etc. to replace it with
-    content.
+    Call methods like ``.write()``, ``.dataframe()``, etc. to replace it with content.
 
-    **Context manager mode**: The skeleton's slot becomes a container that
-    receives the elements written inside the ``with`` block. The skeleton
-    stays until the first of those elements is drawn.
-
-    In both modes, content from the previous run stays mounted in the slot.
-    The frontend only covers it with the skeleton when the new content takes
-    longer than a short grace period, so cached reruns never flash it.
+    **Context manager mode**: The skeleton's slot becomes a container for the
+    elements written inside the ``with`` block, and the skeleton stays until
+    the first of them is drawn. In both modes, the previous run's content stays
+    in the slot until the frontend covers it after a short grace period.
     """
 
     def __init__(
@@ -84,9 +80,8 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config
 
-        # In context manager mode: the loading block that replaces the
-        # skeleton, and the enclosing `in_skeleton_slot` value to restore on
-        # exit.
+        # In context manager mode: the loading block that replaces the skeleton,
+        # and the enclosing `in_skeleton_slot` value to restore on exit.
         self._block_dg: DeltaGenerator | None = None
         self._outer_in_skeleton_slot: bool | None = None
 
@@ -95,8 +90,8 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         # TYPE_CHECKING base class).
         self._dg = parent._enqueue(
             "skeleton",
-            skeleton_proto,
-            layout_config=layout_config,
+            self._skeleton_proto,
+            layout_config=self._layout_config,
             # A placeholder for content that has not arrived, so there is
             # nothing for a client to read yet.
             agent_props=agent_spec.element("skeleton"),
@@ -108,8 +103,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
-        # Inside the `with` block, write into the loading block so content
-        # fills the slot instead of replacing the whole block.
+        # Inside the `with` block, write into the loading block that fills the slot.
         target = self._block_dg if self._block_dg is not None else self._dg
         return getattr(target, name)
 
@@ -121,9 +115,7 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
 
     def _skeleton_height(self) -> HeightWithoutContent | None:
         height = self._layout_config.height if self._layout_config else None
-        if isinstance(height, int) or height == "stretch":
-            return height
-        return None
+        return height if isinstance(height, int) or height == "stretch" else None
 
     def _skeleton_width(self) -> WidthWithoutContent:
         width = self._layout_config.width if self._layout_config else None
@@ -159,13 +151,11 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             ThreadState.update(in_skeleton_slot=self._outer_in_skeleton_slot)
             self._outer_in_skeleton_slot = None
 
-        # Clear the skeleton by re-sending the block without `loading` when:
-        # - nothing was written into the block (its cursor never advanced), or
-        # - the block raised.
-        # Otherwise the frontend clears it on the first visible element. A
-        # parallel fragment's container also advances the cursor, so its
-        # skeleton stays until the worker draws. A re-sent block of the same
-        # type keeps its children on the frontend.
+        # Re-send the block without `loading` to clear the skeleton if nothing
+        # was written into it or it raised. Otherwise the frontend clears it on
+        # the first visible element. A parallel fragment's container counts as
+        # written, so its skeleton stays until the worker draws. The frontend
+        # keeps the children of a re-sent block of the same type.
         cursor = block_dg._cursor
         if cursor is not None and (cursor.index == 0 or typ is not None):
             from streamlit.delta_generator import _enqueue_add_block

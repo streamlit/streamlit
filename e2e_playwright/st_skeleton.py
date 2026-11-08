@@ -96,7 +96,6 @@ with st.form("skeleton_form"):
         placeholder.success("Form submitted!")
 
 
-# Skeleton over a cached report: covers the previous version on a cache miss.
 st.subheader("Skeleton keeps previous content")
 
 
@@ -117,8 +116,7 @@ if st.toggle("Show cached report", on_change=load_report.clear):
             st.write(load_report(st.session_state.get("report_version", 0)))
 
 
-# Parallel fragment inside a skeleton: the main script sends the skeleton with
-# the layout, and it holds the slot until the fragment draws.
+# The main script sends the skeleton, which holds the slot until the fragment draws.
 st.subheader("Parallel fragment in a skeleton")
 
 
