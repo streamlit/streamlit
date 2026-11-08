@@ -276,3 +276,21 @@ def test_get_cookie_secret_falls_back_when_secrets_toml_is_malformed() -> None:
         patch("streamlit.watcher.path_watcher.watch_file"),
     ):
         assert server_util.get_cookie_secret() == "from-config"
+
+
+def test_is_url_from_allowed_origins_skips_ip_lookups_for_allowlisted_origin() -> None:
+    """Configured origins are accepted without the blocking IP lookups."""
+    with (
+        testutil.patch_config_options(
+            {
+                "server.enableCORS": True,
+                "server.corsAllowedOrigins": ["https://embed.example"],
+            }
+        ),
+        patch("streamlit.net_util.get_internal_ip") as mock_get_internal_ip,
+        patch("streamlit.net_util.get_external_ip") as mock_get_external_ip,
+    ):
+        assert server_util.is_url_from_allowed_origins("https://embed.example")
+
+    mock_get_internal_ip.assert_not_called()
+    mock_get_external_ip.assert_not_called()

@@ -60,7 +60,9 @@ def is_url_from_allowed_origins(url: str) -> bool:
 
     Allowed origins:
     1. localhost
-    2. The internal and external IP addresses of the machine where this
+    2. The origins in `server.corsAllowedOrigins`.
+    3. The manually set `browser.serverAddress`.
+    4. The internal and external IP addresses of the machine where this
        function was called from.
 
     If `server.enableCORS` is False, this allows all origins.
@@ -80,13 +82,13 @@ def is_url_from_allowed_origins(url: str) -> bool:
         "localhost",
         "0.0.0.0",  # noqa: S104
         "127.0.0.1",
-        # Try to avoid making unnecessary HTTP requests by checking if the user
-        # manually specified a server address.
+        # Check the configured origins before the IP lookups below, which can
+        # block the event loop on HTTP requests.
+        *allowlisted_domains,
         _get_server_address_if_manually_set,
         # Then try the options that depend on HTTP requests or opening sockets.
         net_util.get_internal_ip,
         net_util.get_external_ip,
-        *allowlisted_domains,
     ]
 
     for allowed_domain in allowed_domains:
