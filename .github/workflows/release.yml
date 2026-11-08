@@ -16,6 +16,11 @@ jobs:
       # Additional permissions for py-coverage-report
       actions: read
       pull-requests: write
+      # upload-coverage-python requests these. GitHub rejects a called
+      # workflow whose jobs request more than the caller grants, even
+      # when those jobs are skipped for this event.
+      contents: read
+      code-quality: write
 
   run-javascript-tests:
     uses: ./.github/workflows/js-tests.yml
@@ -25,6 +30,11 @@ jobs:
       # Additional permissions for coverage-comment
       actions: read
       pull-requests: write
+      # upload-coverage-typescript requests these. GitHub rejects a called
+      # workflow whose jobs request more than the caller grants, even
+      # when those jobs are skipped for this event.
+      contents: read
+      code-quality: write
 
   run-playwright-tests:
     uses: ./.github/workflows/playwright.yml

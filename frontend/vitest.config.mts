@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import path from "path"
+
 import {
   configDefaults,
   coverageConfigDefaults,
@@ -34,8 +36,13 @@ export default defineConfig({
         "text-summary",
         "json-summary",
         "html",
-        // Cobertura XML is consumed by GitHub's code coverage API in CI.
-        "cobertura",
+        // Cobertura XML for GitHub's code coverage API (uploaded in
+        // js-tests.yml). Filenames are relative to the repo root so they
+        // match the paths in a PR diff.
+        [
+          "cobertura",
+          { projectRoot: path.resolve(import.meta.dirname, "..") },
+        ],
         // Add full JSON report when COVERAGE_JSON=1 (used by AI coverage workflows)
         ...(process.env.COVERAGE_JSON ? (["json"] as const) : []),
       ],
