@@ -625,15 +625,16 @@ class _CacheFuncHasher:
             self.update(h, pil_obj.mode)
             self.update(h, pil_obj.size)
 
-            # Hash the palette, since tobytes() returns only palette indices. Hash
-            # it on its own so the sampling of large images below can't skip it.
+            # Hash the palette, since tobytes() returns only palette indices. Read it
+            # as RGBA so palette alpha counts, and hash it on its own so the
+            # sampling of large images below can't skip it.
             if pil_obj.mode in {"P", "PA"}:
-                palette_data = pil_obj.getpalette()
+                palette_data = pil_obj.getpalette("RGBA")
                 if palette_data is not None:
                     self.update(h, bytes(palette_data))
 
-            # Pass the pixels through the numpy branch so large images are sampled
-            # like large arrays.
+            # Hash the pixels as a uint8 array so large images are sampled like
+            # large arrays.
             self.update(h, np.frombuffer(pil_obj.tobytes(), dtype="uint8"))
             return h.digest()
 

@@ -562,9 +562,8 @@ class HashTest(unittest.TestCase):
         assert get_hash(im1) == get_hash(im3)
         assert get_hash(im1) != get_hash(im2)
 
-        # Check for big PIL images, they converted to numpy array with size
-        # bigger than _NP_SIZE_LARGE
-        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 500_000
+        # Large images (1000 * 1000 * 3 bytes) exceed _NP_SIZE_LARGE, so their pixel
+        # bytes are sampled.
         im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im6 = Image.new("RGB", (1000, 1000), (101, 21, 61))
@@ -1071,6 +1070,24 @@ def test_PIL_images_with_different_palettes_hash_differently(
     assert im1.tobytes() == im2.tobytes()
     assert get_hash(im1) != get_hash(im2)
     assert get_hash(im1) == get_hash(make_image(palette))
+
+
+@pytest.mark.parametrize("mode", ["P", "PA"])
+def test_PIL_images_with_different_palette_alpha_hash_differently(mode: str) -> None:
+    """Palette images whose palettes differ only in alpha produce different hashes."""
+
+    def make_image(alpha: int) -> Image.Image:
+        image = Image.new(mode, (10, 10), 0)
+        image.putpalette([0, 0, 0, alpha] * 256, "RGBA")
+        return image
+
+    im1 = make_image(255)
+    im2 = make_image(0)
+
+    # The pixels and the RGB palette entries are equal; only alpha differs.
+    assert im1.tobytes() == im2.tobytes()
+    assert im1.getpalette() == im2.getpalette()
+    assert get_hash(im1) != get_hash(im2)
 
 
 @pytest.mark.parametrize(
