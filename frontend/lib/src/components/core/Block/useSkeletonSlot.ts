@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useMemo, useState } from "react"
+import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 import type { Spinner as SpinnerProto, streamlit } from "@streamlit/protobuf"
 
@@ -31,12 +31,12 @@ import { PENDING_SKELETON_DELAY_MS } from "./styled-components"
 /** How a container renders the skeleton of its slot right now. */
 export interface SkeletonSlot {
   /** Whether an overlay can cover the container, so it sets `position`. */
-  isSkeletonSlot: boolean
+  canShowOverlay: boolean
   /** Whether the container shows its inline skeleton and hides its children. */
   showsInlineSkeleton: boolean
   /** Whether the container covers its children with the skeleton overlay. */
   showsOverlay: boolean
-  /** Whether the children wait under a skeleton, also in its grace period. */
+  /** Whether the children wait under a skeleton, including its grace period. */
   isChildrenPending: boolean
   /** The inline skeleton's height (`Block.loading.skeleton_height`). */
   skeletonHeight?: streamlit.HeightConfig.$Properties | null
@@ -46,7 +46,7 @@ export interface SkeletonSlot {
 
 /** The slot of a container that shows no skeleton. */
 export const NO_SKELETON_SLOT: SkeletonSlot = {
-  isSkeletonSlot: false,
+  canShowOverlay: false,
   showsInlineSkeleton: false,
   showsOverlay: false,
   isChildrenPending: false,
@@ -92,18 +92,18 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
     () => setGraceElapsedRunId(scriptRunId),
     [scriptRunId]
   )
-  // The delay drops to `null` once it elapses, so a run that interrupts this
-  // one, with no render in between, still starts its own timer.
-  useTimeout(
+  const { restart: restartGraceTimer } = useTimeout(
     handleGraceElapsed,
-    wantsInlineSkeleton && existedInEarlierRun && !isGraceElapsed
+    wantsInlineSkeleton && existedInEarlierRun
       ? PENDING_SKELETON_DELAY_MS
       : null
   )
+  // The delay can stay set across runs, so each run restarts the timer.
+  useEffect(() => restartGraceTimer(), [scriptRunId, restartGraceTimer])
 
   const hasPendingSkeleton = notNullOrUndefined(node.pendingSkeleton)
   return {
-    isSkeletonSlot:
+    canShowOverlay:
       notNullOrUndefined(node.deltaBlock.loading) || hasPendingSkeleton,
     showsInlineSkeleton:
       wantsInlineSkeleton && (!existedInEarlierRun || isGraceElapsed),

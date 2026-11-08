@@ -427,7 +427,7 @@ export interface StyledFlexContainerBlockProps {
    */
   hasDefiniteHeight?: boolean
   /** Whether the block positions a skeleton overlay over its content. */
-  $isSkeletonSlot?: boolean
+  $canShowOverlay?: boolean
   /**
    * Whether the block shows its inline skeleton. Its other children have no
    * visible content yet, so they leave the layout instead of adding gaps.
@@ -483,7 +483,7 @@ export const StyledFlexContainerBlock =
       minHeight,
       $fillJustify,
       hasDefiniteHeight,
-      $isSkeletonSlot = false,
+      $canShowOverlay = false,
       $showsInlineSkeleton = false,
     }) => {
       let gapWidth
@@ -613,7 +613,7 @@ export const StyledFlexContainerBlock =
         justifyContent: $fillJustify?.fallback ?? getJustifyContent(justify),
         minHeight,
         flexWrap: $wrap ? "wrap" : "nowrap",
-        ...($isSkeletonSlot && { position: "relative" }),
+        ...($canShowOverlay && { position: "relative" }),
         ...($showsInlineSkeleton && {
           [`& > :not(${StyledLoadingBlockSkeleton})`]: { display: "none" },
         }),

@@ -1512,13 +1512,19 @@ describe("loading blocks", () => {
       expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
 
       // A run that interrupts this one, with no render in between, waits again.
-      rerenderWithContexts(
-        blockComponent(loadingBlock([], "next-run")),
-        runContext(true, "next-run")
-      )
-      expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+      // So does a run that interrupts one whose wait is still in progress.
+      for (const runId of ["next-run", "last-run"]) {
+        rerenderWithContexts(
+          blockComponent(loadingBlock([], runId)),
+          runContext(true, runId)
+        )
+        act(() => {
+          vi.advanceTimersByTime(300)
+        })
+        expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+      }
       act(() => {
-        vi.advanceTimersByTime(500)
+        vi.advanceTimersByTime(200)
       })
       expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
     } finally {

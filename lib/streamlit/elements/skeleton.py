@@ -90,8 +90,8 @@ class SkeletonMixin:
         the skeleton clears when the block exits.
 
         In both modes, content from the previous run stays in place during a
-        rerun. The skeleton only covers it if the new content takes longer
-        than half a second, so reruns that hit the cache don't flash it. A
+        rerun. The skeleton covers that content only if the new content takes
+        longer than half a second, so reruns that hit the cache don't flash it. A
         cached function's spinner inside the ``with`` block doesn't add a
         second loading indicator: Streamlit hides the default spinner and
         shows custom spinner text, including ``st.spinner`` text, on the

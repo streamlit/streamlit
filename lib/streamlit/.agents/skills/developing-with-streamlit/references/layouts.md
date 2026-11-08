@@ -333,7 +333,7 @@ with st.skeleton(height=200):
     st.dataframe(data, key="results")  # Replaces the skeleton in its slot
 ```
 
-In both modes, a rerun keeps the previous content mounted in the slot. The skeleton only covers it if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
+In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
 
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 

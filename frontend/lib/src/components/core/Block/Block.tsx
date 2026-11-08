@@ -389,7 +389,7 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
-        $isSkeletonSlot={skeletonSlot.isSkeletonSlot}
+        $canShowOverlay={skeletonSlot.canShowOverlay}
         $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
         aria-busy={
           skeletonSlot.showsInlineSkeleton ||

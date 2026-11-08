@@ -81,7 +81,7 @@ export const ElementContainer = memo(function ElementContainer({
   const elementType = node.element.type ?? ""
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
-  // A skeleton from this run waits to replace this element, which stays mounted.
+  // A skeleton waits to replace this element, which stays mounted until then.
   const hasPendingSkeleton =
     node.pendingSkeleton !== undefined && !isFullScreen
 

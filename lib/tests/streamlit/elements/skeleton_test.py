@@ -164,7 +164,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         ]
 
     def test_context_manager_writes_into_loading_block(self) -> None:
-        """Elements written inside the block, also via the placeholder, fill the slot."""
+        """Elements written inside the block, including via the placeholder, fill the slot."""
         with st.skeleton(height=120) as placeholder:
             st.markdown("Loaded")
             placeholder.markdown("Also loaded")
@@ -209,7 +209,7 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         # The cleared block is hidden while empty, so it doesn't add a gap.
         assert not last.delta.add_block.allow_empty
         assert list(last.metadata.delta_path) == list(first.metadata.delta_path)
-        # A stretch skeleton's block stretches too, also once it's cleared.
+        # A stretch skeleton's block stretches too, including after it's cleared.
         assert first.delta.add_block.height_config.use_stretch
         assert last.delta.add_block.height_config.use_stretch
 
