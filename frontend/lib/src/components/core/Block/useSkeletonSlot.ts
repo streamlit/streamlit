@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useContext, useMemo, useState } from "react"
+import { useCallback, useContext, useEffect, useMemo, useState } from "react"
 
 import type { Spinner as SpinnerProto, streamlit } from "@streamlit/protobuf"
 
@@ -30,43 +30,41 @@ import { PENDING_SKELETON_DELAY_MS } from "./styled-components"
 
 /** How a container renders the skeleton of its slot right now. */
 export interface SkeletonSlot {
-  /**
-   * Whether a skeleton can cover the container. The container then becomes
-   * the containing block of the absolutely positioned overlay.
-   */
-  isSkeletonSlot: boolean
-  /**
-   * Whether the container shows its inline skeleton. Its other children stay
-   * mounted but hidden.
-   */
+  /** Whether an overlay can cover the container, so it sets `position`. */
+  canShowOverlay: boolean
+  /** Whether the container shows its inline skeleton and hides its children. */
   showsInlineSkeleton: boolean
   /** Whether the container covers its children with the skeleton overlay. */
   showsOverlay: boolean
-  /** Whether the container's children are inside a skeleton that is shown. */
+  /** Whether the children wait under a skeleton, including its grace period. */
   isChildrenPending: boolean
-  /** The inline skeleton's height while the block has no content to keep. */
+  /** The inline skeleton's height (`Block.loading.skeleton_height`). */
   skeletonHeight?: streamlit.HeightConfig.$Properties | null
-  /** The spinner to show on the skeleton as its label. */
+  /** The spinner shown on the skeleton as its label. */
   label?: SpinnerProto.$Properties
+}
+
+/** The slot of a container that shows no skeleton. */
+export const NO_SKELETON_SLOT: SkeletonSlot = {
+  canShowOverlay: false,
+  showsInlineSkeleton: false,
+  showsOverlay: false,
+  isChildrenPending: false,
 }
 
 /**
  * Compute how a container shows the skeleton of its slot.
  *
- * A loading block (`Block.loading`) shows a skeleton until the current run
- * draws its first visible element into it. Without previous content, it
- * shows an inline skeleton at `skeletonHeight`. With previous content, the
- * content stays mounted and the overlay covers it after the grace period.
- * A standalone skeleton that waits on the container's previous content
- * (`BlockNode.pendingSkeleton`) also shows the overlay.
+ * - A loading block (`Block.loading`) without previous content shows an inline
+ *   skeleton until the current run draws its first visible element into it.
+ * - With previous content, the content stays mounted and the overlay covers
+ *   it after the grace period. A standalone skeleton waiting on the
+ *   container's content (`BlockNode.pendingSkeleton`) does the same.
  *
- * `firstRunId` is the run in which the block's renderer mounted. It defaults
- * to the run in which this hook mounted.
+ * `BlockNodeRenderer` calls this hook because the renderer stays mounted while
+ * hiding an empty block, so a cleared slot counts as existing on the next run.
  */
-export function useSkeletonSlot(
-  node: BlockNode,
-  firstRunId?: string
-): SkeletonSlot {
+export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   const { scriptRunId, scriptRunState, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const isInPendingSkeleton = useContext(PendingSkeletonContext)
@@ -82,32 +80,33 @@ export function useSkeletonSlot(
     loadingState.isPending &&
     !loadingState.hasPreviousContent &&
     !isInPendingSkeleton
-  // A block that already existed in an earlier run waits for the grace period
-  // before it shows its inline skeleton, so a slot that a cached rerun fills
-  // quickly, or that never receives content, doesn't flash it. A block that
-  // is new in this run reserves its space right away. A CSS delay can't do
-  // this, because a hidden skeleton would still take up its height.
+  // A block from an earlier run waits for the grace period before it shows its
+  // inline skeleton, so a slot that a cached rerun fills quickly, or that gets
+  // no content, doesn't flash it. A new block reserves its space right away.
+  // A CSS delay can't do this: a hidden skeleton still takes up its height.
   const [mountedRunId] = useState(scriptRunId)
-  const existedInEarlierRun = (firstRunId ?? mountedRunId) !== scriptRunId
+  const existedInEarlierRun = mountedRunId !== scriptRunId
   const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()
+  const isGraceElapsed = graceElapsedRunId === scriptRunId
   const handleGraceElapsed = useCallback(
     () => setGraceElapsedRunId(scriptRunId),
     [scriptRunId]
   )
-  useTimeout(
+  const { restart: restartGraceTimer } = useTimeout(
     handleGraceElapsed,
     wantsInlineSkeleton && existedInEarlierRun
       ? PENDING_SKELETON_DELAY_MS
       : null
   )
+  // The delay can stay set across runs, so each run restarts the timer.
+  useEffect(() => restartGraceTimer(), [scriptRunId, restartGraceTimer])
 
   const hasPendingSkeleton = notNullOrUndefined(node.pendingSkeleton)
   return {
-    isSkeletonSlot:
+    canShowOverlay:
       notNullOrUndefined(node.deltaBlock.loading) || hasPendingSkeleton,
     showsInlineSkeleton:
-      wantsInlineSkeleton &&
-      (!existedInEarlierRun || graceElapsedRunId === scriptRunId),
+      wantsInlineSkeleton && (!existedInEarlierRun || isGraceElapsed),
     showsOverlay:
       !isInPendingSkeleton &&
       ((loadingState.isPending && loadingState.hasPreviousContent) ||

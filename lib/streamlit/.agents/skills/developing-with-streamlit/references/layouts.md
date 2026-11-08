@@ -325,7 +325,7 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot, and the skeleton stays until the first of them is drawn. Draw the slow element first: any element, even a caption, ends the skeleton.
+Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot, and the skeleton stays until the first visible one is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
 
 ```python
 with st.skeleton(height=200):
@@ -333,7 +333,7 @@ with st.skeleton(height=200):
     st.dataframe(data, key="results")  # Replaces the skeleton in its slot
 ```
 
-In both modes, a rerun keeps the previous content mounted in the slot. The skeleton only covers it if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
+In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
 
 For a fragment, `@st.fragment(loading="skeleton")` gives the fragment's container the same skeleton on every run of the fragment.
 

@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  type CSSProperties,
-  memo,
-  type ReactElement,
-  type ReactNode,
-} from "react"
+import { memo, type ReactElement, type ReactNode } from "react"
 
 import type { Spinner as SpinnerProto, streamlit } from "@streamlit/protobuf"
 
@@ -40,27 +35,24 @@ import {
 import type { SkeletonSlot } from "./useSkeletonSlot"
 
 interface SkeletonLabelProps {
-  /** The spinner to show on the skeleton. */
-  spinner?: SpinnerProto.$Properties
+  /** The spinner to show on the skeleton as its label. */
+  label?: SpinnerProto.$Properties
 }
 
-/**
- * A spinner's icon, text, and elapsed time (`show_time`) centered on a
- * skeleton.
- */
+/** A spinner's icon, text, and elapsed time (`show_time`) on a skeleton. */
 function SkeletonLabel({
-  spinner,
+  label,
 }: Readonly<SkeletonLabelProps>): ReactElement | null {
-  const showTime = spinner?.showTime === true
+  const showTime = label?.showTime === true
   const elapsedSeconds = useElapsedSeconds(showTime)
-  if (!spinner?.text) {
+  if (!label?.text) {
     return null
   }
   return (
     <StyledSkeletonLabel data-testid="stSkeletonLabel">
       <DynamicIcon size="lg" iconValue="spinner" />
       <div role="status">
-        <StreamlitMarkdown source={spinner.text} allowHTML={false} />
+        <StreamlitMarkdown source={label.text} allowHTML={false} />
       </div>
       {showTime && (
         <StyledSpinnerTimeText>
@@ -71,22 +63,14 @@ function SkeletonLabel({
   )
 }
 
-interface PendingSkeletonOverlayProps {
-  /** The spinner to show on the skeleton as its label. */
-  label?: SpinnerProto.$Properties
-}
-
 /**
- * Covers a slot's previous content with a skeleton once the grace period has
- * passed. The content stays mounted underneath, so it keeps its state and is
- * updated in place when the new content arrives.
- *
- * The skeleton is decorative, like `st.skeleton`, so it is hidden from
- * assistive technologies unless it carries a label.
+ * Covers a slot's previous content, which stays mounted underneath, with a
+ * skeleton after the grace period. Like `st.skeleton`, it's hidden from
+ * assistive technologies unless it has a label.
  */
 export const PendingSkeletonOverlay = memo(function PendingSkeletonOverlay({
   label,
-}: Readonly<PendingSkeletonOverlayProps>): ReactElement {
+}: Readonly<SkeletonLabelProps>): ReactElement {
   return (
     <StyledPendingSkeletonOverlay
       className="stSkeleton"
@@ -94,29 +78,12 @@ export const PendingSkeletonOverlay = memo(function PendingSkeletonOverlay({
       aria-hidden={label?.text ? undefined : true}
     >
       <StyledSkeletonSurface />
-      <SkeletonLabel spinner={label} />
+      <SkeletonLabel label={label} />
     </StyledPendingSkeletonOverlay>
   )
 })
 
-/**
- * Convert a loading block's fixed skeleton height to CSS. Without a height,
- * the skeleton uses the standard element height, like `st.skeleton()`.
- */
-function getSkeletonHeight(
-  heightConfig: streamlit.HeightConfig.$Properties | null | undefined,
-  defaultHeight: string
-): CSSProperties["height"] {
-  if (heightConfig?.pixelHeight) {
-    return `${heightConfig.pixelHeight}px`
-  }
-  if (heightConfig?.remHeight) {
-    return `${heightConfig.remHeight}rem`
-  }
-  return defaultHeight
-}
-
-interface LoadingBlockSkeletonProps extends PendingSkeletonOverlayProps {
+interface LoadingBlockSkeletonProps extends SkeletonLabelProps {
   heightConfig: streamlit.HeightConfig.$Properties | null | undefined
 }
 
@@ -126,41 +93,36 @@ const LoadingBlockSkeleton = memo(function LoadingBlockSkeleton({
   label,
 }: Readonly<LoadingBlockSkeletonProps>): ReactElement {
   const theme = useEmotionTheme()
-  // A stretch skeleton fills its loading block, which the backend also
-  // stretches.
+  // A stretch skeleton fills its loading block, which the backend stretches.
   const fillsBlock = heightConfig?.useStretch === true
+  // Default to the standard element height, like `st.skeleton()`.
+  const fixedHeight = heightConfig?.pixelHeight
+    ? `${heightConfig.pixelHeight}px`
+    : theme.sizes.minElementHeight
   return (
     <StyledLoadingBlockSkeleton
       className="stSkeleton"
       data-testid="stLoadingBlockSkeleton"
-      height={
-        fillsBlock
-          ? undefined
-          : getSkeletonHeight(heightConfig, theme.sizes.minElementHeight)
-      }
+      height={fillsBlock ? undefined : fixedHeight}
       $fillsBlock={fillsBlock}
       aria-hidden={label?.text ? undefined : true}
     >
       <StyledSkeletonSurface />
-      <SkeletonLabel spinner={label} />
+      <SkeletonLabel label={label} />
     </StyledLoadingBlockSkeleton>
   )
 })
 
 interface SkeletonSlotContentsProps {
-  /** The container's skeleton state, from `useSkeletonSlot`. */
   slot: SkeletonSlot
-  /** The container's children. */
   children: ReactNode
 }
 
 /**
- * Render a container's children with the skeleton of its slot: the inline
- * skeleton before them, or the overlay on top of them.
- *
- * The context provider is always rendered, so the children keep their place
- * in the React tree, and stay mounted, when a container becomes a loading
- * block or stops being one.
+ * Render a container's children with its slot's skeleton: inline before them,
+ * or as an overlay on top. The context provider always renders, so the
+ * children stay mounted when a container becomes a loading block or stops
+ * being one.
  */
 export function SkeletonSlotContents({
   slot,

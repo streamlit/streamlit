@@ -51,27 +51,18 @@ describe("Spinner component", () => {
     expect(spinnerContainer).toHaveClass("stSpinner")
   })
 
-  it("renders nothing while a skeleton shows its text as the label", () => {
-    render(
-      <PendingSkeletonContext.Provider value>
-        <Spinner {...getProps({}, { inSkeletonSlot: true })} />
-      </PendingSkeletonContext.Provider>
-    )
-
-    expect(screen.queryByTestId("stSpinner")).not.toBeInTheDocument()
-  })
-
   it.each([
-    ["it wasn't created in a skeleton slot", false, true],
-    ["its skeleton no longer shows", true, false],
-  ])("renders normally when %s", (_, inSkeletonSlot, isInPendingSkeleton) => {
+    ["renders nothing while its skeleton shows it as a label", true, true, 0],
+    ["renders when it wasn't created in a skeleton slot", false, true, 1],
+    ["renders once its skeleton no longer shows", true, false, 1],
+  ])("%s", (_, inSkeletonSlot, isInPendingSkeleton, spinnerCount) => {
     render(
       <PendingSkeletonContext.Provider value={isInPendingSkeleton}>
         <Spinner {...getProps({}, { inSkeletonSlot })} />
       </PendingSkeletonContext.Provider>
     )
 
-    expect(screen.getByText("Loading...")).toBeVisible()
+    expect(screen.queryAllByTestId("stSpinner")).toHaveLength(spinnerCount)
   })
 
   it("sets the text and width correctly", () => {

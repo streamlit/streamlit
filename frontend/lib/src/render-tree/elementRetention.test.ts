@@ -523,6 +523,14 @@ describe("element retention in AppRoot", () => {
     expect(root.main.retained).toEqual([])
   })
 
+  it("drops a displaced element that a skeleton waited on", () => {
+    let root = initialRoot().clearStaleNodes("run0")
+    root = write(root, "run1", [1], { skeleton: {} })
+    root = write(root, "run1", [1], unkeyed("x"))
+    expect(retainedOf(root.main)).toEqual(["w@2"])
+    expect(root.clearStaleNodes("run1").main.retained).toEqual([])
+  })
+
   it("keeps entries across an interrupted run so the next run can reclaim them", () => {
     let root = initialRoot().clearStaleNodes("run0")
     // run1 is interrupted after displacing "w"; no cleanup happens.

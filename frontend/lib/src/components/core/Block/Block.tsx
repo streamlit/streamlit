@@ -20,7 +20,6 @@ import {
   type ReactNode,
   useContext,
   useMemo,
-  useState,
 } from "react"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
@@ -52,8 +51,6 @@ import Tabs, { type TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
-import { getLoadingBlockState } from "~lib/render-tree/skeletonUtils"
-import { ScriptRunState } from "~lib/ScriptRunState"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
@@ -67,7 +64,11 @@ import {
   type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
-import { useSkeletonSlot } from "./useSkeletonSlot"
+import {
+  NO_SKELETON_SLOT,
+  type SkeletonSlot,
+  useSkeletonSlot,
+} from "./useSkeletonSlot"
 import {
   assignDividerColor,
   type BaseBlockProps,
@@ -248,11 +249,8 @@ export const ContainerContentsWrapper = (
 
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
-  /**
-   * The run in which the block's renderer mounted. A skeleton slot uses it to
-   * tell a new slot from one that existed in an earlier run.
-   */
-  firstRunId?: string
+  /** The block's skeleton state, from `BlockNodeRenderer`. */
+  skeletonSlot?: SkeletonSlot
 }
 
 /**
@@ -277,7 +275,7 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
-  const skeletonSlot = useSkeletonSlot(props.node, props.firstRunId)
+  const skeletonSlot = props.skeletonSlot ?? NO_SKELETON_SLOT
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -391,7 +389,7 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
-        $isSkeletonSlot={skeletonSlot.isSkeletonSlot}
+        $canShowOverlay={skeletonSlot.canShowOverlay}
         $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
         aria-busy={
           skeletonSlot.showsInlineSkeleton ||
@@ -421,10 +419,7 @@ export const BlockNodeRenderer = (
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
-  // The run in which this renderer first mounted. The renderer stays mounted
-  // while it hides an empty block, so a cleared skeleton slot still counts as
-  // an existing slot on the next run.
-  const [firstRunId] = useState(scriptRunId)
+  const skeletonSlot = useSkeletonSlot(node)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
@@ -454,19 +449,14 @@ export const BlockNodeRenderer = (
 
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
-  // An empty loading block holds its slot only while it waits for content.
-  // Once its run ends, it is hidden like an empty `st.container()`, so a
-  // loading block that draws nothing leaves no gap.
+  // An empty loading block takes space only while it shows its inline
+  // skeleton. Otherwise it is hidden like an empty `st.container()`, so it
+  // adds no gap, including during the grace period.
   if (
     node.isEmpty &&
     (!node.deltaBlock.allowEmpty ||
       (notNullOrUndefined(node.deltaBlock.loading) &&
-        !getLoadingBlockState(
-          node,
-          scriptRunId,
-          scriptRunState === ScriptRunState.RUNNING,
-          fragmentIdsThisRun
-        ).isPending))
+        !skeletonSlot.showsInlineSkeleton))
   ) {
     return null
   }
@@ -541,7 +531,7 @@ export const BlockNodeRenderer = (
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
     containerElement = (
-      <FlexBoxContainer {...childProps} firstRunId={firstRunId} />
+      <FlexBoxContainer {...childProps} skeletonSlot={skeletonSlot} />
     )
   }
 

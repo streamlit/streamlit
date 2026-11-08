@@ -793,8 +793,7 @@ class CachedFunc(Generic[P, R]):
             spinner_message = self._info.show_spinner
         elif self._info.show_spinner is True and not is_in_skeleton_slot():
             # Inside a skeleton slot, the skeleton is already the loading
-            # indicator, so the generated text would only add noise. Custom
-            # text is still shown, as the skeleton's label.
+            # indicator. Custom text still shows, as the skeleton's label.
             name = cast("FunctionType", self._info.func).__qualname__
             if len(args) == 0 and len(kwargs) == 0:
                 spinner_message = f"Running `{name}()`."

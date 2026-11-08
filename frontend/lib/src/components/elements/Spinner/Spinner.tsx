@@ -40,8 +40,7 @@ function Spinner({ element }: Readonly<SpinnerProps>): ReactElement | null {
   const isInPendingSkeleton = useContext(PendingSkeletonContext)
   const elapsedTime = useElapsedSeconds(showTime)
 
-  // A spinner created in a skeleton slot is shown as the skeleton's label
-  // while the skeleton is visible, instead of as a second loading indicator.
+  // While its skeleton shows, the skeleton renders this spinner as its label.
   if (inSkeletonSlot && isInPendingSkeleton) {
     return null
   }

@@ -41,10 +41,9 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * output from this run because the fragment is about to rerun, so its existing
  * content stays until its own rerun cleans it up.
  *
- * If a skeleton from this run is still waiting on a node (`pendingSkeleton`),
- * the visitor replaces that node with the skeleton. The agent API's buffer
- * already holds the skeleton there, because the skeleton's delta replaced
- * that path.
+ * The visitor replaces a node that a skeleton from this run still waits on
+ * (`pendingSkeleton`) with the skeleton. The agent API needs no matching rule:
+ * its message buffer already holds the skeleton delta that this swap restores.
  *
  * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
  * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
@@ -95,8 +94,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       return node
     }
 
-    // No new content replaced the skeleton this run, so the skeleton takes
-    // over the slot from the previous run's content.
+    // No new content replaced the skeleton this run, so it takes the slot.
     if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
       return node.pendingSkeleton
     }
@@ -157,13 +155,14 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
 
     // Retained elements are prior-run nodes, so they follow the same rule as
     // stale children of this block.
+    // A displaced node is never swapped for its skeleton, which lost its slot.
     const retained =
       keptChildren === undefined
         ? node.retained
         : getRetainedAfterRemoval(
             node.retained,
             keptChildren,
-            entry => entry.node.accept(childVisitor) !== undefined
+            entry => entry.node.accept(childVisitor) === entry.node
           )
 
     // Performance optimization: If the children haven't changed, return the same node.
@@ -202,8 +201,7 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       return node
     }
 
-    // No new content replaced the skeleton this run, so the skeleton takes
-    // over the slot from the previous run's content.
+    // No new content replaced the skeleton this run, so it takes the slot.
     if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
       return node.pendingSkeleton
     }

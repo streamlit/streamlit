@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Loading blocks: containers that show a skeleton until content is drawn.
-
-The frontend keeps a loading block's skeleton until the first visible element
-of the current run lands inside it. Content from a previous run stays mounted
-underneath and is only covered after a short grace period, so cached reruns
-never flash the skeleton.
-"""
+"""Loading blocks: containers that show a skeleton until content is drawn."""
 
 from __future__ import annotations
 
@@ -54,20 +48,17 @@ def make_loading_block_proto(
     Parameters
     ----------
     skeleton_height
-        The skeleton's height while the block has no content to keep. If
-        ``None``, the frontend uses its default height. ``"stretch"`` also
-        makes the block fill a bounded parent.
+        The skeleton's height while the block has no content to keep, or
+        ``None`` for the frontend default. ``"stretch"`` also stretches the block.
     width
         The block's width.
     show_skeleton
-        Whether the block shows the skeleton. Pass ``False`` to build the
-        cleared block that ``SkeletonPlaceholder.__exit__`` re-sends. The
-        frontend keeps that block's children, and hides it while it has none.
+        Whether the block shows the skeleton. ``False`` builds the cleared
+        block that ``SkeletonPlaceholder.__exit__`` re-sends.
     """
     block_proto = BlockProto()
-    # A loading block renders while empty so the skeleton can reserve space.
-    # A cleared block is hidden while empty, like `st.container()`, so it
-    # doesn't add a gap.
+    # A loading block renders while empty so its skeleton reserves space. A
+    # cleared block is hidden while empty, like `st.container()`.
     block_proto.allow_empty = show_skeleton
     block_proto.flex_container.border = False
     block_proto.flex_container.wrap = False
@@ -97,7 +88,6 @@ def open_loading_block(
     """Insert a loading block at ``dg``'s next position and return it."""
     return dg._block(
         make_loading_block_proto(skeleton_height=skeleton_height, width=width),
-        # The agent API reports a plain container; the skeleton is
-        # presentation only.
+        # The agent API reports a plain container; the skeleton is presentation.
         agent_props=agent_spec.block("container"),
     )
