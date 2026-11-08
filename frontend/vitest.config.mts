@@ -34,6 +34,8 @@ export default defineConfig({
         "text-summary",
         "json-summary",
         "html",
+        // Cobertura XML is consumed by GitHub's code coverage API in CI.
+        "cobertura",
         // Add full JSON report when COVERAGE_JSON=1 (used by AI coverage workflows)
         ...(process.env.COVERAGE_JSON ? (["json"] as const) : []),
       ],

@@ -296,6 +296,10 @@ jobs:
           # Generate JSON report
           python -m coverage json -o coverage.json
 
+          # Generate Cobertura-compatible XML report, consumed by GitHub's
+          # code coverage API in CI.
+          python -m coverage xml -o coverage.xml
+
           # Generate HTML report
           python -m coverage html --directory=htmlcov
 
@@ -328,6 +332,12 @@ jobs:
           name: combined_coverage_report
           path: lib/htmlcov
           retention-days: 14
+      - name: Upload coverage artifact
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report-python
+          path: lib/coverage.xml
 
       - name: Find latest develop coverage
         if: github.event_name == 'pull_request'
@@ -450,3 +460,22 @@ jobs:
               console.error(`Error checking coverage changes: ${error.message}`);
               throw error;
             }
+
+  upload-coverage-python:
+    needs:
+      - py-coverage-report
+    if: ${{ !cancelled() && needs.py-coverage-report.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      code-quality: write
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-report-python
+      - uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1.4.4
+        with:
+          file: coverage.xml
+          language: Python
+          label: code-coverage-agent
