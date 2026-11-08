@@ -23,7 +23,16 @@ from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum, auto
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Final,
+    Literal,
+    NoReturn,
+    Protocol,
+    TypeVar,
+    overload,
+)
 
 from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import (
@@ -32,6 +41,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitDuplicateElementKey,
     StreamlitInvalidLayoutContextError,
+    StreamlitValueError,
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -633,6 +643,7 @@ def _fragment(
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
     key: str | int | None = None,
+    loading: Literal["skeleton"] | None = None,
     additional_hash_info: str = "",
     lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
 ) -> Callable[[F], F] | F:
@@ -650,6 +661,9 @@ def _fragment(
         key = to_key(key)
         require_valid_user_key(key)
 
+    if loading not in {None, "skeleton"}:
+        raise StreamlitValueError("loading", ["'skeleton'", "None"])
+
     if key in _RESERVED_FRAGMENT_KEYS:
         raise StreamlitAPIException(
             f"`{key}` is a reserved name and cannot be used as a fragment key, "
@@ -666,6 +680,7 @@ def _fragment(
                 run_every=run_every,
                 parallel=parallel,
                 key=key,
+                loading=loading,
             )
 
         return wrapper
@@ -700,8 +715,6 @@ def _fragment(
         initialized_active_script_hash = ThreadState.get().active_script_hash
 
         def wrapped_fragment() -> Any:
-            import streamlit as st
-
             # NOTE: We need to call get_script_run_ctx here again and can't just use the
             # value of ctx from above captured by the closure because subsequent
             # fragment runs will generally run in a new script run, thus we'll have a
@@ -775,11 +788,16 @@ def _fragment(
                 fragment_id=fragment_id,
                 delta_path=None,
                 run_location=RunLocation.FRAGMENT,
+                # The body of a fragment with a skeleton is a skeleton slot:
+                # spinners in it label the skeleton instead of stacking.
+                in_skeleton_slot=loading is not None or ts.in_skeleton_slot,
             ):
                 result = None
                 with active_hash_context:
                     container_ctx = (
-                        contextlib.nullcontext() if skip_container else st.container()
+                        contextlib.nullcontext()
+                        if skip_container
+                        else _open_fragment_container(loading)
                     )
                     with container_ctx:
                         try:
@@ -831,7 +849,9 @@ def _fragment(
             ctx.enqueue(msg)
 
         if parallel and not ctx.fragment_ids_this_run:
-            _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment)
+            _dispatch_parallel_fragment(
+                ctx, fragment_id, wrapped_fragment, loading=loading
+            )
             return None
         return wrapped_fragment()
 
@@ -853,6 +873,7 @@ def fragment(
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
     key: str | int | None = None,
+    loading: Literal["skeleton"] | None = None,
 ) -> F: ...
 
 
@@ -865,6 +886,7 @@ def fragment(
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
     key: str | int | None = None,
+    loading: Literal["skeleton"] | None = None,
 ) -> Callable[[F], F]: ...
 
 
@@ -875,6 +897,7 @@ def fragment(
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
     key: str | int | None = None,
+    loading: Literal["skeleton"] | None = None,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -937,14 +960,17 @@ def fragment(
     parallel : bool
         Whether to execute the fragment in parallel during full app reruns.
         If ``True``, the fragment is dispatched to a thread pool and may execute
-        concurrently with other parallel fragments and the rest of the app script.
-        If ``False`` (default), the fragment executes inline on the main thread.
+        concurrently with other parallel fragments. Parallel fragments start
+        after the rest of the app script has finished. Streamlit first waits
+        briefly for the script's elements to be sent to the browser, so the
+        app's layout appears before slow fragments run. If ``False``
+        (default), the fragment executes inline on the main thread.
 
         Parallel fragments are useful for independent, slow operations that
-        should not block overall app throughput. Full app reruns may overlap
-        several parallel fragments with the main script; reruns confined to a
-        single fragment (such as those triggered after widget interactions)
-        remain sequential so state updates stay deterministic.
+        should not block overall app throughput. Full app reruns may run
+        several parallel fragments concurrently; reruns confined to a single
+        fragment (such as those triggered after widget interactions) remain
+        sequential so state updates stay deterministic.
 
         During the initial parallel run, some Streamlit commands are
         restricted because they are not safe to call from concurrent
@@ -974,6 +1000,24 @@ def fragment(
         A fragment key must be unique among the fragments that render in a
         single run, just like a widget ``key``. The names ``"app"`` and
         ``"fragment"`` are reserved and cannot be used as fragment keys.
+
+    loading : "skeleton" or None
+        The loading placeholder to show while the fragment runs. This can be
+        one of the following:
+
+        - ``None`` (default): The fragment shows no placeholder.
+        - ``"skeleton"``: The fragment shows a skeleton until it draws its
+          first element. Spinners, such as a cached function's, don't end it.
+          On a rerun, the fragment's previous content stays in place and the
+          skeleton only covers it if the new content takes longer than half a
+          second. For a parallel fragment, the skeleton is part of the app's
+          first paint, even before the fragment starts running.
+
+        On a first load, the skeleton has the standard element height. To
+        reserve the content's height instead, call the fragment inside
+        ``with st.skeleton(height=...)``. Draw the slow element first in the
+        fragment. Any element, even a title, ends the skeleton when it is
+        drawn.
 
     Examples
     --------
@@ -1073,7 +1117,9 @@ def fragment(
     >>> )
 
     """
-    return _fragment(func, run_every=run_every, parallel=parallel, key=key)
+    return _fragment(
+        func, run_every=run_every, parallel=parallel, key=key, loading=loading
+    )
 
 
 def _prepare_dg_stack_for_worker(
@@ -1088,22 +1134,45 @@ def _prepare_dg_stack_for_worker(
     return deepcopy(dg_stack)
 
 
+def _open_fragment_container(
+    loading: Literal["skeleton"] | None,
+) -> DeltaGenerator:
+    """Open the fragment's container at the current position: a loading block
+    when ``loading`` is set, else ``st.container()``.
+    """
+    import streamlit as st
+
+    if loading is None:
+        return st.container()
+
+    from streamlit.delta_generator_singletons import get_dg_singleton_instance
+    from streamlit.elements.lib.loading_block import open_loading_block
+
+    return open_loading_block(get_dg_singleton_instance().main_dg)
+
+
 def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
     wrapped_fragment: Callable[[], Any],
+    *,
+    loading: Literal["skeleton"] | None = None,
 ) -> None:
     """Dispatch a parallel fragment to the coordinator's thread pool.
 
     Pre-allocates the fragment's container on the main thread (so the frontend
-    sees the container delta immediately), then submits the fragment body to
-    run on a worker thread.
+    sees the container delta, and its skeleton, immediately), then submits the
+    fragment body to run on a worker thread.
+
+    Fragments dispatched by the script thread are deferred: they start once
+    the script body has finished and its layout has been sent to the browser,
+    so CPU-bound fragments can't delay the cheap layout. Nested parallel
+    fragments dispatched by a worker start immediately.
 
     The coordinator's submit() handles context propagation: the caller passes
     ctx explicitly and submit() captures copy_context() at submit time, and the
     worker runs inside captured.run() with _scoped_ctx_attach().
     """
-    import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
 
     coordinator = ctx.parallel_coordinator
@@ -1114,7 +1183,7 @@ def _dispatch_parallel_fragment(
         )
         return
 
-    with st.container():
+    with _open_fragment_container(loading):
         dg_stack_with_container = _prepare_dg_stack_for_worker(context_dg_stack.get())
 
     coordinator.submit(
@@ -1123,6 +1192,7 @@ def _dispatch_parallel_fragment(
         fragment_id,
         wrapped_fragment,
         dg_stack_with_container,
+        defer=not ThreadState.get().is_parallel_worker,
     )
 
 

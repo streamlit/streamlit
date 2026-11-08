@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from unittest.mock import patch
 
@@ -293,6 +294,37 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
                     spinner = transient.elements[0].spinner
                     assert spinner.text == "Fetching data..."
                     assert spinner.in_skeleton_slot
+
+    def test_spinner_timer_ignores_a_stopped_run(self) -> None:
+        """A spinner timer that fires after its run was stopped shows nothing.
+
+        The timer thread inherits the run's context, so enqueueing from it
+        raises when a parallel fragment run is being stopped.
+        """
+        errors: list[BaseException | None] = []
+        test_thread = threading.current_thread()
+
+        def raise_on_timer_thread(_msg: object) -> None:
+            if threading.current_thread() is not test_thread:
+                raise StopException()
+
+        previous_hook = threading.excepthook
+        threading.excepthook = lambda args: errors.append(args.exc_value)
+        try:
+            with (
+                patch("streamlit.elements.spinner.DELAY_SECS", 0.01),
+                patch(
+                    "streamlit.elements.spinner.enqueue_message",
+                    side_effect=raise_on_timer_thread,
+                ) as enqueue,
+            ):
+                with st.spinner("Fetching data..."):
+                    time.sleep(0.2)
+        finally:
+            threading.excepthook = previous_hook
+
+        assert enqueue.called
+        assert errors == []
 
     def test_spinner_outside_skeleton_is_not_marked_as_label(self) -> None:
         """A spinner outside a skeleton slot renders on its own."""

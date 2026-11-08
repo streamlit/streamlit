@@ -115,9 +115,9 @@ class FragmentThreadState:
     # True while a tracked st.* command runs in this context, so nested
     # commands aren't recorded.
     command_tracking_deactivated: bool = False
-    # True while running inside a skeleton slot, a `with st.skeleton()` block.
-    # Spinners use it to avoid adding a second loading indicator next to the
-    # skeleton.
+    # True while running inside a skeleton slot: a `with st.skeleton()` block
+    # or the body of a fragment with `loading="skeleton"`. Spinners use it to
+    # avoid adding a second loading indicator next to the skeleton.
     in_skeleton_slot: bool = False
 
     @property
@@ -285,6 +285,10 @@ class ScriptRunContext:
     # Raises StopException or RerunException when this run should end. Read by
     # contended cache waits via get_run_yield_check().
     yield_check: Callable[[], None] = lambda: None
+    # Blocks the calling thread until the messages enqueued so far have been
+    # sent to the browser, or until the timeout in seconds passes. None when
+    # no browser session sends this run's messages (e.g. AppTest).
+    wait_for_flush: Callable[[float], None] | None = None
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -339,6 +343,7 @@ class ScriptRunContext:
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
+            wait_for_flush=self.wait_for_flush,
         )
         self._has_script_started = False
         self.fragment_ids_this_run = fragment_ids_this_run

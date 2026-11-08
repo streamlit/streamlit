@@ -196,6 +196,7 @@ class ScriptRunner:
         event_loop: asyncio.AbstractEventLoop,
         on_script_error: OnScriptErrorHandler | None = None,
         local_sources_watcher: LocalSourcesWatcher | None = None,
+        wait_for_flush: Callable[[float], None] | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -251,6 +252,12 @@ class ScriptRunner:
             never closes it. After this runner emits ``SHUTDOWN``, it no longer
             uses the loop. The caller determines when no other runner is using
             the loop and it is safe to close.
+
+        wait_for_flush
+            Blocks the calling thread until the messages enqueued so far have
+            been sent to the browser, or until the given timeout in seconds
+            passes. Parallel fragments wait on it so their work starts after
+            the script's layout reached the browser.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -265,6 +272,7 @@ class ScriptRunner:
 
         self._pages_manager = pages_manager
         self._local_sources_watcher = local_sources_watcher
+        self._wait_for_flush = wait_for_flush
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -429,6 +437,7 @@ class ScriptRunner:
                 pages_manager=self._pages_manager,
                 context_info=None,
                 on_script_error=self._on_script_error,
+                wait_for_flush=self._wait_for_flush,
             )
             add_script_run_ctx(threading.current_thread(), ctx)
 

@@ -48,7 +48,8 @@ message Block {
   optional GridCell grid_cell = 18;
 
   // Shows a skeleton in the block until the first visible element of the
-  // current run is drawn inside it. Set by `with st.skeleton()`.
+  // current run is drawn inside it. Set by `with st.skeleton()` and by
+  // fragments with `loading="skeleton"`.
   optional Loading loading = 20;
 
   message Vertical {
