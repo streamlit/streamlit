@@ -564,7 +564,7 @@ class HashTest(unittest.TestCase):
 
         # Check for big PIL images, they converted to numpy array with size
         # bigger than _NP_SIZE_LARGE
-        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 1_000_000
+        # 1000 * 1000 * 3 = 3_000_000 > _NP_SIZE_LARGE = 500_000
         im4 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im5 = Image.new("RGB", (1000, 1000), (100, 20, 60))
         im6 = Image.new("RGB", (1000, 1000), (101, 21, 61))
@@ -1040,28 +1040,59 @@ def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
     assert "unhashable members" in str(exc_info.value).lower()
 
 
-def test_PIL_pmode_palette_collision_prevention() -> None:
-    """P-mode PIL images with different palettes produce different hashes.
+@pytest.mark.parametrize(
+    ("mode", "size"),
+    [
+        pytest.param("P", (10, 10), id="P"),
+        pytest.param("PA", (10, 10), id="PA"),
+        # Reaches _NP_SIZE_LARGE, so the pixel bytes are sampled.
+        pytest.param("P", (_NP_SIZE_LARGE, 1), id="P-large"),
+    ],
+)
+def test_PIL_images_with_different_palettes_hash_differently(
+    mode: str, size: tuple[int, int]
+) -> None:
+    """Palette images that differ only in a palette color produce different hashes.
 
-    Regression test for GitHub issue #14622: tobytes() on palette-indexed (P-mode)
-    PIL images returns only palette indices, not the color table. Two images with
-    identical index arrays but different palettes would collide without this fix.
+    Regression test for GitHub issue #14622: tobytes() on palette-indexed PIL images
+    returns only palette indices, not the color table.
     """
-    # Create two P-mode images with identical pixel indices but different palettes
-    im1 = Image.new("P", (10, 10), 0)
-    im2 = Image.new("P", (10, 10), 0)
 
-    # Set different palettes (768 values for 256 RGB colors)
-    palette1 = [i % 256 for i in range(768)]
-    palette2 = [(i + 128) % 256 for i in range(768)]
+    def make_image(palette: list[int]) -> Image.Image:
+        image = Image.new(mode, size, 0)
+        image.putpalette(palette)
+        return image
 
-    im1.putpalette(palette1)
-    im2.putpalette(palette2)
+    # Change only the color at index 0, which every pixel uses.
+    palette = [0] * 768
+    im1 = make_image(palette)
+    im2 = make_image([255, *palette[1:]])
 
-    # Confirm the vulnerability trigger: tobytes() is equal for both images
     assert im1.tobytes() == im2.tobytes()
+    assert get_hash(im1) != get_hash(im2)
+    assert get_hash(im1) == get_hash(make_image(palette))
 
-    # But the hashes should differ because we now include the palette
+
+@pytest.mark.parametrize(
+    ("im1", "im2"),
+    [
+        pytest.param(
+            Image.frombytes("RGB", (2, 1), bytes(range(6))),
+            Image.frombytes("RGB", (1, 2), bytes(range(6))),
+            id="size",
+        ),
+        pytest.param(
+            Image.frombytes("RGBA", (1, 1), bytes(range(4))),
+            Image.frombytes("CMYK", (1, 1), bytes(range(4))),
+            id="mode",
+        ),
+    ],
+)
+def test_PIL_images_with_equal_pixel_bytes_hash_differently(
+    im1: Image.Image, im2: Image.Image
+) -> None:
+    """PIL images with equal pixel bytes but a different size or mode hash differently."""
+    assert im1.tobytes() == im2.tobytes()
     assert get_hash(im1) != get_hash(im2)
 
 

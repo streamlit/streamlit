@@ -620,19 +620,22 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # We don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data.
-            pixel_bytes = pil_obj.tobytes()
+            # Hash mode and size, because tobytes() is a flat pixel stream that
+            # images of different modes or sizes can share.
+            self.update(h, pil_obj.mode)
+            self.update(h, pil_obj.size)
 
-            # P-mode (palette-indexed) images need the palette included in the hash,
-            # since tobytes() only returns palette indices, not the color table.
-            if pil_obj.mode == "P":
+            # Hash the palette, since tobytes() returns only palette indices. Hash
+            # it on its own so the sampling of large images below can't skip it.
+            if pil_obj.mode in {"P", "PA"}:
                 palette_data = pil_obj.getpalette()
                 if palette_data is not None:
-                    pixel_bytes = bytes(palette_data) + pixel_bytes
+                    self.update(h, bytes(palette_data))
 
-            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
-            return self.to_bytes(np_array)
+            # Pass the pixels through the numpy branch so large images are sampled
+            # like large arrays.
+            self.update(h, np.frombuffer(pil_obj.tobytes(), dtype="uint8"))
+            return h.digest()
 
         elif inspect.isbuiltin(obj):
             return bytes(obj.__name__.encode())
