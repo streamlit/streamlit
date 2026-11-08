@@ -46,9 +46,8 @@ if st.button("Run skeleton context manager (instant)"):
 with st.container(key="delay_cm_container"):
     if st.button("Run skeleton context manager (with delay)"):
         with st.skeleton(height=150):
-            # Sleep well beyond the 0.5s delay threshold so the transient
-            # skeleton stays visible long enough for slower browsers (e.g.
-            # webkit on CI) to reliably observe it, mirroring st_spinner.py.
+            # Sleep long enough for slower browsers (e.g. webkit on CI) to
+            # observe the skeleton, which a new block shows right away.
             time.sleep(2)
         st.success("Data loaded after delay!")
 
@@ -56,7 +55,7 @@ with st.container(key="delay_cm_container"):
 if st.button("Run skeleton context manager (with exception)"):
     try:
         with st.skeleton(height=100):
-            time.sleep(0.7)  # Sleep longer than 0.5s delay to ensure skeleton shows
+            time.sleep(0.7)  # Keep the skeleton visible before raising
             raise ValueError("Test exception")
     except ValueError:
         st.error("Exception caught - skeleton was cleared")
@@ -80,7 +79,7 @@ if st.button("Test skeleton in fragment"):
     @st.fragment
     def skeleton_fragment():
         with st.skeleton(height=100):
-            time.sleep(1)  # Sleep longer than 0.5s delay so skeleton shows
+            time.sleep(1)  # Keep the skeleton visible
         st.write("Fragment completed!")
         st.button("Rerun fragment")
 

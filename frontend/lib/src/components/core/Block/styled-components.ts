@@ -747,8 +747,9 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
 )
 
 /**
- * Delay before a skeleton covers content from a previous run. Matches the delay
- * of the stale fade, so a fast rerun replaces the content before either shows.
+ * Delay before a skeleton covers previous content, or before a slot from an
+ * earlier run shows its inline skeleton. Matches the stale fade, so a fast
+ * rerun replaces the content before either shows.
  */
 export const PENDING_SKELETON_DELAY_MS = 500
 

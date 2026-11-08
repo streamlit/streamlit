@@ -38,8 +38,18 @@ export interface SkeletonSlot {
   showsOverlay: boolean
   /** Whether the container's children are inside a skeleton that is shown. */
   isChildrenPending: boolean
+  /** The inline skeleton's height (`Block.loading.skeleton_height`). */
   skeletonHeight?: streamlit.HeightConfig.$Properties | null
+  /** The spinner shown on the skeleton as its label. */
   label?: SpinnerProto.$Properties
+}
+
+/** The slot of a container that shows no skeleton. */
+export const NO_SKELETON_SLOT: SkeletonSlot = {
+  isSkeletonSlot: false,
+  showsInlineSkeleton: false,
+  showsOverlay: false,
+  isChildrenPending: false,
 }
 
 /**
@@ -51,13 +61,10 @@ export interface SkeletonSlot {
  *   it after the grace period. A standalone skeleton waiting on the
  *   container's content (`BlockNode.pendingSkeleton`) does the same.
  *
- * `firstRunId` is the run in which the block's renderer mounted, and defaults
- * to the run in which this hook mounted.
+ * `BlockNodeRenderer` calls it, because it stays mounted while it hides an
+ * empty block, so a cleared slot still counts as existing on the next run.
  */
-export function useSkeletonSlot(
-  node: BlockNode,
-  firstRunId?: string
-): SkeletonSlot {
+export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   const { scriptRunId, scriptRunState, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const isInPendingSkeleton = useContext(PendingSkeletonContext)
@@ -78,7 +85,7 @@ export function useSkeletonSlot(
   // no content, doesn't flash it. A new block reserves its space right away.
   // A CSS delay can't do this: a hidden skeleton still takes up its height.
   const [mountedRunId] = useState(scriptRunId)
-  const existedInEarlierRun = (firstRunId ?? mountedRunId) !== scriptRunId
+  const existedInEarlierRun = mountedRunId !== scriptRunId
   const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()
   const handleGraceElapsed = useCallback(
     () => setGraceElapsedRunId(scriptRunId),

@@ -23,7 +23,7 @@ import {
   Block as BlockProto,
   Button as ButtonProto,
   Delta as DeltaProto,
-  type Element,
+  Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
@@ -1364,13 +1364,29 @@ describe("loading blocks", () => {
     }
   }
 
+  /** Render `node` through `BlockNodeRenderer`, which owns the skeleton slot. */
+  function blockComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        // @ts-expect-error - widgetMgr is required
+        widgetMgr={undefined}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+      />
+    )
+  }
+
   function renderBlock(
     node: BlockNode,
     isRunning = true,
     scriptRunId = CURRENT_RUN
   ): ReturnType<typeof renderWithContexts> {
     return renderWithContexts(
-      makeVerticalBlockComponent(node),
+      blockComponent(node),
       runContext(isRunning, scriptRunId)
     )
   }
@@ -1415,7 +1431,7 @@ describe("loading blocks", () => {
 
   it.each([
     ["the run drew content", [text("chart", CURRENT_RUN)], true],
-    ["the run has ended", [], false],
+    ["the run has ended", [text("chart", PREVIOUS_RUN)], false],
   ])("shows no skeleton once %s", (_, children, isRunning) => {
     renderBlock(loadingBlock(children, CURRENT_RUN), isRunning)
 
@@ -1451,9 +1467,8 @@ describe("loading blocks", () => {
 
     expect(screen.getAllByTestId("stLoadingBlockSkeleton")).toHaveLength(1)
     expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
-    // The inline skeleton hides the block's other children.
-    const [, innerBlock] = screen.getAllByTestId("stVerticalBlock")
-    expect(innerBlock).not.toBeVisible()
+    // The inner block shows no skeleton of its own, so it takes no space.
+    expect(screen.getAllByTestId("stVerticalBlock")).toHaveLength(1)
   })
 
   it("shows a spinner's text on the skeleton instead of the spinner", async () => {
@@ -1483,13 +1498,12 @@ describe("loading blocks", () => {
         PREVIOUS_RUN
       )
       rerenderWithContexts(
-        makeVerticalBlockComponent(loadingBlock([], CURRENT_RUN)),
+        blockComponent(loadingBlock([], CURRENT_RUN)),
         runContext()
       )
 
-      expect(
-        screen.queryByTestId("stLoadingBlockSkeleton")
-      ).not.toBeInTheDocument()
+      // The empty block takes no space, so it adds no gap during the wait.
+      expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
 
       act(() => {
         vi.advanceTimersByTime(500)
@@ -1501,17 +1515,48 @@ describe("loading blocks", () => {
     }
   })
 
+  it.each([
+    ["an element", text("previous chart", PREVIOUS_RUN)],
+    [
+      "a container",
+      makeVerticalBlock([text("previous chart", PREVIOUS_RUN)], {
+        flexContainer: {},
+      }),
+    ],
+  ])("covers %s that a standalone skeleton waits on", (_, previous) => {
+    const skeleton = new ElementNode(
+      makeProto(Element, { skeleton: {} }),
+      ForwardMsgMetadata.create(),
+      CURRENT_RUN,
+      FAKE_SCRIPT_HASH
+    )
+    renderBlock(
+      makeVerticalBlock([previous.withPendingSkeleton(skeleton)], {
+        flexContainer: {},
+      })
+    )
+
+    expect(screen.getByText("previous chart")).toBeVisible()
+    const overlay = screen.getByTestId("stPendingSkeleton")
+    expect(overlay).toHaveAttribute("aria-hidden", "true")
+    expect(overlay.parentElement).toHaveAttribute("aria-busy", "true")
+  })
+
   it("keeps the children mounted when a container becomes a loading block", () => {
     const chart = text("previous chart", PREVIOUS_RUN)
     const { rerenderWithContexts } = renderBlock(
-      makeVerticalBlock([chart]),
+      makeVerticalBlock([chart], {
+        flexContainer: {
+          direction: BlockProto.FlexContainer.Direction.VERTICAL,
+        },
+      }),
       false,
       PREVIOUS_RUN
     )
     const chartNode = screen.getByText("previous chart")
 
     rerenderWithContexts(
-      makeVerticalBlockComponent(loadingBlock([chart], CURRENT_RUN)),
+      blockComponent(loadingBlock([chart], CURRENT_RUN)),
       runContext()
     )
 

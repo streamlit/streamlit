@@ -60,8 +60,8 @@ function skeleton(scriptRunId = CURRENT_RUN): ElementNode {
 }
 
 describe("keepPreviousContentForSkeleton", () => {
-  it("keeps a previous run's block that holds visible content", () => {
-    const previous = block([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
+  it("keeps a previous run's container that holds visible content", () => {
+    const previous = loadingBlock([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
 
     const kept = keepPreviousContentForSkeleton(previous, skeleton())
 
@@ -73,8 +73,12 @@ describe("keepPreviousContentForSkeleton", () => {
     ["content from the current run", text("chart", CURRENT_RUN)],
     ["a previous skeleton", skeleton(PREVIOUS_RUN)],
     [
-      "a block without visible content",
-      block([skeleton(PREVIOUS_RUN)], PREVIOUS_RUN),
+      "a container without visible content",
+      loadingBlock([skeleton(PREVIOUS_RUN)], PREVIOUS_RUN),
+    ],
+    [
+      "a block that isn't a flex container, such as an expander",
+      block([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN),
     ],
     ["an empty slot", undefined],
     ["a previous run's toast", elementNode({ toast: {} }, PREVIOUS_RUN)],

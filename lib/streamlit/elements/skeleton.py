@@ -93,12 +93,16 @@ class SkeletonMixin:
         rerun. The skeleton only covers it if the new content takes longer
         than half a second, so reruns that hit the cache don't flash it. A
         cached function's spinner inside the ``with`` block doesn't add a
-        second loading indicator: Streamlit hides its default text and shows
-        custom text on the skeleton.
+        second loading indicator: Streamlit hides the default spinner and
+        shows custom spinner text, including ``st.spinner`` text, on the
+        skeleton.
 
         .. note::
             Draw the slow element first inside the ``with`` block. Any element,
-            even a caption, ends the skeleton when it is drawn.
+            even a caption, ends the skeleton when it is drawn. The default
+            spinner stays hidden for the whole block, so use one
+            ``with st.skeleton()`` block per slow loader, or pass custom
+            ``show_spinner`` text.
 
         Parameters
         ----------
@@ -117,7 +121,9 @@ class SkeletonMixin:
 
             - ``"stretch"`` (default): The width of the skeleton matches the
               width of the parent container.
-            - An integer specifying the width in pixels.
+            - An integer specifying the width in pixels. In context manager
+              mode, this also limits the width of the content written inside
+              the block.
 
         Returns
         -------

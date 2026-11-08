@@ -100,7 +100,7 @@ const NOT_PENDING: LoadingBlockState = {
 /**
  * Compute the skeleton state of `node` for the run `scriptRunId`. A loading
  * block is pending until that run draws visible content into it or ends, so a
- * fragment that draws nothing doesn't keep its skeleton.
+ * skeleton whose content never arrives doesn't outlive the run.
  *
  * During a fragment run, only the running fragments' loading blocks are
  * pending. A write gives every block on its path the run's ID, so without this
@@ -145,7 +145,14 @@ export function keepPreviousContentForSkeleton(
 ): AppNode | undefined {
   const anchor =
     existingNode instanceof TransientNode ? existingNode.anchor : existingNode
-  if (!(anchor instanceof ElementNode || anchor instanceof BlockNode)) {
+  // Only elements and flex containers render the overlay. Other blocks, such
+  // as expanders or tabs, are replaced as before.
+  if (
+    !(
+      anchor instanceof ElementNode ||
+      (anchor instanceof BlockNode && anchor.deltaBlock.flexContainer)
+    )
+  ) {
     return undefined
   }
   const waitsForContent =
