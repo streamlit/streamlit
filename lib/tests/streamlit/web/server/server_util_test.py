@@ -294,3 +294,22 @@ def test_is_url_from_allowed_origins_skips_ip_lookups_for_allowlisted_origin() -
 
     mock_get_internal_ip.assert_not_called()
     mock_get_external_ip.assert_not_called()
+
+
+def test_is_url_from_allowed_origins_falls_back_to_external_ip() -> None:
+    """Origins outside the allowlist still match the machine's external IP."""
+    with (
+        testutil.patch_config_options(
+            {
+                "server.enableCORS": True,
+                "server.corsAllowedOrigins": ["https://embed.example"],
+            }
+        ),
+        patch("streamlit.net_util.get_internal_ip", return_value="10.0.0.1"),
+        patch(
+            "streamlit.net_util.get_external_ip", return_value="1.2.3.4"
+        ) as mock_get_external_ip,
+    ):
+        assert server_util.is_url_from_allowed_origins("http://1.2.3.4:8501")
+
+    mock_get_external_ip.assert_called_once()

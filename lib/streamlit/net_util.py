@@ -44,7 +44,7 @@ def get_external_ip() -> str | None:
     Returns
     -------
     str or None
-        The external IPv4 or IPv6 address, or None if the lookup failed.
+        The external IPv4 or IPv6 address, or ``None`` if the lookup failed.
 
     """
     # The external IP is best-effort: used for the headless External URL banner
