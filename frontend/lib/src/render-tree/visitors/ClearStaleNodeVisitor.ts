@@ -41,9 +41,9 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  * output from this run because the fragment is about to rerun, so its existing
  * content stays until its own rerun cleans it up.
  *
- * The visitor replaces a node that a skeleton from this run still waits on
- * (`pendingSkeleton`) with the skeleton. The agent API needs no matching rule:
- * its message buffer already holds the skeleton delta that this swap restores.
+ * If a node's `pendingSkeleton` comes from this run, no new content replaced
+ * the node, so the visitor swaps in that skeleton. The agent API needs no
+ * matching rule: its message buffer already holds the skeleton delta.
  *
  * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
  * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
