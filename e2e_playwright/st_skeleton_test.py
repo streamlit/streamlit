@@ -250,3 +250,22 @@ def test_skeleton_standalone_keeps_previous_content(app: Page):
     expect(container.get_by_text("Standalone report version 1")).to_be_visible()
     expect(overlay).not_to_be_attached()
     expect(report).to_have_attribute("data-test-kept", "true")
+
+
+def test_skeleton_stacks_content_in_horizontal_container(app: Page):
+    """Elements inside a skeleton stack vertically, like in st.container()."""
+    container = get_element_by_key(app, "horizontal_skeleton_container")
+    top = get_button(container, "Top button")
+    bottom = get_button(container, "Bottom button")
+    sibling = get_button(container, "Next to the skeleton")
+    expect(bottom).to_be_visible()
+
+    top_box = top.bounding_box()
+    bottom_box = bottom.bounding_box()
+    sibling_box = sibling.bounding_box()
+    assert top_box is not None
+    assert bottom_box is not None
+    assert sibling_box is not None
+    assert bottom_box["y"] > top_box["y"] + top_box["height"] / 2
+    # The skeleton's slot is one item of the horizontal row.
+    assert sibling_box["x"] > top_box["x"] + top_box["width"]

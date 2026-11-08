@@ -158,3 +158,12 @@ if st.toggle("Show standalone report", on_change=load_standalone_report.clear):
         report_slot.write(
             load_standalone_report(st.session_state.get("standalone_report_version", 0))
         )
+
+
+# Elements inside a skeleton stack vertically, even in a horizontal container.
+st.subheader("Skeleton in a horizontal container")
+with st.container(horizontal=True, key="horizontal_skeleton_container"):
+    with st.skeleton(height=40):
+        st.button("Top button")
+        st.button("Bottom button")
+    st.button("Next to the skeleton")
