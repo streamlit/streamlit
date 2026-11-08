@@ -62,11 +62,13 @@ function skeleton(scriptRunId = CURRENT_RUN): ElementNode {
 describe("keepPreviousContentForSkeleton", () => {
   it("keeps a previous run's container that holds visible content", () => {
     const previous = loadingBlock([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
+    const incoming = skeleton()
 
-    const kept = keepPreviousContentForSkeleton(previous, skeleton())
+    const kept = keepPreviousContentForSkeleton(previous, incoming)
 
     expect(kept).toBeInstanceOf(BlockNode)
     expect((kept as BlockNode).children).toBe(previous.children)
+    expect((kept as BlockNode).pendingSkeleton).toBe(incoming)
   })
 
   it.each([
@@ -169,12 +171,14 @@ describe("getLoadingBlockState", () => {
 describe("AppRoot with skeletons", () => {
   const PATH = [0]
 
-  /** A root whose slot holds a previous run's chart and this run's skeleton. */
-  function skeletonOverPreviousChart(): AppRoot {
+  /** A root whose slot holds `previous` and this run's skeleton. */
+  function skeletonOverPreviousChart(
+    previous: AppNode = text("chart", PREVIOUS_RUN)
+  ): AppRoot {
     return new AppRoot(
       FAKE_SCRIPT_HASH,
       new BlockNode(FAKE_SCRIPT_HASH, [
-        block([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN),
+        block([previous], PREVIOUS_RUN),
         new BlockNode(FAKE_SCRIPT_HASH),
         new BlockNode(FAKE_SCRIPT_HASH),
         new BlockNode(FAKE_SCRIPT_HASH),
@@ -209,9 +213,16 @@ describe("AppRoot with skeletons", () => {
     expect(node.pendingSkeleton).toBeUndefined()
   })
 
-  it("lets the skeleton take the slot if no content arrives this run", () => {
-    const root = skeletonOverPreviousChart().clearStaleNodes(CURRENT_RUN)
+  it.each([
+    ["an element", text("chart", PREVIOUS_RUN)],
+    ["a container", loadingBlock([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)],
+  ])(
+    "lets the skeleton take %s's slot if no content arrives this run",
+    (_, previous) => {
+      const root =
+        skeletonOverPreviousChart(previous).clearStaleNodes(CURRENT_RUN)
 
-    expect((nodeAtPath(root) as ElementNode).element.type).toBe("skeleton")
-  })
+      expect((nodeAtPath(root) as ElementNode).element.type).toBe("skeleton")
+    }
+  )
 })

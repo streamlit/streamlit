@@ -51,7 +51,10 @@ export class BlockNode implements AppNode {
    */
   public readonly retained: readonly RetainedElement[]
 
-  /** See `ElementNode.pendingSkeleton`. */
+  /**
+   * The skeleton a later run sent to this slot. The block stays mounted under
+   * it until new content arrives or the run ends (`ElementNode` has the same).
+   */
   public readonly pendingSkeleton?: ElementNode
 
   public constructor(

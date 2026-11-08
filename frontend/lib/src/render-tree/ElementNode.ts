@@ -41,8 +41,9 @@ export class ElementNode implements AppNode {
   public readonly elementHash?: string
 
   /**
-   * A skeleton from the current run that waits for this slot's new content.
-   * Until then, this previous content stays mounted under the skeleton.
+   * The skeleton a later run sent to this slot. The node keeps showing its
+   * previous content under the skeleton until new content replaces it, or
+   * until the run ends and the skeleton takes the slot.
    */
   public readonly pendingSkeleton?: ElementNode
 
@@ -65,8 +66,14 @@ export class ElementNode implements AppNode {
     this.pendingSkeleton = pendingSkeleton
   }
 
-  /** Return a copy of this node that waits for content under `skeleton`. */
-  public withPendingSkeleton(skeleton: ElementNode): ElementNode {
+  /**
+   * Return a copy of this node that waits for content under `skeleton`, or
+   * that no longer waits if it's undefined. Returns this node if unchanged.
+   */
+  public withPendingSkeleton(skeleton: ElementNode | undefined): ElementNode {
+    if (skeleton === this.pendingSkeleton) {
+      return this
+    }
     return new ElementNode(
       this.element,
       this.metadata,
