@@ -16,7 +16,10 @@
 
 import { useEffect, useState } from "react"
 
-/** Seconds since `isEnabled` became true, updated every 100ms (`show_time`). */
+/**
+ * Return the seconds since `isEnabled` became true, updated every 100ms.
+ * Drives a spinner's `show_time` display.
+ */
 export function useElapsedSeconds(isEnabled: boolean): number {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 

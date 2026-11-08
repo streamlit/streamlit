@@ -84,6 +84,9 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   // inline skeleton, so a slot that a cached rerun fills quickly, or that gets
   // no content, doesn't flash it. A new block reserves its space right away.
   // A CSS delay can't do this: a hidden skeleton still takes up its height.
+  // An empty slot keeps its renderer, and so its wait, because the backend
+  // queue merges the skeleton element `st.skeleton()` sends into the loading
+  // block that replaces it at the same path.
   const [mountedRunId] = useState(scriptRunId)
   const existedInEarlierRun = mountedRunId !== scriptRunId
   const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()

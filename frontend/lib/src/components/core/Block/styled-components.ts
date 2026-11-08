@@ -451,7 +451,10 @@ interface StyledLoadingBlockSkeletonProps {
   $fillsBlock: boolean
 }
 
-/** Defined before `StyledFlexContainerBlock`, which selects it. */
+/**
+ * The inline skeleton of a loading block. Defined before
+ * `StyledFlexContainerBlock`, which references it in a selector.
+ */
 export const StyledLoadingBlockSkeleton =
   styled.div<StyledLoadingBlockSkeletonProps>(
     ({ theme, height, $fillsBlock }) => ({

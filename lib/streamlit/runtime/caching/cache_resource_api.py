@@ -506,7 +506,8 @@ class CacheResourceAPI:
 
             Inside a ``with st.skeleton()`` block, the skeleton is the loading
             indicator, so Streamlit hides the default spinner there. Custom text
-            shows on the skeleton, and as a normal spinner after it clears.
+            appears on the skeleton while it's displayed, and as a normal
+            spinner after the skeleton clears.
 
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is

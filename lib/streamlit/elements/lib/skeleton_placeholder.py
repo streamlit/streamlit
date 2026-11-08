@@ -115,10 +115,12 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
         return dir(DeltaGenerator)
 
     def _skeleton_height(self) -> HeightWithoutContent | None:
+        """The pixel or ``"stretch"`` skeleton height, or ``None`` for the default."""
         height = self._layout_config.height if self._layout_config else None
         return height if isinstance(height, int) or height == "stretch" else None
 
     def _skeleton_width(self) -> WidthWithoutContent:
+        """The loading block's width: the pixel width, otherwise ``"stretch"``."""
         width = self._layout_config.width if self._layout_config else None
         return width if isinstance(width, int) else "stretch"
 
@@ -152,11 +154,13 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
             ThreadState.update(in_skeleton_slot=self._outer_in_skeleton_slot)
             self._outer_in_skeleton_slot = None
 
-        # Re-send the block without `loading` to clear the skeleton if nothing
-        # was written into it or it raised. Otherwise the frontend clears it on
-        # the first visible element. A parallel fragment's container counts as
-        # written, so its skeleton stays until the worker draws. The frontend
-        # keeps the children of a re-sent block of the same type.
+        # Clear the skeleton here only when the frontend can't clear it itself:
+        # - Nothing was written, or the block raised: re-send the block without
+        #   `loading`. The frontend keeps the children of a re-sent block of the
+        #   same type.
+        # - Otherwise, the frontend clears it on the first visible element. A
+        #   parallel fragment's container counts as written, so the skeleton
+        #   stays until the worker draws.
         cursor = block_dg._cursor
         if cursor is not None and (cursor.index == 0 or typ is not None):
             from streamlit.delta_generator import _enqueue_add_block
