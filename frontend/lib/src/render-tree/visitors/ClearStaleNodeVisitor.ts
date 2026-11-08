@@ -155,7 +155,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
 
     // Retained elements are prior-run nodes, so they follow the same rule as
     // stale children of this block.
-    // A displaced node is never swapped for its skeleton, which lost its slot.
+    // Drop a displaced node that a skeleton waited on instead of swapping in
+    // the skeleton, since new content took the slot.
     const retained =
       keptChildren === undefined
         ? node.retained

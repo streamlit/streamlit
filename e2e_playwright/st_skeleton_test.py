@@ -15,11 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    get_button,
-    get_element_by_key,
-    get_toggle,
-)
+from e2e_playwright.shared.app_utils import get_button, get_element_by_key, get_toggle
 
 
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):

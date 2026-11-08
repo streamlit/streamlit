@@ -62,8 +62,8 @@ export function keepPreviousContentForSkeleton(
 ): AppNode | undefined {
   const anchor =
     existingNode instanceof TransientNode ? existingNode.anchor : existingNode
-  // Only elements and flex containers render the overlay. Other blocks, such
-  // as expanders or tabs, are replaced as before.
+  // Only elements and flex containers render the overlay, so the skeleton
+  // replaces other blocks, such as expanders or tabs.
   if (
     !(
       anchor instanceof ElementNode ||
