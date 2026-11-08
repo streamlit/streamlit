@@ -94,3 +94,41 @@ with st.form("skeleton_form"):
     submitted = st.form_submit_button("Submit")
     if submitted:
         placeholder.success("Form submitted!")
+
+
+# Skeleton over a cached report: covers the previous version on a cache miss.
+st.subheader("Skeleton keeps previous content")
+
+
+@st.cache_data(show_spinner="Loading report...")
+def load_report(version: int) -> str:
+    time.sleep(2.5)
+    return f"Report version {version}"
+
+
+# The cache is shared by every test run on the same server, so clear it to make
+# the first load and the next version cache misses in each run.
+if st.toggle("Show cached report", on_change=load_report.clear):
+    if st.button("Load next report version"):
+        st.session_state.report_version = st.session_state.get("report_version", 0) + 1
+    st.button("Rerun skeleton report")
+    with st.container(key="cached_skeleton_container"):
+        with st.skeleton(height=80):
+            st.write(load_report(st.session_state.get("report_version", 0)))
+
+
+# Parallel fragment inside a skeleton: the main script sends the skeleton with
+# the layout, and it holds the slot until the fragment draws.
+st.subheader("Parallel fragment in a skeleton")
+
+
+@st.fragment(parallel=True)
+def parallel_report_body() -> None:
+    time.sleep(2)
+    st.write("Parallel report loaded")
+
+
+if st.toggle("Show parallel report"):
+    with st.container(key="parallel_skeleton_container"):
+        with st.skeleton(height=120):
+            parallel_report_body()

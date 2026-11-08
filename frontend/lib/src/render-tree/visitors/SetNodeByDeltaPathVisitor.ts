@@ -176,7 +176,8 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       this.scriptRunId,
       node.fragmentId,
       node.deltaMsgReceivedAt,
-      this.getRetained(node, currentIndex, newChildren, insertedTransient)
+      this.getRetained(node, currentIndex, newChildren, insertedTransient),
+      node.pendingSkeleton
     )
   }
 

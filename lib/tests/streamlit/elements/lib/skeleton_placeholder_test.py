@@ -20,7 +20,6 @@ import pytest
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
-from streamlit.errors import NoSessionContext
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 
 
@@ -64,17 +63,15 @@ def test_dir_returns_delta_generator_members() -> None:
     assert placeholder.__dir__() == dir(DeltaGenerator)
 
 
-def test_enter_without_session_context_returns_self_without_timer() -> None:
-    """`__enter__` returns self and starts no timer when there is no session context.
+def test_context_manager_without_session_context_skips_thread_state() -> None:
+    """Without a script run context, the context manager still opens its block.
 
-    When ``_transient`` raises ``NoSessionContext`` (i.e. not running inside a
-    script thread), the context manager must swallow the error and skip the
-    delayed-skeleton timer.
+    Outside a script thread there is no ``FragmentThreadState`` to mark as a
+    skeleton slot, so entering and exiting must not touch it.
     """
     placeholder = _make_skeleton_placeholder()
-    placeholder._dg._transient.side_effect = NoSessionContext("no session")
 
-    result = placeholder.__enter__()
+    with placeholder as result:
+        assert result is placeholder
 
-    assert result is placeholder
-    assert placeholder._timer is None
+    placeholder._dg._block.assert_called_once()

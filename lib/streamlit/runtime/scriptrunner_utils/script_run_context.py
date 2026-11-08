@@ -115,6 +115,10 @@ class FragmentThreadState:
     # True while a tracked st.* command runs in this context, so nested
     # commands aren't recorded.
     command_tracking_deactivated: bool = False
+    # True while running inside a skeleton slot, a `with st.skeleton()` block.
+    # Spinners use it to avoid adding a second loading indicator next to the
+    # skeleton.
+    in_skeleton_slot: bool = False
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -139,6 +143,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
     command_tracking_deactivated: bool
+    in_skeleton_slot: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
@@ -205,6 +210,18 @@ class ThreadState:
             yield
         finally:
             _thread_state.reset(token)
+
+
+def is_in_skeleton_slot() -> bool:
+    """Whether the current code runs inside a skeleton slot.
+
+    Returns ``False`` on threads without an initialized ``FragmentThreadState``,
+    such as helper threads that are not attached to a script run.
+    """
+    try:
+        return ThreadState.get().in_skeleton_slot
+    except RuntimeError:
+        return False
 
 
 def is_fragment_callback_warning_suppressed() -> bool:
