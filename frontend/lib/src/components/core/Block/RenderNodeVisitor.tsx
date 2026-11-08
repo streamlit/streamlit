@@ -48,6 +48,14 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   private readonly elementKeyOverride?: string
   private readonly renderedKeySet: Set<string>
   public readonly reactElements: ReactElement[]
+  /**
+   * Rendered previous-run elements that a skeleton waits to replace, by key,
+   * with their index in `reactElements`.
+   */
+  private readonly pendingSkeletonSlots = new Map<
+    string,
+    { index: number; skeleton: ElementNode }
+  >()
   private index: number
   private transientElementCount: number
 
@@ -146,6 +154,24 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
 
     const key = this.getCurrentKey(getElementId(node.element))
     this.index += 1
+    // A previous run's copy that a skeleton waits on rendered first, but this
+    // run already wrote the element at a later index (the layout shifted). The
+    // earlier slot shows its skeleton, and this copy takes over the React
+    // instance by key.
+    const pendingSlot = this.pendingSkeletonSlots.get(key)
+    if (pendingSlot?.skeleton.scriptRunId === node.scriptRunId) {
+      this.pendingSkeletonSlots.delete(key)
+      this.reactElements[pendingSlot.index] = (
+        <ElementNodeRenderer
+          key={`${key}-skeleton`}
+          {...this.props}
+          node={pendingSlot.skeleton}
+        />
+      )
+      const renderer = <ElementNodeRenderer key={key} {...childProps} />
+      this.reactElements.push(renderer)
+      return renderer
+    }
     // Avoid rendering the same element twice. We assume the first one is the one we want
     // because the page is rendered top to bottom, so a valid widget would be rendered
     // correctly and we assume the second one is therefore stale (or throw an error).
@@ -158,6 +184,12 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     this.renderedKeySet.add(key)
 
     const renderer = <ElementNodeRenderer key={key} {...childProps} />
+    if (node.pendingSkeleton) {
+      this.pendingSkeletonSlots.set(key, {
+        index: this.reactElements.length,
+        skeleton: node.pendingSkeleton,
+      })
+    }
     this.reactElements.push(renderer)
 
     return renderer

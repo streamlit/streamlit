@@ -182,8 +182,11 @@ export function getRetainedAfterWrite({
   // element this run already re-emitted at an earlier index. Retaining it is
   // harmless: the current copy renders first, so render dedup skips this one.
   const prevId = getRetainableId(occupant)
+  // A previous-run node that a skeleton waited on was meant to be replaced.
+  // Retaining it could render it ahead of the copy this run already wrote.
   const displaced =
     occupant instanceof ElementNode &&
+    occupant.pendingSkeleton === undefined &&
     prevId !== undefined &&
     prevId !== nextId &&
     occupant.scriptRunId !== scriptRunId &&

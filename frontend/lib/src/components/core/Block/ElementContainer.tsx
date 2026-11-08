@@ -82,7 +82,7 @@ export const ElementContainer = memo(function ElementContainer({
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
   // A skeleton waits to replace this element, which stays mounted until then.
-  // Like the stale fade, the overlay skips fullscreen elements.
+  // Like the stale fade, the overlay is off while any element is in fullscreen.
   const hasPendingSkeleton =
     node.pendingSkeleton !== undefined && !isFullScreen
 

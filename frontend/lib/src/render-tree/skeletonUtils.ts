@@ -49,12 +49,11 @@ function hasVisibleContent(node: AppNode | undefined): boolean {
 }
 
 /**
- * Return the node to set at a slot that receives `skeleton`, or `undefined` to
- * let the skeleton replace the slot as usual.
+ * Keep a previous run's visible content mounted under an incoming skeleton.
  *
- * Visible content from a previous run stays mounted with the skeleton attached
- * as its pending skeleton, so the frontend can cover it after a grace period
- * instead of unmounting it.
+ * Returns that content with `skeleton` attached as its pending skeleton, so the
+ * frontend covers it after a grace period instead of unmounting it. Returns
+ * `undefined` to let the skeleton replace the slot as usual.
  */
 export function keepPreviousContentForSkeleton(
   existingNode: AppNode | undefined,

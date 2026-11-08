@@ -1345,6 +1345,20 @@ describe("BlockNodeRenderer container types", () => {
 })
 
 describe("standalone skeletons", () => {
+  function element(
+    properties: Record<string, unknown>,
+    scriptRunId: string
+  ): ElementNode {
+    return new ElementNode(
+      makeProto(Element, properties),
+      ForwardMsgMetadata.create(),
+      scriptRunId,
+      FAKE_SCRIPT_HASH
+    )
+  }
+
+  const skeleton = element({ skeleton: {} }, "current-run")
+
   it.each([
     ["an element", text("previous chart", "previous-run")],
     [
@@ -1354,12 +1368,6 @@ describe("standalone skeletons", () => {
       }),
     ],
   ])("cover %s that they wait to replace", (_, previous) => {
-    const skeleton = new ElementNode(
-      makeProto(Element, { skeleton: {} }),
-      ForwardMsgMetadata.create(),
-      "current-run",
-      FAKE_SCRIPT_HASH
-    )
     renderWithContexts(
       makeVerticalBlockComponent(
         makeVerticalBlock([previous.withPendingSkeleton(skeleton)])
@@ -1371,6 +1379,28 @@ describe("standalone skeletons", () => {
     const overlay = screen.getByTestId("stPendingSkeleton")
     expect(overlay).toHaveAttribute("aria-hidden", "true")
     expect(overlay.parentElement).toHaveAttribute("aria-busy", "true")
+  })
+
+  it("show the skeleton when this run wrote the kept element further down", async () => {
+    const button = (label: string, scriptRunId: string): ElementNode =>
+      element({ button: { id: "$$ID-moved-button", label } }, scriptRunId)
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([
+          button("Old", "previous-run").withPendingSkeleton(skeleton),
+          button("New", "current-run"),
+        ])
+      )
+    )
+
+    // The layout shifted: this run's copy renders, and the slot that kept the
+    // previous copy shows its skeleton.
+    expect(await screen.findByRole("button", { name: "New" })).toBeVisible()
+    expect(screen.getByTestId("stSkeletonElement")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Old" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
   })
 })
 

@@ -150,6 +150,9 @@ placeholder.dataframe(data)  # Replaces skeleton with content
 ```
 
 - Shows **immediately** when `st.skeleton()` is called (no delay)
+- On a rerun, a slot that still shows the previous run's content keeps that content
+  mounted. The skeleton covers it at its current size only if the new content takes longer
+  than 0.5s, so cached reruns don't flash the skeleton or remount stateful elements
 - Returns a `SkeletonPlaceholder` that wraps a `DeltaGenerator`
 - The skeleton remains visible until replaced with content
 - Calling any `st.*` method on the placeholder (e.g., `.write()`, `.dataframe()`) replaces
@@ -248,12 +251,10 @@ replacement), the skeleton persists and displays again on the next rerun. This m
 `st.empty()` behavior - the placeholder maintains its position in the layout until
 explicitly replaced or the element is no longer rendered in the script.
 
-> **Flicker caveat (standalone mode):** When data loads quickly (e.g., a warm
-> `@st.cache_data` cache), the skeleton appears for a single frame and is immediately
-> replaced, which can cause a brief flicker on every rerun. Since reducing layout shift is
-> the primary motivation for this command, apps that want to avoid the flicker should gate
-> the skeleton on a session-state "loaded" flag (or only render it on a cache miss) rather
-> than rendering it unconditionally.
+> **Reruns (standalone mode):** On a rerun, the previous content stays mounted under the
+> skeleton, which covers it only after 0.5s. Data that loads quickly (e.g., from a warm
+> `@st.cache_data` cache) therefore replaces the content in place without a flicker, so
+> apps don't need to gate the skeleton on a session-state "loaded" flag.
 
 ### Usage Examples
 
@@ -374,12 +375,14 @@ No text, icons, or other decorations—just a clean placeholder shape.
 |---------|-----------|----------------|-------------|-------|-----------|
 | `st.empty()` | No | No | Yes | — | No |
 | `st.spinner()` | Yes | No | No | 0.5s | Yes |
-| `st.skeleton()` standalone | Yes | Yes | Yes | None | No |
+| `st.skeleton()` standalone | Yes | Yes | Yes | None² | No |
 | `st.skeleton()` context mgr | Yes | No¹ | No | 0.5s | No |
 
 ¹ Like `st.spinner()`, context-manager mode does not reserve space during the 0.5s delay
 (and shows nothing at all for blocks that finish within it). Use standalone mode to reserve
 layout space immediately.
+
+² On a rerun, a skeleton over the previous run's content covers it after 0.5s.
 
 ## Alternatives Considered
 

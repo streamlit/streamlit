@@ -523,11 +523,11 @@ describe("element retention in AppRoot", () => {
     expect(root.main.retained).toEqual([])
   })
 
-  it("drops a displaced element that a skeleton waited on", () => {
+  it("doesn't retain a displaced element that a skeleton waited on", () => {
     let root = initialRoot().clearStaleNodes("run0")
     root = write(root, "run1", [1], { skeleton: {} })
     root = write(root, "run1", [1], unkeyed("x"))
-    expect(retainedOf(root.main)).toEqual(["w@2"])
+    expect(retainedOf(root.main)).toEqual([])
     expect(root.clearStaleNodes("run1").main.retained).toEqual([])
   })
 

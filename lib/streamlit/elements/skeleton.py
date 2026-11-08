@@ -80,10 +80,11 @@ class SkeletonMixin:
         **Standalone mode** (like ``st.empty()``): Returns a placeholder that
         is shown immediately and can be replaced with content later by calling
         an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
-        On a rerun, the previous content stays in place. The skeleton only
-        covers it if the new content takes longer than half a second, so
-        reruns that hit the cache don't flash the skeleton or reset stateful
-        elements, such as a dataframe's scroll position.
+        On a rerun, the skeleton doesn't replace the placeholder's previous
+        content right away. If the new content takes longer than half a
+        second, the skeleton covers the previous content at its current size.
+        Reruns that hit the cache therefore don't flash the skeleton or reset
+        stateful elements, such as a dataframe's scroll position.
 
         **Context manager mode** (like ``st.spinner()``, recommended): The
         skeleton is shown while the ``with`` block runs (after a short delay)
