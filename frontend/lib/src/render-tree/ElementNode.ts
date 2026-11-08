@@ -66,8 +66,14 @@ export class ElementNode implements AppNode {
     this.pendingSkeleton = pendingSkeleton
   }
 
-  /** Return a copy of this node that waits for content under `skeleton`. */
-  public withPendingSkeleton(skeleton: ElementNode): ElementNode {
+  /**
+   * Return a copy of this node that waits for content under `skeleton`, or
+   * that no longer waits if it's undefined. Returns this node if unchanged.
+   */
+  public withPendingSkeleton(skeleton: ElementNode | undefined): ElementNode {
+    if (skeleton === this.pendingSkeleton) {
+      return this
+    }
     return new ElementNode(
       this.element,
       this.metadata,

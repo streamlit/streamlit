@@ -88,6 +88,20 @@ function unwrapTransient(node: AppNode | undefined): AppNode | undefined {
   return node instanceof TransientNode ? node.anchor : node
 }
 
+/** Whether `node` is an element with ID `id` that the run `scriptRunId` wrote. */
+function isElementFromRun(
+  node: AppNode,
+  id: string,
+  scriptRunId: string
+): boolean {
+  const element = unwrapTransient(node)
+  return (
+    element instanceof ElementNode &&
+    element.scriptRunId === scriptRunId &&
+    getElementId(element.element) === id
+  )
+}
+
 /**
  * Whether React keeps the component instance when `next` replaces `prev` at
  * the same index. Mirrors the keys assigned by `RenderNodeVisitor`: element and
@@ -142,12 +156,15 @@ export function getRetainedAfterWrite({
   prev,
   next,
   scriptRunId,
+  children = [],
 }: {
   retained: readonly RetainedElement[]
   index: number
   prev: AppNode | undefined
   next: AppNode
   scriptRunId: string
+  /** The block's children after this write. */
+  children?: readonly AppNode[]
 }): readonly RetainedElement[] {
   const occupant = unwrapTransient(prev)
   const incoming = unwrapTransient(next)
@@ -182,16 +199,26 @@ export function getRetainedAfterWrite({
   // element this run already re-emitted at an earlier index. Retaining it is
   // harmless: the current copy renders first, so render dedup skips this one.
   const prevId = getRetainableId(occupant)
-  // A previous-run node that a skeleton waited on was meant to be replaced.
-  // Retaining it could render it ahead of the copy this run already wrote.
+  // A node that a skeleton waited on stayed at its slot while the run wrote
+  // later slots. If one of them holds the run's copy, retaining the node
+  // would render it ahead of that copy.
   const displaced =
     occupant instanceof ElementNode &&
-    occupant.pendingSkeleton === undefined &&
     prevId !== undefined &&
     prevId !== nextId &&
     occupant.scriptRunId !== scriptRunId &&
-    !entries.some(entry => entry.id === prevId)
-      ? [{ node: occupant, id: prevId, before: index + 1 }]
+    !entries.some(entry => entry.id === prevId) &&
+    !(
+      occupant.pendingSkeleton !== undefined &&
+      children.some(child => isElementFromRun(child, prevId, scriptRunId))
+    )
+      ? [
+          {
+            node: occupant.withPendingSkeleton(undefined),
+            id: prevId,
+            before: index + 1,
+          },
+        ]
       : []
 
   const moved = entries

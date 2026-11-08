@@ -204,6 +204,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       prev: node.children[index],
       next: newChildren[index],
       scriptRunId: this.scriptRunId,
+      children: newChildren,
     })
   }
 

@@ -2594,6 +2594,49 @@ describe("GridContainer Component", () => {
     expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
   })
 
+  it.each([
+    ["after", false],
+    ["before", true],
+  ])(
+    "gives a kept widget's skeleton its own cell when this run's copy renders %s it",
+    (_, currentFirst) => {
+      const consoleErrorSpy = vi.spyOn(console, "error")
+      const skeleton = new ElementNode(
+        makeProto(Element, { skeleton: {} }),
+        ForwardMsgMetadata.create(),
+        "current-run",
+        FAKE_SCRIPT_HASH
+      )
+      const kept = textInput(
+        "Old",
+        "moved",
+        "previous-run"
+      ).withPendingSkeleton(skeleton)
+      const current = textInput("New", "moved", "current-run")
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          makeGridBlock({}, currentFirst ? [current, kept] : [kept, current])
+        )
+      )
+
+      // One cell shows the skeleton, and the other renders this run's copy.
+      const cells = screen.getAllByTestId("stGridCell")
+      expect(cells).toHaveLength(2)
+      const skeletonCell = currentFirst ? cells[1] : cells[0]
+      expect(
+        within(skeletonCell).getByTestId("stSkeletonElement")
+      ).toBeVisible()
+      expect(screen.getAllByTestId("stSkeletonElement")).toHaveLength(1)
+      expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+      expect(
+        consoleErrorSpy.mock.calls.some(([message]) =>
+          String(message).includes("same key")
+        )
+      ).toBe(false)
+      consoleErrorSpy.mockRestore()
+    }
+  )
+
   it("places each child of a transparent wrapper in its own cell", () => {
     const fragment = new BlockNode(
       FAKE_SCRIPT_HASH,
