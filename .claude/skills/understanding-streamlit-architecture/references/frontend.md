@@ -203,7 +203,7 @@ Every node tracks:
 Stale nodes are cleared after `scriptFinished`.
 
 ### Skeleton slots
-- A skeleton delta that lands on visible content from a previous run does not replace it. The node stays mounted with the skeleton in `pendingSkeleton` (on `BlockNode` and `ElementNode`) and is covered after a grace period. New content at that path replaces the node; otherwise `ClearStaleNodeVisitor` swaps in the skeleton. Visitors that rebuild a node must carry `pendingSkeleton` over. See `render-tree/skeletonUtils.ts`.
+- A skeleton delta that lands on an element or flex container with visible content from a previous run does not replace it (other blocks, such as tabs, are replaced). The node stays mounted with the skeleton in `pendingSkeleton` (on `BlockNode` and `ElementNode`), and `PendingSkeletonOverlay` covers it after a 0.5s CSS delay. New content at that path replaces the node; otherwise `ClearStaleNodeVisitor` swaps in the skeleton at the end of the run. Visitors that rebuild a node must carry `pendingSkeleton` over. The agent snapshot needs no matching rule because it is built after the run. See `render-tree/skeletonUtils.ts`.
 
 ### Lazy loading
 Components use `React.lazy()` for code splitting, deferring load until first render.
