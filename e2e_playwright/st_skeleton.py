@@ -129,3 +129,32 @@ if st.toggle("Show parallel report"):
     with st.container(key="parallel_skeleton_container"):
         with st.skeleton(height=120):
             parallel_report_body()
+
+
+# Standalone skeleton over a cached report: on a cache miss, it covers the
+# previous version instead of replacing it.
+st.subheader("Standalone skeleton keeps previous content")
+
+
+@st.cache_data(show_spinner=False)
+def load_standalone_report(version: int) -> str:
+    time.sleep(2.5)
+    return f"Standalone report version {version}"
+
+
+def _load_next_standalone_report() -> None:
+    st.session_state.standalone_report_version = (
+        st.session_state.get("standalone_report_version", 0) + 1
+    )
+
+
+# The cache is shared by every test run on the same server, so clear it to make
+# the first load and the next version cache misses in each run.
+if st.toggle("Show standalone report", on_change=load_standalone_report.clear):
+    st.button("Load next standalone report", on_click=_load_next_standalone_report)
+    st.button("Rerun standalone report")
+    with st.container(key="standalone_skeleton_container"):
+        report_slot = st.skeleton(height=80)
+        report_slot.write(
+            load_standalone_report(st.session_state.get("standalone_report_version", 0))
+        )
