@@ -269,7 +269,7 @@ def test_columns():
 
 
 def test_loading_blocks_parse_as_containers() -> None:
-    """Skeleton slots parse as plain containers."""
+    """Skeleton slots and loading fragments parse as plain containers."""
 
     def script() -> None:
         import streamlit as st
@@ -277,10 +277,17 @@ def test_loading_blocks_parse_as_containers() -> None:
         with st.skeleton(height=100):
             st.markdown("Loaded")
 
+        @st.fragment(loading="skeleton")
+        def body() -> None:
+            st.markdown("Fragment loaded")
+
+        body()
+
     at = AppTest.from_function(script).run()
     assert not at.exception
-    assert at.container.len == 1
+    assert at.container.len == 2
     assert at.container[0].markdown[0].value == "Loaded"
+    assert at.container[1].markdown[0].value == "Fragment loaded"
     assert len(at.get("skeleton")) == 0
 
 

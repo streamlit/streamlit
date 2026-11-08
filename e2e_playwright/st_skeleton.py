@@ -164,3 +164,30 @@ with st.container(horizontal=True, key="horizontal_skeleton_container"):
         st.button("Top button")
         st.button("Bottom button")
     st.button("Next to the skeleton")
+
+
+# Fragment with a loading skeleton: covers its content on a fragment-only rerun.
+st.subheader("Fragment with a loading skeleton")
+
+
+@st.cache_data(show_spinner=False)
+def load_fragment_report(version: int) -> str:
+    time.sleep(2.5)
+    return f"Fragment report version {version}"
+
+
+def _load_next_fragment_report() -> None:
+    st.session_state.fragment_report_version = (
+        st.session_state.get("fragment_report_version", 0) + 1
+    )
+
+
+@st.fragment(loading="skeleton")
+def fragment_report() -> None:
+    st.write(load_fragment_report(st.session_state.get("fragment_report_version", 0)))
+    st.button("Load next fragment report", on_click=_load_next_fragment_report)
+
+
+if st.toggle("Show fragment report", on_change=load_fragment_report.clear):
+    with st.container(key="fragment_skeleton_container"):
+        fragment_report()

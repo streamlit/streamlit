@@ -25,7 +25,7 @@ import contextlib
 import contextvars
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
@@ -67,6 +67,12 @@ def _scoped_ctx_attach(ctx: ScriptRunContext | None) -> Generator[None, None, No
             setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, prev)
 
 
+# Upper bound for waiting on the layout flush before deferred workers start.
+# The wait usually ends after a few milliseconds; the bound covers sessions
+# whose messages are not being sent, such as a disconnected client.
+_FLUSH_GATE_TIMEOUT_SECS: Final = 0.1
+
+
 class ParallelFragmentCoordinator:
     """Manages the lifecycle of parallel fragment workers for one script run.
 
@@ -80,6 +86,13 @@ class ParallelFragmentCoordinator:
     scoped ``ScriptRunContext`` attach so ``get_script_run_ctx()`` and
     ``ThreadState.get()`` return the parent's values. Worker-side
     ``ThreadState.update()`` writes stay local to the copied context.
+
+    Work submitted with ``defer=True`` is held until :meth:`join`. ``join``
+    first waits, for at most ``_FLUSH_GATE_TIMEOUT_SECS``, until the messages
+    enqueued so far have been sent to the browser (``wait_for_flush``), then
+    starts the held work. This keeps
+    CPU-bound workers from competing for the GIL with the thread that sends
+    the script's cheap layout.
     """
 
     def __init__(
@@ -87,6 +100,7 @@ class ParallelFragmentCoordinator:
         yield_check: Callable[[], None],
         max_workers: int | None = None,
         poll_interval: float = 0.1,
+        wait_for_flush: Callable[[float], None] | None = None,
     ) -> None:
         if max_workers is not None and max_workers < 1:
             raise ValueError(
@@ -101,12 +115,19 @@ class ParallelFragmentCoordinator:
         self._exception_lock = threading.Lock()
         self._yield_check = yield_check
         self._poll_interval = poll_interval
+        self._wait_for_flush = wait_for_flush
+        # Deferred work, started by join(). `_deferred_released` turns True
+        # when join() starts it, so later deferred submits start right away.
+        # Both are guarded by _join_condition.
+        self._deferred: list[Callable[[], None]] = []
+        self._deferred_released = False
 
     def submit(
         self,
         fn: Callable[..., Any],
         ctx: ScriptRunContext | None,
         *args: Any,
+        defer: bool = False,
     ) -> None:
         """Submit a worker function to the thread pool.
 
@@ -133,6 +154,9 @@ class ParallelFragmentCoordinator:
             worker.
         *args : Any
             Positional arguments forwarded to ``fn``.
+        defer : bool
+            Whether to hold the work until :meth:`join` starts. Work submitted
+            after that starts immediately.
         """
         captured = contextvars.copy_context()
 
@@ -148,6 +172,15 @@ class ParallelFragmentCoordinator:
                     self._outstanding -= 1
                     self._join_condition.notify_all()
 
+        if defer:
+            with self._join_condition:
+                if not self._deferred_released:
+                    self._deferred.append(tracked)
+                    return
+        self._start(tracked)
+
+    def _start(self, tracked: Callable[[], None]) -> None:
+        """Run ``tracked`` on the pool, dropping its count if the pool is shut down."""
         try:
             self._executor.submit(tracked)
         except RuntimeError:
@@ -155,6 +188,25 @@ class ParallelFragmentCoordinator:
                 self._outstanding -= 1
                 self._join_condition.notify_all()
             raise
+
+    def _start_deferred(self) -> None:
+        """Wait for the layout flush, then start the held work.
+
+        A rerun or stop requested during the wait raises from ``yield_check``
+        before the held work starts, and :meth:`drain` then drops that work.
+        """
+        with self._join_condition:
+            has_deferred = bool(self._deferred)
+        if has_deferred:
+            if self._wait_for_flush is not None:
+                self._wait_for_flush(_FLUSH_GATE_TIMEOUT_SECS)
+            self._yield_check()
+        with self._join_condition:
+            deferred = self._deferred
+            self._deferred = []
+            self._deferred_released = True
+        for tracked in deferred:
+            self._start(tracked)
 
     def request_stop(self) -> None:
         """Record an st.stop() from a worker. First writer wins."""
@@ -217,6 +269,7 @@ class ParallelFragmentCoordinator:
         executor is left running and the caller is responsible for calling
         drain() to shut down in-flight workers.
         """
+        self._start_deferred()
         while True:
             with self._join_condition:
                 if self._outstanding == 0:
@@ -238,4 +291,10 @@ class ParallelFragmentCoordinator:
         without risking recursive RerunException/StopException.
         """
         self._stop_event.set()
+        with self._join_condition:
+            # Drop held work. It never started, so there is nothing to cancel.
+            self._outstanding -= len(self._deferred)
+            self._deferred = []
+            self._deferred_released = True
+            self._join_condition.notify_all()
         self._executor.shutdown(wait=True, cancel_futures=True)

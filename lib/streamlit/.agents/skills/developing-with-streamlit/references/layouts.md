@@ -335,6 +335,8 @@ with st.skeleton(height=200):
 
 In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
 
+For a fragment, `@st.fragment(loading="skeleton")` gives the fragment's container the same skeleton on every run of the fragment.
+
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
 ## Fragments with discontiguous layout

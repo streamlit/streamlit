@@ -504,9 +504,10 @@ class CacheResourceAPI:
             a "cache miss" and the cached resource is being created. If string,
             value of show_spinner param will be used for spinner text.
 
-            Inside a ``with st.skeleton()`` block, the skeleton is the loading
-            indicator, so Streamlit hides the default spinner there. Custom text
-            shows on the skeleton, and as a normal spinner after it clears.
+            Inside a ``with st.skeleton()`` block or a fragment with
+            ``loading="skeleton"``, the skeleton is the loading indicator, so
+            Streamlit hides the default spinner there. Custom text shows on the
+            skeleton, and as a normal spinner after it clears.
 
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is

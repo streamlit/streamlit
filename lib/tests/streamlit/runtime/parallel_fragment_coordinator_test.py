@@ -605,3 +605,100 @@ def test_scoped_ctx_attach_ignores_missing_attr_on_cleanup() -> None:
     finally:
         if had_previous:
             setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, previous)
+
+
+def test_deferred_submit_starts_on_join() -> None:
+    """Deferred work waits for join(), then runs before join() returns."""
+    events: list[str] = []
+    c = ParallelFragmentCoordinator(yield_check=lambda: None)
+    c.submit(lambda: events.append("worker"), None, defer=True)
+
+    time.sleep(0.05)
+    assert events == []
+
+    events.append("join")
+    c.join()
+    assert events == ["join", "worker"]
+
+
+def test_deferred_submit_waits_for_flush_before_starting() -> None:
+    """join() waits for the layout flush, bounded, before starting work."""
+    events: list[str] = []
+    timeouts: list[float] = []
+
+    def wait_for_flush(timeout: float) -> None:
+        timeouts.append(timeout)
+        events.append("flush")
+
+    c = ParallelFragmentCoordinator(
+        yield_check=lambda: None, wait_for_flush=wait_for_flush
+    )
+    c.submit(lambda: events.append("worker"), None, defer=True)
+    c.join()
+
+    assert events == ["flush", "worker"]
+    assert len(timeouts) == 1
+    assert 0 < timeouts[0] <= 0.1
+
+
+def test_join_skips_flush_wait_without_deferred_work() -> None:
+    """Immediate work doesn't wait for a flush."""
+    wait_for_flush = MagicMock()
+    c = ParallelFragmentCoordinator(
+        yield_check=lambda: None, wait_for_flush=wait_for_flush
+    )
+    c.submit(lambda: None, None)
+    c.join()
+
+    wait_for_flush.assert_not_called()
+
+
+def test_submit_after_join_started_runs_immediately() -> None:
+    """Deferred work submitted from a running worker starts right away."""
+    events: list[str] = []
+    c = ParallelFragmentCoordinator(yield_check=lambda: None)
+
+    def parent() -> None:
+        c.submit(lambda: events.append("child"), None, defer=True)
+
+    c.submit(parent, None, defer=True)
+    c.join()
+
+    assert events == ["child"]
+
+
+def test_rerun_during_flush_wait_keeps_deferred_work_from_starting() -> None:
+    """A rerun requested while join() waits for the flush starts no work."""
+    worker = MagicMock()
+    rerun_requested = threading.Event()
+
+    def yield_check() -> None:
+        if rerun_requested.is_set():
+            raise RerunException(RerunData())
+
+    c = ParallelFragmentCoordinator(
+        yield_check=yield_check,
+        wait_for_flush=lambda _timeout: rerun_requested.set(),
+    )
+    c.submit(worker, None, defer=True)
+
+    with pytest.raises(RerunException):
+        c.join()
+    c.drain()
+
+    worker.assert_not_called()
+    with c._join_condition:
+        assert c._outstanding == 0
+
+
+def test_drain_drops_deferred_work() -> None:
+    """Work that never started is dropped and doesn't block a later join()."""
+    worker = MagicMock()
+    c = ParallelFragmentCoordinator(yield_check=lambda: None)
+    c.submit(worker, None, defer=True)
+
+    c.drain()
+
+    worker.assert_not_called()
+    with c._join_condition:
+        assert c._outstanding == 0
