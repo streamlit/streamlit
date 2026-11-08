@@ -9,7 +9,7 @@ created: 2026-05-13
 
 Expose a public `st.skeleton()` command that displays an animated loading placeholder element.
 The command supports both standalone usage (like `st.empty()`) and context manager usage
-(like `st.spinner()`), allowing developers to reserve layout space and provide visual feedback
+(like `st.container()`), allowing developers to reserve layout space and provide visual feedback
 while content loads.
 
 ## Problem
@@ -68,10 +68,9 @@ def skeleton(
     1. **Standalone placeholder** (like ``st.empty()``): Returns a
        ``SkeletonPlaceholder`` that can be replaced with actual content.
 
-    2. **Context manager** (like ``st.spinner()``): Shows the skeleton while
-       the code block executes, then automatically clears it. In this mode,
-       the skeleton is handled as a *transient element* that auto-clears
-       when the block exits.
+    2. **Context manager** (like ``st.container()``): Elements written inside
+       the ``with`` block fill the skeleton's slot, and the skeleton shows
+       until the first visible one is drawn.
 
     Parameters
     ----------
@@ -96,10 +95,10 @@ def skeleton(
         - **Standalone**: Call ``st.*`` methods directly on the returned
           object (e.g. ``placeholder.dataframe(...)``) to replace the
           skeleton with content.
-        - **Context manager**: Use it in a ``with`` block. The skeleton is
-          shown as a transient element while the block runs and auto-clears
-          on exit. Elements written inside the block render in the parent
-          container (like ``st.spinner()``), not inside the skeleton.
+        - **Context manager**: Use it in a ``with`` block. Elements written
+          inside the block render in the skeleton's slot and replace the
+          skeleton. If nothing is written, or the block raises, the skeleton
+          clears on exit.
 
     Examples
     --------
@@ -112,15 +111,14 @@ def skeleton(
     >>> time.sleep(2)  # Simulate loading
     >>> placeholder.image("https://placehold.co/400x200")
 
-    Use as a context manager that automatically clears:
+    Use as a context manager whose content replaces the skeleton:
 
     >>> import streamlit as st
     >>> import time
     >>>
     >>> with st.skeleton(height=150):
     ...     time.sleep(2)  # Simulate loading
-    ...     data = load_data()
-    >>> st.dataframe(data)
+    ...     st.dataframe(load_data())
 
     Combine with columns for complex layouts:
 
@@ -160,48 +158,40 @@ placeholder.dataframe(data)  # Replaces skeleton with content
 - Multiple replacements are supported (each call replaces the previous content)
 - Calling `.empty()` clears the skeleton without replacement
 
-**Context manager mode (like `st.spinner()`):**
+**Context manager mode (like `st.container()`):**
 
 ```python
 with st.skeleton(height=200):
     data = expensive_operation()
-# Skeleton auto-clears here
-st.dataframe(data)  # Content appears in normal flow
+    st.dataframe(data)  # Replaces the skeleton in its slot
 ```
 
-- Uses **0.5s delay** before showing (same as `st.spinner()`)
-- If the block completes within 0.5s, no skeleton is shown (avoids flicker)
-- Uses Streamlit's **transient element mechanism** (same as spinner)
-- Auto-clears when the block exits (success or exception)
-- Content written inside the `with` block appears in the **parent container**, not inside
-  the skeleton (same as `st.spinner()`)
-- Unlike `st.spinner()`, there is no text label—just the animated placeholder
+- The skeleton's slot becomes a vertical container, like `st.container()`. Elements written
+  inside the `with` block render into it at the skeleton's position. In a horizontal
+  container they stack vertically, and an integer `width` also limits their width.
+- A new block shows its skeleton **immediately**. The skeleton stays until the run draws the
+  first visible element in the slot; `st.empty()` and spinners don't count.
+- On a rerun, the slot's previous content stays mounted, as in standalone mode. A slot with
+  nothing to keep waits the same 0.5s before it shows its skeleton, so fast blocks don't
+  flash it.
+- If nothing is written inside the block, or the block raises, the skeleton clears on exit,
+  and the empty slot takes no space.
+- Spinners inside the block don't add a second loading indicator. A cached function's
+  default spinner is hidden for the whole block, and custom `show_spinner` or `st.spinner`
+  text labels the skeleton.
 
 **Dual-mode transition:**
 
-When `st.skeleton()` is used as a context manager, the skeleton shown by the initial call
-is cleared in `__enter__` and re-shown as a transient element with the 0.5s delay. See
-[Alternatives Considered](#alternatives-considered) for why a single call can behave this
-way and the simpler alternatives that were weighed.
+When `st.skeleton()` is used as a context manager, `__enter__` replaces the skeleton shown by
+the initial call with the slot's container at the same position, so the slot stays reserved
+without a flash. See [Alternatives Considered](#alternatives-considered) for the alternatives
+that were weighed.
 
-- **Interleaved sequence (single rerun):** a standalone-then-`with` use briefly creates the
-  immediate skeleton, which `__enter__` clears; the transient skeleton then appears only if
-  the block runs longer than 0.5s. The persistent show and the `__enter__` clear are
-  expected to coalesce on the frontend so there is no visible flash (to be verified during
-  implementation).
-- **`with ... as ph`:** `__enter__` returns the `SkeletonPlaceholder` for API symmetry, but
-  in context-manager mode the skeleton is transient—calling methods on `ph` to replace it is
-  not the intended pattern (use standalone mode for replacement).
+- **`with ... as ph`:** `__enter__` returns the `SkeletonPlaceholder`. Inside the block,
+  calling methods on `ph` writes into the slot, like the `st.*` calls there.
 - **Error before the block is entered:** if the script errors after `st.skeleton()` is called
   but before the `with` block starts, the initially-shown skeleton is cleared on the next
   rerun like any other element that is no longer rendered.
-- **Unreserved-space tradeoff:** because `__enter__` clears the skeleton and the transient
-  re-show is delayed by 0.5s (to match `st.spinner()` and avoid flicker on fast blocks),
-  context-manager mode does **not** reserve layout space during that first half second. This
-  is an inherent tension with the anti–layout-shift goal and a key input to the open
-  dual-mode decision in [Alternatives Considered](#alternatives-considered): dropping the
-  0.5s delay (or making it configurable) would reserve space immediately at the cost of
-  flicker on sub-0.5s blocks. Standalone mode is unaffected—it reserves space immediately.
 
 **Dimension behavior:**
 
@@ -335,7 +325,7 @@ def data_section():
 data_section()
 ```
 
-**Context manager for blocking operations (transient mode):**
+**Context manager for blocking operations:**
 
 ```python
 import streamlit as st
@@ -344,11 +334,9 @@ st.write("Click to load data:")
 
 if st.button("Load"):
     with st.skeleton(height=200, width=400):
-        # Skeleton shows during this block (transient)
+        # The skeleton shows until the dataframe replaces it in its slot
         result = expensive_database_query()
-
-    # Skeleton auto-clears, content appears here
-    st.dataframe(result)
+        st.dataframe(result)
 ```
 
 ### Design
@@ -367,7 +355,8 @@ The skeleton renders as a simple rectangular element with:
 └─────────────────────────────────────┘
 ```
 
-No text, icons, or other decorations—just a clean placeholder shape.
+No text, icons, or other decorations—just a clean placeholder shape. The only text is a
+spinner's label in context-manager mode.
 
 ### Comparison with Related Commands
 
@@ -376,13 +365,12 @@ No text, icons, or other decorations—just a clean placeholder shape.
 | `st.empty()` | No | No | Yes | — | No |
 | `st.spinner()` | Yes | No | No | 0.5s | Yes |
 | `st.skeleton()` standalone | Yes | Yes | Yes | None² | No |
-| `st.skeleton()` context mgr | Yes | No¹ | No | 0.5s | No |
+| `st.skeleton()` context mgr | Yes | Yes | No¹ | None² | Spinner text |
 
-¹ Like `st.spinner()`, context-manager mode does not reserve space during the 0.5s delay
-(and shows nothing at all for blocks that finish within it). Use standalone mode to reserve
-layout space immediately.
+¹ Elements written inside the block fill the skeleton's slot instead, like `st.container()`.
 
-² On a rerun, a skeleton over the previous run's content covers it after 0.5s.
+² On a rerun, a skeleton over the previous run's content covers it after 0.5s. In
+context-manager mode, a slot with nothing to keep also waits 0.5s.
 
 ## Alternatives Considered
 
@@ -394,28 +382,31 @@ layout space immediately.
 
 `st.empty()` returns a plain `DeltaGenerator`. We propose a thin `SkeletonPlaceholder`
 wrapper instead because the context-manager mode needs custom `__enter__`/`__exit__`
-semantics (transient display + auto-clear) that a plain `DeltaGenerator` does not provide.
+semantics (filling the slot, clearing on exit) that a plain `DeltaGenerator` lacks.
 The wrapper delegates `st.*` methods to the underlying `DeltaGenerator`, so
 `placeholder.dataframe(...)`, type narrowing, and IDE autocompletion behave like
 `st.empty()`.
 
 - **Option A (proposed): `SkeletonPlaceholder` wrapper** — supports both standalone
-  replacement and the transient `with` block from a single return value. Cost: one new
+  replacement and the `with` block from a single return value. Cost: one new
   public type plus method delegation.
 - **Option B: plain `DeltaGenerator`** — matches `st.empty()` exactly, but cannot carry the
-  transient context-manager behavior.
+  context-manager behavior.
 - **Option C: two commands** (e.g., a placeholder command plus a separate context manager) —
   unambiguous, but adds API surface and splits a single concept.
 
 **Dual-mode in one command vs. splitting it:**
 
-Supporting both an immediate standalone placeholder and a 0.5s-delayed context manager from a
+Supporting both an immediate standalone placeholder and a context manager from a
 single `st.skeleton()` call is the most novel part of this API. Because the call fully
-evaluates before a `with` statement begins, the proposed mechanism is: show the skeleton
-immediately, and if it is then used as a context manager, `__enter__` clears that initial
-skeleton and re-shows it as a transient element with the 0.5s delay. Simpler alternatives —
-dropping the 0.5s delay in `with` mode, adding an explicit `delay` parameter, or splitting
-into two commands — are viable and should be weighed during review.
+evaluates before a `with` statement begins, the shipped mechanism is: show the skeleton
+immediately, and if it is then used as a context manager, `__enter__` replaces it with a
+container at the same position that receives the block's content and keeps showing the
+skeleton until that content is drawn. The alternative of clearing the skeleton in
+`__enter__` and re-showing it as a transient element after a 0.5s delay, with the block's
+content in the parent container (like `st.spinner()`), leaves the slot unreserved for half a
+second and stacks the skeleton above stale content on reruns. Adding an explicit `delay`
+parameter or splitting into two commands remain alternatives.
 
 **`height` positional vs. keyword-only:**
 
@@ -469,7 +460,8 @@ Allow skeleton color customization via theme configuration.
 
 **Label/text overlay:**
 
-Optional text overlay on skeleton (e.g., "Loading chart...").
+A `label` parameter for a text overlay on the skeleton (e.g., "Loading chart..."). In
+context-manager mode, a spinner's text inside the block already labels the skeleton.
 
 **Callback/auto-replace pattern:**
 
