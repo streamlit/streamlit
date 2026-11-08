@@ -15,6 +15,7 @@
  */
 
 import {
+  isValidElement,
   type ReactElement,
   type ReactNode,
   useCallback,
@@ -612,6 +613,11 @@ export const GridContainer = (props: GridContainerProps): ReactElement => {
           }
         } else if (layoutNode instanceof ElementNode) {
           nodeId = getElementId(layoutNode.element)
+        }
+        // A node that a skeleton waits to replace can render that skeleton
+        // under another key (see `RenderNodeVisitor`), and its cell follows.
+        if (nodeId !== undefined && isValidElement(childElement)) {
+          nodeId = String(childElement.key)
         }
 
         // Transient nodes (e.g. a cleared spinner) can return [] — that is not

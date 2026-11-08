@@ -1559,6 +1559,40 @@ describe("loading blocks", () => {
     expect(overlay.parentElement).toHaveAttribute("aria-busy", "true")
   })
 
+  it("shows the skeleton when this run wrote the kept element further down", async () => {
+    const skeleton = new ElementNode(
+      makeProto(Element, { skeleton: {} }),
+      ForwardMsgMetadata.create(),
+      CURRENT_RUN,
+      FAKE_SCRIPT_HASH
+    )
+    const button = (label: string, scriptRunId: string): ElementNode =>
+      new ElementNode(
+        makeProto(Element, { button: { id: "$$ID-moved-button", label } }),
+        ForwardMsgMetadata.create(),
+        scriptRunId,
+        FAKE_SCRIPT_HASH
+      )
+    renderBlock(
+      makeVerticalBlock(
+        [
+          button("Old", PREVIOUS_RUN).withPendingSkeleton(skeleton),
+          button("New", CURRENT_RUN),
+        ],
+        { flexContainer: {} }
+      )
+    )
+
+    // The layout shifted: this run's copy renders, and the slot that kept the
+    // previous copy shows its skeleton.
+    expect(await screen.findByRole("button", { name: "New" })).toBeVisible()
+    expect(screen.getByTestId("stSkeletonElement")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Old" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+  })
+
   it("keeps the children mounted when a container becomes a loading block", () => {
     const chart = text("previous chart", PREVIOUS_RUN)
     const { rerenderWithContexts } = renderBlock(
@@ -2771,6 +2805,49 @@ describe("GridContainer Component", () => {
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
     expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
   })
+
+  it.each([
+    ["after", false],
+    ["before", true],
+  ])(
+    "gives a kept widget's skeleton its own cell when this run's copy renders %s it",
+    (_, currentFirst) => {
+      const consoleErrorSpy = vi.spyOn(console, "error")
+      const skeleton = new ElementNode(
+        makeProto(Element, { skeleton: {} }),
+        ForwardMsgMetadata.create(),
+        "current-run",
+        FAKE_SCRIPT_HASH
+      )
+      const kept = textInput(
+        "Old",
+        "moved",
+        "previous-run"
+      ).withPendingSkeleton(skeleton)
+      const current = textInput("New", "moved", "current-run")
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          makeGridBlock({}, currentFirst ? [current, kept] : [kept, current])
+        )
+      )
+
+      // One cell shows the skeleton, and the other renders this run's copy.
+      const cells = screen.getAllByTestId("stGridCell")
+      expect(cells).toHaveLength(2)
+      const skeletonCell = currentFirst ? cells[1] : cells[0]
+      expect(
+        within(skeletonCell).getByTestId("stSkeletonElement")
+      ).toBeVisible()
+      expect(screen.getAllByTestId("stSkeletonElement")).toHaveLength(1)
+      expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+      expect(
+        consoleErrorSpy.mock.calls.some(([message]) =>
+          String(message).includes("same key")
+        )
+      ).toBe(false)
+      consoleErrorSpy.mockRestore()
+    }
+  )
 
   it("places each child of a transparent wrapper in its own cell", () => {
     const fragment = new BlockNode(
