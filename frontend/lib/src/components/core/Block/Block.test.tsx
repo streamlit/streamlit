@@ -1510,6 +1510,17 @@ describe("loading blocks", () => {
       })
 
       expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
+
+      // A run that interrupts this one, with no render in between, waits again.
+      rerenderWithContexts(
+        blockComponent(loadingBlock([], "next-run")),
+        runContext(true, "next-run")
+      )
+      expect(screen.queryByTestId("stVerticalBlock")).not.toBeInTheDocument()
+      act(() => {
+        vi.advanceTimersByTime(500)
+      })
+      expect(screen.getByTestId("stLoadingBlockSkeleton")).toBeVisible()
     } finally {
       vi.useRealTimers()
     }

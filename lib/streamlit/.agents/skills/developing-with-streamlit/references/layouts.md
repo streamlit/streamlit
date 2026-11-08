@@ -325,7 +325,7 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot, and the skeleton stays until the first of them is drawn. Draw the slow element first: any element, even a caption, ends the skeleton.
+Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot, and the skeleton stays until the first visible one is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
 
 ```python
 with st.skeleton(height=200):

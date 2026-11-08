@@ -30,13 +30,13 @@ import { PENDING_SKELETON_DELAY_MS } from "./styled-components"
 
 /** How a container renders the skeleton of its slot right now. */
 export interface SkeletonSlot {
-  /** Whether a skeleton can cover the container, which then positions it. */
+  /** Whether an overlay can cover the container, so it sets `position`. */
   isSkeletonSlot: boolean
   /** Whether the container shows its inline skeleton and hides its children. */
   showsInlineSkeleton: boolean
   /** Whether the container covers its children with the skeleton overlay. */
   showsOverlay: boolean
-  /** Whether the container's children are inside a skeleton that is shown. */
+  /** Whether the children wait under a skeleton, also in its grace period. */
   isChildrenPending: boolean
   /** The inline skeleton's height (`Block.loading.skeleton_height`). */
   skeletonHeight?: streamlit.HeightConfig.$Properties | null
@@ -61,8 +61,8 @@ export const NO_SKELETON_SLOT: SkeletonSlot = {
  *   it after the grace period. A standalone skeleton waiting on the
  *   container's content (`BlockNode.pendingSkeleton`) does the same.
  *
- * `BlockNodeRenderer` calls it, because it stays mounted while it hides an
- * empty block, so a cleared slot still counts as existing on the next run.
+ * `BlockNodeRenderer` calls this hook because the renderer stays mounted while
+ * hiding an empty block, so a cleared slot counts as existing on the next run.
  */
 export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   const { scriptRunId, scriptRunState, fragmentIdsThisRun } =
@@ -87,13 +87,16 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
   const [mountedRunId] = useState(scriptRunId)
   const existedInEarlierRun = mountedRunId !== scriptRunId
   const [graceElapsedRunId, setGraceElapsedRunId] = useState<string>()
+  const isGraceElapsed = graceElapsedRunId === scriptRunId
   const handleGraceElapsed = useCallback(
     () => setGraceElapsedRunId(scriptRunId),
     [scriptRunId]
   )
+  // The delay drops to `null` once it elapses, so a run that interrupts this
+  // one, with no render in between, still starts its own timer.
   useTimeout(
     handleGraceElapsed,
-    wantsInlineSkeleton && existedInEarlierRun
+    wantsInlineSkeleton && existedInEarlierRun && !isGraceElapsed
       ? PENDING_SKELETON_DELAY_MS
       : null
   )
@@ -103,8 +106,7 @@ export function useSkeletonSlot(node: BlockNode): SkeletonSlot {
     isSkeletonSlot:
       notNullOrUndefined(node.deltaBlock.loading) || hasPendingSkeleton,
     showsInlineSkeleton:
-      wantsInlineSkeleton &&
-      (!existedInEarlierRun || graceElapsedRunId === scriptRunId),
+      wantsInlineSkeleton && (!existedInEarlierRun || isGraceElapsed),
     showsOverlay:
       !isInPendingSkeleton &&
       ((loadingState.isPending && loadingState.hasPreviousContent) ||

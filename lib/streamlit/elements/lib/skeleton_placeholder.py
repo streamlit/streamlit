@@ -60,8 +60,9 @@ class SkeletonPlaceholder(_SkeletonPlaceholderBase):
 
     **Context manager mode**: The skeleton's slot becomes a container for the
     elements written inside the ``with`` block, and the skeleton stays until
-    the first of them is drawn. In both modes, the previous run's content stays
-    in the slot until the frontend covers it after a short grace period.
+    the first visible one is drawn. In both modes, the previous run's content
+    stays mounted until new content replaces it. The skeleton covers it only
+    if that takes longer than a short grace period.
     """
 
     def __init__(

@@ -51,9 +51,9 @@ class SpinnerMixin:
     ) -> Generator[None, None, None]:
         """Display a loading spinner while executing a block of code.
 
-        Inside a ``with st.skeleton()`` block, the skeleton shows the
-        spinner's text and elapsed time while it's displayed, instead of a
-        second loading indicator.
+        Inside a ``with st.skeleton()`` block, the spinner's text and elapsed
+        time appear on the skeleton while the skeleton is displayed, instead
+        of as a second loading indicator.
 
         Parameters
         ----------

@@ -85,9 +85,9 @@ class SkeletonMixin:
         ``with`` block fill the skeleton's slot and stack vertically, like in
         ``st.container()``, even inside a horizontal container. To lay them
         out in a row, put an ``st.container(horizontal=True)`` inside the
-        block. The skeleton stays until the first element is drawn. If nothing
-        is written inside the block, or the block raises an exception, the
-        skeleton clears when the block exits.
+        block. The skeleton stays until the first visible element is drawn. If
+        nothing is written inside the block, or the block raises an exception,
+        the skeleton clears when the block exits.
 
         In both modes, content from the previous run stays in place during a
         rerun. The skeleton only covers it if the new content takes longer
@@ -98,11 +98,11 @@ class SkeletonMixin:
         skeleton.
 
         .. note::
-            Draw the slow element first inside the ``with`` block. Any element,
-            even a caption, ends the skeleton when it is drawn. The default
-            spinner stays hidden for the whole block, so use one
-            ``with st.skeleton()`` block per slow loader, or pass custom
-            ``show_spinner`` text.
+            Draw the slow element first inside the ``with`` block. A visible
+            element, even a caption, ends the skeleton; ``st.empty()`` and
+            spinners don't. The default spinner stays hidden for the whole
+            block, so use one ``with st.skeleton()`` block per slow loader,
+            or pass custom ``show_spinner`` text.
 
         Parameters
         ----------

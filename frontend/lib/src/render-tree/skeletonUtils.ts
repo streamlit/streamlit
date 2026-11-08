@@ -102,11 +102,11 @@ const NOT_PENDING: LoadingBlockState = {
  * block is pending until that run draws visible content into it or ends, so a
  * skeleton whose content never arrives doesn't outlive the run.
  *
- * During a fragment run, only the running fragments' loading blocks are
- * pending. A write gives every block on its path the run's ID, so without this
- * check a fragment rerun would also cover the loading block it renders in. A
- * nested fragment that its parent's rerun calls inline writes with its own
- * fragment ID, so its blocks keep their previous content instead.
+ * In a fragment run, only the running fragments' loading blocks are pending:
+ * - A write gives every block on its path the run's ID, so without this check
+ *   a fragment rerun would also cover the loading block it renders in.
+ * - A nested fragment that its parent's rerun calls inline writes with its own
+ *   fragment ID, so its blocks keep their previous content.
  */
 export function getLoadingBlockState(
   node: BlockNode,

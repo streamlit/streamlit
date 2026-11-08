@@ -451,7 +451,7 @@ export const BlockNodeRenderer = (
 
   // An empty loading block takes space only while it shows its inline
   // skeleton. Otherwise it is hidden like an empty `st.container()`, so it
-  // adds no gap, also during the grace period.
+  // adds no gap, including during the grace period.
   if (
     node.isEmpty &&
     (!node.deltaBlock.allowEmpty ||
