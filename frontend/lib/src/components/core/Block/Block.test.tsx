@@ -23,7 +23,7 @@ import {
   Block as BlockProto,
   Button as ButtonProto,
   Delta as DeltaProto,
-  type Element,
+  Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
@@ -1341,6 +1341,36 @@ describe("BlockNodeRenderer container types", () => {
     expect(tabs).toHaveStyle("align-self: stretch;")
     expect(tabs).toHaveStyle("max-height: 100%;")
     expect(tabs).not.toHaveStyle("height: 100%;")
+  })
+})
+
+describe("standalone skeletons", () => {
+  it.each([
+    ["an element", text("previous chart", "previous-run")],
+    [
+      "a container",
+      makeVerticalBlock([text("previous chart", "previous-run")], {
+        flexContainer: {},
+      }),
+    ],
+  ])("cover %s that they wait to replace", (_, previous) => {
+    const skeleton = new ElementNode(
+      makeProto(Element, { skeleton: {} }),
+      ForwardMsgMetadata.create(),
+      "current-run",
+      FAKE_SCRIPT_HASH
+    )
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([previous.withPendingSkeleton(skeleton)])
+      )
+    )
+
+    // The previous content stays mounted under the overlay.
+    expect(screen.getByText("previous chart")).toBeVisible()
+    const overlay = screen.getByTestId("stPendingSkeleton")
+    expect(overlay).toHaveAttribute("aria-hidden", "true")
+    expect(overlay.parentElement).toHaveAttribute("aria-busy", "true")
   })
 })
 

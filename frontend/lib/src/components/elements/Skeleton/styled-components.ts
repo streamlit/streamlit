@@ -27,7 +27,7 @@ const pulseAnimation = keyframes`
   }
 `
 
-const ANIMATION_STYLES = {
+export const ANIMATION_STYLES = {
   animationDuration: "750ms",
   animationName: pulseAnimation,
   animationTimingFunction: "ease-in",

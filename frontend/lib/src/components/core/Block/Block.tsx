@@ -55,6 +55,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
+import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import {
   PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
@@ -267,6 +268,8 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
+  // A skeleton waits to replace this block, which stays mounted until then.
+  const hasPendingSkeleton = notNullOrUndefined(props.node.pendingSkeleton)
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -380,8 +383,11 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
+        $canShowOverlay={hasPendingSkeleton}
+        aria-busy={hasPendingSkeleton || undefined}
       >
         <ChildRenderer {...props} />
+        {hasPendingSkeleton && <PendingSkeletonOverlay />}
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )

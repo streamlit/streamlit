@@ -317,7 +317,7 @@ This is useful when a control should appear below an element but the control's v
 
 `st.skeleton()` works like `st.empty()` but shows an animated loading placeholder. It can be used in two modes.
 
-Standalone (like `st.empty`): the skeleton appears immediately and is replaced when you call a method on the returned placeholder.
+Standalone (like `st.empty`): the skeleton appears immediately and is replaced when you call a method on the returned placeholder. On a rerun, the previous content stays mounted, and the skeleton only covers it if the new content takes longer than half a second.
 
 ```python
 placeholder = st.skeleton(height=200)

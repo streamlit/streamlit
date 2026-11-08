@@ -477,7 +477,7 @@ with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work r
 
 `st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. The chart then renders into that reserved slot at a stable position, so it goes **stale** (greyed) and updates in place rather than remounting — keeping its scroll, sort, and selection. `chart_slot.skeleton()` (context manager) shows a skeleton while the block runs; write results explicitly to the container (`chart_slot.line_chart(...)`), since the block doesn't redirect bare `st.*` calls into it.
 
-Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
+Avoid `st.empty()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
 For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its output inside its own body; it cannot write to containers created outside it.
 
