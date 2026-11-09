@@ -675,13 +675,19 @@ continue the numbering above.
 
 ## 49. Accessibility Is a Default Requirement
 
+Everything a user needs to use a feature works with a keyboard and a screen reader.
 Keyboard operation, visible focus, accessible names, screen-reader announcements,
 reduced-motion support, and sufficient contrast are part of the feature, not follow-ups.
 Every widget has a meaningful label even when it's hidden: use
 `label_visibility="collapsed"`, never an empty `label`. Visual order matches DOM order.
 Placeholders and decorative elements stay out of the accessibility tree, while content that
-arrives or changes is announced. When a spec ships an interaction without keyboard support,
-it explains why and how the feature stays fully usable without it.
+arrives or changes is announced.
+
+The requirement covers core usage, not every convenience. A secondary pointer interaction,
+such as dragging to resize a side dialog, can ship without a keyboard equivalent when the
+feature stays fully usable without it, and the spec says so. Don't add a half-accessible
+control just to cover the interaction: a focusable control without a clear name or keyboard
+behavior is worse than none.
 
 ## 50. Stay Inside the Visual System
 
