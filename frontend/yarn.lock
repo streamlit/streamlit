@@ -2315,9 +2315,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.44":
-  version: 1.31.44
-  resolution: "@microlink/react-json-view@npm:1.31.44"
+"@microlink/react-json-view@npm:^1.31.46":
+  version: 1.31.46
+  resolution: "@microlink/react-json-view@npm:1.31.46"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2325,7 +2325,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/c4866103b810f9393f36092cbd8a1d1a4a4e42dea056b0be4715e43c6b74bf09fd994438da4bdc7c6386b7d3cda0296d88b199fba044317eebde91cc027c6f3b
+  checksum: 10c0/2bf0d218cf8e772b9be341d45a1c49ae7f6859b36c4a573020c8b7f497c6b7b1c4f1d0594294c3f572efa952c2fe9f2255517fd6ce6597ed9ed0d0bacb10a9b7
   languageName: node
   linkType: hard
 
@@ -3627,7 +3627,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.44"
+    "@microlink/react-json-view": "npm:^1.31.46"
     "@sindresorhus/slugify": "npm:^4.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3661,7 +3661,7 @@ __metadata:
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    hotkeys-js: "npm:^4.0.10"
+    hotkeys-js: "npm:^4.1.1"
     immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
@@ -3669,9 +3669,9 @@ __metadata:
     lodash-es: "npm:^4.18.1"
     loglevel: "npm:^1.9.2"
     mapbox-gl: "npm:^1.13.2"
-    marked: "npm:^18.1.2"
+    marked: "npm:^18.1.3"
     mdast-util-find-and-replace: "npm:^3.0.4"
-    mermaid: "npm:^12.2.0"
+    mermaid: "npm:^12.3.0"
     moment: "npm:^2.31.0"
     moment-duration-format: "npm:^2.3.2"
     moment-timezone: "npm:^0.6.6"
@@ -3717,7 +3717,7 @@ __metadata:
     vite-plugin-dts: "npm:^5.1.2"
     vitest: "npm:^5.0.5"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^8.0.4"
+    wavesurfer.js: "npm:^8.0.5"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -7481,10 +7481,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"elkjs@npm:^0.9.3":
-  version: 0.9.3
-  resolution: "elkjs@npm:0.9.3"
-  checksum: 10c0/caf544ff4fce8442d1d3dd6dface176c9b2fe26fc1e34f56122828e6eef7d2d7fe70d3202f9f3ecf0feb6287d4c8430949f483e63e450a7454bb39ccffab3808
+"elkjs@npm:^0.12.0":
+  version: 0.12.1
+  resolution: "elkjs@npm:0.12.1"
+  checksum: 10c0/bc9779f8460ae190cb598573489632d9d75de3c99f389c9cc85ab6a345a3597ed4d6b0bcd0c8fee60c51574ae0b95e020687c149932e3f15b2350bac9c14df73
   languageName: node
   linkType: hard
 
@@ -8774,10 +8774,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.13.0":
-  version: 17.13.0
-  resolution: "globals@npm:17.13.0"
-  checksum: 10c0/8371d9e4e5581640141b5cce70a098edd765d2e3ab063b14998e590698071e0afb4a4a6739ccfbdcbdeb2565c5553697ba07d95703c51039912cf341a7dba7a7
+"globals@npm:^17.14.0":
+  version: 17.14.0
+  resolution: "globals@npm:17.14.0"
+  checksum: 10c0/422d17c24e87170d4aa566b97a53339ae451c2f4d78512594a7ca951cdb939bc4a85c10071e6dcf77ca63de48713a77f2e71eb9214e44880233dff2090e92731
   languageName: node
   linkType: hard
 
@@ -9267,10 +9267,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.0.10":
-  version: 4.0.10
-  resolution: "hotkeys-js@npm:4.0.10"
-  checksum: 10c0/5fc01bea9e16c159b13d5d891c25a760764240ea9f30a26a7a623b4aca985f6c9d727fa9bfe4f9d5f30ada7de80e2e963dc884c8c6df46100d81f39f989daf09
+"hotkeys-js@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "hotkeys-js@npm:4.1.1"
+  checksum: 10c0/ac3bb9e8438ec85ae30dce6ca730223091cc683937612fd6ba1309b4e32322a6871be4250e286c92fdce2d784e0083f996b55d5c0c616bbe0929b8f4bda0331f
   languageName: node
   linkType: hard
 
@@ -10630,12 +10630,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"marked@npm:^18.1.2":
-  version: 18.1.2
-  resolution: "marked@npm:18.1.2"
+"marked@npm:^18.1.3":
+  version: 18.1.3
+  resolution: "marked@npm:18.1.3"
   bin:
     marked: bin/marked.js
-  checksum: 10c0/0e7312138d6cf866f59a28d2d97ab332ef1b6d1d09263306375a8e9c0e5a4ee892ff1e6ecb668a4959fab0c5f1008c3ddec16c861396fe7cce8f7810521484c9
+  checksum: 10c0/13e72a88c479f388f8c476f8fd50498740097f239091fcfc57d477ac1732c72c70261170029ef6f5029f48cda68663a4d2cd892041f588d95daf52caca02e1a2
   languageName: node
   linkType: hard
 
@@ -10950,9 +10950,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mermaid@npm:^12.2.0":
-  version: 12.2.0
-  resolution: "mermaid@npm:12.2.0"
+"mermaid@npm:^12.3.0":
+  version: 12.3.0
+  resolution: "mermaid@npm:12.3.0"
   dependencies:
     "@braintree/sanitize-url": "npm:^7.1.2"
     "@iconify/utils": "npm:^3.0.2"
@@ -10967,8 +10967,8 @@ __metadata:
     d3-sankey: "npm:^0.12.3"
     dagre-d3-es: "npm:7.0.14"
     dayjs: "npm:^1.11.21"
-    dompurify: "npm:^3.4.12"
-    elkjs: "npm:^0.9.3"
+    dompurify: "npm:^3.4.17"
+    elkjs: "npm:^0.12.0"
     es-toolkit: "npm:^1.45.1"
     katex: "npm:^0.18.0"
     khroma: "npm:^2.1.0"
@@ -10976,8 +10976,7 @@ __metadata:
     roughjs: "npm:^4.6.6"
     stylis: "npm:^4.3.6"
     ts-dedent: "npm:^2.2.0"
-    uuid: "npm:^11.1.0 || ^12 || ^13 || ^14.0.0"
-  checksum: 10c0/6b9e745667febde92ce9c01f1ee8dcd8df77b489a724a131c5340895f12d85de36fd7c52477e6cfb69aa43c2e74bd420b8adb4e9b78c430c4a7f5a5dfe8ad784
+  checksum: 10c0/c3236c6b08d4cbf0e24b23af38736917936a653dffca634a83288198b765872a665d3c4b792d997ae1fcc9f39257c00c3025517542a973dcb695905b9305e3f8
   languageName: node
   linkType: hard
 
@@ -14234,7 +14233,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.0"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.16.2"
-    globals: "npm:^17.13.0"
+    globals: "npm:^17.14.0"
     jiti: "npm:^2.7.0"
     knip: "npm:^6.44.1"
     oxfmt: "npm:^0.76.0"
@@ -15350,15 +15349,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:^11.1.0 || ^12 || ^13 || ^14.0.0":
-  version: 14.0.2
-  resolution: "uuid@npm:14.0.2"
-  bin:
-    uuid: dist-node/bin/uuid
-  checksum: 10c0/88906237004db370b013129c8372a2149f6fa1aad7a5f78fa65ddf2ba0a8663097022300d81fa01f551efee9d6bbe8c7ab140dc6d49f1b03d289f855096990c9
-  languageName: node
-  linkType: hard
-
 "validate-npm-package-name@npm:^6.0.0":
   version: 6.0.0
   resolution: "validate-npm-package-name@npm:6.0.0"
@@ -16092,10 +16082,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^8.0.4":
-  version: 8.0.4
-  resolution: "wavesurfer.js@npm:8.0.4"
-  checksum: 10c0/d6195abf7a8b8086d9707960161f191c22fdc653e8d429ea90f0197bd49f732fc18234d77c7714ddb57dd8f6b5539f5e5e40474a2598b8dd1ad0b42edc2437da
+"wavesurfer.js@npm:^8.0.5":
+  version: 8.0.5
+  resolution: "wavesurfer.js@npm:8.0.5"
+  checksum: 10c0/ee9fd80bc20ee6c4b63ff426020ad961168f42a1644859b4455c99c5b730220a17a7c34aa1e85b92871fcbb1c29540731872fde6685e3419c64380fc75db8c2c
   languageName: node
   linkType: hard
 
