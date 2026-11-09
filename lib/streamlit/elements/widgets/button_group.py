@@ -1507,10 +1507,13 @@ class ButtonGroupMixin:
                     options_format_func,
                 )
             else:
-                # Multi select: filter out invalid values
+                # Multi select: filter out invalid values.
+                # Options are Sequence[Any]. A list[T] | list[T | str] cast names
+                # this method's value type variable, which ty cannot join with Any
+                # through the helper's invariant list union.
                 current_value, value_needs_reset = (
                     validate_and_sync_multiselect_value_with_options(
-                        cast("list[T] | list[T | str]", widget_state.value),
+                        cast("list[Any]", widget_state.value),
                         indexable_options,
                         key,
                         options_format_func,
