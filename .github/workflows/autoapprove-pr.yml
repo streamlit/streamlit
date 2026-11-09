@@ -246,7 +246,8 @@ jobs:
                 .filter((status) => ['failure', 'error'].includes(status.state))
                 .map((status) => `${status.context} (${status.state})`),
             ];
-            if (failedChecks.length > 0) {
+            // The combined state covers every status, including those past the first page.
+            if (failedChecks.length > 0 || combinedStatus.state === 'failure') {
               core.notice(`Checks failed for ${sha}: ${failedChecks.join(', ')}`);
               return;
             }
