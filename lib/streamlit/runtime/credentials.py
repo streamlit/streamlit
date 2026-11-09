@@ -20,6 +20,7 @@ import json
 import os
 import sys
 import textwrap
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
@@ -136,21 +137,30 @@ def _send_email(email: str | None) -> None:
     }
     payload = json.dumps(data).encode()
 
-    # Post to every destination; re-raise the last failure so Credentials.save
-    # logs it.
+    # Post concurrently so one slow destination does not stack timeouts on
+    # first-run activate. Re-raise the last failure so Credentials.save logs it.
+    def _post(metrics_url: str) -> None:
+        response = requests.post(
+            metrics_url,
+            headers=headers,
+            data=payload,
+            timeout=10,
+        )
+        response.raise_for_status()
+
     errors: list[Exception] = []
-    for metrics_url in destinations:
-        try:
-            response = requests.post(
-                metrics_url,
-                headers=headers,
-                data=payload,
-                timeout=10,
-            )
-            response.raise_for_status()
-        except Exception as exc:
-            errors.append(exc)
-            _LOGGER.warning("Failed to post email metrics to %s", metrics_url)
+    with ThreadPoolExecutor(max_workers=len(destinations)) as executor:
+        future_to_url = {
+            executor.submit(_post, metrics_url): metrics_url
+            for metrics_url in destinations
+        }
+        for future in as_completed(future_to_url):
+            metrics_url = future_to_url[future]
+            try:
+                future.result()
+            except Exception as exc:
+                errors.append(exc)
+                _LOGGER.warning("Failed to post email metrics to %s", metrics_url)
 
     if errors:
         raise errors[-1]

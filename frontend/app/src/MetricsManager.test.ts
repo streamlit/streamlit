@@ -790,6 +790,29 @@ describe("track", () => {
       "https://b.example.com/webhook",
     ])
   })
+
+  it("still posts to later destinations when one URL is malformed", async () => {
+    const postFetch = vi.fn(() => Promise.resolve({ ok: true } as Response))
+    global.fetch = postFetch
+
+    const mm = getMetricsManager(
+      undefined,
+      "https://placeholder.example.com/webhook",
+      true
+    )
+    mm.track = MetricsManager.prototype.track.bind(mm)
+    await mm.initialize({ gatherUsageStats: true })
+    // https://[ passes hasHttpsScheme but throws in Request construction.
+    mm.metricsDestinations = ["https://[", "https://b.example.com/webhook"]
+    mm.enqueue("ev1", { data1: 11 })
+    await vi.waitFor(() => {
+      expect(postFetch.mock.calls.length).toBe(1)
+    })
+
+    const input = postFetch.mock.calls[0][0]
+    const postedUrl = typeof input === "string" ? input : input.url
+    expect(postedUrl).toEqual("https://b.example.com/webhook")
+  })
 })
 
 describe("getAnonymousId reuse", () => {

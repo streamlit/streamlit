@@ -365,14 +365,14 @@ class CredentialsClassTest(unittest.TestCase):
             creds.save()
 
             post_urls = [req.url for req in m.request_history if req.method == "POST"]
-            assert post_urls == [
+            assert set(post_urls) == {
                 "https://www.example.com/a",
                 "https://www.example.com/b",
-            ]
+            }
 
     @tempdir()
     def test_email_send_continues_after_partial_fanout_failure(self, temp_dir):
-        """A failed destination still posts to later ones, then save logs the error."""
+        """A failed destination still posts to the others, then save logs the error."""
 
         with requests_mock.mock() as m:
             m.get(
@@ -397,10 +397,10 @@ class CredentialsClassTest(unittest.TestCase):
                 post_urls = [
                     req.url for req in m.request_history if req.method == "POST"
                 ]
-                assert post_urls == [
+                assert set(post_urls) == {
                     "https://www.example.com/a",
                     "https://www.example.com/b",
-                ]
+                }
                 assert len(mock_logger.output) == 1
                 assert "Error saving email" in mock_logger.output[0]
 

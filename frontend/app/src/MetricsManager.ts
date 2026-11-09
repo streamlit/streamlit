@@ -353,8 +353,10 @@ export class MetricsManager {
 
   private async track(data: MetricsEvent): Promise<void> {
     const body = JSON.stringify(data.toJSON())
+    // Async map so a sync Request/URL parse error on one destination
+    // becomes a rejection and does not skip later destinations.
     await Promise.allSettled(
-      this.metricsDestinations.map(url =>
+      this.metricsDestinations.map(async url =>
         fetch(
           new Request(url, {
             method: "POST",
