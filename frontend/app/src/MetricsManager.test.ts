@@ -676,7 +676,7 @@ describe("requestDefaultMetricsConfig fallback", () => {
 
   it("posts the same event to every configured destination", async () => {
     const postFetch = vi.fn(() => Promise.resolve({ ok: true } as Response))
-    global.fetch = postFetch as typeof fetch
+    global.fetch = postFetch
 
     const mm = getMetricsManager(
       undefined,
