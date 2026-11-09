@@ -17,7 +17,8 @@
 # squash commit hides who wrote the merged changes: it keeps green Dependabot PRs
 # auto-approved after an autofix lands.
 #
-# A PR that a reviewer already approved or requested changes on is left alone.
+# A PR that a reviewer already approved or requested changes on is left alone. The
+# approval stays on the PR after later pushes unless branch protection dismisses it.
 #
 # The approval does not count as a code-owner review, so Dependabot PRs that change
 # code-owned paths, such as `.github/` or `lib/pyproject.toml`, still need one.
@@ -99,7 +100,8 @@ jobs:
               "Python Unit Tests",
               "Snapshot Hygiene Check"
             ]
-          # Watched workflows with `paths` filters. They only need to pass when they ran.
+          # Watched workflows with a `paths:` filter. They only need to pass when they ran.
+          # `paths-ignore` workflows still run on dependency PRs, so they stay required.
           PATH_FILTERED_WORKFLOWS: >-
             [
               "Copilot Setup Steps",
@@ -249,6 +251,12 @@ jobs:
             // The combined state covers every status, including those past the first page.
             if (failedChecks.length > 0 || combinedStatus.state === 'failure') {
               core.notice(`Checks failed for ${sha}: ${failedChecks.join(', ')}`);
+              return;
+            }
+            // The combined state is also `pending` for a commit without statuses. No later run
+            // retries a pending status, so such a PR falls back to a manual review.
+            if (combinedStatus.total_count > 0 && combinedStatus.state === 'pending') {
+              core.notice(`Commit statuses for ${sha} are still pending.`);
               return;
             }
 

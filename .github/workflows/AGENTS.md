@@ -50,7 +50,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Use `concurrency` to prevent duplicate runs
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
-- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. When you rename a workflow that runs on PRs, or add one, update the workflow lists in `autoapprove-pr.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
+- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. When you rename a workflow that runs on every PR push, or add one, update the workflow lists in `autoapprove-pr.yml` (and `PATH_FILTERED_WORKFLOWS` for one with a `paths:` filter). Leave label-triggered workflows off those lists. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
 
 ## Shared Composite Actions
 
