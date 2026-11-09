@@ -185,6 +185,15 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         assert list(first_path) == [*block_path, 0]
         assert list(second_path) == [*block_path, 1]
 
+    def test_context_manager_pixel_width_limits_the_slot(self) -> None:
+        """An integer width sizes the loading block, including the re-sent one."""
+        with st.skeleton(width=300):
+            pass
+
+        first, last = self._loading_block_messages()
+        assert first.delta.add_block.width_config.pixel_width == 300
+        assert last.delta.add_block.width_config.pixel_width == 300
+
     def test_context_manager_replaces_skeleton_slot(self) -> None:
         """The loading block takes the skeleton's own position."""
         st.markdown("Before")
@@ -245,6 +254,11 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.skeleton():
                 assert ThreadState.get().in_skeleton_slot
             assert ThreadState.get().in_skeleton_slot
+        assert not ThreadState.get().in_skeleton_slot
+
+        with pytest.raises(ValueError, match="Boom"):
+            with st.skeleton():
+                raise ValueError("Boom")
         assert not ThreadState.get().in_skeleton_slot
 
     def test_context_manager_after_standalone_is_allowed(self) -> None:

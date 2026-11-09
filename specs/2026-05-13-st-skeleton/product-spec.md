@@ -374,9 +374,9 @@ context-manager mode, a slot with nothing to keep also waits 0.5s.
 
 ## Alternatives Considered
 
-> **Open decision:** the return-type and dual-mode choices below need maintainer sign-off
-> before implementation begins. The options are documented here per "Present Options, Not
-> Edicts"; the final selection is intentionally deferred to review.
+> **Decided:** `st.skeleton()` returns a `SkeletonPlaceholder` (Option A), and in
+> context-manager mode its content fills the skeleton's slot. The options below are the
+> alternatives that were weighed.
 
 **Return type — `SkeletonPlaceholder` wrapper vs. plain `DeltaGenerator`:**
 
