@@ -76,6 +76,25 @@ Ship the smallest useful API. Explicitly list what you're NOT including:
 
 Every API needs concrete examples showing simplest usage first, then progressive complexity.
 
+### Specify the Behavioral Contract
+
+A correct signature is not a complete spec. In the proposal's behavior section, cover the
+parts of the contract that apply to the feature:
+
+- **State**: identity, which parameter changes reset it, scope, and cleanup
+- **Reruns**: what triggers a rerun and at what scope, and what happens on retries or
+  overlapping interactions
+- **Placement**: behavior inside forms, fragments, dialogs, the sidebar, and cached
+  functions, or the error raised where it isn't supported
+- **Failures**: what raises, what warns and falls back, and what the viewer sees
+- **Accessibility**: keyboard use, focus, screen-reader names, and reduced motion
+- **Data exposure**: what reaches the browser, logs, and telemetry
+- **Cost**: limits, scaling, and what apps that don't use the feature pay
+- **Compatibility**: behavior changes for existing apps and for other clients, such as
+  AppTest and the agent API
+
+Skip the items that don't apply. The principles below explain the reasoning behind each.
+
 ### Keep It Concise
 
 Specs should cover the most important aspects without redundancy. Avoid repeating the same
@@ -94,6 +113,12 @@ the established style and structure.
 These principles guide the design of Streamlit's public API. Follow them when proposing
 new features or modifying existing commands.
 
+Specs and reviews cite principles by number, so numbers are permanent: add new principles
+at the end and never renumber or retitle existing ones. Cite a principle as `$` plus its
+number, such as `$18` or `$18 Extend Before Inventing`, never `#18`, which GitHub turns
+into a link to issue or PR 18 in PR descriptions and comments. When a spec deliberately
+deviates from a principle, it names the principle and explains why.
+
 ## 1. Simplicity First
 
 The most common use case should require the fewest arguments. A user should be able to
@@ -110,11 +135,29 @@ keyword-only arguments.
 Every optional parameter should have a default that works for 80% of use cases. Users
 shouldn't need to specify `disabled=False` or `width="stretch"` explicitly.
 
+When the best default depends on context, let Streamlit derive it, and give each sentinel
+one job:
+
+- `None` means "not set": Streamlit derives a context-aware value (`hide_index=None`
+  decides from the data) or the feature is absent (no selection, no limit).
+- `False` explicitly turns a feature off.
+- Numbers are literal. If zero has no sensible meaning, raise and point to `None` or
+  `False`.
+- An automatic mode that behaves differently from every explicit value gets its own name,
+  such as `"auto"`, instead of overloading `None`.
+
+An explicit value always wins over a derived one.
+
 ## 4. Start Minimal, Ship Fast
 
 Launch with the smallest useful API. You can always add `sparkline_type="bar"` later,
 but you can never remove it. Every parameter is a maintenance burden. When in doubt,
 leave it out—user feedback will tell you what's actually needed.
+
+The same asymmetry applies to strictness. Loosening a restriction later is backward
+compatible; tightening one is not. When unsure, start strict: raise a clear error for
+duplicates, out-of-range values, and parameter combinations nobody has designed yet, and
+relax the rule once real usage shows it's safe.
 
 ## 5. Consistency Over Novelty
 
@@ -137,7 +180,11 @@ Use consistent parameter names across the API:
 - `help` (not `tooltip`)
 - `on_change` (not `callback`)
 
-This vocabulary is sacred.
+This vocabulary is sacred, and it extends beyond these four names. Widgets share one set
+of chrome parameters—`label`, `key`, `help`, `disabled`, `label_visibility`, and
+`on_change`/`on_click` with `args`/`kwargs`—and elements size themselves with `width` and
+`height`. Reuse `border`, `icon`, and `type` with their established meanings instead of
+inventing synonyms. $45 covers the values these parameters accept.
 
 ## 8. Semantic Names Over Geeky Names
 
@@ -150,11 +197,16 @@ st.title("Welcome")
 st.sidebar
 st.columns(3)
 
-# Bad: Geeky, requires HTML knowledge
+# Bad: Geeky, requires HTML or CSS knowledge
 st.h1("Welcome")
 st.aside
-st.grid(cols=3)
+st.flexbox(cols=3)
 ```
+
+Name the outcome the user sees, not the technique behind it: `run_every` and `live`, not
+`poll_interval` or `debounce`. A name must not promise more than the feature delivers. When
+a feature is itself a technical concept that its audience already knows by a standard name,
+such as `st.iframe` or `alt` text, use that name rather than inventing a friendlier one.
 
 ## 9. Match User Expectations
 
@@ -176,6 +228,10 @@ st.button("Go", help="Click me", disabled=False)
 st.selectbox("Pick", options, help="Pick one", disabled=False)
 st.text_input("Name", help="Enter name", disabled=False)
 ```
+
+The promise is the same intent. When a command genuinely needs different mechanics for a
+shared name, the spec and the docstring call out the difference instead of leaving users to
+discover it.
 
 ## 11. Patterns Are Sacred
 
@@ -221,10 +277,12 @@ st.text_input("Password", password=True)
 # Good: Enum allows expansion
 st.text_input("Password", type="password")
 st.text_input("Email", type="email")  # Easy to add later
-st.text_input("Phone", type="tel")  # And again
+st.text_input("Phone", type="phone")  # And again
 ```
 
-Exception: `disabled=True/False` is fine because there will never be a third state.
+Exception: `disabled=True/False` is fine because there will never be a third state. A
+`bool | X` union is also fine when `True` turns a feature on with defaults and `X`
+configures it: `show_spinner=True` or `show_spinner="Loading data..."`.
 
 ## 17. Positional Arguments Are Precious
 
@@ -287,12 +345,26 @@ Validate parameters immediately and raise clear, actionable exceptions. Users sh
 never see cryptic errors or silent failures. Error messages should explain what went
 wrong AND how to fix it.
 
+Fail fast for mistakes the author made and can fix at the call site: invalid explicit
+values, meaningless parameter combinations, and numbers whose unit is ambiguous. When the
+problem depends on runtime data, an automatic mode, config, or a value a third-party library
+set, warn and fall back instead, so an ordinary rerun with unusual data never crashes the
+app. An explicit request is held to a stricter standard than an automatic default:
+`st.dataframe(lazy=True)` raises when lazy loading isn't possible, while `lazy=None` picks
+eager loading. Ignoring a harmless option that doesn't apply is fine; silently skipping a
+safeguard, such as input validation, or a user's callback is not. Send diagnostics where
+someone can act on them: developers and coding agents read the console, so library warnings
+are logged and shown in the app only when the app is actually wrong.
+
 ## 24. Leverage Markdown Everywhere
 
 Wherever text is displayed, support Streamlit's markdown rendering. Labels, help
 tooltips, captions, and body text should all accept markdown syntax including bold,
 italics, links, code, emoji, and Material icons. This gives users rich formatting
 without separate styling APIs.
+
+Labels and other single-line text accept inline Markdown; block elements such as headings
+are unwrapped to their text. Text that is never displayed, such as `alt` text, stays plain.
 
 ```python
 # Users get formatting for free
@@ -352,6 +424,11 @@ st.selectbox("Pick", np.array(["a", "b", "c"]))  # numpy
 st.selectbox("Pick", pd.Series(["a", "b", "c"]))  # pandas
 ```
 
+Beyond data types, build on platform standards for semantics, such as HTML input types,
+ARIA roles, and ASGI, so behavior like mobile keyboards and autofill comes for free. Expose
+them through Streamlit's own vocabulary rather than mirroring a standard's surface:
+`type="phone"` renders an `<input type="tel">`.
+
 ## 30. Drop-In Replacement for Scripts
 
 Streamlit code should feel like a natural evolution of a Python script. Converting from
@@ -390,6 +467,9 @@ name = st.text_input("Name")  # Does NOT block
 st.write(f"Hello {name}")  # Always runs (name may be "")
 ```
 
+Launchers that start Streamlit from outside a script, such as `App.run()`, are the
+exception: they block until the server stops.
+
 ## 33. Deterministic Output
 
 Given the same code and state, the UI should be identical. Streamlit reruns the entire
@@ -415,6 +495,11 @@ once = one rerun. Uploading 10 files one at a time = 10 reruns. Dragging a slide
 rerun when released, not continuous reruns while dragging. (Exception: explicit
 `st.rerun()` calls in code can trigger additional reruns.)
 
+Reruns follow committed intent. Typed text commits when the user submits it or leaves the
+field, not on every keystroke. Dismissing a menu, submitting invalid input, or a system event like the OS
+switching to dark mode triggers no rerun at all. Reruns that no interaction caused, such as
+`run_every` or live text updates, are always opt-in.
+
 ## 35. Avoid "Clever But Too Clever"
 
 An API like `key="?foo"` to bind to query params is elegant but hard to discover and
@@ -434,6 +519,10 @@ Some data lives in the browser (theme type, viewport size) and some on the serve
 communication on every rerun. Understand the performance implications before committing
 to an API shape.
 
+Layout and theming are resolved in the frontend, where the rendering context is known.
+Python passes semantic values (`"small"`, `"stretch"`, a named color) rather than pixel
+sizes or colors it computed from the theme.
+
 ## 38. Config vs Code: Environment vs Behavior
 
 Use `config.toml` for settings that vary by deployment environment or apply across
@@ -452,3 +541,179 @@ primaryColor = "#FF6B6B"
 # Code: App-specific behavior
 st.set_page_config(page_title="My App", layout="wide")
 ```
+
+Config is also the right home for policies an operator must enforce across apps, such as
+`client.disableDataExport`; a per-call parameter for authors can follow later. But config
+must never change what a line of code means: a global switch that alters how widgets behave
+creates two dialects of every app. Secrets and credentials have their own channel,
+`secrets.toml` and `st.secrets`, and never belong in source code.
+
+## 39. Python Owns App State, the Browser Owns View State
+
+Anything an app's logic depends on lives in Python, as a return value or in
+`st.session_state`. Purely visual state, such as sort order, scroll position, zoom, column
+widths, or which tab is open, stays in the browser and changes without a rerun. View state
+becomes app state only when the author opts in, for example with `on_change="rerun"` on
+`st.tabs`. Never expose a Python value that interactions don't keep current: tabs that
+don't track state report `.open` as `None`, not a stale `True` or `False`.
+
+## 40. Keyed State Survives Changes That Keep It Valid
+
+Without a `key`, a widget's identity comes from its parameters, so changing any of them
+creates a new widget with a fresh value. With a `key`, identity comes from the key, and a
+parameter change may reset the value only when the stored value would otherwise be invalid
+or misread, such as a slider's `min_value`, `max_value`, or `step`. Options-based widgets
+keep the current selection as long as it's still among the options. Presentation parameters
+such as `label`, `help`, `placeholder`, `width`, and `disabled` never reset a keyed widget.
+`value` and `default` only seed the initial state; changing them later doesn't overwrite
+what the user chose.
+
+## 41. Work Is Scoped and Bounded
+
+Everything Streamlit starts, such as threads, timers, cache entries, and connections, ends
+with the run, session, or process that started it. Anything meant to be shared or to
+outlive a session goes through an API built for that, such as `st.cache_resource`, whose
+`scope` and `on_release` define its lifetime and cleanup. Sessions are isolated by default:
+`st.session_state` belongs to one session, `st.cache_data` hands each caller its own copy,
+and only `st.cache_resource` deliberately shares one object. Automatic work is triggered by demand and capped; when
+capacity runs out, skip work rather than build a hidden backlog. Results that arrive late
+never overwrite newer state or a user's pending edits.
+
+## 42. Behavioral Compatibility Is API Compatibility
+
+An additive signature is not automatically backward compatible. Compatibility also covers
+defaults, rerun count and scope, state persistence, callback order, focus, and layout. A
+new parameter's default reproduces today's behavior, which is why new interaction
+parameters on existing commands default to `"ignore"`. When a change alters existing
+behavior on purpose, the spec calls it out, justifies it, and offers a way back when the
+old behavior is a reasonable choice. Fixing behavior that was clearly a bug needs only a
+release note.
+
+## 43. Never Present a Failure as a Success
+
+Viewers and authors must be able to tell when something didn't work. When a command can't
+deliver complete semantics, disable the operation or fail visibly rather than operate on
+partial data: a lazily loaded dataframe turns off search rather than search only the rows
+it has loaded. Don't show controls, ARIA roles, or prompts that promise something the
+feature can't deliver. A value that is silently reset or ignored is worse than an error,
+because a detectable failure gets fixed and an undetectable one doesn't.
+
+## 44. Contain Failures
+
+One failing part must not take down the rest. A broken diagram, a raising fragment, or a
+failed background cache refresh stays isolated, as an inline error or a logged warning,
+while the rest of the app keeps working. Hooks that only observe, such as error handlers,
+fall back to default behavior if they raise. Hooks that guard correctness fail closed: if a
+`validate` callable raises, the input is rejected, not accepted. Control-flow signals like
+`st.stop()` and `st.rerun()` are not errors and never go through error handling.
+
+## 45. Reuse Streamlit's Value Grammars
+
+$7 standardizes parameter names; this standardizes the values they accept. A new parameter
+that takes one of these kinds of value uses the existing grammar:
+
+- **Sizes**: an integer pixel count, `"stretch"`, or `"content"`
+- **Gaps and spacing**: `"xxsmall"` through `"xxlarge"`, or an integer pixel count
+- **Durations**: seconds as a number, a `timedelta`, or a string such as `"1d"`
+- **Colors**: the named palette (`"red"`, `"orange"`, `"yellow"`, `"green"`, `"blue"`,
+  `"violet"`, `"gray"`, and `"primary"`), which follows the theme
+- **Icons**: an emoji or a Material icon (`":material/home:"`)
+
+Require an explicit unit where readers would misread a bare number. `st.text_input(live=300)`
+raises because users of similar tools expect milliseconds, while Streamlit durations are
+seconds.
+
+## 46. One Question per Parameter, One Spelling per Capability
+
+Each parameter answers one question, and its meaning doesn't depend on the container it's
+in. A value that would mean a span in a grid, a weight in a flex row, and nothing elsewhere
+is three parameters sharing one name. The Python type may select a mode when the types are
+unambiguous (a callable runs custom code, a string literal picks a built-in mode), but don't
+inspect function signatures or use heuristics to guess intent. Keep separate concerns in
+separate parameters even when that adds surface, as `validate` and `required` do, and fold
+options that only make sense together into one enum so invalid combinations can't be
+written. In the other direction, give each capability one canonical spelling: avoid
+aliases, second import paths, and mechanisms that duplicate an existing one.
+
+## 47. Python Control Flow Decides What Renders
+
+Streamlit has no `visible=`, `show_if=`, or repeat parameters. Python's `if`, `for`, and
+`with` decide what renders and where, and the order of calls is the order on screen.
+Containers and placeholders (`st.container`, `st.empty`) are the explicit way to fill a
+region out of order. Proposals that encode conditions or repetition as parameters fight
+this model.
+
+```python
+if st.toggle("Show details"):
+    st.dataframe(details)
+```
+
+## 48. Secure by Default
+
+Dangerous capabilities are off until an author turns them on, and the opt-in names the
+risk: raw HTML and JavaScript need `unsafe_allow_html=True` or
+`unsafe_allow_javascript=True`. Anything the browser enforces, such as input validation or
+hidden data export, is a convenience and never a trust boundary; enforce what matters on
+the server. Collect, log, and expose only what a feature needs: keep user input and cached
+values out of logs and warnings, expose auth tokens in `st.user` only when configured, and
+have telemetry record how a feature is used, never the content.
+
+---
+
+# Product Principles
+
+These describe qualities every feature should have regardless of its API shape. They
+continue the numbering above.
+
+## 49. Accessibility Is a Default Requirement
+
+Keyboard operation, visible focus, accessible names, screen-reader announcements,
+reduced-motion support, and sufficient contrast are part of the feature, not follow-ups.
+Every widget has a meaningful label even when it's hidden: use
+`label_visibility="collapsed"`, never an empty `label`. Visual order matches DOM order.
+Placeholders and decorative elements stay out of the accessibility tree, while content that
+arrives or changes is announced. When a spec ships an interaction without keyboard support,
+it explains why and how the feature stays fully usable without it.
+
+## 50. Stay Inside the Visual System
+
+Features look native in every theme without custom CSS. Use theme tokens, the named color
+palette, Material icons, and named variants like `type="primary"` or `type="compact"`
+instead of new styling parameters or overloaded booleans. Responsive behavior follows the
+width of the element's own container, not the viewport, because the same element can sit
+in the sidebar, a column, a dialog, or an embedded app.
+
+## 51. Preserve the User's Context
+
+Perceived performance and continuity are features. Paint stable UI early, reserve space for
+content that's still loading, and avoid flicker and layout shift. Reruns must not discard
+what the user was doing, such as focus, scroll position, open tabs, drafts, or selections.
+Automatic behavior yields to deliberate user action: autoscroll stops while the user scrolls
+up, and a timed rerun never drops a pending edit.
+
+## 52. Pay Only for What You Use
+
+A feature costs nothing for apps that don't use it: no extra import time (import optional
+libraries lazily and detect their types without importing them), no growth of the initial
+frontend bundle (lazy-load heavy dependencies), no extra messages or reruns, and no new
+required dependency. Beyond that, optimize based on measurements, not guesses.
+
+## 53. Workarounds Point to Missing APIs
+
+When many apps inject CSS against Streamlit's DOM, patch its internals, or depend on a
+third-party component for a basic need, that need deserves a supported API. Name it in
+Streamlit's vocabulary rather than copying the workaround's, because the native name is
+permanent. Streamlit's DOM structure, CSS class names other than `st-key-<key>`, and private
+modules are not public API. The reverse also holds: what users can do in a line of Python,
+or what belongs to another library, gets a generic hook rather than a dedicated parameter.
+
+## 54. One App, Many Clients
+
+The browser, AppTest, and the agent API are clients of the same script and execution model.
+Every client goes through the same callbacks and server-side validation and gets no more
+authority or information than the browser. Apps shouldn't need to branch on which client is
+connected, and machine-readable representations use the public API's names (`label`,
+`help`, `options`). Streamlit surfaces the meaning authors provide but never invents it: it
+doesn't generate alt text or mark an action as safe on the author's behalf. Agent-facing
+output keeps Streamlit's own text separate from app content, which clients treat as data,
+not instructions.
