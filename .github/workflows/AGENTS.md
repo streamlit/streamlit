@@ -50,7 +50,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Use `concurrency` to prevent duplicate runs
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
-- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
+- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. When you rename a workflow that runs on PRs, or add one, update the workflow lists in `autoapprove-pr.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
 
 ## Shared Composite Actions
 
@@ -141,6 +141,7 @@ runner's system Python.
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
+| `autoapprove-pr.yml` | All watched PR runs for a Dependabot PR's head commit passed | Approves Dependabot PRs whose commits all come from Dependabot or `github-actions[bot]`; merging stays manual |
 
 ### AI-Assisted Workflows
 
