@@ -3657,7 +3657,7 @@ __metadata:
     axios: "npm:^1.21.0"
     color2k: "npm:^2.0.2"
     d3-graphviz: "npm:^5.6.0"
-    d3-selection: "npm:^3.0.0"
+    d3-selection: "npm:^3.0.1"
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
@@ -7006,6 +7006,13 @@ __metadata:
   version: 3.0.0
   resolution: "d3-selection@npm:3.0.0"
   checksum: 10c0/e59096bbe8f0cb0daa1001d9bdd6dbc93a688019abc97d1d8b37f85cd3c286a6875b22adea0931b0c88410d025563e1643019161a883c516acf50c190a11b56b
+  languageName: node
+  linkType: hard
+
+"d3-selection@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "d3-selection@npm:3.0.1"
+  checksum: 10c0/7efd83b1bd6ce00e791e2eaa721ce9413d15f7037fa4c30b2106e80c147be6f37ad5ebf4bf2c0a7118b984b68a4ee92780dc91ae418a72e1fce0534d4c09d5a3
   languageName: node
   linkType: hard
 

@@ -76,7 +76,7 @@
     "axios": "^1.21.0",
     "color2k": "^2.0.2",
     "d3-graphviz": "^5.6.0",
-    "d3-selection": "^3.0.0",
+    "d3-selection": "^3.0.1",
     "dompurify": "^3.4.17",
     "echarts": "^6.1.0",
     "hoist-non-react-statics": "^3.3.2",
