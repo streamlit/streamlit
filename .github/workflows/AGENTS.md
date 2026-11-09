@@ -141,7 +141,7 @@ runner's system Python.
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
-| `autoapprove-pr.yml` | All watched PR runs for a Dependabot PR's head commit passed | Approves Dependabot PRs whose commits all come from Dependabot or `github-actions[bot]`; merging stays manual |
+| `autoapprove-pr.yml` | All watched PR runs for a Dependabot PR's head commit passed | Approves Dependabot PRs whose commits all come from Dependabot or `github-actions[bot]` and that change no E2E snapshots; merging stays manual |
 
 ### AI-Assisted Workflows
 

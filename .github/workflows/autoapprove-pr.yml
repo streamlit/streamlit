@@ -9,6 +9,7 @@
 # Every commit on the PR must be signed by GitHub (committer web-flow) and authored by
 # Dependabot or github-actions[bot] (merged autofix and snapshot PRs). A commit from
 # anyone else, such as a human push or "Update branch", leaves the PR for a manual review.
+# So does a PR that changes E2E snapshots, for example after a merged snapshot PR.
 #
 # A PR that a reviewer already approved or requested changes on is left alone.
 #
@@ -150,6 +151,17 @@ jobs:
                 .map((commit) => `${commit.sha.slice(0, 10)} (${commit.author?.login ?? 'unknown'})`)
                 .join(', ');
               core.notice(`#${pr.number} has commits that need a manual review: ${list}`);
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            if (files.some((file) => file.filename.startsWith('e2e_playwright/__snapshots__/'))) {
+              core.notice(`#${pr.number} changes E2E snapshots, which need a manual review.`);
               return;
             }
 
