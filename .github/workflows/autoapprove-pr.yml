@@ -3,8 +3,9 @@
 # Each successful PR run of a watched workflow triggers this workflow. It approves only
 # when the newest run of every watched workflow for the PR's head commit has passed, so
 # the last run to finish is the one that approves. Path-filtered workflows count only
-# when they ran. No check run on the head commit may have failed either, which also
-# covers checks from outside these workflows, such as code scanning alerts.
+# when they ran. No check run or commit status on the head commit may have failed
+# either, which also covers checks from outside these workflows, such as code scanning
+# alerts and Snyk.
 #
 # Every commit on the PR must be signed by GitHub (committer web-flow) and authored by
 # Dependabot or github-actions[bot] (merged autofix and snapshot PRs). A commit from
@@ -67,6 +68,7 @@ jobs:
       actions: read
       checks: read
       pull-requests: write
+      statuses: read
     steps:
       - name: Approve if all CI passed
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -224,14 +226,23 @@ jobs:
               filter: 'latest',
               per_page: 100,
             });
-            const failedChecks = checkRuns.filter((check) =>
-              failedCheckConclusions.includes(check.conclusion)
-            );
+            // Some services, such as Snyk, report commit statuses instead of check runs.
+            const { data: combinedStatus } = await github.rest.repos.getCombinedStatusForRef({
+              owner,
+              repo,
+              ref: sha,
+              per_page: 100,
+            });
+            const failedChecks = [
+              ...checkRuns
+                .filter((check) => failedCheckConclusions.includes(check.conclusion))
+                .map((check) => `${check.name} (${check.conclusion})`),
+              ...combinedStatus.statuses
+                .filter((status) => ['failure', 'error'].includes(status.state))
+                .map((status) => `${status.context} (${status.state})`),
+            ];
             if (failedChecks.length > 0) {
-              const list = failedChecks
-                .map((check) => `${check.name} (${check.conclusion})`)
-                .join(', ');
-              core.notice(`Checks failed for ${sha}: ${list}`);
+              core.notice(`Checks failed for ${sha}: ${failedChecks.join(', ')}`);
               return;
             }
 
@@ -249,11 +260,11 @@ jobs:
                 latestStates.set(review.user.login, review.state);
               }
             }
-            const decided = [...latestStates].filter(([, state]) =>
+            const decisiveReviews = [...latestStates].filter(([, state]) =>
               ['APPROVED', 'CHANGES_REQUESTED'].includes(state)
             );
-            if (decided.length > 0) {
-              const list = decided.map(([login, state]) => `${login} (${state})`).join(', ');
+            if (decisiveReviews.length > 0) {
+              const list = decisiveReviews.map(([login, state]) => `${login} (${state})`).join(', ');
               core.notice(`#${pr.number} already has a review decision: ${list}`);
               return;
             }
