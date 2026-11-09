@@ -118,8 +118,8 @@ the established style and structure.
 
 # Principles of Streamlit API Design
 
-These principles guide the design of Streamlit's public API. Follow them when proposing
-new features or modifying existing commands.
+These principles guide the design of Streamlit's public API and how its features behave.
+Follow them when proposing new features or modifying existing commands.
 
 Specs and reviews cite principles by number, so numbers are permanent: add new principles
 at the end and never renumber or retitle existing ones. Cite a principle as `$` plus its
@@ -691,13 +691,6 @@ validation or hidden data export, is a convenience and never a trust boundary; e
 matters on the server. Collect, log, and expose only what a feature needs: keep user input
 and cached values out of logs and warnings, expose auth tokens in `st.user` only when
 configured, and have telemetry record how a feature is used, never the content.
-
----
-
-# Product Principles
-
-These describe qualities every feature should have regardless of its API shape. They
-continue the numbering above.
 
 ## 49. Accessibility Is a Default Requirement
 
