@@ -146,10 +146,12 @@ describe("MermaidChart", () => {
   })
 
   it("shows error state when mermaid import fails", async () => {
-    // Mock the dynamic import to reject
-    vi.doMock("mermaid", () => {
-      throw new Error("Failed to load mermaid")
-    })
+    // Reject asynchronously. A synchronous throw in the vi.doMock factory
+    // never settles the dynamic import on Vitest 5.1, so this test times out
+    // instead of reaching the error state.
+    vi.doMock("mermaid", () =>
+      Promise.reject(new Error("Failed to load mermaid"))
+    )
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 
