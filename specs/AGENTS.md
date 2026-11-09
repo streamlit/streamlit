@@ -341,6 +341,21 @@ Docstrings are for users, not implementers. Document what each parameter does an
 to use it, not how it's implemented internally. Every `Literal` value deserves its own
 bullet point explanation.
 
+The docstring is the API reference: the docs site is generated from it, IDEs show it on
+hover, and coding agents read it. It must be all a user needs to use the command correctly,
+without reading the source or a spec:
+
+- what each parameter accepts and what its default does, including what `None` means
+- what the command returns
+- behavior that affects app logic, such as reruns and `st.session_state`
+- limitations users would otherwise discover by trial and error
+- a runnable example
+
+Shared parameters read the same everywhere. When a parameter like `help`,
+`label_visibility`, `width`, `key`, or `on_change` appears in a new command, reuse the
+wording from existing commands and change only what genuinely differs, so real differences
+stand out ($10).
+
 ## 23. Fail Fast, Fail Helpfully
 
 Validate parameters immediately and raise clear, actionable exceptions. Users should
