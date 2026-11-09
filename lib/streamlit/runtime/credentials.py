@@ -71,7 +71,9 @@ _METRICS_CONFIG_URL: Final = "https://data.streamlit.io/metrics.json"
 def _parse_metrics_destinations(response_json: object) -> list[str]:
     """Return HTTPS metrics destinations from metrics.json payload.
 
-    Prefers ``urls`` when present; falls back to legacy single ``url``.
+    Uses ``urls`` when it contains at least one HTTPS URL; otherwise uses the
+    legacy ``url`` string. Keep in sync with ``parseMetricsDestinations`` in
+    ``frontend/app/src/MetricsManager.ts``.
     """
     if not isinstance(response_json, dict):
         return []
@@ -134,8 +136,8 @@ def _send_email(email: str | None) -> None:
     }
     payload = json.dumps(data).encode()
 
-    # Fan out to every destination; raise the last failure so callers still
-    # observe errors when any sink rejects the event.
+    # Post to every destination; re-raise the last failure so Credentials.save
+    # logs it.
     errors: list[Exception] = []
     for metrics_url in destinations:
         try:
@@ -148,7 +150,7 @@ def _send_email(email: str | None) -> None:
             response.raise_for_status()
         except Exception as exc:
             errors.append(exc)
-            _LOGGER.exception("Failed to post email metrics to %s", metrics_url)
+            _LOGGER.warning("Failed to post email metrics to %s", metrics_url)
 
     if errors:
         raise errors[-1]

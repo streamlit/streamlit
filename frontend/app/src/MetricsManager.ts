@@ -37,10 +37,13 @@ export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
 /** localStorage key for cached metrics destinations (url list + fetch time). */
 export const METRICS_CONFIG_CACHE_KEY = "stMetricsConfig.v2"
 
-/** Legacy forever-sticky single-URL cache key; ignored after upgrade. */
+/**
+ * Single-URL cache key from older Streamlit versions, which never expire it.
+ * Removed on cache write; never read.
+ */
 export const LEGACY_METRICS_CONFIG_CACHE_KEY = "stMetricsConfig"
 
-/** How long a successful metrics.json fetch may be reused without revalidation. */
+/** How long a cached metrics.json response is reused before refetching. */
 export const METRICS_CONFIG_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 const LOG = getLogger("MetricsManager")
@@ -55,7 +58,10 @@ type MetricsConfigCache = {
 
 /**
  * Parse remote metrics config JSON into HTTPS destination URLs.
- * Prefers `urls`; falls back to legacy single `url`.
+ *
+ * Uses `urls` when it contains at least one HTTPS URL; otherwise uses the
+ * legacy `url` string. Keep in sync with `_parse_metrics_destinations` in
+ * `lib/streamlit/runtime/credentials.py`.
  */
 export function parseMetricsDestinations(data: unknown): string[] {
   if (!data || typeof data !== "object") {
@@ -67,7 +73,7 @@ export function parseMetricsDestinations(data: unknown): string[] {
 
   if (Array.isArray(record.urls)) {
     for (const entry of record.urls) {
-      if (typeof entry === "string" && isHttpsUrl(entry)) {
+      if (typeof entry === "string" && hasHttpsScheme(entry)) {
         if (!destinations.includes(entry)) {
           destinations.push(entry)
         }
@@ -79,14 +85,15 @@ export function parseMetricsDestinations(data: unknown): string[] {
     return destinations
   }
 
-  if (typeof record.url === "string" && isHttpsUrl(record.url)) {
+  if (typeof record.url === "string" && hasHttpsScheme(record.url)) {
     return [record.url]
   }
 
   return []
 }
 
-function isHttpsUrl(value: string): boolean {
+/** True when `value` starts with `https://` (does not parse the URL). */
+function hasHttpsScheme(value: string): boolean {
   return value.startsWith("https://")
 }
 
@@ -109,7 +116,7 @@ export class MetricsManager {
   /**
    * HTTPS destinations that receive POSTed metrics events.
    */
-  private metricsUrls: string[] = []
+  private metricsDestinations: string[] = []
 
   /**
    * Function to send a message to the host via postMessage communication
@@ -153,15 +160,19 @@ export class MetricsManager {
     this.actuallySendMetrics = gatherUsageStats && this.metricsUrl !== "off"
     this.getAnonymousId()
 
-    // Trigger fallback to fetch default metrics config if not provided by host
+    // Fetch default metrics config when the host did not provide a mode/URL.
     if (this.actuallySendMetrics && !this.metricsUrl) {
       await this.requestDefaultMetricsConfig()
+    }
 
-      // If no destinations resolved, deactivate metrics
-      if (this.metricsUrls.length === 0) {
-        LOG.error("Undefined metrics config - deactivating metrics tracking.")
-        this.actuallySendMetrics = false
-      }
+    // postMessage mode has no HTTP destinations; URL mode must resolve at least one.
+    if (
+      this.actuallySendMetrics &&
+      this.metricsUrl !== "postMessage" &&
+      this.metricsDestinations.length === 0
+    ) {
+      LOG.error("Undefined metrics config - deactivating metrics tracking.")
+      this.actuallySendMetrics = false
     }
 
     if (this.actuallySendMetrics) {
@@ -203,9 +214,17 @@ export class MetricsManager {
   public setMetricsConfig = (metricsUrl = ""): void => {
     this.metricsUrl = metricsUrl
     if (metricsUrl && metricsUrl !== "off" && metricsUrl !== "postMessage") {
-      this.metricsUrls = isHttpsUrl(metricsUrl) ? [metricsUrl] : []
+      if (hasHttpsScheme(metricsUrl)) {
+        this.metricsDestinations = [metricsUrl]
+      } else {
+        LOG.error(
+          "Rejected non-HTTPS metricsUrl host override - deactivating HTTP metrics:",
+          metricsUrl
+        )
+        this.metricsDestinations = []
+      }
     } else {
-      this.metricsUrls = []
+      this.metricsDestinations = []
     }
   }
 
@@ -214,8 +233,8 @@ export class MetricsManager {
   }
 
   /**
-   * Resolve default metrics destinations from cache and/or remote config.
-   * Uses a 7-day TTL; falls back to stale cache when fetch fails.
+   * Resolve metrics destinations from a fresh cache, else from metrics.json,
+   * else from the stale cache.
    */
   private async requestDefaultMetricsConfig(): Promise<void> {
     const isLocalStoreAvailable = localStorageAvailable()
@@ -223,7 +242,7 @@ export class MetricsManager {
     const now = Date.now()
 
     if (cached && now - cached.fetchedAt < METRICS_CONFIG_TTL_MS) {
-      this.metricsUrls = cached.urls
+      this.metricsDestinations = cached.urls
       return
     }
 
@@ -234,20 +253,33 @@ export class MetricsManager {
 
       if (!response.ok) {
         LOG.error("Failed to fetch metrics config: ", response.status)
-        this.metricsUrls = cached?.urls ?? []
+        this.metricsDestinations = cached?.urls ?? []
         return
       }
 
       const data: unknown = await response.json()
       const destinations = parseMetricsDestinations(data)
-      this.metricsUrls = destinations
+      this.metricsDestinations = destinations
 
-      if (isLocalStoreAvailable && destinations.length > 0) {
-        this.writeMetricsConfigCache({ urls: destinations, fetchedAt: now })
+      if (!isLocalStoreAvailable) {
+        return
+      }
+
+      try {
+        if (destinations.length > 0) {
+          this.writeMetricsConfigCache({ urls: destinations, fetchedAt: now })
+        } else {
+          // Successful empty config must not leave stale destinations to revive later.
+          window.localStorage.removeItem(METRICS_CONFIG_CACHE_KEY)
+          window.localStorage.removeItem(LEGACY_METRICS_CONFIG_CACHE_KEY)
+        }
+      } catch (cacheErr) {
+        // Keep the parsed destinations even if localStorage write/remove fails.
+        LOG.error("Failed to update metrics config cache:", cacheErr)
       }
     } catch (err) {
       LOG.error("Failed to fetch metrics config:", err)
-      this.metricsUrls = cached?.urls ?? []
+      this.metricsDestinations = cached?.urls ?? []
     }
   }
 
@@ -271,7 +303,7 @@ export class MetricsManager {
       }
       const urls = record.urls.filter(
         (entry): entry is string =>
-          typeof entry === "string" && isHttpsUrl(entry)
+          typeof entry === "string" && hasHttpsScheme(entry)
       )
       if (urls.length === 0) {
         return null
@@ -287,7 +319,8 @@ export class MetricsManager {
       METRICS_CONFIG_CACHE_KEY,
       JSON.stringify(cache)
     )
-    // Drop the legacy forever-sticky single-URL key so cutovers are not stuck.
+    // Older Streamlit versions on this origin cache this key forever; removing
+    // it makes them refetch the config.
     window.localStorage.removeItem(LEGACY_METRICS_CONFIG_CACHE_KEY)
   }
 
@@ -321,7 +354,7 @@ export class MetricsManager {
   private async track(data: MetricsEvent): Promise<void> {
     const body = JSON.stringify(data.toJSON())
     await Promise.allSettled(
-      this.metricsUrls.map(url =>
+      this.metricsDestinations.map(url =>
         fetch(
           new Request(url, {
             method: "POST",

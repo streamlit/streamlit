@@ -575,7 +575,9 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrls).toEqual(["https://cached.example.com/webhook"])
+    expect(mm.metricsDestinations).toEqual([
+      "https://cached.example.com/webhook",
+    ])
     expect(fetchMock).not.toHaveBeenCalled()
     expect(mm.actuallySendMetrics).toBe(true)
   })
@@ -596,7 +598,9 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrls).toEqual(["https://fresh.example.com/webhook"])
+    expect(mm.metricsDestinations).toEqual([
+      "https://fresh.example.com/webhook",
+    ])
     expect(fetch).toHaveBeenCalled()
   })
 
@@ -628,7 +632,7 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrls).toEqual([
+    expect(mm.metricsDestinations).toEqual([
       "https://a.example.com/webhook",
       "https://b.example.com/webhook",
     ])
@@ -660,8 +664,52 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrls).toEqual(["https://stale.example.com/webhook"])
+    expect(mm.metricsDestinations).toEqual([
+      "https://stale.example.com/webhook",
+    ])
     expect(mm.actuallySendMetrics).toBe(true)
+  })
+
+  it("falls back to stale cache when fetch rejects", async () => {
+    window.localStorage.setItem(
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://stale.example.com/webhook"],
+        fetchedAt: Date.now() - METRICS_CONFIG_TTL_MS - 1,
+      })
+    )
+    global.fetch = vi.fn(() => Promise.reject(new Error("network down")))
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsDestinations).toEqual([
+      "https://stale.example.com/webhook",
+    ])
+    expect(mm.actuallySendMetrics).toBe(true)
+  })
+
+  it("clears the v2 cache when a successful response has no destinations", async () => {
+    window.localStorage.setItem(
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://stale.example.com/webhook"],
+        fetchedAt: Date.now() - METRICS_CONFIG_TTL_MS - 1,
+      })
+    )
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ urls: [] }),
+      })
+    ) as typeof fetch
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsDestinations).toEqual([])
+    expect(mm.actuallySendMetrics).toBe(false)
+    expect(window.localStorage.getItem(METRICS_CONFIG_CACHE_KEY)).toBeNull()
   })
 
   it("deactivates metrics when fetch fails and no cache exists", async () => {
@@ -670,8 +718,46 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrls).toEqual([])
+    expect(mm.metricsDestinations).toEqual([])
     expect(mm.actuallySendMetrics).toBe(false)
+  })
+})
+
+describe("setMetricsConfig host overrides", () => {
+  it("accepts an HTTPS host override as the sole destination", async () => {
+    const mm = getMetricsManager(
+      undefined,
+      "https://host.example.com/webhook",
+      true
+    )
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsDestinations).toEqual([
+      "https://host.example.com/webhook",
+    ])
+    expect(mm.actuallySendMetrics).toBe(true)
+    expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(0)
+  })
+
+  it("deactivates metrics for a non-HTTPS host override", async () => {
+    const mm = getMetricsManager(
+      undefined,
+      "http://insecure.example.com",
+      true
+    )
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsDestinations).toEqual([])
+    expect(mm.actuallySendMetrics).toBe(false)
+    expect(mm.requestDefaultMetricsConfig.mock.calls.length).toBe(0)
+  })
+})
+
+describe("track", () => {
+  const originalFetch = global.fetch
+
+  afterEach(() => {
+    global.fetch = originalFetch
   })
 
   it("posts the same event to every configured destination", async () => {
@@ -686,7 +772,7 @@ describe("requestDefaultMetricsConfig fallback", () => {
     // Exercise real fan-out (getMetricsManager stubs track by default).
     mm.track = MetricsManager.prototype.track.bind(mm)
     await mm.initialize({ gatherUsageStats: true })
-    mm.metricsUrls = [
+    mm.metricsDestinations = [
       "https://a.example.com/webhook",
       "https://b.example.com/webhook",
     ]

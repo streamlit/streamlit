@@ -343,8 +343,8 @@ class CredentialsClassTest(unittest.TestCase):
             assert '"userId": "email@example.com"' in last_request.text
 
     @tempdir()
-    def test_email_send_multi_url(self, temp_dir):
-        """Saving credentials posts submittedEmail to every urls entry."""
+    def test_email_send_posts_to_all_configured_destinations(self, temp_dir):
+        """Saving credentials posts ``submittedEmail`` to every configured destination."""
 
         with requests_mock.mock() as m:
             m.get(
@@ -369,6 +369,40 @@ class CredentialsClassTest(unittest.TestCase):
                 "https://www.example.com/a",
                 "https://www.example.com/b",
             ]
+
+    @tempdir()
+    def test_email_send_continues_after_partial_fanout_failure(self, temp_dir):
+        """A failed destination still posts to later ones, then save logs the error."""
+
+        with requests_mock.mock() as m:
+            m.get(
+                "https://data.streamlit.io/metrics.json",
+                status_code=200,
+                json={
+                    "urls": [
+                        "https://www.example.com/a",
+                        "https://www.example.com/b",
+                    ]
+                },
+            )
+            m.post("https://www.example.com/a", status_code=500)
+            m.post("https://www.example.com/b", status_code=200)
+            creds: Credentials = Credentials.get_current()  # type: ignore
+            creds._conf_file = str(Path(temp_dir.path) / "config.toml")
+            creds.activation = _verify_email("email@example.com")
+            with self.assertLogs(
+                "streamlit.runtime.credentials", level="ERROR"
+            ) as mock_logger:
+                creds.save()
+                post_urls = [
+                    req.url for req in m.request_history if req.method == "POST"
+                ]
+                assert post_urls == [
+                    "https://www.example.com/a",
+                    "https://www.example.com/b",
+                ]
+                assert len(mock_logger.output) == 1
+                assert "Error saving email" in mock_logger.output[0]
 
     @tempdir()
     def test_email_failed_metrics_fetch(self, temp_dir):
@@ -428,7 +462,50 @@ class CredentialsClassTest(unittest.TestCase):
                 "streamlit.runtime.credentials", level="ERROR"
             ) as mock_logger:
                 creds.save()
-                assert any("Error saving email" in line for line in mock_logger.output)
+                assert len(mock_logger.output) == 1
+                assert "Error saving email" in mock_logger.output[0]
+
+
+class ParseMetricsDestinationsTest(unittest.TestCase):
+    """Unit tests for ``_parse_metrics_destinations``."""
+
+    def test_uses_urls_when_https_entries_present(self):
+        """HTTPS ``urls`` entries win over legacy ``url``."""
+        from streamlit.runtime.credentials import _parse_metrics_destinations
+
+        assert _parse_metrics_destinations(
+            {
+                "urls": [
+                    "https://a.example.com",
+                    "http://insecure.example.com",
+                    "https://a.example.com",
+                    "https://b.example.com",
+                ],
+                "url": "https://legacy.example.com",
+            }
+        ) == ["https://a.example.com", "https://b.example.com"]
+
+    def test_falls_back_to_url_when_urls_empty_or_invalid(self):
+        """Empty or non-HTTPS ``urls`` fall back to legacy ``url``."""
+        from streamlit.runtime.credentials import _parse_metrics_destinations
+
+        assert _parse_metrics_destinations(
+            {"urls": [], "url": "https://legacy.example.com"}
+        ) == ["https://legacy.example.com"]
+        assert _parse_metrics_destinations(
+            {
+                "urls": ["http://insecure.example.com"],
+                "url": "https://legacy.example.com",
+            }
+        ) == ["https://legacy.example.com"]
+
+    def test_returns_empty_for_invalid_payloads(self):
+        """Non-dict and invalid URL shapes yield no destinations."""
+        from streamlit.runtime.credentials import _parse_metrics_destinations
+
+        assert _parse_metrics_destinations(None) == []
+        assert _parse_metrics_destinations({}) == []
+        assert _parse_metrics_destinations({"url": "not-a-url"}) == []
 
 
 class CredentialsModulesTest(unittest.TestCase):
