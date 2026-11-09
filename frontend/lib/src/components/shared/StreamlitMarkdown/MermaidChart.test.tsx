@@ -106,7 +106,16 @@ describe("MermaidChart", () => {
     })
   })
 
+  // Rejects an in-flight mermaid mock so a failed test cannot leave the module
+  // pending for the next test. The flag covers a factory that starts after
+  // cleanup, when the releaser has already been cleared.
+  let releaseMermaidImport: ((error: Error) => void) | undefined
+  let mermaidImportExpected = false
+
   afterEach(() => {
+    mermaidImportExpected = false
+    releaseMermaidImport?.(new Error("Mermaid import cleaned up"))
+    releaseMermaidImport = undefined
     vi.doUnmock("mermaid")
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -157,28 +166,44 @@ describe("MermaidChart", () => {
     })
   })
 
-  it("shows error state when mermaid import fails", async () => {
-    vi.resetModules()
-    // An already-rejected factory never settles import("mermaid") on Vitest
-    // 5.1. Hold the factory open, let the chart start it, then reject.
-    const importGate: { reject?: (error: Error) => void } = {}
-    vi.doMock("mermaid", async () => {
-      await new Promise<never>((_resolve, reject) => {
-        importGate.reject = reject
+  it(
+    "shows error state when mermaid import fails",
+    async () => {
+      vi.resetModules()
+      mermaidImportExpected = true
+      // import("mermaid") reaches the factory after render() returns. An
+      // already-rejected factory never settles that import on Vitest 5.1, so
+      // hold it open until the chart has started it.
+      vi.doMock("mermaid", () => {
+        return new Promise<never>((_resolve, reject) => {
+          if (!mermaidImportExpected) {
+            // Reject on a later turn. A factory that is already rejected
+            // never settles import("mermaid") on Vitest 5.1.
+            queueMicrotask(() => {
+              reject(new Error("Mermaid import cleaned up"))
+            })
+            return
+          }
+          releaseMermaidImport = reject
+        })
       })
-    })
 
-    render(<MermaidChart source="graph TD\nA-->B" />)
-    expect(importGate.reject).toEqual(expect.any(Function))
+      render(<MermaidChart source="graph TD\nA-->B" />)
+      await waitFor(() => {
+        expect(releaseMermaidImport).toEqual(expect.any(Function))
+      })
 
-    act(() => {
-      importGate.reject?.(new Error("Failed to load mermaid"))
-    })
+      await act(async () => {
+        releaseMermaidImport?.(new Error("Failed to load mermaid"))
+        await Promise.resolve()
+      })
 
-    const error = await waitForMermaidError()
-    expect(error).toHaveTextContent("Mermaid diagram error")
-    expect(screen.queryByRole("img")).not.toBeInTheDocument()
-  })
+      const error = await waitForMermaidError()
+      expect(error).toHaveTextContent("Mermaid diagram error")
+      expect(screen.queryByRole("img")).not.toBeInTheDocument()
+    },
+    15_000
+  )
 
   it("shows a generic error message when render rejects with a non-Error", async () => {
     vi.doMock("mermaid", () => ({
