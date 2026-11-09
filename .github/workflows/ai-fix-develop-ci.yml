@@ -449,9 +449,10 @@ jobs:
           set -euo pipefail
           echo "## Develop CI Rerun" >> "$GITHUB_STEP_SUMMARY"
           while IFS=$'\t' read -r id workflow_id attempt name url; do
+            # On a gh error, warn and go on, so one run's error does not skip the other runs.
             read -r status current_attempt < <(
               gh api "repos/$GH_REPO/actions/runs/$id" --jq '"\(.status) \(.run_attempt)"'
-            )
+            ) || { echo "::warning::Could not check $name ($url). Not rerunning it."; continue; }
             # A maintainer may have rerun the workflow while the agent was working.
             if [[ "$status" != "completed" || "$current_attempt" != "$attempt" ]]; then
               echo "::notice::$name run $id is now attempt $current_attempt ($status). Not rerunning it again."
@@ -466,7 +467,8 @@ jobs:
             # is skipped.
             latest="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?per_page=100" |
               jq --argjson id "$id" \
-                'first(.workflow_runs[] | select((.head_branch == "develop" and .event == "push") or .id <= $id)) | .id')"
+                'first(.workflow_runs[] | select((.head_branch == "develop" and .event == "push") or .id <= $id)) | .id')" ||
+              { echo "::warning::Could not check $name ($url). Not rerunning it."; continue; }
             if [[ "$latest" != "$id" ]]; then
               echo "::notice::$name run $id is not the newest develop run, or is older than the latest 100 runs. Not rerunning $url."
               continue
@@ -474,12 +476,12 @@ jobs:
             # A runner outage can fail a run whose jobs were all cancelled or skipped.
             # --failed may not rerun those, so rerun every job when none failed.
             failed_jobs="$(gh api "repos/$GH_REPO/actions/runs/$id/jobs?per_page=100" \
-              --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
+              --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')" ||
+              { echo "::warning::Could not check $name ($url). Not rerunning it."; continue; }
             rerun_args=("$id" --failed)
             if [[ "$failed_jobs" == "0" ]]; then
               rerun_args=("$id")
             fi
-            # Keep going on an error so one rejected rerun does not skip the other runs.
             if ! gh run rerun "${rerun_args[@]}"; then
               echo "::warning::Could not rerun $name ($url)."
               continue
