@@ -153,6 +153,7 @@ describe("MermaidChart", () => {
     // import joins that hung module instead of its own mock.
     await act(async () => {
       resolveRender({ svg: SAMPLE_SVG_WITH_VIEWBOX })
+      await pendingRender
     })
   })
 
