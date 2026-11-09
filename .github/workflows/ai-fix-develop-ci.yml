@@ -460,12 +460,15 @@ jobs:
             # Rerun only the newest develop run of the workflow. A rerun runs on
             # refs/heads/develop again and joins the workflow's cancel-in-progress group,
             # so rerunning an older run would cancel the newer commit's run. The REST branch
-            # and event filters can return stale runs, so filter the latest runs here.
-            newer="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?per_page=100" |
+            # and event filters can return stale runs, so walk the latest 100 runs newest
+            # first and stop at the first develop push run or at this run. Rerun only if
+            # that is this run. A run older than all 100, as from an old dispatched commit,
+            # is skipped.
+            latest="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?per_page=100" |
               jq --argjson id "$id" \
-                '[.workflow_runs[] | select(.head_branch == "develop" and .event == "push" and .id > $id)] | length')"
-            if [[ "$newer" != "0" ]]; then
-              echo "::notice::A newer develop run of $name exists. Not rerunning $url."
+                'first(.workflow_runs[] | select((.head_branch == "develop" and .event == "push") or .id <= $id)) | .id')"
+            if [[ "$latest" != "$id" ]]; then
+              echo "::notice::$name run $id is not the newest develop run, or is older than the latest 100 runs. Not rerunning $url."
               continue
             fi
             # A runner outage can fail a run whose jobs were all cancelled or skipped.
