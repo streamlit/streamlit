@@ -2,11 +2,12 @@
 # failed CI runs for commits merged into develop.
 #
 # Every completed push run of a watched workflow triggers this workflow, but triage
-# starts only once all watched runs for that commit have finished. A commit with
-# several failed workflows gets one triage. A failed run is skipped when a newer
-# develop run of the same workflow is running, passed, or failed: that run decides
-# whether develop is green, and this workflow triages it when it finishes. A manual
-# dispatch skips this check, so a past failure can be triaged in a dry run.
+# starts only once all watched runs for that commit have finished, so a commit with
+# several failed workflows usually gets one triage. A failed run is skipped when a
+# newer develop run of the same workflow is running, passed, or failed: that run
+# decides whether develop is green, and this workflow triages it when it finishes.
+# A manual dispatch skips this check, so a past commit can be triaged. Set dry_run
+# to skip the rerun and the fix PR.
 #
 # The agent runs with a read-only token and writes a decision. Later jobs act on it:
 # - rerun: reruns the failed jobs of each failed run, up to MAX_RUN_ATTEMPTS attempts per run.
@@ -21,7 +22,8 @@ name: AI Fix Develop CI
 on:
   workflow_run:
     # The CI workflows that run on pushes to develop. Keep this list in sync with
-    # WATCHED_WORKFLOWS below and with each workflow's name.
+    # WATCHED_WORKFLOWS below and with each workflow's name. Copilot Setup Steps is
+    # left out: it is not CI, and fixing it needs a workflow change, which triage reports.
     workflows:
       - "CLI Regression"
       - "CodeQL"
@@ -189,14 +191,15 @@ jobs:
             // Skip a failed run when a newer develop commit has a run of the same workflow
             // that is still running, passed, or failed. That run decides whether develop is
             // green, and its failure gets its own triage. A cancelled run decides nothing.
+            // The REST branch and event filters can return stale runs, so list the
+            // workflow's latest runs unfiltered and check them here. 100 runs cover about
+            // a day of CI, much longer than a triage takes.
             async function findNewerRun(run) {
               const { data } = await github.rest.actions.listWorkflowRuns({
                 owner,
                 repo,
                 workflow_id: run.workflow_id,
-                branch: 'develop',
-                event: 'push',
-                per_page: 20,
+                per_page: 100,
               });
               return data.workflow_runs.find(
                 (other) =>
@@ -237,6 +240,7 @@ jobs:
                 }))
               )
             );
+            // A rerun decision covers every listed run, so allow it only if all are under the limit.
             core.setOutput('can_rerun', String(toTriage.every((run) => run.run_attempt < maxAttempts)));
 
   ai-fix-develop-ci:
@@ -251,10 +255,10 @@ jobs:
       issues: read
       pull-requests: read
     concurrency:
-      # One triage at a time: an agent starts only after the previous one finishes, so it
-      # usually sees that triage's rerun or fix PR. GitHub keeps one pending job per group
-      # and cancels older pending ones, which newer runs supersede. Dry runs queue
-      # separately so they cannot cancel a pending real triage.
+      # One triage at a time, so each agent usually sees the previous triage's rerun or
+      # fix PR. GitHub keeps only one pending job per group and cancels older pending
+      # ones. That is fine because the newer commit's runs usually supersede their
+      # failures. Dry runs use their own group so they cannot cancel a pending real triage.
       group: ${{ github.workflow }}${{ inputs.dry_run && '-dry-run' || '' }}
       cancel-in-progress: false
     outputs:
@@ -453,16 +457,31 @@ jobs:
               echo "::notice::$name run $id is now attempt $current_attempt ($status). Not rerunning it again."
               continue
             fi
-            # A rerun keeps refs/heads/develop and joins the workflow's cancel-in-progress
-            # concurrency group, so rerunning an older run would cancel a newer commit's run.
-            latest="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?branch=develop&event=push&per_page=1" \
-              --jq '.workflow_runs[0].id')"
-            if [[ "$latest" != "$id" ]]; then
+            # Rerun only the newest develop run of the workflow. A rerun runs on
+            # refs/heads/develop again and joins the workflow's cancel-in-progress group,
+            # so rerunning an older run would cancel the newer commit's run. The REST branch
+            # and event filters can return stale runs, so filter the latest runs here.
+            newer="$(gh api "repos/$GH_REPO/actions/workflows/$workflow_id/runs?per_page=100" |
+              jq --argjson id "$id" \
+                '[.workflow_runs[] | select(.head_branch == "develop" and .event == "push" and .id > $id)] | length')"
+            if [[ "$newer" != "0" ]]; then
               echo "::notice::A newer develop run of $name exists. Not rerunning $url."
               continue
             fi
-            gh run rerun "$id" --failed
-            echo "- Reran the failed jobs of $name ($url) as attempt $((attempt + 1))." >> "$GITHUB_STEP_SUMMARY"
+            # A runner outage can fail a run whose jobs were all cancelled or skipped.
+            # --failed may not rerun those, so rerun every job when none failed.
+            failed_jobs="$(gh api "repos/$GH_REPO/actions/runs/$id/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out")] | length')"
+            rerun_args=("$id" --failed)
+            if [[ "$failed_jobs" == "0" ]]; then
+              rerun_args=("$id")
+            fi
+            # Keep going on an error so one rejected rerun does not skip the other runs.
+            if ! gh run rerun "${rerun_args[@]}"; then
+              echo "::warning::Could not rerun $name ($url)."
+              continue
+            fi
+            echo "- Reran $name ($url) as attempt $((attempt + 1))." >> "$GITHUB_STEP_SUMMARY"
           done < <(jq -r '.[] | [.id, .workflow_id, .attempt, .name, .url] | @tsv' <<< "$RUNS")
 
   create-pr:

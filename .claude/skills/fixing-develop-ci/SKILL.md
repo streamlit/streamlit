@@ -7,7 +7,7 @@ description: Triages failed CI runs for a commit merged into develop and resolve
 
 Pushes to `develop` run the PR CI workflows, plus Performance Suite and Load Testing, which PRs run only with a label. A merged PR can still turn `develop` red. Most failures are transient: outages, network errors, and flaky tests. Real breakages usually come from a PR whose last CI run predates a change on `develop`, such as a new lint rule, a theme change that invalidates new snapshots, or a file length limit. Others come from a workflow the PR did not run, or from a runner image or external service change.
 
-Most workflows cancel the run for an older commit when a newer one lands, so the newest run of each workflow decides whether `develop` is green. Green `develop` runs are also the baselines that PR wheel-size and coverage comments compare against.
+Most workflows cancel the run for an older commit when a newer one lands, so the newest run of each workflow decides whether `develop` is green. PR wheel-size and coverage comments compare against the latest green `develop` run, so while `develop` is red they compare against an older commit.
 
 The goal is a green `develop` with the least work: rerun what was transient, fix what is broken, and hand the rest to a maintainer.
 
@@ -37,7 +37,7 @@ A commit SHA on `develop`, or the URL of one of its failed runs. Without one, us
 ### 2. Compare against the merged PR and history
 
 - Find the PR the commit came from (`gh pr list --state merged --search <sha>`). Check what it changed and whether its own CI passed. A failure its CI did not show usually comes from a PR merged after that CI ran, or from an external change such as a new tool or dependency release.
-- Check newer `develop` commits. If a newer push run of the same workflow passed, the failure no longer affects `develop`. If one is still running, its result decides.
+- Check newer `develop` commits. If a newer push run of the same workflow passed, the failure no longer affects `develop`. If one is still running, choose **report**: its result decides, and its own triage handles a failure.
 - Check the last ~10 push runs of the failing workflow on `develop` and recent nightly runs for the same error. A deterministic failure repeats and usually traces back to one commit.
 - For a test that might be flaky, check for `@pytest.mark.flaky` and the output of `uv run scripts/fetch_flaky_tests.py`.
 
@@ -58,7 +58,7 @@ Keep these in mind:
 
 ### 4. Act on the decision
 
-**rerun:** Rerun only runs that are still the newest `develop` run of their workflow. A rerun joins that workflow's concurrency group, so rerunning an older run cancels the newer one. Outside CI, rerun only the failed jobs of each such run (`gh run rerun <id> --failed`). In CI, record the decision and let the workflow rerun the jobs.
+**rerun:** Rerun only runs that are still the newest `develop` run of their workflow. A rerun joins that workflow's concurrency group, so rerunning an older run cancels the newer one. Outside CI, rerun only the failed jobs of each such run (`gh run rerun <id> --failed`). If none of its jobs failed or timed out, as after a runner outage that cancelled them, rerun all jobs (`gh run rerun <id>`). In CI, record the decision and let the workflow rerun the jobs.
 
 **fix:**
 

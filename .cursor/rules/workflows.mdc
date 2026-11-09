@@ -160,7 +160,7 @@ runner's system Python.
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review; weekly/full mode uses recently merged PRs as leads, including bundled skills |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-fix-nightly.yml` | Failed `nightly.yml` run or manual | AI-powered nightly failure triage: reruns transient failures, opens a fix PR for real breakages |
-| `ai-fix-develop-ci.yml` | Push CI on `develop` finished with a failure, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
+| `ai-fix-develop-ci.yml` | All watched push runs for a `develop` commit finished and at least one failed, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates
