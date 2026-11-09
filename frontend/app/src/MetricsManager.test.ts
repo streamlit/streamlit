@@ -26,7 +26,14 @@ import {
 } from "@streamlit/lib"
 import { PageProfile } from "@streamlit/protobuf"
 
-import { DEFAULT_METRICS_CONFIG, MetricsManager } from "./MetricsManager"
+import {
+  DEFAULT_METRICS_CONFIG,
+  LEGACY_METRICS_CONFIG_CACHE_KEY,
+  METRICS_CONFIG_CACHE_KEY,
+  METRICS_CONFIG_TTL_MS,
+  MetricsManager,
+  parseMetricsDestinations,
+} from "./MetricsManager"
 
 const getMetricsManager = (
   sessionInfo?: SessionInfo,
@@ -182,11 +189,46 @@ describe("initialize", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    // Checks for cached config first
-    expect(getItemSpy).toHaveBeenCalledWith("stMetricsConfig")
-    // Fetches if no cached config
+    // Checks for v2 cached config first
+    expect(getItemSpy).toHaveBeenCalledWith(METRICS_CONFIG_CACHE_KEY)
+    // Fetches if no fresh cached config
     expect(fetch.mock.calls.length).toBe(1)
     expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
+  })
+})
+
+describe("parseMetricsDestinations", () => {
+  it("prefers urls over legacy url", () => {
+    expect(
+      parseMetricsDestinations({
+        urls: [
+          "https://a.example.com",
+          "https://b.example.com",
+          "https://a.example.com",
+        ],
+        url: "https://legacy.example.com",
+      })
+    ).toEqual(["https://a.example.com", "https://b.example.com"])
+  })
+
+  it("falls back to legacy url when urls is empty", () => {
+    expect(
+      parseMetricsDestinations({ url: "https://legacy.example.com", urls: [] })
+    ).toEqual(["https://legacy.example.com"])
+  })
+
+  it("ignores non-https destinations", () => {
+    expect(
+      parseMetricsDestinations({
+        urls: ["http://insecure.example.com", "https://ok.example.com"],
+      })
+    ).toEqual(["https://ok.example.com"])
+  })
+
+  it("returns empty for invalid payloads", () => {
+    expect(parseMetricsDestinations(null)).toEqual([])
+    expect(parseMetricsDestinations({})).toEqual([])
+    expect(parseMetricsDestinations({ url: "not-a-url" })).toEqual([])
   })
 })
 
@@ -519,25 +561,98 @@ describe("requestDefaultMetricsConfig fallback", () => {
     global.fetch = originalFetch
   })
 
-  it("uses cached metrics config from localStorage when present", async () => {
+  it("uses fresh v2 cache without fetching", async () => {
     window.localStorage.setItem(
-      "stMetricsConfig",
-      "https://cached.example.com/metrics.json"
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://cached.example.com/webhook"],
+        fetchedAt: Date.now(),
+      })
     )
     const fetchMock = vi.fn()
     global.fetch = fetchMock as typeof fetch
 
-    // Pass mockRequestDefaultMetricsConfig=false to exercise the real path.
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrl).toEqual("https://cached.example.com/metrics.json")
-    // Cached config short-circuits the fetch entirely.
+    expect(mm.metricsUrls).toEqual(["https://cached.example.com/webhook"])
     expect(fetchMock).not.toHaveBeenCalled()
     expect(mm.actuallySendMetrics).toBe(true)
   })
 
-  it("deactivates metrics when fetch returns a non-OK response", async () => {
+  it("ignores legacy forever-sticky cache and fetches", async () => {
+    window.localStorage.setItem(
+      LEGACY_METRICS_CONFIG_CACHE_KEY,
+      "https://legacy.example.com/webhook"
+    )
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ url: "https://fresh.example.com/webhook" }),
+      })
+    ) as typeof fetch
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsUrls).toEqual(["https://fresh.example.com/webhook"])
+    expect(fetch).toHaveBeenCalled()
+  })
+
+  it("refetches when v2 cache is expired and writes a new cache entry", async () => {
+    window.localStorage.setItem(
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://stale.example.com/webhook"],
+        fetchedAt: Date.now() - METRICS_CONFIG_TTL_MS - 1,
+      })
+    )
+    window.localStorage.setItem(
+      LEGACY_METRICS_CONFIG_CACHE_KEY,
+      "https://legacy.example.com/webhook"
+    )
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            urls: [
+              "https://a.example.com/webhook",
+              "https://b.example.com/webhook",
+            ],
+          }),
+      })
+    ) as typeof fetch
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsUrls).toEqual([
+      "https://a.example.com/webhook",
+      "https://b.example.com/webhook",
+    ])
+    const cached = JSON.parse(
+      window.localStorage.getItem(METRICS_CONFIG_CACHE_KEY) as string
+    )
+    expect(cached.urls).toEqual([
+      "https://a.example.com/webhook",
+      "https://b.example.com/webhook",
+    ])
+    expect(typeof cached.fetchedAt).toBe("number")
+    expect(
+      window.localStorage.getItem(LEGACY_METRICS_CONFIG_CACHE_KEY)
+    ).toBeNull()
+  })
+
+  it("falls back to stale cache when fetch returns a non-OK response", async () => {
+    window.localStorage.setItem(
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://stale.example.com/webhook"],
+        fetchedAt: Date.now() - METRICS_CONFIG_TTL_MS - 1,
+      })
+    )
     global.fetch = vi.fn(() =>
       Promise.resolve({ ok: false, status: 500 } as Response)
     )
@@ -545,18 +660,49 @@ describe("requestDefaultMetricsConfig fallback", () => {
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrl).toBeFalsy()
-    expect(mm.actuallySendMetrics).toBe(false)
+    expect(mm.metricsUrls).toEqual(["https://stale.example.com/webhook"])
+    expect(mm.actuallySendMetrics).toBe(true)
   })
 
-  it("swallows fetch errors and leaves metrics deactivated", async () => {
+  it("deactivates metrics when fetch fails and no cache exists", async () => {
     global.fetch = vi.fn(() => Promise.reject(new Error("network down")))
 
     const mm = getMetricsManager(undefined, "", false)
     await mm.initialize({ gatherUsageStats: true })
 
-    expect(mm.metricsUrl).toBeFalsy()
+    expect(mm.metricsUrls).toEqual([])
     expect(mm.actuallySendMetrics).toBe(false)
+  })
+
+  it("posts the same event to every configured destination", async () => {
+    const postFetch = vi.fn(() => Promise.resolve({ ok: true } as Response))
+    global.fetch = postFetch as typeof fetch
+
+    const mm = getMetricsManager(
+      undefined,
+      "https://placeholder.example.com/webhook",
+      true
+    )
+    // Exercise real fan-out (getMetricsManager stubs track by default).
+    mm.track = MetricsManager.prototype.track.bind(mm)
+    await mm.initialize({ gatherUsageStats: true })
+    mm.metricsUrls = [
+      "https://a.example.com/webhook",
+      "https://b.example.com/webhook",
+    ]
+    mm.enqueue("ev1", { data1: 11 })
+    await vi.waitFor(() => {
+      expect(postFetch.mock.calls.length).toBe(2)
+    })
+
+    const postUrls = postFetch.mock.calls.map(call => {
+      const input = call[0]
+      return typeof input === "string" ? input : input.url
+    })
+    expect(postUrls).toEqual([
+      "https://a.example.com/webhook",
+      "https://b.example.com/webhook",
+    ])
   })
 })
 

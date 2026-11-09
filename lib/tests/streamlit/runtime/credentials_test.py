@@ -343,6 +343,34 @@ class CredentialsClassTest(unittest.TestCase):
             assert '"userId": "email@example.com"' in last_request.text
 
     @tempdir()
+    def test_email_send_multi_url(self, temp_dir):
+        """Saving credentials posts submittedEmail to every urls entry."""
+
+        with requests_mock.mock() as m:
+            m.get(
+                "https://data.streamlit.io/metrics.json",
+                status_code=200,
+                json={
+                    "urls": [
+                        "https://www.example.com/a",
+                        "https://www.example.com/b",
+                    ]
+                },
+            )
+            m.post("https://www.example.com/a", status_code=200)
+            m.post("https://www.example.com/b", status_code=200)
+            creds: Credentials = Credentials.get_current()  # type: ignore
+            creds._conf_file = str(Path(temp_dir.path) / "config.toml")
+            creds.activation = _verify_email("email@example.com")
+            creds.save()
+
+            post_urls = [req.url for req in m.request_history if req.method == "POST"]
+            assert post_urls == [
+                "https://www.example.com/a",
+                "https://www.example.com/b",
+            ]
+
+    @tempdir()
     def test_email_failed_metrics_fetch(self, temp_dir):
         """Test that saving a new Credential does not send an email if metrics fetch fails"""
 
@@ -400,8 +428,7 @@ class CredentialsClassTest(unittest.TestCase):
                 "streamlit.runtime.credentials", level="ERROR"
             ) as mock_logger:
                 creds.save()
-                assert len(mock_logger.output) == 1
-                assert "Error saving email" in mock_logger.output[0]
+                assert any("Error saving email" in line for line in mock_logger.output)
 
 
 class CredentialsModulesTest(unittest.TestCase):

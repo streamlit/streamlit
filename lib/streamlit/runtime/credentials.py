@@ -65,6 +65,37 @@ _TELEMETRY_HEADLESS_TEXT = """
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 """
 
+_METRICS_CONFIG_URL: Final = "https://data.streamlit.io/metrics.json"
+
+
+def _parse_metrics_destinations(response_json: object) -> list[str]:
+    """Return HTTPS metrics destinations from metrics.json payload.
+
+    Prefers ``urls`` when present; falls back to legacy single ``url``.
+    """
+    if not isinstance(response_json, dict):
+        return []
+
+    destinations: list[str] = []
+    urls = response_json.get("urls")
+    if isinstance(urls, list):
+        for entry in urls:
+            if (
+                isinstance(entry, str)
+                and entry.startswith("https://")
+                and entry not in destinations
+            ):
+                destinations.append(entry)
+
+    if destinations:
+        return destinations
+
+    url = response_json.get("url", "")
+    if isinstance(url, str) and url.startswith("https://"):
+        return [url]
+
+    return []
+
 
 def _send_email(email: str | None) -> None:
     """Send the user's email for metrics, if submitted."""
@@ -73,14 +104,15 @@ def _send_email(email: str | None) -> None:
     if email is None or "@" not in email:
         return
 
-    metrics_url = ""
     try:
-        response_json = requests.get(
-            "https://data.streamlit.io/metrics.json", timeout=2
-        ).json()
-        metrics_url = response_json.get("url", "")
+        response_json = requests.get(_METRICS_CONFIG_URL, timeout=2).json()
+        destinations = _parse_metrics_destinations(response_json)
     except Exception:
         _LOGGER.exception("Failed to fetch metrics URL")
+        return
+
+    if not destinations:
+        _LOGGER.error("Undefined metrics config - skipping email metrics")
         return
 
     headers = {
@@ -100,15 +132,26 @@ def _send_email(email: str | None) -> None:
         "type": "track",
         "userId": email,
     }
+    payload = json.dumps(data).encode()
 
-    response = requests.post(
-        metrics_url,
-        headers=headers,
-        data=json.dumps(data).encode(),
-        timeout=10,
-    )
+    # Fan out to every destination; raise the last failure so callers still
+    # observe errors when any sink rejects the event.
+    errors: list[Exception] = []
+    for metrics_url in destinations:
+        try:
+            response = requests.post(
+                metrics_url,
+                headers=headers,
+                data=payload,
+                timeout=10,
+            )
+            response.raise_for_status()
+        except Exception as exc:
+            errors.append(exc)
+            _LOGGER.exception("Failed to post email metrics to %s", metrics_url)
 
-    response.raise_for_status()
+    if errors:
+        raise errors[-1]
 
 
 class Credentials:
