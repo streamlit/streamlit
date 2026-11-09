@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { render } from "~lib/test_util"
@@ -121,12 +121,16 @@ describe("MermaidChart", () => {
     }
   })
 
-  it("renders loading skeleton initially and error element is not present", () => {
+  it("renders loading skeleton initially and error element is not present", async () => {
     // Keep mermaid pending so loading UI stays visible for this assertion.
+    let resolveRender: (value: { svg: string }) => void = () => {}
+    const pendingRender = new Promise<{ svg: string }>(resolve => {
+      resolveRender = resolve
+    })
     vi.doMock("mermaid", () => ({
       default: {
         initialize: vi.fn(),
-        render: vi.fn().mockReturnValue(new Promise(() => {})),
+        render: vi.fn().mockReturnValue(pendingRender),
       },
     }))
 
@@ -143,17 +147,32 @@ describe("MermaidChart", () => {
     expect(screen.queryByTestId("stSkeletonElement")).not.toBeInTheDocument()
     // Negative assertion: error element should not be present during loading
     expect(screen.queryByTestId("stMermaidError")).not.toBeInTheDocument()
+
+    // Settle the render before the next test. A promise that never resolves
+    // keeps the mermaid module in flight on Vitest 5.1, and the following
+    // import joins that hung module instead of its own mock.
+    await act(async () => {
+      resolveRender({ svg: SAMPLE_SVG_WITH_VIEWBOX })
+    })
   })
 
   it("shows error state when mermaid import fails", async () => {
-    // Reject asynchronously. A synchronous throw in the vi.doMock factory
-    // never settles the dynamic import on Vitest 5.1, so this test times out
-    // instead of reaching the error state.
-    vi.doMock("mermaid", () =>
-      Promise.reject(new Error("Failed to load mermaid"))
-    )
+    vi.resetModules()
+    // An already-rejected factory never settles import("mermaid") on Vitest
+    // 5.1. Hold the factory open, let the chart start it, then reject.
+    const importGate: { reject?: (error: Error) => void } = {}
+    vi.doMock("mermaid", async () => {
+      await new Promise<never>((_resolve, reject) => {
+        importGate.reject = reject
+      })
+    })
 
     render(<MermaidChart source="graph TD\nA-->B" />)
+    expect(importGate.reject).toEqual(expect.any(Function))
+
+    act(() => {
+      importGate.reject?.(new Error("Failed to load mermaid"))
+    })
 
     const error = await waitForMermaidError()
     expect(error).toHaveTextContent("Mermaid diagram error")
