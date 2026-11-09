@@ -8,9 +8,14 @@
 # alerts and Snyk.
 #
 # Every commit on the PR must be signed by GitHub (committer web-flow) and authored by
-# Dependabot or github-actions[bot] (merged autofix and snapshot PRs). A commit from
-# anyone else, such as a human push or "Update branch", leaves the PR for a manual review.
-# So does a PR that changes E2E snapshots, for example after a merged snapshot PR.
+# Dependabot or github-actions[bot]. A commit from anyone else, such as a human push or
+# "Update branch", leaves the PR for a manual review. So does a PR that changes E2E
+# snapshots, for example after a merged snapshot PR.
+#
+# github-actions[bot] commits are the squash merges of [autofix] and [snapshots] PRs,
+# which a maintainer merges. Trusting them is a deliberate trade-off, even though the
+# squash commit hides who wrote the merged changes: it keeps green Dependabot PRs
+# auto-approved after an autofix lands.
 #
 # A PR that a reviewer already approved or requested changes on is left alone.
 #
