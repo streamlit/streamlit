@@ -190,6 +190,11 @@ describe("useDeckGl", () => {
         expected: "<b>Elevation Value:</b> {elevationValue}",
       },
       {
+        description: "properties missing the variable (no interpolation)",
+        object: { properties: { otherValue: 10 } },
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
+      {
         description: "inherited properties getter (no interpolation)",
         object: Object.create({
           get properties() {
@@ -576,6 +581,42 @@ describe("useDeckGl", () => {
       ])
     })
 
+    it("appends selection state to array update triggers", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              updateTriggers: { getLineColor: ["user-trigger", 1] },
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { updateTriggers?: Record<string, unknown> }
+      }
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        "user-trigger",
+        1,
+        [],
+        false,
+      ])
+    })
+
     it("skips null layers when selection mode makes layers pickable", () => {
       const props = getUseDeckGlProps(
         {
@@ -933,6 +974,43 @@ describe("useDeckGl", () => {
       ])
     })
 
+    it("should preserve URL-data layer selections when the spec changes", () => {
+      const elementProps = {
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "test-element-id",
+      }
+      const initialProps = getUseDeckGlProps(elementProps)
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+      const objects = [{ elevationValue: 1 }, { elevationValue: 2 }]
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { [layerId]: [5, 10] },
+              objects: { [layerId]: objects },
+            },
+          },
+        })
+      })
+
+      rerender({
+        ...initialProps,
+        element: getUseDeckGlProps(elementProps, { zoom: 9 }).element,
+      })
+
+      expect(result.current.viewState).toEqual(
+        expect.objectContaining({ zoom: 9 })
+      )
+      expect(result.current.data.selection.indices[layerId]).toEqual([5, 10])
+      expect(result.current.data.selection.objects[layerId]).toEqual(objects)
+    })
+
     it("should clear all selections when data shrinks to empty", () => {
       // Start with data
       const initialData = [
@@ -1009,6 +1087,169 @@ describe("useDeckGl", () => {
         result.current.data.selection.objects["object-layer"]?.[0]
       ).toEqual(updatedData[1])
     })
+  })
+
+  describe("selection fill colors", () => {
+    type FillAccessor = (
+      object: unknown,
+      objectInfo: { index: number }
+    ) => unknown
+
+    const data = [
+      { lng: 1, lat: 1 },
+      { lng: 2, lat: 2 },
+      { lng: 3, lat: 3 },
+    ]
+
+    const getFillColorAfterSelecting = (
+      layerOverrides: Record<string, unknown>,
+      selectedIndices: number[]
+    ): unknown => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data,
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              ...layerOverrides,
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { points: selectedIndices },
+              objects: { points: selectedIndices.map(i => data[i]) },
+            },
+          },
+        })
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      return layer.props.getFillColor
+    }
+
+    it("keeps the original fill color for selected objects and dims the rest", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: [200, 30, 0, 160] },
+        [1]
+      ) as FillAccessor
+
+      expect(typeof getFillColor).toBe("function")
+      expect(getFillColor(data[1], { index: 1 })).toEqual([200, 30, 0, 255])
+      expect(getFillColor(data[0], { index: 0 })).toEqual([200, 30, 0, 102])
+      expect(getFillColor(data[2], { index: 2 })).toEqual([200, 30, 0, 102])
+    })
+
+    it("falls back to theme colors when the original fill color cannot be parsed", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: "not-a-color" },
+        [0]
+      ) as FillAccessor
+
+      const [pr, pg, pb] = parseToRgba(mockTheme.emotion.colors.primary)
+      const [gr, gg, gb] = parseToRgba(mockTheme.emotion.colors.gray20)
+      expect(getFillColor(data[0], { index: 0 })).toEqual([pr, pg, pb, 255])
+      expect(getFillColor(data[1], { index: 1 })).toEqual([gr, gg, gb, 102])
+    })
+
+    it("does not rewrite the fill color when the selection is out of bounds", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: [200, 30, 0, 160] },
+        [10]
+      )
+
+      expect(getFillColor).toEqual([200, 30, 0, 160])
+    })
+  })
+
+  describe("form clear", () => {
+    const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+    const userSelection = {
+      selection: {
+        indices: { [layerId]: [3] },
+        objects: { [layerId]: [{ elevationValue: 3 }] },
+      },
+    }
+    const storedSelection = {
+      selection: {
+        indices: { [layerId]: [1] },
+        objects: { [layerId]: [{ elevationValue: 1 }] },
+      },
+    }
+    const emptySelection = { selection: { indices: {}, objects: {} } }
+
+    it.each([
+      {
+        description: "the stored element state when the element has an id",
+        id: "test-element-id",
+        storedState: storedSelection,
+        expected: storedSelection,
+      },
+      {
+        description: "an empty selection when no element state is stored",
+        id: "test-element-id",
+        storedState: undefined,
+        expected: emptySelection,
+      },
+      {
+        description: "an empty selection when the element has no id",
+        id: "",
+        storedState: undefined,
+        expected: emptySelection,
+      },
+    ])(
+      "resets the selection to $description",
+      ({ id, storedState, expected }) => {
+        const props = getUseDeckGlProps({
+          id,
+          formId: "form",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        })
+        props.widgetMgr.setFormSubmitBehaviors("form", true)
+        if (storedState) {
+          props.widgetMgr.setElementState(id, "selection", storedState)
+        }
+
+        const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+          initialProps: props,
+        })
+
+        act(() => {
+          result.current.setSelection({
+            fromUser: true,
+            value: userSelection,
+          })
+        })
+
+        expect(result.current.data).toEqual(userSelection)
+
+        act(() => {
+          props.widgetMgr.submitForm("form", undefined)
+        })
+
+        expect(result.current.data).toEqual(expected)
+        expect(result.current.hasActiveSelection).toBe(!!storedState)
+      }
+    )
   })
 
   describe("width configuration", () => {
@@ -1132,6 +1373,35 @@ describe("useDeckGl", () => {
 
       expect(result.current.deck.views).toBeUndefined()
       expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+    })
+
+    it.each([
+      {
+        description: "the Streamlit key when mapProvider is carto",
+        jsonOverrides: { mapProvider: "carto" },
+        expected: "x7g2plm9yq8vfrc",
+      },
+      {
+        description: "the Streamlit key when mapStyle points to cartocdn",
+        jsonOverrides: { mapStyle: CARTO_DARK },
+        expected: "x7g2plm9yq8vfrc",
+      },
+      {
+        description: "a user-provided key",
+        jsonOverrides: { mapProvider: "carto", cartoKey: "user-key" },
+        expected: "user-key",
+      },
+      {
+        description: "no key for non-Carto map styles",
+        jsonOverrides: {},
+        expected: undefined,
+      },
+    ])("uses $description", ({ jsonOverrides, expected }) => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({}, {}, jsonOverrides),
+      })
+
+      expect(result.current.deck.cartoKey).toBe(expected)
     })
   })
 

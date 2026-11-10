@@ -270,6 +270,85 @@ def test_stretch_dataframe_default_height(app: Page):
     wait_until(app, _dataframe_fits)
 
 
+def _start_dragging_dataframe(app: Page, dataframe: Locator, delta_px: int) -> None:
+    """Drag the dataframe's bottom-right resize handle, without releasing it.
+
+    A positive ``delta_px`` drags the table taller, a negative one shorter.
+    """
+    # Center the dataframe so the handle stays in the viewport while dragging.
+    dataframe.evaluate("el => el.scrollIntoView({block: 'center'})")
+    box = dataframe.get_by_test_id("stDataFrameResizable").bounding_box()
+    assert box is not None
+    # The resize handle straddles the bottom-right corner.
+    x = box["x"] + box["width"] - 2
+    y = box["y"] + box["height"] - 2
+    app.mouse.move(x, y)
+    app.mouse.down()
+    app.mouse.move(x, y + delta_px / 2)
+    app.mouse.move(x, y + delta_px)
+
+
+def _bottom(locator: Locator) -> float:
+    box = locator.bounding_box()
+    assert box is not None
+    return box["y"] + box["height"]
+
+
+def test_stretch_dataframe_resize_stays_in_parent(app: Page):
+    """A stretch dataframe stays inside its parent when dragged.
+
+    An unbounded card grows with the table. A fixed-height card can be
+    dragged shorter, and dragging taller stops at the space the table fills.
+    """
+    # Without a definite parent height, the card grows with the table while
+    # it's dragged, and keeps that height after the drag.
+    dataframe_card = get_element_by_key(app, "stretch-dataframe-card")
+    card_dataframe = dataframe_card.get_by_test_id("stDataFrame")
+    wait_until(
+        app,
+        lambda: (_height(card_dataframe) or 0) >= DEFAULT_DATAFRAME_HEIGHT_PX,
+    )
+    initial_card_height = _height(dataframe_card) or 0
+
+    _start_dragging_dataframe(app, card_dataframe, 140)
+
+    def _card_grew_with_dataframe() -> bool:
+        resizable = card_dataframe.get_by_test_id("stDataFrameResizable")
+        return (_height(dataframe_card) or 0) > initial_card_height + 100 and (
+            _bottom(resizable) <= _bottom(dataframe_card)
+        )
+
+    # Check mid-drag, where a percentage-height drag would overflow the card,
+    # and again after release, where it would snap back.
+    wait_until(app, _card_grew_with_dataframe)
+    app.mouse.up()
+    wait_until(app, _card_grew_with_dataframe)
+
+    # In a definite-height card, the table can't be dragged past the space it
+    # fills, so the card doesn't overflow and scroll.
+    fixed_card = get_element_by_key(app, "fixed-card-title-and-dataframe")
+    fixed_dataframe = fixed_card.get_by_test_id("stDataFrame")
+    wait_until(app, lambda: _content_fits(fixed_card))
+    fixed_dataframe_height = _height(fixed_dataframe) or 0
+    resizable = fixed_dataframe.get_by_test_id("stDataFrameResizable")
+
+    # Dragging shorter first proves that the handle engages in this card.
+    _start_dragging_dataframe(app, fixed_dataframe, -70)
+    app.mouse.up()
+    wait_until(app, lambda: (_height(resizable) or 0) < fixed_dataframe_height - 30)
+
+    _start_dragging_dataframe(app, fixed_dataframe, 140)
+    app.mouse.up()
+
+    def _dataframe_stays_in_fixed_card() -> bool:
+        # Allow 1px because the heights round fractional sizes differently.
+        return abs((_height(resizable) or 0) - fixed_dataframe_height) <= 1 and (
+            _content_fits(fixed_card)
+        )
+
+    wait_until(app, _dataframe_stays_in_fixed_card)
+
+
 def test_stretch_blocks_grow_in_fixed_height_parents(app: Page):
     """Stretch containers and forms grow past a fixed-height parent; tabs scroll."""
     form_parent = get_element_by_key(app, "fixed-parent-stretch-form")

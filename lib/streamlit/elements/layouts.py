@@ -1111,11 +1111,22 @@ class LayoutsMixin:
             ``False`` (default), no border is shown. If this is ``True``,
             a border is shown around each cell.
 
+            .. note::
+                Use cell borders with caution. Prefer an element's own
+                border when it has one. For example, use
+                ``st.metric(..., border=True)`` instead of a bordered grid so
+                the metric's sparkline chart can extend to the edges of the
+                border. Never combine cell borders with elements that have
+                their own border, because this creates double borders.
+
         row_height : "content" or int
             The height of each row. This can be one of the following:
 
             - ``"content"`` (default): Each row is as tall as its
-              tallest cell.
+              tallest cell. An element or container with
+              ``height="stretch"`` fills the row, either as a direct
+              child of the grid or inside ``grid.cell()``. A stretch
+              chart or dataframe is at least its default height.
             - A positive integer: Every row is that many pixels.
               Content that is taller scrolls inside the cell. Content
               does not stretch automatically. Pass ``height="stretch"``

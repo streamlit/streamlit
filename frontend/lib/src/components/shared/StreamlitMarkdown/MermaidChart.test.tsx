@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { render } from "~lib/test_util"
@@ -31,21 +31,41 @@ const SAMPLE_SVG_WITH_DIMENSIONS =
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined)
 
+// One module mock for the whole file. Vitest 5.1 keeps a mocked "mermaid"
+// module cached, so a later vi.doMock does not replace it.
+const mermaidMock = vi.hoisted(() => ({
+  importError: null as Error | null,
+  initialize: vi.fn(),
+  render: vi.fn(),
+}))
+
+vi.mock("mermaid", () => ({
+  get default(): {
+    initialize: ReturnType<typeof vi.fn>
+    render: ReturnType<typeof vi.fn>
+  } {
+    if (mermaidMock.importError) {
+      throw mermaidMock.importError
+    }
+    return {
+      initialize: mermaidMock.initialize,
+      render: mermaidMock.render,
+    }
+  },
+}))
+
 function mockMermaidSuccess(svg = SAMPLE_SVG_WITH_VIEWBOX): {
   initialize: ReturnType<typeof vi.fn>
   render: ReturnType<typeof vi.fn>
 } {
-  const initialize = vi.fn()
-  const renderFn = vi.fn().mockResolvedValue({ svg })
-
-  vi.doMock("mermaid", () => ({
-    default: {
-      initialize,
-      render: renderFn,
-    },
-  }))
-
-  return { initialize, render: renderFn }
+  mermaidMock.importError = null
+  mermaidMock.initialize.mockReset()
+  mermaidMock.render.mockReset()
+  mermaidMock.render.mockResolvedValue({ svg })
+  return {
+    initialize: mermaidMock.initialize,
+    render: mermaidMock.render,
+  }
 }
 
 async function waitForChartImage(): Promise<HTMLElement> {
@@ -97,6 +117,10 @@ describe("MermaidChart", () => {
   )
 
   beforeEach(() => {
+    mermaidMock.importError = null
+    mermaidMock.initialize.mockReset()
+    mermaidMock.render.mockReset()
+    mermaidMock.render.mockResolvedValue({ svg: SAMPLE_SVG_WITH_VIEWBOX })
     global.URL.createObjectURL = vi.fn(() => "blob:mermaid-test")
     global.URL.revokeObjectURL = vi.fn()
     mockWriteText.mockClear()
@@ -107,7 +131,6 @@ describe("MermaidChart", () => {
   })
 
   afterEach(() => {
-    vi.doUnmock("mermaid")
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     if (originalClipboardDescriptor) {
@@ -121,14 +144,13 @@ describe("MermaidChart", () => {
     }
   })
 
-  it("renders loading skeleton initially and error element is not present", () => {
+  it("renders loading skeleton initially and error element is not present", async () => {
     // Keep mermaid pending so loading UI stays visible for this assertion.
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockReturnValue(new Promise(() => {})),
-      },
-    }))
+    let resolveRender: (value: { svg: string }) => void = () => {}
+    const pendingRender = new Promise<{ svg: string }>(resolve => {
+      resolveRender = resolve
+    })
+    mermaidMock.render.mockReturnValue(pendingRender)
 
     render(<MermaidChart source="graph TD\nA-->B" />)
     expect(screen.getByTestId("stMermaidChart")).toBeVisible()
@@ -143,13 +165,18 @@ describe("MermaidChart", () => {
     expect(screen.queryByTestId("stSkeletonElement")).not.toBeInTheDocument()
     // Negative assertion: error element should not be present during loading
     expect(screen.queryByTestId("stMermaidError")).not.toBeInTheDocument()
+
+    // Settle the render so a later test does not join a hung mermaid.render().
+    await act(async () => {
+      resolveRender({ svg: SAMPLE_SVG_WITH_VIEWBOX })
+      await pendingRender
+    })
   })
 
   it("shows error state when mermaid import fails", async () => {
-    // Mock the dynamic import to reject
-    vi.doMock("mermaid", () => {
-      throw new Error("Failed to load mermaid")
-    })
+    // The cached module cannot be replaced per test on Vitest 5.1. Throwing
+    // from the default export is the failure the component catches.
+    mermaidMock.importError = new Error("Failed to load mermaid")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 
@@ -159,12 +186,7 @@ describe("MermaidChart", () => {
   })
 
   it("shows a generic error message when render rejects with a non-Error", async () => {
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockRejectedValue("boom"),
-      },
-    }))
+    mermaidMock.render.mockRejectedValue("boom")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 

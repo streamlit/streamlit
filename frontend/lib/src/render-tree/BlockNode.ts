@@ -51,6 +51,12 @@ export class BlockNode implements AppNode {
    */
   public readonly retained: readonly RetainedElement[]
 
+  /**
+   * The skeleton a later run sent to this slot. The block stays mounted under
+   * it until new content arrives or the run ends (`ElementNode` has the same).
+   */
+  public readonly pendingSkeleton?: ElementNode
+
   public constructor(
     activeScriptHash: string,
     children?: AppNode[],
@@ -58,7 +64,8 @@ export class BlockNode implements AppNode {
     scriptRunId?: string,
     fragmentId?: string,
     deltaMsgReceivedAt?: number,
-    retained?: readonly RetainedElement[]
+    retained?: readonly RetainedElement[],
+    pendingSkeleton?: ElementNode
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
@@ -67,6 +74,21 @@ export class BlockNode implements AppNode {
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
     this.retained = retained ?? NO_RETAINED_ELEMENTS
+    this.pendingSkeleton = pendingSkeleton
+  }
+
+  /** Return a copy of this node that waits for content under `skeleton`. */
+  public withPendingSkeleton(skeleton: ElementNode): BlockNode {
+    return new BlockNode(
+      this.activeScriptHash,
+      this.children,
+      this.deltaBlock,
+      this.scriptRunId,
+      this.fragmentId,
+      this.deltaMsgReceivedAt,
+      this.retained,
+      skeleton
+    )
   }
 
   /** True if this Block has no children. */

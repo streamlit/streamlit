@@ -17,7 +17,7 @@ How you structure your app affects usability more than you think.
 | `@st.dialog`      | You need a focused modal flow (dialog or side drawer), such as confirmation, short editing, details, or settings that should temporarily interrupt the main page.                                                                                                                            |
 | `st.form`         | You need to batch multiple widget inputs and rerun only when the user submits.                                                                                                                                                                                                              |
 | `st.empty`        | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order.                                                                                                                                                                           |
-| `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits).                                                           |
+| `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager whose content fills the skeleton's slot.                                                                        |
 | `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns.                                                                                                                                                                          |
 | `st.bottom`       | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls.                                                                                                                                                                       |
 | `st.space`        | You need explicit vertical or horizontal spacing inside the current layout direction.                                                                                                                                                                                                       |
@@ -253,8 +253,8 @@ with button_col:
 Sibling cards with different content (for example, one `st.metric` without `delta` or `chart_data`) end up with uneven heights.
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
-- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`. `st.columns(n, border=True)` also gives equal-height bordered columns.
-- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching. In grid rows without a pixel `row_height`, `grid.cell()` is such a wrapper: make the card itself the cell with `grid.container(border=True, height="stretch")`.
+- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`, including inside `grid.cell()`, for example a card that spans two columns. `st.columns(n, border=True)` also gives equal-height bordered columns.
+- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
 - A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
@@ -349,15 +349,15 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (like `st.spinner`, **recommended**): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
+Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot and stack vertically, like in `st.container()`, even in a horizontal container. The skeleton stays until the first visible element is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
 
 ```python
 with st.skeleton(height=200):
     data = expensive_operation()
-st.success("Data loaded!")
+    st.dataframe(data, key="results")  # Replaces the skeleton in its slot
 ```
 
-Prefer context manager mode; use standalone mode only when you need to reserve a slot and fill it later (like `st.empty`).
+In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's default spinner is hidden for the whole `with` block; custom `show_spinner` or `st.spinner` text labels the skeleton instead.
 
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 

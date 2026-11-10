@@ -168,7 +168,11 @@ import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
-import { getRunIdentity, type RunIdentity } from "./util/runIdentity"
+import {
+  getFinishedRun,
+  getRunIdentity,
+  type RunIdentity,
+} from "./util/runIdentity"
 import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -1161,7 +1165,7 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.metadata as ForwardMsgMetadata | null | undefined,
             msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
@@ -2068,8 +2072,9 @@ export class App extends PureComponent<Props, State> {
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
    * @param metadata the ForwardMsg metadata, which carries the identity of the
-   * run that finished. A later run may already have started by the time this
-   * message is handled, so React state can't be used to name the finished run.
+   * run that finished and which of its fragments' output was delivered. A
+   * later run may already have started by the time this message is handled,
+   * so React state can't be used to name the finished run.
    */
   handleScriptFinished(
     status: ForwardMsg.ScriptFinishedStatus,
@@ -2081,7 +2086,7 @@ export class App extends PureComponent<Props, State> {
     // work. Widget completion, stale-node cleanup, and cache aging need the
     // finished run, so they are skipped here rather than guessed from React
     // state.
-    const finishedRun = getRunIdentity(metadata)
+    const finishedRun = getFinishedRun(metadata)
 
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
@@ -2092,7 +2097,10 @@ export class App extends PureComponent<Props, State> {
     if (finishedRun) {
       this.setState(prevState => ({
         scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-        scriptRunFinishedFragmentIds: finishedRun.fragmentIds,
+        // Widgets in a fragment whose output was dropped re-enable when that
+        // fragment's own rerun finishes.
+        scriptRunFinishedFragmentIds:
+          finishedRun.cleanupFragmentIds ?? finishedRun.fragmentIds,
       }))
     }
 
@@ -2127,8 +2135,10 @@ export class App extends PureComponent<Props, State> {
         })
       })
 
+      const cleanupFragmentIds = finishedRun?.cleanupFragmentIds
       if (
         finishedRun &&
+        cleanupFragmentIds &&
         (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
           status ===
             ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
@@ -2155,7 +2165,8 @@ export class App extends PureComponent<Props, State> {
             return {
               elements: elements.clearStaleNodes(
                 finishedRun.scriptRunId,
-                finishedRun.fragmentIds
+                cleanupFragmentIds,
+                finishedRun.droppedFragmentIds
               ),
             }
           },
@@ -2172,7 +2183,7 @@ export class App extends PureComponent<Props, State> {
       // before a NewSession message is processed. This issue should not
       // disrupt users and is not a critical need for the message cache
       if (
-        finishedRun &&
+        cleanupFragmentIds &&
         this.connectionManager !== null &&
         status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
         this.sessionInfo.isSet &&
@@ -2186,7 +2197,7 @@ export class App extends PureComponent<Props, State> {
       ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge,
-          finishedRun.fragmentIds
+          cleanupFragmentIds
         )
       }
     }
@@ -2285,15 +2296,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Update pendingElementsBuffer with the given Delta and set up a timer to
-   * update state.elements. This buffer allows us to process Deltas quickly
-   * without spamming React with too many of render() calls.
+   * Applies one delta to the element tree.
+   *
+   * Logs and drops a delta whose metadata has no usable delta path. A usable
+   * path has at least a root container and an index within it. React runs the
+   * setState updater after handleMessage's try/catch returns, so a throw from
+   * applyDelta there would make React unmount the app.
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata,
+    metadataMsg: ForwardMsgMetadata | null | undefined,
     elementHash?: string
   ): void => {
+    if (!metadataMsg || metadataMsg.deltaPath.length < 2) {
+      LOG.error(
+        `Dropping a ${deltaMsg.type} delta with a missing or invalid delta path.`
+      )
+      return
+    }
+
     // A delta belongs to the run of the most recent new_session before it.
     // Reading scriptRunId from prevState (not this.state) keeps that true,
     // because React applies queued updaters in order.

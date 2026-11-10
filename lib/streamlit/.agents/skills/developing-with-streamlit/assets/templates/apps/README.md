@@ -166,8 +166,9 @@ budget. It limits serialized bytes for one decorated function, not total process
 memory. Don't guess it from source dataset size, representative or example
 values, or arbitrary constants; ask the user when the memory budget is unknown.
 Combine limits when they address different risks. Use a custom spinner message
-for loaders that run directly in the page. Use `show_spinner=False` only when a
-surrounding loading UI, such as `st.skeleton`, already provides feedback:
+for loaders that run directly in the page. Inside `with st.skeleton()`, the
+skeleton already provides feedback: it hides the default spinner and shows custom
+spinner text on the skeleton:
 
 ```python
 @st.cache_data(ttl="1h", show_spinner="Loading metric data...")

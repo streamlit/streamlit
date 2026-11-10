@@ -234,6 +234,44 @@ def test_client_outer_fragment_run_drops_a_nested_fragments_old_content() -> Non
     assert _bodies(client) == ["app", "outer", "row 0"]
 
 
+def test_client_keeps_a_dropped_fragments_content_until_its_own_rerun() -> None:
+    """A fragment whose output the server dropped from a finished run keeps
+    its older content, as the browser does, until its own rerun replaces it.
+    """
+    client = interaction.AgentSessionClient()
+    finished = _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
+    finished.metadata.delivery.dropped_fragment_ids.append("inner")
+    _write_all(
+        client,
+        _new_session("r1"),
+        _markdown([0, 0], "app"),
+        *_nested_fragment_run("row 0", "row 1"),
+        _finished(ForwardMsg.FINISHED_SUCCESSFULLY),
+        _new_session("r2", fragment_ids=["outer", "inner"]),
+        _block([0, 1], fragment_id="outer"),
+        _markdown([0, 1, 0], "outer v2", fragment_id="outer"),
+        finished,
+    )
+
+    outer = tree.merge_deltas(client.messages).children[0].children[1]
+    inner = outer.children[1]
+    assert outer.children[0].element.markdown.body == "outer v2"
+    assert [row.element.markdown.body for row in inner.children.values()] == [
+        "row 0",
+        "row 1",
+    ]
+
+    _write_all(
+        client,
+        _new_session("r3", fragment_ids=["inner"]),
+        _block([0, 1, 1], fragment_id="inner"),
+        _markdown([0, 1, 1, 0], "row 0 v2", fragment_id="inner"),
+        _finished(ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY),
+    )
+
+    assert _bodies(client) == ["app", "outer v2", "row 0 v2"]
+
+
 def test_client_inner_fragment_run_keeps_the_outer_fragment() -> None:
     """A nested fragment's own rerun replaces only its container's contents."""
     client = interaction.AgentSessionClient()

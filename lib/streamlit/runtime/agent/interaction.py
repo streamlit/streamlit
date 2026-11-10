@@ -239,7 +239,9 @@ class AgentSessionClient(SessionClient):
             msg_type == "script_finished"
             and msg.script_finished in _COMPLETED_RUN_STATUSES
         ):
-            self._drop_stale_deltas()
+            self._drop_stale_deltas(
+                frozenset(msg.metadata.delivery.dropped_fragment_ids)
+            )
             self.finished_at = time.monotonic()
 
     def _add_delta(self, msg: ForwardMsg) -> None:
@@ -260,7 +262,7 @@ class AgentSessionClient(SessionClient):
                 del self._element_at[cached]
         self._deltas.append((self._run_id, msg))
 
-    def _drop_stale_deltas(self) -> None:
+    def _drop_stale_deltas(self, dropped_fragment_ids: frozenset[str]) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
 
         This is the frontend's stale-node rule over a message list. A full run
@@ -270,13 +272,25 @@ class AgentSessionClient(SessionClient):
         under a container it wrote, which includes what a fragment nested in
         that container rendered before. As in the browser's tree, a container
         is judged by position, so a dropped one takes its contents with it.
+
+        ``dropped_fragment_ids`` are fragments whose output the server dropped
+        from this run because they rerun next. Their older deltas, and
+        everything under their containers, stay until their own rerun finishes.
+        Unlike the browser, this keeps them even when a container above them is
+        dropped, such as one their parent fragment stopped rendering in the same
+        run. The browser removes them with that container, so until their own
+        rerun an agent snapshot can list widgets the browser no longer shows.
         """
         # Keep in sync with `ClearStaleNodeVisitor` in
         # frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts,
         # which applies this rule to the browser's tree. Writes are checked
         # against what this buffer keeps, so content the browser dropped but
         # this kept would still accept writes.
-        running = self._fragments_this_run
+        running = self._fragments_this_run - dropped_fragment_ids
+        if self._fragments_this_run and not running:
+            # Every fragment's output was dropped, and an empty set would mean
+            # a full run.
+            return
         # Its indexes point into the list being replaced.
         self._element_at = {}
         if not running:
@@ -287,20 +301,31 @@ class AgentSessionClient(SessionClient):
 
         # Containers of a fragment that ran: re-sent, so this run decides their
         # contents, or not re-sent, so they and their contents are gone.
-        replaced = {
-            tuple(msg.metadata.delta_path)
-            for _, msg in self._deltas
-            if msg.delta.fragment_id in running
-            and msg.delta.WhichOneof("type") == "add_block"
-        }
+        def containers_of(fragment_ids: frozenset[str]) -> set[tuple[int, ...]]:
+            return {
+                tuple(msg.metadata.delta_path)
+                for _, msg in self._deltas
+                if msg.delta.fragment_id in fragment_ids
+                and msg.delta.WhichOneof("type") == "add_block"
+            }
+
+        replaced = containers_of(running)
+        preserved = containers_of(dropped_fragment_ids)
+
+        def is_under(path: tuple[int, ...], containers: set[tuple[int, ...]]) -> bool:
+            return any(path[:depth] in containers for depth in range(1, len(path) + 1))
 
         def is_stale(run_id: str, msg: ForwardMsg) -> bool:
             if run_id == self._run_id:
                 return False
+            path = tuple(msg.metadata.delta_path)
+            if msg.delta.fragment_id in dropped_fragment_ids or is_under(
+                path, preserved
+            ):
+                return False
             if msg.delta.fragment_id in running:
                 return True
-            path = tuple(msg.metadata.delta_path)
-            return any(path[:depth] in replaced for depth in range(1, len(path) + 1))
+            return is_under(path, replaced)
 
         self._deltas = [
             (run_id, msg) for run_id, msg in self._deltas if not is_stale(run_id, msg)

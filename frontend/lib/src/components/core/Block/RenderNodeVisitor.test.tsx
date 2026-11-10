@@ -16,13 +16,17 @@
 
 import { isValidElement } from "react"
 
-import { BlockNode, TransientNode } from "~lib/AppNode"
+import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
+
+import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import {
   block,
   blockWithId,
+  FAKE_SCRIPT_HASH,
+  makeProto,
   text,
   textInput,
 } from "~lib/render-tree/test-utils"
@@ -347,6 +351,68 @@ describe("RenderNodeVisitor", () => {
         "$$ID-abc123-one",
         "$$ID-def456-two",
       ])
+    })
+
+    describe("kept nodes that a skeleton waits to replace", () => {
+      const KEY = "$$ID-moved-key"
+      const skeleton = new ElementNode(
+        makeProto(Element, { skeleton: {} }),
+        ForwardMsgMetadata.create(),
+        "current_run",
+        FAKE_SCRIPT_HASH
+      )
+      const kinds: [
+        string,
+        (scriptRunId: string) => ElementNode | BlockNode,
+      ][] = [
+        ["an element", run => textInput("moved", "moved", run)],
+        ["a keyed container", run => blockWithId(KEY, [text("child")], run)],
+      ]
+
+      it.each(kinds)(
+        "show the skeleton in the kept slot of %s when this run's copy renders later",
+        (_, makeNode) => {
+          const current = makeNode("current_run")
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(
+              block([
+                makeNode("previous_run").withPendingSkeleton(skeleton),
+                current,
+              ])
+            )
+          )
+
+          // This run's copy takes over the React instance by key.
+          expect(result.map(element => element.key)).toEqual([
+            `${KEY}-skeleton`,
+            KEY,
+          ])
+          expect(result[0].props.node).toBe(skeleton)
+          expect(result[1].props.node).toBe(current)
+        }
+      )
+
+      it.each(kinds)(
+        "show the skeleton in the kept slot of %s when this run's copy renders first",
+        (_, makeNode) => {
+          const current = makeNode("current_run")
+          const result = RenderNodeVisitor.collectReactElements(
+            createMockProps(
+              block([
+                current,
+                makeNode("previous_run").withPendingSkeleton(skeleton),
+              ])
+            )
+          )
+
+          expect(result.map(element => element.key)).toEqual([
+            KEY,
+            `${KEY}-skeleton`,
+          ])
+          expect(result[0].props.node).toBe(current)
+          expect(result[1].props.node).toBe(skeleton)
+        }
+      )
     })
 
     it("collects React elements from block children", () => {

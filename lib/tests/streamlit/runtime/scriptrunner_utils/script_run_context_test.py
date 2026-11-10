@@ -551,7 +551,9 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx.shared.widget_user_keys_this_run.check_and_add("key")
         ctx.shared.form_ids_this_run.check_and_add("form")
         ctx.shared.new_fragment_ids.check_and_add("fragment")
-        ctx.shared.track_command(_make_command("markdown"), max_per_command=5)
+        ctx.shared.track_command(
+            _make_command("markdown"), max_per_command=5, max_total=10
+        )
 
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
 

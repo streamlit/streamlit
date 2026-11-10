@@ -639,6 +639,11 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+            Inside a ``with st.skeleton()`` block, the skeleton is the loading
+            indicator, so Streamlit hides the default spinner there. Custom text
+            appears on the skeleton while it's displayed, and as a normal
+            spinner after the skeleton clears.
+
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is
             ``False`` (default), no time is displayed. If this is ``True``,
@@ -1030,19 +1035,20 @@ class DataCache(Cache[R]):
         *,
         expected_generation: int,
         expected_key_generation: int,
-    ) -> None:
+    ) -> bool:
         """Write back a background-refreshed value unless it is orphaned.
 
         Discards (does not write) if the cache was detached, the whole cache or the
         specific key was cleared since the refresh was triggered, or the entry is no
-        longer present (evicted, hard-expired, or cleared).
+        longer present (evicted, hard-expired, or cleared). Returns whether the value
+        was written.
         """
         if self._refresh_is_orphaned(
             value_key,
             expected_generation=expected_generation,
             expected_key_generation=expected_key_generation,
         ):
-            return
+            return False
 
         # st._main and st.sidebar are process-global DeltaGenerator singletons, so
         # reading their _id is safe here on the background refresh thread even though
@@ -1069,15 +1075,16 @@ class DataCache(Cache[R]):
                 expected_generation=expected_generation,
                 expected_key_generation=expected_key_generation,
             ):
-                return
+                return False
             # Presence check: only write back if the entry still exists. A hard-expired
             # / evicted / cleared entry should stay gone so the next access is a miss.
             try:
                 if not self.storage.has(value_key):
-                    return
+                    return False
             except CacheStorageError:
-                return
+                return False
             self.storage.set(value_key, pickled_entry)
+            return True
 
     def _clear(self, key: str | None = None) -> None:
         with self._write_lock:
