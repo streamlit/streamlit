@@ -20,7 +20,8 @@ Demonstrates:
   URL with ``bind="query-params"``, so every view is shareable
 - Layout-first loading: the main script draws each card's frame, title, and
   ``st.skeleton``, and calls the card's ``@st.fragment(parallel=True)`` inside
-  it. The cards load concurrently, nothing moves when data arrives, and cached
+  it. A card with its own controls (MRR by plan) draws them in its fragment.
+  The cards load concurrently, nothing moves when data arrives, and cached
   reruns update the cards in place.
 - BI card anatomy: a bold title with a certified badge, a caption, and
   right-aligned controls with a ⋮ ``st.menu_button`` that opens a
@@ -69,8 +70,8 @@ KPIS: dict[str, tuple[str, str, Literal["line", "bar", "area"]]] = {
 
 
 def reset_filters() -> None:
-    # Bound widgets are reset by assigning their keys in a callback; removing the
-    # keys would make them read the old values back from the URL.
+    # Assign the keys instead of deleting them: deleting doesn't update the
+    # browser, and a bound widget would read its old value back from the URL.
     st.session_state.period = data.DEFAULT_PERIOD
     st.session_state.regions = []
     st.session_state.plans = []
@@ -88,15 +89,19 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
     accounts, history = data.load_book()
     ids = data.filter_accounts(accounts, filters).index
     series = data.monthly_kpis(history, ids, filters.months)[kpi]
-    first, last = series.iloc[0], series.iloc[-1]
-    average = series.iloc[1:-1].mean()
-    if kpi in {"arr", "net_new_mrr"}:
+    last = series.iloc[-1]
+    vs_start = kpi in {"arr", "nrr"}
+    baseline = series.iloc[0] if vs_start else series.iloc[1:-1].mean()
+    if kpi == "arr":
         value = charts.money(last)
-        base = first if kpi == "arr" else average
-        delta = f"{last / base - 1:+.1%}" if base else None
+        delta = f"{last / baseline - 1:+.1%}" if baseline else None
+    elif kpi == "net_new_mrr":
+        # Net new MRR can be negative, so compare amounts, not a percent change.
+        value = charts.money(last)
+        delta = ("+" if last >= baseline else "") + charts.money(last - baseline)
     else:
         value = f"{last:.1f}%"
-        delta = f"{last - (first if kpi == 'nrr' else average):+.1f} pts"
+        delta = f"{last - baseline:+.1f} pts"
     label, icon, chart_type = KPIS[kpi]
     st.metric(
         f"{label} :green[:material/verified:]",
@@ -104,9 +109,7 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
         delta,
         delta_color="inverse" if kpi == "gross_churn" else "normal",
         delta_description=(
-            f"vs. {filters.months} months ago"
-            if kpi in {"arr", "nrr"}
-            else "vs. period average"
+            f"vs. {filters.months} months ago" if vs_start else "vs. period average"
         ),
         chart_data=series.iloc[1:],
         chart_type=chart_type,
@@ -119,10 +122,10 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
 
 @st.fragment(parallel=True)
 def mrr_growth_card(filters: data.Filters) -> None:
-    """MRR by plan, with a $/% view and a menu with a forecast and comparison.
+    """MRR by plan, with a $/% view and a menu that toggles a forecast.
 
-    Its controls must live in the fragment, so that using them reruns only
-    this card, so the card draws its own frame and skeleton.
+    Its controls live in the fragment so that using them reruns only this
+    card, which is why the card draws its own frame and skeleton.
     """
     with st.container(border=True, height="stretch"):
         controls = card_header(
@@ -155,7 +158,7 @@ def mrr_growth_card(filters: data.Filters) -> None:
                     milestones=data.milestones(filters),
                 ),
                 height=CHART_HEIGHT,
-                alt="Monthly recurring revenue by plan over time; Enterprise contributes most",
+                alt="Monthly recurring revenue by plan over time",
             )
 
 
@@ -172,12 +175,12 @@ def mrr_bridge_chart(filters: data.Filters) -> None:
     )
 
 
-@st.fragment
+@st.fragment(parallel=True)
 def industry_drilldown(filters: data.Filters) -> None:
     """Donut of MRR by industry that filters the top-accounts table on click.
 
-    A regular (not parallel) fragment: clicking a slice reruns only this
-    section, and a table click opens a dialog, which parallel fragments can't.
+    Clicking a slice or a table button reruns only this section. That rerun
+    runs in the main thread, so the table's button can open a dialog.
     """
     accounts, _ = data.load_book()
     active = data.filter_accounts(accounts, filters).query("mrr > 0")
@@ -196,6 +199,9 @@ def industry_drilldown(filters: data.Filters) -> None:
         event = st.echarts_chart(
             charts.industry_mix(by_industry),
             on_select="rerun",
+            # The industries keep their order, so the selection stays valid
+            # when a filter changes the data.
+            key="industry_mix",
             height=CHART_HEIGHT + 40,
             alt="Share of MRR by industry",
         )
@@ -227,8 +233,8 @@ def industry_drilldown(filters: data.Filters) -> None:
 
 
 def export_csv() -> bytes:
-    # Called only when the button is clicked, so the button renders before the
-    # data has loaded.
+    # Streamlit calls this only on click, so the button renders before the data
+    # loads. It reads `filters`, which the page layout below defines.
     accounts, _ = data.load_book()
     return data.accounts_csv(data.filter_accounts(accounts, filters))
 
@@ -237,7 +243,7 @@ def export_csv() -> bytes:
 # Page layout
 # =============================================================================
 
-# Header: the filter summary is filled in once the toolbar widgets have run.
+# Header. The filter summary goes into `summary` after the toolbar below has run.
 with st.container(horizontal=True, vertical_alignment="center"):
     with st.container(gap=None):
         st.title("Revenue overview", icon=":material/insights:", anchor=False)
@@ -279,21 +285,20 @@ summary.caption(filters.describe())
 
 with st.container(horizontal=True, vertical_alignment="center"):
     st.subheader("Revenue", help="Certified metrics, refreshed hourly.", anchor=False)
-    actions = st.container(
-        horizontal=True, horizontal_alignment="right", width="content"
-    )
-sql_popover(actions, "revenue")
-actions.download_button(
-    "Export",
-    export_csv,
-    file_name="accounts.csv",
-    mime="text/csv",
-    icon=":material/download:",
-    on_click="ignore",
-)
+    with st.container(horizontal=True, horizontal_alignment="right", width="content"):
+        sql_popover("revenue")
+        st.download_button(
+            "Export",
+            export_csv,
+            file_name="accounts.csv",
+            mime="text/csv",
+            icon=":material/download:",
+            on_click="ignore",
+        )
 
-# The main script draws every skeleton, so the page has its final layout from
-# the first paint. Each fragment's first element replaces its skeleton.
+# The main script draws the KPI, bridge, and drill-down skeletons, so they hold
+# their size from the first paint. Each fragment's first element replaces its
+# skeleton.
 with st.container(horizontal=True):
     for kpi in KPIS:
         with st.skeleton(height=KPI_HEIGHT):
@@ -312,7 +317,5 @@ with bridge_col.container(border=True, height="stretch"):
     with st.skeleton(height=CHART_HEIGHT):
         mrr_bridge_chart(filters)
 
-# A regular fragment runs in the main script and blocks it while it loads, so
-# it comes last, after every parallel fragment has started.
 with st.skeleton(height=DRILLDOWN_HEIGHT):
     industry_drilldown(filters)

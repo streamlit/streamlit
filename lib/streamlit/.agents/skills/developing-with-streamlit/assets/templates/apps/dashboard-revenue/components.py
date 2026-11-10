@@ -126,7 +126,9 @@ def card_menu(
 
     ``toggles`` maps Session State keys to option labels, such as
     ``{"mrr_forecast": "forecast"}``. Picking one flips its flag in the menu's
-    callback, so the card already reads the new value when it redraws.
+    callback, so the card already reads the new value when it redraws. Read
+    the flag, not the menu's return value: the flip changes the option's label,
+    so the menu returns ``None`` for it.
     """
     toggles = toggles or {}
     key = f"{card}_menu"
@@ -139,8 +141,8 @@ def card_menu(
         return f":material/add_chart: Show {toggles[option]}"
 
     def flip_toggle() -> None:
-        if st.session_state[key] in toggles:
-            flag = st.session_state[key]
+        flag = st.session_state[key]
+        if flag in toggles:
             st.session_state[flag] = not st.session_state.get(flag, False)
 
     # A menu icon as the only label renders an icon-only trigger without a chevron.
@@ -157,9 +159,9 @@ def card_menu(
         definition_drawer(card)
 
 
-def sql_popover(container: DeltaGenerator, card: str) -> None:
+def sql_popover(card: str) -> None:
     """Add a popover that shows the query behind a section."""
-    with container.popover("SQL", icon=":material/data_object:", type="tertiary"):
+    with st.popover("SQL", icon=":material/data_object:", type="tertiary"):
         st.caption(f"Query behind **{DEFINITIONS[card].title}**")
         st.code(DEFINITIONS[card].sql, language="sql", width=520)
 
@@ -178,6 +180,7 @@ def definition_drawer(card: str) -> None:
 
 def account_table(accounts: pd.DataFrame) -> pd.DataFrame:
     """Shape accounts for display, with a drawer button column first."""
+    # A MultiselectColumn shows each one-item plan list as a colored chip.
     table = accounts.assign(view=VIEW_ACTION, plan=accounts["plan"].map(lambda p: [p]))
     return table[["view", "name", "plan", "mrr", "mrr_trend", "health", "renewal_date"]]
 

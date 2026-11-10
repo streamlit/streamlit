@@ -49,7 +49,9 @@ def card_header(title: str, caption: str, *, certified: bool = False):
             badge = " :green-badge[:material/verified:]" if certified else ""
             st.markdown(f"**{title}**{badge}")
             st.caption(caption)
-        return st.container(horizontal=True, horizontal_alignment="right", width="content")
+        return st.container(
+            horizontal=True, horizontal_alignment="right", width="content"
+        )
 
 
 with st.container(border=True):
@@ -58,7 +60,9 @@ with st.container(border=True):
         "View", ["$", "%"], default="$", required=True, label_visibility="collapsed"
     )
     action = controls.menu_button(
-        ":material/more_vert:", [":material/menu_book: What's measured"], type="tertiary"
+        ":material/more_vert:",
+        [":material/menu_book: What's measured"],
+        type="tertiary",
     )
     if action:
         definition_drawer("mrr_by_plan")  # An @st.dialog(..., position="right")
@@ -230,7 +234,7 @@ To keep the layout stable:
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
-When cards depend on each other, such as a chart selection that filters a table, they can't be independent fragments. Paint the layout first anyway: draw each card's frame, header, and a standalone `st.skeleton()` placeholder, then load the data once and fill each placeholder. On reruns, a placeholder keeps its previous content mounted until the new content arrives.
+When cards depend on each other, such as a chart selection that filters a table, they can't be independent fragments. Paint the layout first anyway: draw each card's frame, header, and a standalone `st.skeleton()` placeholder, then load the data once and fill each placeholder. On reruns, a placeholder keeps its previous content until the new content arrives, and the skeleton covers it only after half a second. The load runs outside any skeleton block, so a cached loader's spinner would show as its own element: cache it with `show_spinner=False`.
 
 ```python
 with st.container(border=True):
@@ -256,20 +260,31 @@ def reset_filters() -> None:
 
 with st.container(horizontal=True, vertical_alignment="center"):
     st.title("Revenue overview", icon=":material/insights:", anchor=False)
-    st.button("Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters)
+    st.button(
+        "Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters
+    )
 
 with st.container(horizontal=True, vertical_alignment="center"):
     period = st.segmented_control(
-        "Period", ["3M", "6M", "12M"], default="12M", required=True,
-        key="period", bind="query-params", label_visibility="collapsed",
-    )  # fmt: skip
+        "Period",
+        ["3M", "6M", "12M"],
+        default="12M",
+        required=True,
+        key="period",
+        bind="query-params",
+        label_visibility="collapsed",
+    )
     with st.popover("Filters", icon=":material/tune:"):
         regions = st.pills(
-            "Regions", REGIONS, selection_mode="multi", key="regions", bind="query-params"
+            "Regions",
+            REGIONS,
+            selection_mode="multi",
+            key="regions",
+            bind="query-params",
         )
 ```
 
-- Treat an empty multiselect as "all", and summarize the active filters, for example in a caption under the title, so a closed popover doesn't hide them.
+- Treat an empty multi-select filter as "all", and summarize the active filters, for example in a caption under the title, so a closed popover doesn't hide them.
 - In a multipage app, draw the toolbar in the entrypoint before `page.run()`, so every page shares it.
 
 ## Theme and polish

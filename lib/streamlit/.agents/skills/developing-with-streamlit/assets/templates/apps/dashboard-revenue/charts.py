@@ -40,12 +40,15 @@ def _month_labels(index: pd.Index) -> pd.Index:
 
 def money(value: float) -> str:
     """Format a dollar amount compactly, for example ``$4.82M`` or ``$812K``."""
-    sign, value = ("-" if value < 0 else ""), abs(value)
+    sign = "-" if value < 0 else ""
+    value = abs(value)
     if value >= 1_000_000:
         return f"{sign}${value / 1_000_000:.2f}M"
     if value >= 10_000:
         return f"{sign}${value / 1_000:.0f}K"
-    return f"{sign}${value / 1_000:.1f}K" if value >= 1_000 else f"{sign}${value:,.0f}"
+    if value >= 1_000:
+        return f"{sign}${value / 1_000:.1f}K"
+    return f"{sign}${value:,.0f}"
 
 
 def _markers(
@@ -171,14 +174,14 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
     ]
     rows = []
     level = 0.0
+    # ``base`` is where each bar starts, and ``level`` the running MRR after it.
     for name, amount, kind in steps:
         if kind == "total":
-            level, base = amount, 0.0
+            base, level = 0.0, amount
         elif kind == "increase":
             base, level = level, level + amount
         else:
-            level += amount
-            base = level
+            base, level = level + amount, level + amount
         height = round(abs(amount) / 1_000, 1)
         rows.append(
             {
@@ -239,9 +242,7 @@ def industry_mix(mrr_by_industry: pd.Series) -> dict[str, Any]:
     source = (mrr_by_industry / 1_000).round(1).rename("mrr").rename_axis("industry")
     return {
         "dataset": {"source": source.reset_index()},
-        # Pie tooltips leave named {@...} placeholders empty, so read the MRR
-        # column by position.
-        "tooltip": {"trigger": "item", "formatter": "{b}: ${@[1]}K ({d}%)"},
+        "tooltip": {"trigger": "item", "formatter": "{b}: ${@mrr}K ({d}%)"},
         "legend": {"bottom": 0, "icon": "circle", "itemWidth": 8, "itemHeight": 8},
         "title": {
             "text": money(mrr_by_industry.sum()),

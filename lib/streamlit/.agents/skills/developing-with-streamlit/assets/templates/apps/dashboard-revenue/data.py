@@ -35,7 +35,8 @@ import streamlit as st
 # are visible. Set to 0 when you connect a real data source.
 SIMULATED_LATENCY_S = 0.8
 
-# 24 months of window, plus a year of lookback for retention and comparisons.
+# The longest period (24 months), 12 months of lookback for retention, and a
+# few spare months.
 N_MONTHS = 40
 PERIODS = {"3M": 3, "6M": 6, "12M": 12, "24M": 24}
 DEFAULT_PERIOD = "24M"
@@ -96,10 +97,10 @@ class Filters:
 def current_filters() -> Filters:
     """Read the toolbar filters from Session State; empty pills mean "all"."""
     return Filters(
-        period=st.session_state.get("period") or DEFAULT_PERIOD,
-        regions=tuple(st.session_state.get("regions") or REGIONS),
-        plans=tuple(st.session_state.get("plans") or PLANS),
-        annotations=st.session_state.get("annotations", False),
+        period=st.session_state.period,
+        regions=tuple(st.session_state.regions or REGIONS),
+        plans=tuple(st.session_state.plans or PLANS),
+        annotations=st.session_state.annotations,
     )
 
 
@@ -170,9 +171,8 @@ def _generate_book(n_accounts: int = 240) -> tuple[pd.DataFrame, pd.DataFrame]:
         signup.replace(year=today.year + (signup.replace(year=today.year) < today))
         for signup in signups
     ]
-    seats = np.round(current / np.array([_PLAN_SEAT_PRICE[p] for p in plan])).astype(
-        int
-    )
+    seat_price = np.array([_PLAN_SEAT_PRICE[p] for p in plan])
+    seats = np.round(current / seat_price).astype(int)
     accounts = pd.DataFrame(
         {
             "name": rng.choice(combos, n_accounts, replace=False),
@@ -193,8 +193,8 @@ def _generate_book(n_accounts: int = 240) -> tuple[pd.DataFrame, pd.DataFrame]:
     return accounts, history
 
 
-# Every call runs inside an ``st.skeleton`` block, so the spinner text labels
-# the skeleton during a slow load instead of drawing a second indicator.
+# The cards call this inside ``st.skeleton``, so the spinner text labels the
+# skeleton during a slow load instead of drawing a second indicator.
 @st.cache_data(ttl="1h", show_spinner="Loading the customer book...")
 def load_book() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load customer accounts and their monthly MRR history."""
@@ -203,10 +203,8 @@ def load_book() -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def filter_accounts(accounts: pd.DataFrame, filters: Filters) -> pd.DataFrame:
-    mask = accounts["region"].isin(filters.regions) & accounts["plan"].isin(
-        filters.plans
-    )
-    return accounts[mask]
+    in_regions = accounts["region"].isin(filters.regions)
+    return accounts[in_regions & accounts["plan"].isin(filters.plans)]
 
 
 def mrr_by_plan(
@@ -218,15 +216,15 @@ def mrr_by_plan(
 
 
 def mrr_forecast(monthly: pd.DataFrame, horizon: int = 3) -> pd.DataFrame:
-    """Extend each plan's MRR by its average monthly growth over the last six months."""
+    """Extend each plan's MRR by its average monthly growth in the last six months.
+
+    A shorter window uses all of its months.
+    """
     recent = monthly.iloc[-7:]
-    growth = (recent.iloc[-1] / recent.iloc[0].replace(0, np.nan)) ** (
-        1 / (len(recent) - 1)
-    )
+    total_growth = recent.iloc[-1] / recent.iloc[0].replace(0, np.nan)
+    growth = (total_growth ** (1 / (len(recent) - 1))).fillna(1.0)
     future = pd.date_range(monthly.index[-1], periods=horizon + 1, freq="MS")[1:]
-    rows = [
-        monthly.iloc[-1] * growth.fillna(1.0) ** step for step in range(1, horizon + 1)
-    ]
+    rows = [monthly.iloc[-1] * growth**step for step in range(1, horizon + 1)]
     return pd.DataFrame(rows, index=future)
 
 
@@ -260,15 +258,14 @@ def monthly_kpis(history: pd.DataFrame, ids: pd.Index, months: int) -> pd.DataFr
     contraction = (previous - mrr).where((mrr > 0) & (mrr < previous), 0).sum()
     year_ago = mrr.shift(12, axis=1)
     retained = mrr.where(year_ago > 0, 0).sum()
-    base = year_ago.where(year_ago > 0, 0).sum().replace(0, np.nan)
+    year_ago_total = year_ago.sum().replace(0, np.nan)
+    previous_total = previous.sum().replace(0, np.nan)
     kpis = pd.DataFrame(
         {
             "arr": total * 12,
             "net_new_mrr": total.diff(),
-            "nrr": retained / base * 100,
-            "gross_churn": (churned + contraction)
-            / previous.sum().replace(0, np.nan)
-            * 100,
+            "nrr": retained / year_ago_total * 100,
+            "gross_churn": (churned + contraction) / previous_total * 100,
         }
     )
     return kpis.iloc[-(months + 1) :]

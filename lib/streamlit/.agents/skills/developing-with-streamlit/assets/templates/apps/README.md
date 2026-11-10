@@ -134,7 +134,9 @@ def reset_filters() -> None:
 
 with st.container(horizontal=True, vertical_alignment="center"):
     st.title("My dashboard", icon=":material/monitoring:", anchor=False)
-    st.button("Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters)
+    st.button(
+        "Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters
+    )
 ```
 
 ### Independent and parallel card updates with @st.fragment

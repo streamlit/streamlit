@@ -216,11 +216,12 @@ def aggregate_companies(
     "Company details", position="right", width="medium", icon=":material/business:"
 )
 def company_drawer(company: pd.Series) -> None:
-    """Show a company's attributes, totals, and usage over the full period."""
+    """Show a company's attributes, its totals for the selected window, and its
+    daily usage over the full period.
+    """
     all_data = load_company_data()
-    usage = all_data[all_data["company_name"] == company["company_name"]].sort_values(
-        "date"
-    )
+    is_company = all_data["company_name"] == company["company_name"]
+    usage = all_data[is_company].sort_values("date")
 
     st.subheader(company["company_name"], anchor=False)
     with st.container(horizontal=True, gap="small"):

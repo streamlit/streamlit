@@ -15,7 +15,7 @@
 """API usage dashboard template.
 
 Demonstrates:
-- Segmented control with icon labels for category selection, bound to the URL
+- Segmented control for category selection, bound to the URL
   with ``bind="query-params"``
 - Multiselect for endpoint filtering
 - Starter kits / presets for quick selection
