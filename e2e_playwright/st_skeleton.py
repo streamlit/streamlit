@@ -94,3 +94,29 @@ with st.form("skeleton_form"):
     submitted = st.form_submit_button("Submit")
     if submitted:
         placeholder.success("Form submitted!")
+
+
+# Standalone skeleton over a cached report: on a cache miss, it covers the
+# previous version instead of replacing it.
+st.subheader("Standalone skeleton keeps previous content")
+
+
+@st.cache_data(show_spinner=False)
+def load_standalone_report(version: int) -> str:
+    time.sleep(2.5)
+    return f"Standalone report version {version}"
+
+
+# The cache is shared by every test run on the same server, so clear it to make
+# the first load and the next version cache misses in each run.
+if st.toggle("Show standalone report", on_change=load_standalone_report.clear):
+    if st.button("Load next standalone report"):
+        st.session_state.standalone_report_version = (
+            st.session_state.get("standalone_report_version", 0) + 1
+        )
+    st.button("Rerun standalone report")
+    with st.container(key="standalone_skeleton_container"):
+        report_slot = st.skeleton(height=80)
+        report_slot.write(
+            load_standalone_report(st.session_state.get("standalone_report_version", 0))
+        )

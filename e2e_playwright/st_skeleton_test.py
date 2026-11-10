@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import get_button, get_element_by_key
+from e2e_playwright.shared.app_utils import get_button, get_element_by_key, get_toggle
 
 
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
@@ -164,3 +164,40 @@ def test_skeleton_in_form(app: Page):
     expect(form.get_by_text("Form submitted!")).to_be_visible()
     # Skeleton should be gone (replaced)
     expect(skeleton_in_form).not_to_be_visible()
+
+
+def test_skeleton_standalone_keeps_previous_content(app: Page):
+    """A standalone skeleton covers the previous run's content on a slow rerun.
+
+    The previous content stays mounted under the overlay and is updated in
+    place. A cached rerun shows no overlay.
+    """
+    container = get_element_by_key(app, "standalone_skeleton_container")
+    # Click without waiting for the run, so the first-load skeleton is observable.
+    get_toggle(app, "Show standalone report").click()
+    expect(container.get_by_test_id("stSkeletonElement")).to_be_visible()
+    expect(container.get_by_text("Standalone report version 0")).to_be_visible(
+        timeout=10000
+    )
+
+    report = container.get_by_test_id("stMarkdown")
+    report.evaluate("element => { element.dataset.testKept = 'true' }")
+
+    get_button(app, "Load next standalone report").click()
+    overlay = container.get_by_test_id("stPendingSkeleton")
+    expect(overlay).to_be_visible(timeout=3000)
+    expect(container.get_by_text("Standalone report version 0")).to_be_attached()
+    expect(container.get_by_test_id("stSkeletonElement")).not_to_be_attached()
+
+    expect(container.get_by_text("Standalone report version 1")).to_be_visible(
+        timeout=10000
+    )
+    expect(overlay).not_to_be_attached()
+    # The report element was updated in place instead of being remounted.
+    expect(report).to_have_attribute("data-test-kept", "true")
+
+    get_button(app, "Rerun standalone report").click()
+    wait_for_app_run(app)
+    expect(container.get_by_text("Standalone report version 1")).to_be_visible()
+    expect(overlay).not_to_be_attached()
+    expect(report).to_have_attribute("data-test-kept", "true")

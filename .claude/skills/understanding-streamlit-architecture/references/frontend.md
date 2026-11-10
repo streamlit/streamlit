@@ -202,6 +202,9 @@ Every node tracks:
 
 Stale nodes are cleared after `scriptFinished`.
 
+### Skeleton slots
+- A skeleton delta that lands on an element or flex container with visible content from a previous run does not replace it (other blocks, such as tabs, are replaced). The node stays mounted with the skeleton in `pendingSkeleton` (on `BlockNode` and `ElementNode`), and `PendingSkeletonOverlay` covers it after a 0.5s CSS delay. New content at that path replaces the node; otherwise `ClearStaleNodeVisitor` swaps in the skeleton at the end of the run. `SetNodeByDeltaPathVisitor` and `ClearTransientNodesVisitor` carry `pendingSkeleton` over when they rebuild a node. If the run writes a kept widget or keyed container again at another index of the block (the layout shifted), `RenderNodeVisitor` renders the skeleton in the kept slot and the fresh copy at its new index. The agent API needs no matching rule: its message buffer already holds the skeleton delta that the end-of-run swap restores. See `render-tree/skeletonUtils.ts`.
+
 ### Lazy loading
 Components use `React.lazy()` for code splitting, deferring load until first render.
 

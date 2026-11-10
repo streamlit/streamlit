@@ -23,7 +23,7 @@ import {
   Block as BlockProto,
   Button as ButtonProto,
   Delta as DeltaProto,
-  type Element,
+  Element,
   ForwardMsgMetadata,
   streamlit,
 } from "@streamlit/protobuf"
@@ -1344,6 +1344,66 @@ describe("BlockNodeRenderer container types", () => {
   })
 })
 
+describe("standalone skeletons", () => {
+  function element(
+    properties: Record<string, unknown>,
+    scriptRunId: string
+  ): ElementNode {
+    return new ElementNode(
+      makeProto(Element, properties),
+      ForwardMsgMetadata.create(),
+      scriptRunId,
+      FAKE_SCRIPT_HASH
+    )
+  }
+
+  const skeleton = element({ skeleton: {} }, "current-run")
+
+  it.each([
+    ["an element", text("previous chart", "previous-run")],
+    [
+      "a container",
+      makeVerticalBlock([text("previous chart", "previous-run")], {
+        flexContainer: {},
+      }),
+    ],
+  ])("cover %s that they wait to replace", (_, previous) => {
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([previous.withPendingSkeleton(skeleton)])
+      )
+    )
+
+    // The previous content stays mounted under the overlay.
+    expect(screen.getByText("previous chart")).toBeVisible()
+    const overlay = screen.getByTestId("stPendingSkeleton")
+    expect(overlay).toHaveAttribute("aria-hidden", "true")
+    expect(overlay.parentElement).toHaveAttribute("aria-busy", "true")
+  })
+
+  it("show the skeleton when this run wrote the kept element further down", async () => {
+    const button = (label: string, scriptRunId: string): ElementNode =>
+      element({ button: { id: "$$ID-moved-button", label } }, scriptRunId)
+    renderWithContexts(
+      makeVerticalBlockComponent(
+        makeVerticalBlock([
+          button("Old", "previous-run").withPendingSkeleton(skeleton),
+          button("New", "current-run"),
+        ])
+      )
+    )
+
+    // The layout shifted: this run's copy renders, and the slot that kept the
+    // previous copy shows its skeleton.
+    expect(await screen.findByRole("button", { name: "New" })).toBeVisible()
+    expect(screen.getByTestId("stSkeletonElement")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "Old" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+  })
+})
+
 describe("GridContainer Component", () => {
   function makeGridBlock(
     gridContainerProps: Partial<BlockProto.GridContainer.$Properties> = {},
@@ -2533,6 +2593,49 @@ describe("GridContainer Component", () => {
     expect(screen.getAllByTestId("stGridCell")).toHaveLength(1)
     expect(screen.getAllByTestId("stElementContainer")).toHaveLength(1)
   })
+
+  it.each([
+    ["after", false],
+    ["before", true],
+  ])(
+    "gives a kept widget's skeleton its own cell when this run's copy renders %s it",
+    (_, currentFirst) => {
+      const consoleErrorSpy = vi.spyOn(console, "error")
+      const skeleton = new ElementNode(
+        makeProto(Element, { skeleton: {} }),
+        ForwardMsgMetadata.create(),
+        "current-run",
+        FAKE_SCRIPT_HASH
+      )
+      const kept = textInput(
+        "Old",
+        "moved",
+        "previous-run"
+      ).withPendingSkeleton(skeleton)
+      const current = textInput("New", "moved", "current-run")
+      renderWithContexts(
+        makeGridNodeRendererComponent(
+          makeGridBlock({}, currentFirst ? [current, kept] : [kept, current])
+        )
+      )
+
+      // One cell shows the skeleton, and the other renders this run's copy.
+      const cells = screen.getAllByTestId("stGridCell")
+      expect(cells).toHaveLength(2)
+      const skeletonCell = currentFirst ? cells[1] : cells[0]
+      expect(
+        within(skeletonCell).getByTestId("stSkeletonElement")
+      ).toBeVisible()
+      expect(screen.getAllByTestId("stSkeletonElement")).toHaveLength(1)
+      expect(screen.queryByTestId("stPendingSkeleton")).not.toBeInTheDocument()
+      expect(
+        consoleErrorSpy.mock.calls.some(([message]) =>
+          String(message).includes("same key")
+        )
+      ).toBe(false)
+      consoleErrorSpy.mockRestore()
+    }
+  )
 
   it("places each child of a transparent wrapper in its own cell", () => {
     const fragment = new BlockNode(
