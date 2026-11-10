@@ -30,10 +30,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import {
-  DATAFRAME_PRINT_SLOT_CLASS,
-  DATAFRAME_PRINT_TABLE_CLASS,
-} from "./printClassNames"
+import { DATAFRAME_PRINT_TABLE_CLASS } from "./printClassNames"
 
 /** Default text the grid draws for a missing value. */
 const DEFAULT_MISSING_PLACEHOLDER = "None"
@@ -267,6 +264,3 @@ function renderPrintTable(
   table.append(thead, body)
   return table
 }
-
-/** Class of the print slot, re-exported for callers that only need the name. */
-export { DATAFRAME_PRINT_SLOT_CLASS }
