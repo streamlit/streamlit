@@ -1,6 +1,6 @@
 # Streamlit WCAG theme & shell chrome inventory
 
-Last updated: 2026-10-30. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
+Last updated: 2026-11-10. Re-audit when default theme tokens, focus-ring derivation, or library icon hit targets change.
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
@@ -53,7 +53,7 @@ Use `fadedText70` (70% `bodyText`) for secondary or muted **text** and `fadedTex
 | Role | Typical tokens / config | Criterion | Floor | Required surfaces |
 | ---- | ----------------------- | --------- | ----- | ----------------- |
 | Body text | `textColor` / `bodyText` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
-| Secondary / muted UI text | `fadedText70`, `grayTextColor`, placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, dataframe header (stock fill when unset) |
+| Secondary / muted UI text | `fadedText70`, `grayTextColor`, enabled placeholders, counters, hints; default `dataframeHeaderTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar, dataframe header (stock fill when unset) |
 | Link text | `linkColor` / `blueTextColor` | 1.4.3 | ≥ 4.5:1 | Page, secondary / sidebar |
 | Code text on code fill | Inline `codeTextColor` on `codeBackgroundColor` | 1.4.3 | ≥ 4.5:1 | Code background |
 | Status text on status fill | Shipped `*TextColor` on `*BackgroundColor`; `primary` on `primarybg` | 1.4.3 | ≥ 4.5:1 | Alert / badge / metric fills on **page and default sidebar** (fills are translucent) |
@@ -116,7 +116,7 @@ Per-color status text on status fill (painted pairs only: markdown badges, metri
 
 #### Disabled styling
 
-`fadedText40` measures ~2.2:1 (light) and ~3.7:1 (dark). 1.4.3 exempts inactive (disabled) components, so this is not a Library blocks row. It is recorded so enabled UI that reuses `fadedText40` still gets caught.
+`fadedText40` measures ~2.2:1 (light) and ~3.7:1 (dark). 1.4.3 exempts inactive (disabled) components, so this is not a Library blocks row. It is recorded so enabled UI that reuses `fadedText40` still gets caught. Disabled empty text fields (TextInput, NumberInput, TextArea, ChatInput, Multiselect, Selectbox) also paint placeholders with `fadedText40`; enabled placeholders stay on `fadedText70`.
 
 ### 1.4.11 Non-text Contrast
 
