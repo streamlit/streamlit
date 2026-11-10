@@ -641,8 +641,9 @@ class CacheDataAPI:
 
             Inside a ``with st.skeleton()`` block or a fragment with
             ``loading="skeleton"``, the skeleton is the loading indicator, so
-            Streamlit hides the default spinner there. Custom text shows on the
-            skeleton, and as a normal spinner after it clears.
+            Streamlit hides the default spinner there. Custom text appears on
+            the skeleton while it's displayed, and as a normal spinner after
+            the skeleton clears.
 
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is

@@ -254,8 +254,11 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`, including inside `grid.cell()`, for example a card that spans two columns. `st.columns(n, border=True)` also gives equal-height bordered columns.
+- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
+- A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card or chart created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
+- In image card grids, crop the images to one aspect ratio (for example, with `PIL.ImageOps.fit`) and pass `width="stretch"` to each `st.image`, so every image fills its column at the same height.
 
 ```python
 # Equal-height KPI cards with mixed content
@@ -277,6 +280,29 @@ for col, (plan, features) in zip(st.columns(3), plans.items()):
         st.space("stretch")
         st.button("Choose", key=f"choose_{plan}", width="stretch")
 ```
+
+**Charts side by side:**
+
+- Give every chart in a row the same integer `height`, or `height="stretch"` on each chart and its card. Default heights differ by library: `st.plotly_chart` is taller than Vega-Lite charts (`st.line_chart`, `st.altair_chart`, and similar) and `st.echarts_chart`.
+- For Altair facet, repeat, and concat charts (including `chart1 | chart2` and `chart1 & chart2`), keep the default `height` and size the views with `.properties(height=...)`. The card around the chart can still stretch. Streamlit's `height` doesn't resize their views: `"stretch"` renders them empty (or overflowing in a fixed-height parent), and an integer `height` paints over the next element.
+
+## Bento layouts and fixed-height regions
+
+A bento puts a tall card next to stacked smaller cards. Build it with `st.grid` and a pixel `row_height`: span the tall card with `grid.cell(column_span=2, row_span=2)`, and pass `height="stretch"` to the metrics, cards, charts, and dataframes in the cells. Every cell then has an exact height that stretch elements fill. `st.grid(height=N)` does not size the rows; it only makes the grid scroll.
+
+```python
+# Two 232px rows plus the default gap: exactly 480px
+grid = st.grid(3, row_height=232, border=True)
+with grid.cell(column_span=2, row_span=2):
+    st.markdown("**Revenue**")
+    st.line_chart(revenue, height="stretch", alt="Revenue over time")
+grid.bar_chart(by_region, height="stretch", alt="Revenue by region")
+grid.dataframe(orders, height="stretch", alt="Recent orders")
+```
+
+For loading cards, wrap a cell's body in `with st.skeleton(height="stretch")`. The skeleton fills the cell without a measured height, and so does a stretch chart written in the block. A chart inside a fragment can't stretch, so give it a pixel height.
+
+Without a pixel `row_height`, and in `st.columns`, only stacked metrics and text cards stretch to a tall neighbor. Stacked charts keep their default heights, so the stack sets the row's height instead of the tall card, and `st.columns` doesn't pass a fixed height down.
 
 ## Bordered containers
 
@@ -325,7 +351,7 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot, and the skeleton stays until the first visible one is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
+Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot and stack vertically, like in `st.container()`, even in a horizontal container. The skeleton stays until the first visible element is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
 
 ```python
 with st.skeleton(height=200):
@@ -333,7 +359,7 @@ with st.skeleton(height=200):
     st.dataframe(data, key="results")  # Replaces the skeleton in its slot
 ```
 
-In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's spinner inside the `with` block shows its custom text on the skeleton instead of as a second indicator.
+In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's default spinner is hidden for the whole `with` block; custom `show_spinner` or `st.spinner` text labels the skeleton instead.
 
 For a fragment, `@st.fragment(loading="skeleton")` gives the fragment's container the same skeleton on every run of the fragment.
 
@@ -406,7 +432,7 @@ st.space(50)  # Custom pixels
 
 ## Width and height
 
-Control element sizing (for equal-height cards, see "Aligning elements side by side" above):
+Control element sizing (for equal-height cards, see "Aligning elements side by side" above; for exact regions, see "Bento layouts and fixed-height regions"):
 
 ```python
 # Shrink to content size

@@ -91,11 +91,11 @@ class SkeletonMixin:
 
         In both modes, content from the previous run stays in place during a
         rerun. The skeleton covers that content only if the new content takes
-        longer than half a second, so reruns that hit the cache don't flash it. A
-        cached function's spinner inside the ``with`` block doesn't add a
-        second loading indicator: Streamlit hides the default spinner and
-        shows custom spinner text, including ``st.spinner`` text, on the
-        skeleton.
+        longer than half a second, so reruns that hit the cache don't flash it.
+        Spinners inside the ``with`` block don't add a second loading
+        indicator. Streamlit hides a cached function's default spinner. Custom
+        ``show_spinner`` text and ``st.spinner`` text appear on the skeleton
+        while it's displayed.
 
         .. note::
             Draw the slow element first inside the ``with`` block. A visible

@@ -1,4 +1,4 @@
-# snapshot-autofix.yml listens for this name via workflow_run.
+# snapshot-autofix.yml and ai-fix-develop-ci.yml listen for this name via workflow_run.
 name: Playwright E2E Tests
 
 on:
