@@ -1079,8 +1079,8 @@ class TestDateInputSerdeISO:
             date(2025, 3, 15),
         )
 
-    def test_deserialize_reversed_range_reverts_to_default(self):
-        """Test that a reversed date range reverts to default (range mode)."""
+    def test_deserialize_reversed_range_reverts_to_default(self) -> None:
+        """A reversed range falls back to the configured default."""
         values = _DateInputValues(
             value=(date(2025, 3, 1), date(2025, 3, 15)),
             is_range=True,
@@ -1092,6 +1092,31 @@ class TestDateInputSerdeISO:
             date(2025, 3, 1),
             date(2025, 3, 15),
         )
+
+    def test_deserialize_equal_range_is_accepted(self) -> None:
+        """A range with equal start and end dates is accepted unchanged."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2025-03-10", "2025-03-10"]) == (
+            date(2025, 3, 10),
+            date(2025, 3, 10),
+        )
+
+    def test_deserialize_single_mode_ignores_extra_reversed_url_value(self) -> None:
+        """Single-date mode keeps the first URL value even if a second is earlier."""
+        values = _DateInputValues(
+            value=(date(2025, 1, 15),),
+            is_range=False,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2025-06-01", "2025-01-01"]) == date(2025, 6, 1)
 
     def test_deserialize_in_bounds_succeeds(self):
         """Test that a date within bounds is accepted."""

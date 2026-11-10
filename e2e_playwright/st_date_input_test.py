@@ -814,7 +814,7 @@ def test_date_input_query_param_range_seeding(page: Page, app_base_url: str):
 def test_date_input_query_param_reversed_range_reverts_to_default(
     page: Page, app_base_url: str
 ):
-    """Test that a reversed date range in query params reverts to default."""
+    """A reversed URL range falls back to the default and is removed from the URL."""
     page.goto(
         build_app_url(
             app_base_url,

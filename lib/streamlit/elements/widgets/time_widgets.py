@@ -696,14 +696,17 @@ class DateInputSerde:
                 # Invalid URL query param value (e.g. "not-a-date") — revert to default.
                 return_value = self.value.value
             else:
-                # Reject out-of-range dates or reversed ranges from URL query
-                # params — revert to default. Matches SliderSerde.deserialize
-                # which validates bounds in the deserializer so
-                # _seed_widget_from_url can detect default equality and clear
-                # the URL param via _clear_url_param.
+                # Out-of-range dates and reversed ranges (start after end) are
+                # invalid URL values, so return the default. URL seeding then
+                # clears the query param, as it does for SliderSerde bounds
+                # checks.
                 if return_value and (
                     any(d < self.value.min or d > self.value.max for d in return_value)
-                    or (len(return_value) > 1 and return_value[0] > return_value[1])
+                    or (
+                        self.value.is_range
+                        and len(return_value) > 1
+                        and return_value[0] > return_value[1]
+                    )
                 ):
                     return_value = self.value.value
         else:
