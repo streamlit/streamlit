@@ -51,7 +51,7 @@ Keep these in mind:
 - Do not rerun publishing failures. Part of the release may already be on PyPI, and PyPI rejects files that already exist, so a rerun fails the same way.
 - If any failure in the run is a real breakage, choose **fix**. A rerun cannot turn the nightly green while one job is broken.
 - Allow at most 3 attempts per run (the original plus 2 reruns). After that, a remaining flaky failure needs a fix or a report.
-- Before fixing, check whether the failure is already handled: commits on `develop` since the nightly tag that touch the failing area, and open PRs that mention the failing test or error. This includes PRs on `ai-fix-nightly-*` branches from earlier runs. If one exists, choose **report** and link it.
+- Before fixing, check whether the failure is already handled: commits on `develop` since the nightly tag that touch the failing area, and open PRs that mention the failing test or error. This includes PRs on `ai-fix-nightly-*` branches from earlier runs and on `ai-fix-develop-ci-*` branches, which fix the same breakage when it first fails on `develop`. If one exists, choose **report** and link it.
 
 ### 4. Act on the decision
 
