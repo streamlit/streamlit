@@ -294,3 +294,67 @@ with st.popover(
     key="wrap_false_popover",
 ):
     st.write("wrap popover content")
+
+# Popovers inside a tab and an expander. Switching tabs or collapsing the
+# expander should close the open popover.
+tab_with_popover, tab_without_popover = st.tabs(
+    ["Tab with popover", "Tab without popover"]
+)
+with tab_with_popover:
+    with st.popover("Popover in tab"):
+        st.write("Popover in tab content")
+        tab_input = st.text_input("Popover tab input", key="popover_tab_input")
+with tab_without_popover:
+    st.write("Tab without popover content")
+st.write(f"Popover tab input value: {tab_input}")
+
+with st.expander("Expander with popover", expanded=True):
+    with st.popover("Popover in expander"):
+        st.write("Popover in expander content")
+
+# A popover that starts open on an inactive tab. The user has not seen it, so
+# an unrelated rerun must not run on_change. Selecting the tab shows it.
+if "hidden_open_cb" not in st.session_state:
+    st.session_state.hidden_open_cb = 0
+    st.session_state.hidden_open_pop = True
+
+
+def hidden_open_callback() -> None:
+    st.session_state.hidden_open_cb += 1
+
+
+shown_tab, hidden_open_tab = st.tabs(["Shown tab", "Hidden open tab"])
+with shown_tab:
+    st.button("Unrelated rerun", key="unrelated_rerun")
+with hidden_open_tab:
+    hidden_pop = st.popover(
+        "Popover open while hidden",
+        key="hidden_open_pop",
+        on_change=hidden_open_callback,
+    )
+    if hidden_pop.open:
+        st.write("Hidden open popover content")
+
+st.write(f"Hidden popover callback count: {st.session_state.hidden_open_cb}")
+
+# Same case inside a collapsed expander. Opening the expander must show the
+# popover. The summary click must not record a close.
+if "hidden_exp_cb" not in st.session_state:
+    st.session_state.hidden_exp_cb = 0
+    st.session_state.hidden_exp_pop = True
+
+
+def hidden_exp_callback() -> None:
+    st.session_state.hidden_exp_cb += 1
+
+
+with st.expander("Collapsed expander", expanded=False):
+    hidden_exp_pop = st.popover(
+        "Popover open in collapsed expander",
+        key="hidden_exp_pop",
+        on_change=hidden_exp_callback,
+    )
+    with hidden_exp_pop:
+        st.write("Collapsed expander popover content")
+
+st.write(f"Hidden expander callback count: {st.session_state.hidden_exp_cb}")
