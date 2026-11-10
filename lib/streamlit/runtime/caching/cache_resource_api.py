@@ -504,6 +504,11 @@ class CacheResourceAPI:
             a "cache miss" and the cached resource is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+            Inside a ``with st.skeleton()`` block, the skeleton is the loading
+            indicator, so Streamlit hides the default spinner there. Custom text
+            appears on the skeleton while it's displayed, and as a normal
+            spinner after the skeleton clears.
+
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is
             ``False`` (default), no time is displayed. If this is ``True``,
@@ -821,9 +826,11 @@ class ResourceCache(Cache[R]):
         Hard-expired keys never reach this method: the storage layer treats them as
         missing.
         """
-        # Unlike DataCache, no ``fresh_ttl_seconds is None`` guard is needed here:
-        # resource caches always resolve it to a float (ttl uses coerce_none_to_inf).
-        if self.refresh_mode != "background" or result.stored_at is None:
+        if (
+            self.refresh_mode != "background"
+            or result.stored_at is None
+            or self.fresh_ttl_seconds is None
+        ):
             return False
         return (
             cache_utils.TTLCACHE_TIMER() - result.stored_at
@@ -891,14 +898,15 @@ class ResourceCache(Cache[R]):
         *,
         expected_generation: int,
         expected_key_generation: int,
-    ) -> None:
+    ) -> bool:
         """Write back a background-refreshed resource unless it is orphaned.
 
         On a successful write the replaced resource's ``on_release`` fires, unless the
         refresh returned the same object that is now cached (then it is left intact).
         On a discard the freshly produced resource is released so it doesn't leak. Any
         ``on_release`` failure is logged rather than propagated so it can't turn a
-        successful compute into a failed refresh.
+        successful compute into a failed refresh. Returns whether the resource was
+        written.
         """
         # st._main and st.sidebar are process-global DeltaGenerator singletons, so
         # reading their _id is safe here on the background refresh thread even though
@@ -965,6 +973,7 @@ class ResourceCache(Cache[R]):
                     "background cache refresh.",
                     exc_info=True,
                 )
+        return not discard
 
     def _clear(self, key: str | None = None) -> None:
         with self._mem_cache_lock:

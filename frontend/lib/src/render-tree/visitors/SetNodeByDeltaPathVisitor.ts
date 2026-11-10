@@ -176,7 +176,8 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       this.scriptRunId,
       node.fragmentId,
       node.deltaMsgReceivedAt,
-      this.getRetained(node, currentIndex, newChildren, insertedTransient)
+      this.getRetained(node, currentIndex, newChildren, insertedTransient),
+      node.pendingSkeleton
     )
   }
 
@@ -203,6 +204,7 @@ export class SetNodeByDeltaPathVisitor implements AppNodeVisitor<AppNode> {
       prev: node.children[index],
       next: newChildren[index],
       scriptRunId: this.scriptRunId,
+      children: newChildren,
     })
   }
 

@@ -831,6 +831,27 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
+    def test_default_spinner_is_hidden_in_skeleton_slot(self, _, cache_decorator):
+        """Inside a skeleton slot, only a spinner with custom text is shown."""
+
+        @cache_decorator(show_spinner=True)
+        def function_with_default_spinner(x: int) -> int:
+            return x
+
+        @cache_decorator(show_spinner="CUSTOM_TEXT")
+        def function_with_custom_text(x: int) -> int:
+            return x
+
+        with script_run_context.ThreadState.scoped(in_skeleton_slot=True):
+            function_with_default_spinner(3)
+            assert self.forward_msg_queue.is_empty()
+
+            function_with_custom_text(3)
+            assert not self.forward_msg_queue.is_empty()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_with_custom_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.
@@ -1699,6 +1720,56 @@ class CommonCacheBackgroundRefreshTest(DeltaGeneratorTestCase):
         timer_patch.return_value = _BG_TTL * 1.5
         assert foo() == 2
         assert call_count[0] == 2
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_finishing_after_stale_read_is_not_repeated(
+        self, _: str, cache_decorator: Any, timer_patch: Mock
+    ) -> None:
+        """A caller whose stale read raced a finished refresh doesn't refresh again."""
+        call_count = [0]
+
+        @cache_decorator(ttl=_BG_TTL, refresh_mode="background", show_spinner=False)
+        def foo() -> int:
+            call_count[0] += 1
+            return call_count[0]
+
+        timer_patch.return_value = 0
+        assert foo() == 1
+
+        original_in_refresh_cooldown = cache_utils.Cache.in_refresh_cooldown
+        raced = [False]
+
+        def refresh_finishes_after_read(cache: Any, value_key: str) -> bool:
+            # Runs after the outer caller read the stale entry but before it tries
+            # the refresh lock: another caller's refresh starts and finishes here.
+            if not raced[0]:
+                raced[0] = True
+                assert foo() == 1
+            return original_in_refresh_cooldown(cache, value_key)
+
+        with (
+            self._patch_sync_submit() as submit_mock,
+            patch.object(
+                cache_utils.Cache,
+                "in_refresh_cooldown",
+                autospec=True,
+                side_effect=refresh_finishes_after_read,
+            ),
+        ):
+            timer_patch.return_value = _BG_TTL * 1.5
+            assert foo() == 1
+            submit_mock.assert_called_once()
+            assert call_count[0] == 2
+            assert foo() == 2
+
+            # The next stale window still refreshes.
+            timer_patch.return_value = _BG_TTL * 3
+            assert foo() == 2
+            assert submit_mock.call_count == 2
+            assert call_count[0] == 3
 
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]

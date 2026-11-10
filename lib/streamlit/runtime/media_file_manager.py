@@ -28,10 +28,13 @@ from streamlit.runtime.media_file_storage import (
     MediaFileStorage,
     MediaFileStorageError,
 )
+from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 
 if TYPE_CHECKING:
     import io
     from collections.abc import Callable
+
+    from streamlit.runtime.memory_media_file_storage import MemoryFile
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -125,6 +128,37 @@ class MediaFileManager:
         # need to be protected with a Lock. (This is not an RLock, which
         # means taking it multiple times from the same thread will deadlock.)
         self._lock = threading.Lock()
+
+    @property
+    def can_read_files(self) -> bool:
+        """Whether ``read_file`` can return a stored file.
+
+        Only the built-in in-memory storage can. The storage interface has no
+        read, so a storage a host plugs in through
+        ``RuntimeConfig.media_file_storage`` serves its files on its own.
+        """
+        return isinstance(self._storage, MemoryMediaFileStorage)
+
+    def read_file(self, file_id: str) -> MemoryFile | None:
+        """Return the stored file ``file_id`` names, or None if there is none.
+
+        A deferred download's placeholder id is never a stored file, so its
+        callable never runs here.
+
+        Raises
+        ------
+        MediaFileStorageError
+            If the storage cannot return files: see ``can_read_files``.
+        """
+        if not isinstance(self._storage, MemoryMediaFileStorage):
+            raise MediaFileStorageError("This media storage cannot return files.")
+        # Read without the lock, as the `/media` route reads it: `add` holds
+        # the lock while it loads a file from disk, and one lookup sees a file
+        # either whole or not at all.
+        try:
+            return self._storage.get_file(file_id)
+        except MediaFileStorageError:
+            return None
 
     def _get_inactive_file_ids(self) -> set[str]:
         """Compute the set of files that are stored in the manager, but are

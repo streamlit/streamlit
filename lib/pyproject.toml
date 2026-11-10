@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.66.1"
+version = "1.67.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -106,7 +106,7 @@ dependencies = [
   "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
   # Without watchdog, we fallback to a polling file watcher to check for app changes.
-  "watchdog>=2.1.5,<7; platform_system != 'Darwin'",
+  "watchdog>=2.1.5,<8; platform_system != 'Darwin'",
 ]
 
 [project.optional-dependencies]

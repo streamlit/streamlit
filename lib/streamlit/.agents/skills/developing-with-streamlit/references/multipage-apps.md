@@ -19,6 +19,8 @@ app_pages/
 
 Give every `st.Page` a context-appropriate Material Symbols icon (`:material/icon_name:`) so navigation is easy to scan. Choose a name from the [supported icon list](https://raw.githubusercontent.com/streamlit/streamlit/refs/heads/develop/lib/streamlit/material_icon_names.py) because unsupported names raise an error.
 
+Give each `st.Page` a brief `help` (one to three short sentences, about 200 characters) that says what the page is: what it shows, what users can do there, and what sets it apart from similar pages. It is the page's nav tooltip, the default tooltip of `st.page_link` to that page, and the page's `help` in the agent API snapshot. It is not shown on the page; use `st.caption` for a visible subtitle.
+
 ```python
 # streamlit_app.py
 import streamlit as st
@@ -30,11 +32,33 @@ if "selected_project" not in st.session_state:
 # Define navigation
 page = st.navigation(
     [
-        st.Page("app_pages/home.py", title="Home", icon=":material/home:"),
         st.Page(
-            "app_pages/analytics.py", title="Analytics", icon=":material/bar_chart:"
+            "app_pages/home.py",
+            title="Home",
+            icon=":material/home:",
+            help=(
+                "Overview of the selected project: key metrics, recent activity, "
+                "and open tasks. Switch projects from the sidebar."
+            ),
         ),
-        st.Page("app_pages/settings.py", title="Settings", icon=":material/settings:"),
+        st.Page(
+            "app_pages/analytics.py",
+            title="Analytics",
+            icon=":material/bar_chart:",
+            help=(
+                "Weekly usage trends for the selected project. Compare date "
+                "ranges, filter by team, and download the data as CSV."
+            ),
+        ),
+        st.Page(
+            "app_pages/settings.py",
+            title="Settings",
+            icon=":material/settings:",
+            help=(
+                "Manage project members, roles, and notification preferences. "
+                "Changes apply to everyone on the project."
+            ),
+        ),
     ]
 )
 
@@ -186,18 +210,42 @@ Show different pages based on user role, authentication, or any other condition 
 # streamlit_app.py
 import streamlit as st
 
-pages = [st.Page("app_pages/home.py", title="Home", icon=":material/home:")]
+pages = [
+    st.Page(
+        "app_pages/home.py",
+        title="Home",
+        icon=":material/home:",
+        help=(
+            "Overview of your projects: key metrics, recent activity, and "
+            "open tasks. Start here to pick a project."
+        ),
+    )
+]
 
 if st.user.is_logged_in:
     pages.append(
         st.Page(
-            "app_pages/dashboard.py", title="Dashboard", icon=":material/bar_chart:"
+            "app_pages/dashboard.py",
+            title="Dashboard",
+            icon=":material/bar_chart:",
+            help=(
+                "Weekly usage of your projects, with a chart per project and "
+                "team. Filter by date range and export the results as CSV."
+            ),
         )
     )
 
 if st.session_state.get("is_admin"):
     pages.append(
-        st.Page("app_pages/admin.py", title="Admin", icon=":material/settings:")
+        st.Page(
+            "app_pages/admin.py",
+            title="Admin",
+            icon=":material/settings:",
+            help=(
+                "Manage project members, roles, and access. Visible to admins "
+                "only; changes apply to all users."
+            ),
+        )
     )
 
 page = st.navigation(pages)

@@ -16,8 +16,6 @@
 
 import { Suspense } from "react"
 
-import { isNullOrEmptyString } from "@streamlit/utils"
-
 import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
@@ -97,21 +95,24 @@ const MENU_STYLE_ICONS = new Set([
 ])
 
 /**
- * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
+ * Checks if a trigger shows only a menu-style icon and no text, either as the
+ * label (with no icon prop) or as the icon prop (with an empty label).
  * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns true if label is exactly one of the menu-style icons with no additional text
+ * @returns true if the trigger's only content is one of the menu-style icons
  */
 export function isMenuStyleIconLabel(
   icon: string | undefined,
   label: string | undefined
 ): boolean {
-  if (!isNullOrEmptyString(icon)) {
-    return false
+  const trimmedIcon = icon?.trim() ?? ""
+  const trimmedLabel = label?.trim() ?? ""
+  if (trimmedIcon === "") {
+    return MENU_STYLE_ICONS.has(trimmedLabel)
   }
-  return !isNullOrEmptyString(label) && MENU_STYLE_ICONS.has(label.trim())
+  return trimmedLabel === "" && MENU_STYLE_ICONS.has(trimmedIcon)
 }
 
 /**

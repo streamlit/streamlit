@@ -5,7 +5,7 @@ Compose metrics, charts, and data into clean dashboard layouts.
 
 ## Cards with borders
 
-Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, and `st.form`:
+Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, `st.grid`, and `st.form`:
 
 ```python
 # Container card
@@ -49,7 +49,20 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`). Otherwise, use `st.columns` with `height="stretch"` on each metric so the cards share a height and width (see "Aligning elements side by side" in `layouts.md`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for up to about five metrics that all have the same parts (every metric has a `delta`, or none does; the same for `chart_data`). With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest.
+
+Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
+
+```python
+# A pixel row height also gives every row the same height.
+with st.grid(4, row_height=160, gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%", border=True, height="stretch")
+    st.metric("Users", "762k", "+12%", border=True, height="stretch")
+    st.metric("Orders", "1.4k", border=True, height="stretch")
+    st.metric("Conversion", "3.2%", "+0.1%", border=True, height="stretch")
+```
+
+For a side-by-side comparison of `st.columns`, `st.grid`, and horizontal containers, see "Side by side: columns vs grid vs horizontal container" in `layouts.md`.
 
 ## Zero deltas
 
@@ -87,12 +100,8 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric(
-        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
-    )
-    st.metric(
-        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
-    )
+    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend)
+    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend)
     st.metric(
         "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
     )
@@ -139,9 +148,9 @@ st.echarts_chart(
 
 The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
 
-## Smooth loading with parallel fragments + skeletons
+## Layout-first loading with parallel fragments + skeletons
 
-When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
+When a dashboard has multiple cards with slow data loads (queries or API calls), load the layout first: the cheap parts (titles, filters, card frames) paint right away, a skeleton holds each slow card body at its final size, and the bodies fill in as their data arrives. Combine `@st.fragment(parallel=True)` with `st.skeleton`: the fragments load concurrently on a full app rerun, so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
 @st.cache_data(ttl="15m")
@@ -153,35 +162,44 @@ def load_orders(): ...  # Another slow query / API call
 
 
 @st.fragment(parallel=True)
-def revenue_card():
-    with st.container(border=True):
-        st.subheader("Revenue by Region")
-        with st.skeleton(height=260):
-            data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
+def revenue_body():
+    data = load_revenue()
+    st.bar_chart(data, x="region", y="revenue", height=260, alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
-def orders_card():
-    with st.container(border=True):
-        st.subheader("Recent Orders")
-        with st.skeleton(height=260):
-            data = load_orders()
-            st.dataframe(data, hide_index=True, alt="Recent orders")
+def orders_body():
+    data = load_orders()
+    st.dataframe(data, height=260, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
 with col1:
-    revenue_card()
+    with st.container(border=True):
+        st.subheader("Revenue by Region")  # Drawn by the main script
+        with st.skeleton(height=260):  # Holds the slot until the chart arrives
+            revenue_body()
 with col2:
-    orders_card()
+    with st.container(border=True):
+        st.subheader("Recent Orders")
+        with st.skeleton(height=260):
+            orders_body()
 ```
 
-The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
+Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first visible element replaces the skeleton, so draw that element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
+
+The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
+
+To keep the layout stable:
+
+- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. If the element has no `height` parameter, give the skeleton the height the element renders at.
+- Put the content inside the `with st.skeleton()` block, not after it, and draw the slow element first: any visible element, even a caption, ends the skeleton.
+- Give stateful elements a `key`, so a rerun updates them in place and they keep their scroll and selection.
+- Inside a skeleton, Streamlit hides a cached function's default spinner, so `show_spinner=False` isn't needed. Pass `show_spinner="..."` to label the skeleton during slow loads.
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
-Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
+Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
 ## Sidebar filters
 
@@ -211,23 +229,24 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
 | `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
 | `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
 | `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
 | `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
-| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 
 ## References
 
 - `theme.md` — Config theming, dense padding, chart palettes (cheat sheet first)
-- `layouts.md` — Columns, containers, tabs, dialogs
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
 - `charts.md` — Choosing chart commands, consistent charts, chart selections
 - `data-display.md` — Dataframes, column configuration, metric sparklines
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)

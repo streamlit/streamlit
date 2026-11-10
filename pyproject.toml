@@ -99,7 +99,7 @@ dev = [
   { include-group = "test" },
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.95",
+  "ty==0.0.97",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.17.3",
   # We fix mypy to a version to avoid breaking our CI on updates,
@@ -201,6 +201,9 @@ integration = [
   "pydantic",
   # Used by type_util tests:
   "sympy",
+  # Used by the agent API's MCP endpoint conformance test, against the
+  # official MCP client:
+  "mcp",
 ]
 
 # =============================================================================

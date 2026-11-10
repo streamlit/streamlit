@@ -92,6 +92,7 @@ function NavLink({
         widgetsDisabled={widgetsDisabled}
         isExternal={isExternalPage(page)}
         externalUrl={getExternalPageUrl(page)}
+        help={page.help}
       >
         {pageName}
       </SidebarNavLink>

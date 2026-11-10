@@ -720,6 +720,29 @@ class NavigationTest(DeltaGeneratorTestCase):
         assert c.app_pages[1].HasField("external_url")
         assert c.app_pages[1].external_url == "https://docs.streamlit.io"
 
+    def test_page_help_is_sent_and_registered(self):
+        """Page help reaches the nav message and the page registry for visible,
+        hidden, and external pages. Pages without help send none."""
+        pages = [
+            st.Page("page1.py", help="  Net revenue by **region**."),
+            st.Page("page2.py"),
+            st.Page("page3.py", visibility="hidden", help="A hidden page."),
+            st.Page("https://docs.streamlit.io", title="Docs", help="The docs."),
+        ]
+        st.navigation(pages)
+        expected_help = [
+            "Net revenue by **region**.",
+            "",
+            "A hidden page.",
+            "The docs.",
+        ]
+
+        c = self.get_message_from_queue().navigation
+        assert [p.help for p in c.app_pages] == expected_help
+
+        registry = self.script_run_ctx.pages_manager.get_pages()
+        assert [registry[page._script_hash]["help"] for page in pages] == expected_help
+
     def test_direct_url_to_external_page_falls_back_to_default(self):
         """Test that when a user navigates directly to an external page's URL path,
         the default non-external page is returned instead of the external page."""

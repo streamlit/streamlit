@@ -486,6 +486,8 @@ describe("AppNavigation", () => {
         isDefault: true,
         sectionHeader: "section1",
         icon: "icon1",
+        // Hosts receive the page list unchanged, including page help.
+        help: "The app's start page.",
       }),
       new AppPage({
         pageName: "streamlit_app2",

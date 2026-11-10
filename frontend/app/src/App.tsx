@@ -168,7 +168,11 @@ import {
   includeIfDefined,
   reconcileHostConfigValues,
 } from "./util/hostConfigHelpers"
-import { getRunIdentity, type RunIdentity } from "./util/runIdentity"
+import {
+  getFinishedRun,
+  getRunIdentity,
+  type RunIdentity,
+} from "./util/runIdentity"
 import type { ThemeManager } from "./util/useThemeManager"
 
 // vite config builds global variable PACKAGE_METADATA
@@ -1161,7 +1165,7 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.metadata as ForwardMsgMetadata | null | undefined,
             msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
@@ -1173,7 +1177,10 @@ export class App extends PureComponent<Props, State> {
         gitInfoChanged: (gitInfo: GitInfo) =>
           this.handleGitInfoChanged(gitInfo),
         scriptFinished: (status: ForwardMsg.ScriptFinishedStatus) =>
-          this.handleScriptFinished(status),
+          this.handleScriptFinished(
+            status,
+            msgProto.metadata as ForwardMsgMetadata
+          ),
         pageProfile: (pageProfile: PageProfile) =>
           this.handlePageProfileMsg(pageProfile),
         autoRerun: (autoRerun: AutoRerun) => this.handleAutoRerun(autoRerun),
@@ -2064,18 +2071,38 @@ export class App extends PureComponent<Props, State> {
   /**
    * Handler for ForwardMsg.scriptFinished messages
    * @param status the ScriptFinishedStatus that the script finished with
+   * @param metadata the ForwardMsg metadata, which carries the identity of the
+   * run that finished and which of its fragments' output was delivered. A
+   * later run may already have started by the time this message is handled,
+   * so React state can't be used to name the finished run.
    */
-  handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+  handleScriptFinished(
+    status: ForwardMsg.ScriptFinishedStatus,
+    metadata?: ForwardMsgMetadata | null
+  ): void {
+    // A finish without identity only comes from the stop AppSession sends
+    // when handling a BackMsg exception. Later finishes, from the error run
+    // and from the script that was still running, carry identity and do this
+    // work. Widget completion, stale-node cleanup, and cache aging need the
+    // finished run, so they are skipped here rather than guessed from React
+    // state.
+    const finishedRun = getFinishedRun(metadata)
+
     // Bump a monotonic counter and snapshot the fragment IDs of the run that
     // just finished, so widgets (e.g. ChatInput) can react to the completion of
     // the specific full-script or fragment run they triggered. This runs before
     // the status-conditional handling below on purpose: the counter must bump
-    // for every finish status (including FINISHED_WITH_COMPILE_ERROR) so widgets
-    // re-enable even when a run ends with a compilation error.
-    this.setState(prevState => ({
-      scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
-      scriptRunFinishedFragmentIds: prevState.fragmentIdsThisRun,
-    }))
+    // for every attributed finish status (including FINISHED_WITH_COMPILE_ERROR)
+    // so widgets re-enable even when a run ends with a compilation error.
+    if (finishedRun) {
+      this.setState(prevState => ({
+        scriptRunFinishedSequence: prevState.scriptRunFinishedSequence + 1,
+        // Widgets in a fragment whose output was dropped re-enable when that
+        // fragment's own rerun finishes.
+        scriptRunFinishedFragmentIds:
+          finishedRun.cleanupFragmentIds ?? finishedRun.fragmentIds,
+      }))
+    }
 
     // Clear history replaceState only on a real finish for the latest
     // requested run. An interrupt (FINISHED_EARLY_FOR_RERUN) from an older
@@ -2108,10 +2135,13 @@ export class App extends PureComponent<Props, State> {
         })
       })
 
+      const cleanupFragmentIds = finishedRun?.cleanupFragmentIds
       if (
-        status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
-        status ===
-          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        finishedRun &&
+        cleanupFragmentIds &&
+        (status === ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY ||
+          status ===
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY)
       ) {
         // Clear any stale elements left over from the previous run.
         // We only do that for completed runs, not for runs that were finished early
@@ -2120,13 +2150,23 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
+        // Skip a full-app cleanup once a later run has started (an error run
+        // sent while this run was still executing, whose finish has already
+        // cleaned up): it would drop that run's nodes. Fragment cleanup is
+        // safe, because any later write restamps the blocks on its path.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun, elements }) => {
+          ({ elements, scriptRunId }) => {
+            if (
+              finishedRun.fragmentIds.length === 0 &&
+              scriptRunId !== finishedRun.scriptRunId
+            ) {
+              return null
+            }
             return {
-              // Apply any pending elements that haven't been applied.
               elements: elements.clearStaleNodes(
-                scriptRunId,
-                fragmentIdsThisRun
+                finishedRun.scriptRunId,
+                cleanupFragmentIds,
+                finishedRun.droppedFragmentIds
               ),
             }
           },
@@ -2143,6 +2183,7 @@ export class App extends PureComponent<Props, State> {
       // before a NewSession message is processed. This issue should not
       // disrupt users and is not a critical need for the message cache
       if (
+        cleanupFragmentIds &&
         this.connectionManager !== null &&
         status !== ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN &&
         this.sessionInfo.isSet &&
@@ -2150,12 +2191,13 @@ export class App extends PureComponent<Props, State> {
         // a NewSession message after the latest rerun request. This is done
         // to ignore finished messages from previous script runs, which would
         // cause issues with deleting cached messages that are needed for the
-        // current script run.
+        // current script run. Read the flag here, not in a setState callback:
+        // a later NewSession can set it before React commits.
         this.hasReceivedNewSession
       ) {
         this.connectionManager.incrementMessageCacheRunCount(
           this.sessionInfo.current.maxCachedMessageAge,
-          this.state.fragmentIdsThisRun
+          cleanupFragmentIds
         )
       }
     }
@@ -2254,15 +2296,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Update pendingElementsBuffer with the given Delta and set up a timer to
-   * update state.elements. This buffer allows us to process Deltas quickly
-   * without spamming React with too many of render() calls.
+   * Applies one delta to the element tree.
+   *
+   * Logs and drops a delta whose metadata has no usable delta path. A usable
+   * path has at least a root container and an index within it. React runs the
+   * setState updater after handleMessage's try/catch returns, so a throw from
+   * applyDelta there would make React unmount the app.
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata,
+    metadataMsg: ForwardMsgMetadata | null | undefined,
     elementHash?: string
   ): void => {
+    if (!metadataMsg || metadataMsg.deltaPath.length < 2) {
+      LOG.error(
+        `Dropping a ${deltaMsg.type} delta with a missing or invalid delta path.`
+      )
+      return
+    }
+
     // A delta belongs to the run of the most recent new_session before it.
     // Reading scriptRunId from prevState (not this.state) keeps that true,
     // because React applies queued updaters in order.

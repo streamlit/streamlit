@@ -239,7 +239,9 @@ class AgentSessionClient(SessionClient):
             msg_type == "script_finished"
             and msg.script_finished in _COMPLETED_RUN_STATUSES
         ):
-            self._drop_stale_deltas()
+            self._drop_stale_deltas(
+                frozenset(msg.metadata.delivery.dropped_fragment_ids)
+            )
             self.finished_at = time.monotonic()
 
     def _add_delta(self, msg: ForwardMsg) -> None:
@@ -260,7 +262,7 @@ class AgentSessionClient(SessionClient):
                 del self._element_at[cached]
         self._deltas.append((self._run_id, msg))
 
-    def _drop_stale_deltas(self) -> None:
+    def _drop_stale_deltas(self, dropped_fragment_ids: frozenset[str]) -> None:
         """Drop what the finished run was responsible for and did not re-emit.
 
         This is the frontend's stale-node rule over a message list. A full run
@@ -270,13 +272,25 @@ class AgentSessionClient(SessionClient):
         under a container it wrote, which includes what a fragment nested in
         that container rendered before. As in the browser's tree, a container
         is judged by position, so a dropped one takes its contents with it.
+
+        ``dropped_fragment_ids`` are fragments whose output the server dropped
+        from this run because they rerun next. Their older deltas, and
+        everything under their containers, stay until their own rerun finishes.
+        Unlike the browser, this keeps them even when a container above them is
+        dropped, such as one their parent fragment stopped rendering in the same
+        run. The browser removes them with that container, so until their own
+        rerun an agent snapshot can list widgets the browser no longer shows.
         """
         # Keep in sync with `ClearStaleNodeVisitor` in
         # frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts,
         # which applies this rule to the browser's tree. Writes are checked
         # against what this buffer keeps, so content the browser dropped but
         # this kept would still accept writes.
-        running = self._fragments_this_run
+        running = self._fragments_this_run - dropped_fragment_ids
+        if self._fragments_this_run and not running:
+            # Every fragment's output was dropped, and an empty set would mean
+            # a full run.
+            return
         # Its indexes point into the list being replaced.
         self._element_at = {}
         if not running:
@@ -287,20 +301,31 @@ class AgentSessionClient(SessionClient):
 
         # Containers of a fragment that ran: re-sent, so this run decides their
         # contents, or not re-sent, so they and their contents are gone.
-        replaced = {
-            tuple(msg.metadata.delta_path)
-            for _, msg in self._deltas
-            if msg.delta.fragment_id in running
-            and msg.delta.WhichOneof("type") == "add_block"
-        }
+        def containers_of(fragment_ids: frozenset[str]) -> set[tuple[int, ...]]:
+            return {
+                tuple(msg.metadata.delta_path)
+                for _, msg in self._deltas
+                if msg.delta.fragment_id in fragment_ids
+                and msg.delta.WhichOneof("type") == "add_block"
+            }
+
+        replaced = containers_of(running)
+        preserved = containers_of(dropped_fragment_ids)
+
+        def is_under(path: tuple[int, ...], containers: set[tuple[int, ...]]) -> bool:
+            return any(path[:depth] in containers for depth in range(1, len(path) + 1))
 
         def is_stale(run_id: str, msg: ForwardMsg) -> bool:
             if run_id == self._run_id:
                 return False
+            path = tuple(msg.metadata.delta_path)
+            if msg.delta.fragment_id in dropped_fragment_ids or is_under(
+                path, preserved
+            ):
+                return False
             if msg.delta.fragment_id in running:
                 return True
-            path = tuple(msg.metadata.delta_path)
-            return any(path[:depth] in replaced for depth in range(1, len(path) + 1))
+            return is_under(path, replaced)
 
         self._deltas = [
             (run_id, msg) for run_id, msg in self._deltas if not is_stale(run_id, msg)
@@ -490,7 +515,7 @@ class AgentSessionRegistry:
         self._reclaim_idle()
         session = self._sessions.get(handle)
         if session is None or session.user_info != user_info:
-            ttl = _duration(float(config.get_option("server.agentSessionTTL")))
+            ttl = format_duration(float(config.get_option("server.agentSessionTTL")))
             raise AgentRequestError(
                 "unknown_session",
                 "This session does not exist or has expired: sessions end after "
@@ -653,7 +678,7 @@ async def interact(
                 raise AgentRequestError(
                     "wait_timed_out",
                     "The app has finished, but its snapshot was still being "
-                    f"built after {_duration(_wait_timeout())}. Nothing is lost: "
+                    f"built after {format_duration(_wait_timeout())}. Nothing is lost: "
                     "send a request with only `session_id` to collect it.",
                     session_id=session.handle,
                 ) from None
@@ -663,9 +688,9 @@ async def interact(
     if session.busy:
         raise AgentRequestError(
             "session_busy",
-            "This session already has an interaction in flight. If it is one "
-            "whose response you lost, send only `session_id` in a moment to "
-            "collect it.",
+            "This session already has an interaction in flight. Wait for its "
+            "response. If its client timed out or disconnected, send only "
+            "`session_id` in a moment to collect it.",
         )
     session.busy = True
     session.released.clear()
@@ -707,8 +732,12 @@ def _wait_timeout() -> float:
     return float(config.get_option("server.agentWaitTimeout"))
 
 
-def _duration(seconds: float) -> str:
-    """Phrase a number of seconds for an error message, such as "15 minutes"."""
+def format_duration(seconds: float) -> str:
+    """Format ``seconds`` as a short phrase, such as ``15 minutes``.
+
+    An exact non-zero number of minutes is phrased in minutes. Every other
+    duration is phrased in seconds.
+    """
     if seconds and seconds % 60 == 0:
         amount, unit = seconds / 60, "minute"
     else:
@@ -772,8 +801,9 @@ async def _run_interaction(
         # owed to the client that started it.
         raise AgentRequestError(
             "session_busy",
-            "This session is still running an interaction that timed out. "
-            "Send only `session_id` to wait for it, then send this request.",
+            "This session is still running an interaction that timed out or "
+            "whose client disconnected. Send only `session_id` to wait for it, "
+            "then send this request.",
         )
     if pending is not None:
         # Its result goes uncollected, but its run happened, so this request
@@ -966,8 +996,8 @@ async def _wait_and_build(
         # The run can settle in the same loop iteration the timeout fires in.
         if not app_session.is_settled:
             session.timed_out = interaction
-            timeout = _duration(_wait_timeout())
-            elapsed = _duration(round(time.monotonic() - interaction.started))
+            timeout = format_duration(_wait_timeout())
+            elapsed = format_duration(round(time.monotonic() - interaction.started))
             raise AgentRequestError(
                 "wait_timed_out",
                 f"The app did not finish within {timeout}, and is still "
@@ -1233,8 +1263,8 @@ def _refuse_malformed_writes(request: dict[str, Any]) -> None:
         if not isinstance(trigger, dict):
             raise AgentRequestError(
                 "invalid_request",
-                "`trigger` must be an object with a `key`, and at most one may "
-                "be sent.",
+                "`trigger` must be an object, `{key, value?}`. Send one "
+                "trigger per request.",
             )
         if extra := set(trigger).difference(TRIGGER_FIELDS):
             raise AgentRequestError(
@@ -1309,6 +1339,7 @@ def _resolve_page(
                     # requires `title`, as in the snapshot's `pages`.
                     "title": info.get("page_name", ""),
                     **({"icon": info["icon"]} if info.get("icon") else {}),
+                    **({"help": info["help"]} if info.get("help") else {}),
                 }
                 for info in pages.values()
             ]

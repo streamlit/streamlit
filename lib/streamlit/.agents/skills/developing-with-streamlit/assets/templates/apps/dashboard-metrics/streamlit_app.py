@@ -24,7 +24,9 @@ Demonstrates:
 - ``@st.cache_data(ttl=...)`` per-metric loaders to keep data fresh and bounded
 - ``@st.fragment(parallel=True)`` cards that load concurrently on full reruns
   and rerun in isolation on widget interactions
-- ``st.skeleton`` placeholders so each card fills in as soon as its data is ready
+- Layout-first loading with ``st.skeleton``: the main script draws the KPI
+  skeletons, so the row has its final size before any data loads. Cached
+  reruns update each card in place without a skeleton.
 
 This template uses synthetic data. Replace the ``generate_*_data()`` functions
 with your own data sources (e.g., Snowflake queries, APIs, etc.).
@@ -52,7 +54,7 @@ st.set_page_config(
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
 CHART_HEIGHT = 350  # Leaves room for each chart's legend and zoom slider
-KPI_HEIGHT = 215  # Approximate height of a bordered st.metric with a sparkline
+KPI_HEIGHT = 184  # Height of each KPI's skeleton and metric, so they match
 # Tooltip number format, using the same format strings as ``st.metric``.
 VALUE_FORMAT = "%,.0f"
 
@@ -115,7 +117,7 @@ def generate_metric_data(
     return df
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
 def load_metric(metric_name: str) -> pd.DataFrame:
     """Load a single metric's time series (cached per metric).
 
@@ -123,7 +125,9 @@ def load_metric(metric_name: str) -> pd.DataFrame:
     concurrently as parallel fragments. Replace the body with your data
     source (Snowflake query, API call, etc.). The ``ttl`` keeps the cache
     fresh; add ``max_entries`` if the set of metric names can grow large so
-    the cache stays bounded.
+    the cache stays bounded. Every call runs inside a skeleton, so a slow
+    load shows the spinner text on the skeleton instead of a second
+    indicator.
     """
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=730)  # 2 years of data
@@ -289,23 +293,24 @@ def kpi_card(label: str, metric_name: str) -> None:
     """Display a bordered KPI card: the latest 7-day average and its 4-week change.
 
     Like the metric cards, each KPI is a parallel fragment that loads its own
-    (cached) data inside ``st.skeleton``.
+    (cached) data. The main script calls it inside ``st.skeleton``, and the
+    metric replaces that skeleton.
     """
-    with st.skeleton(height=KPI_HEIGHT):
-        # The last 4 weeks (29 daily points) of the 7-day average: the value is
-        # the latest point, the delta compares it to the first one.
-        trend = load_metric(metric_name)["value_7d_ma"].tail(29)
-        change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
-        st.metric(
-            label,
-            f"{trend.iloc[-1]:,.0f}",
-            # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
-            f"{change:+.1%}" if change else 0,
-            delta_description="vs. 4 weeks ago",
-            help="7-day average",
-            chart_data=trend,
-            border=True,
-        )
+    # The last 4 weeks (29 daily points) of the 7-day average: the value is
+    # the latest point, the delta compares it to the first one.
+    trend = load_metric(metric_name)["value_7d_ma"].tail(29)
+    change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
+    st.metric(
+        label,
+        f"{trend.iloc[-1]:,.0f}",
+        # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
+        f"{change:+.1%}" if change else 0,
+        delta_description="vs. 4 weeks ago",
+        help="7-day average",
+        chart_data=trend,
+        border=True,
+        height=KPI_HEIGHT,
+    )
 
 
 # =============================================================================
@@ -323,8 +328,9 @@ def metric_card(
 
     The card is a parallel fragment: on a full app rerun every card loads its
     own data concurrently, and on widget interactions (view toggle, filters)
-    only this card reruns. The card's data is loaded inside ``st.skeleton`` so
-    the title and controls stay stable while the chart fills in.
+    only this card reruns. Its controls must live inside the fragment, so the
+    card draws its own frame and header, and loads its data inside
+    ``st.skeleton`` so the header stays stable while the chart fills in.
 
     Parameters
     ----------
@@ -377,9 +383,9 @@ def metric_card(
                     key=f"{metric_name}_time",
                 )
 
-        # Load this card's data and render inside a skeleton placeholder. The
-        # skeleton shows while the (cached) loader runs, then clears once the
-        # chart or table is rendered.
+        # The chart or table replaces the skeleton. On any rerun, including a
+        # filter change, a cache hit updates the chart in place; a cache miss
+        # covers the old chart with the skeleton after half a second.
         with st.skeleton(height=CHART_HEIGHT):
             df = load_metric(metric_name)
 
@@ -449,12 +455,18 @@ render_page_header("# :material/monitoring: Metrics Dashboard")
 # Each KPI and card loads its own data; as parallel fragments they load
 # concurrently on the first run instead of blocking on each other.
 
-# KPI row: horizontal containers wrap on narrow screens.
+# KPI row: the main script draws each KPI's skeleton, so the row has its final
+# size from the first paint, and each metric replaces its skeleton when its data
+# arrives. Horizontal containers wrap on narrow screens.
 with st.container(horizontal=True):
-    kpi_card("Active users", "users")
-    kpi_card("Sessions", "sessions")
-    kpi_card("Revenue", "revenue")
-    kpi_card("Conversions", "conversions")
+    for kpi_label, kpi_metric in [
+        ("Active users", "users"),
+        ("Sessions", "sessions"),
+        ("Revenue", "revenue"),
+        ("Conversions", "conversions"),
+    ]:
+        with st.skeleton(height=KPI_HEIGHT):
+            kpi_card(kpi_label, kpi_metric)
 
 # Row 1: Users and Sessions
 row1 = st.columns(2)

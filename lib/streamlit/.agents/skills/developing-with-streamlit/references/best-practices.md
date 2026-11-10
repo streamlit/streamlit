@@ -237,7 +237,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, then wrap the slow work and the element it feeds in `with st.skeleton():`. The skeleton reserves the slot, and on reruns the previous element stays mounted at a stable position (keeping a dataframe's scroll, sort, and selection); the skeleton only covers it if the new data takes longer than half a second. Avoid `st.empty()` placeholders that you fill after slow work: they clear the slot at the top of the rerun, which unmounts the old element and resets its state. Give stateful elements a stable `key`.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
@@ -246,17 +246,16 @@ st.title("Orders")
 region = st.selectbox("Region", regions)
 st.dataframe(orders)
 
-# GOOD: Title and filter paint immediately; a container reserves the table's slot and
-# shows a skeleton while it loads, so the table keeps its state at a stable position.
+# GOOD: Title and filter paint immediately; the skeleton reserves the table's slot
+# while it loads, and the table keeps its state at a stable position across reruns.
 st.title("Orders")
 region = st.selectbox("Region", regions)
-table_slot = st.container()  # Reserve the table's position up front
-with table_slot.skeleton():
+with st.skeleton(height=400):
     orders = load_orders()
-    table_slot.dataframe(orders, key="orders")  # Write into the reserved slot
+    st.dataframe(orders, height=400, key="orders")  # Same height as its skeleton
 ```
 
-See `performance.md` for the rendering-order details and a fuller placeholder example.
+With several slow sections, each skeleton still waits for the slow work above it. Call each section's `@st.fragment(parallel=True)` inside its skeleton so the sections load concurrently (see "Layout-first loading" in `dashboards.md`). See `performance.md` for the rendering-order details and a fuller placeholder example.
 
 Use fragments for independent sections that can rerun separately from the page. For a timer, refresh that section with `@st.fragment(run_every=...)` instead of looping the script or adding `streamlit-autorefresh`.
 

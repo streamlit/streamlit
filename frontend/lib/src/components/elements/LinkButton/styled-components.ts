@@ -22,6 +22,7 @@ import { darken } from "color2k"
 import {
   BaseButtonKind,
   BaseButtonSize,
+  getTertiaryActiveColor,
 } from "~lib/components/shared/BaseButton/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -179,7 +180,7 @@ export const StyledTertiaryLinkButton = styled(
     },
   },
   "&:active": {
-    color: darken(theme.colors.primary, 0.25),
+    color: getTertiaryActiveColor(theme),
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
     backgroundColor: theme.colors.transparent,

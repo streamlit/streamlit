@@ -479,11 +479,8 @@ class TestSnowflakeCallersRightsConnection:
         env_var_names = [
             "SNOWFLAKE_ACCOUNT",
             "SNOWFLAKE_HOST",
-            "SNOWFLAKE_DATABASE",
-            "SNOWFLAKE_SCHEMA",
         ]
 
-        # Validate that we throw an exception if any env vars are missing.
         for missing_var in env_var_names:
 
             def fake_getenv(key: str) -> str | None:
@@ -521,23 +518,31 @@ class TestSnowflakeCallersRightsConnection:
         ("extra_env", "expected_extra"),
         [
             pytest.param(
-                {"SNOWFLAKE_PROTOCOL": "http", "SNOWFLAKE_PORT": "8082"},
-                {"protocol": "http", "port": "8082"},
-                id="protocol-and-port-set",
+                {
+                    "SNOWFLAKE_DATABASE": "my_database",
+                    "SNOWFLAKE_SCHEMA": "streamlit_schema",
+                    "SNOWFLAKE_PROTOCOL": "http",
+                    "SNOWFLAKE_PORT": "8082",
+                },
+                {
+                    "database": "my_database",
+                    "schema": "streamlit_schema",
+                    "protocol": "http",
+                    "port": "8082",
+                },
+                id="optional-env-set",
             ),
-            pytest.param({}, {}, id="protocol-and-port-unset"),
+            pytest.param({}, {}, id="optional-env-unset"),
         ],
     )
-    def test_get_connection_params_all_values_ok(
+    def test_get_connection_params_includes_optional_env_only_when_set(
         self, extra_env: dict[str, str], expected_extra: dict[str, str]
     ) -> None:
-        """Protocol and port are included only when the container sets them."""
+        """The connection includes optional environment variables only when the container sets them."""
 
         fake_env_values = {
             "SNOWFLAKE_ACCOUNT": "my-account",
             "SNOWFLAKE_HOST": "account.snowf.com",
-            "SNOWFLAKE_DATABASE": "my_database",
-            "SNOWFLAKE_SCHEMA": "streamlit_schema",
             **extra_env,
         }
 
@@ -566,8 +571,6 @@ class TestSnowflakeCallersRightsConnection:
             "client_session_keep_alive": True,
             "account": "my-account",
             "host": "account.snowf.com",
-            "database": "my_database",
-            "schema": "streamlit_schema",
             **expected_extra,
             "token": f"{fake_file_token}.{fake_header_token}",
         }

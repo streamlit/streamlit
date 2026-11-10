@@ -40,7 +40,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(30)
+    expect(popover_elements).to_have_count(31)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -568,6 +568,11 @@ def test_popover_menu_style_icons_hide_chevron(
     expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
     expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
     expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # A menu-style `icon` with an empty label also hides the chevron
+    icon_param_popover = get_element_by_key(app, "more_vert_icon_param_popover")
+    expect(icon_param_popover.get_by_text("more_vert", exact=True)).to_be_visible()
+    expect(icon_param_popover.get_by_text("expand_more")).not_to_be_visible()
 
     # Verify that regular popovers DO have the chevron (for contrast)
     regular_popover = get_popover(app, "popover 3 (with widgets)")

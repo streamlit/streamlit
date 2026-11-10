@@ -309,6 +309,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             url_path="foo",
             default=False,
             visibility="hidden",
+            help="Secret text",
         )
 
         ctx = get_script_run_ctx()
@@ -316,7 +317,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert len(ctx.shared.tracked_commands) == 1
         command = ctx.shared.tracked_commands[0]
         assert command.name == "Page"
-        assert len(command.args) == 6
+        assert len(command.args) == 7
         assert str(command.args[0]).strip() == 'k: "page"\nt: "str"\nm: "len:6"'
         # ``_positional_arg_offset=1`` must place the first real argument at
         # position 0 (like a plain function), not 1 (shifted by ``self``).
@@ -327,6 +328,9 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
         assert str(command.args[3]).strip() == 'k: "url_path"\nt: "str"\nm: "len:3"'
         assert str(command.args[4]).strip() == 'k: "default"\nt: "bool"\nm: "val:False"'
         assert str(command.args[5]).strip() == 'k: "visibility"\nt: "str"\nm: "len:6"'
+        # Help is recorded by length only, never by content.
+        assert str(command.args[6]).strip() == 'k: "help"\nt: "str"\nm: "len:11"'
+        assert "Secret" not in str(command)
 
     def test_page_constructor_exception_is_tracked(self) -> None:
         """Page constructor failures retain the existing telemetry event."""

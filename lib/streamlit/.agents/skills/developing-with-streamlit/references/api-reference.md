@@ -75,6 +75,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.fragment` | Decorator to turn a function into a fragment which can rerun independently of the full app. Use it to reduce rerun cost for isolated interactive sections or run independent, slow sections in parallel during full app reruns. |
 | `st.get_option` | Return the current value of a given Streamlit configuration option. Use it for runtime-aware behavior that depends on configured settings. |
 | `st.graphviz_chart` | Display a graph using the d3-graphviz library and Graphviz WASM. Use it for diagrams that need Graphviz layout engines or clusters; prefer `st.mermaid_chart` for other diagrams. |
+| `st.grid` | Insert a responsive grid container. Use it for wrapping card layouts and spanning items with `grid.cell()`. |
 | `st.header` | Display text in header formatting. Use it for major sections below the page title. |
 | `st.help` | Display help and other information for a given object. It renders docstrings, signatures, and related information inside the app. |
 | `st.html` | Insert HTML into your app. JavaScript is ignored by default; for interactive components that exchange data with Python, use `st.components.v2.component()` instead. |
@@ -113,7 +114,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |
 | `st.set_option` | Set a configuration option. Use sparingly because not all options are safe or meaningful to change after startup. |
 | `st.set_page_config` | Configure the default settings of the page. Prefer calling it near the top of the script; repeated calls are additive and override only the parameters you specify. |
-| `st.skeleton` | Display a skeleton loading placeholder. Use it standalone (like `st.empty`) to reserve space and replace it with content later, or as a context manager (like `st.spinner`) to show a temporary placeholder while a block runs. |
+| `st.skeleton` | Display a skeleton loading placeholder. Use it standalone (like `st.empty`) to reserve space and replace it with content later, or as a context manager whose content fills the skeleton's slot. |
 | `st.slider` | Display a slider widget. Use it for numeric ranges, dates, times, or other ordered values. |
 | `st.snow` | Draw celebratory snowfall. Use sparingly for lightweight success or celebration effects. |
 | `st.space` | Add vertical or horizontal space. Use it for small layout adjustments instead of empty Markdown strings. |
