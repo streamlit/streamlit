@@ -41,8 +41,8 @@ const printReleaseScrollBox: CSSObject = {
 }
 
 export const StyledTableContainer = styled.div<{
-  hasScrollableHeight?: boolean
-}>(({ theme, hasScrollableHeight = false }) => ({
+  hasReservedHeight?: boolean
+}>(({ theme, hasReservedHeight = false }) => ({
   // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
   fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
@@ -58,7 +58,7 @@ export const StyledTableContainer = styled.div<{
   // Use block display to let table expand naturally
   display: "block",
 
-  ...(hasScrollableHeight ? {} : { "@media print": printReleaseScrollBox }),
+  ...(hasReservedHeight ? {} : { "@media print": printReleaseScrollBox }),
 }))
 
 export const StyledTableCaption = styled.div(({ theme }) => ({
@@ -75,41 +75,49 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
 export const StyledTableBorder = styled.div<{
   borderMode: Table.BorderMode
   hasScrollableHeight?: boolean
-}>(({ theme, borderMode, hasScrollableHeight = false }) => ({
-  // Add the enclosing border on an extra wrapper around the table. This ensures that
-  // when the table scrolls horizontally on small windows, it still shows a border all
-  // around the table and the table doesn't look cut off.
-  border:
-    borderMode === Table.BorderMode.ALL
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-      : "none",
-  borderRadius: theme.radii.default,
-  overflow: "auto",
-  // Constrain width to parent to prevent overflow from pushing parent containers wider.
-  // This ensures horizontal scroll is contained within this wrapper.
-  width: "100%",
-  maxWidth: "100%",
-  // When a fixed height is specified, constrain to 100% of parent
-  height: hasScrollableHeight ? "100%" : undefined,
-  // Create positioning context for absolutely positioned children (e.g., Pandas Styler tooltips)
-  // This ensures such elements are contained within this wrapper for scroll calculations
-  position: "relative",
-  // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
-  display: "block",
-  // This prevents accidental overscrolling that triggers the browser's Back button.
-  overscrollBehaviorX: "contain",
+  hasReservedHeight?: boolean
+}>(
+  ({
+    theme,
+    borderMode,
+    hasScrollableHeight = false,
+    hasReservedHeight = false,
+  }) => ({
+    // Add the enclosing border on an extra wrapper around the table. This ensures that
+    // when the table scrolls horizontally on small windows, it still shows a border all
+    // around the table and the table doesn't look cut off.
+    border:
+      borderMode === Table.BorderMode.ALL
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+        : "none",
+    borderRadius: theme.radii.default,
+    overflow: "auto",
+    // Constrain width to parent to prevent overflow from pushing parent containers wider.
+    // This ensures horizontal scroll is contained within this wrapper.
+    width: "100%",
+    maxWidth: "100%",
+    // When a fixed height is specified, constrain to 100% of parent
+    height: hasScrollableHeight ? "100%" : undefined,
+    // Create positioning context for absolutely positioned children (e.g., Pandas Styler tooltips)
+    // This ensures such elements are contained within this wrapper for scroll calculations
+    position: "relative",
+    // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
+    display: "block",
+    // This prevents accidental overscrolling that triggers the browser's Back button.
+    overscrollBehaviorX: "contain",
 
-  ...(hasScrollableHeight
-    ? {}
-    : {
-        "@media print": {
-          ...printReleaseScrollBox,
-          // Clip painting so a table wider than its printed column is cut
-          // at the border. Unlike overflow, this does not block page breaks.
-          clipPath: "inset(0)",
-        },
-      }),
-}))
+    ...(hasReservedHeight
+      ? {}
+      : {
+          "@media print": {
+            ...printReleaseScrollBox,
+            // Clip painting so a table wider than its printed column is cut
+            // at the border. Unlike overflow, this does not block page breaks.
+            clipPath: "inset(0)",
+          },
+        }),
+  })
+)
 
 export const StyledTable = styled.table<{
   useContentWidth?: boolean

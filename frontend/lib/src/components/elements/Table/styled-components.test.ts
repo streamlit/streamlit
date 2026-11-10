@@ -65,15 +65,14 @@ describe("st.table print layout", () => {
 
   it("keeps the scroll box of a fixed-height table in print", () => {
     const containerCss = cssOf(
-      render(
-        createElement(StyledTableContainer, { hasScrollableHeight: true })
-      )
+      render(createElement(StyledTableContainer, { hasReservedHeight: true }))
     )
     const borderCss = cssOf(
       render(
         createElement(StyledTableBorder, {
           borderMode: Table.BorderMode.ALL,
           hasScrollableHeight: true,
+          hasReservedHeight: true,
         })
       )
     )
@@ -81,6 +80,27 @@ describe("st.table print layout", () => {
     expect(containerCss).toContain("overflow:clip")
     expect(containerCss).not.toContain("@media print")
     expect(borderCss).toContain("overflow:auto")
+    expect(borderCss).toContain("height:100%")
+    expect(borderCss).not.toContain("@media print")
+  })
+
+  it("keeps a stretch-height table clipped in print without filling the border", () => {
+    const containerCss = cssOf(
+      render(createElement(StyledTableContainer, { hasReservedHeight: true }))
+    )
+    const borderCss = cssOf(
+      render(
+        createElement(StyledTableBorder, {
+          borderMode: Table.BorderMode.ALL,
+          hasReservedHeight: true,
+        })
+      )
+    )
+
+    expect(containerCss).toContain("overflow:clip")
+    expect(containerCss).not.toContain("@media print")
+    expect(borderCss).toContain("overflow:auto")
+    expect(borderCss).not.toContain("height:100%")
     expect(borderCss).not.toContain("@media print")
   })
 
