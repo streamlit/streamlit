@@ -829,6 +829,27 @@ describe("Popover chevron visibility", () => {
     expect(button).not.toHaveTextContent("expand_less")
   })
 
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when icon is %s and label is empty", async icon => {
+    const user = userEvent.setup()
+    const props = getProps({ label: "", icon })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent(icon.slice(":material/".length, -1))
+    expect(button).not.toHaveTextContent("expand_more")
+
+    await user.click(button)
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
   it("shows chevron for regular labels", () => {
     const props = getProps({ label: "Actions" })
     render(

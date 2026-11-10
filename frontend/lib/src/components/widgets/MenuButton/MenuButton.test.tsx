@@ -280,8 +280,29 @@ describe("MenuButton widget", () => {
     expect(button).not.toHaveTextContent("expand_more")
   })
 
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when icon is %s and label is empty", icon => {
+    const props = getProps({ label: "", icon })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveTextContent(icon.slice(":material/".length, -1))
+    expect(button).not.toHaveTextContent("expand_more")
+  })
+
   it("shows chevron for regular labels", () => {
     const props = getProps({ label: "Actions" })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveTextContent("expand_more")
+  })
+
+  it("shows chevron when icon is menu-style but label has text", () => {
+    const props = getProps({ label: "Actions", icon: ":material/more_vert:" })
     render(<MenuButton {...props} />)
 
     const button = screen.getByTestId("stMenuButtonButton")
