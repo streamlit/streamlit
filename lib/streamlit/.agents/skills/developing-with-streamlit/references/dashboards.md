@@ -152,9 +152,9 @@ st.echarts_chart(
 
 The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
 
-## Smooth loading with parallel fragments + skeletons
+## Layout-first loading with parallel fragments + skeletons
 
-When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
+When a dashboard has multiple cards with slow data loads (queries or API calls), load the layout first: the cheap parts (titles, filters, card frames) paint right away, a skeleton holds each slow card body at its final size, and the bodies fill in as their data arrives. Combine `@st.fragment(parallel=True)` with `st.skeleton`: the fragments load concurrently on a full app rerun, so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
 @st.cache_data(ttl="15m")
@@ -194,6 +194,13 @@ Draw each card's frame and title in the main script, and call its parallel fragm
 
 The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
 
+To keep the layout stable:
+
+- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. Measure content that has no `height` parameter once.
+- Put the content inside the `with st.skeleton()` block, not after it, and draw the slow element first: any visible element, even a caption, ends the skeleton.
+- Give stateful elements a `key`, so a rerun updates them in place and they keep their scroll and selection.
+- Inside a skeleton, Streamlit hides a cached function's default spinner, so `show_spinner=False` isn't needed. Pass `show_spinner="..."` to label the skeleton during slow loads.
+
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
 Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
@@ -226,13 +233,13 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
 | `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
 | `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
 | `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
 | `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
 | `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
-| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 

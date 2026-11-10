@@ -194,7 +194,7 @@ st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
 
 ### Parallel fragments
 
-Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially. To paint the page's layout and every card's size first, call each fragment inside `with st.skeleton(height=...)` from the main script (see "Layout-first loading" in `dashboards.md`).
 
 ```python
 # BAD: Three slow queries run sequentially (~9s total)
@@ -247,6 +247,7 @@ orders()
 **When NOT to use:**
 
 - Fragments that depend on each other's Session State writes
+- Pure-Python CPU-bound work: threads share the GIL, so it doesn't overlap, and busy workers can delay the page's first paint
 
 **Thread safety rules:**
 
@@ -486,7 +487,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its
 The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
-- `st.skeleton` — animated placeholder that reserves layout space while content loads.
+- `st.skeleton` — animated placeholder that reserves layout space while content loads. Prefer it over a spinner for charts, tables, and metrics: cached reruns update the content in place without showing it, and a cached function's spinner text inside it labels the skeleton.
 - `st.progress` — determinate progress bar when you can report percent complete (e.g., looping over a known number of steps).
 - `st.status` — progress and intermediate output for multi-step, long-running tasks.
 

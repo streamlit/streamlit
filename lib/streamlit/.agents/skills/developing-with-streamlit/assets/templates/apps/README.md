@@ -19,11 +19,11 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
-| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, `st.skeleton` on quick cards with `st.spinner` for the slow report |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, spinner text shown on the slow report's skeleton |
 
 ## Quick Start
 
@@ -138,18 +138,28 @@ def render_page_header(title: str):
 Wrap each card in `@st.fragment` so widget interactions rerun only that card,
 not the whole page. If a dashboard has multiple cards with independent,
 compute-intensive data loads, add `parallel=True` so those cards run
-concurrently on a full app rerun. Wrap the loading body in `st.skeleton` so each
-card shows a placeholder until its data is ready:
+concurrently on a full app rerun. Load the page layout first: draw each card's
+frame and title in the main script, and call its fragment inside
+`with st.skeleton(height=...)`. Every card then has its final size from the
+first paint, and the fragment's first element replaces its skeleton:
 
 ```python
 @st.fragment(parallel=True)
-def metric_card(metric_name: str):
-    with st.container(border=True):
-        st.markdown(f"**{metric_name}**")  # Stays stable while the body loads
-        with st.skeleton(height=300):
-            data = load_metric(metric_name)  # Cached; loads in parallel
-            st.line_chart(data, alt=f"{metric_name} over time")
+def metric_body(metric_name: str):
+    data = load_metric(metric_name)  # Cached; loads in parallel
+    st.line_chart(data, height=300, alt=f"{metric_name} over time")
+
+
+with st.container(border=True):
+    st.markdown("**Revenue**")  # Drawn by the main script
+    with st.skeleton(height=300):  # Holds the chart's slot until it arrives
+        metric_body("revenue")
 ```
+
+A card with its own controls must draw them inside the fragment, so it draws its
+frame, header, and `with st.skeleton()` around the slow part there too, as the
+`dashboard-metrics` chart cards do. On cached reruns the chart updates in place without a
+skeleton; on a cache miss, the skeleton covers the old chart at its size.
 
 Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
 behind a widget interaction instead, where the fragment reruns sequentially.
