@@ -67,6 +67,8 @@ jobs:
             const dryRun = process.env.DRY_RUN === 'true';
             const dependabot = 'dependabot[bot]';
             const trustedCommitAuthors = [dependabot, 'github-actions[bot]'];
+            // Label-gated workflows (Autofix, AI review, Performance) finish as skipped when their
+            // label is absent. neutral is a finished run with no pass or fail result.
             const passedRunConclusions = ['success', 'skipped', 'neutral'];
             // Cancelled check runs don't block approval. Label-triggered workflows such as Autofix
             // cancel each other's runs, and the workflow-run check already requires CI to pass.
@@ -163,7 +165,7 @@ jobs:
               ];
               // The combined state covers every status, including those past the first page.
               if (failedChecks.length > 0 || combinedStatus.state === 'failure') {
-                return `checks failed: ${failedChecks.join(', ') || 'commit status'}`;
+                return `checks failed: ${failedChecks.join(', ') || 'a commit status beyond the first 100'}`;
               }
               // The combined state is also `pending` for a commit without statuses.
               if (combinedStatus.total_count > 0 && combinedStatus.state === 'pending') {
@@ -224,7 +226,7 @@ jobs:
                     pull_number: pr.number,
                     commit_id: pr.head.sha,
                     event: 'APPROVE',
-                    body: `Auto-approved: all CI passed for ${pr.head.sha}.`,
+                    body: `Auto-approved: all CI passed for ${pr.head.sha} ([workflow run](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})).`,
                   });
                   result = 'Approved';
                 }
