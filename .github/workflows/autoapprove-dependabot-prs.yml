@@ -2,9 +2,9 @@
 #
 # Runs on weekdays shortly before the Cursor Dependabot automation, which enables
 # auto-merge on green Dependabot PRs. A PR is approved when every PR workflow run for
-# its head commit has finished and passed, and no check run or commit status on that
-# commit failed. That also covers checks from outside GitHub Actions, such as code
-# scanning alerts and Snyk.
+# its head commit has finished and passed, no check run failed, and no commit status
+# (such as Snyk) failed or is still pending. That also covers checks from outside
+# GitHub Actions, such as code scanning alerts.
 #
 # Every commit on the PR must be signed by GitHub (committer web-flow) and authored by
 # Dependabot or github-actions[bot]. A commit from anyone else, such as a human push or
@@ -28,12 +28,13 @@ name: Autoapprove Dependabot PRs
 
 on:
   schedule:
-    # 11:30 UTC on weekdays, 30 minutes before the Cursor Dependabot automation.
+    # 11:30 UTC on weekdays, so approvals land before the Cursor Dependabot automation
+    # (12:00 UTC, configured in Cursor) enables auto-merge.
     - cron: "30 11 * * 1-5"
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Report which PRs would be approved without approving them"
+        description: "When true, only report which PRs would be approved. The default approves them."
         type: boolean
         required: false
         default: false
@@ -67,12 +68,12 @@ jobs:
             const dependabot = 'dependabot[bot]';
             const trustedCommitAuthors = [dependabot, 'github-actions[bot]'];
             const passedRunConclusions = ['success', 'skipped', 'neutral'];
-            // Cancelled checks are left out: label-triggered runs such as Autofix cancel each
-            // other, and the workflow runs must have passed anyway.
+            // Cancelled check runs don't block approval. Label-triggered workflows such as Autofix
+            // cancel each other's runs, and the workflow-run check already requires CI to pass.
             const failedCheckConclusions = ['failure', 'timed_out', 'action_required', 'startup_failure'];
 
             // Returns why the PR can't be approved, or null when it can.
-            async function blocker(pr) {
+            async function findApprovalBlocker(pr) {
               const sha = pr.head.sha;
 
               const commits = await github.paginate(github.rest.pulls.listCommits, {
@@ -211,7 +212,7 @@ jobs:
             for (const pr of dependabotPrs) {
               let result;
               try {
-                const reason = await blocker(pr);
+                const reason = await findApprovalBlocker(pr);
                 if (reason) {
                   result = `Skipped: ${reason}`;
                 } else if (dryRun) {
