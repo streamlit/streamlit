@@ -696,10 +696,9 @@ class DateInputSerde:
                 # Invalid URL query param value (e.g. "not-a-date") — revert to default.
                 return_value = self.value.value
             else:
-                # Out-of-range dates and reversed ranges (start after end) are
-                # invalid URL values, so return the default. URL seeding then
-                # clears the query param, as it does for SliderSerde bounds
-                # checks.
+                # Return the default for out-of-range dates and for ranges whose
+                # start is after the end. URL seeding then sees the default and
+                # removes the bad query param.
                 if return_value and (
                     any(d < self.value.min or d > self.value.max for d in return_value)
                     or (
