@@ -2465,8 +2465,8 @@ describe("DateTimeInput widget", () => {
 
       // Doubles as the guard for getTypedTimeFromDom's assumptions: exactly two
       // segments in the whole popover means no dayPeriod segment (hourCycle 24)
-      // and no seconds segment, and that no other control there reports an
-      // hour/minute the resolver could pick up by mistake.
+      // under the default minute-granular step, and that no other control there
+      // reports an hour/minute the resolver could pick up by mistake.
       const popoverSegments = within(
         screen.getByTestId("stDateTimeInputCalendar")
       ).getAllByRole("spinbutton")

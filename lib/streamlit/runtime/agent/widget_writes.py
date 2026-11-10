@@ -768,12 +768,13 @@ def _iso_text_to_wire(
 ) -> Any:
     """Turn any ISO 8601 form into the one layout a date-time or time input reads.
 
-    `st.datetime_input` reads only `YYYY-MM-DDTHH:MM` and `st.time_input` only
-    `HH:MM` or `HH:MM:SS`, and each replaces anything else with its default
-    without an error. So a value with seconds, a fraction, or a space would
-    change nothing while the request succeeded. The widget's own serializer
-    writes the layout it reads. These widgets hold no offset, so a value with
-    one is refused rather than converted to some time zone.
+    `st.datetime_input` reads `YYYY-MM-DDTHH:MM` or `YYYY-MM-DDTHH:MM:SS`
+    (seconds when ``step`` is sub-minute) and `st.time_input` reads `HH:MM` or
+    `HH:MM:SS`. Each replaces anything else with its default without an error.
+    So a value with a fraction or a space would change nothing while the
+    request succeeded. The widget's own serializer writes the layout it reads.
+    These widgets hold no offset, so a value with one is refused rather than
+    converted to some time zone.
     """
     kind = _ISO_TEXT_INPUTS.get(command)
     if kind is None or not isinstance(value, str):

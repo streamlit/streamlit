@@ -107,7 +107,10 @@ export function snapTimeParts(
   return null
 }
 
-/** True when step is not a whole number of minutes (seconds UI + snap). */
+/**
+ * Whether `step` is not a whole number of minutes, so the widget shows a
+ * seconds segment and sends seconds.
+ */
 export function stepIncludesSeconds(step: number): boolean {
   return step % 60 !== 0
 }

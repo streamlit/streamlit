@@ -23,14 +23,11 @@ import {
   parseFormatOrder,
   SEGMENT_SELECTOR,
 } from "~lib/components/widgets/DateInput/dateInputUtils"
-import {
-  snapTimeParts,
-  snapTimeStep,
-} from "~lib/components/widgets/timeStepSnap"
+import { snapTimeParts } from "~lib/components/widgets/timeStepSnap"
 import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-export { SEGMENT_SELECTOR, snapTimeStep }
+export { SEGMENT_SELECTOR }
 
 function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
@@ -283,8 +280,7 @@ function readSegment(
  * `DateField` and `TimeField` both withhold `onChange` until every one of their
  * segments is filled, so a time entered while its partner segments are still
  * placeholders reaches no handler — the rendered segments are its only record.
- * An unfilled hour/minute counts as 0; an unfilled second likewise defaults to 0
- * so a lone hour or minute survives.
+ * Unfilled segments count as 0, so a lone hour or minute still produces a time.
  *
  * Assumes a 24-hour cycle: with `hourCycle={12}` the hour reports 1–12 and needs
  * the `dayPeriod` segment to disambiguate.

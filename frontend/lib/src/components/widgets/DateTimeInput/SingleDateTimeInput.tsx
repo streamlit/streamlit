@@ -708,23 +708,28 @@ function SingleDateTimeInput({
       const fullDateTime = parsePastedDateTime(text, format)
       if (fullDateTime) {
         e.preventDefault()
-        setDisplayValue(fullDateTime)
+        // Match TimeInput: drop hidden seconds when the widget is
+        // minute-granular so local state matches the stripped wire value.
+        const normalized = includeSeconds
+          ? fullDateTime
+          : fullDateTime.set({ second: 0 })
+        setDisplayValue(normalized)
         hasEditedRef.current = false
         // Report what the field now shows before committing, so a leftover
         // required error clears even when the commit fails the range check.
-        onEdit(toIso(fullDateTime))
+        onEdit(toIso(normalized))
         // Only remember accepted commits, as in `commitOrRevert`: a rejected
         // out-of-range paste must not dedupe a later blur of the same value
         // once the range allows it.
-        if (onChange(fullDateTime)) {
-          lastCommittedRef.current = fullDateTime
+        if (onChange(normalized)) {
+          lastCommittedRef.current = normalized
         }
         return
       }
 
       // For partial segment paste, let RAC handle it (no custom partial for datetime)
     },
-    [disabled, format, onChange, onEdit, toIso]
+    [disabled, format, includeSeconds, onChange, onEdit, toIso]
   )
 
   // Shared step-snap handler for ArrowUp/ArrowDown on time segments.

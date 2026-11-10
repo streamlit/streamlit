@@ -45,7 +45,10 @@ import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
-import { snapTimeParts } from "~lib/components/widgets/timeStepSnap"
+import {
+  snapTimeParts,
+  stepIncludesSeconds,
+} from "~lib/components/widgets/timeStepSnap"
 import {
   useBasicWidgetState,
   type ValueWithSource,
@@ -89,7 +92,7 @@ export interface Props {
  * Note: `step` also controls arrow-key behaviour via `handleKeyCapture`.
  */
 function stepToGranularity(stepSeconds: number): "minute" | "second" {
-  return stepSeconds % 60 !== 0 ? "second" : "minute"
+  return stepIncludesSeconds(stepSeconds) ? "second" : "minute"
 }
 
 /** Converts an HH:MM or HH:MM:SS wire-format string to a React Aria Time object. */

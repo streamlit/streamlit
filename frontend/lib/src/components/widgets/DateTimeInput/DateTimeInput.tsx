@@ -40,6 +40,7 @@ import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { stepIncludesSeconds } from "~lib/components/widgets/timeStepSnap"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -137,7 +138,7 @@ function DateTimeInput({
   // positive step.
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment above
   const step = element.step ? Number(element.step) : 900
-  const includeSeconds = step % 60 !== 0
+  const includeSeconds = stepIncludesSeconds(step)
 
   const minDateTime = useMemo(
     () => isoToCalendarDateTime(element.min),

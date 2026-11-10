@@ -98,6 +98,10 @@ def test_datetime_input_widget_rendering(
         get_datetime_input(app, "Datetime input 12 (width='stretch')"),
         name="st_datetime_input-width_stretch",
     )
+    assert_snapshot(
+        get_datetime_input(app, "Datetime input step=30"),
+        name="st_datetime_input-step_30",
+    )
 
 
 def test_datetime_input_dropdown(app: Page, assert_snapshot: ImageCompareFunction):
@@ -211,6 +215,7 @@ def test_step_interval_applied(app: Page):
     datetime_field = get_datetime_input(
         app, "Datetime input 7 (step=60)"
     ).get_by_test_id("stDateTimeInputField")
+    expect(datetime_field.get_by_role("spinbutton")).to_have_count(5)
 
     # Type into segments: year, month, day, hour, minute
     type_date(datetime_field, "2025", "11", "19", "16", "46")
@@ -219,7 +224,9 @@ def test_step_interval_applied(app: Page):
     expect_markdown(app, "Value 7: 2025-11-19 16:46:00")
 
 
-def test_sub_minute_step_shows_seconds_and_snaps(app: Page):
+def test_sub_minute_step_shows_seconds_and_snaps(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
     """Sub-minute step shows a seconds segment and ArrowUp snaps by the step."""
     datetime_input = get_datetime_input(app, "Datetime input step=30")
     datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
@@ -228,6 +235,12 @@ def test_sub_minute_step_shows_seconds_and_snaps(app: Page):
 
     second_segment = segments.last
     second_segment.click()
+    # Popover time row should also expose a seconds segment.
+    popover_time = app.get_by_test_id("stDateTimeInputPopoverTime")
+    expect(popover_time).to_be_visible()
+    expect(popover_time.get_by_role("spinbutton")).to_have_count(3)
+    assert_snapshot(popover_time, name="st_datetime_input-step_30_popover_time")
+
     second_segment.press("ArrowUp")
     # Commit by clicking away from the field.
     app.get_by_text("Value step30:").click()

@@ -387,9 +387,11 @@ def _default_min_datetime(base_date: date) -> datetime:
     )
 
 
-def _default_max_datetime(base_date: date) -> datetime:
+def _default_max_datetime(base_date: date, *, keep_seconds: bool = False) -> datetime:
     return _combine_date_time(
-        adjust_years(base_date, years=10), _DEFAULT_MAX_BOUND_TIME
+        adjust_years(base_date, years=10),
+        _DEFAULT_MAX_BOUND_TIME,
+        keep_seconds=keep_seconds,
     )
 
 
@@ -440,7 +442,7 @@ class _DateTimeInputValues:
         )
 
         parsed_max = (
-            _default_max_datetime(base_date_for_bounds)
+            _default_max_datetime(base_date_for_bounds, keep_seconds=keep_seconds)
             if max_value is None
             else _convert_datetimelike_to_datetime(
                 max_value,
@@ -1386,6 +1388,11 @@ class TimeWidgetsMixin:
             - ``None``: The widget initializes with no value and returns ``None``
               until the user selects a datetime.
 
+            Any seconds in the initial value are only preserved in the returned
+            ``datetime`` when ``step`` is not a whole number of minutes
+            (``step % 60 != 0``). With the default step, seconds are stripped
+            from the initial value.
+
         min_value : "now", datetime.datetime, datetime.date, datetime.time, str, or None
             The minimum selectable datetime. This can be any of the datetime
             types accepted by ``value``.
@@ -1400,7 +1407,8 @@ class TimeWidgetsMixin:
 
             If this is ``None`` (default), the maximum selectable datetime is
             ten years after the initial value. If no initial value is set, the
-            maximum selectable datetime is ten years after today at 23:59.
+            maximum selectable datetime is ten years after today at ``23:59``
+            for minute-granular steps or ``23:59:59`` for sub-minute steps.
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
@@ -1476,8 +1484,9 @@ class TimeWidgetsMixin:
               are shown. Arrow keys snap to the nearest step boundary.
             - Otherwise (``step`` is not a whole number of minutes,
               i.e. ``step % 60 != 0``): hour, minute, and second
-              components are shown. The returned ``datetime`` and the URL
-              wire format include seconds. Arrow keys snap to the nearest
+              components are shown. The returned ``datetime`` includes
+              seconds, and so does the URL query parameter when
+              ``bind="query-params"``. Arrow keys snap to the nearest
               step boundary.
 
             Any valid datetime may be entered regardless of the step value.
