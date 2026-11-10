@@ -4412,9 +4412,9 @@ class TestMetaSkillPackaging:
         build the wheel and assert both files are inside it, and that
         repo-only files under ``.agents`` are not.
 
-        Also assert dashboard-metrics/.streamlit/config.toml is in the wheel.
-        Python's default glob skips hidden directories, so a package-data pattern
-        alone can omit that sample theme.
+        Also assert the templates' ``.streamlit/config.toml`` files are in the
+        wheel. Python's default glob skips hidden directories, so a package-data
+        pattern alone can omit those sample themes.
         """
         import shutil
         import zipfile
@@ -4457,9 +4457,11 @@ class TestMetaSkillPackaging:
         assert f"{meta}/SKILL.md" in names
         assert f"{meta}/scripts/discover.py" in names
         assert f"{content}/SKILL.md" in names
-        assert (
-            f"{content}/assets/templates/apps/dashboard-metrics/.streamlit/config.toml"
-        ) in names
+        apps = f"{content}/assets/templates/apps"
+        assert f"{apps}/dashboard-metrics/.streamlit/config.toml" in names
+        assert f"{apps}/dashboard-revenue/.streamlit/config.toml" in names
+        # dashboard-revenue imports helper modules next to its entrypoint.
+        assert f"{apps}/dashboard-revenue/components.py" in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [
@@ -4471,10 +4473,17 @@ class TestMetaSkillPackaging:
         ]
         assert unexpected == []
 
-    def test_dashboard_metrics_theme_matches_dense_dashboard(self) -> None:
-        """dashboard-metrics config.toml must stay a copy of dense-dashboard.toml.
+    @pytest.mark.parametrize(
+        ("template", "theme"),
+        [
+            ("dashboard-metrics", "dense-dashboard"),
+            ("dashboard-revenue", "bi-dashboard"),
+        ],
+    )
+    def test_template_theme_matches_preset(self, template: str, theme: str) -> None:
+        """A template's config.toml must stay a copy of its theme preset.
 
-        The sample adds a provenance comment; compare bodies after stripping
+        The sample may add a provenance comment; compare bodies after stripping
         leading comments so the two theme files cannot drift silently.
         """
         skill_root = (
@@ -4489,17 +4498,12 @@ class TestMetaSkillPackaging:
             / "assets"
             / "templates"
             / "apps"
-            / "dashboard-metrics"
+            / template
             / ".streamlit"
             / "config.toml"
         )
         source = (
-            skill_root
-            / "assets"
-            / "templates"
-            / "themes"
-            / "configs"
-            / "dense-dashboard.toml"
+            skill_root / "assets" / "templates" / "themes" / "configs" / f"{theme}.toml"
         )
         assert sample.is_file()
         assert source.is_file()

@@ -18,7 +18,7 @@ themes are aesthetic variants.
 |------|----------|
 | Same brand across many apps | Shared TOML/URL via `theme.base`; tweak in each app’s `config.toml` |
 | Locked single look | `shadcn` (light) or `vscode` (dark) |
-| User can toggle light/dark | `shadcn-dual` (general) or `dense-dashboard` (compact KPI padding) |
+| User can toggle light/dark | `shadcn-dual` (general), `dense-dashboard` (compact KPI padding), or `bi-dashboard` (BI cards and KPIs) |
 
 ## Dual-mode (settings toggle stays available)
 
@@ -26,6 +26,7 @@ themes are aesthetic variants.
 |-------|-------|---------|-------|
 | **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Neutral brand look with per-mode sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
+| **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist fonts, larger metric values, and color-blind-checked chart palettes for BI cards |
 
 ## Single-mode (locked appearance)
 

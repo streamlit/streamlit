@@ -10,8 +10,8 @@ These templates are based on official Streamlit demo apps and work out of the bo
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-seattle-weather** | Weather data exploration dashboard | `st.metric`, `st.pills`, `st.altair_chart`, year comparison |
-| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized `st.echarts_chart` lines with a zoom slider, peer average calculation |
+| **dashboard-seattle-weather** | Weather data exploration dashboard | `st.grid` of bordered `st.metric`s built from a spec loop (`format`, `delta_description`, `icon`), year `st.pills` bound to the URL, `st.altair_chart` year comparison with matching chart heights |
+| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
 
 ### Analytics Dashboard Templates
 
@@ -19,11 +19,12 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
+| **dashboard-revenue** | Revenue BI dashboard with certified metrics | Filter toolbar bound to the URL (`bind="query-params"`), certified KPI metrics and card titles, ⋮ `st.menu_button` card menus with a "What's measured" drawer and a forecast toggle, section SQL popover, ECharts milestone annotations and forecast range, donut-to-table drill-down with a `ButtonColumn` account drawer, layout-first loading with parallel fragments, `bi-dashboard` theme |
 | **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
-| **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores, custom cache spinner |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` with `st.skeleton`, `st.popover` filters, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
-| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, main-script filter that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, spinner text shown on the slow report's skeleton |
+| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
+| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`), custom cache spinner |
+| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` cards with `st.skeleton`, one loader cached per breakdown, `st.popover` filters with required segmented controls, reset callback, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, formatted report columns |
 
 ## Quick Start
 
@@ -50,7 +51,7 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
-`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`).
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
 
 ## Canonical Patterns
 
@@ -114,23 +115,26 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
 Compact filter controls using `st.popover`:
 
 ```python
-with st.popover("Filters", type="tertiary"):
+with st.popover("Filters", icon=":material/tune:", type="tertiary"):
     line_options = st.pills("Lines", ["Daily", "7-day MA"], selection_mode="multi")
-    time_range = st.segmented_control("Time range", TIME_RANGES, default="All")
+    time_range = st.segmented_control(
+        "Time range", TIME_RANGES, default="All", required=True
+    )
 ```
+
+`required=True` keeps a single-select control from returning `None`, so no fallback is needed.
 
 ### Page Header with Reset Button
 
 ```python
-def render_page_header(title: str):
-    """Render page header with title and reset button."""
-    with st.container(
-        horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
-    ):
-        st.markdown(title)
-        if st.button(":material/restart_alt: Reset", type="tertiary"):
-            st.session_state.clear()
-            st.rerun()
+def reset_filters() -> None:
+    # Assigning keys in a callback resets keyed and URL-bound widgets.
+    st.session_state.time_range = "All"
+
+
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.title("My dashboard", icon=":material/monitoring:", anchor=False)
+    st.button("Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters)
 ```
 
 ### Independent and parallel card updates with @st.fragment
