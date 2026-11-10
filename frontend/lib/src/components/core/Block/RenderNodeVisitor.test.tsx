@@ -14,15 +14,30 @@
  * limitations under the License.
  */
 
-import { isValidElement } from "react"
+import { isValidElement, type ReactElement } from "react"
 
-import { BlockNode, TransientNode } from "~lib/AppNode"
+import {
+  Delta as DeltaProto,
+  Element,
+  ForwardMsgMetadata,
+} from "@streamlit/protobuf"
+
+import {
+  type AppNode,
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import {
   block,
   blockWithId,
+  FAKE_SCRIPT_HASH,
+  forwardMsgMetadata,
+  makeProto,
   text,
   textInput,
 } from "~lib/render-tree/test-utils"
@@ -533,6 +548,244 @@ describe("RenderNodeVisitor", () => {
       expect((result[0] as React.ReactElement).key).toBe("transient-0")
       // Anchor BlockNode will be the first visited element in this visitor; key should be "0"
       expect((result[1] as React.ReactElement).key).toBe("0")
+    })
+  })
+
+  describe("stale copies of content that moved up", () => {
+    const RUN = "run_2"
+    const OLD_RUN = "run_1"
+
+    /** An element that the block's latest run wrote over different content. */
+    const moved = (body: string): ElementNode =>
+      text(body, RUN, `hash-${body}`, true)
+    /** An element left over from the previous run. */
+    const stale = (body: string): ElementNode =>
+      text(body, OLD_RUN, `hash-${body}`)
+    /** A toast written by `scriptRunId`, with the same hash for every run. */
+    const toast = (
+      scriptRunId: string,
+      replacedDifferentContent = false
+    ): ElementNode =>
+      new ElementNode(
+        makeProto(Element, { toast: { body: "Ready!" } }),
+        ForwardMsgMetadata.create(),
+        scriptRunId,
+        FAKE_SCRIPT_HASH,
+        undefined,
+        "hash-toast",
+        replacedDifferentContent
+      )
+
+    const collectElements = (node: BlockNode): ReactElement[] =>
+      RenderNodeVisitor.collectReactElements(createMockProps(node))
+    const keysOf = (node: BlockNode): (string | null)[] =>
+      collectElements(node).map(element => element.key)
+
+    it("skips the stale copy right after its moved copy and keeps later keys", () => {
+      const node = block([moved("L1"), stale("L1"), stale("L2")], RUN)
+
+      const result = collectElements(node)
+
+      expect(result.map(element => element.key)).toEqual(["0", "2"])
+      expect(result[0].props.node).toBe(node.children[0])
+      expect(result[1].props.node).toBe(node.children[2])
+    })
+
+    it.each<[string, AppNode[]]>([
+      ["the previous sibling is stale too", [stale("L1"), stale("L1")]],
+      [
+        "the hashes differ",
+        [moved("L1"), text("L1", OLD_RUN, "another-hash")],
+      ],
+      [
+        "both hashes are missing",
+        [text("L1", RUN, undefined, true), text("L1", OLD_RUN)],
+      ],
+      [
+        "both hashes are empty",
+        [text("L1", RUN, "", true), text("L1", OLD_RUN, "")],
+      ],
+      [
+        "the stale copy has an element ID",
+        [
+          text("input", RUN, "hash-input", true),
+          textInput("input", "input_id", OLD_RUN, "hash-input"),
+        ],
+      ],
+      [
+        "the previous sibling was rewritten with unchanged content",
+        [text("D", RUN, "hash-D", false), stale("D")],
+      ],
+      [
+        "the latest run wrote both copies",
+        [moved("D"), text("D", RUN, "hash-D", true)],
+      ],
+      ["the previous sibling is a block", [block([], RUN), stale("L1")]],
+      // Stale cleanup keeps toasts, so hiding one could remount it later.
+      ["the stale copy is a toast", [toast(RUN, true), toast(OLD_RUN)]],
+    ])("renders every child when %s", (_, children) => {
+      expect(collectElements(block(children, RUN))).toHaveLength(
+        children.length
+      )
+    })
+
+    it("renders identical elements that are not adjacent", () => {
+      const node = block(
+        [moved("D"), stale("A"), stale("D"), stale("B"), stale("D")],
+        RUN
+      )
+
+      expect(keysOf(node)).toEqual(["0", "1", "2", "3", "4"])
+    })
+
+    it("skips the stale copy in the block of a fragment run", () => {
+      const fragmentBlock = block(
+        [
+          text("L1", "fragment_run", "hash-L1", true),
+          text("L1", "full_run", "hash-L1"),
+        ],
+        "fragment_run"
+      )
+
+      expect(keysOf(fragmentBlock)).toEqual(["0"])
+    })
+
+    it("skips nothing in a parent block that a fragment run only passed through", () => {
+      const main = block(
+        [
+          text("L1", "full_run", "hash-L1", true),
+          text("L1", "full_run", "hash-L1"),
+          block([], "fragment_run"),
+        ],
+        "fragment_run"
+      )
+
+      expect(keysOf(main)).toEqual(["0", "1", "2"])
+    })
+
+    it("skips a stale copy that a spinner wraps", () => {
+      const spinner = new TransientNode(RUN, stale("L1"), [
+        text("spinner", RUN),
+      ])
+      const node = block([moved("L1"), spinner, stale("L2")], RUN)
+
+      expect(keysOf(node)).toEqual(["0", "transient-0", "2"])
+    })
+
+    it("looks through a spinner that wraps the moved copy", () => {
+      const spinner = new TransientNode(RUN, moved("L1"), [
+        text("spinner", RUN),
+      ])
+      const node = block([spinner, stale("L1"), stale("L2")], RUN)
+
+      expect(keysOf(node)).toEqual(["transient-0", "0", "2"])
+    })
+
+    it("takes the previous sibling from children, not from a retained entry", () => {
+      const retainedId = "$$ID-retained_id-key"
+      const node = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [moved("L1"), stale("L1"), stale("L2")],
+        undefined,
+        RUN,
+        undefined,
+        undefined,
+        [
+          {
+            node: textInput("retained", "retained_id", OLD_RUN),
+            id: retainedId,
+            before: 1,
+          },
+        ]
+      )
+
+      expect(keysOf(node)).toEqual(["0", retainedId, "2"])
+    })
+
+    describe("through AppRoot", () => {
+      const EMPTY_ROOT = new AppRoot(
+        FAKE_SCRIPT_HASH,
+        new BlockNode(FAKE_SCRIPT_HASH, [
+          new BlockNode(FAKE_SCRIPT_HASH),
+          new BlockNode(FAKE_SCRIPT_HASH),
+          new BlockNode(FAKE_SCRIPT_HASH),
+          new BlockNode(FAKE_SCRIPT_HASH),
+        ])
+      )
+
+      const writeLine = (
+        root: AppRoot,
+        scriptRunId: string,
+        index: number,
+        body: string
+      ): AppRoot =>
+        root.applyDelta(
+          scriptRunId,
+          makeProto(DeltaProto, { newElement: { text: { body } } }),
+          forwardMsgMetadata([0, index]),
+          `hash-${body}`
+        )
+
+      const runScript = (
+        root: AppRoot,
+        scriptRunId: string,
+        bodies: string[]
+      ): AppRoot =>
+        bodies
+          .reduce(
+            (current, body, index) =>
+              writeLine(current, scriptRunId, index, body),
+            root
+          )
+          .clearStaleNodes(scriptRunId, [])
+
+      /** The rendered keys and bodies of the main block after each write. */
+      const renderEachWrite = (
+        root: AppRoot,
+        scriptRunId: string,
+        bodies: string[]
+      ): {
+        keys: (string | null)[]
+        bodies: (string | null | undefined)[]
+      }[] => {
+        let current = root
+        return bodies.map((body, index) => {
+          current = writeLine(current, scriptRunId, index, body)
+          const result = collectElements(current.main)
+          return {
+            keys: result.map(element => element.key),
+            bodies: result.map(
+              element => (element.props.node as ElementNode).element.text?.body
+            ),
+          }
+        })
+      }
+
+      it("shows each line once while a rerun moves the lines up", () => {
+        const firstRun = runScript(EMPTY_ROOT, "run_1", [
+          "Header",
+          "L1",
+          "L2",
+          "L3",
+        ])
+
+        expect(renderEachWrite(firstRun, "run_2", ["L1", "L2", "L3"])).toEqual(
+          [
+            { keys: ["0", "2", "3"], bodies: ["L1", "L2", "L3"] },
+            { keys: ["0", "1", "3"], bodies: ["L1", "L2", "L3"] },
+            { keys: ["0", "1", "2"], bodies: ["L1", "L2", "L3"] },
+          ]
+        )
+      })
+
+      it("skips nothing during an unchanged rerun of identical adjacent lines", () => {
+        const page = ["S", "S", "X"]
+        const firstRun = runScript(EMPTY_ROOT, "run_1", page)
+
+        expect(renderEachWrite(firstRun, "run_2", page)).toEqual(
+          page.map(() => ({ keys: ["0", "1", "2"], bodies: page }))
+        )
+      })
     })
   })
 })

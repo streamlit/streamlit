@@ -20,7 +20,9 @@ from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     expect_script_state,
     get_button,
+    get_element_by_key,
     get_selectbox,
+    get_toggle,
 )
 
 
@@ -222,3 +224,64 @@ def test_chat_transient_spinner_does_not_leave_stale_elements(app: Page) -> None
 
     wait_for_app_run(app)
     expect(app.get_by_text("Echo: Message 2")).to_be_visible()
+
+
+def _expect_still_running(app: Page) -> None:
+    """Check right away that the script run hasn't finished yet."""
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running", timeout=1
+    )
+
+
+def test_moved_up_content_shows_each_line_once_while_running(app: Page) -> None:
+    _select_mode(app, "moved_up_content")
+    markdown = app.get_by_test_id("stMarkdown")
+    header = markdown.filter(has_text="moved-up header")
+    expect(header).to_be_visible()
+
+    get_toggle(app, "Show moved-up header").locator("label").click()
+
+    # The rerun writes line 1 into the header's slot, which removes the header.
+    expect(header).to_have_count(0)
+
+    for i in range(1, 4):
+        line = f"moved-up line {i}"
+        # Wait until the rerun has written the line one slot higher. The app
+        # then sleeps, while the line's old copy still sits in the next slot.
+        expect(
+            app.get_by_test_id("stElementContainer")
+            .filter(has_text=line)
+            .and_(app.locator("[data-stale='false']"))
+        ).to_have_count(1)
+        # Don't wait: stale cleanup at the end of the run would also remove a
+        # duplicate.
+        expect(markdown.filter(has_text=line)).to_have_count(1, timeout=1)
+        _expect_still_running(app)
+
+    wait_for_app_run(app)
+    for i in range(1, 4):
+        expect(markdown.filter(has_text=f"moved-up line {i}")).to_have_count(1)
+    expect(app.locator("[data-stale='true']")).to_have_count(0)
+
+
+def test_repeated_dividers_stay_visible_during_unchanged_rerun(app: Page) -> None:
+    _select_mode(app, "repeated_dividers")
+    containers = get_element_by_key(app, "repeated_dividers").get_by_test_id(
+        "stElementContainer"
+    )
+    rewritten = containers.and_(app.locator("[data-stale='false']"))
+    expect(containers).to_have_count(10)
+
+    get_button(app, "Rerun repeated dividers").click()
+
+    # The run sleeps after each section's first spacer, once it has rewritten
+    # 3 and then 8 elements.
+    for rewritten_count in (3, 8):
+        expect(rewritten).to_have_count(rewritten_count)
+        # Identical copies the run hasn't rewritten yet must stay visible.
+        expect(containers).to_have_count(10, timeout=1)
+        _expect_still_running(app)
+
+    wait_for_app_run(app)
+    expect(containers).to_have_count(10)
+    expect(app.locator("[data-stale='true']")).to_have_count(0)

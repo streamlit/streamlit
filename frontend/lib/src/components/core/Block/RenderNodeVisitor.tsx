@@ -16,7 +16,12 @@
 
 import type { ReactElement } from "react"
 
-import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  type BlockNode,
+  ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
 import type { RetainedElement } from "~lib/render-tree/elementRetention"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
@@ -35,7 +40,8 @@ type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
  *
  * This visitor accumulates React elements in a mutable array and tracks
  * rendered element and block IDs so a rerun cannot mount the same widget or
- * keyed container twice.
+ * keyed container twice. It also skips the stale old copy of content that a
+ * rerun moved up by one slot.
  *
  * Usage:
  * ```typescript
@@ -50,6 +56,11 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   public readonly reactElements: ReactElement[]
   private index: number
   private transientElementCount: number
+  /**
+   * The `children` entry before the one being visited. This visitor also
+   * renders a transient node's anchor, so the anchor sees that same sibling.
+   */
+  private previousSibling?: AppNode
 
   constructor(props: BlockPropsWithoutWidth, elementKeyOverride?: string) {
     this.props = props
@@ -154,6 +165,12 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     if (this.renderedKeySet.has(key)) {
       return null
     }
+    // Hide the old copy of content that the rerun just moved up one slot. It
+    // would otherwise show twice until the rerun overwrites it. Only a one-slot
+    // shift is covered.
+    if (this.isStaleCopyOfPreviousSibling(node)) {
+      return null
+    }
 
     this.renderedKeySet.add(key)
 
@@ -186,7 +203,7 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
 
     if (retained.length === 0) {
       // Visit all the children nodes and collect the react elements
-      children.forEach(childNode => childNode.accept(visitor))
+      children.forEach((_, index) => visitor.visitChild(children, index))
       return visitor.reactElements
     }
 
@@ -203,11 +220,50 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
         retainedIndex++
       }
       if (index < children.length) {
-        children[index].accept(visitor)
+        visitor.visitChild(children, index)
       }
     }
 
     return visitor.reactElements
+  }
+
+  /** Visit `children[index]`, recording the child before it. */
+  private visitChild(children: AppNode[], index: number): void {
+    this.previousSibling = children[index - 1]
+    children[index].accept(this)
+  }
+
+  /**
+   * Whether `node` is the stale old copy of the content that the parent's
+   * latest run just moved into the previous slot. That holds when:
+   * - `node` was written by an earlier run than its parent block's latest run
+   *   and has no element ID (elements with an ID are deduplicated by key
+   *   instead);
+   * - the previous `children` entry, or the anchor of a transient node there,
+   *   was written by the parent's latest run with the same non-empty hash;
+   * - that write replaced different content, so an unchanged rerun of
+   *   identical adjacent elements (e.g. `st.write("")` pairs) hides nothing.
+   *
+   * Toasts are never skipped: they render nothing in place, and stale cleanup
+   * keeps them, so hiding one and showing it again later would remount it and
+   * re-queue a toast that already expired.
+   */
+  private isStaleCopyOfPreviousSibling(node: ElementNode): boolean {
+    const { scriptRunId } = this.props.node
+    const previous =
+      this.previousSibling instanceof TransientNode
+        ? this.previousSibling.anchor
+        : this.previousSibling
+    return (
+      node.scriptRunId !== scriptRunId &&
+      node.element.type !== "toast" &&
+      previous instanceof ElementNode &&
+      previous.scriptRunId === scriptRunId &&
+      previous.replacedDifferentContent &&
+      Boolean(node.elementHash) &&
+      previous.elementHash === node.elementHash &&
+      getElementId(node.element) === undefined
+    )
   }
 
   /**

@@ -66,6 +66,25 @@ function canReuseElementPayload(
   )
 }
 
+/**
+ * Determine if a new element puts different content into its slot than the
+ * node it replaces. When the slot holds a transient node (a spinner or a
+ * skeleton), its anchor is the content already in the slot. An empty slot, a
+ * block, or a missing hash counts as different.
+ */
+function replacesDifferentContent(
+  existingNode: AppNode | undefined,
+  elementHash: string | undefined
+): boolean {
+  const occupant =
+    existingNode instanceof TransientNode ? existingNode.anchor : existingNode
+  return !(
+    Boolean(elementHash) &&
+    occupant instanceof ElementNode &&
+    occupant.elementHash === elementHash
+  )
+}
+
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -267,7 +286,8 @@ export class AppRoot {
           metadata,
           activeScriptHash,
           delta.fragmentId,
-          elementHash
+          elementHash,
+          replacesDifferentContent(existingNode, elementHash)
         )
       }
 
@@ -429,7 +449,8 @@ export class AppRoot {
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string
+    elementHash?: string,
+    replacedDifferentContent = false
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
@@ -437,7 +458,8 @@ export class AppRoot {
       scriptRunId,
       activeScriptHash,
       fragmentId,
-      elementHash
+      elementHash,
+      replacedDifferentContent
     )
     return new AppRoot(
       this.mainScriptHash,
