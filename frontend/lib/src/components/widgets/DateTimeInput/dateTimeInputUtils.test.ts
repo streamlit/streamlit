@@ -438,10 +438,15 @@ describe("getTypedTimeFromDom", () => {
     expect(getTypedTimeFromDom(null)).toBeNull()
   })
 
-  it("returns null when neither hour nor minute is typed", () => {
+  it("returns null when hour, minute, and second are all empty", () => {
     expect(
       getTypedTimeFromDom(
-        renderSegments({ year: null, hour: null, minute: null })
+        renderSegments({
+          year: null,
+          hour: null,
+          minute: null,
+          second: null,
+        })
       )
     ).toBeNull()
   })
@@ -473,6 +478,14 @@ describe("getTypedTimeFromDom", () => {
     ).toMatchObject({ hour: 3, minute: 24, second: 0 })
   })
 
+  it("preserves a seconds-only draft when hour and minute are empty", () => {
+    expect(
+      getTypedTimeFromDom(
+        renderSegments({ hour: null, minute: null, second: 30 })
+      )
+    ).toMatchObject({ hour: 0, minute: 0, second: 30 })
+  })
+
   it("reads hour 0 as typed rather than as absent", () => {
     expect(
       getTypedTimeFromDom(renderSegments({ hour: 0, minute: 30 }))
@@ -482,7 +495,12 @@ describe("getTypedTimeFromDom", () => {
   it("returns null when only the date segments are typed", () => {
     expect(
       getTypedTimeFromDom(
-        renderSegments({ year: 2025, hour: null, minute: null })
+        renderSegments({
+          year: 2025,
+          hour: null,
+          minute: null,
+          second: null,
+        })
       )
     ).toBeNull()
   })

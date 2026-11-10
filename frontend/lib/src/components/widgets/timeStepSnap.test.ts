@@ -130,6 +130,20 @@ describe("snapTimeParts", () => {
       snapTimeParts({ hour: 16, minute: 45, second: 0 }, "minute", 60, true)
     ).toBeNull()
   })
+
+  it("wraps ArrowUp past midnight to 00:00 for a non-divisor step", () => {
+    // 23:59:54 with step=7 → next candidate 86401; land on first boundary.
+    expect(
+      snapTimeParts({ hour: 23, minute: 59, second: 54 }, "second", 7, true)
+    ).toEqual({ hour: 0, minute: 0, second: 0 })
+  })
+
+  it("wraps ArrowDown from midnight to the last in-day step boundary", () => {
+    // step=7 → last boundary is floor(86399/7)*7 = 86394 → 23:59:54.
+    expect(
+      snapTimeParts({ hour: 0, minute: 0, second: 0 }, "second", 7, false)
+    ).toEqual({ hour: 23, minute: 59, second: 54 })
+  })
 })
 
 describe("stepIncludesSeconds", () => {

@@ -275,12 +275,13 @@ function readSegment(
 /**
  * Read hour, minute, and optional second from a container's rendered segments,
  * for the window before the field has emitted an `onChange`. Returns null when
- * neither hour nor minute is filled.
+ * hour, minute, and second are all empty.
  *
  * `DateField` and `TimeField` both withhold `onChange` until every one of their
  * segments is filled, so a time entered while its partner segments are still
  * placeholders reaches no handler — the rendered segments are its only record.
- * Unfilled segments count as 0, so a lone hour or minute still produces a time.
+ * Unfilled segments count as 0, so a lone hour, minute, or second still
+ * produces a time (e.g. seconds-only drafts with a sub-minute step).
  *
  * Assumes a 24-hour cycle: with `hourCycle={12}` the hour reports 1–12 and needs
  * the `dayPeriod` segment to disambiguate.
@@ -290,8 +291,8 @@ export function getTypedTimeFromDom(
 ): Time | null {
   const hour = readSegment(container, "hour")
   const minute = readSegment(container, "minute")
-  if (hour === null && minute === null) return null
   const second = readSegment(container, "second")
+  if (hour === null && minute === null && second === null) return null
   return new Time(hour ?? 0, minute ?? 0, second ?? 0)
 }
 

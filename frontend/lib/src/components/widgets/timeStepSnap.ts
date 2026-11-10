@@ -84,9 +84,10 @@ export function snapTimeParts(
 
     let next: number
     if (segmentType === "second") {
-      next = up
-        ? Math.floor(totalSecs / step) * step + step
-        : Math.ceil(totalSecs / step) * step - step
+      // Use snapTimeStep so overflow lands on midnight and underflow on the
+      // last in-day step boundary — modulo wrap loses alignment when step
+      // does not divide 86400 (e.g. step=7).
+      next = snapTimeStep(totalSecs, step, up, 86400)
     } else {
       // For hour/minute segments, find the next step boundary at least one
       // segment-unit away so the displayed segment visibly changes.
@@ -94,13 +95,17 @@ export function snapTimeParts(
       next = up
         ? Math.ceil((totalSecs + jumpSize) / step) * step
         : Math.floor((totalSecs - jumpSize) / step) * step
+      if (next >= 86400) {
+        next = 0
+      } else if (next < 0) {
+        next = Math.floor((86400 - 1) / step) * step
+      }
     }
 
-    const wrapped = ((next % 86400) + 86400) % 86400
     return {
-      hour: Math.floor(wrapped / 3600),
-      minute: Math.floor((wrapped % 3600) / 60),
-      second: wrapped % 60,
+      hour: Math.floor(next / 3600),
+      minute: Math.floor((next % 3600) / 60),
+      second: next % 60,
     }
   }
 
