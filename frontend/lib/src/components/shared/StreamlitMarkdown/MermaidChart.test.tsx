@@ -31,21 +31,41 @@ const SAMPLE_SVG_WITH_DIMENSIONS =
 
 const mockWriteText = vi.fn().mockResolvedValue(undefined)
 
+// One module mock for the whole file. Vitest 5.1 keeps a mocked "mermaid"
+// module cached, so a later vi.doMock does not replace it.
+const mermaidMock = vi.hoisted(() => ({
+  importError: null as Error | null,
+  initialize: vi.fn(),
+  render: vi.fn(),
+}))
+
+vi.mock("mermaid", () => ({
+  get default(): {
+    initialize: ReturnType<typeof vi.fn>
+    render: ReturnType<typeof vi.fn>
+  } {
+    if (mermaidMock.importError) {
+      throw mermaidMock.importError
+    }
+    return {
+      initialize: mermaidMock.initialize,
+      render: mermaidMock.render,
+    }
+  },
+}))
+
 function mockMermaidSuccess(svg = SAMPLE_SVG_WITH_VIEWBOX): {
   initialize: ReturnType<typeof vi.fn>
   render: ReturnType<typeof vi.fn>
 } {
-  const initialize = vi.fn()
-  const renderFn = vi.fn().mockResolvedValue({ svg })
-
-  vi.doMock("mermaid", () => ({
-    default: {
-      initialize,
-      render: renderFn,
-    },
-  }))
-
-  return { initialize, render: renderFn }
+  mermaidMock.importError = null
+  mermaidMock.initialize.mockReset()
+  mermaidMock.render.mockReset()
+  mermaidMock.render.mockResolvedValue({ svg })
+  return {
+    initialize: mermaidMock.initialize,
+    render: mermaidMock.render,
+  }
 }
 
 async function waitForChartImage(): Promise<HTMLElement> {
@@ -97,6 +117,10 @@ describe("MermaidChart", () => {
   )
 
   beforeEach(() => {
+    mermaidMock.importError = null
+    mermaidMock.initialize.mockReset()
+    mermaidMock.render.mockReset()
+    mermaidMock.render.mockResolvedValue({ svg: SAMPLE_SVG_WITH_VIEWBOX })
     global.URL.createObjectURL = vi.fn(() => "blob:mermaid-test")
     global.URL.revokeObjectURL = vi.fn()
     mockWriteText.mockClear()
@@ -106,17 +130,7 @@ describe("MermaidChart", () => {
     })
   })
 
-  // Rejects an in-flight mermaid mock so a failed test cannot leave the module
-  // pending for the next test. The flag covers a factory that starts after
-  // cleanup, when the releaser has already been cleared.
-  let releaseMermaidImport: ((error: Error) => void) | undefined
-  let mermaidImportExpected = false
-
   afterEach(() => {
-    mermaidImportExpected = false
-    releaseMermaidImport?.(new Error("Mermaid import cleaned up"))
-    releaseMermaidImport = undefined
-    vi.doUnmock("mermaid")
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     if (originalClipboardDescriptor) {
@@ -136,12 +150,7 @@ describe("MermaidChart", () => {
     const pendingRender = new Promise<{ svg: string }>(resolve => {
       resolveRender = resolve
     })
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockReturnValue(pendingRender),
-      },
-    }))
+    mermaidMock.render.mockReturnValue(pendingRender)
 
     render(<MermaidChart source="graph TD\nA-->B" />)
     expect(screen.getByTestId("stMermaidChart")).toBeVisible()
@@ -157,9 +166,7 @@ describe("MermaidChart", () => {
     // Negative assertion: error element should not be present during loading
     expect(screen.queryByTestId("stMermaidError")).not.toBeInTheDocument()
 
-    // Settle the render before the next test. A promise that never resolves
-    // keeps the mermaid module in flight on Vitest 5.1, and the following
-    // import joins that hung module instead of its own mock.
+    // Settle the render so a later test does not join a hung mermaid.render().
     await act(async () => {
       resolveRender({ svg: SAMPLE_SVG_WITH_VIEWBOX })
       await pendingRender
@@ -167,39 +174,19 @@ describe("MermaidChart", () => {
   })
 
   it("shows error state when mermaid import fails", async () => {
-    vi.resetModules()
-    mermaidImportExpected = true
-    // import("mermaid") reaches the factory after render() returns. An
-    // already-rejected factory never settles that import on Vitest 5.1, so
-    // hold it open until the chart has started it.
-    vi.doMock("mermaid", (): Promise<never> => {
-      if (!mermaidImportExpected) {
-        return Promise.reject(new Error("Mermaid import cleaned up"))
-      }
-      return new Promise<never>((_resolve, reject) => {
-        releaseMermaidImport = reject
-      })
-    })
+    // The cached module cannot be replaced per test on Vitest 5.1. Throwing
+    // from the default export is the failure the component catches.
+    mermaidMock.importError = new Error("Failed to load mermaid")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
-    await waitFor(() => {
-      expect(releaseMermaidImport).toEqual(expect.any(Function))
-    })
-
-    releaseMermaidImport?.(new Error("Failed to load mermaid"))
 
     const error = await waitForMermaidError()
     expect(error).toHaveTextContent("Mermaid diagram error")
     expect(screen.queryByRole("img")).not.toBeInTheDocument()
-  }, 15_000)
+  })
 
   it("shows a generic error message when render rejects with a non-Error", async () => {
-    vi.doMock("mermaid", () => ({
-      default: {
-        initialize: vi.fn(),
-        render: vi.fn().mockRejectedValue("boom"),
-      },
-    }))
+    mermaidMock.render.mockRejectedValue("boom")
 
     render(<MermaidChart source="graph TD\nA-->B" />)
 
