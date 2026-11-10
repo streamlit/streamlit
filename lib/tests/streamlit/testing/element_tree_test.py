@@ -4474,10 +4474,10 @@ def test_datetime_input_widget_state_accepts_legacy_min_max_format() -> None:
 
 
 def test_datetime_input_widget_state_rejects_unknown_min_format() -> None:
-    """A ``min`` in neither supported format raises when serializing."""
+    """A ``min`` in no supported wire format raises when serializing."""
     widget = _datetime_input_with_bounds("June 1st", "2024/12/31, 23:59")
 
-    with pytest.raises(ValueError, match="does not match format"):
+    with pytest.raises(ValueError, match="Unrecognized datetime wire format"):
         _ = widget._widget_state
 
 
