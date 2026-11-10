@@ -15,7 +15,6 @@
  */
 
 import {
-  Block as BlockProto,
   Delta as DeltaProto,
   Element,
   ForwardMsgMetadata,
@@ -25,12 +24,17 @@ import type { AppNode } from "./AppNode.interface"
 import { AppRoot } from "./AppRoot"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
-import { keepPreviousContentForSkeleton } from "./skeletonUtils"
+import {
+  getLoadingBlockState,
+  keepPreviousContentForSkeleton,
+} from "./skeletonUtils"
 import {
   block,
   FAKE_SCRIPT_HASH,
   forwardMsgMetadata,
+  loadingBlock,
   makeProto,
+  skeletonSpinner,
   text,
 } from "./test-utils"
 import { TransientNode } from "./TransientNode"
@@ -55,18 +59,9 @@ function skeleton(scriptRunId = CURRENT_RUN): ElementNode {
   return elementNode({ skeleton: {} }, scriptRunId)
 }
 
-function container(children: AppNode[], scriptRunId: string): BlockNode {
-  return new BlockNode(
-    FAKE_SCRIPT_HASH,
-    children,
-    makeProto(BlockProto, { flexContainer: {} }),
-    scriptRunId
-  )
-}
-
 describe("keepPreviousContentForSkeleton", () => {
   it("keeps a previous run's container that holds visible content", () => {
-    const previous = container([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
+    const previous = loadingBlock([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)
     const incoming = skeleton()
 
     const kept = keepPreviousContentForSkeleton(previous, incoming)
@@ -81,7 +76,7 @@ describe("keepPreviousContentForSkeleton", () => {
     ["a previous skeleton", skeleton(PREVIOUS_RUN)],
     [
       "a container without visible content",
-      container([skeleton(PREVIOUS_RUN)], PREVIOUS_RUN),
+      loadingBlock([skeleton(PREVIOUS_RUN)], PREVIOUS_RUN),
     ],
     [
       "a block that isn't a flex container, such as an expander",
@@ -99,10 +94,7 @@ describe("keepPreviousContentForSkeleton", () => {
 
   it("keeps a transient wrapper's anchor and its running spinner", () => {
     const previous = text("chart", PREVIOUS_RUN)
-    const spinner = elementNode(
-      { spinner: { text: "Loading..." } },
-      CURRENT_RUN
-    )
+    const spinner = skeletonSpinner("Loading...", CURRENT_RUN)
     const wrapped = new TransientNode(CURRENT_RUN, previous, [spinner])
 
     const kept = keepPreviousContentForSkeleton(wrapped, skeleton())
@@ -113,6 +105,67 @@ describe("keepPreviousContentForSkeleton", () => {
     expect(keptAnchor.element).toBe(previous.element)
     expect(keptAnchor.pendingSkeleton).toBeDefined()
   })
+})
+
+describe("getLoadingBlockState", () => {
+  it("ignores skeletons, empties, and transient spinners as content", () => {
+    const node = loadingBlock(
+      [
+        skeleton(),
+        elementNode({ empty: {} }, CURRENT_RUN),
+        new TransientNode(CURRENT_RUN, text("old", PREVIOUS_RUN), [
+          skeletonSpinner("Loading", CURRENT_RUN),
+        ]),
+      ],
+      CURRENT_RUN
+    )
+
+    const state = getLoadingBlockState(node, CURRENT_RUN, true, [])
+
+    expect(state.isPending).toBe(true)
+    expect(state.hasPreviousContent).toBe(true)
+  })
+
+  it.each([
+    ["the block is from a previous run", loadingBlock([], PREVIOUS_RUN)],
+    ["the block has no loading field", block([], CURRENT_RUN)],
+  ])("is not pending when %s", (_, node) => {
+    expect(getLoadingBlockState(node, CURRENT_RUN, true, []).isPending).toBe(
+      false
+    )
+  })
+
+  it("ignores spinners from previous runs", () => {
+    const spinner = skeletonSpinner("Old", PREVIOUS_RUN)
+    const node = loadingBlock(
+      [new TransientNode(CURRENT_RUN, undefined, [spinner])],
+      CURRENT_RUN
+    )
+
+    expect(
+      getLoadingBlockState(node, CURRENT_RUN, true, []).label
+    ).toBeUndefined()
+  })
+
+  it.each([
+    ["a running fragment's block", "running_fragment", true],
+    ["a block outside the running fragments", "other_fragment", false],
+    ["a block outside any fragment", undefined, false],
+  ])(
+    "during a fragment run, makes %s pending: %s",
+    (_, fragmentId, isPending) => {
+      const node = loadingBlock(
+        [text("chart", PREVIOUS_RUN)],
+        CURRENT_RUN,
+        fragmentId
+      )
+
+      expect(
+        getLoadingBlockState(node, CURRENT_RUN, true, ["running_fragment"])
+          .isPending
+      ).toBe(isPending)
+    }
+  )
 })
 
 describe("AppRoot with skeletons", () => {
@@ -162,7 +215,7 @@ describe("AppRoot with skeletons", () => {
 
   it.each([
     ["an element", text("chart", PREVIOUS_RUN)],
-    ["a container", container([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)],
+    ["a container", loadingBlock([text("chart", PREVIOUS_RUN)], PREVIOUS_RUN)],
   ])(
     "lets the skeleton take %s's slot if no content arrives this run",
     (_, previous) => {

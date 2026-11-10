@@ -166,31 +166,33 @@ def load_orders(): ...  # Another slow query / API call
 
 
 @st.fragment(parallel=True)
-def revenue_card():
-    with st.container(border=True):
-        st.subheader("Revenue by Region")
-        with st.skeleton(height=260):
-            data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
+def revenue_body():
+    data = load_revenue()
+    st.bar_chart(data, x="region", y="revenue", height=260, alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
-def orders_card():
-    with st.container(border=True):
-        st.subheader("Recent Orders")
-        with st.skeleton(height=260):
-            data = load_orders()
-            st.dataframe(data, hide_index=True, alt="Recent orders")
+def orders_body():
+    data = load_orders()
+    st.dataframe(data, height=260, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
 with col1:
-    revenue_card()
+    with st.container(border=True):
+        st.subheader("Revenue by Region")  # Drawn by the main script
+        with st.skeleton(height=260):  # Holds the slot until the chart arrives
+            revenue_body()
 with col2:
-    orders_card()
+    with st.container(border=True):
+        st.subheader("Recent Orders")
+        with st.skeleton(height=260):
+            orders_body()
 ```
 
-The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
+Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first element replaces the skeleton, so draw the slow element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
+
+The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 

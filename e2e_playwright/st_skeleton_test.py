@@ -77,20 +77,19 @@ def test_skeleton_context_manager_with_delay(app: Page):
     # container, so the test does not depend on the total number of static
     # skeletons rendered elsewhere in the app.
     cm_skeletons = get_element_by_key(app, "delay_cm_container").get_by_test_id(
-        "stSkeletonElement"
+        "stLoadingBlockSkeleton"
     )
     expect(cm_skeletons).to_have_count(0)
 
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # The skeleton appears within the container during the delay (1s sleep > 0.5s
-    # delay threshold).
+    # The block is new in this run, so its skeleton reserves space right away.
     expect(cm_skeletons).to_have_count(1, timeout=3000)
 
     # The success message appears after the skeleton clears...
     expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=10000)
-    # ...and the transient skeleton must be gone.
+    # ...and the skeleton must be gone, because the block drew nothing.
     expect(cm_skeletons).to_have_count(0)
 
 
@@ -166,6 +165,56 @@ def test_skeleton_in_form(app: Page):
     expect(skeleton_in_form).not_to_be_visible()
 
 
+def test_skeleton_keeps_previous_content_while_reloading(app: Page):
+    """On a cache miss, a skeleton covers the previous content, which stays
+    mounted, and shows the cached function's spinner text as its label.
+    """
+    container = get_element_by_key(app, "cached_skeleton_container")
+    # Click without waiting for the run, so the first-load skeleton is observable.
+    get_toggle(app, "Show cached report").click()
+
+    # First load: nothing to keep, so the skeleton reserves the space.
+    expect(container.get_by_test_id("stLoadingBlockSkeleton")).to_be_visible()
+    expect(container.get_by_text("Report version 0")).to_be_visible(timeout=5000)
+    expect(container.get_by_test_id("stLoadingBlockSkeleton")).not_to_be_attached()
+
+    # Cache miss: the previous report stays mounted, covered by the skeleton.
+    get_button(app, "Load next report version").click()
+    overlay = container.get_by_test_id("stPendingSkeleton")
+    expect(overlay).to_be_visible(timeout=3000)
+    expect(overlay.get_by_text("Loading report...")).to_be_visible()
+    expect(container.get_by_text("Report version 0")).to_be_attached()
+    expect(container.get_by_test_id("stSpinner")).not_to_be_attached()
+
+    expect(container.get_by_text("Report version 1")).to_be_visible(timeout=5000)
+    expect(overlay).not_to_be_attached()
+
+    # Cached rerun: the report element updates in place, without a skeleton.
+    report = container.get_by_test_id("stMarkdown")
+    report.evaluate("element => { element.dataset.testKept = 'true' }")
+    get_button(app, "Rerun skeleton report").click()
+    wait_for_app_run(app)
+    expect(container.get_by_text("Report version 1")).to_be_visible()
+    expect(overlay).not_to_be_attached()
+    expect(report).to_have_attribute("data-test-kept", "true")
+
+
+def test_skeleton_holds_slot_for_parallel_fragment(app: Page):
+    """A parallel fragment called inside a skeleton keeps it, at its height,
+    until the fragment draws.
+    """
+    get_toggle(app, "Show parallel report").click()
+    container = get_element_by_key(app, "parallel_skeleton_container")
+
+    skeleton = container.get_by_test_id("stLoadingBlockSkeleton")
+    expect(skeleton).to_be_visible()
+    expect(skeleton).to_have_css("height", "120px")
+    expect(container.get_by_text("Parallel report loaded")).not_to_be_attached()
+
+    expect(container.get_by_text("Parallel report loaded")).to_be_visible(timeout=5000)
+    expect(skeleton).not_to_be_attached()
+
+
 def test_skeleton_standalone_keeps_previous_content(app: Page):
     """A standalone skeleton covers the previous run's content on a slow rerun.
 
@@ -201,3 +250,22 @@ def test_skeleton_standalone_keeps_previous_content(app: Page):
     expect(container.get_by_text("Standalone report version 1")).to_be_visible()
     expect(overlay).not_to_be_attached()
     expect(report).to_have_attribute("data-test-kept", "true")
+
+
+def test_skeleton_stacks_content_in_horizontal_container(app: Page):
+    """Elements inside a skeleton stack vertically, like in st.container()."""
+    container = get_element_by_key(app, "horizontal_skeleton_container")
+    top = get_button(container, "Top button")
+    bottom = get_button(container, "Bottom button")
+    sibling = get_button(container, "Next to the skeleton")
+    expect(bottom).to_be_visible()
+
+    top_box = top.bounding_box()
+    bottom_box = bottom.bounding_box()
+    sibling_box = sibling.bounding_box()
+    assert top_box is not None
+    assert bottom_box is not None
+    assert sibling_box is not None
+    assert bottom_box["y"] > top_box["y"] + top_box["height"] / 2
+    # The skeleton's slot is one item of the horizontal row.
+    assert sibling_box["x"] > top_box["x"] + top_box["width"]

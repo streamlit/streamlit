@@ -18,6 +18,7 @@ import { act, screen, waitFor } from "@testing-library/react"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
+import { PendingSkeletonContext } from "~lib/components/core/Block/PendingSkeletonContext"
 import { render } from "~lib/test_util"
 
 import Spinner, { type SpinnerProps } from "./Spinner"
@@ -48,6 +49,20 @@ describe("Spinner component", () => {
     const spinnerContainer = screen.getByTestId("stSpinner")
     expect(spinnerContainer).toBeInTheDocument()
     expect(spinnerContainer).toHaveClass("stSpinner")
+  })
+
+  it.each([
+    ["renders nothing while its skeleton shows it as a label", true, true, 0],
+    ["renders when it wasn't created in a skeleton slot", false, true, 1],
+    ["renders once its skeleton no longer shows", true, false, 1],
+  ])("%s", (_, inSkeletonSlot, isInPendingSkeleton, spinnerCount) => {
+    render(
+      <PendingSkeletonContext.Provider value={isInPendingSkeleton}>
+        <Spinner {...getProps({}, { inSkeletonSlot })} />
+      </PendingSkeletonContext.Provider>
+    )
+
+    expect(screen.queryAllByTestId("stSpinner")).toHaveLength(spinnerCount)
   })
 
   it("sets the text and width correctly", () => {

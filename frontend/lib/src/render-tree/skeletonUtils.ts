@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import type { Spinner as SpinnerProto } from "@streamlit/protobuf"
+
 import type { AppNode } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
@@ -32,20 +34,101 @@ const NON_CONTENT_ELEMENT_TYPES = new Set([
 ])
 
 /**
- * Whether `node` contains visible content. Transient elements, such as
- * spinners, never count; only a transient node's anchor does.
+ * Whether `node` contains visible content, from any run or only from the run
+ * `scriptRunId`. Transient elements, such as spinners, never count; only a
+ * transient node's anchor does.
  */
-function hasVisibleContent(node: AppNode | undefined): boolean {
+function hasVisibleContent(
+  node: AppNode | undefined,
+  scriptRunId?: string
+): boolean {
   if (node instanceof ElementNode) {
-    return !NON_CONTENT_ELEMENT_TYPES.has(node.element.type ?? "")
+    return (
+      !NON_CONTENT_ELEMENT_TYPES.has(node.element.type ?? "") &&
+      (scriptRunId === undefined || node.scriptRunId === scriptRunId)
+    )
   }
   if (node instanceof BlockNode) {
-    return node.children.some(hasVisibleContent)
+    return node.children.some(child => hasVisibleContent(child, scriptRunId))
   }
   if (node instanceof TransientNode) {
-    return hasVisibleContent(node.anchor)
+    return hasVisibleContent(node.anchor, scriptRunId)
   }
   return false
+}
+
+/** Find a spinner from the run `scriptRunId` that labels the slot's skeleton. */
+function findSkeletonLabel(
+  node: AppNode | undefined,
+  scriptRunId: string
+): SpinnerProto.$Properties | undefined {
+  if (node instanceof BlockNode) {
+    for (const child of node.children) {
+      const label = findSkeletonLabel(child, scriptRunId)
+      if (label !== undefined) return label
+    }
+  }
+  if (node instanceof TransientNode) {
+    const spinner = node.transientNodes.find(
+      transient =>
+        transient.scriptRunId === scriptRunId &&
+        transient.element.spinner?.inSkeletonSlot === true
+    )?.element.spinner
+    return spinner ?? findSkeletonLabel(node.anchor, scriptRunId)
+  }
+  return undefined
+}
+
+/** How a loading block (`Block.loading`) renders its skeleton right now. */
+export interface LoadingBlockState {
+  /** Whether the block waits for its first visible element of this run. */
+  isPending: boolean
+  /**
+   * Whether the block still holds a previous run's content, which stays
+   * mounted and is covered after a grace period.
+   */
+  hasPreviousContent: boolean
+  /** The spinner to show on the skeleton as its label. */
+  label?: SpinnerProto.$Properties
+}
+
+const NOT_PENDING: LoadingBlockState = {
+  isPending: false,
+  hasPreviousContent: false,
+}
+
+/**
+ * Compute the skeleton state of `node` for the run `scriptRunId`. A loading
+ * block is pending until that run draws visible content into it or ends, so a
+ * skeleton whose content never arrives doesn't outlive the run.
+ *
+ * In a fragment run, only the running fragments' loading blocks are pending:
+ * - A write gives every block on its path the run's ID, so without this check
+ *   a fragment rerun would also cover the loading block it renders in.
+ * - A nested fragment that its parent's rerun calls inline writes with its own
+ *   fragment ID, so its blocks keep their previous content.
+ */
+export function getLoadingBlockState(
+  node: BlockNode,
+  scriptRunId: string,
+  isRunning: boolean,
+  fragmentIdsThisRun: readonly string[]
+): LoadingBlockState {
+  if (
+    !node.deltaBlock.loading ||
+    !isRunning ||
+    node.scriptRunId !== scriptRunId ||
+    (fragmentIdsThisRun.length > 0 &&
+      !fragmentIdsThisRun.includes(node.fragmentId ?? "")) ||
+    hasVisibleContent(node, scriptRunId)
+  ) {
+    return NOT_PENDING
+  }
+  return {
+    isPending: true,
+    hasPreviousContent: hasVisibleContent(node),
+    label: findSkeletonLabel(node, scriptRunId),
+  }
 }
 
 /**

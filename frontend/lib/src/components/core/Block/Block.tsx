@@ -55,7 +55,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
-import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
+import { SkeletonSlotContents } from "./SkeletonPlaceholders"
 import {
   PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
@@ -64,6 +64,11 @@ import {
   type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
+import {
+  NO_SKELETON_SLOT,
+  type SkeletonSlot,
+  useSkeletonSlot,
+} from "./useSkeletonSlot"
 import {
   assignDividerColor,
   type BaseBlockProps,
@@ -244,6 +249,8 @@ export const ContainerContentsWrapper = (
 
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
+  /** The block's skeleton state, from `BlockNodeRenderer`. */
+  skeletonSlot?: SkeletonSlot
 }
 
 /**
@@ -268,8 +275,7 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
-  // A skeleton waits to replace this block, which stays mounted until then.
-  const hasPendingSkeleton = notNullOrUndefined(props.node.pendingSkeleton)
+  const skeletonSlot = props.skeletonSlot ?? NO_SKELETON_SLOT
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -383,11 +389,17 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
-        $canShowOverlay={hasPendingSkeleton}
-        aria-busy={hasPendingSkeleton || undefined}
+        $canShowOverlay={skeletonSlot.canShowOverlay}
+        $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
+        aria-busy={
+          skeletonSlot.showsInlineSkeleton ||
+          skeletonSlot.showsOverlay ||
+          undefined
+        }
       >
-        <ChildRenderer {...props} />
-        {hasPendingSkeleton && <PendingSkeletonOverlay />}
+        <SkeletonSlotContents slot={skeletonSlot}>
+          <ChildRenderer {...props} />
+        </SkeletonSlotContents>
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -407,6 +419,7 @@ export const BlockNodeRenderer = (
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
+  const skeletonSlot = useSkeletonSlot(node)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
@@ -436,7 +449,15 @@ export const BlockNodeRenderer = (
 
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
-  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
+  // An empty loading block takes space only while it shows its inline
+  // skeleton. Otherwise it is hidden like an empty `st.container()`, so it
+  // adds no gap, including during the grace period.
+  if (
+    node.isEmpty &&
+    (!node.deltaBlock.allowEmpty ||
+      (notNullOrUndefined(node.deltaBlock.loading) &&
+        !skeletonSlot.showsInlineSkeleton))
+  ) {
     return null
   }
 
@@ -509,7 +530,9 @@ export const BlockNodeRenderer = (
   )
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    containerElement = <FlexBoxContainer {...childProps} />
+    containerElement = (
+      <FlexBoxContainer {...childProps} skeletonSlot={skeletonSlot} />
+    )
   }
 
   if (node.deltaBlock.gridContainer) {

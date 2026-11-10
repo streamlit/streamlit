@@ -470,12 +470,12 @@ chart_slot = st.container()  # Reserve the chart's position up front
 
 st.caption("Data refreshes hourly. Email support@example.com for access.")
 
-with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work runs
+with chart_slot.skeleton(height=300):  # The skeleton holds the reserved slot
     report = load_report(account)  # Slow work runs after the page is painted
-    chart_slot.line_chart(report.history)  # Renders into the reserved slot; keeps state
+    st.line_chart(report.history)  # Fills the skeleton's slot; keeps state
 ```
 
-`st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. The chart then renders into that reserved slot at a stable position, so it goes **stale** (greyed) and updates in place rather than remounting — keeping its scroll, sort, and selection. `chart_slot.skeleton()` (context manager) shows a skeleton while the block runs; write results explicitly to the container (`chart_slot.line_chart(...)`), since the block doesn't redirect bare `st.*` calls into it.
+`st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. Inside `with chart_slot.skeleton():`, bare `st.*` calls fill the skeleton's slot. On reruns the previous chart stays mounted there and updates in place rather than remounting — keeping its scroll, sort, and selection. The skeleton only covers it if the new data takes longer than half a second, so cached reruns don't flash it.
 
 Avoid `st.empty()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 

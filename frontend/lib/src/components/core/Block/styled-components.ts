@@ -247,6 +247,9 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           display: "none",
         }
       : {}),
+    // A spinner shown as the skeleton's label leaves its own slot empty. Hide
+    // that slot so it doesn't leave a gap.
+    ...(elementType === "spinner" && { "&:empty": { display: "none" } }),
     ...(elementType === "space"
       ? {
           // Space elements should have minimal cross-axis dimensions.
@@ -425,6 +428,11 @@ export interface StyledFlexContainerBlockProps {
   hasDefiniteHeight?: boolean
   /** Whether the block positions a skeleton overlay over its content. */
   $canShowOverlay?: boolean
+  /**
+   * Whether the block shows its inline skeleton. Its other children have no
+   * visible content yet, so they leave the layout instead of adding gaps.
+   */
+  $showsInlineSkeleton?: boolean
 }
 
 function isFixedLengthHeight(
@@ -436,6 +444,30 @@ function isFixedLengthHeight(
     !(typeof height === "string" && height.endsWith("%"))
   )
 }
+
+interface StyledLoadingBlockSkeletonProps {
+  height?: CSSProperties["height"]
+  /** Whether the skeleton fills its loading block, which stretches. */
+  $fillsBlock: boolean
+}
+
+/**
+ * The inline skeleton of a loading block. Defined before
+ * `StyledFlexContainerBlock`, which references it in a selector.
+ */
+export const StyledLoadingBlockSkeleton =
+  styled.div<StyledLoadingBlockSkeletonProps>(
+    ({ theme, height, $fillsBlock }) => ({
+      position: "relative",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "100%",
+      ...($fillsBlock
+        ? { flex: "1 1 auto", minHeight: theme.sizes.minElementHeight }
+        : { height, flexShrink: 0 }),
+    })
+  )
 
 export const StyledFlexContainerBlock =
   styled.div<StyledFlexContainerBlockProps>(
@@ -455,6 +487,7 @@ export const StyledFlexContainerBlock =
       $fillJustify,
       hasDefiniteHeight,
       $canShowOverlay = false,
+      $showsInlineSkeleton = false,
     }) => {
       let gapWidth
       if (gap !== undefined) {
@@ -584,6 +617,9 @@ export const StyledFlexContainerBlock =
         minHeight,
         flexWrap: $wrap ? "wrap" : "nowrap",
         ...($canShowOverlay && { position: "relative" }),
+        ...($showsInlineSkeleton && {
+          [`& > :not(${StyledLoadingBlockSkeleton})`]: { display: "none" },
+        }),
         ...(border && {
           border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
           borderRadius: theme.radii.default,
@@ -714,10 +750,11 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
 )
 
 /**
- * Delay before a skeleton covers previous content. Matches the stale fade, so
- * a fast rerun replaces the content before either shows.
+ * Delay before a skeleton covers previous content, or before a slot from an
+ * earlier run shows its inline skeleton. Matches the stale fade, so a fast
+ * rerun replaces the content before either shows.
  */
-const PENDING_SKELETON_DELAY_MS = 500
+export const PENDING_SKELETON_DELAY_MS = 500
 
 const pendingSkeletonReveal = keyframes({
   from: { opacity: 0, visibility: "hidden" },
@@ -746,6 +783,16 @@ export const StyledSkeletonSurface = styled.div(({ theme }) => ({
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.darkenedBgMix15,
   ...SKELETON_PULSE_STYLES,
+}))
+
+/** Text shown on a skeleton, taken from a spinner in its slot. */
+export const StyledSkeletonLabel = styled.div(({ theme }) => ({
+  position: "relative",
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+  padding: theme.spacing.lg,
+  textAlign: "center",
 }))
 
 export interface StyledGridContainerBlockProps {
