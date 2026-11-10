@@ -495,8 +495,9 @@ class SecretsDirectoryTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("streamlit.watcher.path_watcher.watch_dir")
-    def test_access_secrets(self, mock_watch_dir):
+    def test_access_secrets(self, mock_watch_dir, mock_watch_file):
         mock_get_option = testutil.build_mock_config_get_option(
             {"secrets.files": [self.temp_dir_path]}
         )
@@ -512,6 +513,52 @@ class SecretsDirectoryTest(unittest.TestCase):
                 watcher_type="poll",
             )
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
+    def test_watches_each_secret_file(self, mock_watch_file):
+        """Each secret file is watched, so a rotated value is reloaded even though
+        the secrets directory itself does not change."""
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [self.temp_dir_path]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            assert self.secrets["example_token"] == "token123"
+
+        watched = {c.args[0] for c in mock_watch_file.call_args_list}
+        assert watched == {
+            os.path.join(self.temp_dir_path, "example_login", "username"),
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            os.path.join(self.temp_dir_path, "example_token", "token"),
+        }
+        for c in mock_watch_file.call_args_list:
+            assert c.args[1] == self.secrets._on_secrets_changed
+            assert c.kwargs == {"watcher_type": "poll"}
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
+    def test_reload_watches_files_of_added_secret(self, mock_watch_file):
+        """A secret folder added after startup gets its files watched on reload,
+        and files that are already watched are not watched twice."""
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [self.temp_dir_path]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            assert self.secrets["example_token"] == "token123"
+            assert mock_watch_file.call_count == 3
+
+            os.makedirs(os.path.join(self.temp_dir_path, "new_secret"))
+            new_file = os.path.join(self.temp_dir_path, "new_secret", "value")
+            with open(new_file, "w", encoding="utf-8") as f:
+                f.write("fresh")
+            self.secrets._on_secrets_changed(self.temp_dir_path)
+
+            assert self.secrets["new_secret"] == "fresh"
+        assert mock_watch_file.call_count == 4
+        assert mock_watch_file.call_args.args[0] == new_file
+
+    @patch("streamlit.watcher.path_watcher.watch_file", MagicMock())
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
     def test_secrets_reload(self):
         with open(
@@ -1063,6 +1110,89 @@ def test_parse_directory_skips_nested_subdirectory(tmp_path: Path) -> None:
 
     assert found is True
     assert mapping == {"my_secret": "abc"}
+
+
+def _write_kubelet_secret_volume(
+    volume: Path, files: dict[str, str], stamp: str
+) -> None:
+    """Write files the way kubelet updates a secret volume: into a new hidden
+    ``..<timestamp>`` folder, then swap the ``..data`` link to it. The visible
+    keys are links into ``..data``."""
+    data_dir = volume / f"..{stamp}"
+    data_dir.mkdir(parents=True)
+    for name, value in files.items():
+        (data_dir / name).write_text(value, encoding="utf-8")
+    tmp_link = volume / "..data_tmp"
+    tmp_link.symlink_to(data_dir.name)
+    os.replace(tmp_link, volume / "..data")
+    for name in files:
+        if not (volume / name).is_symlink():
+            (volume / name).symlink_to(f"..data/{name}")
+
+
+def test_parse_directory_skips_hidden_entries(tmp_path: Path) -> None:
+    """Hidden entries, such as kubelet's ``..data`` and ``..<timestamp>`` folders,
+    are not secrets, and a hidden file at the top level does not raise."""
+    secret_root = tmp_path / "secret_root"
+    _write_kubelet_secret_volume(
+        secret_root / "api_key", {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
+    )
+    (secret_root / ".DS_Store").write_text("", encoding="utf-8")
+    (secret_root / "login").mkdir()
+    (secret_root / "login" / "username").write_text("jane", encoding="utf-8")
+    (secret_root / "login" / ".hidden").write_text("x", encoding="utf-8")
+
+    mapping, found = Secrets()._parse_directory(str(secret_root))
+
+    assert found is True
+    assert mapping == {"api_key": "v1", "login": "jane"}
+
+
+def test_parse_directory_skips_hidden_entries_in_projected_volume(
+    tmp_path: Path,
+) -> None:
+    """A single projected volume mapping items to ``<secret>/<field>`` puts the
+    kubelet's hidden folders at the top level of the secrets directory."""
+    volume = tmp_path / "secrets"
+    data_dir = volume / "..2026_01_01_00_00_00.1"
+    (data_dir / "api_key").mkdir(parents=True)
+    (data_dir / "api_key" / "secret_string").write_text("v1", encoding="utf-8")
+    (volume / "..data").symlink_to(data_dir.name)
+    (volume / "api_key").symlink_to("..data/api_key")
+
+    mapping, found = Secrets()._parse_directory(str(volume))
+
+    assert found is True
+    assert mapping == {"api_key": "v1"}
+
+
+def test_kubelet_update_changes_watched_file_identity(tmp_path: Path) -> None:
+    """The polling file watcher on a key link sees a kubelet update: the link
+    resolves to the new file, whose modification time and content differ."""
+    from streamlit.watcher import util as watcher_util
+
+    volume = tmp_path / "secrets" / "api_key"
+    _write_kubelet_secret_volume(
+        volume, {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
+    )
+    key = str(volume / "secret_string")
+    before = (
+        watcher_util.path_modification_time(key),
+        watcher_util.calc_hash_with_blocking_retries(key),
+    )
+
+    _write_kubelet_secret_volume(
+        volume, {"secret_string": "v2"}, "2026_01_01_00_01_00.2"
+    )
+    new_file = volume / "..2026_01_01_00_01_00.2" / "secret_string"
+    os.utime(new_file, (before[0] + 10, before[0] + 10))
+    after = (
+        watcher_util.path_modification_time(key),
+        watcher_util.calc_hash_with_blocking_retries(key),
+    )
+
+    assert after[0] > before[0]
+    assert after[1] != before[1]
 
 
 def test_parse_file_path_rejects_non_toml_non_directory(tmp_path: Path) -> None:
