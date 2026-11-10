@@ -124,16 +124,15 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(legend.pageIconInactiveColor).toBe(colors.fadedText20)
   })
 
-  it("seeds the continuous color scale from the sequential palette", () => {
+  it("seeds the default visualMap color scale from the sequential palette", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
-    const visualMap = echartsTheme.visualMap as Record<
-      string,
-      Record<string, unknown>
-    >
-    expect(visualMap.inRange.color).toEqual([
+    expect(echartsTheme.gradientColor).toEqual([
       ...theme.colors.chartSequentialColors,
     ])
+    // Must NOT happen: the theme sets an inRange, which ECharts would merge
+    // into every visualMap, including size-only ones.
+    expect(echartsTheme.visualMap).not.toHaveProperty("inRange")
   })
 
   it("themes the non-cartesian axes (polar, parallel, single)", () => {
@@ -470,12 +469,18 @@ describe("Streamlit theme resolved by ECharts", () => {
     charts.splice(0).forEach(chart => chart.dispose())
   })
 
-  /** Render ``option`` with the dark Streamlit theme and option defaults. */
-  function renderThemed(option: EChartsOptionObject): {
-    component: (mainType: string) => ResolvedModel
+  /**
+   * Render ``option`` with a Streamlit theme (dark by default) and option
+   * defaults.
+   */
+  function renderThemed(
+    option: EChartsOptionObject,
+    emotionTheme = darkTheme.emotion
+  ): {
+    chart: EChartsType
+    component: (mainType: string, index?: number) => ResolvedModel
     series: (index: number) => ResolvedModel
   } {
-    const emotionTheme = darkTheme.emotion
     const chart = echarts.init(
       null,
       buildStreamlitEChartsTheme(emotionTheme),
@@ -489,17 +494,20 @@ describe("Streamlit theme resolved by ECharts", () => {
         emotionTheme
       ) as EChartsOption
     )
-    const model = (
-      chart as unknown as {
-        getModel: () => {
-          getComponent: (mainType: string) => ResolvedModel
-          getSeriesByIndex: (index: number) => ResolvedModel
+    // Read the model on each call: `setTheme` can rebuild it.
+    const model = (): {
+      getComponent: (mainType: string, index?: number) => ResolvedModel
+      getSeriesByIndex: (index: number) => ResolvedModel
+    } =>
+      (
+        chart as unknown as {
+          getModel: () => ReturnType<typeof model>
         }
-      }
-    ).getModel()
+      ).getModel()
     return {
-      component: mainType => model.getComponent(mainType),
-      series: index => model.getSeriesByIndex(index),
+      chart,
+      component: (mainType, index) => model().getComponent(mainType, index),
+      series: index => model().getSeriesByIndex(index),
     }
   }
 
@@ -722,6 +730,116 @@ describe("Streamlit theme resolved by ECharts", () => {
         "hideOverlap",
       ])
     ).toBe(false)
+  })
+
+  it.each([
+    ["light", lightTheme.emotion],
+    ["dark", darkTheme.emotion],
+  ] as const)(
+    "maps visualMap colors like ECharts, defaulting to the sequential palette (%s)",
+    (_name, emotionTheme) => {
+      const legacyColor = ["#d94e5d", "#eac736", "#50a3ba"]
+      const { component } = renderThemed(
+        {
+          visualMap: [
+            { min: 0, max: 1 },
+            { type: "piecewise", min: 0, max: 1 },
+            { min: 0, max: 1, inRange: { symbolSize: [6, 30] } },
+            { min: 0, max: 1, color: legacyColor },
+            { min: 0, max: 1, inRange: { color: ["#000000", "#ffffff"] } },
+          ],
+          series: [],
+        },
+        emotionTheme
+      )
+      const inRangeColorOf = (index: number): unknown =>
+        component("visualMap", index).get(["target", "inRange", "color"])
+
+      const sequential = [...emotionTheme.colors.chartSequentialColors]
+      expect(inRangeColorOf(0)).toEqual(sequential)
+      expect(inRangeColorOf(1)).toEqual(sequential)
+      // Must NOT happen: a visualMap that maps only size also maps color.
+      expect(inRangeColorOf(2)).toBeUndefined()
+      expect(
+        component("visualMap", 2).get(["target", "inRange", "symbolSize"])
+      ).toEqual([6, 30])
+      // ECharts reads the legacy `color` from high to low value.
+      expect(inRangeColorOf(3)).toEqual(legacyColor.toReversed())
+      expect(inRangeColorOf(4)).toEqual(["#000000", "#ffffff"])
+    }
+  )
+
+  it("keeps the categorical series colors under a size-only visualMap", () => {
+    const { series } = renderThemed({
+      visualMap: {
+        show: false,
+        dimension: 2,
+        min: 0,
+        max: 1,
+        inRange: { symbolSize: [6, 30] },
+      },
+      xAxis: {},
+      yAxis: {},
+      series: [0, 1, 2].map(index => ({
+        type: "scatter",
+        data: [[index, index, 0.5]],
+      })),
+    })
+    const itemVisualOf = (index: number, key: string): unknown =>
+      (
+        series(index) as unknown as {
+          getData: () => { getItemVisual: (i: number, key: string) => unknown }
+        }
+      )
+        .getData()
+        .getItemVisual(0, key)
+
+    expect(
+      [0, 1, 2].map(
+        index => (itemVisualOf(index, "style") as { fill: string }).fill
+      )
+    ).toEqual(darkTheme.emotion.colors.chartCategoricalColors.slice(0, 3))
+    expect(itemVisualOf(0, "symbolSize")).toBe(18)
+  })
+
+  it("retints the default visualMap scale on a light/dark theme switch", () => {
+    const { chart, component } = renderThemed(
+      { visualMap: { min: 0, max: 1 }, series: [] },
+      lightTheme.emotion
+    )
+    const inRangeColor = (): unknown =>
+      component("visualMap").get(["target", "inRange", "color"])
+    expect(inRangeColor()).toEqual([
+      ...lightTheme.emotion.colors.chartSequentialColors,
+    ])
+
+    chart.setTheme(buildStreamlitEChartsTheme(darkTheme.emotion))
+
+    expect(inRangeColor()).toEqual([
+      ...darkTheme.emotion.colors.chartSequentialColors,
+    ])
+  })
+
+  it("uses a spec gradientColor as is, without the theme palette", () => {
+    const { component } = renderThemed({
+      gradientColor: ["#ffffff", "#ff0000"],
+      visualMap: [
+        { min: 0, max: 1 },
+        { min: 0, max: 1, inRange: { symbolSize: [6, 30] } },
+        { min: 0, max: 1, target: { inRange: { symbolSize: [6, 30] } } },
+      ],
+      series: [],
+    })
+
+    expect(
+      component("visualMap", 0).get(["target", "inRange", "color"])
+    ).toEqual(["#ffffff", "#ff0000"])
+    // Must NOT happen: a size-only visualMap picks up the gradient.
+    for (const index of [1, 2]) {
+      expect(
+        component("visualMap", index).get(["target", "inRange", "color"])
+      ).toBeUndefined()
+    }
   })
 })
 
@@ -1164,6 +1282,141 @@ describe("applyStreamlitOptionDefaults", () => {
     )
 
     expect((result.grid as Record<string, unknown>).bottom).toBe(gridBottom)
+  })
+
+  describe("leaves room beside the plot for a vertical visualMap", () => {
+    // ECharts' padding (15px per side) and bar or symbol width (20px), then
+    // the 10px text gap and an estimated label width.
+    const glyphPx = convertRemToPx(theme.fontSizes.twoSm) * 0.55
+    const withLabel = (chars: number): number =>
+      Math.ceil(30 + 20 + 10 + chars * glyphPx)
+
+    it.each([
+      ["a continuous map", { min: 0, max: 1 }, "left", 50],
+      [
+        // Handle overhang (2px) and bar center (10px), then a 24px handle.
+        "a calculable map's handle values",
+        { min: 0, max: 100, calculable: true },
+        "left",
+        Math.ceil(30 + 36 + 3 * glyphPx),
+      ],
+      [
+        "end text wider than the bar",
+        { min: 0, max: 1, text: ["High temperature", "Low"] },
+        "left",
+        Math.ceil(30 + 16 * glyphPx),
+      ],
+      [
+        // ECharts drops the piece labels when the map has end text.
+        "a piecewise map's end text instead of its piece labels",
+        { type: "piecewise", min: 0, max: 9, text: ["High", "Low"] },
+        "left",
+        Math.ceil(30 + 4 * glyphPx),
+      ],
+      ["a map offset from the left edge", { left: 100 }, "left", 150],
+      [
+        "piecewise labels at the auto-raised precision",
+        { type: "piecewise", min: 0, max: 9 },
+        "left",
+        // "9.0 - 9.0"
+        withLabel(9),
+      ],
+      [
+        "category labels",
+        { categories: ["Low", "Medium", "High"] },
+        "left",
+        withLabel(6),
+      ],
+      [
+        "piece labels, including open-ended and primitive ones",
+        {
+          pieces: [
+            { min: 0, max: 10 },
+            { gt: 10 },
+            { value: 5, label: "x" },
+            1000000,
+          ],
+        },
+        "left",
+        // "1000000"
+        withLabel(7),
+      ],
+      [
+        "an empty piece label as its bounds",
+        { pieces: [{ min: 0, max: 1000, label: "" }] },
+        "left",
+        // "0 - 1000"
+        withLabel(8),
+      ],
+      [
+        "a map pinned to the right edge",
+        { right: 0, padding: 4, itemWidth: 60 },
+        "right",
+        68,
+      ],
+      ["a map offset from the right edge", { right: 10 }, "right", 60],
+      [
+        "an auto left beside a right offset",
+        { left: "auto", right: 10 },
+        "right",
+        60,
+      ],
+      [
+        "a map with auto positions",
+        { left: "auto", right: "auto" },
+        "left",
+        50,
+      ],
+    ] as const)("fits %s", (_name, visualMap, side, expectedPx) => {
+      const result = applyDefaults(
+        { xAxis: {}, yAxis: {}, visualMap, series: [] },
+        STREAMLIT_THEME
+      )
+
+      const grid = result.grid as Record<string, unknown>
+      // Must NOT happen: the other side gives up its tight margin.
+      const tight = { left: gridLeft, right: gridRight }
+      expect({ left: grid.left, right: grid.right }).toEqual({
+        ...tight,
+        [side]: expectedPx,
+      })
+    })
+
+    it.each([
+      ["hidden", { show: false }],
+      ["horizontal", { orient: "horizontal" }],
+      ["centered", { left: "center" }],
+      ["offset by a percentage", { left: "10%" }],
+    ])(
+      "keeps the tight side margins when the map is %s",
+      (_name, visualMap) => {
+        const result = applyDefaults(
+          { xAxis: {}, yAxis: {}, visualMap, series: [] },
+          STREAMLIT_THEME
+        )
+
+        const grid = result.grid as Record<string, unknown>
+        expect([grid.left, grid.right]).toEqual([gridLeft, gridRight])
+      }
+    )
+
+    it("keeps a spec grid.left over the room and uses the widest map", () => {
+      const visualMap = [
+        { min: 0, max: 1 },
+        { min: 0, max: 1, itemWidth: 40 },
+      ]
+      const fitted = applyDefaults(
+        { xAxis: {}, yAxis: {}, visualMap, series: [] },
+        STREAMLIT_THEME
+      )
+      expect((fitted.grid as Record<string, unknown>).left).toBe(70)
+
+      const pinned = applyDefaults(
+        { xAxis: {}, yAxis: {}, grid: { left: 5 }, visualMap, series: [] },
+        STREAMLIT_THEME
+      )
+      expect((pinned.grid as Record<string, unknown>).left).toBe(5)
+    })
   })
 
   it("lifts a default-bottom legend off a dataZoom slider", () => {

@@ -525,6 +525,33 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
 
     wait_until(app, hidden_charts_and_tables_lay_out)
 
+    # A grid.cell() in a content-height row keeps flex in print. Its chart
+    # does not cover the text below it, and the cell does not cover the next
+    # element.
+    grid_cell = get_element_by_key(app, "grid_cell_chart").get_by_test_id("stGridCell")
+    grid_cell_block = grid_cell.first.get_by_test_id("stVerticalBlock")
+    grid_cell_chart = grid_cell_block.get_by_test_id("stVegaLiteChart")
+    below_grid_chart = grid_cell_block.get_by_text(
+        "Below the grid cell chart", exact=True
+    )
+    after_grid = app.get_by_text("After the grid cell chart", exact=True)
+    expect(grid_cell_chart).to_be_visible()
+    expect(below_grid_chart).to_be_visible()
+    expect(grid_cell_block).to_have_css("display", "flex")
+
+    def grid_cell_chart_does_not_overlap() -> None:
+        chart_box = grid_cell_chart.bounding_box()
+        below_box = below_grid_chart.bounding_box()
+        after_box = after_grid.bounding_box()
+        assert chart_box is not None
+        assert below_box is not None
+        assert after_box is not None
+        assert chart_box["height"] > 100
+        assert chart_box["y"] + chart_box["height"] <= below_box["y"] + 1
+        assert below_box["y"] + below_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, grid_cell_chart_does_not_overlap)
+
     buttons = get_element_by_key(app, "horizontal_buttons").get_by_test_id("stButton")
     expect(buttons).to_have_count(2)
     first_button = buttons.nth(0).bounding_box()

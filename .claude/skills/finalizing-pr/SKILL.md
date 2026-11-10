@@ -155,16 +155,20 @@ Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` 
 
 ### 12. Final AI review
 
-After the review loop, apply `ai-final-review` once. Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
+After the review loop, apply `ai-final-review` once. When the PR has both `change:feature` and `impact:users`, also apply `ai-qa-test` so AI QA runs on that user-facing feature.
+
+Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
 
 ```bash
 gh pr edit --add-label "ai-final-review"
+# Only when the PR has both change:feature and impact:users:
+gh pr edit --add-label "ai-qa-test"
 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status queued
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
+Run `/fixing-pr` exactly once, whether step 11 was approved or ran out of iterations, so it can wait for CI and address comments. Tell `/fixing-pr` to skip `ai-qa-testing.yml` when polling CI; that workflow posts its report as a PR comment for a maintainer to review and adds `do-not-merge` on `FAIL`. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
 
 ### 13. Post agent metrics
 

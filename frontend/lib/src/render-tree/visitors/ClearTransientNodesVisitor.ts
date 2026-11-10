@@ -83,7 +83,8 @@ export class ClearTransientNodesVisitor implements AppNodeVisitor<
       // retained entry and re-anchor it to the children that remain.
       keptChildren === undefined
         ? node.retained
-        : getRetainedAfterRemoval(node.retained, keptChildren, () => true)
+        : getRetainedAfterRemoval(node.retained, keptChildren, () => true),
+      node.pendingSkeleton
     )
   }
 

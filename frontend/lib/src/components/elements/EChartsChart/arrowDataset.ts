@@ -442,7 +442,7 @@ function getPlaceholderName(source: unknown): string | null {
  * Numeric names (e.g. integer column labels like `2015`) become strings, as
  * in ECharts, because Arrow field names are always strings.
  */
-function getDimensionName(dimension: unknown): string | undefined {
+export function getDimensionName(dimension: unknown): string | undefined {
   const name: unknown = isPlainObject(dimension)
     ? (dimension as { name?: unknown }).name
     : dimension

@@ -360,6 +360,49 @@ describe("st.tabs", () => {
       const updatedTabs = screen.getAllByRole("tab")
       expect(updatedTabs[1]).toHaveAttribute("aria-selected", "true")
     })
+
+    it("restores persisted tab after rendering intermediate tab lists during a delta path shift", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const labels = ["Overview", "Details", "Raw Data"]
+      const makeNode = (tabLabels: string[]): BlockNode =>
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          tabLabels.map(label => makeTab(label)),
+          new BlockProto({ allowEmpty: true, id: blockId, tabContainer: {} })
+        )
+
+      const { rerender } = render(
+        <Tabs {...getProps({ node: makeNode(labels), widgetMgr })} />
+      )
+      await user.click(screen.getAllByRole("tab")[1])
+
+      // A shifted block inherits the children at its new path, so the tab
+      // list can render with no tabs or another block's tabs before its own
+      // tab blocks arrive.
+      for (const intermediate of [[], ["Left", "Right"], ["Overview"]]) {
+        rerender(
+          <Tabs {...getProps({ node: makeNode(intermediate), widgetMgr })} />
+        )
+      }
+      rerender(<Tabs {...getProps({ node: makeNode(labels), widgetMgr })} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("tab")[1]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
+      })
+      expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
+        "aria-selected",
+        "false"
+      )
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
+        "Details"
+      )
+    })
   })
 
   describe("dynamic tabs (widget state tracking)", () => {
@@ -625,7 +668,7 @@ describe("st.tabs", () => {
   })
 
   describe("tab list reconciliation when labels or counts change", () => {
-    it("passively keyed tabs persist fallback label when the tab list is replaced and the selection is invalid", async () => {
+    it("passively keyed tabs keep the stored label when the tab list is replaced and the selection is invalid", async () => {
       const user = userEvent.setup()
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
@@ -652,9 +695,9 @@ describe("st.tabs", () => {
       })
       expect(screen.getAllByRole("tab")[0]).toHaveTextContent("Alpha")
       expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
-        "Alpha"
+        "Tab 2"
       )
-      expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      expect(widgetMgr.setElementState).not.toHaveBeenCalledWith(
         blockId,
         "activeTabLabel",
         "Alpha"
@@ -752,9 +795,7 @@ describe("st.tabs", () => {
         )
       })
       expect(screen.getAllByRole("tab")[1]).toHaveTextContent("Only2")
-      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
-        "Only2"
-      )
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe("C")
       expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
         "aria-selected",
         "false"

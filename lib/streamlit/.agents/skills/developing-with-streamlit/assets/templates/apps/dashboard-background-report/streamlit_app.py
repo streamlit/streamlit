@@ -37,6 +37,10 @@ Notes on this template:
   one card is much slower than the rest.
 - The quick cards still use caching + parallel fragments: they are much faster than
   the report but slow enough that overlapping them and caching their results pays off.
+- Layout-first loading: the main script draws each card's frame, title, and
+  ``st.skeleton``, and calls the card's fragment inside it. The page has its final
+  layout from the first paint, cached reruns update the cards in place, and the slow
+  report's spinner text shows on its skeleton.
 
 This template uses synthetic data with ``time.sleep`` to stand in for slow work.
 Replace ``run_freshness_report()`` and the ``load_*`` loaders with your real data
@@ -66,6 +70,9 @@ st.set_page_config(
 REGIONS = ["us-west-2", "us-east-1", "eu-west-1", "ap-northeast-1"]
 CHART_HEIGHT = 280
 REPORT_HEIGHT = 320
+# Height of the KPI row's skeleton and metrics, so they match. It assumes the wide
+# layout, where the three metrics fit in one row; on narrow screens they wrap.
+KPI_HEIGHT = 108
 
 # The slow operation stands in for heavy work (a big warehouse query, a full
 # reconciliation, an export); real ones can take much longer. The quick loaders are
@@ -146,28 +153,27 @@ def run_freshness_report() -> pd.DataFrame:
 @st.fragment(parallel=True)
 def kpis_card(region: str) -> None:
     """Quick KPI row for the selected region."""
-    with st.skeleton(height=120):
-        kpis = load_kpis(region)
-        with st.container(horizontal=True):
-            st.metric("Active pipelines", kpis["pipelines"], border=True)
-            st.metric("On-time", f"{kpis['on_time_pct']:.1f}%", border=True)
-            st.metric("Avg latency", f"{kpis['avg_latency_min']:.0f} min", border=True)
+    kpis = load_kpis(region)
+    with st.container(horizontal=True):
+        for label, value in [
+            ("Active pipelines", f"{kpis['pipelines']:.0f}"),
+            ("On-time", f"{kpis['on_time_pct']:.1f}%"),
+            ("Avg latency", f"{kpis['avg_latency_min']:.0f} min"),
+        ]:
+            st.metric(label, value, border=True, height=KPI_HEIGHT)
 
 
 @st.fragment(parallel=True)
 def throughput_card(region: str) -> None:
     """Quick throughput chart for the selected region."""
-    with st.container(border=True):
-        st.subheader("Throughput (last 30 days)")
-        with st.skeleton(height=CHART_HEIGHT):
-            throughput = load_throughput(region)
-            st.line_chart(
-                throughput,
-                x="date",
-                y="rows_processed",
-                height=CHART_HEIGHT,
-                alt="Rows processed per day",
-            )
+    throughput = load_throughput(region)
+    st.line_chart(
+        throughput,
+        x="date",
+        y="rows_processed",
+        height=CHART_HEIGHT,
+        alt="Rows processed per day",
+    )
 
 
 @st.fragment(parallel=True)
@@ -176,29 +182,24 @@ def freshness_report() -> None:
 
     On a full app rerun this is dispatched to a worker thread, so the main-script
     filter stays responsive and the quick cards fill in while the report is still
-    loading. A loading message shows while the long report runs (a skeleton is better
-    suited to quick loads).
+    loading. The main script calls it inside ``st.skeleton``, so the spinner text
+    shows on the skeleton, at the report's size, instead of as a separate spinner.
     """
-    with st.container(border=True):
-        st.subheader("Pipeline freshness report")
-        st.caption(
-            f"Heavy, account-wide work (~{REPORT_SECONDS}s). It loads in the "
-            "background, so the filter and the cards above stay responsive while it "
-            "fills in."
-        )
-        with st.spinner(f"Running the account-wide report… (~{REPORT_SECONDS}s)"):
-            report = run_freshness_report()
-        overdue = int((~report["within_sla"]).sum())
-        if overdue:
-            st.warning(f"{overdue} of {len(report)} pipelines are past their SLA.")
-        else:
-            st.success(f"All {len(report)} pipelines are within their SLA.")
-        st.dataframe(
-            report,
-            hide_index=True,
-            height=REPORT_HEIGHT,
-            alt="Per-pipeline freshness report",
-        )
+    with st.spinner(f"Running the account-wide report… (~{REPORT_SECONDS}s)"):
+        report = run_freshness_report()
+    # Draw the table first: the first element replaces the skeleton, which has the
+    # table's height.
+    st.dataframe(
+        report,
+        hide_index=True,
+        height=REPORT_HEIGHT,
+        alt="Per-pipeline freshness report",
+    )
+    overdue = int((~report["within_sla"]).sum())
+    if overdue:
+        st.warning(f"{overdue} of {len(report)} pipelines are past their SLA.")
+    else:
+        st.success(f"All {len(report)} pipelines are within their SLA.")
 
 
 # =============================================================================
@@ -213,9 +214,25 @@ st.title("Operations dashboard")
 filter_col, _ = st.columns([1, 3])
 region = filter_col.selectbox("Region", REGIONS)
 
+# Each card's frame, title, and skeleton are drawn here; its fragment's output
+# replaces the skeleton.
+
 # Quick, region-specific cards: they reload fast and update when the region changes.
-kpis_card(region)
-throughput_card(region)
+with st.skeleton(height=KPI_HEIGHT):
+    kpis_card(region)
+
+with st.container(border=True):
+    st.subheader("Throughput (last 30 days)")
+    with st.skeleton(height=CHART_HEIGHT):
+        throughput_card(region)
 
 # Slow, region-independent report: loads in the background while the page stays usable.
-freshness_report()
+with st.container(border=True):
+    st.subheader("Pipeline freshness report")
+    st.caption(
+        f"Heavy, account-wide work (~{REPORT_SECONDS}s). It loads in the "
+        "background, so the filter and the cards above stay responsive while it "
+        "fills in."
+    )
+    with st.skeleton(height=REPORT_HEIGHT):
+        freshness_report()

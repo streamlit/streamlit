@@ -35,6 +35,7 @@ import {
 import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
+import { keepPreviousContentForSkeleton } from "./skeletonUtils"
 import { TransientNode } from "./TransientNode"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
@@ -340,13 +341,21 @@ export class AppRoot {
     )
   }
 
+  /**
+   * @param preservedFragmentIds Fragments whose nodes, with their subtrees,
+   * are kept as-is because their output was dropped from this run and their
+   * own rerun cleans them up.
+   */
   public clearStaleNodes(
     currentScriptRunId: string,
-    fragmentIdsThisRun?: Array<string>
+    fragmentIdsThisRun?: Array<string>,
+    preservedFragmentIds?: ReadonlySet<string>
   ): AppRoot {
     const visitor = new ClearStaleNodeVisitor(
       currentScriptRunId,
-      fragmentIdsThisRun
+      fragmentIdsThisRun,
+      undefined,
+      preservedFragmentIds
     )
     const newChildren = this.root.children.map(node =>
       this.ensureBlockNode(node.accept(visitor))
@@ -431,12 +440,21 @@ export class AppRoot {
       fragmentId,
       elementHash
     )
+    // A skeleton keeps a previous run's content mounted until new content
+    // arrives, so cached reruns don't flash the skeleton.
+    const nodeToSet =
+      element.type === "skeleton"
+        ? (keepPreviousContentForSkeleton(
+            GetNodeByDeltaPathVisitor.getNodeAtPath(this.root, deltaPath),
+            elementNode
+          ) ?? elementNode)
+        : elementNode
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(
         this.root,
         deltaPath,
-        elementNode,
+        nodeToSet,
         scriptRunId
       ) as BlockNode,
       this.appLogo

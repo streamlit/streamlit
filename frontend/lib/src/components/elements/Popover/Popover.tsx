@@ -212,7 +212,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
-  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
+  // Hide the chevron if the only content is a menu-style icon (e.g., :material/menu:)
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   // Attach to a wrapper div rather than BaseButton directly. BaseButtonTooltip

@@ -55,6 +55,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { GridContainer } from "./GridContainer"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
+import { SkeletonSlotContents } from "./SkeletonPlaceholders"
 import {
   PRINT_BORDERED_COLUMN_CLASS,
   StyledColumn,
@@ -63,6 +64,11 @@ import {
   type StyledFlexContainerBlockProps,
   StyledLayoutWrapper,
 } from "./styled-components"
+import {
+  NO_SKELETON_SLOT,
+  type SkeletonSlot,
+  useSkeletonSlot,
+} from "./useSkeletonSlot"
 import {
   assignDividerColor,
   type BaseBlockProps,
@@ -243,14 +249,16 @@ export const ContainerContentsWrapper = (
 
 interface FlexBoxContainerProps extends BaseBlockProps {
   node: BlockNode
+  /** The block's skeleton state, from `BlockNodeRenderer`. */
+  skeletonSlot?: SkeletonSlot
 }
 
 /**
- * Whether a `grid.cell()` block fills its definite-height grid cell.
+ * Whether a `grid.cell()` block fills its grid cell.
  *
  * The cell block has no height of its own, so without this its stretch
- * children collapse to 0. Content rows stay content-sized so
- * `vertical_alignment` can still move the cell.
+ * children would size to their content instead of matching the row. The
+ * filling block applies the grid's `vertical_alignment` to its children.
  */
 function shouldFillGridCell(
   deltaBlock: BlockProto,
@@ -267,6 +275,7 @@ export const FlexBoxContainer = (
 ): ReactElement => {
   const direction = getDirectionOfBlock(props.node.deltaBlock)
   const parentContext = useContext(FlexContext)
+  const skeletonSlot = props.skeletonSlot ?? NO_SKELETON_SLOT
 
   const activateScrollToBottom = shouldActivateScrollToBottom(props.node)
   const scrollContainerRef = useScrollToBottom(activateScrollToBottom)
@@ -285,6 +294,10 @@ export const FlexBoxContainer = (
   const enableHorizontalScroll = direction === Direction.HORIZONTAL && !wrap
 
   const fillGridCell = shouldFillGridCell(props.node.deltaBlock, parentContext)
+  // Only a fixed row height is definite. In a content row, the cell grows
+  // with the row, and stretch charts keep their default height as a minimum.
+  const fillDefiniteGridCell =
+    fillGridCell && parentContext?.hasDefiniteHeight === true
 
   const styles: StyledFlexContainerBlockProps = {
     gap:
@@ -351,13 +364,15 @@ export const FlexBoxContainer = (
         notNullOrUndefined(props.node.deltaBlock.column) ||
         notNullOrUndefined(props.node.deltaBlock.gridCell)
       }
-      // Stretch children of this cell take leftover space.
-      verticalStretchGrows={fillGridCell}
+      // Stretch children of a definite-height cell take leftover space.
+      verticalStretchGrows={fillDefiniteGridCell}
       {...heightContextProps}
-      // A filling grid cell is a definite-height column even though the cell
-      // block has no height config of its own. Set this after the height
+      // A fixed-height grid cell is a definite-height column even though the
+      // cell block has no height config of its own. Set this after the height
       // props so it wins over a content-sized cell.
-      hasFixedHeight={fillGridCell || heightContextProps.hasFixedHeight}
+      hasFixedHeight={
+        fillDefiniteGridCell || heightContextProps.hasFixedHeight
+      }
       parentContext={parentContext}
     >
       <StyledFlexContainerBlock
@@ -374,8 +389,17 @@ export const FlexBoxContainer = (
         data-test-scroll-behavior={
           activateScrollToBottom ? "scroll-to-bottom" : "normal"
         }
+        $canShowOverlay={skeletonSlot.canShowOverlay}
+        $showsInlineSkeleton={skeletonSlot.showsInlineSkeleton}
+        aria-busy={
+          skeletonSlot.showsInlineSkeleton ||
+          skeletonSlot.showsOverlay ||
+          undefined
+        }
       >
-        <ChildRenderer {...props} />
+        <SkeletonSlotContents slot={skeletonSlot}>
+          <ChildRenderer {...props} />
+        </SkeletonSlotContents>
       </StyledFlexContainerBlock>
     </FlexContextProvider>
   )
@@ -395,6 +419,7 @@ export const BlockNodeRenderer = (
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const flexContext = useContext(FlexContext)
+  const skeletonSlot = useSkeletonSlot(node)
 
   let minStretchBehavior: MinFlexElementWidth
   if (LARGE_STRETCH_BEHAVIOR.has(node.deltaBlock.type ?? "")) {
@@ -424,7 +449,15 @@ export const BlockNodeRenderer = (
 
   const fillGridCell = shouldFillGridCell(node.deltaBlock, flexContext)
 
-  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
+  // An empty loading block takes space only while it shows its inline
+  // skeleton. Otherwise it is hidden like an empty `st.container()`, so it
+  // adds no gap, including during the grace period.
+  if (
+    node.isEmpty &&
+    (!node.deltaBlock.allowEmpty ||
+      (notNullOrUndefined(node.deltaBlock.loading) &&
+        !skeletonSlot.showsInlineSkeleton))
+  ) {
     return null
   }
 
@@ -497,7 +530,9 @@ export const BlockNodeRenderer = (
   )
 
   if (checkFlexContainerBackwardsCompatibile(node.deltaBlock)) {
-    containerElement = <FlexBoxContainer {...childProps} />
+    containerElement = (
+      <FlexBoxContainer {...childProps} skeletonSlot={skeletonSlot} />
+    )
   }
 
   if (node.deltaBlock.gridContainer) {

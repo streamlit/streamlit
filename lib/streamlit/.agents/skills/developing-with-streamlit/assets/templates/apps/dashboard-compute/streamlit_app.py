@@ -18,7 +18,7 @@ Demonstrates:
 - Multiple metric cards in a grid layout
 - ``@st.fragment(parallel=True)`` so cards load concurrently on full reruns and
   rerun in isolation on widget interactions
-- ``st.skeleton`` placeholders while each card's data loads
+- ``st.skeleton`` slots that keep each chart's size while its data loads
 - ``@st.cache_data(ttl=...)`` loaders that keep data fresh and bounded
 - ``st.echarts_chart`` line and stacked bar charts that animate when a filter
   changes, morph between chart types, and zoom with a ``dataZoom`` slider
@@ -110,7 +110,7 @@ def generate_time_series(
     return df
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading credit usage...")
 def load_account_type_data() -> pd.DataFrame:
     """Load credits by account type."""
     end_date = date.today() - timedelta(days=1)
@@ -124,7 +124,7 @@ def load_account_type_data() -> pd.DataFrame:
     )
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading credit usage...")
 def load_instance_type_data() -> pd.DataFrame:
     """Load credits by instance type."""
     end_date = date.today() - timedelta(days=1)
@@ -143,7 +143,7 @@ def load_instance_type_data() -> pd.DataFrame:
     )
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading credit usage...")
 def load_region_data() -> pd.DataFrame:
     """Load credits by region."""
     end_date = date.today() - timedelta(days=1)
@@ -334,8 +334,8 @@ def dimension_metric(
 
     The card is a parallel fragment: on a full app rerun each card loads its
     own data concurrently in a thread pool, and clicking a popover filter only
-    reruns this card, not the whole page. Data is loaded inside ``st.skeleton``
-    so the controls stay stable while the chart fills in.
+    reruns this card, not the whole page. Its controls must be in the fragment,
+    so the card draws its own ``st.skeleton`` below them to hold the chart's size.
 
     Parameters
     ----------
@@ -414,8 +414,8 @@ def dimension_metric(
                     key=f"{key_prefix}_time",
                 )
 
-        # Load this card's data and render inside a skeleton placeholder so each
-        # card fills in as soon as its own (cached) data is ready.
+        # The chart replaces the skeleton. On a cache miss, the skeleton covers the
+        # previous chart after half a second and shows the loader's spinner text.
         with st.skeleton(height=CHART_HEIGHT):
             data = loader()
 

@@ -148,6 +148,7 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Only `dataset.source` takes a dataframe.** A dataframe in `series.data` or `xAxis.data` raises an error.
 - **Numbers on a category axis are positions.** A marker at `{"xAxis": 2023}` means category index 2023 (0-based), not the label `2023`, so a year axis drops it. Pass labels as strings, and cast numeric category columns such as years with `.astype(str)`.
 - **Text in the option is plain text.** Markdown doesn't render in `title.text` or labels. Put formatted copy in `st.markdown` next to the chart.
+- **Leave bar corners to the theme.** Unstacked bars without negative values get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. For square bars, set `"borderRadius": 0`.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 
 ## Chart selections
@@ -212,6 +213,7 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 - An existing Plotly Express line or scatter figure also holds up to about 1,000,000 points, because it switches to WebGL above 1,000 points. A `go.Scatter` trace stays SVG; use `go.Scattergl` for large data.
 - For ECharts series that read `dataset`, pass more than about 1,000 rows as a dataframe in `dataset.source`, never as Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, drops the **Show data** table, and leaves the agent API only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
+- When the data loads slowly, put the load and the chart inside `with st.skeleton(height=...)` and pass the same height to the skeleton and the chart. The slot keeps its size while the data loads, and cached reruns update the chart in place (see [dashboards.md](dashboards.md)).
 
 Streamlit fills rendering defaults that you haven't set yourself, so don't add them by hand:
 
