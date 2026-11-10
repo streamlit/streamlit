@@ -74,8 +74,11 @@ export const printTableSplitRules: CSSObject = {
  * Emotion selector that matches this box when it contains a chart (an
  * element with `PrintLayout.GRAPHIC`) that prints, so not inside a closed
  * tab or a closed expander. Pair it with `printKeepTogetherRules` so the
- * box is not split from that chart. A box with a visible dataframe or
- * `st.table` is not matched, so that table can continue on the next page
- * and repeat its header. A box taller than a page still breaks.
+ * box is not split from that chart. Any visible `PrintLayout.FIXED_WIDTH`
+ * element opts the box out, including a short dataframe, an empty
+ * dataframe, and a fixed-height `st.table` that keeps its scroll box. A
+ * card that pairs a chart with a summary dataframe therefore no longer
+ * stays together. That is the trade-off for letting a tall table paginate
+ * instead of leaving a blank strip. A box taller than a page still breaks.
  */
 export const PRINT_CHART_CARD_SELECTOR = `&:has(${VISIBLE_PRINT_GRAPHIC}):not(:has(${VISIBLE_PRINT_FIXED_WIDTH}))`

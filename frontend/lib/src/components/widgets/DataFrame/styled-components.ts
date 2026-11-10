@@ -63,7 +63,10 @@ export const StyledResizableContainer =
         },
         // When the print table is filled, it replaces the hidden canvas. Let
         // this box grow past its on-screen height and break across pages, so
-        // the table continues instead of leaving a blank strip.
+        // the table continues instead of leaving a blank strip. Print rows
+        // are about 27px, so the default 35px `row_height` keeps a
+        // `height=<px>` table shorter than its on-screen box. A much
+        // smaller `row_height` could paint over the next element.
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
           ...printAllowSplitRules,
           display: "block",

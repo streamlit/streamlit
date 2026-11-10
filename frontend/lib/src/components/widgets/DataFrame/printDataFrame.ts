@@ -192,7 +192,15 @@ function printCellContent(
   }
 
   if (cell.kind === GridCellKind.Boolean) {
-    return cell.data === true ? "\u2713" : ""
+    // A missing checkbox is a self-drawn empty cell and stays blank. Print
+    // an empty box for `false` so it is not the same as a missing value.
+    if (cell.data === true) {
+      return "\u2713"
+    }
+    if (cell.data === false) {
+      return "\u2610"
+    }
+    return ""
   }
 
   if (cell.kind === GridCellKind.Image) {
@@ -285,6 +293,7 @@ function renderPrintTable(
 ): HTMLTableElement {
   const table = document.createElement("table")
   table.className = DATAFRAME_PRINT_TABLE_CLASS
+  table.dataset.testid = DATAFRAME_PRINT_TABLE_CLASS
   const head = document.createElement("tr")
   for (const header of headers) {
     const cell = document.createElement("th")

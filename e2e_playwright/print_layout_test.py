@@ -112,7 +112,7 @@ def test_print_stacks_chart_rows_without_overlap(
             assert box["x"] + box["width"] <= sidebar_right + 1
         # The dataframe prints a table in place of its canvas. The table can
         # be wider than the sidebar, so the dataframe clips its painting.
-        assert sidebar.locator(".stDataFramePrintTable").count() == 1
+        assert sidebar.get_by_test_id("stDataFramePrintTable").count() == 1
         assert not sidebar.get_by_test_id("stDataFrameResizable").is_visible()
         assert (
             sidebar.get_by_test_id("stDataFrame").evaluate(
@@ -312,7 +312,7 @@ def test_print_stacks_chart_rows_without_overlap(
 
     end_browser_print(app)
     # The print table is removed again, so the interactive grid is unchanged.
-    expect(sidebar.locator(".stDataFramePrintTable")).to_have_count(0)
+    expect(sidebar.get_by_test_id("stDataFramePrintTable")).to_have_count(0)
 
 
 def _assert_inside(inner: Locator, outer: Locator) -> None:

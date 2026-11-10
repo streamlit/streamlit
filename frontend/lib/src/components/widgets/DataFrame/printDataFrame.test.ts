@@ -110,6 +110,7 @@ describe("fillDataFramePrintSlot", () => {
 
     const table = slot.querySelector("table")
     expect(table).toHaveClass(DATAFRAME_PRINT_TABLE_CLASS)
+    expect(table).toHaveAttribute("data-testid", DATAFRAME_PRINT_TABLE_CLASS)
     expect(
       [...slot.querySelectorAll("th")].map(cell => cell.textContent)
     ).toEqual(["Name", "City"])
@@ -144,6 +145,40 @@ describe("fillDataFramePrintSlot", () => {
     expect(
       [...slot.querySelectorAll("td")].map(cell => cell.textContent)
     ).toEqual(["42%", "Oct 20, 2026"])
+  })
+
+  it("prints a checked box, an empty box, and a blank for a missing checkbox", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("On", { kind: "checkbox" })],
+      ([, row]) => {
+        if (row === 0) {
+          return {
+            kind: GridCellKind.Boolean,
+            data: true,
+            allowOverlay: false,
+          }
+        }
+        if (row === 1) {
+          return {
+            kind: GridCellKind.Boolean,
+            data: false,
+            allowOverlay: false,
+          }
+        }
+        return {
+          kind: GridCellKind.Boolean,
+          data: undefined,
+          allowOverlay: false,
+          isMissingValue: true,
+        }
+      },
+      { startRow: 0, rowCount: 3 }
+    )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["\u2713", "\u2610", ""])
   })
 
   it("prints an image cell as an image instead of its URL", () => {
