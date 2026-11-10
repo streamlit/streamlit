@@ -47,6 +47,10 @@ message Block {
   // When set, the block spans the specified number of columns and rows.
   optional GridCell grid_cell = 18;
 
+  // Shows a skeleton in the block until the first visible element of the
+  // current run is drawn inside it. Set by `with st.skeleton()`.
+  optional Loading loading = 20;
+
   message Vertical {
     bool border = 1;
 
@@ -234,6 +238,12 @@ message Block {
   // render directly in the parent container's flex context.
   message Transparent {}
 
+  message Loading {
+    // Height of the skeleton while the block has no content to keep. If
+    // unset, the frontend uses a default height.
+    optional streamlit.HeightConfig skeleton_height = 1;
+  }
+
   message GridContainer {
     // Number of columns. Absent means auto (determined by min_column_width_px).
     optional uint32 columns = 1;
@@ -291,5 +301,5 @@ message Block {
     bool column_span_all = 3;
   }
 
-  // Next ID: 20
+  // Next ID: 21
 }

@@ -831,6 +831,27 @@ class CommonCacheTest(DeltaGeneratorTestCase):
     @parameterized.expand(
         [("cache_data", cache_data), ("cache_resource", cache_resource)]
     )
+    def test_default_spinner_is_hidden_in_skeleton_slot(self, _, cache_decorator):
+        """Inside a skeleton slot, only a spinner with custom text is shown."""
+
+        @cache_decorator(show_spinner=True)
+        def function_with_default_spinner(x: int) -> int:
+            return x
+
+        @cache_decorator(show_spinner="CUSTOM_TEXT")
+        def function_with_custom_text(x: int) -> int:
+            return x
+
+        with script_run_context.ThreadState.scoped(in_skeleton_slot=True):
+            function_with_default_spinner(3)
+            assert self.forward_msg_queue.is_empty()
+
+            function_with_custom_text(3)
+            assert not self.forward_msg_queue.is_empty()
+
+    @parameterized.expand(
+        [("cache_data", cache_data), ("cache_resource", cache_resource)]
+    )
     def test_with_custom_text_spinner(self, _, cache_decorator):
         """If the show_spinner flag is set, there should be one element in the
         report queue.

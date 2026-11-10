@@ -639,6 +639,11 @@ class CacheDataAPI:
             a "cache miss" and the cached data is being created. If string,
             value of show_spinner param will be used for spinner text.
 
+            Inside a ``with st.skeleton()`` block, the skeleton is the loading
+            indicator, so Streamlit hides the default spinner there. Custom text
+            appears on the skeleton while it's displayed, and as a normal
+            spinner after the skeleton clears.
+
         show_time : bool
             Whether to show the elapsed time next to the spinner text. If this is
             ``False`` (default), no time is displayed. If this is ``True``,

@@ -50,6 +50,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Use `concurrency` to prevent duplicate runs
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
+- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
 
 ## Shared Composite Actions
 
@@ -97,7 +98,7 @@ runner's system Python.
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
-| `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
+| `load-testing.yml` | Push to `develop`, `run-load-testing` label, or manual | Server load testing with concurrent Playwright sessions |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
 | `meta-skill-discovery.yml` | Push/PR to `develop` (meta-skill changes) | Tests the meta-skill's `discover.py` on Windows and macOS with only pytest installed |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
@@ -110,7 +111,7 @@ runner's system Python.
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
 | `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
-| `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
+| `snapshot-hygiene.yml` | Push to `develop`, PR (`e2e_playwright/` changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 
 ### Security & Analysis
@@ -151,6 +152,7 @@ runner's system Python.
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review; weekly/full mode uses recently merged PRs as leads, including bundled skills |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-fix-nightly.yml` | Failed `nightly.yml` run or manual | AI-powered nightly failure triage: reruns transient failures, opens a fix PR for real breakages |
+| `ai-fix-develop-ci.yml` | All watched push runs for a `develop` commit finished and at least one failed, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates
