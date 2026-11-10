@@ -966,10 +966,8 @@ function DataFrame({
     ? undefined
     : trimmedAlt
 
-  // A canvas cannot fragment across pages. Build a real HTML table of the
-  // rows currently on screen so a bordered card can continue instead of
-  // leaving a blank strip. Cleared after printing so the interactive grid
-  // is unchanged.
+  // A canvas cannot fragment across pages, so beforeprint fills an HTML
+  // table of the rows on screen and afterprint clears it again.
   useEffect(() => {
     const slot = printSlotRef.current
     if (!slot) {

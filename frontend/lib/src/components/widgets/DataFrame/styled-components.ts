@@ -61,9 +61,9 @@ export const StyledResizableContainer =
         [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
           overflow: "clip",
         },
-        // A print table sits under the canvas. Grow past the on-screen
-        // height and allow page breaks so the table can continue instead of
-        // jumping and leaving a blank strip.
+        // When the print table is filled, it replaces the hidden canvas. Let
+        // this box grow past its on-screen height and break across pages, so
+        // the table continues instead of leaving a blank strip.
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
           ...printAllowSplitRules,
           display: "block",
@@ -98,6 +98,11 @@ export const StyledResizableContainer =
           ...printTableSplitRules,
           "th, td": {
             whiteSpace: "nowrap",
+            // Bound long values (e.g. sparkline lists) like the grid's
+            // column width does, so one cell cannot push later columns out.
+            maxWidth: theme.sizes.tableColumnMaxWidth,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
             padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
             border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
             textAlign: "left",
@@ -105,6 +110,11 @@ export const StyledResizableContainer =
           },
           th: {
             fontWeight: theme.fontWeights.semiBold,
+          },
+          img: {
+            display: "block",
+            maxHeight: theme.iconSizes.xl,
+            maxWidth: "100%",
           },
         },
       },

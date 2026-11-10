@@ -148,7 +148,11 @@ export function Table(props: Readonly<TableProps>): ReactElement {
     : trimmedAlt
 
   return (
-    <StyledTableContainer className="stTable" data-testid="stTable">
+    <StyledTableContainer
+      className="stTable"
+      data-testid="stTable"
+      hasScrollableHeight={hasScrollableHeight}
+    >
       {!isNullOrEmptyString(cssStyles) && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}

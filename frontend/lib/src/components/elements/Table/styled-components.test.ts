@@ -49,8 +49,27 @@ describe("st.table print layout", () => {
     )
   })
 
-  it("releases a scrollable border wrapper in print", () => {
+  it("releases and clips a content-height border wrapper in print", () => {
     const css = cssOf(
+      render(
+        createElement(StyledTableBorder, {
+          borderMode: Table.BorderMode.ALL,
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /@media print\{[^}]*break-inside:auto[^}]*height:auto;max-height:none;overflow:visible;[^}]*clip-path:inset\(0\)/
+    )
+  })
+
+  it("keeps the scroll box of a fixed-height table in print", () => {
+    const containerCss = cssOf(
+      render(
+        createElement(StyledTableContainer, { hasScrollableHeight: true })
+      )
+    )
+    const borderCss = cssOf(
       render(
         createElement(StyledTableBorder, {
           borderMode: Table.BorderMode.ALL,
@@ -59,9 +78,10 @@ describe("st.table print layout", () => {
       )
     )
 
-    expect(css).toMatch(
-      /@media print\{[^}]*break-inside:auto[^}]*height:auto;max-height:none;overflow:visible/
-    )
+    expect(containerCss).toContain("overflow:clip")
+    expect(containerCss).not.toContain("@media print")
+    expect(borderCss).toContain("overflow:auto")
+    expect(borderCss).not.toContain("@media print")
   })
 
   it("prints as a splitting table with a repeating header", () => {

@@ -62,6 +62,13 @@ describe("visibleRowsFromRegion", () => {
     })
   })
 
+  it("caps the fallback for a large frame without a viewport", () => {
+    expect(visibleRowsFromRegion(null, 1_000_000)).toEqual({
+      startRow: 0,
+      rowCount: 100,
+    })
+  })
+
   it("clamps a viewport that extends past the last row", () => {
     expect(
       visibleRowsFromRegion({ x: 0, y: 8, width: 2, height: 10 }, 10)
@@ -137,6 +144,80 @@ describe("fillDataFramePrintSlot", () => {
     expect(
       [...slot.querySelectorAll("td")].map(cell => cell.textContent)
     ).toEqual(["42%", "Oct 20, 2026"])
+  })
+
+  it("prints an image cell as an image instead of its URL", () => {
+    const url = "data:image/png;base64,iVBORw0KGgo="
+    fillDataFramePrintSlot(
+      slot,
+      [column("Picture", { kind: "image" })],
+      () => ({
+        kind: GridCellKind.Image,
+        data: [url],
+        displayData: [url],
+        allowOverlay: false,
+      }),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    const cell = slot.querySelector("td")
+    expect(cell?.querySelector("img")).toHaveAttribute("src", url)
+    expect(cell?.textContent).toBe("")
+  })
+
+  it("prints option labels for selectbox and multiselect cells", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [
+        column("Size", { kind: "selectbox" }),
+        column("Tags", { kind: "multiselect" }),
+      ],
+      ([col]) =>
+        col === 0
+          ? {
+              kind: GridCellKind.Custom,
+              allowOverlay: false,
+              copyData: "s",
+              data: {
+                kind: "dropdown-cell",
+                allowedValues: [null, { value: "s", label: "Small" }],
+                value: "s",
+              },
+            }
+          : {
+              kind: GridCellKind.Custom,
+              allowOverlay: false,
+              copyData: "a,b",
+              data: {
+                kind: "multi-select-cell",
+                options: [{ value: "a", label: "Alpha" }, { value: "b" }],
+                values: ["a", "b"],
+              },
+            },
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["Small", "Alpha, b"])
+  })
+
+  it("falls back to copyData for custom cells without display text", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Clip", { kind: "audio" })],
+      () => ({
+        kind: GridCellKind.Custom,
+        allowOverlay: false,
+        copyData: "https://example.com/a.mp3",
+        data: { kind: "audio-cell", src: "https://example.com/a.mp3" },
+      }),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe(
+      "https://example.com/a.mp3"
+    )
   })
 
   it("escapes cell text through textContent", () => {

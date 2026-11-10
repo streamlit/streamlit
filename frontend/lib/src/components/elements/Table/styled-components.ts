@@ -25,7 +25,24 @@ import {
 import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 
-export const StyledTableContainer = styled.div(({ theme }) => ({
+/**
+ * Print rules that let a content-height table split across pages. A
+ * fixed-height table keeps its scroll box, because its element container
+ * reserves only that height and a released table would paint over the
+ * elements below it.
+ */
+const printReleaseScrollBox: CSSObject = {
+  // A scroll or clip box cannot fragment across pages. Release both so a
+  // tall table continues instead of jumping and leaving a blank strip.
+  ...printAllowSplitRules,
+  height: "auto",
+  maxHeight: "none",
+  overflow: "visible",
+}
+
+export const StyledTableContainer = styled.div<{
+  hasScrollableHeight?: boolean
+}>(({ theme, hasScrollableHeight = false }) => ({
   // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
   fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
@@ -41,14 +58,7 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   // Use block display to let table expand naturally
   display: "block",
 
-  "@media print": {
-    // A scroll or clip box cannot fragment across pages. Release both so a
-    // tall table continues instead of jumping and leaving a blank strip.
-    ...printAllowSplitRules,
-    height: "auto",
-    maxHeight: "none",
-    overflow: "visible",
-  },
+  ...(hasScrollableHeight ? {} : { "@media print": printReleaseScrollBox }),
 }))
 
 export const StyledTableCaption = styled.div(({ theme }) => ({
@@ -89,12 +99,16 @@ export const StyledTableBorder = styled.div<{
   // This prevents accidental overscrolling that triggers the browser's Back button.
   overscrollBehaviorX: "contain",
 
-  "@media print": {
-    ...printAllowSplitRules,
-    height: "auto",
-    maxHeight: "none",
-    overflow: "visible",
-  },
+  ...(hasScrollableHeight
+    ? {}
+    : {
+        "@media print": {
+          ...printReleaseScrollBox,
+          // Clip painting so a table wider than its printed column is cut
+          // at the border. Unlike overflow, this does not block page breaks.
+          clipPath: "inset(0)",
+        },
+      }),
 }))
 
 export const StyledTable = styled.table<{

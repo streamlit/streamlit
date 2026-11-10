@@ -24,24 +24,24 @@ import {
 import { PRINT_INACTIVE_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import {
   type BaseColumn,
+  DEFAULT_MISSING_PLACEHOLDER,
   isErrorCell,
   isMissingValueCell,
+  SELF_DRAWN_MISSING_KINDS,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { DATAFRAME_PRINT_TABLE_CLASS } from "./printClassNames"
 
-/** Default text the grid draws for a missing value. */
-const DEFAULT_MISSING_PLACEHOLDER = "None"
+/**
+ * Rows printed when the grid has not reported a region yet. Bounds the DOM
+ * built synchronously in `beforeprint` for a large frame.
+ */
+const MAX_FALLBACK_PRINT_ROWS = 100
 
-/** Column kinds that draw an empty missing cell instead of the placeholder. */
-const SELF_DRAWN_MISSING_KINDS = new Set([
-  "checkbox",
-  "line_chart",
-  "bar_chart",
-  "progress",
-])
+/** Printed content of one cell: text, or the image URLs of an image cell. */
+type PrintCell = string | { imageUrls: readonly string[] }
 
 /** Rows currently painted in the on-screen grid viewport. */
 export interface DataFramePrintVisibleRows {
@@ -78,8 +78,9 @@ export function isHiddenFromPrint(element: HTMLElement): boolean {
 /**
  * Visible rows from a glide `onVisibleRegionChanged` rectangle.
  *
- * When the grid has not reported a region yet, every row is treated as
- * visible so a short frame still prints.
+ * Falls back to the first rows (up to `MAX_FALLBACK_PRINT_ROWS`) when the
+ * grid has not reported a region yet, so a short dataframe still prints in
+ * full.
  */
 export function visibleRowsFromRegion(
   region: Rectangle | null | undefined,
@@ -89,7 +90,10 @@ export function visibleRowsFromRegion(
     return { startRow: 0, rowCount: 0 }
   }
   if (!region || region.height <= 0) {
-    return { startRow: 0, rowCount: numRows }
+    return {
+      startRow: 0,
+      rowCount: Math.min(numRows, MAX_FALLBACK_PRINT_ROWS),
+    }
   }
   const startRow = Math.max(0, Math.min(region.y, numRows - 1))
   const endRow = Math.min(numRows, region.y + region.height)
@@ -123,12 +127,16 @@ export function fillDataFramePrintSlot(
   const missingPlaceholder =
     options.missingPlaceholder ?? DEFAULT_MISSING_PLACEHOLDER
   const headers = printable.map(({ column }) => printColumnHeader(column))
-  const rows: string[][] = []
+  const rows: PrintCell[][] = []
   for (let offset = 0; offset < visibleRows.rowCount; offset++) {
     const row = visibleRows.startRow + offset
     rows.push(
       printable.map(({ column, index }) =>
-        printCellText(getCellContent([index, row]), column, missingPlaceholder)
+        printCellContent(
+          getCellContent([index, row]),
+          column,
+          missingPlaceholder
+        )
       )
     )
   }
@@ -159,15 +167,18 @@ function printColumnHeader(column: BaseColumn): string {
 /**
  * What the grid shows for this cell.
  *
- * Loading skeletons print as a blank. A missing value prints the placeholder
- * the grid draws over it. Formatted `displayData` is preferred so a
- * percentage prints as `42%` rather than the stored `0.42`.
+ * Loading skeletons, such as rows of a lazy dataframe whose chunk is still
+ * in flight, print as a blank. A missing value prints the placeholder the
+ * grid draws over it. Image cells print their images. Formatted
+ * `displayData` is preferred so a percentage prints as `42%` rather than the
+ * stored `0.42`. Custom cells without a known display field fall back to
+ * their `copyData` text.
  */
-function printCellText(
+function printCellContent(
   cell: GridCell,
   column: BaseColumn,
   missingPlaceholder: string
-): string {
+): PrintCell {
   if (cell.kind === GridCellKind.Loading) {
     return ""
   }
@@ -184,8 +195,12 @@ function printCellText(
     return cell.data === true ? "\u2713" : ""
   }
 
+  if (cell.kind === GridCellKind.Image) {
+    return { imageUrls: cell.data }
+  }
+
   if ("displayData" in cell) {
-    const displayData = cell.displayData
+    const displayData: unknown = cell.displayData
     if (typeof displayData === "string") {
       return displayData
     }
@@ -208,10 +223,36 @@ function printCellText(
   }
 
   if (typeof data === "object") {
-    return printRecordText(data as Record<string, unknown>)
+    const text = printRecordText(data as Record<string, unknown>)
+    if (text.length > 0) {
+      return text
+    }
   }
 
-  return ""
+  return "copyData" in cell && typeof cell.copyData === "string"
+    ? cell.copyData
+    : ""
+}
+
+/** Label of the option with this value, so `format_func` labels print. */
+function optionLabel(options: unknown, value: unknown): string {
+  const text = toSafeString(value)
+  if (!Array.isArray(options)) {
+    return text
+  }
+  for (const option of options as unknown[]) {
+    if (
+      typeof option === "object" &&
+      option !== null &&
+      "value" in option &&
+      option.value === text &&
+      "label" in option &&
+      typeof option.label === "string"
+    ) {
+      return option.label
+    }
+  }
+  return text
 }
 
 function printRecordText(record: Record<string, unknown>): string {
@@ -228,17 +269,19 @@ function printRecordText(record: Record<string, unknown>): string {
     return record.label
   }
   if (Array.isArray(record.values)) {
-    return record.values.map(item => toSafeString(item)).join(", ")
+    return record.values
+      .map(item => optionLabel(record.options, item))
+      .join(", ")
   }
   if (typeof record.value === "string" || typeof record.value === "number") {
-    return String(record.value)
+    return optionLabel(record.allowedValues, record.value)
   }
   return ""
 }
 
 function renderPrintTable(
   headers: readonly string[],
-  rows: readonly string[][]
+  rows: readonly PrintCell[][]
 ): HTMLTableElement {
   const table = document.createElement("table")
   table.className = DATAFRAME_PRINT_TABLE_CLASS
@@ -254,9 +297,18 @@ function renderPrintTable(
   const body = document.createElement("tbody")
   for (const row of rows) {
     const line = document.createElement("tr")
-    for (const text of row) {
+    for (const content of row) {
       const cell = document.createElement("td")
-      cell.textContent = text
+      if (typeof content === "string") {
+        cell.textContent = content
+      } else {
+        for (const url of content.imageUrls) {
+          const image = document.createElement("img")
+          image.src = url
+          image.alt = ""
+          cell.append(image)
+        }
+      }
       line.append(cell)
     }
     body.append(line)
