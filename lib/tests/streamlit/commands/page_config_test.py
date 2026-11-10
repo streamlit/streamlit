@@ -249,3 +249,19 @@ def test_get_favicon_string_reraises_for_non_string_icon() -> None:
         pytest.raises(RuntimeError, match="boom"),
     ):
         _get_favicon_string(b"123")
+
+
+def test_get_favicon_string_reraises_streamlit_errors_for_string_icon() -> None:
+    """Re-raise ``StreamlitAPIException`` for a string icon instead of returning it.
+
+    That error means the image was found but can't be used, so falling back to
+    the string would hide the reason.
+    """
+    with (
+        mock.patch(
+            "streamlit.commands.page_config.image_to_url",
+            side_effect=StreamlitAPIException("unsupported", error_id="test"),
+        ),
+        pytest.raises(StreamlitAPIException, match="unsupported"),
+    ):
+        _get_favicon_string("icon.eps")

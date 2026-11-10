@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
@@ -106,6 +107,10 @@ def _get_favicon_string(page_icon: PageIcon) -> str:
             output_format="auto",
             image_id="favicon",
         )
+    except StreamlitAPIException:
+        # The image was found but can't be used, so show why instead of
+        # falling back to the string.
+        raise
     except Exception:
         if isinstance(page_icon, str):
             # This fall-thru handles emoji shortcode strings (e.g. ":shark:"),
