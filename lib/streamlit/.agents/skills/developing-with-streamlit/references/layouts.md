@@ -255,7 +255,7 @@ Sibling cards with different content (for example, one `st.metric` without `delt
 - Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
 - When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`, including inside `grid.cell()`, for example a card that spans two columns. `st.columns(n, border=True)` also gives equal-height bordered columns.
 - Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
-- A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
+- A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card or chart created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
 - In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
 - Pin a card's trailing button to the bottom with `st.space("stretch")`.
 - In image card grids, crop the images to one aspect ratio (for example, with `PIL.ImageOps.fit`) and pass `width="stretch"` to each `st.image`, so every image fills its column at the same height.
@@ -300,7 +300,9 @@ grid.bar_chart(by_region, height="stretch", alt="Revenue by region")
 grid.dataframe(orders, height="stretch", alt="Recent orders")
 ```
 
-Without a pixel `row_height`, and in `st.columns`, only stacked metrics and text cards stretch to a tall neighbor. Stacked charts keep their default heights and outgrow it, and `st.columns` doesn't pass a fixed height down.
+For loading cards, wrap a cell's body in `with st.skeleton(height="stretch")`. The skeleton fills the cell without a measured height, and so does a stretch chart written in the block. A chart inside a fragment can't stretch, so give it a pixel height.
+
+Without a pixel `row_height`, and in `st.columns`, only stacked metrics and text cards stretch to a tall neighbor. Stacked charts keep their default heights, so the stack sets the row's height instead of the tall card, and `st.columns` doesn't pass a fixed height down.
 
 ## Bordered containers
 
