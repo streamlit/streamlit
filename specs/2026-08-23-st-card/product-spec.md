@@ -169,8 +169,9 @@ A card has two regions:
 2. **Body:** the elements written to the card, with normal element spacing.
 
 A card with an empty body renders only its header, without an empty padded body. A
-skeleton in the body counts as content, so it can hold the body's height while the data
-loads (see [Loading and fragments](#loading-and-fragments)).
+skeleton, a `with st.skeleton()` block, or a pending fragment in the body counts as
+content, so the body keeps its space while the data loads (see
+[Loading and fragments](#loading-and-fragments)).
 
 ### Header layout and overflow
 
@@ -326,16 +327,24 @@ content-height row, `grid.cell()` must fill the row the way direct grid children
 
 ### Loading and fragments
 
-Cards fit the layout-first loading model proposed in
-[#17756](https://github.com/streamlit/streamlit/pull/17756):
+Cards fit layout-first loading
+([#17756](https://github.com/streamlit/streamlit/pull/17756)) with the `st.skeleton`
+behavior shipped in #17924 and #17920:
 
 - **The header shows first.** A card created in the main script shows its header as soon
   as the script reaches it. The body can load afterward in a fragment or behind a
   skeleton.
-- **Only a known height reserves space.** A pending fragment reserves no space, and
-  `with st.skeleton()` shows its placeholder only after a short delay. To keep the card's
-  height while the body loads, use a standalone `st.skeleton(height=...)`, an integer card
-  height, or a grid row with a fixed `row_height`.
+- **A skeleton holds the body's space.** `with st.skeleton(height=...)` in the body shows
+  its skeleton at once and keeps it until the first visible element in the block,
+  including one drawn by a parallel fragment called inside it. On reruns, the previous
+  content stays mounted, and the skeleton covers it only if the new content takes longer
+  than 0.5s. In a card with a bounded height, such as an integer height or a grid row with
+  a fixed `row_height`, `height="stretch"` fills the body, so nobody measures the content.
+  Elsewhere, the skeleton's height must match the content's, or the first load shifts.
+- **A fragment's own reruns need a skeleton inside the fragment.** A fragment-only rerun,
+  such as one triggered from `card.actions`, doesn't re-enter the block around the call.
+  A body that's slow on those reruns wraps its content in a second `with st.skeleton()`,
+  as #17756 describes.
 - **Header controls can rerun just the body.** Give the body fragment a `key` and trigger
   it from the control with an
   [event-scoped rerun](../2026-06-23-event-scoped-fragment-reruns/product-spec.md). The
@@ -351,7 +360,8 @@ The MRR card from [Header actions](#header-actions), with its body in a parallel
 @st.fragment(parallel=True, key="mrr_body")
 def mrr_body():
     share = st.session_state.mrr_view == "%"
-    st.area_chart(load_mrr(share=share), height=320)
+    with st.skeleton():  # Covers the reruns triggered by the view control
+        st.area_chart(load_mrr(share=share), height=320)
 
 
 with st.card("MRR by plan", caption="Monthly recurring revenue in $K") as card:
@@ -363,8 +373,11 @@ with st.card("MRR by plan", caption="Monthly recurring revenue in $K") as card:
         label_visibility="collapsed",
         on_change=lambda: st.rerun("mrr_body"),
     )
-    mrr_body()
+    with st.skeleton(height=320):  # Holds the body's space on the first load
+        mrr_body()
 ```
+
+An [automatic body skeleton](#header-and-content), a follow-up, would replace both blocks.
 
 ### Accessibility
 
@@ -535,6 +548,20 @@ Each follow-up is additive, so code written against the first version keeps work
   footers line up.
 - **Header updates.** `card.update(label=..., caption=..., icon=...)` works like
   `st.status.update()`, for example to replace a `"spinner"` icon once the data loads.
+- **Automatic body skeleton.** The body behaves like a `with st.skeleton()` block, so a
+  card shows a skeleton until its first visible body element without a block of its own.
+  The skeleton fills the body when the card's height is bounded and has the default
+  skeleton height otherwise. The header and `card.actions` are never covered. Open points:
+  - **Sizing an unbounded card:** the outermost pending skeleton wins today, so the card's
+    skeleton would hide an explicit `with st.skeleton(height=...)` inside it. An explicit
+    height in the body should win instead.
+  - **Fragment reruns:** a skeleton created by the main script doesn't cover a fragment's
+    own reruns. Covering the reruns of a fragment that fills the body is safe for cards,
+    because the controls that trigger them sit in the header. This follows #17756's
+    decision on fragment skeletons.
+  - **Default or opt-in:** as the default, it changes how slow card bodies load in apps
+    built on the first version, so it needs product sign-off, as #17920 did. Otherwise it
+    is an opt-in parameter.
 - **Header loading state.** The header shows that the body is still loading, for example
   with a spinner icon while the body's skeleton is visible, as suggested in #17756.
 - **Selectable title.** Some dashboards make the title a dropdown that switches the shown
