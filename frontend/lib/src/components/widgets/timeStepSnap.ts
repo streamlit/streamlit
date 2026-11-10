@@ -90,16 +90,14 @@ export function snapTimeParts(
       next = snapTimeStep(totalSecs, step, up, 86400)
     } else {
       // For hour/minute segments, find the next step boundary at least one
-      // segment-unit away so the displayed segment visibly changes.
+      // segment-unit away so the displayed segment visibly changes. Modulo
+      // wrap preserves that offset across midnight (e.g. 23:30 + hour with
+      // step=30 → 00:30); collapsing to 00:00 would drop minutes/seconds.
       const jumpSize = segmentType === "hour" ? 3600 : 60
       next = up
         ? Math.ceil((totalSecs + jumpSize) / step) * step
         : Math.floor((totalSecs - jumpSize) / step) * step
-      if (next >= 86400) {
-        next = 0
-      } else if (next < 0) {
-        next = Math.floor((86400 - 1) / step) * step
-      }
+      next = ((next % 86400) + 86400) % 86400
     }
 
     return {

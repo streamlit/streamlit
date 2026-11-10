@@ -144,6 +144,20 @@ describe("snapTimeParts", () => {
       snapTimeParts({ hour: 0, minute: 0, second: 0 }, "second", 7, false)
     ).toEqual({ hour: 23, minute: 59, second: 54 })
   })
+
+  it("wraps hour ArrowUp across midnight while keeping the step offset", () => {
+    // 23:30 + ≥1h, ceil to step=30 → 00:30 (not collapsed to midnight).
+    expect(
+      snapTimeParts({ hour: 23, minute: 30, second: 0 }, "hour", 30, true)
+    ).toEqual({ hour: 0, minute: 30, second: 0 })
+  })
+
+  it("wraps hour ArrowDown across midnight while keeping the step offset", () => {
+    // 00:30 − ≥1h, floor to step=30 → 23:30.
+    expect(
+      snapTimeParts({ hour: 0, minute: 30, second: 0 }, "hour", 30, false)
+    ).toEqual({ hour: 23, minute: 30, second: 0 })
+  })
 })
 
 describe("stepIncludesSeconds", () => {
