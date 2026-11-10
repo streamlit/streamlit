@@ -64,8 +64,8 @@ export const StyledResizableContainer =
         // When the print table is filled, it replaces the hidden canvas. Let
         // this box grow past its on-screen height and break across pages, so
         // the table continues instead of leaving a blank strip. The element
-        // container also drops its reserved pixel height in print when this
-        // table is present.
+        // container also drops its reserved height, flex basis, and size
+        // containment in print when this table is present.
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
           ...printAllowSplitRules,
           display: "block",

@@ -376,7 +376,7 @@ describe("StyledElementContainer print layout", () => {
     )
 
     expect(css).toMatch(
-      /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none/
+      /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none;[^}]*flex:0 0 auto;contain:none/
     )
   })
 })

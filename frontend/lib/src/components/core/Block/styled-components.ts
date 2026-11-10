@@ -219,10 +219,13 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
           }
         : {}),
       // A dataframe print table can be taller than the on-screen canvas
-      // box. Drop the reserved height so the next element is not covered.
+      // box. Drop the reserved height, flex basis, and size containment so
+      // the next element is not covered.
       [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
         height: "auto",
         maxHeight: "none",
+        flex: "0 0 auto",
+        contain: "none",
       },
     },
 
