@@ -89,6 +89,7 @@ export const StyledTextAreaInput = styled.textarea<{
     cursor: "not-allowed",
     color: theme.colors.fadedText40,
     WebkitTextFillColor: theme.colors.fadedText40,
+    "&::placeholder": { color: theme.colors.fadedText40 },
   },
 }))
 
