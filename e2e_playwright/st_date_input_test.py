@@ -811,6 +811,26 @@ def test_date_input_query_param_range_seeding(page: Page, app_base_url: str):
     expect(page).to_have_url(re.compile(r"bound_range=2025-04-10"))
 
 
+def test_date_input_query_param_reversed_range_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that a reversed date range in query params reverts to default."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_range": ["2025-03-15", "2025-03-01"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(
+        page,
+        "Bound range:",
+        "(datetime.date(2025, 3, 1), datetime.date(2025, 3, 15))",
+    )
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_range="))
+
+
 def test_date_input_query_param_out_of_range_resets(page: Page, app_base_url: str):
     """Test that out-of-bounds dates revert to default."""
     page.goto(build_app_url(app_base_url, query={"bound_minmax_date": "2024-01-01"}))

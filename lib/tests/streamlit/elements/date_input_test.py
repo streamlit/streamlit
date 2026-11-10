@@ -1079,6 +1079,20 @@ class TestDateInputSerdeISO:
             date(2025, 3, 15),
         )
 
+    def test_deserialize_reversed_range_reverts_to_default(self):
+        """Test that a reversed date range reverts to default (range mode)."""
+        values = _DateInputValues(
+            value=(date(2025, 3, 1), date(2025, 3, 15)),
+            is_range=True,
+            min=date(2020, 1, 1),
+            max=date(2026, 12, 31),
+        )
+        serde = DateInputSerde(values)
+        assert serde.deserialize(["2025-03-15", "2025-03-01"]) == (
+            date(2025, 3, 1),
+            date(2025, 3, 15),
+        )
+
     def test_deserialize_in_bounds_succeeds(self):
         """Test that a date within bounds is accepted."""
         values = _DateInputValues(
