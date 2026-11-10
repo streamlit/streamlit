@@ -530,7 +530,7 @@ exclude = [
 replace-imports-with-any = ["altair.**"]
 
 [tool.ty.rules]
-unresolved-import = "ignore"
+import-not-found = "ignore"
 possibly-unresolved-reference = "error"
 unused-ignore-comment = "ignore"
 unused-type-ignore-comment = "ignore"
