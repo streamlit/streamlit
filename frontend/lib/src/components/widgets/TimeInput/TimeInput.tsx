@@ -45,6 +45,7 @@ import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { snapTimeParts } from "~lib/components/widgets/timeStepSnap"
 import {
   useBasicWidgetState,
   type ValueWithSource,
@@ -267,9 +268,6 @@ function TimeInput({
   const allowEmptyDisplay = isNullOrUndefined(element.default) && !disabled
   const showClearButton = allowEmptyDisplay && !element.required
   const inForm = isInForm({ formId: element.formId })
-
-  const stepMins = step / 60
-  const stepHours = step / 3600
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -643,87 +641,25 @@ function TimeInput({
       const segmentType = target.getAttribute("data-type")
       const up = e.key === "ArrowUp"
       const current = stringToTime(displayValue)
+      const snapped = snapTimeParts(
+        {
+          hour: current.hour,
+          minute: current.minute,
+          second: current.second,
+        },
+        segmentType,
+        step,
+        up
+      )
+      if (!snapped) return
 
-      if (segmentType === "minute" && step % 60 === 0) {
-        // Minute-granular step. For step=60 (stepMins=1) react-aria's ±1 is correct.
-        if (!Number.isInteger(stepMins) || stepMins <= 1) return
+      e.preventDefault()
+      // Stop both React synthetic propagation and the underlying native event
+      // so react-aria's onKeyDown on the spinbutton cannot also fire.
+      e.stopPropagation()
+      e.nativeEvent.stopImmediatePropagation()
 
-        e.preventDefault()
-        // Stop both React synthetic propagation and the underlying native event
-        // so react-aria's onKeyDown on the spinbutton cannot also fire.
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const totalMins = current.hour * 60 + current.minute
-        const next = up
-          ? Math.floor(totalMins / stepMins) * stepMins + stepMins
-          : Math.ceil(totalMins / stepMins) * stepMins - stepMins
-        const wrapped =
-          next >= 1440
-            ? 0
-            : next < 0
-              ? Math.floor(1439 / stepMins) * stepMins
-              : next
-        handleChange(new Time(Math.floor(wrapped / 60), wrapped % 60))
-      } else if (segmentType === "hour" && step % 3600 === 0) {
-        // Hour-only mode. React-aria defaults to ±1 h; only intercept when the
-        // step is a multiple of hours greater than 1.
-        if (!Number.isInteger(stepHours) || stepHours <= 1) return
-
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const next = up
-          ? Math.floor(current.hour / stepHours) * stepHours + stepHours
-          : Math.ceil(current.hour / stepHours) * stepHours - stepHours
-        const wrapped =
-          next >= 24
-            ? 0
-            : next < 0
-              ? Math.floor(23 / stepHours) * stepHours
-              : next
-        handleChange(new Time(wrapped, 0))
-      } else if (step % 60 !== 0 && step > 1) {
-        // Non-minute-divisible step (e.g. 30s, 90s): all time segments snap
-        // using total-seconds math so the result is always a valid step boundary.
-        if (
-          segmentType !== "hour" &&
-          segmentType !== "minute" &&
-          segmentType !== "second"
-        )
-          return
-
-        e.preventDefault()
-        e.stopPropagation()
-        e.nativeEvent.stopImmediatePropagation()
-
-        const totalSecs =
-          current.hour * 3600 + current.minute * 60 + current.second
-
-        let next: number
-        if (segmentType === "second") {
-          next = up
-            ? Math.floor(totalSecs / step) * step + step
-            : Math.ceil(totalSecs / step) * step - step
-        } else {
-          // For hour/minute segments, find the next step boundary at least one
-          // segment-unit away so the displayed segment visibly changes.
-          const jumpSize = segmentType === "hour" ? 3600 : 60
-          next = up
-            ? Math.ceil((totalSecs + jumpSize) / step) * step
-            : Math.floor((totalSecs - jumpSize) / step) * step
-        }
-
-        const wrapped = ((next % 86400) + 86400) % 86400
-        handleChange(
-          new Time(
-            Math.floor(wrapped / 3600),
-            Math.floor((wrapped % 3600) / 60),
-            wrapped % 60
-          )
-        )
-      }
+      handleChange(new Time(snapped.hour, snapped.minute, snapped.second))
     },
     [
       disabled,
@@ -731,8 +667,6 @@ function TimeInput({
       pasteOverride,
       validationError,
       step,
-      stepMins,
-      stepHours,
       handleChange,
       commitChangedDisplay,
       element,

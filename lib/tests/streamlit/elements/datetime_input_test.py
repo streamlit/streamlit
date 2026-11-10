@@ -214,13 +214,23 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidParameterTypeError):
             st.datetime_input("The label", step=(1, 0))
         with pytest.raises(
-            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
         ):
-            st.datetime_input("The label", step=30)
+            st.datetime_input("The label", step=0)
         with pytest.raises(
-            StreamlitValueOutOfRangeError, match=r"\[60 seconds, 23 hours\]"
+            StreamlitValueOutOfRangeError, match=r"\[1 second, 23 hours\]"
         ):
             st.datetime_input("The label", step=timedelta(hours=24))
+
+    def test_sub_minute_step_preserves_seconds(self):
+        """Sub-minute steps keep seconds in the wire value and returned datetime."""
+        value = datetime(2024, 5, 10, 13, 47, 30)
+        result = st.datetime_input("The label", value=value, step=30)
+
+        assert result == value
+        proto = self.get_delta_from_queue().new_element.date_time_input
+        assert proto.step == 30
+        assert proto.default == ["2024-05-10T13:47:30"]
 
     def test_format_validation(self):
         """Test invalid format raises."""

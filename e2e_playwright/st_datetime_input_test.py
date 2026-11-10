@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 24
+NUM_DATETIME_INPUTS = 25
 
 
 def test_datetime_input_widget_rendering(
@@ -217,6 +217,23 @@ def test_step_interval_applied(app: Page):
     wait_for_app_run(app)
 
     expect_markdown(app, "Value 7: 2025-11-19 16:46:00")
+
+
+def test_sub_minute_step_shows_seconds_and_snaps(app: Page):
+    """Sub-minute step shows a seconds segment and ArrowUp snaps by the step."""
+    datetime_input = get_datetime_input(app, "Datetime input step=30")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    segments = datetime_field.get_by_role("spinbutton")
+    expect(segments).to_have_count(6)
+
+    second_segment = segments.last
+    second_segment.click()
+    second_segment.press("ArrowUp")
+    # Commit by clicking away from the field.
+    app.get_by_text("Value step30:").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value step30: 2025-11-19 16:45:30")
 
 
 def test_clearable_datetime_input(app: Page):

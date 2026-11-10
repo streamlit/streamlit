@@ -56,6 +56,7 @@ import {
   usePopoverInteractionFlag,
 } from "~lib/components/widgets/DateInput/focusLeave"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
+import { stepIncludesSeconds } from "~lib/components/widgets/timeStepSnap"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   SHIFT_VIEWPORT_PADDING,
@@ -174,6 +175,13 @@ function SingleDateTimeInput({
   const errorId = `${id}-error`
   const popoverId = `${id}-calendar`
   const popoverDescId = `${id}-calendar-desc`
+  const includeSeconds = stepIncludesSeconds(step)
+  const timeGranularity = includeSeconds ? "second" : "minute"
+  const toIso = useCallback(
+    (dt: CalendarDateTime): string =>
+      calendarDateTimeToIso(dt, includeSeconds),
+    [includeSeconds]
+  )
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
   const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -291,7 +299,8 @@ function SingleDateTimeInput({
    * them in state means there is no buffered copy to go stale. */
   const resolveGivenTime = useCallback((): Time | null => {
     const buffered = displayValueRef.current
-    if (buffered) return new Time(buffered.hour, buffered.minute)
+    if (buffered)
+      return new Time(buffered.hour, buffered.minute, buffered.second)
     // Dismissing clears `pendingTime` but leaves the inline segments alone, so
     // a time typed there survives into a later date pick while a popover one
     // does not. That asymmetry is deliberate: the popover unmounts with its
@@ -333,7 +342,8 @@ function SingleDateTimeInput({
       date.month,
       date.day,
       time.hour,
-      time.minute
+      time.minute,
+      time.second
     )
   }, [resolveGivenTime])
 
@@ -577,7 +587,7 @@ function SingleDateTimeInput({
     (date: CalendarDateTime | null): void => {
       setDisplayValue(date)
       hasEditedRef.current = true
-      onEdit(date ? calendarDateTimeToIso(date) : null)
+      onEdit(date ? toIso(date) : null)
       onValidate(date)
       if (date) {
         // The field now carries its own time, superseding any pending one.
@@ -585,7 +595,7 @@ function SingleDateTimeInput({
         onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
-    [onEdit, onFocusChange, onValidate, setPendingTime]
+    [onEdit, onFocusChange, onValidate, setPendingTime, toIso]
   )
 
   // Calendar date selection: merge the date with whatever time the user has
@@ -600,17 +610,18 @@ function SingleDateTimeInput({
         date.month,
         date.day,
         currentTime?.hour ?? 0,
-        currentTime?.minute ?? 0
+        currentTime?.minute ?? 0,
+        currentTime?.second ?? 0
       )
       setDisplayValue(merged)
       setPendingTime(null)
       hasEditedRef.current = true
-      onEdit(calendarDateTimeToIso(merged))
+      onEdit(toIso(merged))
       onValidate(merged)
       setIsCalendarActive(true)
       activeOriginRef.current = null
     },
-    [onEdit, onValidate, resolveGivenTime, setPendingTime]
+    [onEdit, onValidate, resolveGivenTime, setPendingTime, toIso]
   )
 
   // Opens the passive preview when focus enters a date/time segment. Focus on
@@ -701,7 +712,7 @@ function SingleDateTimeInput({
         hasEditedRef.current = false
         // Report what the field now shows before committing, so a leftover
         // required error clears even when the commit fails the range check.
-        onEdit(calendarDateTimeToIso(fullDateTime))
+        onEdit(toIso(fullDateTime))
         // Only remember accepted commits, as in `commitOrRevert`: a rejected
         // out-of-range paste must not dedupe a later blur of the same value
         // once the range allows it.
@@ -713,7 +724,7 @@ function SingleDateTimeInput({
 
       // For partial segment paste, let RAC handle it (no custom partial for datetime)
     },
-    [disabled, format, onChange, onEdit]
+    [disabled, format, onChange, onEdit, toIso]
   )
 
   // Shared step-snap handler for ArrowUp/ArrowDown on time segments.
@@ -740,11 +751,11 @@ function SingleDateTimeInput({
         e.nativeEvent.stopImmediatePropagation()
         setDisplayValue(snapped)
         hasEditedRef.current = true
-        onEdit(calendarDateTimeToIso(snapped))
+        onEdit(toIso(snapped))
         onValidate(snapped)
       }
     },
-    [step, onEdit, onValidate]
+    [step, onEdit, onValidate, toIso]
   )
 
   // Capture-phase keydown: step-aware time arrows, Alt+ArrowDown, Tab closing, Enter commit.
@@ -915,7 +926,11 @@ function SingleDateTimeInput({
   // divergence is visual only.
   const popoverTimeValue = useMemo((): Time | null => {
     if (!displayValue) return pendingTime
-    return new Time(displayValue.hour, displayValue.minute)
+    return new Time(
+      displayValue.hour,
+      displayValue.minute,
+      displayValue.second
+    )
   }, [displayValue, pendingTime])
 
   // Popover TimeField change: merge new time with existing date, or hold it as
@@ -927,7 +942,9 @@ function SingleDateTimeInput({
         // Drop pendingTime when the user empties the field; otherwise the
         // controlled value puts the time back. With no date, that state is the
         // field's only record of the time.
-        setPendingTime(time ? new Time(time.hour, time.minute) : null)
+        setPendingTime(
+          time ? new Time(time.hour, time.minute, time.second) : null
+        )
         return
       }
       // A CalendarDateTime always has a time, so there is nothing to clear.
@@ -937,14 +954,15 @@ function SingleDateTimeInput({
         current.month,
         current.day,
         time.hour,
-        time.minute
+        time.minute,
+        time.second
       )
       setDisplayValue(merged)
       hasEditedRef.current = true
-      onEdit(calendarDateTimeToIso(merged))
+      onEdit(toIso(merged))
       onValidate(merged)
     },
-    [onEdit, onValidate, setPendingTime]
+    [onEdit, onValidate, setPendingTime, toIso]
   )
 
   const handlePopoverTimeKeyDown = useCallback(
@@ -1011,7 +1029,7 @@ function SingleDateTimeInput({
                 onChange={handleFieldChange}
                 minValue={minDateTime ?? undefined}
                 maxValue={maxDateTime ?? undefined}
-                granularity="minute"
+                granularity={timeGranularity}
                 hourCycle={24}
                 shouldForceLeadingZeros
                 isDisabled={disabled}
@@ -1138,7 +1156,7 @@ function SingleDateTimeInput({
                     isInvalid={error !== null}
                     value={popoverTimeValue}
                     onChange={handlePopoverTimeChange}
-                    granularity="minute"
+                    granularity={timeGranularity}
                     hourCycle={24}
                     shouldForceLeadingZeros
                     isDisabled={disabled}

@@ -489,6 +489,56 @@ describe("DateTimeInput widget", () => {
       render(<DateTimeInput {...props} />)
       expect(screen.getByTestId("stDateTimeInput")).toBeVisible()
     })
+
+    it("shows a seconds segment when step is not divisible by 60", () => {
+      const props = getProps({
+        default: ["2025-11-19T16:45:30"],
+        step: 30,
+      })
+      render(<DateTimeInput {...props} />)
+
+      const segments = screen.getAllByRole("spinbutton")
+      // year, month, day, hour, minute, second
+      expect(segments).toHaveLength(6)
+      expect(segments[5]).toHaveAttribute("aria-valuenow", "30")
+    })
+
+    it("snaps second ArrowUp to the next step boundary (step=30)", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45:00"],
+        step: 30,
+        min: "2025-11-01T00:00:00",
+        max: "2025-11-30T23:59:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <div>
+          <DateTimeInput {...props} />
+          <button data-testid="outside">outside</button>
+        </div>
+      )
+      spy.mockClear()
+
+      const secondSegment = screen
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "second")
+      await user.click(secondSegment as HTMLElement)
+      await user.keyboard("{ArrowUp}")
+      await user.click(screen.getByTestId("outside"))
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T16:45:30"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
   })
 
   describe("Clearable behavior", () => {

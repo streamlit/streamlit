@@ -106,8 +106,11 @@ ALLOWED_DATE_FORMATS: Final = re.compile(
 )
 _DATETIME_LEGACY_FORMAT: Final = "%Y/%m/%d, %H:%M"
 _DATETIME_ISO_FORMAT: Final = "%Y-%m-%dT%H:%M"
+_DATETIME_ISO_FORMAT_WITH_SECONDS: Final = "%Y-%m-%dT%H:%M:%S"
 _DEFAULT_MIN_BOUND_TIME: Final = time(hour=0, minute=0)
-_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59)
+# Include seconds so sub-minute steps can select through the end of the day;
+# minute-granular steps strip seconds during normalization.
+_DEFAULT_MAX_BOUND_TIME: Final = time(hour=23, minute=59, second=59)
 
 
 def _validate_date_format(date_format: object) -> None:
@@ -135,9 +138,12 @@ def _date_to_proto_string(value: date) -> str:
     return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
 
-def _datetime_to_iso_string(value: datetime) -> str:
+def _datetime_to_iso_string(value: datetime, *, include_seconds: bool = False) -> str:
     """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
-    return f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
+    base = f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
+    if include_seconds:
+        return f"{base}:{value.second:02d}"
+    return base
 
 
 def _convert_timelike_to_time(value: TimeValue) -> time:
@@ -265,21 +271,40 @@ def _parse_max_date(
     return parsed_max_date
 
 
-def _normalize_time(value: time) -> time:
-    """Return a time without seconds, microseconds, or timezone info."""
+def _normalize_time(value: time, *, keep_seconds: bool = False) -> time:
+    """Return a time without microseconds or timezone info.
+
+    Seconds are stripped unless ``keep_seconds`` is true (sub-minute steps).
+    """
+    if keep_seconds:
+        return value.replace(microsecond=0, tzinfo=None)
     return value.replace(second=0, microsecond=0, tzinfo=None)
 
 
-def _normalize_datetime_value(value: datetime) -> datetime:
-    """Return a datetime without seconds, microseconds, or timezone info."""
+def _normalize_datetime_value(
+    value: datetime, *, keep_seconds: bool = False
+) -> datetime:
+    """Return a datetime without microseconds or timezone info.
+
+    Seconds are stripped unless ``keep_seconds`` is true (sub-minute steps).
+    """
     if value.tzinfo is not None:
         value = value.replace(tzinfo=None)
+    if keep_seconds:
+        return value.replace(microsecond=0)
     return value.replace(second=0, microsecond=0)
 
 
-def _combine_date_time(component_date: date, component_time: time) -> datetime:
+def _combine_date_time(
+    component_date: date,
+    component_time: time,
+    *,
+    keep_seconds: bool = False,
+) -> datetime:
     """Combine a date and time into a normalized datetime."""
-    return datetime.combine(component_date, _normalize_time(component_time))
+    return datetime.combine(
+        component_date, _normalize_time(component_time, keep_seconds=keep_seconds)
+    )
 
 
 def _try_parse_datetime_with_format(value: str, fmt: str) -> datetime | None:
@@ -295,28 +320,29 @@ def _convert_datetimelike_to_datetime(
     *,
     fallback_date: date,
     fallback_time: time,
+    keep_seconds: bool = False,
 ) -> datetime:
     """Convert supported datetime inputs into a normalized datetime."""
-    fallback_time = _normalize_time(fallback_time)
+    fallback_time = _normalize_time(fallback_time, keep_seconds=keep_seconds)
 
     if value == "now":
-        return _normalize_datetime_value(datetime.now())
+        return _normalize_datetime_value(datetime.now(), keep_seconds=keep_seconds)
 
     if isinstance(value, datetime):
-        return _normalize_datetime_value(value)
+        return _normalize_datetime_value(value, keep_seconds=keep_seconds)
 
     if isinstance(value, date) and not isinstance(value, datetime):
-        return _combine_date_time(value, fallback_time)
+        return _combine_date_time(value, fallback_time, keep_seconds=keep_seconds)
 
     if isinstance(value, time):
-        return _combine_date_time(fallback_date, value)
+        return _combine_date_time(fallback_date, value, keep_seconds=keep_seconds)
 
     if isinstance(value, str):
         stripped_value = value.strip()
 
         try:
             parsed_dt = datetime.fromisoformat(stripped_value)
-            return _normalize_datetime_value(parsed_dt)
+            return _normalize_datetime_value(parsed_dt, keep_seconds=keep_seconds)
         except ValueError:
             pass
 
@@ -328,17 +354,23 @@ def _convert_datetimelike_to_datetime(
         ):
             maybe_parsed_dt = _try_parse_datetime_with_format(stripped_value, fmt)
             if maybe_parsed_dt is not None:
-                return _normalize_datetime_value(maybe_parsed_dt)
+                return _normalize_datetime_value(
+                    maybe_parsed_dt, keep_seconds=keep_seconds
+                )
 
         try:
             parsed_date = date.fromisoformat(stripped_value)
-            return _combine_date_time(parsed_date, fallback_time)
+            return _combine_date_time(
+                parsed_date, fallback_time, keep_seconds=keep_seconds
+            )
         except ValueError:
             pass
 
         try:
             parsed_time = time.fromisoformat(stripped_value)
-            return _combine_date_time(fallback_date, parsed_time)
+            return _combine_date_time(
+                fallback_date, parsed_time, keep_seconds=keep_seconds
+            )
         except ValueError:
             pass
 
@@ -361,9 +393,9 @@ def _default_max_datetime(base_date: date) -> datetime:
     )
 
 
-def _datetime_to_proto_string(value: datetime) -> str:
-    normalized = _normalize_datetime_value(value)
-    return _datetime_to_iso_string(normalized)
+def _datetime_to_proto_string(value: datetime, *, include_seconds: bool = False) -> str:
+    normalized = _normalize_datetime_value(value, keep_seconds=include_seconds)
+    return _datetime_to_iso_string(normalized, include_seconds=include_seconds)
 
 
 @dataclass(frozen=True)
@@ -378,6 +410,8 @@ class _DateTimeInputValues:
         value: DateTimeValue,
         min_value: DateTimeValue,
         max_value: DateTimeValue,
+        *,
+        keep_seconds: bool = False,
     ) -> _DateTimeInputValues:
         parsed_value = (
             None
@@ -386,6 +420,7 @@ class _DateTimeInputValues:
                 value,
                 fallback_date=date.today(),
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
@@ -400,6 +435,7 @@ class _DateTimeInputValues:
                 min_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MIN_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
@@ -410,6 +446,7 @@ class _DateTimeInputValues:
                 max_value,
                 fallback_date=base_date_for_bounds,
                 fallback_time=_DEFAULT_MAX_BOUND_TIME,
+                keep_seconds=keep_seconds,
             )
         )
 
@@ -487,13 +524,25 @@ class DateTimeInputSerde:
     value: datetime | None
     min: datetime
     max: datetime
+    step: int = 900
+
+    @property
+    def _include_seconds(self) -> bool:
+        return self.step % 60 != 0
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
-            for fmt in (_DATETIME_ISO_FORMAT, _DATETIME_LEGACY_FORMAT):
+            # Prefer seconds when present so sub-minute steps round-trip;
+            # fall back to minute-only and the legacy display format.
+            for fmt in (
+                _DATETIME_ISO_FORMAT_WITH_SECONDS,
+                _DATETIME_ISO_FORMAT,
+                _DATETIME_LEGACY_FORMAT,
+            ):
                 try:
                     deserialized = _normalize_datetime_value(
-                        datetime.strptime(ui_value[0], fmt)
+                        datetime.strptime(ui_value[0], fmt),
+                        keep_seconds=self._include_seconds,
                     )
                     break
                 except ValueError:
@@ -509,7 +558,7 @@ class DateTimeInputSerde:
     def serialize(self, v: datetime | None) -> list[str]:
         if v is None:
             return []
-        return [_datetime_to_proto_string(v)]
+        return [_datetime_to_proto_string(v, include_seconds=self._include_seconds)]
 
 
 @dataclass
@@ -1421,7 +1470,18 @@ class TimeWidgetsMixin:
         step : int or timedelta
             The stepping interval in seconds. This defaults to ``900`` (15
             minutes). You can also pass a ``datetime.timedelta`` object. The
-            value must be between 60 seconds and 23 hours.
+            value must be between 1 second and 23 hours.
+
+            - If ``step`` is divisible by 60: hour and minute components
+              are shown. Arrow keys snap to the nearest step boundary.
+            - Otherwise (``step`` is not a whole number of minutes,
+              i.e. ``step % 60 != 0``): hour, minute, and second
+              components are shown. The returned ``datetime`` and the URL
+              wire format include seconds. Arrow keys snap to the nearest
+              step boundary.
+
+            Any valid datetime may be entered regardless of the step value.
+            Step only affects the displayed segments and arrow-key behavior.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.
@@ -1477,10 +1537,11 @@ class TimeWidgetsMixin:
             ``st.query_params``; it can only be programmatically changed
             through ``st.session_state``.
 
-            Datetimes use ISO 8601 format (YYYY-MM-DDThh:mm) in the URL.
-            Invalid query parameter values are ignored and removed from
-            the URL. If ``value`` is ``None``, an empty query parameter
-            (e.g., ``?my_key=``) clears the widget.
+            Datetimes use ISO 8601 format in the URL (``YYYY-MM-DDThh:mm``,
+            or ``YYYY-MM-DDThh:mm:ss`` when ``step`` has a sub-minute
+            component). Invalid query parameter values are ignored and
+            removed from the URL. If ``value`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
 
             When ``on_change="ignore"``, the URL is updated as soon as the
             value is committed (pressing Enter, closing the popover after
@@ -1601,21 +1662,50 @@ class TimeWidgetsMixin:
         )
         label = maybe_raise_label_warnings(label, label_visibility)
 
+        _validate_date_format(format)
+
+        if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
+            raise StreamlitInvalidParameterTypeError(
+                "step",
+                type(step).__name__,
+                ["int", "timedelta"],
+            )
+        step_seconds = (
+            int(step.total_seconds()) if isinstance(step, timedelta) else step
+        )
+        if not 1 <= step_seconds <= timedelta(hours=23).seconds:
+            # Use unit labels so the message reads [1 second, 23 hours]
+            # rather than [1, 82800].
+            raise StreamlitValueOutOfRangeError(
+                "step",
+                value=f"{step_seconds} seconds",
+                min_value="1 second",
+                max_value="23 hours",
+            )
+        include_seconds = step_seconds % 60 != 0
+
         datetime_values = _DateTimeInputValues.from_raw_values(
             value=value,
             min_value=min_value,
             max_value=max_value,
+            keep_seconds=include_seconds,
         )
 
         default_value = datetime_values.value
-        min_value_proto = _datetime_to_proto_string(datetime_values.min)
-        max_value_proto = _datetime_to_proto_string(datetime_values.max)
+        min_value_proto = _datetime_to_proto_string(
+            datetime_values.min, include_seconds=include_seconds
+        )
+        max_value_proto = _datetime_to_proto_string(
+            datetime_values.max, include_seconds=include_seconds
+        )
 
         if isinstance(value, (datetime, date, time)):
             value_for_id: Any = (
                 None
                 if default_value is None
-                else _datetime_to_proto_string(default_value)
+                else _datetime_to_proto_string(
+                    default_value, include_seconds=include_seconds
+                )
             )
         else:
             value_for_id = value
@@ -1644,27 +1734,6 @@ class TimeWidgetsMixin:
         has_explicit_bounds = min_value is not None or max_value is not None
         del value, min_value, max_value
 
-        _validate_date_format(format)
-
-        if isinstance(step, bool) or not isinstance(step, (int, timedelta)):
-            raise StreamlitInvalidParameterTypeError(
-                "step",
-                type(step).__name__,
-                ["int", "timedelta"],
-            )
-        step_seconds = (
-            int(step.total_seconds()) if isinstance(step, timedelta) else step
-        )
-        if not 60 <= step_seconds <= timedelta(hours=23).seconds:
-            # Use unit labels so the message reads [60 seconds, 23 hours]
-            # rather than [60, 82800].
-            raise StreamlitValueOutOfRangeError(
-                "step",
-                value=f"{step_seconds} seconds",
-                min_value="60 seconds",
-                max_value="23 hours",
-            )
-
         session_state = get_session_state().filtered_state
         default_value_for_proto = default_value
         if key is not None and key in session_state and session_state[key] is None:
@@ -1675,7 +1744,9 @@ class TimeWidgetsMixin:
         date_time_input_proto.label = label
         if default_value_for_proto is not None:
             date_time_input_proto.default[:] = [
-                _datetime_to_proto_string(default_value_for_proto)
+                _datetime_to_proto_string(
+                    default_value_for_proto, include_seconds=include_seconds
+                )
             ]
         date_time_input_proto.min = min_value_proto
         date_time_input_proto.max = max_value_proto
@@ -1702,6 +1773,7 @@ class TimeWidgetsMixin:
             value=default_value_for_proto,
             min=datetime_values.min,
             max=datetime_values.max,
+            step=step_seconds,
         )
         widget_state = register_widget(
             date_time_input_proto.id,

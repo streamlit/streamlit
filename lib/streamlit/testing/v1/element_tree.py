@@ -3174,10 +3174,16 @@ class DateTimeInput(Widget):
         from datetime import datetime
 
         def _parse_dt(value: str) -> datetime:
-            try:
-                return datetime.strptime(value, "%Y-%m-%dT%H:%M")
-            except ValueError:
-                return datetime.strptime(value, "%Y/%m/%d, %H:%M")
+            for fmt in (
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M",
+                "%Y/%m/%d, %H:%M",
+            ):
+                try:
+                    return datetime.strptime(value, fmt)
+                except ValueError:
+                    continue
+            raise ValueError(f"Unrecognized datetime wire format: {value!r}")
 
         ws = WidgetState()
         ws.id = self.id
@@ -3186,7 +3192,7 @@ class DateTimeInput(Widget):
         min_dt = _parse_dt(self.min)
         max_dt = _parse_dt(self.max)
 
-        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
+        serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt, step=self.step)
         serialized_value = serde.serialize(self.value)
         if serialized_value is not None:
             ws.string_array_value.data[:] = serialized_value

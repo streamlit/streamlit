@@ -239,3 +239,10 @@ st.datetime_input(
     required=True,
     label_visibility="hidden",
 )
+
+v_step30 = st.datetime_input(
+    "Datetime input step=30",
+    datetime(2025, 11, 19, 16, 45, 0),
+    step=30,
+)
+st.write("Value step30:", v_step30)

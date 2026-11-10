@@ -64,7 +64,7 @@ describe("isoToCalendarDateTime", () => {
     expect(isoToCalendarDateTime("2024-01-01T00:60")).toBeNull()
   })
 
-  it("accepts ISO with seconds (discards seconds)", () => {
+  it("accepts ISO with seconds (preserves seconds)", () => {
     const result = isoToCalendarDateTime("2024-07-04T08:15:30")
     expect(result).toMatchObject({
       year: 2024,
@@ -72,6 +72,7 @@ describe("isoToCalendarDateTime", () => {
       day: 4,
       hour: 8,
       minute: 15,
+      second: 30,
     })
   })
 
@@ -82,9 +83,14 @@ describe("isoToCalendarDateTime", () => {
 })
 
 describe("calendarDateTimeToIso", () => {
-  it("serializes to the expected wire format", () => {
-    const dt = new CalendarDateTime(2024, 1, 5, 9, 3)
+  it("serializes to the expected minute wire format", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3, 45)
     expect(calendarDateTimeToIso(dt)).toBe("2024-01-05T09:03")
+  })
+
+  it("includes seconds when requested", () => {
+    const dt = new CalendarDateTime(2024, 1, 5, 9, 3, 45)
+    expect(calendarDateTimeToIso(dt, true)).toBe("2024-01-05T09:03:45")
   })
 })
 
@@ -396,9 +402,38 @@ describe("computeStepSnap", () => {
     expect(computeStepSnap(dt, "year", 900, true)).toBeNull()
   })
 
-  it("returns null when step is not divisible by 60 (minute segment)", () => {
-    const dt = new CalendarDateTime(2025, 11, 19, 16, 45)
-    expect(computeStepSnap(dt, "minute", 90, true)).toBeNull()
+  it("snaps total-seconds for non-60-divisible step on the second segment", () => {
+    const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
+    const result = computeStepSnap(dt, "second", 90, true)
+    expect(result).toMatchObject({
+      year: 2025,
+      month: 11,
+      day: 19,
+      hour: 16,
+      minute: 46,
+      second: 30,
+    })
+  })
+
+  it("snaps minute segment with jump-size for non-60-divisible step", () => {
+    // 16:45:00 + at least 60s, ceil to 90 → 16:46:30
+    const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
+    const result = computeStepSnap(dt, "minute", 90, true)
+    expect(result).toMatchObject({
+      hour: 16,
+      minute: 46,
+      second: 30,
+    })
+  })
+
+  it("wraps total-seconds snap past midnight", () => {
+    const dt = new CalendarDateTime(2025, 11, 19, 23, 59, 30)
+    const result = computeStepSnap(dt, "second", 30, true)
+    expect(result).toMatchObject({
+      hour: 0,
+      minute: 0,
+      second: 0,
+    })
   })
 
   it("preserves date fields when snapping time", () => {
@@ -419,7 +454,10 @@ describe("computeStepSnap", () => {
  * segment, and drops `aria-valuenow` entirely on iOS. */
 const renderSegments = (
   segments: Partial<
-    Record<"year" | "month" | "day" | "hour" | "minute", number | null>
+    Record<
+      "year" | "month" | "day" | "hour" | "minute" | "second",
+      number | null
+    >
   >
 ): HTMLElement => {
   const el = document.createElement("div")
@@ -504,6 +542,18 @@ describe("getTypedTimeFromDom", () => {
     expect(
       getTypedTimeFromDom(renderSegments({ hour: null, minute: 24 }))
     ).toMatchObject({ hour: 0, minute: 24 })
+  })
+
+  it("reads a typed second segment", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 3, minute: 24, second: 45 }))
+    ).toMatchObject({ hour: 3, minute: 24, second: 45 })
+  })
+
+  it("defaults an untyped second to zero", () => {
+    expect(
+      getTypedTimeFromDom(renderSegments({ hour: 3, minute: 24 }))
+    ).toMatchObject({ hour: 3, minute: 24, second: 0 })
   })
 
   it("reads hour 0 as typed rather than as absent", () => {
