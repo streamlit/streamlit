@@ -91,6 +91,9 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
     ids = data.filter_accounts(accounts, filters).index
     series = data.monthly_kpis(history, ids, filters.months)[kpi]
     last = series.iloc[-1]
+    # monthly_kpis starts one month before the window. Level metrics (ARR, NRR)
+    # compare with that month; monthly flows (net new MRR, churn) compare with
+    # the window average, excluding the latest month.
     vs_start = kpi in {"arr", "nrr"}
     baseline = series.iloc[0] if vs_start else series.iloc[1:-1].mean()
     if kpi == "arr":
@@ -167,6 +170,7 @@ def mrr_growth_card(filters: data.Filters) -> None:
 
 @st.fragment(parallel=True)
 def mrr_bridge_chart(filters: data.Filters) -> None:
+    """MRR movements as a waterfall. The page calls it inside its ``st.skeleton``."""
     accounts, history = data.load_book()
     ids = data.filter_accounts(accounts, filters).index
     movements = data.mrr_movements(history, ids, filters.months)
@@ -247,7 +251,8 @@ def export_csv(filters: data.Filters) -> bytes:
 # Page layout
 # =============================================================================
 
-# Header. The filter summary goes into `summary` after the toolbar below has run.
+# Header. `summary` is a placeholder; the code below fills it once the toolbar
+# has set the filters.
 with st.container(horizontal=True, vertical_alignment="center"):
     with st.container(gap=None):
         st.title("Revenue overview", icon=":material/insights:", anchor=False)

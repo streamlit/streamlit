@@ -91,13 +91,15 @@ DEFINITIONS = {
         "How MRR moved between the start and end of the period: new customers, "
         "expansion, contraction, and churn.",
         "SELECT movement, SUM(mrr_change) AS mrr_change\nFROM revenue.mrr_movements\n"
-        "WHERE month BETWEEN :period_start AND :period_end\nGROUP BY movement",
+        "WHERE month BETWEEN :period_start AND :period_end\n"
+        "  AND region IN (:regions) AND plan IN (:plans)\nGROUP BY movement",
     ),
     "industry_mix": Definition(
         "Revenue by industry",
         "Current MRR of active customers, grouped by industry.",
         "SELECT industry, SUM(mrr) AS mrr\nFROM revenue.accounts\n"
-        "WHERE mrr > 0\nGROUP BY industry",
+        "WHERE mrr > 0 AND region IN (:regions) AND plan IN (:plans)\n"
+        "GROUP BY industry",
     ),
 }
 

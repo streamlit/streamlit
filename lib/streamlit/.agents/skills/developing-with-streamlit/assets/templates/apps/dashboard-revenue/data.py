@@ -35,8 +35,8 @@ import streamlit as st
 # are visible. Set to 0 when you connect a real data source.
 SIMULATED_LATENCY_S = 0.8
 
-# The longest period (24 months), 12 months of lookback for retention, and a
-# few spare months.
+# Months of generated history: the longest period (24) plus 12 months of
+# retention lookback and a few spare months.
 N_MONTHS = 40
 PERIODS = {"3M": 3, "6M": 6, "12M": 12, "24M": 24}
 DEFAULT_PERIOD = "24M"
@@ -85,6 +85,7 @@ class Filters:
         return PERIODS[self.period]
 
     def describe(self) -> str:
+        """Summarize the active filters for the caption under the page title."""
         regions = (
             "All regions"
             if len(self.regions) == len(REGIONS)

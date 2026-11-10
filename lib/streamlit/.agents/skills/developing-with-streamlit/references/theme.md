@@ -471,7 +471,7 @@ Copy from `assets/templates/themes/configs/` into `.streamlit/config.toml`, or a
 |-------|------|---------|-------|-------|
 | **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Default dual-mode + sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
-| **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist, Geist Mono | Dual-mode BI cards: larger metric values, rounder corners, color-blind-checked chart palettes |
+| **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist, Geist Mono | Dual-mode BI cards: compact bold metric values, rounder corners, color-blind-checked chart palettes |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |
 | **fluent** | Light (locked) | `#0078D4` | Segoe UI, Cascadia Code | |

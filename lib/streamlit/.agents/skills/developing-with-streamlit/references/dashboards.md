@@ -285,6 +285,7 @@ with st.container(horizontal=True, vertical_alignment="center"):
         )
 ```
 
+- Bind only filters that are safe to share: bound values appear in links and browser history. Keep sensitive values, such as account IDs or customer emails, out of the URL, and use `persist_state` to keep them across pages.
 - Treat an empty multi-select filter as "all", and summarize the active filters, for example in a caption under the title, so a closed popover doesn't hide them.
 - In a multipage app, draw the toolbar in the entrypoint before `page.run()`, so every page shares it.
 
@@ -292,7 +293,7 @@ with st.container(horizontal=True, vertical_alignment="center"):
 
 When the user wants a branded or dense KPI look, pair the dashboard with a theme — do not inject CSS for colors or `.block-container` padding.
 
-- Copy `assets/templates/themes/configs/dense-dashboard.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle) or `bi-dashboard.toml` (indigo, Geist fonts, larger metric values) into the app’s `.streamlit/config.toml`, or point `theme.base` at a shared brand file
+- Copy `assets/templates/themes/configs/dense-dashboard.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle) or `bi-dashboard.toml` (indigo, Geist fonts, compact bold metric values) into the app’s `.streamlit/config.toml`, or point `theme.base` at a shared brand file
 - Set chart and dataframe brand colors in config (`chartCategoricalColors`, `dataframe*`), not as one-off per-chart hardcodes
 - Start with the cheat sheet and Content padding in `theme.md`
 

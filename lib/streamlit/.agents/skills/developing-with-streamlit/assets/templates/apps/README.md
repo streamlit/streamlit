@@ -118,7 +118,7 @@ Compact filter controls using `st.popover`:
 with st.popover("Filters", icon=":material/tune:", type="tertiary"):
     line_options = st.pills("Lines", ["Daily", "7-day MA"], selection_mode="multi")
     time_range = st.segmented_control(
-        "Time range", TIME_RANGES, default="All", required=True
+        "Time range", TIME_RANGES, default="All", required=True, key="time_range"
     )
 ```
 

@@ -1,5 +1,5 @@
 # BI dashboard dual light/dark Streamlit theme
-# Indigo primary, Geist fonts, larger metric values, and compact padding for
+# Indigo primary, Geist fonts, compact bold metric values, and tight padding for
 # KPI and card layouts; the settings appearance toggle stays available.
 # Categorical palettes were checked for color-vision deficiencies in both modes
 # (adjacent pairs; the first three slots also pass all pairs, for scatter charts).

@@ -240,8 +240,8 @@ region = st.segmented_control(
     bind="query-params",
 )
 
-# Each card's frame, title, and skeleton are drawn here; its fragment's output
-# replaces the skeleton.
+# The main script draws each card's frame, title, and skeleton; the fragment's
+# output replaces the skeleton.
 
 # Quick, region-specific cards: they reload fast and update when the region changes.
 with st.skeleton(height=KPI_HEIGHT):

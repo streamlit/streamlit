@@ -30,7 +30,8 @@ from data import PLANS
 
 _LEGEND = {"top": 0, "left": 0, "icon": "roundRect", "itemWidth": 10, "itemHeight": 10}
 _GRID = {"left": 4, "right": 12, "top": 36, "bottom": 4}
-# Annotation color: a neutral gray that reads on both the light and dark theme.
+# Gray for annotation lines and areas. Their labels set no color, so ECharts
+# draws dark text in the light theme and light text in the dark theme.
 _MARKER_GRAY = "#8E90A2"
 
 
@@ -73,12 +74,7 @@ def _markers(
             "silent": True,
             "symbol": ["none", "none"],
             "lineStyle": {"color": _MARKER_GRAY, "type": "dashed", "opacity": 0.8},
-            "label": {
-                "color": _MARKER_GRAY,
-                "position": "insideEndTop",
-                "fontSize": 11,
-                "formatter": "{b}",
-            },
+            "label": {"position": "insideEndTop", "fontSize": 11, "formatter": "{b}"},
             "data": [
                 {"name": text, "xAxis": label}
                 for label, (_, text) in zip(labels, milestones, strict=True)
@@ -88,7 +84,9 @@ def _markers(
         series["markArea"] = {
             "silent": True,
             "itemStyle": {"color": "rgba(142, 144, 162, 0.14)"},
-            "label": {"color": _MARKER_GRAY, "position": "insideTop", "fontSize": 11},
+            # Above the area: a label inside a translucent area gets light text,
+            # even in the light theme.
+            "label": {"position": "top", "fontSize": 11},
             "data": [
                 [{"name": "Forecast", "xAxis": forecast[0]}, {"xAxis": forecast[1]}]
             ],
