@@ -213,6 +213,7 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 - An existing Plotly Express line or scatter figure also holds up to about 1,000,000 points, because it switches to WebGL above 1,000 points. A `go.Scatter` trace stays SVG; use `go.Scattergl` for large data.
 - For ECharts series that read `dataset`, pass more than about 1,000 rows as a dataframe in `dataset.source`, never as Python lists in `series.data`. Only `dataset.source` is sent as Arrow, so converting a large dataframe to lists makes the chart slower to send, drops the **Show data** table, and leaves the agent API only raw option values instead of a table.
 - Cache the data loading with `st.cache_data`, and isolate charts that refresh on a timer in `@st.fragment(run_every=...)` (see [performance.md](performance.md)).
+- When the data loads slowly, put the load and the chart inside `with st.skeleton(height=...)` and pass the same height to the skeleton and the chart. The slot keeps its size while the data loads, and cached reruns update the chart in place (see [dashboards.md](dashboards.md)).
 
 Streamlit fills rendering defaults that you haven't set yourself, so don't add them by hand:
 

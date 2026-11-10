@@ -252,10 +252,10 @@ st.title("Orders")
 region = st.selectbox("Region", regions)
 with st.skeleton(height=400):
     orders = load_orders()
-    st.dataframe(orders, key="orders")  # Fills the skeleton's slot
+    st.dataframe(orders, height=400, key="orders")  # Same height as its skeleton
 ```
 
-See `performance.md` for the rendering-order details and a fuller placeholder example.
+With several slow sections, each skeleton still waits for the slow work above it. Call each section's `@st.fragment(parallel=True)` inside its skeleton so the sections load concurrently (see "Layout-first loading" in `dashboards.md`). See `performance.md` for the rendering-order details and a fuller placeholder example.
 
 Use fragments for independent sections that can rerun separately from the page. For a timer, refresh that section with `@st.fragment(run_every=...)` instead of looping the script or adding `streamlit-autorefresh`.
 
