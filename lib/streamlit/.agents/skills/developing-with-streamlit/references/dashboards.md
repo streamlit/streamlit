@@ -43,12 +43,13 @@ with st.container(border=True):
 In BI dashboards, give every card the same header: a bold title, an optional caption, and controls aligned right. Mark certified metrics with a badge, and put secondary actions in a ⋮ menu instead of more buttons:
 
 ```python
-def card_header(title: str, caption: str, *, certified: bool = False):
+def card_header(title: str, caption: str | None = None, *, certified: bool = False):
     with st.container(horizontal=True, vertical_alignment="center"):
         with st.container(gap=None):
             badge = " :green-badge[:material/verified:]" if certified else ""
             st.markdown(f"**{title}**{badge}")
-            st.caption(caption)
+            if caption:
+                st.caption(caption)
         return st.container(
             horizontal=True, horizontal_alignment="right", width="content"
         )

@@ -231,17 +231,21 @@ def mrr_forecast(monthly: pd.DataFrame, horizon: int = 3) -> pd.DataFrame:
 def mrr_movements(
     history: pd.DataFrame, ids: pd.Index, months: int
 ) -> dict[str, float]:
-    """Decompose the MRR change over the window into its movement types."""
-    window = history.loc[ids].iloc[:, [-months - 1, -1]]
-    before, after = window.iloc[:, 0], window.iloc[:, 1]
+    """Sum each month's MRR movements over the window, by movement type.
+
+    Comparing month to month keeps changes that a start-to-end comparison
+    would net out, such as an account that expands and then churns.
+    """
+    mrr = history.loc[ids].to_numpy()[:, -months - 1 :]
+    before, after = mrr[:, :-1], mrr[:, 1:]
     change = after - before
     return {
-        "start": float(before.sum()),
+        "start": float(mrr[:, 0].sum()),
         "new": float(after[before == 0].sum()),
         "expansion": float(change[(before > 0) & (change > 0)].sum()),
         "contraction": float(-change[(after > 0) & (change < 0)].sum()),
         "churn": float(before[(before > 0) & (after == 0)].sum()),
-        "end": float(after.sum()),
+        "end": float(mrr[:, -1].sum()),
     }
 
 

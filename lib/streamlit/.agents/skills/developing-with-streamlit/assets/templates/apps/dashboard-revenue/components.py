@@ -45,7 +45,8 @@ class Definition:
 
 
 # What each certified metric and chart measures, shown in its card menu.
-# Replace the SQL with the queries behind your own metrics.
+# Replace these with your own metric catalog: its queries, owners, refresh
+# schedules, and which metrics it certifies.
 DEFINITIONS = {
     "revenue": Definition(
         "Revenue KPIs",

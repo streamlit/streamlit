@@ -4461,7 +4461,8 @@ class TestMetaSkillPackaging:
         assert f"{apps}/dashboard-metrics/.streamlit/config.toml" in names
         assert f"{apps}/dashboard-revenue/.streamlit/config.toml" in names
         # dashboard-revenue imports helper modules next to its entrypoint.
-        assert f"{apps}/dashboard-revenue/components.py" in names
+        for module in ("components", "charts", "data"):
+            assert f"{apps}/dashboard-revenue/{module}.py" in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [

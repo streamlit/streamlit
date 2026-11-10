@@ -40,6 +40,7 @@ from typing import Literal
 
 import charts
 import data
+import pandas as pd
 from components import (
     DEFINITIONS,
     account_columns,
@@ -100,8 +101,10 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
         value = charts.money(last)
         delta = ("+" if last >= baseline else "") + charts.money(last - baseline)
     else:
-        value = f"{last:.1f}%"
-        delta = f"{last - baseline:+.1f} pts"
+        # NRR is undefined for a month whose accounts had no MRR a year earlier.
+        value = f"{last:.1f}%" if pd.notna(last) else "—"
+        change = last - baseline
+        delta = f"{change:+.1f} pts" if pd.notna(change) else None
     label, icon, chart_type = KPIS[kpi]
     st.metric(
         f"{label} :green[:material/verified:]",
@@ -179,8 +182,9 @@ def mrr_bridge_chart(filters: data.Filters) -> None:
 def industry_drilldown(filters: data.Filters) -> None:
     """Donut of MRR by industry that filters the top-accounts table on click.
 
-    Clicking a slice or a table button reruns only this section. That rerun
-    runs in the main thread, so the table's button can open a dialog.
+    Clicking a slice or a table button reruns only this fragment. That rerun
+    runs on the script thread, not in a parallel worker, so the table's button
+    can open the account drawer (``@st.dialog``).
     """
     accounts, _ = data.load_book()
     active = data.filter_accounts(accounts, filters).query("mrr > 0")
@@ -232,9 +236,9 @@ def industry_drilldown(filters: data.Filters) -> None:
         open_clicked_account(table, "top_accounts_click")
 
 
-def export_csv() -> bytes:
+def export_csv(filters: data.Filters) -> bytes:
     # Streamlit calls this only on click, so the button renders before the data
-    # loads. It reads `filters`, which the page layout below defines.
+    # loads.
     accounts, _ = data.load_book()
     return data.accounts_csv(data.filter_accounts(accounts, filters))
 
@@ -289,7 +293,7 @@ with st.container(horizontal=True, vertical_alignment="center"):
         sql_popover("revenue")
         st.download_button(
             "Export",
-            export_csv,
+            lambda: export_csv(filters),
             file_name="accounts.csv",
             mime="text/csv",
             icon=":material/download:",
