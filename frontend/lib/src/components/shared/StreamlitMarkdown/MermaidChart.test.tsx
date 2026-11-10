@@ -166,44 +166,32 @@ describe("MermaidChart", () => {
     })
   })
 
-  it(
-    "shows error state when mermaid import fails",
-    async () => {
-      vi.resetModules()
-      mermaidImportExpected = true
-      // import("mermaid") reaches the factory after render() returns. An
-      // already-rejected factory never settles that import on Vitest 5.1, so
-      // hold it open until the chart has started it.
-      vi.doMock("mermaid", () => {
-        return new Promise<never>((_resolve, reject) => {
-          if (!mermaidImportExpected) {
-            // Reject on a later turn. A factory that is already rejected
-            // never settles import("mermaid") on Vitest 5.1.
-            queueMicrotask(() => {
-              reject(new Error("Mermaid import cleaned up"))
-            })
-            return
-          }
-          releaseMermaidImport = reject
-        })
+  it("shows error state when mermaid import fails", async () => {
+    vi.resetModules()
+    mermaidImportExpected = true
+    // import("mermaid") reaches the factory after render() returns. An
+    // already-rejected factory never settles that import on Vitest 5.1, so
+    // hold it open until the chart has started it.
+    vi.doMock("mermaid", (): Promise<never> => {
+      if (!mermaidImportExpected) {
+        return Promise.reject(new Error("Mermaid import cleaned up"))
+      }
+      return new Promise<never>((_resolve, reject) => {
+        releaseMermaidImport = reject
       })
+    })
 
-      render(<MermaidChart source="graph TD\nA-->B" />)
-      await waitFor(() => {
-        expect(releaseMermaidImport).toEqual(expect.any(Function))
-      })
+    render(<MermaidChart source="graph TD\nA-->B" />)
+    await waitFor(() => {
+      expect(releaseMermaidImport).toEqual(expect.any(Function))
+    })
 
-      await act(async () => {
-        releaseMermaidImport?.(new Error("Failed to load mermaid"))
-        await Promise.resolve()
-      })
+    releaseMermaidImport?.(new Error("Failed to load mermaid"))
 
-      const error = await waitForMermaidError()
-      expect(error).toHaveTextContent("Mermaid diagram error")
-      expect(screen.queryByRole("img")).not.toBeInTheDocument()
-    },
-    15_000
-  )
+    const error = await waitForMermaidError()
+    expect(error).toHaveTextContent("Mermaid diagram error")
+    expect(screen.queryByRole("img")).not.toBeInTheDocument()
+  }, 15_000)
 
   it("shows a generic error message when render rejects with a non-Error", async () => {
     vi.doMock("mermaid", () => ({
