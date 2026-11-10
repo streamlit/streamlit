@@ -55,7 +55,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 20  # Including sidebar, fragment, and menu-style icons
+TOTAL_MENU_BUTTONS = 21  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -304,6 +304,11 @@ def test_menu_button_menu_style_icons_hide_chevron(
     expect(menu_icon_button.get_by_text("expand_more")).not_to_be_visible()
     expect(more_vert_button.get_by_text("expand_more")).not_to_be_visible()
     expect(more_horiz_button.get_by_text("expand_more")).not_to_be_visible()
+
+    # A menu-style `icon` with an empty label also hides the chevron
+    icon_param_button = get_element_by_key(app, "more_vert_icon_param_button")
+    expect(icon_param_button.get_by_text("more_vert", exact=True)).to_be_visible()
+    expect(icon_param_button.get_by_text("expand_more")).not_to_be_visible()
 
     # Verify that regular buttons DO have the chevron (for contrast)
     regular_button = get_menu_button(app, "Actions")

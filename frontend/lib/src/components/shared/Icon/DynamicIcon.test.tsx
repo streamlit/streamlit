@@ -187,9 +187,21 @@ describe("isMenuStyleIconLabel", () => {
     [undefined, ":material/more_horiz:", true],
     [undefined, " :material/menu: ", true],
 
+    // Menu-style icon prop with an empty label should return true
+    [":material/menu:", "", true],
+    [":material/more_vert:", "", true],
+    [":material/more_horiz:", undefined, true],
+    [":material/more_vert:", "  ", true],
+
     // When icon prop is set, should return false (not icon-only)
     [":material/edit:", ":material/menu:", false],
     ["some-icon", ":material/more_vert:", false],
+    [":material/more_vert:", "Actions", false],
+    [":material/menu:", ":material/menu:", false],
+
+    // Non-menu-style icon prop with an empty label should return false
+    [":material/edit:", "", false],
+    ["spinner", "", false],
 
     // Non-menu-style icons should return false
     [undefined, ":material/edit:", false],
