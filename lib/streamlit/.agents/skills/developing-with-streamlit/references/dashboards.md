@@ -49,7 +49,7 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for up to about five metrics that all have the same parts (every metric has a `delta`, or none does; the same for `chart_data`). With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest.
 
 Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
 
@@ -100,12 +100,8 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric(
-        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
-    )
-    st.metric(
-        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
-    )
+    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend)
+    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend)
     st.metric(
         "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
     )
@@ -203,7 +199,7 @@ To keep the layout stable:
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
-Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
+Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
 ## Sidebar filters
 
