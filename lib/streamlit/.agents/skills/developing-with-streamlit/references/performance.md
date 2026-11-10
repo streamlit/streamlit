@@ -194,7 +194,7 @@ st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
 
 ### Parallel fragments
 
-Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially. To paint the page's layout and every card's size first, call each fragment inside `with st.skeleton(height=...)` from the main script (see "Layout-first loading" in `dashboards.md`).
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially. To paint the page's layout and every card's size first, call each fragment inside `with st.skeleton(height=...)` from the main script. That block covers only full-app runs, so a fragment whose own reruns can be slow, such as `run_every` refreshes, also wraps its body in `with st.skeleton()` (see "Layout-first loading" in `dashboards.md`).
 
 ```python
 # BAD: Three slow queries run sequentially (~9s total)

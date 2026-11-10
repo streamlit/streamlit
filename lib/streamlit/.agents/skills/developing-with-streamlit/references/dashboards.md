@@ -188,7 +188,24 @@ with col2:
 
 Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first visible element replaces the skeleton, so draw that element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
 
-The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
+A fragment's own rerun, such as a `run_every` refresh or a widget inside the fragment, runs only the fragment body. It never re-enters the block around the call, so the old content fades as stale until the rerun finishes. If those reruns can be slow, wrap the body's content in a second `with st.skeleton()`:
+
+```python
+@st.fragment(parallel=True, run_every="15s")
+def live_orders():
+    with st.skeleton():  # Covers the fragment's own refreshes
+        st.bar_chart(load_live_orders(), height=340, alt="Orders per minute")
+
+
+with st.container(border=True):
+    st.markdown("**Live orders**")
+    with st.skeleton(height=340):  # Sizes the first load
+        live_orders()
+```
+
+Each block covers the runs that enter it. The inner block needs no height: on a full-app run, the outer skeleton covers it, and on the fragment's own rerun, the previous content keeps its size under the skeleton.
+
+A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. The controls would end a skeleton around the call, so the card paints once its fragment runs, and the inner block needs the content's height, as in the `dashboard-metrics` chart cards.
 
 To keep the layout stable:
 
