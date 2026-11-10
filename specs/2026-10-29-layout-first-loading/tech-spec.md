@@ -81,9 +81,9 @@ late.
 
 ### Change 1: fragment skeleton (options B and C)
 
-- `_fragment(..., loading="skeleton")` validates the value and creates the fragment's
-  container with `open_loading_block()` instead of `st.container()`. Both places that create
-  the container do this:
+- `_fragment(..., show_skeleton=True)` creates the fragment's container with
+  `open_loading_block()` instead of `st.container()`. Both places that create the container
+  do this:
   - The wrapper, for inline runs and fragment-only reruns.
   - `_dispatch_parallel_fragment`, on the script thread, for parallel full-app runs. The
     skeleton is part of the main script's first flush, even while the worker is held
@@ -122,8 +122,8 @@ held list early.
 ## Prototype
 
 Draft PR [#17838](https://github.com/streamlit/streamlit/pull/17838) implements option C of
-change 1 and change 2 as designed above, on top of #17924 and #17920. Its results are in
-the [product spec](./product-spec.md#prototype).
+change 1, spelled `loading="skeleton"`, and change 2 as designed above, on top of #17924
+and #17920. Its results are in the [product spec](./product-spec.md#prototype).
 
 It also stops a delayed `st.spinner` message from raising `StopException` tracebacks when
 its run has already stopped, which stopped parallel fragment runs triggered. That bug
@@ -148,9 +148,8 @@ predates this work and can be fixed separately.
 ## Test plan
 
 - **Python unit:**
-  - Options B and C: `loading` on the container for inline runs, fragment reruns, and the
-    pre-allocated parallel container; validation of the value; and `in_skeleton_slot` in
-    the body.
+  - Options B and C: `Block.loading` on the container for inline runs, fragment reruns,
+    and the pre-allocated parallel container, and `in_skeleton_slot` in the body.
   - Coordinator deferral, the flush gate and its timeout, a rerun during the wait, and
     `drain()` dropping held work.
   - The `AppSession` flush waiter, including a waiter added while a flush is being sent.

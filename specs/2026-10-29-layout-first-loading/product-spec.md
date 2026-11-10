@@ -115,7 +115,7 @@ the fragment's own rerun it keeps the previous content's size.
 - Cons: Two blocks per card for fragments that rerun on their own. Users must learn that the
   outer block doesn't cover fragment-only reruns.
 
-**Option B: `@st.fragment(loading="skeleton")`, sized from a bounded parent**
+**Option B: `@st.fragment(show_skeleton=True)`, sized from a bounded parent**
 
 The fragment's container becomes a loading block on every run of the fragment, including
 its own reruns. On a first load, the skeleton fills a parent with a bounded height, such as
@@ -123,7 +123,7 @@ its own reruns. On a first load, the skeleton fills a parent with a bounded heig
 height elsewhere. In a bounded parent, one parameter replaces both blocks:
 
 ```python
-@st.fragment(parallel=True, run_every="15s", loading="skeleton")
+@st.fragment(parallel=True, run_every="15s", show_skeleton=True)
 def live_orders():
     st.bar_chart(load_live_orders(), height="stretch")
 
@@ -141,10 +141,11 @@ fragment, so it's part of the first paint even while the worker waits for a free
   use until `st.card` ships. In an unbounded parent, it still needs the block around the
   call for its size.
 
-**Option C: `loading="skeleton"` as prototyped**
+**Option C: `show_skeleton=True` at the minimum height, as prototyped**
 
 As option B, but the first-load skeleton always has the minimum element height. Draft
-[#17838](https://github.com/streamlit/streamlit/pull/17838) implements this option.
+[#17838](https://github.com/streamlit/streamlit/pull/17838) implements this option, spelled
+`loading="skeleton"`.
 
 - Cons: Saves only the inner block. A card still needs the block around the call for its
   size, so it ends up with two constructs, as with option A, plus a new parameter. The
@@ -158,6 +159,25 @@ As option B, but the first-load skeleton always has the minimum element height. 
 With every option, the first visible element of the fragment ends the skeleton, so a cheap
 element drawn first, such as a title, ends it early. Card headers belong in the main
 script, and `st.card` draws them from its parameters.
+
+**Naming for options B and C.** `show_skeleton` is proposed over `loading="skeleton"`:
+
+- `@st.cache_data(show_spinner=...)` already turns on loading UI from a decorator, so
+  users know the shape ($9 Match User Expectations, $11 Patterns Are Sacred). Both mean
+  "show this indicator while the work runs".
+- $16 Prefer Enums Over Booleans names `show_spinner` as the allowed `bool | X` exception.
+  `show_skeleton` can grow the same way, for example `show_skeleton="Loading revenue..."`
+  for the skeleton's label.
+- `loading="lazy"` is the standard HTML name for lazy loading, the likely meaning of a
+  future `loading` parameter on `st.iframe` or `st.image` ($8 Semantic Names Over Geeky
+  Names). A `loading` that means skeleton UI on fragments would break $10 Same Name, Same
+  Behavior.
+
+The case for the enum is $46 One Question per Parameter: if fragments could later show a
+spinner instead, `loading="skeleton" | "spinner"` rules out writing both. A fragment-level
+spinner is speculative, because spinners inside a fragment already work and label its
+skeleton. If a size ever needs its own argument, it gets a separate parameter rather than
+`show_skeleton=340`.
 
 ### 2. Parallel fragments start after the layout is sent
 
@@ -297,9 +317,9 @@ option A's inner block for cards with their own controls.
 
 ## Open decisions
 
-1. Fragment skeleton (change 1): option A, B, or C? For B or C, the name:
-   `loading="skeleton"`, an enum that can grow ($16 Prefer Enums Over Booleans), or
-   `show_skeleton=True`.
+1. Fragment skeleton (change 1): option A, B, or C? For B or C, the name: `show_skeleton`
+   (proposed), or the `loading="skeleton"` enum of the prototype (see
+   [Naming](#1-a-skeleton-for-a-fragments-own-reruns)).
 2. Parallel start (change 2): the default (option A) or opt-in (option B)? With the "or N
    ms" variant? The prototype implements option A without the variant, and the demo didn't
    need it.
