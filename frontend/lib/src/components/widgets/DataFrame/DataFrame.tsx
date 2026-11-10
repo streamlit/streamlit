@@ -106,6 +106,13 @@ import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { DATAFRAME_PRINT_SLOT_CLASS } from "./printClassNames"
+import {
+  clearDataFramePrintSlot,
+  fillDataFramePrintSlot,
+  isHiddenFromPrint,
+  visibleRowsFromRegion,
+} from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
@@ -202,6 +209,11 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  const printSlotRef = useRef<HTMLDivElement>(null)
+  // Rows currently painted in the grid viewport. Printing builds an HTML
+  // table of this range so the page can split instead of leaving a blank
+  // strip behind a non-fragmenting canvas.
+  const visibleRegionRef = useRef<Rectangle | null>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -954,6 +966,66 @@ function DataFrame({
     ? undefined
     : trimmedAlt
 
+  // A canvas cannot fragment across pages. Build a real HTML table of the
+  // rows currently on screen so a bordered card can continue instead of
+  // leaving a blank strip. Cleared after printing so the interactive grid
+  // is unchanged.
+  useEffect(() => {
+    const slot = printSlotRef.current
+    if (!slot) {
+      return
+    }
+
+    const handleBeforePrint = (): void => {
+      const frame = slot.closest(".stDataFrame")
+      if (
+        isEmptyTable ||
+        (frame instanceof HTMLElement && isHiddenFromPrint(frame))
+      ) {
+        clearDataFramePrintSlot(slot)
+        return
+      }
+      fillDataFramePrintSlot(
+        slot,
+        columns,
+        getCellContent,
+        visibleRowsFromRegion(visibleRegionRef.current, numRows),
+        {
+          missingPlaceholder: element.placeholder ?? undefined,
+          accessibleName,
+        }
+      )
+    }
+    const handleAfterPrint = (): void => {
+      clearDataFramePrintSlot(slot)
+    }
+
+    window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
+      clearDataFramePrintSlot(slot)
+    }
+  }, [
+    accessibleName,
+    columns,
+    element.placeholder,
+    getCellContent,
+    isEmptyTable,
+    numRows,
+  ])
+
+  const handleVisibleRegionChanged = useCallback(
+    (range: Rectangle): void => {
+      visibleRegionRef.current = range
+      if (isLazy) {
+        onVisibleRegionChanged(range)
+      }
+    },
+    [isLazy, onVisibleRegionChanged]
+  )
+
   return (
     <StyledResizableContainer
       className="stDataFrame"
@@ -1120,6 +1192,7 @@ function DataFrame({
         )}
       </Toolbar>
       <Resizable
+        className="stDataFrameResizable"
         data-testid="stDataFrameResizable"
         ref={resizableRef}
         aria-label={accessibleName}
@@ -1239,9 +1312,9 @@ function DataFrame({
                 }
               : {}),
           }}
-          // Request chunks for the visible range (plus a small buffer) when the
-          // user scrolls a lazy dataframe.
-          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
+          // Track the painted viewport for print, and request chunks for a
+          // lazy dataframe when the user scrolls.
+          onVisibleRegionChanged={handleVisibleRegionChanged}
           // Search needs to be activated manually, to support search
           // via the toolbar. Disabled for lazy dataframes since search would
           // only operate on loaded chunks.
@@ -1442,6 +1515,7 @@ function DataFrame({
           })}
         />
       </Resizable>
+      <div className={DATAFRAME_PRINT_SLOT_CLASS} ref={printSlotRef} />
       {tooltip !== undefined && (
         <Tooltip
           top={tooltip.top}

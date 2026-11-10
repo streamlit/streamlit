@@ -1,0 +1,219 @@
+/**
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+
+import { DATAFRAME_PRINT_TABLE_CLASS } from "./printClassNames"
+import {
+  clearDataFramePrintSlot,
+  fillDataFramePrintSlot,
+  isHiddenFromPrint,
+  visibleRowsFromRegion,
+} from "./printDataFrame"
+
+function column(
+  title: string,
+  overrides: Partial<BaseColumn> = {}
+): BaseColumn {
+  return {
+    title,
+    name: title,
+    isHidden: false,
+    kind: "text",
+    getCellValue: (cell: GridCell) =>
+      "displayData" in cell ? cell.displayData : "",
+    ...overrides,
+  } as BaseColumn
+}
+
+const textCell = (displayData: string): GridCell => ({
+  kind: GridCellKind.Text,
+  displayData,
+  data: displayData,
+  allowOverlay: false,
+})
+
+describe("visibleRowsFromRegion", () => {
+  it("uses the painted viewport when the grid has reported one", () => {
+    expect(
+      visibleRowsFromRegion({ x: 0, y: 10, width: 4, height: 5 }, 100)
+    ).toEqual({ startRow: 10, rowCount: 5 })
+  })
+
+  it("falls back to every row when no viewport is known yet", () => {
+    expect(visibleRowsFromRegion(null, 7)).toEqual({
+      startRow: 0,
+      rowCount: 7,
+    })
+  })
+
+  it("clamps a viewport that extends past the last row", () => {
+    expect(
+      visibleRowsFromRegion({ x: 0, y: 8, width: 2, height: 10 }, 10)
+    ).toEqual({ startRow: 8, rowCount: 2 })
+  })
+})
+
+describe("fillDataFramePrintSlot", () => {
+  let slot: HTMLDivElement
+
+  beforeEach(() => {
+    slot = document.createElement("div")
+    document.body.appendChild(slot)
+  })
+
+  afterEach(() => {
+    slot.remove()
+  })
+
+  it("writes the visible rows, skipping hidden and button columns", () => {
+    const columns = [
+      column("Name"),
+      column("Secret", { isHidden: true }),
+      column("Go", { kind: "button" }),
+      column("City"),
+    ]
+    const values = [
+      ["Ada", "nope", "click", "London"],
+      ["Grace", "nope", "click", "Boston"],
+      ["Alan", "nope", "click", "Manchester"],
+    ]
+
+    fillDataFramePrintSlot(
+      slot,
+      columns,
+      ([col, row]) => textCell(values[row][col]),
+      { startRow: 1, rowCount: 2 }
+    )
+
+    const table = slot.querySelector("table")
+    expect(table).toHaveClass(DATAFRAME_PRINT_TABLE_CLASS)
+    expect(
+      [...slot.querySelectorAll("th")].map(cell => cell.textContent)
+    ).toEqual(["Name", "City"])
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["Grace", "Boston", "Alan", "Manchester"])
+  })
+
+  it("prints the formatted text instead of the stored value", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Share"), column("When")],
+      ([col]) => {
+        if (col === 0) {
+          return {
+            kind: GridCellKind.Number,
+            data: 0.42,
+            displayData: "42%",
+            allowOverlay: false,
+          }
+        }
+        return {
+          kind: GridCellKind.Custom,
+          data: { kind: "date", displayDate: "Oct 20, 2026" },
+          allowOverlay: false,
+          copyData: "",
+        }
+      },
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["42%", "Oct 20, 2026"])
+  })
+
+  it("escapes cell text through textContent", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      () => textCell("A & B <C>"),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe("A & B <C>")
+  })
+
+  it("prints a blank for a loading skeleton cell", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      () => ({
+        kind: GridCellKind.Loading,
+        allowOverlay: false,
+        skeletonWidth: 60,
+      }),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe("")
+  })
+
+  it("names the table when an accessible name is provided", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Name")],
+      () => textCell("Ada"),
+      { startRow: 0, rowCount: 1 },
+      { accessibleName: "People" }
+    )
+
+    expect(slot.querySelector("table")).toHaveAttribute("aria-label", "People")
+  })
+
+  it("clears the slot", () => {
+    fillDataFramePrintSlot(slot, [column("Name")], () => textCell("Ada"), {
+      startRow: 0,
+      rowCount: 1,
+    })
+    clearDataFramePrintSlot(slot)
+    expect(slot.childElementCount).toBe(0)
+  })
+
+  it("does nothing when there are no visible rows", () => {
+    fillDataFramePrintSlot(slot, [column("Name")], () => textCell("Ada"), {
+      startRow: 0,
+      rowCount: 0,
+    })
+    expect(slot.childElementCount).toBe(0)
+  })
+})
+
+describe("isHiddenFromPrint", () => {
+  it("hides a dataframe inside a closed tab", () => {
+    const host = document.createElement("div")
+    host.setAttribute("data-st-inactive", "")
+    const frame = document.createElement("div")
+    host.append(frame)
+    document.body.append(host)
+
+    expect(isHiddenFromPrint(frame)).toBe(true)
+    host.remove()
+  })
+
+  it("hides a dataframe inside a collapsed expander", () => {
+    const details = document.createElement("details")
+    const frame = document.createElement("div")
+    details.append(frame)
+    document.body.append(details)
+
+    expect(isHiddenFromPrint(frame)).toBe(true)
+    details.remove()
+  })
+})

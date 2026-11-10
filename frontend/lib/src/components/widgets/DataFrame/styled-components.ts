@@ -17,6 +17,15 @@
 import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import {
+  printAllowSplitRules,
+  printTableSplitRules,
+} from "~lib/components/shared/printPageBreak"
+
+import {
+  DATAFRAME_PRINT_SLOT_CLASS,
+  DATAFRAME_PRINT_TABLE_CLASS,
+} from "./printClassNames"
 
 interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
@@ -39,13 +48,58 @@ export const StyledResizableContainer =
       verticalAlign: "top",
       height: "100%",
 
+      // Filled in beforeprint with an HTML table of the visible rows. Hidden
+      // on screen so the canvas grid is what the user interacts with.
+      [`& .${DATAFRAME_PRINT_SLOT_CLASS}`]: {
+        display: "none",
+      },
+
       "@media print": {
-        // The grid keeps the pixel width it measured on screen, and its
-        // canvas paints that full width. Clip it to its container, so a grid
-        // wider than the printed card does not spill past the border.
-        // `clip` does not make a scroll container, unlike `hidden`.
+        // Cap the on-screen pixel width so a wider grid does not spill the
+        // printed card. A canvas without a print table still needs clipping.
         maxWidth: "100%",
-        overflow: "clip",
+        [`&:not(:has(.${DATAFRAME_PRINT_TABLE_CLASS}))`]: {
+          overflow: "clip",
+        },
+        // A print table sits under the canvas. Grow past the on-screen
+        // height and allow page breaks so the table can continue instead of
+        // jumping and leaving a blank strip.
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+          ...printAllowSplitRules,
+          display: "block",
+          width: "100%",
+          height: "auto",
+          maxHeight: "none",
+          overflow: "visible",
+        },
+        [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stDataFrameResizable, &:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stElementToolbar`]:
+          {
+            display: "none",
+          },
+        [`& .${DATAFRAME_PRINT_SLOT_CLASS}`]: {
+          display: "block",
+          width: "100%",
+        },
+        [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
+          borderCollapse: "collapse",
+          // max-content is the table's intrinsic size, not a theme length.
+          // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
+          width: "max-content",
+          maxWidth: "100%",
+          fontFamily: theme.genericFonts.bodyFont,
+          fontSize: theme.fontSizes.sm,
+          ...printTableSplitRules,
+          "th, td": {
+            whiteSpace: "nowrap",
+            padding: `${theme.spacing.threeXS} ${theme.spacing.sm}`,
+            border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
+            textAlign: "left",
+            fontWeight: theme.fontWeights.normal,
+          },
+          th: {
+            fontWeight: theme.fontWeights.semiBold,
+          },
+        },
       },
 
       "& .stDataFrameGlideDataEditor": {
