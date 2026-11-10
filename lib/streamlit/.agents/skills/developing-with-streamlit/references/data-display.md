@@ -138,7 +138,7 @@ st.dataframe(
 
 Use `ButtonColumn` for clickable, per-row actions in `st.dataframe` or `st.data_editor`. The cell value is the button label (supports `:material/...:` icons). A cell holding a **list** renders a dropdown menu of multiple actions.
 
-Prefer `ButtonColumn` over `st.dataframe` row selection when a click should trigger a one-off action for a specific row, such as opening a dialog, showing details, or running an operation. Button clicks are transient and reset after the click-triggered rerun. Row selection represents ongoing state and persists across reruns until the selection is changed or cleared, so reserve it for cases where the app needs to keep track of selected rows.
+Prefer `ButtonColumn` over `st.dataframe` row or cell selections when a click should trigger a one-off action for a specific row, such as opening a `st.dialog` with its details or running an operation. Button clicks are transient and reset after the click-triggered rerun. Selections are ongoing state and persist across reruns until they change or are cleared. A dialog opened from a selection would open again on every later rerun while the row stays selected. Reserve selections for results that should last as long as the item stays selected, such as a details panel for the selected row on the same page.
 
 ```python
 df = pd.DataFrame(
@@ -281,6 +281,8 @@ selected_data = df.iloc[selected_indices]
 ```
 
 Selection modes: `"single-row"`, `"multi-row"`, `"single-column"`, `"multi-column"`, `"single-cell"`, `"multi-cell"`.
+
+Use selections for results that last while the item stays selected, such as showing the selected row's details below the table. To trigger a one-off row action, such as opening a dialog, use a [ButtonColumn](#row-actions-with-buttoncolumn) instead.
 
 Import `DataframeState` from `streamlit.typing` when annotating the returned event; do not import it from Streamlit's internal modules. For chart selections, see [charts.md](charts.md#chart-selections).
 
