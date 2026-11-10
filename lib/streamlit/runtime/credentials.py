@@ -111,11 +111,13 @@ def _send_email(email: str | None) -> None:
         response_json = requests.get(_METRICS_CONFIG_URL, timeout=2).json()
         destinations = _parse_metrics_destinations(response_json)
     except Exception:
-        _LOGGER.exception("Failed to fetch metrics URL")
+        _LOGGER.exception("Failed to fetch metrics config")
         return
 
     if not destinations:
-        _LOGGER.error("Undefined metrics config - skipping email metrics")
+        _LOGGER.debug(
+            "metrics.json lists no HTTPS destinations; skipping email metrics"
+        )
         return
 
     headers = {
@@ -137,8 +139,9 @@ def _send_email(email: str | None) -> None:
     }
     payload = json.dumps(data).encode()
 
-    # Post concurrently so one slow destination does not stack timeouts on
-    # first-run activate. Re-raise the last failure so Credentials.save logs it.
+    # Post concurrently so streamlit activate waits for at most one timeout
+    # instead of one per destination. Re-raise one of the failures so
+    # Credentials.save logs it.
     def _post(metrics_url: str) -> None:
         response = requests.post(
             metrics_url,

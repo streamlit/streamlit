@@ -31,6 +31,7 @@ from streamlit import file_util
 from streamlit.runtime.credentials import (
     Credentials,
     _Activation,
+    _parse_metrics_destinations,
     _verify_email,
     email_prompt,
 )
@@ -371,7 +372,7 @@ class CredentialsClassTest(unittest.TestCase):
             }
 
     @tempdir()
-    def test_email_send_continues_after_partial_fanout_failure(self, temp_dir):
+    def test_email_send_still_posts_when_one_destination_fails(self, temp_dir):
         """A failed destination still posts to the others, then save logs the error."""
 
         with requests_mock.mock() as m:
@@ -419,7 +420,7 @@ class CredentialsClassTest(unittest.TestCase):
                 creds.save()
                 assert len(m.request_history) == 1
                 assert len(mock_logger.output) == 1
-                assert "Failed to fetch metrics URL" in mock_logger.output[0]
+                assert "Failed to fetch metrics config" in mock_logger.output[0]
 
     @tempdir()
     def test_email_not_send(self, temp_dir):
@@ -469,9 +470,8 @@ class CredentialsClassTest(unittest.TestCase):
 class ParseMetricsDestinationsTest(unittest.TestCase):
     """Unit tests for ``_parse_metrics_destinations``."""
 
-    def test_uses_urls_when_https_entries_present(self):
+    def test_uses_urls_when_https_entries_present(self) -> None:
         """HTTPS ``urls`` entries win over legacy ``url``."""
-        from streamlit.runtime.credentials import _parse_metrics_destinations
 
         assert _parse_metrics_destinations(
             {
@@ -485,9 +485,8 @@ class ParseMetricsDestinationsTest(unittest.TestCase):
             }
         ) == ["https://a.example.com", "https://b.example.com"]
 
-    def test_falls_back_to_url_when_urls_empty_or_invalid(self):
+    def test_falls_back_to_url_when_urls_empty_or_invalid(self) -> None:
         """Empty or non-HTTPS ``urls`` fall back to legacy ``url``."""
-        from streamlit.runtime.credentials import _parse_metrics_destinations
 
         assert _parse_metrics_destinations(
             {"urls": [], "url": "https://legacy.example.com"}
@@ -499,9 +498,8 @@ class ParseMetricsDestinationsTest(unittest.TestCase):
             }
         ) == ["https://legacy.example.com"]
 
-    def test_returns_empty_for_invalid_payloads(self):
+    def test_returns_empty_for_invalid_payloads(self) -> None:
         """Non-dict and invalid URL shapes yield no destinations."""
-        from streamlit.runtime.credentials import _parse_metrics_destinations
 
         assert _parse_metrics_destinations(None) == []
         assert _parse_metrics_destinations({}) == []

@@ -198,7 +198,7 @@ describe("initialize", () => {
 })
 
 describe("parseMetricsDestinations", () => {
-  it("prefers urls over legacy url", () => {
+  it("prefers urls over legacy url and removes duplicates", () => {
     expect(
       parseMetricsDestinations({
         urls: [
@@ -582,7 +582,7 @@ describe("requestDefaultMetricsConfig fallback", () => {
     expect(mm.actuallySendMetrics).toBe(true)
   })
 
-  it("ignores legacy forever-sticky cache and fetches", async () => {
+  it("ignores the legacy cache key and fetches", async () => {
     window.localStorage.setItem(
       LEGACY_METRICS_CONFIG_CACHE_KEY,
       "https://legacy.example.com/webhook"
@@ -721,9 +721,84 @@ describe("requestDefaultMetricsConfig fallback", () => {
     expect(mm.metricsDestinations).toEqual([])
     expect(mm.actuallySendMetrics).toBe(false)
   })
+
+  it("keeps parsed destinations when localStorage.setItem throws", async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ url: "https://fresh.example.com/webhook" }),
+      })
+    ) as typeof fetch
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("QuotaExceededError")
+      })
+
+    try {
+      const mm = getMetricsManager(undefined, "", false)
+      await mm.initialize({ gatherUsageStats: true })
+
+      expect(mm.metricsDestinations).toEqual([
+        "https://fresh.example.com/webhook",
+      ])
+      expect(mm.actuallySendMetrics).toBe(true)
+    } finally {
+      setItemSpy.mockRestore()
+    }
+  })
+
+  it("does not overwrite a host off mode when metrics.json resolves later", async () => {
+    let resolveFetch: (value: {
+      ok: boolean
+      json: () => Promise<{ url: string }>
+    }) => void = () => {}
+    global.fetch = vi.fn(
+      () =>
+        new Promise(resolve => {
+          resolveFetch = resolve
+        })
+    ) as typeof fetch
+
+    const mm = getMetricsManager(undefined, "", false)
+    const initPromise = mm.initialize({ gatherUsageStats: true })
+    mm.setMetricsConfig("off")
+    resolveFetch({
+      ok: true,
+      json: () =>
+        Promise.resolve({ url: "https://fetched.example.com/webhook" }),
+    })
+    await initPromise
+
+    expect(mm.metricsUrl).toEqual("off")
+    expect(mm.metricsDestinations).toEqual([])
+    expect(mm.actuallySendMetrics).toBe(false)
+  })
 })
 
 describe("setMetricsConfig host overrides", () => {
+  it("leaves destinations alone when host sends an empty metricsUrl", async () => {
+    window.localStorage.setItem(
+      METRICS_CONFIG_CACHE_KEY,
+      JSON.stringify({
+        urls: ["https://cached.example.com/webhook"],
+        fetchedAt: Date.now(),
+      })
+    )
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+    expect(mm.metricsDestinations).toEqual([
+      "https://cached.example.com/webhook",
+    ])
+
+    // OSS host-config always sends metricsUrl: "" for "no override".
+    mm.setMetricsConfig("")
+    expect(mm.metricsDestinations).toEqual([
+      "https://cached.example.com/webhook",
+    ])
+  })
+
   it("accepts an HTTPS host override as the sole destination", async () => {
     const mm = getMetricsManager(
       undefined,
