@@ -138,7 +138,9 @@ st.dataframe(
 
 Use `ButtonColumn` for clickable, per-row actions in `st.dataframe` or `st.data_editor`. The cell value is the button label (supports `:material/...:` icons). A cell holding a **list** renders a dropdown menu of multiple actions.
 
-Prefer `ButtonColumn` over `st.dataframe` row or cell selections when a click should trigger a one-off action for a specific row, such as opening a `st.dialog` with its details or running an operation. Button clicks are transient and reset after the click-triggered rerun. Selections are ongoing state and persist across reruns until they change or are cleared. A dialog opened from a selection would open again on every later rerun while the row stays selected. Reserve selections for results that should last as long as the item stays selected, such as a details panel for the selected row on the same page.
+Prefer `ButtonColumn` over `st.dataframe` row or cell selections when a click should trigger a one-off action for a specific row, such as opening a `st.dialog` with its details or running an operation. Button clicks are transient and reset after the click-triggered rerun. Selections are ongoing state and persist across reruns until they change or are cleared. If the script opens a dialog whenever a selection is set, the dialog opens again on every later rerun while the item stays selected. Reserve selections for results that should last as long as the item stays selected, such as a details panel for the selected row on the same page.
+
+Give every row the same label, or the same set of labels, naming the action (for example, `:material/visibility: View`), not the row's item such as its name. The other columns already identify the row.
 
 ```python
 df = pd.DataFrame(
@@ -146,7 +148,7 @@ df = pd.DataFrame(
         "name": ["Alice", "Bob"],
         "actions": [
             [":material/edit: Edit", ":material/delete: Delete"],
-            [":material/edit: Edit"],
+            [":material/edit: Edit", ":material/delete: Delete"],
         ],
     }
 )
@@ -172,6 +174,7 @@ st.dataframe(
 - **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as a dict-like object with `row` and `label` attributes (also supports key access) — only during the click rerun, then resets to `None`.
 - Import `ButtonColumnClickState` from `streamlit.typing` when annotating this click value.
 - Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
+- To open a dialog, call the dialog function after `st.dataframe` when `st.session_state[key]` is set.
 - Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
 - Style with `type="primary" | "secondary" | "tertiary"` and `alignment`.
 
