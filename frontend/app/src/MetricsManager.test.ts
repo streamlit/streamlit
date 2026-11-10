@@ -186,14 +186,18 @@ describe("initialize", () => {
   it("attempts fetch when no metrics config received", async () => {
     // eslint-disable-next-line no-proto
     const getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem")
-    const mm = getMetricsManager(undefined, "", false)
-    await mm.initialize({ gatherUsageStats: true })
+    try {
+      const mm = getMetricsManager(undefined, "", false)
+      await mm.initialize({ gatherUsageStats: true })
 
-    // Checks for v2 cached config first
-    expect(getItemSpy).toHaveBeenCalledWith(METRICS_CONFIG_CACHE_KEY)
-    // Fetches if no fresh cached config
-    expect(fetch.mock.calls.length).toBe(1)
-    expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
+      // Checks for v2 cached config first
+      expect(getItemSpy).toHaveBeenCalledWith(METRICS_CONFIG_CACHE_KEY)
+      // Fetches if no fresh cached config
+      expect(fetch.mock.calls.length).toBe(1)
+      expect(fetch.mock.calls[0][0]).toEqual(DEFAULT_METRICS_CONFIG)
+    } finally {
+      getItemSpy.mockRestore()
+    }
   })
 })
 
@@ -420,16 +424,23 @@ describe("metrics helpers", () => {
     const getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem")
     // eslint-disable-next-line no-proto
     const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
-    const mm = getMetricsManager()
-    await mm.initialize({ gatherUsageStats: true })
+    try {
+      const mm = getMetricsManager()
+      await mm.initialize({ gatherUsageStats: true })
 
-    expect(getItemSpy).toHaveBeenCalledWith("ajs_anonymous_id")
-    expect(getCookieSpy).toHaveBeenCalled()
-    expect(setCookieSpy).toHaveBeenCalled()
-    expect(setItemSpy).toHaveBeenCalled()
-    expect(mm.anonymousId).toHaveLength(36)
-    expect(window.localStorage.getItem("ajs_anonymous_id")).toHaveLength(36)
-    expect(document.cookie).toContain("ajs_anonymous_id")
+      expect(getItemSpy).toHaveBeenCalledWith("ajs_anonymous_id")
+      expect(getCookieSpy).toHaveBeenCalled()
+      expect(setCookieSpy).toHaveBeenCalled()
+      expect(setItemSpy).toHaveBeenCalled()
+      expect(mm.anonymousId).toHaveLength(36)
+      expect(window.localStorage.getItem("ajs_anonymous_id")).toHaveLength(36)
+      expect(document.cookie).toContain("ajs_anonymous_id")
+    } finally {
+      getItemSpy.mockRestore()
+      setItemSpy.mockRestore()
+      setCookieSpy.mockRestore()
+      getCookieSpy.mockRestore()
+    }
   })
 })
 
@@ -730,23 +741,23 @@ describe("requestDefaultMetricsConfig fallback", () => {
           Promise.resolve({ url: "https://fresh.example.com/webhook" }),
       })
     ) as typeof fetch
-    const setItemSpy = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("QuotaExceededError")
-      })
 
-    try {
-      const mm = getMetricsManager(undefined, "", false)
-      await mm.initialize({ gatherUsageStats: true })
+    const mm = getMetricsManager(undefined, "", false)
+    // Stub the cache writer so the inner try/catch runs without breaking
+    // localStorageAvailable()'s probe (which also uses setItem).
+    mm.writeMetricsConfigCache = vi.fn(() => {
+      throw new Error("QuotaExceededError")
+    })
+    await mm.initialize({ gatherUsageStats: true })
 
-      expect(mm.metricsDestinations).toEqual([
-        "https://fresh.example.com/webhook",
-      ])
-      expect(mm.actuallySendMetrics).toBe(true)
-    } finally {
-      setItemSpy.mockRestore()
-    }
+    expect(mm.metricsDestinations).toEqual([
+      "https://fresh.example.com/webhook",
+    ])
+    expect(mm.actuallySendMetrics).toBe(true)
+    expect(mm.writeMetricsConfigCache).toHaveBeenCalledWith({
+      urls: ["https://fresh.example.com/webhook"],
+      fetchedAt: expect.any(Number),
+    })
   })
 
   it("does not overwrite a host off mode when metrics.json resolves later", async () => {
@@ -894,17 +905,13 @@ describe("getAnonymousId reuse", () => {
   it("reuses an existing anonymousId cookie and persists it to localStorage", async () => {
     setCookie("ajs_anonymous_id", "existing-cookie-id")
 
-    const setItemSpy = vi.spyOn(window.localStorage, "setItem")
-
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
     expect(mm.anonymousId).toEqual("existing-cookie-id")
-    expect(setItemSpy).toHaveBeenCalledWith(
-      "ajs_anonymous_id",
+    expect(window.localStorage.getItem("ajs_anonymous_id")).toEqual(
       "existing-cookie-id"
     )
-    setItemSpy.mockRestore()
   })
 
   it("reuses a JSON-stringified legacy anonymousId from localStorage", async () => {

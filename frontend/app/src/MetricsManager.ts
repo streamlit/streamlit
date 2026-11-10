@@ -367,10 +367,13 @@ export class MetricsManager {
 
   private async track(data: MetricsEvent): Promise<void> {
     const body = JSON.stringify(data.toJSON())
+    // Snapshot destinations so logging stays correct if the host replaces
+    // the list while these requests are in flight.
+    const destinations = this.metricsDestinations
     // Async map so a sync Request/URL parse error on one destination
     // becomes a rejection and does not skip later destinations.
     const results = await Promise.allSettled(
-      this.metricsDestinations.map(async url =>
+      destinations.map(async url =>
         fetch(
           new Request(url, {
             method: "POST",
@@ -386,7 +389,7 @@ export class MetricsManager {
       if (result.status === "rejected") {
         LOG.error(
           "Failed to post metrics to",
-          this.metricsDestinations[index],
+          destinations[index],
           result.reason
         )
       }
