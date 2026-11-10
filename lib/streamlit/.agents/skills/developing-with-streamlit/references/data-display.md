@@ -174,7 +174,7 @@ st.dataframe(
 - **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as a dict-like object with `row` and `label` attributes (also supports key access) — only during the click rerun, then resets to `None`.
 - Import `ButtonColumnClickState` from `streamlit.typing` when annotating this click value.
 - Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
-- To open a dialog, call the dialog function after `st.dataframe` when `st.session_state[key]` is set.
+- To open a dialog, call the dialog function after `st.dataframe` when `st.session_state[key]` is not `None`, and pass the clicked row into it. The click value exists only on this rerun, so the dialog body cannot read it later.
 - Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
 - Style with `type="primary" | "secondary" | "tertiary"` and `alignment`.
 
