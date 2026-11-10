@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 def register_widget(
     element_id: str,
     *,
+    element_type: str,
     deserializer: WidgetDeserializer[T],
     serializer: WidgetSerializer[T],
     ctx: ScriptRunContext | None,
@@ -73,6 +74,9 @@ def register_widget(
     ----------
     element_id : str
         The id of the element. Must be unique.
+    element_type : str
+        The element type the id was computed with in
+        ``compute_and_register_element_id`` (e.g. "slider").
     deserializer : WidgetDeserializer[T]
         Called to convert a widget's protobuf value to the value returned by
         its st.<widget_name> function.
@@ -214,6 +218,7 @@ def register_widget(
         max_array_length=max_array_length,
         allow_url_duplicates=allow_url_duplicates,
         disabled=disabled,
+        element_type=element_type,
     )
     return register_widget_from_metadata(metadata, ctx)
 

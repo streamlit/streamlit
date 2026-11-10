@@ -349,6 +349,7 @@ class CameraInputMixin:
 
         camera_input_state = register_widget(
             camera_input_proto.id,
+            element_type="camera_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

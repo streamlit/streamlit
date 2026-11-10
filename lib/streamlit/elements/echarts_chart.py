@@ -1705,6 +1705,7 @@ class EChartsMixin:
         serde = EChartsChartSelectionSerde()
         widget_state = register_widget(
             echarts_chart_proto.id,
+            element_type="echarts_chart",
             on_change_handler=on_select_callback,
             deserializer=serde.deserialize,
             serializer=serde.serialize,

@@ -910,6 +910,7 @@ class TextWidgetsMixin:
 
         widget_state = register_widget(
             text_input_proto.id,
+            element_type="text_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
@@ -1365,6 +1366,7 @@ class TextWidgetsMixin:
         serde = TextAreaSerde(value, max_chars)
         widget_state = register_widget(
             text_area_proto.id,
+            element_type="text_area",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

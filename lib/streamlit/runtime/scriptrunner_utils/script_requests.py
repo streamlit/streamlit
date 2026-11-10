@@ -17,7 +17,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field, replace
 from enum import Enum
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from google.protobuf.message import Message
 
@@ -44,6 +44,36 @@ class ScriptRequestType(Enum):
     # A script rerun has been requested. The ScriptRunner should
     # handle this request as soon as it reaches an interrupt point.
     RERUN = "RERUN"
+
+
+class RerunReason(Enum):
+    """Why a script run started, as recorded in ``PageProfile.rerun_reason``.
+
+    Members are listed in order of precedence. When one run has several
+    reasons, for example because rerun requests were coalesced, the first one
+    listed is recorded. See ``PageProfile.proto`` for what each reason covers.
+    """
+
+    INITIAL_LOAD = "initial_load"
+    NAVIGATION = "navigation"
+    WIDGET_INTERACTION = "widget_interaction"
+    QUERY_PARAMS_CHANGE = "query_params_change"
+    ST_RERUN = "st_rerun"
+    FILE_CHANGE = "file_change"
+    FRAGMENT_AUTO_RERUN = "fragment_auto_rerun"
+    MANUAL_RERUN = "manual_rerun"
+    UNKNOWN = "unknown"
+
+    def combine(self, other: RerunReason) -> RerunReason:
+        """Return whichever of the two reasons has the higher precedence."""
+        if _RERUN_REASON_PRECEDENCE[other] < _RERUN_REASON_PRECEDENCE[self]:
+            return other
+        return self
+
+
+_RERUN_REASON_PRECEDENCE: Final[dict[RerunReason, int]] = {
+    reason: index for index, reason in enumerate(RerunReason)
+}
 
 
 @dataclass(frozen=True)
@@ -80,6 +110,9 @@ class RerunData:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
     context_info: ContextInfo | None = None
+    # Why this rerun was requested. The script runner can raise it to a reason
+    # with higher precedence once the run starts (see RerunReason).
+    reason: RerunReason = RerunReason.UNKNOWN
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -435,6 +468,7 @@ class ScriptRequests:
                 replay_trigger_states=coalesced_replay_states,
                 replay_trigger_values=coalesced_replay_values,
                 context_info=new_data.context_info,
+                reason=self._rerun_data.reason.combine(new_data.reason),
             )
 
             return True

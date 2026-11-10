@@ -497,6 +497,7 @@ class BidiComponentMixin:
 
         component_state = register_widget(
             bidi_component_proto.id,
+            element_type="bidi_component",
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
@@ -512,6 +513,7 @@ class BidiComponentMixin:
 
         trig_state = register_widget(
             aggregator_id,
+            element_type="bidi_component",
             deserializer=deserialize_trigger_list,  # always returns list or None
             serializer=lambda v: json.dumps(v),  # send dict as JSON
             ctx=ctx,

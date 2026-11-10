@@ -53,6 +53,33 @@ message PageProfile {
   repeated string installed_agents = 14;
   // Agent API activity in this server process. Unset while every count is zero.
   AgentApiUsage agent_api_usage = 15;
+  // Why this run started, in order of precedence:
+  // - "initial_load": the first run of a session.
+  // - "navigation": a page change (navigation menu, st.page_link,
+  //   st.switch_page) or browser back/forward.
+  // - "widget_interaction": a widget's value changed.
+  // - "query_params_change": the query string changed without a page change
+  //   (st.page_link to the current page, or a host-supplied query string).
+  // - "st_rerun": st.rerun().
+  // - "file_change": a source file changed with run-on-save enabled.
+  // - "fragment_auto_rerun": a fragment's run_every timer.
+  // - "manual_rerun": any other browser request, such as the "Rerun" menu
+  //   item, the R shortcut, a host-requested rerun, or a rerun after
+  //   reconnecting.
+  // - "unknown": none of the above.
+  // When several rerun requests are coalesced into one run, or one run
+  // matches several reasons, the reason with the highest precedence is
+  // recorded.
+  string rerun_reason = 16;
+  // Element type of the widget that triggered a "widget_interaction" run, as
+  // passed to compute_and_register_element_id (e.g. "slider",
+  // "vega_lite_chart", "dataframe", "form_submit_button",
+  // "component_instance" for custom components v1, "bidi_component" for
+  // custom components v2). When several widgets changed, this is their
+  // common type if they share one, else the common type of the changed
+  // trigger widgets (e.g. the button that submitted a form), else "multiple".
+  // Empty for other rerun reasons.
+  string rerun_element_type = 17;
 }
 
 // Agent API activity in one server process. Cumulative since this process

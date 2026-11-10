@@ -377,6 +377,7 @@ class ColorPickerMixin:
 
         widget_state = register_widget(
             color_picker_proto.id,
+            element_type="color_picker",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

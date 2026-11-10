@@ -203,6 +203,7 @@ And if you're using Streamlit Cloud, add "pyarrow" to your requirements.txt.""",
 
             component_state = register_widget(
                 element.component_instance.id,
+                element_type="component_instance",
                 deserializer=deserialize_component,
                 serializer=lambda x: x,
                 ctx=get_script_run_ctx(),

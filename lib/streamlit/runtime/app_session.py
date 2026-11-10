@@ -53,6 +53,7 @@ from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RerunReason,
     RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
@@ -629,7 +630,12 @@ class AppSession:
             lambda: self._enqueue_forward_msg(self._create_exception_message(e))
         )
 
-    def request_rerun(self, client_state: ClientState | None) -> None:
+    def request_rerun(
+        self,
+        client_state: ClientState | None,
+        *,
+        reason: RerunReason | None = None,
+    ) -> None:
         """Signal that we're interested in running the script.
 
         If the script is not already running, it will be started immediately.
@@ -640,6 +646,9 @@ class AppSession:
         client_state : streamlit.proto.ClientState_pb2.ClientState | None
             The ClientState protobuf to run the script with, or None
             to use previous client state.
+        reason : RerunReason | None
+            Why the rerun is requested, recorded in telemetry. When None, it is
+            inferred from ``client_state``.
 
         """
 
@@ -676,6 +685,14 @@ class AppSession:
             if client_state.HasField("context_info"):
                 self._client_state.context_info.CopyFrom(client_state.context_info)
 
+            if reason is None:
+                if client_state.is_history_navigation:
+                    reason = RerunReason.NAVIGATION
+                elif client_state.is_auto_rerun:
+                    reason = RerunReason.FRAGMENT_AUTO_RERUN
+                else:
+                    reason = RerunReason.MANUAL_RERUN
+
             query_string = sanitize_query_string(client_state.query_string)
             rerun_data = RerunData(
                 query_string=query_string,
@@ -691,9 +708,10 @@ class AppSession:
                 context_info=client_state.context_info
                 if client_state.HasField("context_info")
                 else None,
+                reason=reason,
             )
         else:
-            rerun_data = RerunData()
+            rerun_data = RerunData(reason=reason or RerunReason.UNKNOWN)
 
         if self._scriptrunner is not None:
             if (
@@ -911,7 +929,7 @@ class AppSession:
             return
 
         if self._run_on_save:
-            self.request_rerun(self._client_state)
+            self.request_rerun(self._client_state, reason=RerunReason.FILE_CHANGE)
         else:
             # File watchers run off the event loop, and ForwardMsgQueue is
             # single-threaded. This handoff prevents delta coalescing from

@@ -40,6 +40,7 @@ from streamlit.runtime.forward_msg_cache import (
     populate_hash_if_needed,
 )
 from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunReason
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
@@ -280,6 +281,12 @@ class ScriptRunContext:
     # Raises StopException or RerunException when this run should end. Read by
     # contended cache waits via get_run_yield_check().
     yield_check: Callable[[], None] = lambda: None
+    # Why this run started, before widget changes are considered. Recorded in
+    # PageProfile telemetry.
+    rerun_reason: RerunReason = RerunReason.UNKNOWN
+    # Element type of the widget(s) whose value changed for this run, or None
+    # when no widget changed. Set before widget callbacks run.
+    rerun_element_type: str | None = None
 
     def __post_init__(self) -> None:
         # Capture the main script thread's identity so reset() can refuse to
@@ -313,6 +320,7 @@ class ScriptRunContext:
         is_history_navigation: bool = False,
         # Called by fragment workers and contended cache waits to cease execution.
         yield_check: Callable[[], None] = lambda: None,
+        rerun_reason: RerunReason = RerunReason.UNKNOWN,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
             raise RuntimeError(
@@ -338,6 +346,8 @@ class ScriptRunContext:
         self._has_script_started = False
         self.fragment_ids_this_run = fragment_ids_this_run
         self.is_history_navigation = is_history_navigation
+        self.rerun_reason = rerun_reason
+        self.rerun_element_type = None
         self.has_dialog_opened = False
         self.cached_message_hashes = frozenset(cached_message_hashes or ())
 

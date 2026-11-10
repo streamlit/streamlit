@@ -605,6 +605,26 @@ def _navigation_is_pending(
     )
 
 
+def _rerun_element_type(changed_widgets: list[WidgetMetadata[Any]]) -> str:
+    """Return the element type to record for a run caused by these widget changes.
+
+    This is the widgets' type if they all share one. Otherwise it is the type of
+    the changed trigger widgets, which are what sent the rerun (e.g. a form's
+    submit button), if they share one, or else "multiple".
+    """
+    element_types = {metadata.element_type for metadata in changed_widgets}
+    if len(element_types) == 1:
+        return element_types.pop()
+    trigger_element_types = {
+        metadata.element_type
+        for metadata in changed_widgets
+        if metadata.value_type in _TRIGGER_PROTO_FIELDS
+    }
+    if len(trigger_element_types) == 1:
+        return trigger_element_types.pop()
+    return "multiple"
+
+
 @dataclass(slots=True)
 class _CallbackRerunVotes:
     """What the callbacks of one interaction asked for, collected during dispatch.
@@ -952,6 +972,7 @@ class SessionState:
 
         # Changed widgets, split by which dispatch path (if any) will handle them.
         changed_widget_ids_for_single_callback: list[str] = []
+        changed_widget_metadata: list[WidgetMetadata[Any]] = []
 
         for wid in self._new_widget_state:
             if not self._widget_changed(wid):
@@ -959,12 +980,19 @@ class SessionState:
             metadata = self._new_widget_state.widget_metadata.get(wid)
             if metadata is None or metadata.disabled:
                 continue
+            changed_widget_metadata.append(metadata)
             if metadata.callback is not None:
                 changed_widget_ids_for_single_callback.append(wid)
             # Widgets with neither `callback` nor `callbacks` (e.g. form fields)
             # are skipped: their values are already in session state and they do
             # not influence rerun scope.  Widgets with `callbacks` are handled by
             # Path 2 below.
+
+        ctx = get_script_run_ctx()
+        if ctx and changed_widget_metadata:
+            # Recorded before callbacks run so the run is attributed to this
+            # interaction even if a callback raises.
+            ctx.rerun_element_type = _rerun_element_type(changed_widget_metadata)
 
         # Path 1: single callback.
         for wid in changed_widget_ids_for_single_callback:
@@ -990,8 +1018,6 @@ class SessionState:
             # 2) JSON value change dispatch
             if metadata.value_type == "json_value":
                 self._dispatch_json_change_callbacks(votes, wid, metadata, args, kwargs)
-
-        ctx = get_script_run_ctx()
 
         # Queue the callbacks' reruns only now that every callback has run. Queued
         # mid-dispatch, the next callback's first st.* call would pick the request up
@@ -1128,7 +1154,7 @@ class SessionState:
         This entry carries no widget state. Trigger replay is attached separately to
         ``rerun_batch[0]`` and folded by ``request_rerun_batch``.
         """
-        from streamlit.runtime.scriptrunner import RerunData
+        from streamlit.runtime.scriptrunner import RerunData, RerunReason
 
         return RerunData(
             query_string=ctx.query_string,
@@ -1136,6 +1162,7 @@ class SessionState:
             widget_states=None,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
+            reason=RerunReason.ST_RERUN,
         )
 
     def _omit_query_bound_widget_states(

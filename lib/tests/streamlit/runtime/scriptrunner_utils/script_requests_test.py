@@ -23,6 +23,7 @@ from streamlit.proto.Common_pb2 import ChatInputValue, StringTriggerValue
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
+    RerunReason,
     ScriptRequest,
     ScriptRequests,
     ScriptRequestType,
@@ -813,3 +814,66 @@ def test_inactive_older_trigger_is_not_carried_forward(trigger_field: str) -> No
 
     assert _get_widget("trigger", result) is None
     assert _get_widget("persistent", result).string_value == "new"
+
+
+def test_rerun_reason_combine_follows_declaration_order() -> None:
+    """Every reason outranks all reasons declared after it, in either order."""
+    reasons = list(RerunReason)
+    for index, higher in enumerate(reasons):
+        assert higher.combine(higher) is higher
+        for lower in reasons[index + 1 :]:
+            assert higher.combine(lower) is higher
+            assert lower.combine(higher) is higher
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "expected"),
+    [
+        pytest.param(
+            RerunReason.FRAGMENT_AUTO_RERUN,
+            RerunReason.MANUAL_RERUN,
+            RerunReason.FRAGMENT_AUTO_RERUN,
+            id="older_reason_kept_when_higher",
+        ),
+        pytest.param(
+            RerunReason.FRAGMENT_AUTO_RERUN,
+            RerunReason.NAVIGATION,
+            RerunReason.NAVIGATION,
+            id="newer_reason_kept_when_higher",
+        ),
+        pytest.param(
+            RerunReason.ST_RERUN,
+            RerunReason.FILE_CHANGE,
+            RerunReason.ST_RERUN,
+            id="st_rerun_beats_file_change",
+        ),
+        pytest.param(
+            RerunReason.UNKNOWN,
+            RerunReason.MANUAL_RERUN,
+            RerunReason.MANUAL_RERUN,
+            id="unknown_never_overrides",
+        ),
+    ],
+)
+def test_coalesced_rerun_keeps_highest_precedence_reason(
+    first: RerunReason, second: RerunReason, expected: RerunReason
+) -> None:
+    """Coalescing rerun requests keeps the reason with the higher precedence."""
+    reqs = ScriptRequests()
+    reqs.request_rerun(RerunData(reason=first))
+    reqs.request_rerun(RerunData(reason=second))
+
+    assert reqs.on_scriptrunner_ready().rerun_data.reason is expected
+
+
+def test_coalesced_fragment_reruns_keep_highest_precedence_reason() -> None:
+    """Fragment reruns merged into one queue also keep the higher reason."""
+    reqs = ScriptRequests()
+    reqs.request_rerun(
+        RerunData(fragment_id="a", reason=RerunReason.FRAGMENT_AUTO_RERUN)
+    )
+    reqs.request_rerun(RerunData(fragment_id="b", reason=RerunReason.ST_RERUN))
+
+    rerun_data = reqs.on_scriptrunner_ready().rerun_data
+    assert rerun_data.fragment_id_queue == ["a", "b"]
+    assert rerun_data.reason is RerunReason.ST_RERUN

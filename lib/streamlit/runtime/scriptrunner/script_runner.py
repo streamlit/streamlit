@@ -46,6 +46,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
+    RerunReason,
     ScriptRequests,
     ScriptRequestType,
 )
@@ -665,6 +666,11 @@ class ScriptRunner:
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
             previous_page_script_hash = ctx.page_script_hash
+            rerun_reason = self._rerun_reason_at_run_start(
+                rerun_data,
+                previous_page_script_hash=previous_page_script_hash,
+                page_script_hash=page_script_hash,
+            )
             if previous_page_script_hash != page_script_hash:
                 # Page changed, enforce reset widget state where possible.
                 # This enforcement matters when a new script thread is started
@@ -714,6 +720,7 @@ class ScriptRunner:
                 context_info=rerun_data.context_info,
                 is_history_navigation=rerun_data.is_history_navigation,
                 yield_check=self._maybe_handle_execution_control_request,
+                rerun_reason=rerun_reason,
             )
             with self._join_wake_lock:
                 self._join_wake_coordinator = ctx.parallel_coordinator
@@ -1002,6 +1009,30 @@ class ScriptRunner:
                 rerun_data = rerun_exception_data
             else:
                 break
+
+    def _rerun_reason_at_run_start(
+        self,
+        rerun_data: RerunData,
+        *,
+        previous_page_script_hash: str,
+        page_script_hash: str,
+    ) -> RerunReason:
+        """Return why this run started, before widget changes are considered.
+
+        Must be called before this run's query string is applied to the
+        session's query params.
+        """
+        if not previous_page_script_hash:
+            # Every run sets the session's current page, so it is only empty
+            # before the session's first run.
+            return RerunReason.INITIAL_LOAD
+        if rerun_data.page_name or previous_page_script_hash != page_script_hash:
+            return rerun_data.reason.combine(RerunReason.NAVIGATION)
+        with self._session_state.query_params() as qp:
+            query_string_changed = not qp.matches_query_string(rerun_data.query_string)
+        if query_string_changed:
+            return rerun_data.reason.combine(RerunReason.QUERY_PARAMS_CHANGE)
+        return rerun_data.reason
 
     def _on_script_finished(
         self,
