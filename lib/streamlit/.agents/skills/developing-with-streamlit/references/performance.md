@@ -247,7 +247,7 @@ orders()
 **When NOT to use:**
 
 - Fragments that depend on each other's Session State writes
-- Pure-Python CPU-bound work: threads share the GIL, so it doesn't overlap, and busy workers can delay the page's first paint
+- Pure-Python CPU-bound work on standard (GIL) Python builds: threads share the GIL, so it doesn't overlap, and busy workers can delay the page's first paint
 
 **Thread safety rules:**
 
@@ -487,7 +487,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its
 The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
-- `st.skeleton` — animated placeholder that reserves layout space while content loads. Prefer it over a spinner for charts, tables, and metrics: cached reruns update the content in place without showing it, and a cached function's spinner text inside it labels the skeleton.
+- `st.skeleton` — animated placeholder that reserves layout space while content loads. Prefer it over a spinner for charts, tables, and metrics: cached reruns update the content in place without flashing the skeleton, and custom spinner text from a cached function inside the block labels the skeleton.
 - `st.progress` — determinate progress bar when you can report percent complete (e.g., looping over a known number of steps).
 - `st.status` — progress and intermediate output for multi-step, long-running tasks.
 

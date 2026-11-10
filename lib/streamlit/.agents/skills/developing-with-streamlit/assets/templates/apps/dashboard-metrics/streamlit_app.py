@@ -293,8 +293,8 @@ def kpi_card(label: str, metric_name: str) -> None:
     """Display a bordered KPI card: the latest 7-day average and its 4-week change.
 
     Like the metric cards, each KPI is a parallel fragment that loads its own
-    (cached) data. The page layout calls it inside ``st.skeleton``, so the
-    skeleton is drawn by the main script and the metric replaces it.
+    (cached) data. The main script calls it inside ``st.skeleton``, and the
+    metric replaces that skeleton.
     """
     # The last 4 weeks (29 daily points) of the 7-day average: the value is
     # the latest point, the delta compares it to the first one.
@@ -383,11 +383,9 @@ def metric_card(
                     key=f"{metric_name}_time",
                 )
 
-        # Load this card's data and render it inside the skeleton's slot. The
-        # chart or table replaces the skeleton. On reruns that hit the cache,
-        # the chart updates in place without a skeleton; on a cache miss, the
-        # skeleton covers the old chart at its size after half a second. This
-        # also covers the card's own reruns, such as a filter change.
+        # The chart or table replaces the skeleton. On any rerun, including a
+        # filter change, a cache hit updates the chart in place; a cache miss
+        # covers the old chart with the skeleton after half a second.
         with st.skeleton(height=CHART_HEIGHT):
             df = load_metric(metric_name)
 

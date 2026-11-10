@@ -70,7 +70,9 @@ st.set_page_config(
 REGIONS = ["us-west-2", "us-east-1", "eu-west-1", "ap-northeast-1"]
 CHART_HEIGHT = 280
 REPORT_HEIGHT = 320
-KPI_HEIGHT = 108  # Height of the KPI row's skeleton and metrics, so they match
+# Height of the KPI row's skeleton and metrics, so they match. It assumes the wide
+# layout, where the three metrics fit in one row; on narrow screens they wrap.
+KPI_HEIGHT = 108
 
 # The slow operation stands in for heavy work (a big warehouse query, a full
 # reconciliation, an export); real ones can take much longer. The quick loaders are
@@ -180,7 +182,7 @@ def freshness_report() -> None:
 
     On a full app rerun this is dispatched to a worker thread, so the main-script
     filter stays responsive and the quick cards fill in while the report is still
-    loading. The page layout calls it inside ``st.skeleton``, so the spinner text
+    loading. The main script calls it inside ``st.skeleton``, so the spinner text
     shows on the skeleton, at the report's size, instead of as a separate spinner.
     """
     with st.spinner(f"Running the account-wide report… (~{REPORT_SECONDS}s)"):
@@ -212,9 +214,8 @@ st.title("Operations dashboard")
 filter_col, _ = st.columns([1, 3])
 region = filter_col.selectbox("Region", REGIONS)
 
-# Layout first: the main script draws every card's frame, title, and skeleton, then
-# calls the card's parallel fragment inside its skeleton. The page has its final
-# layout from the first paint, and each fragment's output replaces its skeleton.
+# Each card's frame, title, and skeleton are drawn here; its fragment's output
+# replaces the skeleton.
 
 # Quick, region-specific cards: they reload fast and update when the region changes.
 with st.skeleton(height=KPI_HEIGHT):

@@ -146,7 +146,7 @@ first paint, and the fragment's first element replaces its skeleton:
 ```python
 @st.fragment(parallel=True)
 def metric_body(metric_name: str):
-    data = load_metric(metric_name)  # Cached; loads in parallel
+    data = load_metric(metric_name)  # Cached; runs on a worker alongside other cards
     st.line_chart(data, height=300, alt=f"{metric_name} over time")
 
 
@@ -158,8 +158,8 @@ with st.container(border=True):
 
 A card with its own controls must draw them inside the fragment, so it draws its
 frame, header, and `with st.skeleton()` around the slow part there too, as the
-`dashboard-metrics` chart cards do. On cached reruns the chart updates in place without a
-skeleton; on a cache miss, the skeleton covers the old chart at its size.
+`dashboard-metrics` chart cards do. On a cached rerun the chart updates in place without a
+skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second.
 
 Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
 behind a widget interaction instead, where the fragment reruns sequentially.

@@ -186,13 +186,13 @@ with col2:
             orders_body()
 ```
 
-Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first element replaces the skeleton, so draw the slow element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
+Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first visible element replaces the skeleton, so draw that element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
 
 The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
 
 To keep the layout stable:
 
-- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. Measure content that has no `height` parameter once.
+- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. If the element has no `height` parameter, give the skeleton the height the element renders at.
 - Put the content inside the `with st.skeleton()` block, not after it, and draw the slow element first: any visible element, even a caption, ends the skeleton.
 - Give stateful elements a `key`, so a rerun updates them in place and they keep their scroll and selection.
 - Inside a skeleton, Streamlit hides a cached function's default spinner, so `show_spinner=False` isn't needed. Pass `show_spinner="..."` to label the skeleton during slow loads.
