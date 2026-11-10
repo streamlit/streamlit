@@ -60,7 +60,9 @@ describe("StyledResizableContainer print layout", () => {
       )
     )
 
-    expect(css).toMatch(/:has\(\.stDataFramePrintTable\)\{break-inside:auto/)
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\)\{break-inside:auto[^}]*min-width:0[^}]*clip-path:inset\(0\)/
+    )
     expect(css).toMatch(
       /:has\(\.stDataFramePrintTable\) \.stDataFrameResizable,.*:has\(\.stDataFramePrintTable\) \.stElementToolbar\{display:none/
     )

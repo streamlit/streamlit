@@ -68,9 +68,15 @@ export const StyledResizableContainer =
           ...printAllowSplitRules,
           display: "block",
           width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
           height: "auto",
           maxHeight: "none",
+          // Keep overflow visible so the table can fragment. Clip painting
+          // to this box so extra columns are cut at the card instead of
+          // spilling past the border.
           overflow: "visible",
+          clipPath: "inset(0)",
         },
         [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stDataFrameResizable, &:has(.${DATAFRAME_PRINT_TABLE_CLASS}) .stElementToolbar`]:
           {
@@ -79,6 +85,7 @@ export const StyledResizableContainer =
         [`& .${DATAFRAME_PRINT_SLOT_CLASS}`]: {
           display: "block",
           width: "100%",
+          maxWidth: "100%",
         },
         [`& .${DATAFRAME_PRINT_TABLE_CLASS}`]: {
           borderCollapse: "collapse",
