@@ -17,6 +17,7 @@
 import { type GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { genericFonts } from "~lib/theme/primitives/typography"
 
 import { DATAFRAME_PRINT_TABLE_CLASS } from "./printClassNames"
 import {
@@ -117,6 +118,65 @@ describe("fillDataFramePrintSlot", () => {
     expect(
       [...slot.querySelectorAll("td")].map(cell => cell.textContent)
     ).toEqual(["Grace", "Boston", "Alan", "Manchester"])
+  })
+
+  it("keeps an empty column title instead of falling back to the name", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("", { name: "col_a" })],
+      () => textCell("Ada"),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("th")?.textContent).toBe("")
+  })
+
+  it("prints the URL for a link cell that shows a Material icon", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Link", { kind: "link" })],
+      () => ({
+        kind: GridCellKind.Uri,
+        data: "https://example.com",
+        displayData: "\uE89E",
+        allowOverlay: false,
+        hoverEffect: true,
+        themeOverride: { fontFamily: genericFonts.iconFont },
+      }),
+      { startRow: 0, rowCount: 1 }
+    )
+
+    expect(slot.querySelector("td")?.textContent).toBe("https://example.com")
+  })
+
+  it("prints a missing or empty icon-link cell without the icon", () => {
+    fillDataFramePrintSlot(
+      slot,
+      [column("Link", { kind: "link" })],
+      ([, row]) =>
+        row === 0
+          ? {
+              kind: GridCellKind.Uri,
+              data: null as unknown as string,
+              displayData: "",
+              allowOverlay: false,
+              hoverEffect: true,
+              isMissingValue: true,
+            }
+          : {
+              kind: GridCellKind.Uri,
+              data: "",
+              displayData: "",
+              allowOverlay: false,
+              hoverEffect: true,
+              themeOverride: { fontFamily: genericFonts.iconFont },
+            },
+      { startRow: 0, rowCount: 2 }
+    )
+
+    expect(
+      [...slot.querySelectorAll("td")].map(cell => cell.textContent)
+    ).toEqual(["None", ""])
   })
 
   it("prints the formatted text instead of the stored value", () => {

@@ -361,6 +361,24 @@ describe("StyledElementContainer print layout", () => {
     )
     expect(css).not.toMatch(/@media print\{[^}]*stPageLink/)
   })
+
+  it("releases reserved height around a dataframe print table", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          isStale: false,
+          width: "100%",
+          height: "300px",
+          elementType: "arrowDataFrame",
+          overflow: "visible",
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none/
+    )
+  })
 })
 
 describe("StyledColumn print layout", () => {

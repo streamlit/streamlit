@@ -239,6 +239,23 @@ describe("st.table", () => {
     expect(scrollableWrapper).toHaveAttribute("aria-label", "Scrollable table")
   })
 
+  it("treats a stretch-height table as a reserved scroll box", () => {
+    const props: TableProps = {
+      ...getProps(UNICODE),
+      heightConfig: {
+        useStretch: true,
+      },
+    }
+
+    const { container } = render(<Table {...props} />)
+
+    const scrollableWrapper = container.querySelector(
+      '[data-testid="stTable"] > div'
+    ) as HTMLElement
+    expect(scrollableWrapper).toHaveAttribute("role", "region")
+    expect(scrollableWrapper).toHaveAttribute("aria-label", "Scrollable table")
+  })
+
   describe("alt (accessible name)", () => {
     it("sets aria-label on the table when alt is provided", () => {
       render(

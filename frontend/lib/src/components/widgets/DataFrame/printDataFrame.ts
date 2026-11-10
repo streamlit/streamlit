@@ -30,6 +30,7 @@ import {
   SELF_DRAWN_MISSING_KINDS,
   toSafeString,
 } from "~lib/components/widgets/DataFrame/columns"
+import { genericFonts } from "~lib/theme/primitives/typography"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import { DATAFRAME_PRINT_TABLE_CLASS } from "./printClassNames"
@@ -156,7 +157,7 @@ export function clearDataFramePrintSlot(slot: HTMLElement): void {
 
 /** Parent levels plus the leaf title, matching the grid's group row. */
 function printColumnHeader(column: BaseColumn): string {
-  const title = column.title || column.name || ""
+  const title = column.title ?? column.name ?? ""
   const group = column.group?.trim()
   if (group === undefined || group.length === 0) {
     return title
@@ -205,6 +206,17 @@ function printCellContent(
 
   if (cell.kind === GridCellKind.Image) {
     return { imageUrls: cell.data }
+  }
+
+  // LinkColumn icon cells store a Material ligature or codepoint in
+  // displayData. That glyph needs the icon font, which print does not
+  // apply, so use the URL instead.
+  if (
+    cell.kind === GridCellKind.Uri &&
+    cell.themeOverride?.fontFamily === genericFonts.iconFont &&
+    typeof cell.data === "string"
+  ) {
+    return cell.data
   }
 
   if ("displayData" in cell) {

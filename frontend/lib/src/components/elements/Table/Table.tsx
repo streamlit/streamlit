@@ -111,8 +111,11 @@ export function Table(props: Readonly<TableProps>): ReactElement {
     ? numColumns - numIndexColumns
     : numColumns
 
-  // Scrolling is enabled when a fixed pixel height or width is specified
-  const hasScrollableHeight = Boolean(props.heightConfig?.pixelHeight)
+  // Pixel and stretch height reserve a box. Print keeps that clip so the
+  // table does not paint over later elements. Content height can split.
+  const hasScrollableHeight = Boolean(
+    props.heightConfig?.pixelHeight || props.heightConfig?.useStretch
+  )
   const hasScrollableWidth = Boolean(props.widthConfig?.pixelWidth)
 
   // Table sizes to content (width="content") instead of filling space
