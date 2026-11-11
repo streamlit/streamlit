@@ -1434,7 +1434,8 @@ describe("DataFrame widget", () => {
   })
 
   it("changes the column format and remeasures the column afterwards", async () => {
-    const user = userEvent.setup()
+    vi.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<DataFrame {...props} />)
 
     openColumnMenu()
@@ -1450,12 +1451,12 @@ describe("DataFrame widget", () => {
     // The remeasure is delayed until the new format is applied to all cells.
     expect(dataEditorRemeasureColumnsMock).not.toHaveBeenCalled()
 
-    await waitFor(() => {
-      expect(dataEditorRemeasureColumnsMock).toHaveBeenCalledWith(
-        CompactSelection.fromSingleSelection(1)
-      )
+    act(() => {
+      vi.advanceTimersByTime(100)
     })
-    expect(dataEditorRemeasureColumnsMock).toHaveBeenCalledOnce()
+    expect(dataEditorRemeasureColumnsMock).toHaveBeenCalledExactlyOnceWith(
+      CompactSelection.fromSingleSelection(1)
+    )
   })
 
   describe("resizing", () => {
