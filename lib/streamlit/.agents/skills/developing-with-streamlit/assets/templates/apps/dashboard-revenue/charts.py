@@ -25,8 +25,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import data
 import pandas as pd
-from data import PLANS
 
 _LEGEND = {"top": 0, "left": 0, "icon": "roundRect", "itemWidth": 10, "itemHeight": 10}
 _GRID = {"left": 4, "right": 12, "top": 36, "bottom": 4}
@@ -115,7 +115,7 @@ def mrr_growth(
         values /= 1_000
     # A plan removed by the filter keeps its column (and color slot) but has no
     # values, so it draws nothing.
-    source = values.reindex(columns=PLANS).round(1).reset_index(drop=True)
+    source = values.reindex(columns=data.PLANS).round(1).reset_index(drop=True)
     labels = _month_labels(combined.index)
     source.insert(0, "month", labels)
     series: list[dict[str, Any]] = [
@@ -130,7 +130,7 @@ def mrr_growth(
             "emphasis": {"focus": "series"},
             "encode": {"x": "month", "y": plan},
         }
-        for plan in PLANS
+        for plan in data.PLANS
     ]
     forecast_range = (
         (labels[len(monthly)], labels[-1]) if forecast is not None else None
@@ -143,7 +143,7 @@ def mrr_growth(
             "valueFormatter": "%.1f%%" if share else "$%,.1fK",
         },
         # The markers series stays out of the legend.
-        "legend": {**_LEGEND, "data": PLANS},
+        "legend": {**_LEGEND, "data": data.PLANS},
         "grid": _GRID,
         "xAxis": {
             "type": "category",
@@ -292,7 +292,8 @@ def account_mrr(history: pd.Series) -> dict[str, Any]:
                 "name": "MRR",
                 "type": "line",
                 "smooth": 0.3,
-                "showSymbol": False,
+                # A single month draws no line, so show its point.
+                "showSymbol": len(source) == 1,
                 "lineStyle": {"width": 2.5},
                 "areaStyle": {"opacity": 0.16},
                 "encode": {"x": "month", "y": "mrr"},

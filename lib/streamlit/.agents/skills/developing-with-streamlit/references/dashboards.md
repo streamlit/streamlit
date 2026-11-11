@@ -64,6 +64,7 @@ with st.container(border=True):
         ":material/more_vert:",
         [":material/menu_book: What's measured"],
         type="tertiary",
+        help="More options",
     )
     if action:
         definition_drawer("mrr_by_plan")  # An @st.dialog(..., position="right")
@@ -71,7 +72,7 @@ with st.container(border=True):
 
 - A label that is only `:material/more_vert:` (or `:material/more_horiz:` or `:material/menu:`) makes an icon-only trigger without a chevron.
 - `st.menu_button` returns the picked option only on the rerun it triggers. To toggle a chart option from the menu, flip a Session State flag in its `on_click` callback, so the card already reads the new value when it redraws.
-- Show definitions and record details in a side drawer, `@st.dialog(..., position="right")`, and the query behind a section in `st.popover("SQL", icon=":material/data_object:")` with `st.code(sql, language="sql")`.
+- Show definitions and record details in a side drawer, `@st.dialog(..., position="right")`, and the query behind a section in `st.popover("SQL", icon=":material/data_object:")` with `st.code(sql, language="sql")`. In a `@st.fragment(parallel=True)`, open the drawer only on the rerun a click triggers, as the menu above does: calling `@st.dialog` during the parallel full-app run raises.
 - For a certified KPI, add `:green[:material/verified:]` to the `st.metric` label and its definition to `help`.
 
 ## KPI rows
@@ -265,6 +266,8 @@ with st.container(border=True):
 accounts = load_accounts()
 table_slot.dataframe(accounts, height=400, alt="Customer accounts")
 ```
+
+Or draw both cards in one `@st.fragment(parallel=True)` inside one `st.skeleton`, as `dashboard-revenue` does for its industry donut and accounts table. A selection then reruns only that fragment.
 
 Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 

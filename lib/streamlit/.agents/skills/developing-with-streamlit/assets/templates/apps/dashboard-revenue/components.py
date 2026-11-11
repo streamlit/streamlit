@@ -84,7 +84,7 @@ DEFINITIONS = {
         "Monthly recurring revenue split by plan. The forecast extends each plan "
         "by its average growth over the last six months.",
         "SELECT month, plan, SUM(mrr) AS mrr\nFROM revenue.mrr_monthly\n"
-        "WHERE region IN (:regions)\nGROUP BY month, plan",
+        "WHERE region IN (:regions) AND plan IN (:plans)\nGROUP BY month, plan",
     ),
     "mrr_bridge": Definition(
         "MRR bridge",
@@ -136,7 +136,7 @@ def card_menu(
     toggles = toggles or {}
     key = f"{card}_menu"
 
-    def label(option: str) -> str:
+    def option_label(option: str) -> str:
         if option not in toggles:
             return MEASURED
         if st.session_state.get(option, False):
@@ -144,15 +144,15 @@ def card_menu(
         return f":material/add_chart: Show {toggles[option]}"
 
     def flip_toggle() -> None:
-        flag = st.session_state[key]
-        if flag in toggles:
-            st.session_state[flag] = not st.session_state.get(flag, False)
+        picked = st.session_state[key]
+        if picked in toggles:
+            st.session_state[picked] = not st.session_state.get(picked, False)
 
     # A menu icon as the only label renders an icon-only trigger without a chevron.
     choice = controls.menu_button(
         ":material/more_vert:",
         [*toggles, "measured"],
-        format_func=label,
+        format_func=option_label,
         type="tertiary",
         key=key,
         help="More options",
@@ -172,7 +172,8 @@ def sql_popover(card: str) -> None:
 @st.dialog("What's measured", position="right", width=520, icon=":material/menu_book:")
 def definition_drawer(card: str) -> None:
     definition = DEFINITIONS[card]
-    st.subheader(definition.title, anchor=False)
+    # Dialogs shrink headings to 65%, so bold text keeps the title at body size.
+    st.markdown(f"**{definition.title}**")
     with st.container(horizontal=True, gap="small"):
         st.badge("Certified", icon=":material/verified:", color="green")
         st.badge(definition.owner, icon=":material/groups:", color="gray")
@@ -225,7 +226,7 @@ def open_clicked_account(table: pd.DataFrame, key: str) -> None:
 def account_drawer(account_id: str) -> None:
     accounts, history = data.load_book()
     account = accounts.loc[account_id].to_dict()
-    st.subheader(account["name"], anchor=False)
+    st.markdown(f"**{account['name']}**")
     with st.container(horizontal=True, gap="small"):
         st.badge(account["plan"], icon=":material/workspace_premium:", color="violet")
         st.badge(account["region"], icon=":material/public:", color="gray")

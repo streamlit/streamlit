@@ -43,7 +43,6 @@ DEFAULT_PERIOD = "24M"
 REGIONS = ["North America", "EMEA", "APAC", "LATAM"]
 PLANS = ["Enterprise", "Pro", "Starter"]
 INDUSTRIES = ["Fintech", "Healthcare", "Retail", "Manufacturing", "Media", "Logistics"]
-STATUSES = ["Healthy", "Needs attention", "At risk", "Churned"]
 
 _OWNERS = ["Ava Chen", "Marcus Reid", "Priya Nair", "Jonas Berg", "Sofia Rossi"]
 _NAME_PREFIXES = [
@@ -163,6 +162,7 @@ def _generate_book(n_accounts: int = 240) -> tuple[pd.DataFrame, pd.DataFrame]:
         ["Churned", "Healthy", "Needs attention"],
         default="At risk",
     )
+    # 240 unique names; add more before raising n_accounts.
     combos = [f"{p} {s}" for p in _NAME_PREFIXES for s in _NAME_SUFFIXES]
     signups = [
         months[s].date() + timedelta(days=int(rng.integers(0, 27))) for s in start

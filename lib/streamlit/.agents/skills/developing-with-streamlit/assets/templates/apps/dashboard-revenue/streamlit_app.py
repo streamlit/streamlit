@@ -61,7 +61,11 @@ st.set_page_config(
 # moves when the data arrives.
 KPI_HEIGHT = 186
 CHART_HEIGHT = 320
+# The drill-down's two cards side by side. Narrow viewports stack them, so the
+# first load grows there.
 DRILLDOWN_HEIGHT = 444
+
+# KPI key -> (metric label, metric icon, sparkline chart type).
 KPIS: dict[str, tuple[str, str, Literal["line", "bar", "area"]]] = {
     "arr": ("Annual recurring revenue", ":material/payments:", "area"),
     "net_new_mrr": ("Net new MRR", ":material/trending_up:", "bar"),
@@ -104,7 +108,7 @@ def kpi_card(kpi: str, filters: data.Filters) -> None:
         value = charts.money(last)
         delta = ("+" if last >= baseline else "") + charts.money(last - baseline)
     else:
-        # NRR is undefined for a month whose accounts had no MRR a year earlier.
+        # NRR and gross churn are undefined when their baseline MRR is zero.
         value = f"{last:.1f}%" if pd.notna(last) else "—"
         change = last - baseline
         delta = f"{change:+.1f} pts" if pd.notna(change) else None
@@ -186,9 +190,9 @@ def mrr_bridge_chart(filters: data.Filters) -> None:
 def industry_drilldown(filters: data.Filters) -> None:
     """Donut of MRR by industry that filters the top-accounts table on click.
 
-    Clicking a slice or a table button reruns only this fragment. That rerun
-    runs on the script thread, not in a parallel worker, so the table's button
-    can open the account drawer (``@st.dialog``).
+    Clicking a slice, a table button, or the ⋮ menu reruns only this fragment,
+    on the script thread. ``@st.dialog`` raises in a parallel worker, so both
+    drawers can open only from that rerun.
     """
     accounts, _ = data.load_book()
     active = data.filter_accounts(accounts, filters).query("mrr > 0")
