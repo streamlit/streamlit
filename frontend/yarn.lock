@@ -2315,9 +2315,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microlink/react-json-view@npm:^1.31.47":
-  version: 1.31.47
-  resolution: "@microlink/react-json-view@npm:1.31.47"
+"@microlink/react-json-view@npm:^1.31.48":
+  version: 1.31.48
+  resolution: "@microlink/react-json-view@npm:1.31.48"
   dependencies:
     react-base16-styling: "npm:~0.10.0"
     react-lifecycles-compat: "npm:~3.0.4"
@@ -2325,7 +2325,7 @@ __metadata:
   peerDependencies:
     react: ">= 15"
     react-dom: ">= 15"
-  checksum: 10c0/2877b85fd1787daed3b13534e279c1697dc8484225f95eb1e36829c7fc6eafbb68a688719656dcf544b8eaec3e8a25ed77db08a0a5d45b6b6c7dec478499c678
+  checksum: 10c0/66a77e13e96b2ac5ab7c056906ff03211ea4487a8f164edcfe15277c5e77f0479af99a746149c3b5c3872f4997d1ea2a1b5a69c1f7cb8629b4fb869c6af2c37b
   languageName: node
   linkType: hard
 
@@ -3537,7 +3537,7 @@ __metadata:
     "@types/react-dom": "npm:^18.2.0"
     "@types/react-transition-group": "npm:^4.4.12"
     "@vitejs/plugin-react-swc": "npm:^4.3.3"
-    chrome-launcher: "npm:^1.2.2"
+    chrome-launcher: "npm:^1.2.3"
     color2k: "npm:^2.0.2"
     hoist-non-react-statics: "npm:^3.3.2"
     iframe-resizer: "npm:4.3.11"
@@ -3627,7 +3627,7 @@ __metadata:
     "@luma.gl/core": "npm:^9.4.2"
     "@luma.gl/engine": "npm:^9.4.2"
     "@luma.gl/shadertools": "npm:^9.4.2"
-    "@microlink/react-json-view": "npm:^1.31.47"
+    "@microlink/react-json-view": "npm:^1.31.48"
     "@sindresorhus/slugify": "npm:^4.0.0"
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/connection": "workspace:^"
@@ -3661,7 +3661,7 @@ __metadata:
     dompurify: "npm:^3.4.17"
     echarts: "npm:^6.1.0"
     hoist-non-react-statics: "npm:^3.3.2"
-    hotkeys-js: "npm:^4.1.1"
+    hotkeys-js: "npm:^4.1.2"
     immer: "npm:^11.2.9"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.47"
@@ -6122,6 +6122,20 @@ __metadata:
   bin:
     print-chrome-path: bin/print-chrome-path.cjs
   checksum: 10c0/82a49db9223fa36826d408762b32174ac3b41fa3dc7cdde6b7526fe23ae7c86dd7a40e25cf124b65e513bb5f45fe3afb85a4c049219cb8d9e789dc2a54ef46e7
+  languageName: node
+  linkType: hard
+
+"chrome-launcher@npm:^1.2.3":
+  version: 1.2.3
+  resolution: "chrome-launcher@npm:1.2.3"
+  dependencies:
+    "@types/node": "npm:*"
+    escape-string-regexp: "npm:^4.0.0"
+    is-wsl: "npm:^2.2.0"
+    lighthouse-logger: "npm:^2.0.1"
+  bin:
+    print-chrome-path: bin/print-chrome-path.cjs
+  checksum: 10c0/302259d3a3f4247fbfe484f435da6ac4f11b732fc330fd28ef7762afb5159b2e7c53a6bfd69fc4f45ec4b7fd69fe38be70e26c193399f96cdfad69c824c50fff
   languageName: node
   linkType: hard
 
@@ -9277,10 +9291,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hotkeys-js@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "hotkeys-js@npm:4.1.1"
-  checksum: 10c0/ac3bb9e8438ec85ae30dce6ca730223091cc683937612fd6ba1309b4e32322a6871be4250e286c92fdce2d784e0083f996b55d5c0c616bbe0929b8f4bda0331f
+"hotkeys-js@npm:^4.1.2":
+  version: 4.1.2
+  resolution: "hotkeys-js@npm:4.1.2"
+  checksum: 10c0/a788354ef014a1025e37231ab25afa7975428217067648ac4251d614ae8c4b1ed3df0533b749a026611859e6519ad03d5af8122b6c2afc2980069eb9bd168d29
   languageName: node
   linkType: hard
 
