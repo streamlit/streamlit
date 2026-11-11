@@ -254,8 +254,8 @@ def test_get_favicon_string_reraises_for_non_string_icon() -> None:
 def test_get_favicon_string_reraises_streamlit_errors_for_string_icon() -> None:
     """Re-raise ``StreamlitAPIException`` for a string icon instead of returning it.
 
-    That error means the image was found but can't be used, so falling back to
-    the string would hide the reason.
+    That error means Streamlit rejected the image, so falling back to the string
+    would hide the reason.
     """
     with (
         mock.patch(

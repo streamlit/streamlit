@@ -290,7 +290,9 @@ def test_image_to_url_rejects_eps_without_rendering(
 
 def test_image_to_url_rejects_wmf() -> None:
     """``image_to_url`` raises a clear error for WMF data, which only renders on Windows."""
-    with pytest.raises(StreamlitAPIException, match="WMF images are not supported"):
+    with pytest.raises(
+        StreamlitAPIException, match="WMF and EMF images are not supported"
+    ):
         image_to_url(
             _WMF_BYTES,
             layout_config=_DEFAULT_LAYOUT,
@@ -320,6 +322,26 @@ def test_image_to_url_rejects_images_over_pixel_limit() -> None:
             output_format="auto",
             image_id="test-too-large",
         )
+
+
+def test_image_to_url_rejects_images_over_twice_pixel_limit() -> None:
+    """Images that Pillow refuses to open get the same error as other oversized images."""
+    data = _encode_image((10, 10), "PNG")
+    with (
+        mock.patch("PIL.Image.MAX_IMAGE_PIXELS", 49),
+        pytest.raises(StreamlitAPIException, match="too large to display") as exc_info,
+    ):
+        image_to_url(
+            data,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-too-large",
+        )
+
+    assert exc_info.value.error_id == "image-too-large"
+    assert isinstance(exc_info.value.__cause__, Image.DecompressionBombError)
 
 
 def test_image_to_url_accepts_images_at_pixel_limit(no_runtime: None) -> None:

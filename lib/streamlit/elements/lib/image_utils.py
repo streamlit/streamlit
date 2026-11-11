@@ -91,6 +91,20 @@ def _image_is_gif(image: PILImage) -> bool:
     return image.format == "GIF"
 
 
+def _image_too_large_error(
+    size: tuple[int, int] | None = None,
+) -> StreamlitAPIException:
+    from PIL import Image
+
+    dimensions = f" ({size[0]}x{size[1]} pixels)" if size else ""
+    return StreamlitAPIException(
+        f"The image is too large to display{dimensions}. Resize it to at most "
+        f"{Image.MAX_IMAGE_PIXELS:,} pixels, or raise the limit by setting "
+        "`PIL.Image.MAX_IMAGE_PIXELS`.",
+        error_id="image-too-large",
+    )
+
+
 def _check_image_is_supported(pil_image: PILImage) -> None:
     """Raise if Streamlit can't convert the image the same way everywhere.
 
@@ -100,10 +114,12 @@ def _check_image_is_supported(pil_image: PILImage) -> None:
     from PIL import Image
 
     # Pillow only renders EPS when Ghostscript is installed, and WMF/EMF only on
-    # Windows, so support would differ between environments.
+    # Windows, so support would differ between environments. Pillow reports EMF
+    # files with the format "WMF".
     if pil_image.format in {"EPS", "WMF"}:
+        format_name = "WMF and EMF" if pil_image.format == "WMF" else "EPS"
         raise StreamlitAPIException(
-            f"{pil_image.format} images are not supported. Convert the image to a "
+            f"{format_name} images are not supported. Convert the image to a "
             "format such as PNG or JPEG first.",
             error_id="image-format-not-supported",
         )
@@ -113,19 +129,18 @@ def _check_image_is_supported(pil_image: PILImage) -> None:
     max_pixels = Image.MAX_IMAGE_PIXELS
     width, height = pil_image.size
     if max_pixels is not None and width * height > max_pixels:
-        raise StreamlitAPIException(
-            f"The image is too large to display ({width}x{height} pixels). Resize "
-            f"it to at most {max_pixels:,} pixels, or raise the limit by setting "
-            "`PIL.Image.MAX_IMAGE_PIXELS`.",
-            error_id="image-too-large",
-        )
+        raise _image_too_large_error(pil_image.size)
 
 
 def _open_image_bytes(image_data: bytes) -> PILImage:
     """Open encoded image bytes with Pillow and check that they're supported."""
     from PIL import Image
 
-    pil_image = Image.open(io.BytesIO(image_data))
+    try:
+        pil_image = Image.open(io.BytesIO(image_data))
+    except Image.DecompressionBombError as ex:
+        # Pillow raises this itself for images above twice the pixel limit.
+        raise _image_too_large_error() from ex
     _check_image_is_supported(pil_image)
     return pil_image
 
@@ -240,7 +255,8 @@ def _ensure_image_size_and_format(
     # Resizing the image down if the embedded width is greater than
     # the target width.
     if target_width > 0 and actual_width > target_width:
-        # We need to resize the image.
+        # We need to resize the image. A very wide image would otherwise round
+        # down to a height of zero.
         new_height = max(1, int(1.0 * actual_height * target_width / actual_width))
         # Let the JPEG decoder skip detail that the resize would discard. The
         # decoded image stays at least as large as the target size, and other
