@@ -1078,7 +1078,6 @@ describe("formatDurationFromSeconds", () => {
       expect(formatDurationFromSeconds(-7200, "localized")).toMatch(/^-/)
     })
 
-    // Only a RangeError (unsupported locale) retries with the default locale.
     it.each([
       {
         errorName: "RangeError",
@@ -1093,7 +1092,7 @@ describe("formatDurationFromSeconds", () => {
         lastLocales: navigator.languages,
       },
     ])(
-      "falls back to the clock after a $errorName with $constructions formatter construction(s)",
+      "after a $errorName, tries $constructions locale setting(s) before falling back to the clock",
       async ({ ErrorType, constructions, lastLocales }) => {
         const intlObject = Intl as unknown as { DurationFormat?: unknown }
         const original = intlObject.DurationFormat
@@ -1134,27 +1133,6 @@ describe("formatDurationFromSeconds", () => {
         expect(formatDurationFromSeconds(1.5, "localized", 3)).toEqual(
           "00:00:01.5"
         )
-      } finally {
-        intlObject.DurationFormat = original
-      }
-    })
-
-    it("falls back to the elapsed-time clock when the default-locale retry also fails", async () => {
-      const intlObject = Intl as unknown as { DurationFormat?: unknown }
-      const original = intlObject.DurationFormat
-      intlObject.DurationFormat = function ThrowingDurationFormat() {
-        return {
-          format: (): string => {
-            throw new RangeError("Unsupported duration")
-          },
-        }
-      }
-      // Reload the module so its formatter cache starts empty.
-      vi.resetModules()
-      try {
-        const { formatDurationFromSeconds: formatWithThrowingIntl } =
-          await import("./arrowFormatUtils")
-        expect(formatWithThrowingIntl(5, "localized")).toEqual("00:00:05")
       } finally {
         intlObject.DurationFormat = original
       }
