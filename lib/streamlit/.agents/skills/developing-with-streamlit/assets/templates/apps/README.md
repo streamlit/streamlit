@@ -161,10 +161,15 @@ with st.container(border=True):
         metric_body("revenue")
 ```
 
-A card with its own controls must draw them inside the fragment, so it draws its
-frame, header, and `with st.skeleton()` around the slow part there too, as the
-`dashboard-metrics` chart cards do. On a cached rerun the chart updates in place without a
-skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second.
+The skeleton around the call covers only full-app runs. If the fragment's own
+reruns, such as a `run_every` refresh or a widget interaction inside it, can be
+slow, add a second `with st.skeleton()` inside the fragment around the slow part.
+It needs no height when it's the fragment body's first element. A card with its
+own controls must draw them inside the fragment, so it draws its frame, header,
+and controls there, and gives the inner skeleton the chart's height, as the
+`dashboard-metrics` and `dashboard-compute` chart cards do. On a cached rerun the
+chart updates in place without a skeleton; on a cache miss, the skeleton covers
+the old chart at its size after half a second.
 
 Keep `st.dialog` / `st.switch_page` out of parallel fragments — gate those
 behind a widget interaction instead, where the fragment reruns sequentially.

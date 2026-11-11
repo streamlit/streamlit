@@ -188,11 +188,31 @@ with col2:
 
 Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first visible element replaces the skeleton, so draw that element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
 
-The outer `with st.skeleton()` doesn't cover fragment-only reruns, such as `run_every` refreshes. A card with its own controls must draw them inside the fragment, so it draws its frame, title, and `with st.skeleton()` there too; that card paints once its fragment runs.
+A fragment's own rerun, such as a `run_every` refresh or a widget interaction inside the fragment, runs only the fragment body. It never re-enters the block around the call, so Streamlit fades the old content as stale until the rerun finishes. If those reruns can be slow, wrap the body's content in a second `with st.skeleton()`:
+
+```python
+def load_live_orders(): ...  # Slow query that every refresh runs again
+
+
+@st.fragment(parallel=True, run_every="15s")
+def live_orders():
+    with st.skeleton():  # Covers the fragment's own refreshes
+        st.bar_chart(load_live_orders(), height=340, alt="Orders per minute")
+
+
+with st.container(border=True):
+    st.markdown("**Live orders**")
+    with st.skeleton(height=340):  # Sizes the first load
+        live_orders()
+```
+
+Each block covers the runs that enter it, and the inner skeleton doesn't end the outer one. The inner block needs no height when it's the body's first element: on a full-app run, the outer skeleton covers it, and on the fragment's own rerun, the previous content keeps its size under the skeleton.
+
+A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` and `dashboard-compute` chart cards.
 
 To keep the layout stable:
 
-- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. If the element has no `height` parameter, give the skeleton the height the element renders at.
+- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. If the element has no `height` parameter, give the skeleton the height the element renders at. An inner block that is the fragment body's first element needs none.
 - Put the content inside the `with st.skeleton()` block, not after it, and draw the slow element first: any visible element, even a caption, ends the skeleton.
 - Give stateful elements a `key`, so a rerun updates them in place and they keep their scroll and selection.
 - Inside a skeleton, Streamlit hides a cached function's default spinner, so `show_spinner=False` isn't needed. Pass `show_spinner="..."` to label the skeleton during slow loads.
