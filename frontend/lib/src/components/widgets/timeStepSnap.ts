@@ -22,9 +22,9 @@ export interface TimeParts {
 }
 
 /**
- * Compute the next step-snapped value given the current total, step size,
- * direction, and wrap boundary. Used for minute-granular (max=1440) and
- * hour-only (max=24) step snapping on ArrowUp/ArrowDown.
+ * Move `current` to the next or previous multiple of `step`, wrapping into
+ * `[0, max)`. Callers pass total minutes (`max` 1440), hours (`max` 24), or
+ * seconds of the day (`max` 86400).
  */
 export function snapTimeStep(
   current: number,
@@ -89,10 +89,8 @@ export function snapTimeParts(
       // does not divide 86400 (e.g. step=7).
       next = snapTimeStep(totalSecs, step, up, 86400)
     } else {
-      // For hour/minute segments, find the next step boundary at least one
-      // segment-unit away so the displayed segment visibly changes. Modulo
-      // wrap preserves that offset across midnight (e.g. 23:30 + hour with
-      // step=30 → 00:30); collapsing to 00:00 would drop minutes/seconds.
+      // Jump at least one hour/minute so the focused segment visibly changes,
+      // and wrap by modulo so 23:30 + 1h with step=30 lands on 00:30, not 00:00.
       const jumpSize = segmentType === "hour" ? 3600 : 60
       next = up
         ? Math.ceil((totalSecs + jumpSize) / step) * step

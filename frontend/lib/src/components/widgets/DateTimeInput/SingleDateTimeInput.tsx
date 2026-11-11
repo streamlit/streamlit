@@ -708,8 +708,8 @@ function SingleDateTimeInput({
       const fullDateTime = parsePastedDateTime(text, format)
       if (fullDateTime) {
         e.preventDefault()
-        // Match TimeInput: drop hidden seconds when the widget is
-        // minute-granular so local state matches the stripped wire value.
+        // Minute-granular widgets drop pasted seconds so local state matches
+        // the wire value, which omits them.
         const normalized = includeSeconds
           ? fullDateTime
           : fullDateTime.set({ second: 0 })

@@ -66,7 +66,8 @@ export function isoToCalendarDateTime(
 
 /**
  * Serialize a CalendarDateTime to the wire format.
- * Minute-granular steps use `YYYY-MM-DDTHH:mm`; sub-minute steps include `:ss`.
+ * Appends `:ss` only when `includeSeconds` is true. Callers set it for
+ * sub-minute steps.
  */
 export function calendarDateTimeToIso(
   dt: CalendarDateTime,

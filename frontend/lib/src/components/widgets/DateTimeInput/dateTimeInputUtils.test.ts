@@ -319,7 +319,7 @@ describe("computeStepSnap", () => {
     expect(computeStepSnap(dt, "year", 900, true)).toBeNull()
   })
 
-  it("snaps total-seconds for non-60-divisible step on the second segment", () => {
+  it("snaps the second segment to the next step boundary for a sub-minute step", () => {
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
     const result = computeStepSnap(dt, "second", 90, true)
     expect(result).toMatchObject({
@@ -332,7 +332,7 @@ describe("computeStepSnap", () => {
     })
   })
 
-  it("snaps minute segment with jump-size for non-60-divisible step", () => {
+  it("moves the minute segment to the next step boundary at least one minute away for a sub-minute step", () => {
     // 16:45:00 + at least 60s, ceil to 90 → 16:46:30
     const dt = new CalendarDateTime(2025, 11, 19, 16, 45, 0)
     const result = computeStepSnap(dt, "minute", 90, true)

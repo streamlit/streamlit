@@ -138,6 +138,11 @@ def _date_to_proto_string(value: date) -> str:
     return f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
 
 
+def _step_includes_seconds(step: int) -> bool:
+    """Whether ``step`` is not a whole number of minutes (seconds UI + wire)."""
+    return step % 60 != 0
+
+
 def _datetime_to_iso_string(value: datetime, *, include_seconds: bool = False) -> str:
     """Serialize a datetime to ISO 8601 with a guaranteed four-digit year."""
     base = f"{_date_to_proto_string(value)}T{value.hour:02d}:{value.minute:02d}"
@@ -530,7 +535,7 @@ class DateTimeInputSerde:
 
     @property
     def _include_seconds(self) -> bool:
-        return self.step % 60 != 0
+        return _step_includes_seconds(self.step)
 
     def deserialize(self, ui_value: list[str] | None) -> datetime | None:
         if ui_value is not None and len(ui_value) > 0:
@@ -570,7 +575,7 @@ class TimeInputSerde:
 
     @property
     def _wire_fmt(self) -> str:
-        return "%H:%M:%S" if self.step % 60 != 0 else "%H:%M"
+        return "%H:%M:%S" if _step_includes_seconds(self.step) else "%H:%M"
 
     def deserialize(self, ui_value: str | None) -> time | None:
         if ui_value is None:
@@ -592,7 +597,7 @@ class TimeInputSerde:
             return self.value
         # Strip seconds when step is minute-granular so the returned value is
         # consistent regardless of how the value arrived (query-param, session state).
-        if self.step % 60 == 0:
+        if not _step_includes_seconds(self.step):
             parsed = parsed.replace(second=0, microsecond=0)
         return parsed
 
@@ -1159,7 +1164,11 @@ class TimeWidgetsMixin:
             if isinstance(step, int)
             else 0  # Invalid type; validation raises below.
         )
-        if parsed_time is not None and _step_secs > 0 and _step_secs % 60 == 0:
+        if (
+            parsed_time is not None
+            and _step_secs > 0
+            and not _step_includes_seconds(_step_secs)
+        ):
             parsed_time = parsed_time.replace(second=0, microsecond=0)
 
         element_id = compute_and_register_element_id(
@@ -1487,10 +1496,10 @@ class TimeWidgetsMixin:
               components are shown. The returned ``datetime`` includes
               seconds, and so does the URL query parameter when
               ``bind="query-params"``. Arrow keys snap to the nearest
-              step boundary.
+              step boundary across the full time value.
 
             Any valid datetime may be entered regardless of the step value.
-            Step only affects the displayed segments and arrow-key behavior.
+            Step does not restrict or snap the entered value.
 
         disabled : bool
             An optional boolean that disables the widget if set to ``True``.
@@ -1691,7 +1700,7 @@ class TimeWidgetsMixin:
                 min_value="1 second",
                 max_value="23 hours",
             )
-        include_seconds = step_seconds % 60 != 0
+        include_seconds = _step_includes_seconds(step_seconds)
 
         datetime_values = _DateTimeInputValues.from_raw_values(
             value=value,

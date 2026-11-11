@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 25
+NUM_DATETIME_INPUTS = 26
 
 
 def test_datetime_input_widget_rendering(
@@ -530,6 +530,26 @@ def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url
 
     expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))
+
+
+def test_datetime_input_query_param_sub_minute_seconds(page: Page, app_base_url: str):
+    """Sub-minute step keeps URL seconds and round-trips an edit with :ss."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_step30_dt": "2025-11-20T10:30:30"})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound step30 datetime:", "2025-11-20 10:30:30")
+    expect(page).to_have_url(re.compile(r"bound_step30_dt=2025-11-20T10%3A30%3A30"))
+
+    datetime_field = get_datetime_input(page, "Bound step30 datetime").get_by_test_id(
+        "stDateTimeInputField"
+    )
+    type_date(datetime_field, "2025", "11", "20", "11", "00", "30")
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound step30 datetime:", "2025-11-20 11:00:30")
+    expect(page).to_have_url(re.compile(r"bound_step30_dt=2025-11-20T11%3A00%3A30"))
 
 
 def test_year_picker_lists_boundary_year_when_bounds_cross_a_year(app: Page):
