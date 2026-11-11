@@ -38,6 +38,43 @@ with st.container(border=True):
     st.dataframe(top_products, alt="Top products")
 ```
 
+## Card headers and menus
+
+In BI dashboards, give every card the same header: a bold title, an optional caption, and controls aligned right. Mark certified metrics with a badge, and put secondary actions in a ⋮ menu instead of more buttons:
+
+```python
+def card_header(title: str, caption: str | None = None, *, certified: bool = False):
+    with st.container(horizontal=True, vertical_alignment="center"):
+        with st.container(gap=None):
+            badge = " :green-badge[:material/verified:]" if certified else ""
+            st.markdown(f"**{title}**{badge}")
+            if caption:
+                st.caption(caption)
+        return st.container(
+            horizontal=True, horizontal_alignment="right", width="content"
+        )
+
+
+with st.container(border=True):
+    controls = card_header("MRR by plan", "Monthly recurring revenue", certified=True)
+    view = controls.segmented_control(
+        "View", ["$", "%"], default="$", required=True, label_visibility="collapsed"
+    )
+    action = controls.menu_button(
+        ":material/more_vert:",
+        [":material/menu_book: What's measured"],
+        type="tertiary",
+        help="More options",
+    )
+    if action:
+        definition_drawer("mrr_by_plan")  # An @st.dialog(..., position="right")
+```
+
+- A label that is only `:material/more_vert:` (or `:material/more_horiz:` or `:material/menu:`) makes an icon-only trigger without a chevron.
+- `st.menu_button` returns the picked option only on the rerun it triggers. To toggle a chart option from the menu, flip a Session State flag in its `on_click` callback, so the card already reads the new value when it redraws.
+- Show definitions and record details in a side drawer, `@st.dialog(..., position="right")`, and the query behind a section in `st.popover("SQL", icon=":material/data_object:")` with `st.code(sql, language="sql")`. In a `@st.fragment(parallel=True)`, open the drawer only on the rerun a click triggers, as the menu above does: calling `@st.dialog` during the parallel full-app run raises.
+- For a certified KPI, add `:green[:material/verified:]` to the `st.metric` label and its definition to `help`.
+
 ## KPI rows
 
 Use horizontal containers for responsive metric rows:
@@ -219,6 +256,19 @@ To keep the layout stable:
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
+When cards depend on each other, such as a chart selection that filters a table, they can't be independent fragments. Paint the layout first anyway: draw each card's frame, header, and a standalone `st.skeleton()` placeholder, then load the data once and fill each placeholder. On reruns, a placeholder keeps its previous content until the new content arrives, and the skeleton covers it only after half a second. The load runs outside any skeleton block, so a cached loader's spinner would show as its own element: cache it with `show_spinner=False`.
+
+```python
+with st.container(border=True):
+    st.markdown("**Accounts**")
+    table_slot = st.skeleton(height=400)  # Drawn before any data loads
+
+accounts = load_accounts()
+table_slot.dataframe(accounts, height=400, alt="Customer accounts")
+```
+
+Or draw both cards in one `@st.fragment(parallel=True)` inside one `st.skeleton`, as `dashboard-revenue` does for its industry donut and accounts table. A selection then reruns only that fragment.
+
 Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
 ## Global filters
@@ -266,11 +316,11 @@ with st.container(horizontal=True, vertical_alignment="center"):
 
 When the user wants a branded or dense KPI look, pair the dashboard with a theme — do not inject CSS for colors or `.block-container` padding.
 
-- Copy `assets/templates/themes/configs/dense-dashboard.toml` into the app’s `.streamlit/config.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle), or point `theme.base` at a shared brand file
+- Copy `assets/templates/themes/configs/dense-dashboard.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle) or `bi-dashboard.toml` (indigo, Geist fonts, compact bold metric values) into the app’s `.streamlit/config.toml`, or point `theme.base` at a shared brand file
 - Set chart and dataframe brand colors in config (`chartCategoricalColors`, `dataframe*`), not as one-off per-chart hardcodes
 - Start with the cheat sheet and Content padding in `theme.md`
 
-`dashboard-metrics` ships a sample `.streamlit/config.toml` based on `dense-dashboard`.
+`dashboard-metrics` ships a copy of `dense-dashboard`, and `dashboard-revenue` a copy of `bi-dashboard`.
 
 ## Dashboard templates
 
@@ -278,6 +328,7 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
+| `dashboard-revenue` | Revenue BI dashboard: filter toolbar bound to the URL, certified KPIs, card headers with ⋮ menus and definition drawers, SQL popover, ECharts annotations and forecast, donut-to-table drill-down with a record drawer, parallel fragments with skeletons |
 | `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
 | `dashboard-companies` | Company leaderboard with a filter toolbar bound to the URL, sparkline and badge columns, a `ButtonColumn` that opens a company drawer, custom cache spinner |
 | `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, one loader cached per breakdown, popover filters, reset callback, ECharts charts that animate between line and bar |
