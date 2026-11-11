@@ -1114,6 +1114,8 @@ describe("useWaveformController", () => {
       })
 
       expect(fallback?.meta.size).toBe(0)
+      // Reported once by the player error handler and once by stop().
+      expect(mockEvents.onError).toHaveBeenCalledTimes(2)
       expect(mockEvents.onError).toHaveBeenCalledWith(
         expect.objectContaining({ message: "decode failed" })
       )
