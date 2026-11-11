@@ -590,3 +590,24 @@ if st.button(
     help="Help for the dialog trigger",
 ):
     help_button_dialog()
+
+
+# Regression coverage: a dialog the main script opened, and the user dismissed,
+# must reopen when a fragment declared below that call opens it. The fragment
+# rerun writes the dialog to a later event-container slot than the full run did.
+@st.dialog("Dialog shared by main and fragment")
+def dialog_shared_by_main_and_fragment() -> None:
+    st.write("Shared dialog content")
+
+
+if st.button("Open shared dialog from main"):
+    dialog_shared_by_main_and_fragment()
+
+
+@st.fragment
+def shared_dialog_fragment() -> None:
+    if st.button("Open shared dialog from fragment"):
+        dialog_shared_by_main_and_fragment()
+
+
+shared_dialog_fragment()
