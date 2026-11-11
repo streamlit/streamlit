@@ -28,11 +28,8 @@ st.set_page_config(
     layout="wide",
 )
 
-"""
-# :material/query_stats: Stock peer analysis
-
-Easily compare stocks against others in their peer group.
-"""
+st.title("Stock peer analysis", icon=":material/query_stats:")
+st.markdown("Easily compare stocks against others in their peer group.")
 
 st.space("small")
 cols = st.columns([1, 3])
@@ -138,6 +135,16 @@ STOCKS = [
 
 DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
 
+horizon_map = {
+    "1 Month": "1mo",
+    "3 Months": "3mo",
+    "6 Months": "6mo",
+    "1 Year": "1y",
+    "5 Years": "5y",
+    "10 Years": "10y",
+    "20 Years": "20y",
+}
+
 
 top_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
@@ -155,31 +162,15 @@ with top_left_cell:
         placeholder="Choose stocks to compare. Example: NVDA",
         accept_new_options=True,
     )
-
-# Time horizon selector
-horizon_map = {
-    "1 Month": "1mo",
-    "3 Months": "3mo",
-    "6 Months": "6mo",
-    "1 Year": "1y",
-    "5 Years": "5y",
-    "10 Years": "10y",
-    "20 Years": "20y",
-}
-
-with top_left_cell:
-    # Buttons for picking time horizon
+    # required=True keeps one horizon selected, so `horizon` is never None.
     horizon = st.pills(
         "Time horizon",
         options=list(horizon_map.keys()),
         default="6 Months",
+        required=True,
+        key="horizon",
+        bind="query-params",
     )
-
-# `st.pills` returns None if the user deselects the active pill. Stop early
-# so we don't hit a KeyError when looking up `horizon_map[horizon]` below.
-if horizon is None:
-    top_left_cell.info("Pick a time horizon", icon=":material/info:")
-    st.stop()
 
 tickers = [t.upper() for t in tickers]
 
@@ -207,9 +198,8 @@ def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
 try:
     data = load_data(tickers, horizon_map[horizon])
 except yf.exceptions.YFRateLimitError:
-    st.warning("YFinance is rate-limiting us :(\nTry again later.")
+    st.warning("Try again later.", title="YFinance is rate-limiting us")
     st.stop()
-    raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
 empty_columns = data.columns[data.isna().all()].tolist()
 
@@ -243,24 +233,20 @@ if len(tickers) > 1:
 else:
     price_summary = f"{max_norm_value[1]} at {max_norm_value[0] - 1:+.0%}"
 
-bottom_left_cell = cols[0].container(
-    border=True, height="stretch", vertical_alignment="center"
-)
-
-with bottom_left_cell:
-    metric_cols = st.columns(2)
-    metric_cols[0].metric(
-        "Best stock",
-        max_norm_value[1],
-        delta=f"{round((max_norm_value[0] - 1) * 100)}%",
-        width="content",
-    )
-    metric_cols[1].metric(
-        "Worst stock",
-        min_norm_value[1],
-        delta=f"{round((min_norm_value[0] - 1) * 100)}%",
-        width="content",
-    )
+with cols[0].container(
+    border=True, height="stretch", horizontal=True, vertical_alignment="center"
+):
+    for label, (value, ticker) in [
+        ("Best stock", max_norm_value),
+        ("Worst stock", min_norm_value),
+    ]:
+        st.metric(
+            label,
+            ticker,
+            delta=value - 1,
+            format="percent",
+            delta_description=f"over {horizon.lower()}",
+        )
 
 
 def line_series(column: str, **extra: Any) -> dict[str, Any]:
@@ -293,12 +279,11 @@ with right_cell:
 st.space("medium")
 
 # Plot individual stock vs peer average
-"""
-## Individual stocks vs peer average
-
-For the analysis below, the "peer average" when analyzing stock X always
-excludes X itself.
-"""
+st.header("Individual stocks vs peer average")
+st.markdown(
+    'For the analysis below, the "peer average" when analyzing stock X always '
+    "excludes X itself."
+)
 
 if len(tickers) <= 1:
     st.warning("Pick 2 or more tickers to compare them")
@@ -355,9 +340,6 @@ for i, ticker in enumerate(tickers):
     )
 
 st.space("medium")
-
-"""
-## Raw data
-"""
+st.header("Raw data")
 
 st.dataframe(data, alt="Selected stock price history")

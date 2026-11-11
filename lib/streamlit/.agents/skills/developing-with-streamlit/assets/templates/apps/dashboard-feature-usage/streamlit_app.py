@@ -15,11 +15,13 @@
 """API usage dashboard template.
 
 Demonstrates:
-- Segmented control for category selection
+- Segmented control for category selection, bound to the URL
+  with ``bind="query-params"``
 - Multiselect for endpoint filtering
 - Starter kits / presets for quick selection
+- Bordered container cards with bold labels
 - Time series visualization with normalization
-- Metric cards with 28-day deltas
+- Metric cards with numeric values formatted by ``format=`` and 28-day deltas
 - Rolling average options
 - ``@st.cache_data(ttl=...)`` loader to keep data fresh and bounded
 - Conditional rendering: the collapsed "Raw data" expander only computes and
@@ -38,7 +40,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="API Usage Dashboard",
+    page_title="API usage",
     page_icon=":material/api:",
     layout="wide",
 )
@@ -83,11 +85,10 @@ API_CATEGORIES = {
 
 # Starter kits - predefined endpoint selections
 STARTER_KITS = {
-    "None": [],
     "Core CRUD": ["/users", "/users/{id}", "/orders", "/orders/{id}"],
     "Search": ["/users/search", "/products/search", "/products/categories"],
     "Analytics": ["/analytics/events", "/analytics/metrics", "/analytics/reports"],
-    "High Volume": ["/users", "/products", "/orders", "/analytics/events"],
+    "High volume": ["/users", "/products", "/orders", "/analytics/events"],
 }
 
 ROLLING_OPTIONS = {"Raw": 1, "7-day average": 7, "28-day average": 28}
@@ -117,7 +118,7 @@ def generate_api_data(
             trend = base * (1 + growth) ** i
 
             # Weekly seasonality (lower on weekends)
-            if dt.dayofweek >= 5:
+            if dt.day_of_week >= 5:
                 trend *= 0.4
 
             # Random noise
@@ -140,10 +141,7 @@ def load_api_data() -> pd.DataFrame:
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=365)
 
-    all_endpoints = []
-    for endpoints in API_CATEGORIES.values():
-        all_endpoints.extend(endpoints)
-
+    all_endpoints = [e for endpoints in API_CATEGORIES.values() for e in endpoints]
     return generate_api_data(all_endpoints, start_date, end_date)
 
 
@@ -152,19 +150,17 @@ def apply_rolling_average(df: pd.DataFrame, window: int) -> pd.DataFrame:
     if window == 1:
         return df
 
-    result = df.copy()
-    result["request_count"] = result.groupby("endpoint")["request_count"].transform(
-        lambda x: x.rolling(window, min_periods=1).mean()
+    return df.assign(
+        request_count=df.groupby("endpoint")["request_count"].transform(
+            lambda x: x.rolling(window, min_periods=1).mean()
+        )
     )
-    return result
 
 
 def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize request counts to percentages (share of total per day)."""
-    result = df.copy()
-    daily_totals = result.groupby("date")["request_count"].transform("sum")
-    result["request_count"] /= daily_totals
-    return result
+    daily_totals = df.groupby("date")["request_count"].transform("sum")
+    return df.assign(request_count=df["request_count"] / daily_totals)
 
 
 def calculate_delta(df: pd.DataFrame, endpoint: str) -> tuple[float, float | None]:
@@ -189,38 +185,18 @@ def calculate_delta(df: pd.DataFrame, endpoint: str) -> tuple[float, float | Non
 # Page Layout
 # =============================================================================
 
-# Load data
-raw_data = load_api_data()
-
-# Header
-st.markdown("# API Usage :material/api:")
+st.title("API usage", icon=":material/api:")
 st.caption("Select an API category to explore endpoint usage over time.")
 
-# Category selection (not centered)
 category = st.segmented_control(
-    "Select category",
-    options=[
-        ":material/person: Users",
-        ":material/shopping_cart: Orders",
-        ":material/inventory_2: Products",
-        ":material/analytics: Analytics",
-    ],
-    default=":material/person: Users",
+    "Category",
+    options=list(API_CATEGORIES),
+    default="Users",
+    required=True,
+    key="category",
+    bind="query-params",
     label_visibility="collapsed",
 )
-
-if not category:
-    st.warning("Please select a category above.", icon=":material/warning:")
-    st.stop()
-
-# Map display name to category key
-category_map = {
-    ":material/person: Users": "Users",
-    ":material/shopping_cart: Orders": "Orders",
-    ":material/inventory_2: Products": "Products",
-    ":material/analytics: Analytics": "Analytics",
-}
-selected_category = category_map[category]
 
 st.subheader(f"{category} endpoints")
 
@@ -228,48 +204,41 @@ st.subheader(f"{category} endpoints")
 filter_col, chart_col = st.columns([1, 2])
 
 with filter_col:
-    # Metric selection
-    with st.expander("Metric", expanded=True, icon=":material/analytics:"):
+    with st.container(border=True):
+        st.markdown("**Metric**")
         rolling_label = st.segmented_control(
             "Time aggregation",
-            list(ROLLING_OPTIONS.keys()),
+            list(ROLLING_OPTIONS),
             default="7-day average",
+            required=True,
             label_visibility="collapsed",
         )
-
-        if rolling_label is None:
-            st.caption("Please select a time aggregation.")
-            st.stop()
-
-        rolling_window = ROLLING_OPTIONS[rolling_label]
-
         normalize = st.toggle(
             "Normalize",
             value=False,
             help="Normalize to show percentage share of total requests",
         )
 
-    # Starter kits
-    with st.expander("Starter kits", expanded=True, icon=":material/auto_awesome:"):
+    with st.container(border=True):
+        st.markdown("**Starter kits**")
         starter_kit = st.pills(
             "Quick select",
-            options=list(STARTER_KITS.keys()),
-            default="None",
+            options=list(STARTER_KITS),
             label_visibility="collapsed",
         )
 
-    # Endpoint selection
-    available_endpoints = API_CATEGORIES[selected_category]
-
-    # Determine default selection based on starter kit
-    if starter_kit and starter_kit != "None":
+    available_endpoints = API_CATEGORIES[category]
+    if starter_kit:
         default_endpoints = [
             e for e in STARTER_KITS[starter_kit] if e in available_endpoints
         ]
     else:
         default_endpoints = available_endpoints[:4]  # First 4 endpoints
 
-    with st.expander("Endpoints", expanded=True, icon=":material/checklist:"):
+    # The multiselect has no key, so a new default from a starter kit resets
+    # its selection.
+    with st.container(border=True):
+        st.markdown("**Endpoints**")
         selected_endpoints = st.multiselect(
             "Select endpoints",
             options=available_endpoints,
@@ -277,7 +246,6 @@ with filter_col:
             label_visibility="collapsed",
         )
 
-# Filter and process data
 if not selected_endpoints:
     with chart_col:
         st.info(
@@ -285,36 +253,32 @@ if not selected_endpoints:
         )
     st.stop()
 
-filtered_data = raw_data[raw_data["endpoint"].isin(selected_endpoints)].copy()
-filtered_data = apply_rolling_average(filtered_data, rolling_window)
+# Load the data after the header and filters, so they paint first.
+raw_data = load_api_data()
+filtered_data = raw_data[raw_data["endpoint"].isin(selected_endpoints)]
+filtered_data = apply_rolling_average(filtered_data, ROLLING_OPTIONS[rolling_label])
 
 if normalize:
     filtered_data = normalize_data(filtered_data)
 
 with chart_col:
-    # Latest metrics
-    with st.expander("Latest numbers", expanded=True, icon=":material/numbers:"):
-        metrics_row = st.container(horizontal=True)
+    with st.container(border=True):
+        # The comparison is named once here: a delta_description on each
+        # metric makes four cards too wide for one row in this column.
+        st.markdown("**Latest numbers** :gray[vs. 28 days ago]")
+        with st.container(horizontal=True):
+            for endpoint in selected_endpoints:
+                latest, delta = calculate_delta(filtered_data, endpoint)
+                st.metric(
+                    endpoint,
+                    latest,
+                    delta,
+                    format="percent" if normalize else "%,.0f",
+                    border=True,
+                )
 
-        for endpoint in selected_endpoints:
-            latest, delta = calculate_delta(filtered_data, endpoint)
-
-            if normalize:
-                value_str = f"{latest:.2%}"
-                delta_str = f"{delta:+.2%}" if delta is not None else None
-            else:
-                value_str = f"{latest:,.0f}"
-                delta_str = f"{delta:+,.0f}" if delta is not None else None
-
-            metrics_row.metric(
-                label=endpoint,
-                value=value_str,
-                delta=delta_str,
-                border=True,
-            )
-
-    # Time series chart
-    with st.expander("Time series", expanded=True, icon=":material/show_chart:"):
+    with st.container(border=True):
+        st.markdown("**Time series**")
         y_format = ".1%" if normalize else ",.0f"
         y_title = "Share of requests" if normalize else "Request count"
 
@@ -335,12 +299,12 @@ with chart_col:
                     alt.Tooltip("request_count:Q", title="Requests", format=y_format),
                 ],
             )
-            .properties(height=450)
             .interactive()
         )
 
         st.altair_chart(
             chart,
+            height=450,
             alt=(
                 f"{rolling_label} share of requests by endpoint over time"
                 if normalize
@@ -356,15 +320,13 @@ raw_data_section = st.expander(
 )
 if raw_data_section.open:
     with raw_data_section:
-        display_df = filtered_data.copy()
-        column_config = {}
-        if normalize:
-            column_config["request_count"] = st.column_config.NumberColumn(
-                "Requests", format="percent"
-            )
         st.dataframe(
-            display_df,
+            filtered_data,
             hide_index=True,
-            column_config=column_config or None,
+            column_config={
+                "request_count": st.column_config.NumberColumn(
+                    "Requests", format="percent" if normalize else None
+                )
+            },
             alt="Filtered endpoint request data",
         )
