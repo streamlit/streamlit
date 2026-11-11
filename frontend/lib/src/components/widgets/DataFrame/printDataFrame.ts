@@ -157,7 +157,7 @@ export function clearDataFramePrintSlot(slot: HTMLElement): void {
 
 /** Parent levels plus the leaf title, matching the grid's group row. */
 function printColumnHeader(column: BaseColumn): string {
-  const title = column.title ?? column.name ?? ""
+  const title = column.title
   const group = column.group?.trim()
   if (group === undefined || group.length === 0) {
     return title

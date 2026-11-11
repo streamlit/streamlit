@@ -32,8 +32,8 @@ import {
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
-import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
