@@ -21,13 +21,15 @@ import {
   type GridCell,
   type GridSelection,
 } from "@glideapps/glide-data-grid"
-import { act, screen } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
+import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import * as UseScrollbarGutterSize from "~lib/hooks/useScrollbarGutterSize"
 import { EMPTY } from "~lib/mocks/arrow/empty"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render, renderWithContexts } from "~lib/test_util"
@@ -51,7 +53,8 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
       remeasureColumns: dataEditorRemeasureColumnsMock,
       scrollTo: dataEditorScrollToMock,
     }))
-    return <div data-testid="mock-data-editor" />
+    // DataFrame measures scrollbars from glide's `.dvn-stack` scroll area.
+    return <div data-testid="mock-data-editor" className="dvn-stack" />
   }),
 }))
 
@@ -61,6 +64,7 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 vi.mock("native-file-system-adapter", () => ({}))
 
 import DataFrame, { type DataFrameProps } from "./DataFrame"
+import { DEBOUNCE_TIME_MS as TOOLTIP_DEBOUNCE_TIME_MS } from "./hooks/useTooltips"
 import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 
 const getProps = (
@@ -182,6 +186,16 @@ describe("DataFrame widget", () => {
     (
       getDataEditorProps() as { gridSelection: GridSelection }
     ).gridSelection.rows.toArray()
+
+  const currentCell = (): readonly [number, number] | undefined =>
+    (getDataEditorProps().gridSelection as GridSelection).current?.cell
+
+  const getCell = (col: number, row: number): GridCell =>
+    (
+      getDataEditorProps().getCellContent as (
+        item: readonly [number, number]
+      ) => GridCell
+    )([col, row])
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -1087,6 +1101,439 @@ describe("DataFrame widget", () => {
       expect.objectContaining({ bgCell: expect.any(String) })
     )
     expect(getRowThemeOverride(1)).toBeUndefined()
+  })
+
+  it("renders a lazy dataframe from its initial chunk with the total row count", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          lazyData: {
+            sourceId: "lazy-source",
+            pageSize: 10,
+            rowCount: 100,
+            initialChunk: { data: TEN_BY_TEN },
+          },
+        })}
+      />
+    )
+
+    const dataEditorProps = getDataEditorProps()
+    expect(dataEditorProps.rows).toBe(100)
+    expect(dataEditorProps.keybindings).toMatchObject({ selectAll: false })
+    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument()
+  })
+
+  it("renders pre-constructed data and custom toolbar actions", () => {
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+        })}
+        data={new Quiver({ data: TEN_BY_TEN })}
+        customToolbarActions={[
+          <button key="custom" type="button">
+            Custom action
+          </button>,
+        ]}
+      />
+    )
+
+    expect(getDataEditorProps().rows).toBe(10)
+    expect(
+      screen.getByRole("button", { name: "Custom action" })
+    ).toBeInTheDocument()
+  })
+
+  it("restores the initial row selection from the widget state", () => {
+    const widgetMgr = createWidgetMgr()
+    vi.mocked(widgetMgr.getStringValue).mockReturnValue(ROW_SELECTION_STATE)
+
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
+        })}
+        widgetMgr={widgetMgr}
+      />
+    )
+
+    expect(selectedRows()).toEqual([1])
+    expect(screen.getByLabelText("Clear selection")).toBeInTheDocument()
+    // Restoring the stored value must not write it back to the widget state.
+    expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      description: "clears the cell selection",
+      selectionMode: [],
+      expectedCell: undefined,
+    },
+    {
+      description: "keeps the cell selection with cell selection activated",
+      selectionMode: [DataframeProto.SelectionMode.MULTI_CELL],
+      expectedCell: [1, 0],
+    },
+  ])(
+    "$description when entering fullscreen",
+    async ({ selectionMode, expectedCell }) => {
+      const user = userEvent.setup()
+      render(
+        <DataFrame
+          {...getProps(TEN_BY_TEN)}
+          element={DataframeProto.create({
+            arrowData: { data: TEN_BY_TEN },
+            editingMode: DataframeProto.EditingMode.READ_ONLY,
+            selectionMode,
+          })}
+        />
+      )
+
+      act(() => {
+        invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+      })
+      expect(currentCell()).toEqual([1, 0])
+
+      await user.click(screen.getByRole("button", { name: "Fullscreen" }))
+
+      expect(
+        screen.getByRole("button", { name: "Close fullscreen" })
+      ).toBeVisible()
+      expect(currentCell()).toEqual(expectedCell)
+    }
+  )
+
+  it("clears the cell selection when the unfocused grid loses focus", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+    })
+    act(() => {
+      invokeDataEditorCallback("onMouseMove", { kind: "out-of-bounds" })
+    })
+    const container = screen.getByTestId("stDataFrame")
+
+    // Focus moving to an element inside the dataframe keeps the selection.
+    fireEvent.blur(container, {
+      relatedTarget: screen.getByTestId("mock-data-editor"),
+    })
+    expect(currentCell()).toEqual([1, 0])
+
+    fireEvent.blur(container, { relatedTarget: null })
+    expect(currentCell()).toBeUndefined()
+  })
+
+  it("keeps the cell selection on blur while the grid is focused", () => {
+    render(<DataFrame {...props} />)
+
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+    })
+    fireEvent.blur(screen.getByTestId("stDataFrame"), { relatedTarget: null })
+
+    expect(currentCell()).toEqual([1, 0])
+  })
+
+  it("resets edits and selections when its form is cleared on submit", () => {
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg: vi.fn(),
+      formsDataChanged: vi.fn(),
+    })
+    widgetMgr.setFormSubmitBehaviors("form", true)
+
+    render(
+      <DataFrame
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.FIXED,
+          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
+          id: "form-editor",
+          formId: "form",
+        })}
+        elementHash="form-hash"
+        disabled={false}
+        widgetMgr={widgetMgr}
+      />
+    )
+
+    const getCellText = (): unknown =>
+      (getCell(1, 0) as { displayData?: string }).displayData
+    const originalText = getCellText()
+
+    act(() => {
+      invokeDataEditorCallback("onCellEdited", [1, 0], {
+        ...getCell(1, 0),
+        data: 999,
+        displayData: "999",
+      })
+    })
+    selectRow(2)
+    expect(getCellText()).toBe("999")
+    expect(selectedRows()).toEqual([2])
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(getCellText()).toBe(originalText)
+    expect(selectedRows()).toEqual([])
+  })
+
+  it("closes the column visibility menu with Escape", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    await user.click(screen.getByLabelText("Show/hide columns"))
+    expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
+
+    await user.keyboard("{Escape}")
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnVisibilityMenu")
+    ).not.toBeInTheDocument()
+  })
+
+  it("detects scrollable grids and keeps scrollbar clicks away from the grid", async () => {
+    const SCROLLBAR_GUTTER = 10
+    vi.spyOn(UseScrollbarGutterSize, "useScrollbarGutterSize").mockReturnValue(
+      SCROLLBAR_GUTTER
+    )
+    vi.spyOn(
+      HTMLElement.prototype,
+      "getBoundingClientRect"
+    ).mockImplementation(function getRect(this: HTMLElement): DOMRect {
+      // The scroll area is larger than the container (clientWidth and
+      // clientHeight are 0 in jsdom), so both scrollbars are shown.
+      const size = this.classList.contains("dvn-stack")
+        ? { width: 1000, height: 1000 }
+        : { width: 300, height: 200 }
+      return {
+        ...size,
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        right: size.width,
+        bottom: size.height,
+        toJSON: () => ({}),
+      }
+    })
+    const parentPointerDown = vi.fn()
+
+    render(
+      <div onPointerDown={parentPointerDown}>
+        <DataFrame {...props} />
+      </div>
+    )
+
+    await waitFor(() => {
+      expect(getDataEditorProps().experimental).toMatchObject({
+        paddingBottom: -SCROLLBAR_GUTTER,
+        paddingRight: -SCROLLBAR_GUTTER,
+      })
+    })
+
+    const container = screen.getByTestId("stDataFrame")
+    // jsdom has no PointerEvent, so use a MouseEvent to carry coordinates.
+    const pointerDownAt = (clientX: number, clientY: number): void => {
+      fireEvent(
+        container,
+        new MouseEvent("pointerdown", { bubbles: true, clientX, clientY })
+      )
+    }
+
+    // Inside the grid area:
+    pointerDownAt(150, 100)
+    expect(parentPointerDown).toHaveBeenCalledOnce()
+
+    // On the horizontal scrollbar (bottom edge):
+    pointerDownAt(150, 195)
+    // On the vertical scrollbar (right edge):
+    pointerDownAt(295, 100)
+    expect(parentPointerDown).toHaveBeenCalledOnce()
+  })
+
+  it("hides the tooltip when the grid selection changes", () => {
+    vi.useFakeTimers()
+    render(
+      <DataFrame
+        {...getProps(TEN_BY_TEN)}
+        element={DataframeProto.create({
+          arrowData: { data: TEN_BY_TEN },
+          editingMode: DataframeProto.EditingMode.READ_ONLY,
+          columns: JSON.stringify({ _index: { help: "Index help" } }),
+        })}
+      />
+    )
+
+    act(() => {
+      invokeDataEditorCallback("onItemHovered", {
+        kind: "header",
+        location: [0, -1],
+        bounds: { x: 0, y: 0, width: 40, height: 24 },
+        isTouchDevice: false,
+      })
+    })
+    act(() => {
+      vi.advanceTimersByTime(TOOLTIP_DEBOUNCE_TIME_MS)
+    })
+    expect(screen.getByTestId("stDataFrameTooltipTarget")).toBeVisible()
+
+    act(() => {
+      invokeDataEditorCallback("onGridSelectionChange", cellSelection())
+    })
+
+    expect(
+      screen.queryByTestId("stDataFrameTooltipTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("sorts from the column menu and hides an open search overlay", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    await user.click(screen.getByLabelText("Search"))
+    expect(getDataEditorProps().showSearch).toBe(true)
+
+    const unsortedTitle = getEditorColumns()[1].title
+    openColumnMenu()
+    await user.click(screen.getByText("Sort ascending"))
+
+    expect(getDataEditorProps().showSearch).toBe(false)
+    expect(getEditorColumns()[1].title).toBe(`↑ ${unsortedTitle}`)
+  })
+
+  it("unpins a pinned column from the column menu", async () => {
+    const user = userEvent.setup()
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [2000],
+    })
+    render(<DataFrame {...props} />)
+
+    const freezeColumnsBeforePin = getDataEditorProps().freezeColumns as number
+    openColumnMenu()
+    await user.click(screen.getByText("Pin column"))
+    expect(getDataEditorProps().freezeColumns).toBe(freezeColumnsBeforePin + 1)
+
+    openColumnMenu()
+    expect(screen.queryByText("Pin column")).not.toBeInTheDocument()
+    await user.click(screen.getByText("Unpin column"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect(getDataEditorProps().freezeColumns).toBe(freezeColumnsBeforePin)
+  })
+
+  it("changes the column format and remeasures the column afterwards", async () => {
+    const user = userEvent.setup()
+    render(<DataFrame {...props} />)
+
+    openColumnMenu()
+    await user.click(screen.getByRole("menuitem", { name: /Format/ }))
+    await user.click(screen.getByText("Percent"))
+
+    expect(
+      screen.queryByTestId("stDataFrameColumnMenu")
+    ).not.toBeInTheDocument()
+    expect((getCell(1, 1) as { displayData: string }).displayData).toContain(
+      "%"
+    )
+    // The remeasure is delayed until the new format is applied to all cells.
+    expect(dataEditorRemeasureColumnsMock).not.toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(dataEditorRemeasureColumnsMock).toHaveBeenCalledWith(
+        CompactSelection.fromSingleSelection(1)
+      )
+    })
+    expect(dataEditorRemeasureColumnsMock).toHaveBeenCalledOnce()
+  })
+
+  describe("resizing", () => {
+    /** Twice the theme's table border width (1px). */
+    const BORDER_THRESHOLD = 2
+
+    const renderResizableDataFrame = (
+      heightConfig?: DataFrameProps["heightConfig"]
+    ): { resizable: HTMLElement; handle: HTMLElement } => {
+      render(<DataFrame {...props} heightConfig={heightConfig} />)
+      const resizable = screen.getByTestId("stDataFrameResizable")
+      const handle = resizable.querySelector<HTMLElement>(
+        '[style*="se-resize"]'
+      )
+      if (!handle) {
+        throw new Error("Resize handle not found")
+      }
+      return { resizable, handle }
+    }
+
+    const mockResizableSize = (
+      resizable: HTMLElement,
+      width: number,
+      height: number
+    ): void => {
+      Object.defineProperty(resizable, "offsetWidth", {
+        configurable: true,
+        value: width,
+      })
+      Object.defineProperty(resizable, "offsetHeight", {
+        configurable: true,
+        value: height,
+      })
+    }
+
+    it("switches a stretch height to pixels when a drag starts", async () => {
+      const user = userEvent.setup()
+      const { resizable, handle } = renderResizableDataFrame({
+        useStretch: true,
+      })
+      expect(resizable.style.height).toBe("100%")
+      mockResizableSize(resizable, 400, 180)
+
+      await user.pointer({ keys: "[MouseLeft>]", target: handle })
+
+      expect(resizable.style.height).toBe("180px")
+
+      await user.pointer({ keys: "[/MouseLeft]" })
+      expect(resizable.style.width).toBe("400px")
+      expect(resizable.style.height).toBe("180px")
+    })
+
+    it("applies the dragged size when a drag stops", async () => {
+      const user = userEvent.setup()
+      const { resizable, handle } = renderResizableDataFrame()
+      const initialHeight = resizable.style.height
+      mockResizableSize(resizable, 350, 120)
+
+      await user.pointer({ keys: "[MouseLeft>]", target: handle })
+      // A pixel height is kept as is when the drag starts.
+      expect(resizable.style.height).toBe(initialHeight)
+
+      await user.pointer({ keys: "[/MouseLeft]" })
+      expect(resizable.style.width).toBe("350px")
+      expect(resizable.style.height).toBe("120px")
+    })
+
+    it("adds the border width when dragged to the maximum height", async () => {
+      const user = userEvent.setup()
+      const { resizable, handle } = renderResizableDataFrame()
+      const maxHeight = Number.parseFloat(resizable.style.maxHeight)
+      mockResizableSize(resizable, 350, maxHeight - BORDER_THRESHOLD)
+
+      await user.pointer({ keys: "[MouseLeft>]", target: handle })
+      await user.pointer({ keys: "[/MouseLeft]" })
+
+      expect(resizable.style.height).toBe(`${maxHeight}px`)
+    })
   })
 
   describe("ignoreRerun", () => {
