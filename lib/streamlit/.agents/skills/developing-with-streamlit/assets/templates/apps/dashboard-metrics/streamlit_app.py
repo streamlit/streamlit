@@ -42,7 +42,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Metrics Dashboard",
+    page_title="Metrics dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )
@@ -57,6 +57,7 @@ CHART_HEIGHT = 350  # Leaves room for each chart's legend and zoom slider
 KPI_HEIGHT = 184  # Height of each KPI's skeleton and metric, so they match
 # Tooltip number format, using the same format strings as ``st.metric``.
 VALUE_FORMAT = "%,.0f"
+VIEWS = {"chart": ":material/show_chart:", "table": ":material/table:"}
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -319,11 +320,7 @@ def kpi_card(label: str, metric_name: str) -> None:
 
 
 @st.fragment(parallel=True)
-def metric_card(
-    title: str,
-    metric_name: str,
-    chart_type: str = "line",
-) -> None:
+def metric_card(title: str, metric_name: str, chart_type: str = "line") -> None:
     """Display a metric card with chart/table toggle and popover filters.
 
     The card is a parallel fragment: on a full app rerun every card loads its
@@ -331,16 +328,8 @@ def metric_card(
     only this card reruns. Its controls must live inside the fragment, so the
     card draws its own frame and header, and loads its data inside
     ``st.skeleton`` so the header stays stable while the chart fills in.
-
-    Parameters
-    ----------
-    title : str
-        Card title.
-    metric_name : str
-        Key into ``METRIC_CONFIG`` used to load this card's data and namespace
-        this card's widget state.
-    chart_type : str
-        One of ``"line"``, ``"area"``, ``"bar"``, ``"point"``.
+    ``metric_name`` is a ``METRIC_CONFIG`` key and prefixes the card's widget
+    keys; ``chart_type`` is ``"line"``, ``"area"``, ``"bar"``, or ``"point"``.
     """
     chart_renderers = {
         "line": render_line_chart,
@@ -362,13 +351,15 @@ def metric_card(
 
             view_mode = st.segmented_control(
                 "View",
-                options=[":material/show_chart:", ":material/table:"],
-                default=":material/show_chart:",
+                options=VIEWS.keys(),
+                format_func=lambda view: VIEWS[view],
+                default="chart",
+                required=True,
                 key=f"{metric_name}_view",
                 label_visibility="collapsed",
             )
 
-            with st.popover("Filters", type="tertiary"):
+            with st.popover("Filters", icon=":material/tune:", type="tertiary"):
                 line_options = st.pills(
                     "Lines",
                     options=["Daily", "7-day MA"],
@@ -380,6 +371,7 @@ def metric_card(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
+                    required=True,
                     key=f"{metric_name}_time",
                 )
 
@@ -389,9 +381,9 @@ def metric_card(
         with st.skeleton(height=CHART_HEIGHT):
             df = load_metric(metric_name)
 
-            # Apply filters
+            # With no line picked, show the 7-day MA, so the chart always has one.
             line_options = line_options or ["7-day MA"]
-            filtered_df = filter_by_time_range(df, "ds", time_range or "All")
+            filtered_df = filter_by_time_range(df, "ds", time_range)
 
             # Determine which columns to show
             y_cols = []
@@ -403,15 +395,14 @@ def metric_card(
                 y_cols.append("value_7d_ma")
                 labels.append("7-day MA")
 
-            # Render view
-            if "table" in (view_mode or ""):
+            if view_mode == "table":
                 st.dataframe(
                     filtered_df,
                     height=CHART_HEIGHT,
                     hide_index=True,
                     alt=f"{title} data",
                 )
-            elif y_cols:
+            else:
                 option = render_chart(filtered_df, "ds", y_cols, labels)
                 # Describe the last series drawn: the smoother 7-day MA when shown.
                 y_col = y_cols[-1]
@@ -425,8 +416,6 @@ def metric_card(
                         title, option["dataset"]["source"], "ds", y_col, series
                     ),
                 )
-            else:
-                st.info("Select at least one line option.")
 
 
 # =============================================================================
@@ -434,23 +423,34 @@ def metric_card(
 # =============================================================================
 
 
-def render_page_header(title: str) -> None:
+def reset_cards() -> None:
+    """Restore every metric card's controls to their defaults."""
+    # Assigning a widget's key in a callback also updates it in the browser.
+    for metric_name in METRIC_CONFIG:
+        st.session_state[f"{metric_name}_view"] = "chart"
+        st.session_state[f"{metric_name}_lines"] = ["Daily", "7-day MA"]
+        st.session_state[f"{metric_name}_time"] = "All"
+
+
+def render_page_header(title: str, icon: str) -> None:
     """Render page header with title and reset button."""
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
     ):
-        st.markdown(title)
-        if st.button(":material/restart_alt: Reset", type="tertiary"):
-            st.session_state.clear()
-            st.rerun()
+        st.title(title, icon=icon, anchor=False)
+        st.button(
+            "Reset",
+            icon=":material/restart_alt:",
+            type="tertiary",
+            on_click=reset_cards,
+        )
 
 
 # =============================================================================
 # Page Layout
 # =============================================================================
 
-# Page header
-render_page_header("# :material/monitoring: Metrics Dashboard")
+render_page_header("Metrics dashboard", ":material/monitoring:")
 
 # Each KPI and card loads its own data; as parallel fragments they load
 # concurrently on the first run instead of blocking on each other.

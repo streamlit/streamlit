@@ -201,17 +201,46 @@ Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. 
 
 Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
 
-## Sidebar filters
+## Global filters
 
-Put filters in the sidebar to maximize dashboard space:
+Put the page's filters in a toolbar under the title, or in the sidebar (`with st.sidebar:`) when there are many. Bind them to the URL with `bind="query-params"` so every view can be shared, and keep secondary filters in a popover:
 
 ```python
-with st.sidebar:
-    date_range = st.date_input("Date range", value=(start, end))
-    region = st.multiselect("Region", regions, default=regions)
+def reset_filters() -> None:
+    # Assigning keys in a callback resets bound widgets and their URL parameters.
+    st.session_state.period = "12M"
+    st.session_state.regions = []
 
-# Main area is all dashboard content
+
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.title("Revenue overview", icon=":material/insights:", anchor=False)
+    st.button(
+        "Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters
+    )
+
+with st.container(horizontal=True, vertical_alignment="center"):
+    period = st.segmented_control(
+        "Period",
+        ["3M", "6M", "12M"],
+        default="12M",
+        required=True,
+        key="period",
+        bind="query-params",
+        label_visibility="collapsed",
+    )
+    with st.popover("Filters", icon=":material/tune:"):
+        regions = st.pills(
+            "Regions",
+            REGIONS,
+            selection_mode="multi",
+            key="regions",
+            bind="query-params",
+        )
 ```
+
+- Bind only filters that are safe to share: bound values appear in links and browser history. Keep sensitive values, such as account IDs or customer emails, out of the URL, and use `persist_state` to keep them across pages.
+- Treat an empty multi-select filter as "all", and summarize the active filters, for example in a caption under the title, so a closed popover doesn't hide them.
+- In a multipage app, draw the toolbar in the entrypoint before `page.run()`, so every page shares it.
 
 ## Theme and polish
 
@@ -230,12 +259,12 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | Template | Features |
 |----------|----------|
 | `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
-| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
-| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
-| `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
-| `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
-| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script |
+| `dashboard-companies` | Company leaderboard with a filter toolbar bound to the URL, sparkline and badge columns, a `ButtonColumn` that opens a company drawer, custom cache spinner |
+| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, one loader cached per breakdown, popover filters, reset callback, ECharts charts that animate between line and bar |
+| `dashboard-feature-usage` | API endpoint usage analytics with a category control bound to the URL, starter kits, bordered cards, conditional "Raw data" expander (Altair) |
+| `dashboard-seattle-weather` | Exploratory weather data visualization: an `st.grid` of metrics from a spec loop, year pills bound to the URL (Altair) |
+| `dashboard-stock-peers` | Stock peer comparison with ECharts time series and URL-bound ticker and horizon filters |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a URL-bound region filter in the main script, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script and the report's spinner text on its skeleton |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 
