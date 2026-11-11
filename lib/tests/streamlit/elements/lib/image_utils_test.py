@@ -16,16 +16,20 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import io
+import struct
+from typing import TYPE_CHECKING, Literal
 from unittest import mock
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from PIL import Image, JpegImagePlugin
 
 from streamlit.elements.lib.image_utils import (
     _4d_to_list_3d,
     _clip_image,
+    _ensure_image_size_and_format,
     _validate_image_format_string,
     _verify_np_shape,
     image_to_url,
@@ -36,8 +40,10 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from pathlib import Path
+
+    from streamlit.elements.lib.image_utils import AtomicImage
 
 _DEFAULT_LAYOUT = LayoutConfig(width="stretch")
 
@@ -230,6 +236,173 @@ def test_image_to_url_bgr_accepts_3_channel_image(no_runtime: None) -> None:
     )
 
     assert result == ""
+
+
+_EPS_BYTES = (
+    b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 10 10\n%%EndComments\n%%EOF\n"
+)
+
+# A placeable WMF header, which Pillow identifies without rendering anything.
+_WMF_BYTES = (
+    struct.pack("<IHhhhhHIH", 0x9AC6CDD7, 0, 0, 0, 1000, 1000, 1440, 0, 0)
+    + b"\x01\x00\x09\x00"
+    + b"\x00" * 32
+)
+
+
+def _encode_image(size: tuple[int, int], image_format: str) -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", size, "red").save(buffer, format=image_format)
+    return buffer.getvalue()
+
+
+# "auto" rejects EPS while detecting the format. "PNG" skips detection and
+# rejects it when `_ensure_image_size_and_format` opens the data. PIL images
+# are checked before they're saved.
+@pytest.mark.parametrize("output_format", ["auto", "PNG"])
+@pytest.mark.parametrize(
+    "to_input",
+    [bytes, io.BytesIO, lambda data: Image.open(io.BytesIO(data))],
+    ids=["bytes", "BytesIO", "PIL"],
+)
+def test_image_to_url_rejects_eps_without_rendering(
+    output_format: Literal["auto", "PNG"],
+    to_input: Callable[[bytes], AtomicImage],
+) -> None:
+    """``image_to_url`` raises a clear error for EPS data instead of rendering it."""
+    # Patch Ghostscript so the test can assert Pillow never invokes it,
+    # installed or not.
+    with (
+        mock.patch("PIL.EpsImagePlugin.Ghostscript") as ghostscript,
+        pytest.raises(StreamlitAPIException, match="EPS images are not supported"),
+    ):
+        image_to_url(
+            to_input(_EPS_BYTES),
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format=output_format,
+            image_id="test-eps",
+        )
+
+    ghostscript.assert_not_called()
+
+
+def test_image_to_url_rejects_wmf() -> None:
+    """``image_to_url`` raises a clear error for WMF data, which only renders on Windows."""
+    with pytest.raises(
+        StreamlitAPIException, match="WMF and EMF images are not supported"
+    ):
+        image_to_url(
+            _WMF_BYTES,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-wmf",
+        )
+
+
+def test_image_to_url_rejects_images_over_pixel_limit() -> None:
+    """``image_to_url`` rejects images with more pixels than ``Image.MAX_IMAGE_PIXELS``."""
+    data = _encode_image((10, 10), "PNG")
+    with (
+        mock.patch("PIL.Image.MAX_IMAGE_PIXELS", 99),
+        # Pillow warns about the same images while opening them.
+        pytest.warns(Image.DecompressionBombWarning),
+        pytest.raises(
+            StreamlitAPIException, match=r"too large to display \(10x10 pixels\)"
+        ),
+    ):
+        image_to_url(
+            data,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-too-large",
+        )
+
+
+def test_image_to_url_rejects_images_over_twice_pixel_limit() -> None:
+    """Images that Pillow refuses to open get the same error as other oversized images."""
+    data = _encode_image((10, 10), "PNG")
+    with (
+        mock.patch("PIL.Image.MAX_IMAGE_PIXELS", 49),
+        pytest.raises(StreamlitAPIException, match="too large to display") as exc_info,
+    ):
+        image_to_url(
+            data,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-too-large",
+        )
+
+    assert exc_info.value.error_id == "image-too-large"
+    assert isinstance(exc_info.value.__cause__, Image.DecompressionBombError)
+
+
+def test_image_to_url_accepts_images_at_pixel_limit(no_runtime: None) -> None:
+    """``image_to_url`` accepts an image with exactly ``Image.MAX_IMAGE_PIXELS`` pixels."""
+    data = _encode_image((10, 10), "PNG")
+    with mock.patch("PIL.Image.MAX_IMAGE_PIXELS", 100):
+        result = image_to_url(
+            data,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-at-limit",
+        )
+
+    assert result == ""
+
+
+@pytest.mark.parametrize("path", [r"\\host\share\image.png", "//host/share/image.png"])
+def test_image_to_url_rejects_windows_network_paths(path: str) -> None:
+    """On Windows, ``image_to_url`` rejects network paths before touching the filesystem."""
+    with (
+        mock.patch("streamlit.env_util.IS_WINDOWS", True),
+        mock.patch("streamlit.elements.lib.image_utils.os.path.isfile") as isfile,
+        pytest.raises(StreamlitAPIException, match="Network paths"),
+    ):
+        image_to_url(
+            path,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="RGB",
+            output_format="auto",
+            image_id="test-network-path",
+        )
+
+    isfile.assert_not_called()
+
+
+def test_ensure_image_size_and_format_decodes_jpeg_at_reduced_size() -> None:
+    """A downscaled JPEG is decoded at the smallest scale that covers the target."""
+    with mock.patch.object(
+        JpegImagePlugin.JpegImageFile,
+        "draft",
+        autospec=True,
+        side_effect=JpegImagePlugin.JpegImageFile.draft,
+    ) as draft:
+        result = _ensure_image_size_and_format(
+            _encode_image((1200, 800), "JPEG"), LayoutConfig(width=300), "JPEG"
+        )
+
+    draft.assert_called_once_with(mock.ANY, None, (300, 200))
+    assert Image.open(io.BytesIO(result)).size == (300, 200)
+
+
+def test_ensure_image_size_and_format_keeps_wide_images_one_pixel_tall() -> None:
+    """A very wide image keeps a height of at least one pixel after resizing."""
+    result = _ensure_image_size_and_format(
+        _encode_image((60000, 10), "JPEG"), _DEFAULT_LAYOUT, "JPEG"
+    )
+
+    assert Image.open(io.BytesIO(result)).size == (1460, 1)
 
 
 def test_image_to_url_returns_empty_when_runtime_unavailable(no_runtime: None) -> None:
