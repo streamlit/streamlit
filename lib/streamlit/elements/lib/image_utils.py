@@ -22,7 +22,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, Union, cast
 
-from streamlit import runtime, url_util
+from streamlit import env_util, path_security, runtime, url_util
 from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
@@ -91,6 +91,60 @@ def _image_is_gif(image: PILImage) -> bool:
     return image.format == "GIF"
 
 
+def _image_too_large_error(
+    size: tuple[int, int] | None = None,
+) -> StreamlitAPIException:
+    from PIL import Image
+
+    dimensions = f" ({size[0]}x{size[1]} pixels)" if size else ""
+    return StreamlitAPIException(
+        f"The image is too large to display{dimensions}. Resize it to at most "
+        f"{Image.MAX_IMAGE_PIXELS:,} pixels, or raise the limit by setting "
+        "`PIL.Image.MAX_IMAGE_PIXELS`.",
+        error_id="image-too-large",
+    )
+
+
+def _check_image_is_supported(pil_image: PILImage) -> None:
+    """Raise if Streamlit can't convert the image the same way everywhere.
+
+    The check only reads the format and size from the image header, so it runs
+    before anything loads the pixels.
+    """
+    from PIL import Image
+
+    # Pillow only renders EPS when Ghostscript is installed, and WMF/EMF only on
+    # Windows, so support would differ between environments. Pillow reports EMF
+    # files with the format "WMF".
+    if pil_image.format in {"EPS", "WMF"}:
+        format_name = "WMF and EMF" if pil_image.format == "WMF" else "EPS"
+        raise StreamlitAPIException(
+            f"{format_name} images are not supported. Convert the image to a "
+            "format such as PNG or JPEG first.",
+            error_id="image-format-not-supported",
+        )
+
+    # Pillow only warns about images between this limit and twice this limit,
+    # and decoding them takes hundreds of megabytes.
+    max_pixels = Image.MAX_IMAGE_PIXELS
+    width, height = pil_image.size
+    if max_pixels is not None and width * height > max_pixels:
+        raise _image_too_large_error(pil_image.size)
+
+
+def _open_image_bytes(image_data: bytes) -> PILImage:
+    """Open encoded image bytes with Pillow and check that they're supported."""
+    from PIL import Image
+
+    try:
+        pil_image = Image.open(io.BytesIO(image_data))
+    except Image.DecompressionBombError as ex:
+        # Pillow raises this itself for images above twice the pixel limit.
+        raise _image_too_large_error() from ex
+    _check_image_is_supported(pil_image)
+    return pil_image
+
+
 def _validate_image_format_string(
     image_data: bytes | PILImage, format: str
 ) -> ImageFormat:
@@ -110,9 +164,7 @@ def _validate_image_format_string(
 
     pil_image: PILImage
     if isinstance(image_data, bytes):
-        from PIL import Image
-
-        pil_image = Image.open(io.BytesIO(image_data))
+        pil_image = _open_image_bytes(image_data)
     else:
         pil_image = image_data
 
@@ -191,7 +243,7 @@ def _ensure_image_size_and_format(
     """
     from PIL import Image
 
-    pil_image: PILImage = Image.open(io.BytesIO(image_data))
+    pil_image = _open_image_bytes(image_data)
     actual_width, actual_height = pil_image.size
 
     target_width = (
@@ -203,8 +255,13 @@ def _ensure_image_size_and_format(
     # Resizing the image down if the embedded width is greater than
     # the target width.
     if target_width > 0 and actual_width > target_width:
-        # We need to resize the image.
-        new_height = int(1.0 * actual_height * target_width / actual_width)
+        # We need to resize the image. A very wide image would otherwise round
+        # down to a height of zero.
+        new_height = max(1, int(1.0 * actual_height * target_width / actual_width))
+        # Let the JPEG decoder skip detail that the resize would discard. The
+        # decoded image stays at least as large as the target size, and other
+        # formats ignore this.
+        pil_image.draft(None, (target_width, new_height))
         # pillow reexports Image.Resampling.BILINEAR as Image.BILINEAR for backwards
         # compatibility reasons, so we use the reexport to support older pillow
         # versions. The types don't seem to reflect this, though, hence the type: ignore
@@ -275,6 +332,15 @@ def image_to_url(
 
     # Strings
     if isinstance(image, str):
+        # Checking whether a network or device path is a file makes Windows
+        # contact that location, so reject these paths before any file access.
+        if env_util.IS_WINDOWS and path_security.is_windows_unc_path(image):
+            raise StreamlitAPIException(
+                "Network paths and device paths are not supported for images. "
+                "Use a local path, a URL, or the image data instead.",
+                error_id="image-network-path-not-supported",
+            )
+
         # If it's an absolute URL or relative static URL, return it directly.
         if not os.path.isfile(image) and (
             url_util.is_url(image, allowed_schemas=("http", "https", "data"))
@@ -323,6 +389,7 @@ def image_to_url(
 
     # PIL Images
     elif isinstance(image, (ImageFile.ImageFile, Image.Image)):
+        _check_image_is_supported(image)
         img_format = _validate_image_format_string(image, output_format)
         image_data = _pil_to_bytes(image, img_format)
 
