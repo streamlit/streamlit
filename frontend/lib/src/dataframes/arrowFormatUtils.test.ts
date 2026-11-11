@@ -1064,7 +1064,8 @@ describe("formatDurationFromSeconds", () => {
         try {
           const { formatDurationFromSeconds: formatWithoutNavigator } =
             await import("./arrowFormatUtils")
-          expect(formatWithoutNavigator(5, "localized")).toEqual("5 sec")
+          // The unit label depends on the host locale.
+          expect(formatWithoutNavigator(5, "localized")).toMatch(/^5\D/)
           expect(ctorSpy).toHaveBeenCalledWith(undefined, expect.anything())
         } finally {
           vi.unstubAllGlobals()
