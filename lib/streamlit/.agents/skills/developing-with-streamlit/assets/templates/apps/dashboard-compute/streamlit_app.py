@@ -116,7 +116,7 @@ def generate_time_series(
 
         for i, dt in enumerate(dates):
             trend = base * (1 + growth) ** i
-            if dt.dayofweek >= 5:
+            if dt.day_of_week >= 5:
                 trend *= 0.4
 
             daily = max(0, trend * rng.uniform(0.8, 1.2))
@@ -396,6 +396,7 @@ def dimension_metric(title: str, dimension: str) -> None:
         with st.skeleton(height=CHART_HEIGHT):
             data = load_credits(dimension)
 
+            # Cleared pills fall back to the card's defaults, so the chart has a series.
             selected = selected or config["default_selection"]
             line_options = line_options or ["7-day MA"]
             filtered = data[data[dimension].isin(selected)]
