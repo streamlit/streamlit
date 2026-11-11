@@ -30,6 +30,7 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
+import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -2165,6 +2166,41 @@ describe("DateInput", () => {
           }
         )
       })
+    })
+
+    it("opens the calendar and commits a two-click range when rendered in the sidebar", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        isRange: true,
+        default: ["2019-07-06", "2019-07-08"],
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <IsSidebarContext.Provider value={true}>
+          <DateInput {...props} />
+        </IsSidebarContext.Provider>
+      )
+      vi.mocked(props.widgetMgr.setStringArrayValue).mockClear()
+
+      await user.click(
+        getRangeDateSegments(screen.getByTestId("stDateInput"), "start").year
+      )
+      expect(await screen.findByTestId("stDateInputCalendar")).toBeVisible()
+
+      await user.click(screen.getByLabelText("Wednesday, July 10, 2019"))
+      expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+      await user.click(screen.getByLabelText("Friday, July 12, 2019"))
+
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2019-07-10", "2019-07-12"],
+        { formId: props.element.formId, fragmentId: undefined, fromUser: true }
+      )
     })
   })
 })
@@ -4484,6 +4520,42 @@ describe("DateInput range-mode commit-on-blur", () => {
       expect(sendRerunBackMsg).toHaveBeenCalledTimes(expectedReruns)
     }
   )
+
+  it("commits a typed range only once when an outside control is clicked with the calendar open", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = getProps(
+      { isRange: true, default: ["2019-07-06", "2019-07-08"] },
+      { widgetMgr }
+    )
+    const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    renderWithOutsideButton(props)
+    spy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    const end = getRangeDateSegments(screen.getByTestId("stDateInput"), "end")
+    await typeIntoSegment(user, end.day, "20")
+    expect(screen.getByTestId("stDateInputCalendar")).toBeVisible()
+    expect(spy).not.toHaveBeenCalled()
+
+    // The outside pointerdown commits and closes the calendar. The field blur
+    // that follows must not write the same range again.
+    await user.click(screen.getByRole("button", { name: "Outside" }))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("stDateInputCalendar")
+      ).not.toBeInTheDocument()
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith(
+      props.element.id,
+      ["2019-07-06", "2019-07-20"],
+      expect.objectContaining({ fromUser: true })
+    )
+    await waitForRerunFlush()
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
 
   it("discards an end-only date when focus moves to another control with the calendar open", async () => {
     const user = userEvent.setup()

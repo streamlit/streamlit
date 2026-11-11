@@ -592,6 +592,55 @@ describe("format", () => {
     expect(result).toBe(String(row))
   })
 
+  it.each([
+    { closed: "both", expected: "[0.0000, 1.5000]" },
+    { closed: "left", expected: "[0.0000, 1.5000)" },
+    { closed: "right", expected: "(0.0000, 1.5000]" },
+    { closed: "neither", expected: "(0.0000, 1.5000)" },
+  ])(
+    "interval closed on $closed formats as $expected",
+    ({ closed, expected }) => {
+      const intervalStruct = new Struct([
+        new Field("left", new Float64(), true),
+        new Field("right", new Float64(), true),
+      ])
+      const meta = new Map<string, string>([
+        ["ARROW:extension:name", "pandas.interval"],
+        [
+          "ARROW:extension:metadata",
+          JSON.stringify({ subtype: "float64", closed }),
+        ],
+      ])
+      const row = vectorFromArray(
+        [{ left: 0, right: 1.5 }],
+        intervalStruct
+      ).get(0)
+      expect(
+        format(row, {
+          type: DataFrameCellType.DATA,
+          arrowField: new Field("iv", intervalStruct, true, meta),
+          pandasType: undefined,
+        })
+      ).toEqual(expected)
+    }
+  )
+
+  it("decimal via pandas metadata without an arrow scale formats unscaled", () => {
+    expect(
+      format(new Uint32Array([12345, 0, 0, 0]), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("c", new Binary(), true),
+        pandasType: {
+          field_name: "c",
+          name: "c",
+          pandas_type: "decimal",
+          numpy_type: "object",
+          metadata: null,
+        },
+      })
+    ).toEqual("12345")
+  })
+
   it("period column with missing arrow extension metadata returns raw duration", () => {
     expect(
       format(BigInt(5), {
@@ -943,6 +992,19 @@ describe("formatDurationFromSeconds", () => {
     it("does not round unsupported fractions into whole seconds", () => {
       expect(formatDurationFromSeconds(1.5, "compact", 0)).toEqual("00:00:01")
     })
+
+    it.each([
+      [1.9999, 3, "00:00:02"],
+      [59.9996, 3, "00:01:00"],
+      [3599.9999999999, 9, "01:00:00"],
+    ])(
+      "carries %s rounded at %s digits into the next whole second",
+      (seconds, digits, expected) => {
+        expect(formatDurationFromSeconds(seconds, "compact", digits)).toEqual(
+          expected
+        )
+      }
+    )
   })
 
   describe("localized format", () => {
@@ -976,9 +1038,88 @@ describe("formatDurationFromSeconds", () => {
       }
     )
 
+    it.skipIf(!HAS_INTL_DURATION_FORMAT).each([
+      [90_061, 9, "1 day, 1 hr, 1 min, 1 sec"],
+      [2 * 86_400 + 300, 9, "2 days, 5 min"],
+      [59.9996, 3, "1 min"],
+    ])(
+      "formats %s seconds at %s digits as %s",
+      (seconds, digits, expected) => {
+        expect(
+          formatDurationFromSeconds(seconds, "localized", digits)
+        ).toEqual(expected)
+      }
+    )
+
+    it.skipIf(!HAS_INTL_DURATION_FORMAT)(
+      "uses the default locale when navigator is unavailable",
+      async () => {
+        const intlObject = Intl as unknown as {
+          DurationFormat: new (locales?: unknown, options?: unknown) => unknown
+        }
+        const ctorSpy = vi.spyOn(intlObject, "DurationFormat")
+        vi.stubGlobal("navigator", undefined)
+        // Reload the module so its formatter cache starts empty.
+        vi.resetModules()
+        try {
+          const { formatDurationFromSeconds: formatWithoutNavigator } =
+            await import("./arrowFormatUtils")
+          // The unit label depends on the host locale.
+          expect(formatWithoutNavigator(5, "localized")).toMatch(/^5\D/)
+          expect(ctorSpy).toHaveBeenCalledWith(undefined, expect.anything())
+        } finally {
+          vi.unstubAllGlobals()
+          ctorSpy.mockRestore()
+        }
+      }
+    )
+
     it("prefixes a minus for negative durations", () => {
       expect(formatDurationFromSeconds(-7200, "localized")).toMatch(/^-/)
     })
+
+    it.each([
+      {
+        errorName: "RangeError",
+        ErrorType: RangeError,
+        constructions: 2,
+        lastLocales: undefined,
+      },
+      {
+        errorName: "TypeError",
+        ErrorType: TypeError,
+        constructions: 1,
+        lastLocales: navigator.languages,
+      },
+    ])(
+      "after a $errorName, tries $constructions locale setting(s) before falling back to the clock",
+      async ({ ErrorType, constructions, lastLocales }) => {
+        const intlObject = Intl as unknown as { DurationFormat?: unknown }
+        const original = intlObject.DurationFormat
+        const ctorSpy = vi.fn()
+        intlObject.DurationFormat = function ThrowingDurationFormat(
+          locales?: unknown
+        ) {
+          ctorSpy(locales)
+          return {
+            format: (): string => {
+              throw new ErrorType("Unsupported duration")
+            },
+          }
+        }
+        // Reload the module so its formatter cache starts empty.
+        vi.resetModules()
+        try {
+          const { formatDurationFromSeconds: formatWithThrowingIntl } =
+            await import("./arrowFormatUtils")
+          expect(formatWithThrowingIntl(5, "localized")).toEqual("00:00:05")
+          expect(ctorSpy).toHaveBeenCalledTimes(constructions)
+          expect(ctorSpy).toHaveBeenLastCalledWith(lastLocales)
+        } finally {
+          intlObject.DurationFormat = original
+        }
+      }
+    )
 
     it("falls back to the elapsed-time clock when Intl.DurationFormat is missing", () => {
       const intlObject = Intl as unknown as { DurationFormat?: unknown }
@@ -992,27 +1133,6 @@ describe("formatDurationFromSeconds", () => {
         expect(formatDurationFromSeconds(1.5, "localized", 3)).toEqual(
           "00:00:01.5"
         )
-      } finally {
-        intlObject.DurationFormat = original
-      }
-    })
-
-    it("falls back to the elapsed-time clock when the default-locale retry also fails", async () => {
-      const intlObject = Intl as unknown as { DurationFormat?: unknown }
-      const original = intlObject.DurationFormat
-      intlObject.DurationFormat = function ThrowingDurationFormat() {
-        return {
-          format: (): string => {
-            throw new RangeError("Unsupported duration")
-          },
-        }
-      }
-      // Reload the module so its formatter cache starts empty.
-      vi.resetModules()
-      try {
-        const { formatDurationFromSeconds: formatWithThrowingIntl } =
-          await import("./arrowFormatUtils")
-        expect(formatWithThrowingIntl(5, "localized")).toEqual("00:00:05")
       } finally {
         intlObject.DurationFormat = original
       }
@@ -1080,6 +1200,11 @@ describe("isValidDurationSeconds", () => {
     expect(isValidDurationSeconds(maxSeconds, 0)).toBe(false)
     expect(isValidDurationSeconds(-maxSeconds, 0)).toBe(false)
     expect(isValidDurationSeconds(Number.POSITIVE_INFINITY, 9)).toBe(false)
+  })
+
+  it("rejects NaN", () => {
+    expect(isValidDurationSeconds(Number.NaN, 0)).toBe(false)
+    expect(isValidDurationSeconds(Number.NaN, 9)).toBe(false)
   })
 })
 
