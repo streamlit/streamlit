@@ -39,7 +39,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 47
+TEXT_INPUT_ELEMENTS = 48
 
 
 def test_text_input_widget_rendering(
@@ -72,6 +72,10 @@ def test_text_input_widget_rendering(
     assert_snapshot(
         get_text_input(themed_app, "text input 6 (disabled)"),
         name="st_text_input-disabled",
+    )
+    assert_snapshot(
+        get_text_input(themed_app, "text input 6b (disabled empty placeholder)"),
+        name="st_text_input-disabled_empty_placeholder",
     )
     assert_snapshot(
         get_text_input(themed_app, "text input 7 (hidden label)"),

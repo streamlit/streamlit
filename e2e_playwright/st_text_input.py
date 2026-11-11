@@ -33,6 +33,14 @@ st.write("value 5:", v5)
 v6 = st.text_input("text input 6 (disabled)", "default text", disabled=True)
 st.write("value 6:", v6)
 
+# Empty + disabled so the placeholder is visible (disabled filled snaps hide it).
+st.text_input(
+    "text input 6b (disabled empty placeholder)",
+    value="",
+    placeholder="Placeholder",
+    disabled=True,
+)
+
 v7 = st.text_input(
     "text input 7 (hidden label)", "default text", label_visibility="hidden"
 )
