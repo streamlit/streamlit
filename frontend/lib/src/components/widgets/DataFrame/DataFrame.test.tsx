@@ -1176,7 +1176,7 @@ describe("DataFrame widget", () => {
       expectedCell: undefined,
     },
     {
-      description: "keeps the cell selection with cell selection activated",
+      description: "keeps the cell selection in cell selection mode",
       selectionMode: [DataframeProto.SelectionMode.MULTI_CELL],
       expectedCell: [1, 0],
     },
@@ -1209,7 +1209,7 @@ describe("DataFrame widget", () => {
     }
   )
 
-  it("clears the cell selection when the unfocused grid loses focus", () => {
+  it("clears the cell selection on blur after the pointer leaves the grid", () => {
     render(<DataFrame {...props} />)
 
     act(() => {
@@ -1230,7 +1230,7 @@ describe("DataFrame widget", () => {
     expect(currentCell()).toBeUndefined()
   })
 
-  it("keeps the cell selection on blur while the grid is focused", () => {
+  it("keeps the cell selection on blur while the pointer is over the grid", () => {
     render(<DataFrame {...props} />)
 
     act(() => {
@@ -1300,7 +1300,7 @@ describe("DataFrame widget", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("detects scrollable grids and keeps scrollbar clicks away from the grid", async () => {
+  it("stops scrollbar pointerdowns from propagating when both scrollbars are shown", async () => {
     const SCROLLBAR_GUTTER = 10
     vi.spyOn(UseScrollbarGutterSize, "useScrollbarGutterSize").mockReturnValue(
       SCROLLBAR_GUTTER
