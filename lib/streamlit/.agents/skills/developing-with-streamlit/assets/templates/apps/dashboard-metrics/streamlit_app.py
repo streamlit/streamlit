@@ -98,7 +98,7 @@ def generate_metric_data(
     trend = base_value * (1 + growth_rate) ** np.arange(n_days)
 
     # Add weekly seasonality (lower on weekends)
-    day_of_week = dates.dayofweek
+    day_of_week = dates.day_of_week
     seasonality = np.where(day_of_week >= 5, 0.7, 1.0)
     trend *= seasonality
 

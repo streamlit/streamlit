@@ -339,14 +339,14 @@ with st.container(border=True):
                 color="auto",
                 width="small",
             ),
-            "total_credits": st.column_config.NumberColumn("Credits", format="%,d"),
+            "total_credits": st.column_config.NumberColumn("Credits", format="%,.0f"),
             "growth_score": st.column_config.NumberColumn(
                 "Growth",
                 format="%+.0f",
                 help="Credit change: second half vs first half of period",
             ),
             "usage_trend": st.column_config.LineChartColumn("Trend", width="medium"),
-            "daily_avg": st.column_config.NumberColumn("Daily avg", format="%,d"),
+            "daily_avg": st.column_config.NumberColumn("Daily avg", format="%,.0f"),
             "region": st.column_config.MultiselectColumn(
                 "Region",
                 options=REGIONS,
