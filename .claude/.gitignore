@@ -34,6 +34,7 @@ skills/*
 !skills/implementing-feature/
 !skills/sharing-pr-agent-artifacts/
 !skills/generating-changelog/
+!skills/releasing-streamlit/
 !skills/improving-frontend-coverage/
 !skills/improving-python-coverage/
 !skills/reviewing-pr-description/

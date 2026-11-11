@@ -18,6 +18,7 @@ eggs/
 # Unit test / coverage reports
 .coverage
 coverage.json
+coverage.xml
 .coverage\.*
 .pytest_cache/
 .mypy_cache/

@@ -55,7 +55,7 @@ from openai import OpenAI
 client = OpenAI()
 with st.chat_message("assistant"):
     stream = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-6-astra",
         messages=st.session_state.messages,
         stream=True,
     )
@@ -233,9 +233,9 @@ Convert audio to text and inject it back into the chat input:
 prompt = st.chat_input("Say something", accept_audio=True, key="chat")
 
 if prompt and prompt.audio:
-    # Transcribe with Whisper or another STT model
+    # Transcribe with a speech-to-text model
     transcript = openai.audio.transcriptions.create(
-        model="whisper-1",
+        model="gpt-transcribe",
         file=prompt.audio,
     )
     # Set the transcribed text as the next input

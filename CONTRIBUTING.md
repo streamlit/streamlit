@@ -122,6 +122,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
 | `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
 | `generating-changelog` | When preparing release notes between two git tags |
+| `releasing-streamlit` | Explicit `/releasing-streamlit <version>` only: drives a core or patch release from `wiki/release-process.md`, checking what is already done and pausing at each human gate |
 | `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
 | `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |

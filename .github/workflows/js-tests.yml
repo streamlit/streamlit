@@ -110,6 +110,12 @@ jobs:
           name: vitest_coverage_html
           path: frontend/coverage
           retention-days: 30
+      - name: Upload Cobertura coverage artifact
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cobertura_coverage_typescript
+          path: frontend/coverage/cobertura-coverage.xml
 
   js-coverage-comment:
     needs:
@@ -244,3 +250,27 @@ jobs:
             } catch (error) {
               console.error(`Error checking coverage changes: ${error.message}`);
             }
+
+  upload-coverage-typescript:
+    needs:
+      - js-unit-tests
+    # Nightly and release runs call this workflow with their own event, and
+    # the action would attribute their coverage to the wrong commit.
+    if: ${{ !cancelled() && needs.js-unit-tests.result == 'success' && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      code-quality: write
+    steps:
+      - name: Download Cobertura coverage artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cobertura_coverage_typescript
+      - uses: actions/upload-code-coverage@2b21a77928be8d5168c2b9581a67f2adbebacc52 # v1.4.4
+        with:
+          file: cobertura-coverage.xml
+          language: TypeScript
+          label: vitest
+          # This upload supplements the existing coverage reports, so an API
+          # outage shouldn't fail develop runs that later serve as baselines.
+          fail-on-error: false
