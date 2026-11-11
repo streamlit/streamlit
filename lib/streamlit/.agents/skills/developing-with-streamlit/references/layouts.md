@@ -361,6 +361,8 @@ with st.skeleton(height=200):
 
 In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's default spinner is hidden for the whole `with` block; custom `show_spinner` or `st.spinner` text labels the skeleton instead.
 
+A fragment's own rerun skips a `with st.skeleton()` wrapped around the fragment's call, so put a second `with st.skeleton()` inside the fragment body to cover those reruns (see "Layout-first loading" in `dashboards.md`).
+
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
 
 ## Fragments with discontiguous layout
