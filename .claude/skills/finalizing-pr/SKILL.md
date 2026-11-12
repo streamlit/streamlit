@@ -169,11 +169,3 @@ gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml 
 ```
 
 Run `/fixing-pr` exactly once, whether step 11 was approved or ran out of iterations, so it can wait for CI and address comments. Tell `/fixing-pr` to skip `ai-qa-testing.yml` when polling CI; that workflow posts its report as a PR comment for a maintainer to review and adds `do-not-merge` on `FAIL`. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
-
-### 13. Post agent metrics
-
-Post the agent metrics to the PR body:
-
-```bash
-uv run python scripts/log_agent_metrics.py --post
-```
