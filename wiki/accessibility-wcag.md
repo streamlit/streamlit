@@ -1,14 +1,14 @@
 # Streamlit WCAG command inventory
 
-Last updated: 2026-10-06. Re-audit a command when its accessible name, keyboard behavior, or role changes.
+Last updated: 2026-11-11. Re-audit a command when its accessible name, keyboard behavior, or role changes.
 
-This page is the **command** inventory (`st.*`). For default theme tokens and library shell chrome (1.4.3, 1.4.11, 2.5.8), see the [theme & shell chrome inventory](accessibility-theme.md).
+This page is the **command** inventory (`st.*`). For default theme tokens and library shell chrome (including shared app-frame surfaces), see the [theme & shell chrome inventory](accessibility-theme.md).
 
 How Streamlit enables or blocks authors from meeting **WCAG 2.2 Level A and AA** in their apps. Conformance applies to the **app**, not the library — this page is not a claim that Streamlit itself is conformant.
 
 Accessibility audits (US Section 508, EN 301 549, and similar) evaluate the app an author ships, not Streamlit itself. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
 
-**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus the shared chrome those commands use (accessible names for 4.1.2 and element-toolbar target size for 2.5.8). Other widgets are out of scope until audited. Shell chrome for 1.4.3, 1.4.11, and 2.5.8 is on the [theme inventory](accessibility-theme.md); shell **2.4.1** (main landmark, page-nav landmark, skip link) is noted there as well. Other shell criteria (for example 4.1.3) remain unscored.
+**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus the shared chrome those commands use (accessible names for 4.1.2 and element-toolbar target size for 2.5.8). Other widgets are out of scope until audited. Theme floors (1.4.3, 1.4.11, 2.5.8) and shell **2.4.1** are on the [theme inventory](accessibility-theme.md). Library-owned frame regions (header, sidebar, page nav, main menu, dialogs/popovers, toasts, toolbars) are scored under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Page-level criteria such as 1.4.4 / 1.4.10 / 1.4.12 / 2.4.2 / 3.1.1 remain unscored.
 
 ## What we are scoring
 
@@ -61,7 +61,9 @@ Use **Library blocks** only when an author cannot meet the criterion with any pu
 
 ## Shared chrome
 
-**Streamlit element toolbar** ([#17211](https://github.com/streamlit/streamlit/pull/17211)): Fullscreen, Download, and related actions compose an accessible name from non-blank element `alt`, or from a single-image caption (plain text). Without that context the label stays generic (e.g. `"Fullscreen"`). Hit targets are at least `max(1.5rem, 24px)` for WCAG 2.5.8. Distinctive names still require the author to supply `alt` or caption — **Author must**.
+**Streamlit element toolbar** ([#17211](https://github.com/streamlit/streamlit/pull/17211)): Fullscreen, Download, and related actions compose an accessible name from non-blank element `alt`, or from a single-image caption (plain text). Without that context the label stays generic (e.g. `"Fullscreen"`). Hit targets are at least `max(1.5rem, 24px)` for WCAG 2.5.8. Distinctive names still require the author to supply `alt` or caption — **Author must**. Unlocked toolbars that stay at `opacity: 0` while a child action has keyboard focus are a shell **2.4.7** gap — see [Element toolbar](accessibility-theme.md#element-toolbar) / [Dataframe toolbar](accessibility-theme.md#dataframe-toolbar) ([#17337](https://github.com/streamlit/streamlit/issues/17337)).
+
+**App shell frame** (header, sidebar chrome, page navigation, main menu, dialogs/popovers/menus, toast/skills nudge, shared non-text chrome): scored on the theme inventory under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Use that section for keyboard, focus order/visibility, name/role, and status-message accounting of the library-owned frame — not this command page.
 
 ## Media
 
