@@ -555,12 +555,37 @@ export function buildStreamlitEChartsTheme(
     // draw, where a vertical line and its label crawl up the plot. As component
     // keys, these override a chart-wide `animationDuration`; `animation: false`
     // still turns them off.
-    markLine: MARKER_ENTRY_ANIMATION,
     markPoint: MARKER_ENTRY_ANIMATION,
+    // Reference lines and shaded ranges are neutral rather than series-colored,
+    // so a "Target" line or forecast band doesn't read as a second copy of the
+    // data. ECharts draws a markLine's line and label in its `itemStyle.color`,
+    // and a markArea label in its fill color at full opacity, so the label
+    // stays readable over the faint band. A series with an explicit color keeps
+    // it on its marks (see `withSeriesColoredMarkers`).
+    markLine: {
+      ...MARKER_ENTRY_ANIMATION,
+      itemStyle: {
+        color: labelColor,
+      },
+    },
+    markArea: {
+      itemStyle: {
+        color: transparentize(colors.bodyText, 0.92),
+      },
+    },
     bar: selectStyle,
     pictorialBar: selectStyle,
     scatter: selectStyle,
-    heatmap: selectStyle,
+    // Gaps in the app background color separate the cells, as for treemap
+    // tiles.
+    heatmap: {
+      itemStyle: {
+        borderColor: colors.bgColor,
+        // ECharts takes a pixel number, and `borderWidth` is a px token.
+        borderWidth: Number.parseFloat(theme.sizes.borderWidth),
+      },
+      ...selectStyle,
+    },
     graph: selectStyle,
     ...lineMarkerDefaults,
     // ECharts separates sunburst segments and funnel stages with a white line,
@@ -1741,7 +1766,9 @@ function buildDefaultGrid(
  * ``grid`` layout, legend placement around titles and stacking of
  * bottom-anchored chart controls, the style of inside funnel and pie labels,
  * treemap insets around a title or breadcrumb, the label position
- * of horizontal markLines, and a spec ``gradientColor`` for its visualMaps).
+ * of horizontal markLines, an explicit series color on that series' marks,
+ * the fill opacity of unstacked areas, and a spec ``gradientColor`` for its
+ * visualMaps).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
@@ -1789,8 +1816,12 @@ export function applyStreamlitOptionDefaults(
   if (!applyVisualDefaults) {
     return filled
   }
-  return withHorizontalMarkLineLabels(
-    withTreemapInsets(withInsideLabelStyle(filled, theme), theme)
+  return withSoftAreaFill(
+    withSeriesColoredMarkers(
+      withHorizontalMarkLineLabels(
+        withTreemapInsets(withInsideLabelStyle(filled, theme), theme)
+      )
+    )
   )
 }
 
@@ -1976,6 +2007,104 @@ function withHorizontalMarkLineLabels(
             : entry
         ),
       },
+    }
+  })
+}
+
+/** ECharts' markArea fill alpha when the area takes the series color. */
+const SERIES_MARK_AREA_ALPHA = 0.4
+
+/**
+ * Keep an explicit series color on the series' markLine and markArea.
+ *
+ * The theme gives marks a neutral color, which would otherwise win over the
+ * series color ECharts falls back to. A series that sets ``itemStyle.color``
+ * or its own ``color`` (for example an empty series that only carries marks)
+ * chose that color for its marks too, so this copies it onto marks that don't
+ * set their own. The markArea fill gets the alpha ECharts applies to a series
+ * color.
+ */
+function withSeriesColoredMarkers(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  return mapOptionSeries(option, series => {
+    // `itemStyle.color` wins over the series `color`, which may be a palette.
+    const ownColor: unknown = Array.isArray(series.color)
+      ? series.color[0]
+      : series.color
+    const seriesColor: unknown =
+      get(series, ["itemStyle", "color"]) ?? ownColor
+    if (isNullOrUndefined(seriesColor)) {
+      return series
+    }
+    const withMarkColor = (
+      key: "markLine" | "markArea",
+      color: unknown
+    ): Record<string, unknown> | undefined => {
+      const marker = series[key]
+      if (
+        !isPlainObject(marker) ||
+        !isNullOrUndefined(get(marker, ["itemStyle", "color"]))
+      ) {
+        return undefined
+      }
+      const markerObject = marker as Record<string, unknown>
+      const itemStyle = isPlainObject(markerObject.itemStyle)
+        ? (markerObject.itemStyle as Record<string, unknown>)
+        : {}
+      return { ...markerObject, itemStyle: { ...itemStyle, color } }
+    }
+    const markLine = withMarkColor("markLine", seriesColor)
+    const markArea = withMarkColor(
+      "markArea",
+      typeof seriesColor === "string"
+        ? echarts.color.modifyAlpha(seriesColor, SERIES_MARK_AREA_ALPHA)
+        : seriesColor
+    )
+    if (markLine === undefined && markArea === undefined) {
+      return series
+    }
+    return {
+      ...series,
+      ...(markLine && { markLine }),
+      ...(markArea && { markArea }),
+    }
+  })
+}
+
+/** Fill opacity of an unstacked area series under the Streamlit theme. */
+const AREA_FILL_OPACITY = 0.2
+
+/**
+ * Soften the fill of unstacked area series.
+ *
+ * ECharts fills an area at 0.7 opacity, which hides the gridlines and any
+ * area behind it. The theme can't set this, because ECharts draws any line
+ * series with an ``areaStyle`` (even ``{}``) as an area. Stacked areas keep
+ * ECharts' fill, since there the fill is what tells the bands apart. An
+ * ``areaStyle`` with its own ``color`` (often a gradient that carries its
+ * own alpha) or ``opacity`` is left alone.
+ */
+function withSoftAreaFill(option: EChartsOptionObject): EChartsOptionObject {
+  return mapOptionSeries(option, series => {
+    const { type, areaStyle, stack } = series
+    if (
+      type !== "line" ||
+      !isPlainObject(areaStyle) ||
+      (!isNullOrUndefined(stack) && stack !== "")
+    ) {
+      return series
+    }
+    const areaStyleObject = areaStyle as Record<string, unknown>
+    if (
+      areaStyleObject.color !== undefined ||
+      areaStyleObject.opacity !== undefined
+    ) {
+      return series
+    }
+    return {
+      ...series,
+      areaStyle: { ...areaStyleObject, opacity: AREA_FILL_OPACITY },
     }
   })
 }
