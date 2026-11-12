@@ -53,6 +53,7 @@ import {
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
@@ -694,7 +695,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
-        className="stVegaLiteChart"
+        className={[
+          "stVegaLiteChart",
+          // Size containment hides the drawn width from a fit-content
+          // ancestor. Mark stretch-width charts so a stacked print column
+          // stays full width instead of collapsing.
+          isSizeContained && useStretchWidth
+            ? PRINT_SIZE_CONTAINED_GRAPHIC_CLASS
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(" ")}
         useContainerWidth={useStretchWidth}
         useContainerHeight={passesContainerHeight}
         isSizeContained={isSizeContained}

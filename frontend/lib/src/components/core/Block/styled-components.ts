@@ -32,6 +32,7 @@ import {
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
+import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
 import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
@@ -586,7 +587,9 @@ export const StyledFlexContainerBlock =
                 // A chart keeps its on-screen pixel width. A stacked column
                 // with only a chart shrinks to that width, instead of
                 // stretching the card and leaving an empty strip inside it.
-                [`> .stColumn:has(.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}))`]:
+                // Size-contained stretch-width charts and Plotly cannot
+                // contribute a width, so those columns stay full page width.
+                [`> .stColumn:has(.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER})):not(:has(.${PRINT_SIZE_CONTAINED_GRAPHIC_CLASS}))`]:
                   {
                     width: "fit-content",
                     maxWidth: "100%",

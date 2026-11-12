@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { Direction } from "~lib/components/core/Layout/utils"
+import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { render } from "~lib/test_util"
 
 import { PrintLayout } from "./ElementContainerConfig"
@@ -103,10 +104,11 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // The card's content is the chart's on-screen width, so the column
-    // shrinks to it. A column with a dataframe or table keeps full width.
+    // shrinks to it. A column with a dataframe, table, or size-contained
+    // stretch-width chart keeps full width.
     expect(css).toMatch(
       new RegExp(
-        `>\\.stColumn:has\\(\\.${PrintLayout.GRAPHIC}[^{]*:not\\(:has\\(\\.${PrintLayout.FIXED_WIDTH}[^{]*\\{[^}]*fit-content;max-width:100%`
+        `>\\.stColumn:has\\(\\.${PrintLayout.GRAPHIC}[^{]*:not\\(:has\\(\\.${PrintLayout.FIXED_WIDTH}[^{]*:not\\(:has\\(\\.${PRINT_SIZE_CONTAINED_GRAPHIC_CLASS}\\)\\)\\{[^}]*fit-content;max-width:100%`
       )
     )
   })
