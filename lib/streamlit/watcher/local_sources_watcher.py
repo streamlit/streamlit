@@ -47,6 +47,13 @@ class WatchedModule(NamedTuple):
 # thus initializing config options when this file is first imported.
 PathWatcher: PathWatcherType | None = None
 
+# Module names waiting to be removed from sys.modules. Every session shares
+# this set because sys.modules is process-wide. The next session to run a
+# script evicts those modules, including a session opened after the change
+# or after every older session has closed.
+_pending_evictions: Final[set[str]] = set()
+_pending_evictions_lock: Final = threading.Lock()
+
 
 class LocalSourcesWatcher:
     """Watch local Python sources and pages to trigger app reruns.
@@ -74,8 +81,6 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
-        self._pending_evictions: set[str] = set()
-        self._pending_evictions_lock = threading.Lock()
 
         self.update_watched_pages()
 
@@ -175,8 +180,8 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            with self._pending_evictions_lock:
-                self._pending_evictions.update(modules_to_evict)
+            with _pending_evictions_lock:
+                _pending_evictions.update(modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -193,33 +198,33 @@ class LocalSourcesWatcher:
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 
-        Called at the start of each script run on the script thread so that
-        ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing.
+        The script thread calls this at the start of a run, before user code,
+        so the file-watcher thread does not mutate ``sys.modules`` during user
+        code or cache serialization. Every session shares the pending names, so
+        this call also removes modules that other sessions' watchers queued. It
+        does not wait for those sessions to finish their current script.
         """
-        with self._pending_evictions_lock:
-            pending = self._pending_evictions
-            self._pending_evictions = set()
+        # Hold the lock until the modules are removed, so a concurrent flush
+        # that finds the set empty cannot return before the removal finishes.
+        with _pending_evictions_lock:
+            if not _pending_evictions:
+                return
 
-        if not pending:
-            return
+            prefixes = tuple(f"{name}." for name in _pending_evictions)
+            all_to_evict = set(_pending_evictions)
+            _pending_evictions.clear()
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
 
-        prefixes = tuple(f"{name}." for name in pending)
-        all_to_evict = set(pending)
-        for key in list(sys.modules.keys()):
-            if key.startswith(prefixes):
-                all_to_evict.add(key)
-
-        for name in all_to_evict:
-            sys.modules.pop(name, None)
+            for name in all_to_evict:
+                sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
         self._watched_pages = set()
-        with self._pending_evictions_lock:
-            self._pending_evictions.clear()
         self._is_closed = True
 
     def _register_watcher(
