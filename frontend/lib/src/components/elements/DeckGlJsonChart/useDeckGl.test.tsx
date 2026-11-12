@@ -574,10 +574,20 @@ describe("useDeckGl", () => {
       const layer = result.current.deck.layers?.[0] as {
         props: { updateTriggers?: Record<string, unknown> }
       }
+      const primary = mockTheme.emotion.colors.primary
+      // Every Scatterplot fill accessor keeps its trigger; earlier ones must
+      // not be dropped when later accessors rewrite updateTriggers.
+      expect(layer.props.updateTriggers?.getFillColor).toEqual([
+        0,
+        [],
+        false,
+        primary,
+      ])
       expect(layer.props.updateTriggers?.getLineColor).toEqual([
         false,
         [],
         false,
+        primary,
       ])
     })
 
@@ -614,6 +624,7 @@ describe("useDeckGl", () => {
         1,
         [],
         false,
+        mockTheme.emotion.colors.primary,
       ])
     })
 
@@ -1563,6 +1574,7 @@ describe("useDeckGl", () => {
             object: unknown,
             objectInfo: { index: number }
           ) => unknown
+          updateTriggers?: Record<string, unknown>
         }
       }
       expect(typeof layer.props.getFillColor).toBe("function")
@@ -1578,6 +1590,46 @@ describe("useDeckGl", () => {
         g,
         b,
         Math.floor(255 * 0.4),
+      ])
+      // getFillColor's trigger must survive later Scatterplot accessors so
+      // selection changes recompute the injected fill.
+      expect(layer.props.updateTriggers?.getFillColor).toEqual([
+        [0],
+        true,
+        mockTheme.emotion.colors.primary,
+      ])
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { "omit-fill-select": [1] },
+              objects: { "omit-fill-select": [data[1]] },
+            },
+          },
+        })
+      })
+
+      const afterReselect = result.current.deck.layers?.[0] as {
+        props: {
+          getFillColor?: (
+            object: unknown,
+            objectInfo: { index: number }
+          ) => unknown
+          updateTriggers?: Record<string, unknown>
+        }
+      }
+      expect(
+        afterReselect.props.getFillColor?.(data[0], { index: 0 })
+      ).toEqual([r, g, b, Math.floor(255 * 0.4)])
+      expect(
+        afterReselect.props.getFillColor?.(data[1], { index: 1 })
+      ).toEqual([r, g, b, 255])
+      expect(afterReselect.props.updateTriggers?.getFillColor).toEqual([
+        [1],
+        true,
+        mockTheme.emotion.colors.primary,
       ])
     })
   })
