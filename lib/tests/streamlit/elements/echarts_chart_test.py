@@ -1180,10 +1180,18 @@ def test_dataset_source_exact_duplicate_pandas_columns_raise() -> None:
 @pytest.mark.parametrize(
     "source",
     [
-        pd.DataFrame([[1, 2]], columns=[1, "1"]),
-        pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
+        pytest.param(
+            pd.DataFrame([[1, 2]], columns=[1, "1"]),
+            id="stringified_collision",
+            marks=pytest.mark.filterwarnings(
+                "ignore:The DataFrame has column names of mixed type:UserWarning"
+            ),
+        ),
+        pytest.param(
+            pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
+            id="pyarrow_table",
+        ),
     ],
-    ids=["stringified_collision", "pyarrow_table"],
 )
 def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
     """Labels that only collide as Arrow field names are left to the browser.
