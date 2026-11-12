@@ -19,7 +19,7 @@ Invoke this skill when the user's request involves:
 - Building and running Streamlit apps
 - Building chat, conversational, or agentic UIs (AI assistants, thinking expanders, chain-of-thought, tool-call timelines)
 - Styling widgets (button colors, backgrounds, CSS customization)
-- Accessibility, WCAG, captions, contrast, or accessible naming (`alt=`, labels, screen readers). If asked whether Streamlit is WCAG compliant: **no certification claim** — library floor ≠ app conformance; answer from the always-on a11y rules below and `references/accessibility.md`.
+- Accessibility, WCAG, captions, contrast, or accessible naming (`alt=`, labels, screen readers). If asked whether Streamlit is WCAG compliant, don't claim certification: the library's defaults don't make an app conformant. See `references/accessibility.md`.
 - Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
@@ -29,9 +29,12 @@ Invoke this skill when the user's request involves:
 
 **IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Use `width="stretch"` or `width="content"` instead. Dataframes and most charts stretch to fill their container by default, but buttons, including `st.button`, `st.download_button`, `st.form_submit_button`, `st.link_button`, and `st.page_link`, default to `width="content"`; pass `width="stretch"` to make one fill its container. Remove `use_container_width` when you encounter it.
 
-**Accessibility (do not skip):** Every chart/image/map/media/iframe/PDF/table/dataframe gets a useful keyword `alt=` (takeaway, not chart type; decorative `alt=""` only for `st.image` / `st.pyplot`). Real widget labels (`help=`/placeholder are not substitutes); `st.set_page_config(page_title=...)` not the default “Streamlit”. Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep stock tokens). Do not report the task done until the Step 4 accessibility scan passes. Details: `references/accessibility.md`.
+**Accessibility (do not skip)** — details and the full verify checklist: `references/accessibility.md`:
+- Useful keyword `alt=` on author-content media/charts/maps/tables/dataframes/data editors that accept it (takeaway, not chart type; decorative `alt=""` only for `st.image` / `st.pyplot`). Do not pass `alt=` to `st.logo`.
+- Real widget labels (`help=` / placeholder are not substitutes); descriptive `st.set_page_config(page_title=...)` (filename-derived defaults rarely describe the app).
+- Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep stock tokens). Do not report the task done until the Step 4 accessibility gate passes.
 
-Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`. When the task includes charts, media, tables, themes, or dashboards, **read `references/accessibility.md` with the primary reference** (Author must + Verify), not only at the end.
+Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
 - Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 - When a native Streamlit command covers the need, use it instead of a third-party package or a new custom component (for example, `st.text_input(..., live=True)` instead of `streamlit-keyup`). See `references/third-party-components.md` for the full mapping and the cases that still need a package.
@@ -188,7 +191,7 @@ For **beautifying/improving an app**, read in order:
 
 Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). In `theme.md`, read **Choose a config shape**, **Where to put keys**, and **Cheat sheet** first; open deeper sections only when the ask needs them.
 
-For **building a dashboard**, before coding charts/tables: every chart/dataframe gets a useful `alt=`; set `page_title`; if theming, do not break contrast. Then read:
+For **building a dashboard**, read:
 1. `references/dashboards.md`
 2. `references/charts.md` and `references/accessibility.md` (Author must + Verify)
 3. `references/data-display.md`
@@ -255,7 +258,7 @@ The agent API drives the app over HTTP without a browser. It returns the finishe
    ```
 3. **Drive** what you changed. Send the returned `session_id` with `widget_state` (keys to values) or `trigger` (`{"key": ...}` for a button), and check the affected elements in `tree`. On `status: "error"`, read the `exception` element, fix the code, and send only `session_id` to rerun. Edits need no restart, but after each one send only `session_id` first: requests are checked against the last snapshot, so new options and changed keys show up only after that rerun.
 4. **Check the console output** after each request. Streamlit logs warnings and tracebacks there that the snapshot doesn't show, such as deprecations and ignored parameters. Fix or report anything new.
-5. **Accessibility gate** (required before done — do not skip after a green run): every chart/image/map/media/iframe/PDF/table/dataframe call has a useful `alt=` (not chart-type fluff); no empty widget labels; `page_title` is set; video/audio with speech has captions/transcript when needed; meaning is not color-only; custom themes got a contrast check. Fix failures before claiming done.
+5. **Accessibility gate** (required before done): run the "Verify before you say done" checklist in `references/accessibility.md` and fix failures.
 6. **Stop** the instance when you're done.
 
 For purely visual changes (theme, CSS, spacing), this only confirms that the app still runs; checking the look needs a browser. If the app needs credentials, secrets, or services you don't have, or you can't run a background process, say so instead of changing the code to make it run.
