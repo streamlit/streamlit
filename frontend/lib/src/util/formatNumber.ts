@@ -16,7 +16,7 @@
 
 import numbro from "numbro"
 
-import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs"
 
 import { isNullOrUndefined, notNullOrUndefined } from "./utils"
 
