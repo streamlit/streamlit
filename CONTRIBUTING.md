@@ -114,6 +114,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
 | `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
 | `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
+| `implementing-bug-fix` | When you have a GitHub bug issue to reproduce and fix end-to-end, or want the next feasible confirmed P0-P3 bug selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
