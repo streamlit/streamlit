@@ -366,7 +366,7 @@ st.image(logo, alt="Company logo")
 
 ## Design principles
 
-- **Contrast:** WCAG AA (~4.5:1) for body text; primary color must support white button labels. Custom themes often break these floors — see [accessibility.md](accessibility.md#theme-override-hazards).
+- **Contrast:** WCAG AA (~4.5:1) for body text; primary color must support white button labels. Custom themes often miss these contrast ratios — see [accessibility.md](accessibility.md#theme-override-hazards).
 - **Harmony:** Neutral base + one brand accent, or a small semantic set (success/error) alongside primary.
 - **Type:** Body 14–16px / 400; clear heading scale; monospace code slightly smaller than body.
 - **Layers:** Keep `secondaryBackgroundColor` distinct from `backgroundColor`—slightly darker on a light theme, slightly lighter on a dark theme. Sidebar may match or deliberately contrast.

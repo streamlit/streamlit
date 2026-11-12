@@ -19,7 +19,7 @@ Invoke this skill when the user's request involves:
 - Building and running Streamlit apps
 - Building chat, conversational, or agentic UIs (AI assistants, thinking expanders, chain-of-thought, tool-call timelines)
 - Styling widgets (button colors, backgrounds, CSS customization)
-- Accessibility, WCAG, captions, contrast, or accessible naming (`alt=`, labels, screen readers). If asked whether Streamlit is WCAG compliant, don't claim certification: the library's defaults don't make an app conformant. See `references/accessibility.md`.
+- Accessibility, WCAG, captions, contrast, or accessible naming (`alt=`, labels, screen readers)
 - Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
@@ -31,8 +31,10 @@ Invoke this skill when the user's request involves:
 
 **Accessibility (do not skip).** Rules and the verify checklist are in `references/accessibility.md`:
 - Give author-content displays a useful keyword-only `alt=` when the command supports it (takeaway, not chart type; decorative `alt=""` only for `st.image` / `st.pyplot`). Do not pass `alt=` to `st.logo`.
-- Real labels on input widgets (`help=` / placeholder are not substitutes); icon-only buttons use `""` plus a descriptive Material `icon=`; `st.chat_input` is named by its placeholder. Set a descriptive `st.set_page_config(page_title=...)`.
-- Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep stock tokens). Do not report the task done until the Step 4 accessibility gate passes.
+- Real labels on input widgets (`help=` / placeholder are not substitutes).
+- Icon-only buttons use `""` plus a descriptive Material `icon=` (spoken name is the icon id plus "icon"); `st.chat_input` is named by its placeholder.
+- Set a descriptive `st.set_page_config(page_title=...)` when needed; on multipage apps prefer per-page `st.Page` titles over one flattening global `page_title`.
+- Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep the default theme colors). Do not report the task done until the Step 4 accessibility gate passes.
 
 Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
@@ -142,7 +144,7 @@ Step 5: Check if app is running and offer to run it
 
 ### Reference routing table
 
-Use this routing table to select reference(s). **Always read the reference file** before making changes. When the task includes charts, media, tables, themes, or dashboards, read `references/accessibility.md` **with** that primary reference.
+Use this routing table to select reference(s). **Always read the reference file** before making changes.
 
 > All file paths below are relative to this skill's directory (`streamlit/.agents/skills/developing-with-streamlit/`).
 
@@ -151,10 +153,10 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **Accessibility, WCAG, screen readers, captions, contrast, or accessible apps** — what Streamlit's defaults already cover vs author `alt`/labels/captions, theme override hazards, known library gaps, and a verify pass | read `references/accessibility.md` |
 | **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, native replacements for third-party components, and type checking | read `references/best-practices.md` and `references/accessibility.md` |
 | **App is slow, reruns take too long, data loads repeatedly, work is recomputed unnecessarily, or the page shows stale or shifting content while it loads** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, loading states such as `st.skeleton` that render the layout first, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
-| **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers, BI patterns (filter toolbars bound to the URL, card headers with ⋮ menus, certified metrics, definition drawers), and layout-first loading where `st.skeleton` holds each slow card's size while parallel fragments load it | read `references/dashboards.md` and `references/accessibility.md` (Author must + Verify) |
-| **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md`, `references/design.md`, and `references/accessibility.md` (Author must + Theme override hazards + Verify) |
+| **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers, BI patterns (filter toolbars bound to the URL, card headers with ⋮ menus, certified metrics, definition drawers), and layout-first loading where `st.skeleton` holds each slow card's size while parallel fragments load it | read `references/dashboards.md` and `references/accessibility.md` |
+| **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md`, `references/design.md`, and `references/accessibility.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
-| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first) and `references/accessibility.md` (Theme override hazards) |
+| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first) and `references/accessibility.md` |
 | **Page structure and layout** — `st.columns`, `st.grid`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, when to use each container type, aligning side-by-side elements (widget heights, `vertical_alignment`, equal-height cards and charts), bento layouts and fixed-height regions, and fragments with discontiguous layout (triggering from outside, rendering into outside containers) | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, row/column/cell selection, metric sparklines, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` and `references/accessibility.md` |
 | **Charts, maps, and data visualization** — choosing between the simple charts, `st.altair_chart`, `st.echarts_chart` (including an existing ECharts option or `pyecharts` chart), `st.plotly_chart`, `st.pyplot`, `st.map`/`st.pydeck_chart`, and diagrams; keeping charts consistent on a page; chart selections (`on_select`); accessible `alt=` names; and large chart data | read `references/charts.md` and `references/accessibility.md` |
@@ -184,7 +186,7 @@ If the user asks for a UI element or interaction that **has never been part of S
 
 For **beautifying/improving an app**, read in order:
 1. `references/theme.md` — brand colors, light/dark, sidebar, padding (prefer config over CSS)
-2. `references/accessibility.md` — Author must + Theme override hazards + Verify (visual polish without adding missing `alt=` / fixing empty labels is **incomplete**)
+2. `references/accessibility.md`
 3. `references/design.md` — icons, hierarchy, micro-polish
 4. `references/layouts.md`
 5. `references/selection-widgets.md`
@@ -193,11 +195,9 @@ Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). In
 
 For **building a dashboard**, read:
 1. `references/dashboards.md`
-2. `references/charts.md` and `references/accessibility.md` (Author must + Verify)
+2. `references/charts.md` and `references/accessibility.md`
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
-
-For **adding charts, media, or tables** to an existing app, read the topic reference and `references/accessibility.md` (Author must: takeaway `alt=`, no color-only meaning).
 
 **IMPORTANT - Use templates:**
 
@@ -236,7 +236,7 @@ For **performance optimization**, read:
 
 **Actions:**
 
-1. Apply the patterns and recommendations from the loaded reference(s), including **Author must** from `references/accessibility.md` when that file was loaded
+1. Apply the patterns and recommendations from the loaded reference(s), including what authors must add from `references/accessibility.md` when that file was loaded
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
 4. Type check the edited Python files with `ty` (recommended) or `mypy`, using the project's configured checker if it has one. Streamlit's public API is typed and tested with both, so wrong API use is reported before the app runs. Install and run notes are in `references/environment-setup.md`; an example is in `references/best-practices.md`.

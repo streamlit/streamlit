@@ -6,8 +6,8 @@ Use the typed media command for images, video, audio, and PDFs — each renders 
 
 Pass keyword-only `alt=` so assistive technologies can name the media. Write a short, plain-text name appropriate to the media (about one sentence). Do not open with "Image of…"; do not paste the same string into `caption` and `alt`. Broader author/agent accessibility defaults (labels, captions/transcripts, theme contrast) are in [accessibility.md](accessibility.md).
 
-- **`st.image` / `st.pyplot`:** `alt` is independent of `caption`. Use `alt=""` only for decorative images. Omitting `alt` leaves the image without an accessible name. For several `st.image` inputs, pass a same-length sequence with one alt value per image (use ``None`` to skip one); a single string raises an exception. `st.pyplot` takes one figure and one `alt` string (describe the whole figure).
-- **`st.video` / `st.audio`:** `alt` names the player. For video captions (WCAG 1.2.2), use `subtitles=` on native files (or on-platform captions for YouTube); a transcript does not replace captions. For essential audio, place a transcript nearby.
+- **`st.image` / `st.pyplot`:** `alt` is independent of `caption`. Use `alt=""` only for decorative images. Omitting `alt` leaves the image without an accessible name. When `st.image` receives a list of images, pass a same-length `alt` sequence (use ``None`` to skip one); a single string raises an exception. `st.pyplot` takes one figure and one `alt` string (describe the whole figure).
+- **`st.video` / `st.audio`:** `alt` names the player. For video captions (WCAG 1.2.2), use `subtitles=` for the native player (local file or non-YouTube URL); YouTube URLs raise if you pass it, so use on-platform captions or a captioned non-YouTube source. A transcript does not replace captions. For essential audio, place a transcript nearby.
 - **`st.pdf`:** `alt` names the viewer, not the PDF's page content.
 - **`st.iframe`:** `alt` sets the iframe `title`. Omit it only when the default title (`"st.iframe"` on every embed) is acceptable.
 

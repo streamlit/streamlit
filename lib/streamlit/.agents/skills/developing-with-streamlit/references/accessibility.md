@@ -1,26 +1,26 @@
 # Accessibility when building Streamlit apps
 
-This page covers what Streamlit already provides, what app authors must supply, and which workarounds to avoid. Streamlit's shipped defaults give a useful **baseline** (landmarks, skip link, keyboard support in most native widgets, default theme contrast when tokens are untouched) — **not** a claim that an app is WCAG-conformant. Conformance applies to the app you ship.
+This page covers what Streamlit already provides, what app authors must supply, and which workarounds to avoid. Streamlit's shipped defaults give a useful **baseline** (landmarks, skip link, keyboard support in most native widgets, default theme contrast when you do not override those colors) — **not** a claim that an app is WCAG-conformant. Conformance applies to the app you ship.
 
 Prefer native `st.*` over custom HTML, third-party widgets, or CSS that recreates chrome. Custom and community surfaces often lose keyboard, focus, and naming behavior Streamlit already provides. See also [best-practices.md](best-practices.md), [theme.md](theme.md), [charts.md](charts.md#accessible-names-alt), [media-display.md](media-display.md#accessible-names-alt), and [data-display.md](data-display.md#accessible-names-alt).
 
 ## Library already covers (do not reinvent)
 
-- App frame: main landmark, “Skip to main content,” and a named page-navigation landmark when multipage nav is shown.
+- App frame: main landmark, "Skip to main content," and a named page-navigation landmark when multipage nav is shown.
 - Most native widgets are keyboard-operable, and `st.dialog` contains focus while open.
-- Default light/dark themes meet AA text contrast (body, muted, links) and white-on-primary button labels when you leave stock tokens alone.
+- Default light and dark themes meet WCAG AA contrast for body text, muted text, links, and white labels on primary buttons, as long as you do not override those colors.
 
-Do not rebuild headers, sidebars, menus, or toasts in raw HTML to “fix” accessibility. Fix author content first.
+Do not rebuild headers, sidebars, menus, or toasts in raw HTML to "fix" accessibility. Fix author content first.
 
-## Author must (always do these)
+## What authors must add
 
-- Pass keyword-only `alt=` on author-content media and data displays that accept it: `st.image`, `st.pyplot`, charts, maps, `st.video`, `st.audio`, `st.iframe`, `st.pdf`, `st.table`, `st.dataframe`, and `st.data_editor`. Short plain text that states the **takeaway or purpose** — not the chart type, not `"Image of…"`, not a data dump. Decorative `alt=""` is only for `st.image` / `st.pyplot`. Whitespace-only `alt` is ignored. Do not pass `alt=` to app-chrome commands such as `st.logo` (no such parameter).
-- On `st.echarts_chart`, `alt` replaces the data-derived description, so a vague name is worse than omitting `alt`. On `st.image` with several images, pass a same-length sequence (use `None` to skip one); a single string raises an error. `st.pyplot` takes one figure and one `alt` string (describe the whole figure, including subplots).
+- Pass keyword-only `alt=` on author-content media and data displays that accept it: `st.image`, `st.pyplot`, charts, maps, `st.video`, `st.audio`, `st.iframe`, `st.pdf`, `st.table`, `st.dataframe`, and `st.data_editor`. Write short plain text that states the **takeaway or purpose** — not the chart type, not `"Image of…"`, not a data dump. Decorative `alt=""` is only for `st.image` / `st.pyplot`. Whitespace-only `alt` is ignored. Do not pass `alt=` to app-chrome commands such as `st.logo` (no such parameter).
+- On `st.echarts_chart`, `alt` replaces the data-derived description, so a vague name is worse than omitting `alt`. When `st.image` receives a list of images, pass a same-length `alt` sequence (use `None` to skip one); a single string raises an error. `st.pyplot` takes one figure and one `alt` string (describe the whole figure, including subplots).
 - Give input widgets a real label. Never `label=""` on inputs. Use `label_visibility="collapsed"` or `"hidden"` on widgets that accept it when the visible UI already names the control. Do not use `help=` or `placeholder=` as a substitute for a label on those widgets.
-- Buttons have no `label_visibility`: for an icon-only button, pass `""` as the label with `icon=":material/…:"` and pick an icon whose name describes the action; otherwise use a visible text label. Avoid emoji-only labels.
+- Buttons have no `label_visibility`: for an icon-only button, pass `""` as the label with `icon=":material/…:"`. The spoken name is the Material icon id plus "icon" (for example `:material/delete:` → "delete icon"; `:material/thumb_up:` → "thumb_up icon"), so prefer a single-word icon id when the icon is the only name. Otherwise use a visible text label. Avoid emoji-only labels.
 - `st.chat_input` has no `label`; its `placeholder` is the accessible name, so keep it descriptive and non-empty.
-- Set a descriptive browser tab title with `st.set_page_config(page_title=...)`; the filename-derived default (for example `"streamlit_app"`) rarely describes the app.
-- For video with meaningful speech, provide synchronized captions: native files need `st.video(..., subtitles=...)`; YouTube embeds cannot take `subtitles=` (raises an error), so use a video that already has on-platform captions or switch to a captioned native file. A nearby transcript is supplementary and does not replace captions. For `st.audio`, place a transcript nearby when the recording is essential content (there is no `transcript=` parameter).
+- Set a descriptive browser tab title with `st.set_page_config(page_title=...)` when the filename-derived default (for example `"streamlit_app"`) does not describe the app. On multipage apps, prefer descriptive per-page `st.Page` titles; a global `page_title` in the entrypoint sticks for the session and can flatten those tab titles.
+- For video with meaningful speech, provide synchronized captions: use `st.video(..., subtitles=...)` for the native player (local file or non-YouTube URL). YouTube URLs raise if you pass `subtitles=`, so use a video that already has on-platform captions or switch to a captioned non-YouTube source. A nearby transcript is supplementary and does not replace captions. For `st.audio`, place a transcript nearby when the recording is essential content (there is no `transcript=` parameter).
 - Do not encode meaning with color alone in charts, `st.metric` deltas, or status text. Pair color with text, pattern, or direct labels.
 - Put **critical** errors in `st.error` / on-page alerts when the user must notice them — not only in `st.toast`.
 - If you customize `theme.*` or use colored markdown (`:orange[…]`, status fills as plain text), re-check contrast (see [Theme override hazards](#theme-override-hazards)).
@@ -46,9 +46,9 @@ st.chat_input(placeholder="Ask about this dashboard")
 
 ## Common AI anti-patterns
 
-- Claiming the app or Streamlit is “WCAG compliant,” “AA certified,” or “fully accessible.”
+- Claiming the app or Streamlit is "WCAG compliant," "AA certified," or "fully accessible."
 - Generic or chart-type `alt` (`"Chart"`, `"Line chart"`, `"Image of…"`) or pasting the same string into `caption` and `alt`.
-- Using decorative `alt=""` on meaningful images/charts to “satisfy” the rule.
+- Using decorative `alt=""` on meaningful images/charts to "satisfy" the rule.
 - Icon-only controls with no spoken name; `help=` / placeholder as the only label on labeled inputs.
 - Color-only metric deltas or status (red/green with no text).
 - Critical failures only in `st.toast`.
@@ -58,7 +58,7 @@ st.chat_input(placeholder="Ask about this dashboard")
 
 ## Theme override hazards
 
-The shipped light and dark themes meet AA text contrast (body, muted, links) and white-on-primary button labels. Custom themes often break this.
+Default light and dark themes meet WCAG AA contrast for body text, muted text, links, and white labels on primary buttons. Custom themes often break this.
 
 When you set colors in `.streamlit/config.toml`:
 
@@ -85,8 +85,8 @@ Scan the app you generated or edited:
 
 1. Every `st.image`, chart, map, media, iframe, PDF, table, dataframe, and `st.data_editor` that accepts `alt=` has a **useful** value (takeaway, not chart type); decorative `alt=""` only on image/pyplot when intentional. Do not pass `alt=` to `st.logo`.
 2. No empty labels on input widgets (icon-only buttons with a descriptive Material icon are fine; `st.chat_input` is named by its placeholder); collapsed labels are intentional, and `help=` / `placeholder` are not substitutes elsewhere.
-3. `st.set_page_config(page_title=...)` sets a descriptive tab title (not the filename-derived default).
-4. Video with speech has synchronized captions (`subtitles=` for native files, or on-platform captions / a captioned native alternative for YouTube) — a transcript alone does not pass; audio has a transcript path when needed.
+3. Browser tab titles are descriptive: filename-derived defaults are replaced when needed, and multipage apps keep useful per-page `st.Page` titles instead of one flattening global `page_title`.
+4. Video with speech has synchronized captions (`subtitles=` for the native player, or on-platform captions / a captioned non-YouTube alternative for YouTube) — a transcript alone does not pass; essential audio has a nearby transcript (there is no `transcript=` parameter).
 5. Meaning is not color-only (charts, metrics, status).
-6. Custom theme or colored markdown was contrast-checked, or you stayed on stock tokens.
-7. You did not add custom HTML/CSS to replace native chrome or to “fix” a known library gap above.
+6. Custom theme or colored markdown was contrast-checked, or you kept the default theme colors.
+7. You did not add custom HTML/CSS to replace native chrome or to "fix" a known library gap above.
