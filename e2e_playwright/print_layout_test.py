@@ -359,8 +359,9 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     assert _metric_text_scale(content_value) == 1
 
     # Plotly, ECharts, and DeckGL charts stack their row like the built-in
-    # charts. Each chart and its rendered graphic stay inside the column, and
-    # the chart stays above the following element.
+    # charts. Their column keeps the full row width instead of collapsing to
+    # the chart, each chart and its rendered graphic stay inside the column,
+    # and the chart stays above the following element.
     for row_key, chart_test_id, graphic_selector, name in [
         ("plotly_row", "stPlotlyChart", ".main-svg", "Plotly"),
         ("echarts_row", "stEChartsChart", "svg, canvas", "ECharts"),
@@ -376,24 +377,59 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         expect(row_graphic).to_be_attached()
 
         def chart_row_stacks(
+            row: Locator = row,
             row_chart: Locator = row_chart,
             row_graphic: Locator = row_graphic,
             row_column: Locator = row_column,
             beside_text: Locator = beside_text,
             after_row: Locator = after_row,
         ) -> None:
+            row_box = row.bounding_box()
+            column_box = row_column.bounding_box()
             chart_box = row_chart.bounding_box()
             beside_box = beside_text.bounding_box()
             after_box = after_row.bounding_box()
+            assert row_box is not None
+            assert column_box is not None
             assert chart_box is not None
             assert beside_box is not None
             assert after_box is not None
+            assert column_box["width"] >= row_box["width"] - 1
             _assert_inside(row_chart, row_column)
             _assert_inside(row_graphic, row_column)
             assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
             assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
         wait_until(app, chart_row_stacks)
+
+    # A content-height Vega chart keeps its on-screen width, so its stacked
+    # card shrinks to the chart instead of leaving an empty strip. The text
+    # column beside it keeps the full row width.
+    content_row = get_element_by_key(app, "content_height_chart_row")
+    content_columns = content_row.get_by_test_id("stColumn")
+    expect(content_columns).to_have_count(2)
+    content_chart_column = content_columns.nth(0)
+    content_chart_graphic = content_chart_column.locator("svg.marks, canvas.marks")
+    expect(content_chart_graphic.first).to_be_visible()
+
+    def content_height_chart_card_shrinks() -> None:
+        row_box = content_row.bounding_box()
+        chart_column_box = content_chart_column.bounding_box()
+        graphic_box = content_chart_graphic.first.bounding_box()
+        text_column_box = content_columns.nth(1).bounding_box()
+        assert row_box is not None
+        assert chart_column_box is not None
+        assert graphic_box is not None
+        assert text_column_box is not None
+        # The card is wider than the chart only by its padding, so neither a
+        # full-width card nor a collapsed one passes.
+        column_right = chart_column_box["x"] + chart_column_box["width"]
+        graphic_right = graphic_box["x"] + graphic_box["width"]
+        assert 0 <= column_right - graphic_right <= 40
+        assert chart_column_box["width"] < row_box["width"] - 40
+        assert text_column_box["width"] >= row_box["width"] - 1
+
+    wait_until(app, content_height_chart_card_shrinks)
 
     # A horizontal container with a chart stacks like a column row, and the
     # chart spans the container. Its fixed height fits the row but not the

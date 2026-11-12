@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { Direction } from "~lib/components/core/Layout/utils"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { render } from "~lib/test_util"
 
 import { PrintLayout } from "./ElementContainerConfig"
@@ -90,6 +91,30 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(".stVerticalBlock{display:block")
     expect(css).toContain("margin-bottom:1rem")
     expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
+  })
+
+  it("emits a fit-content rule for stacked columns with an intrinsic-width chart", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+        })
+      )
+    )
+
+    // Only a visible marked chart opts the column in. A column with a
+    // dataframe or table keeps full width.
+    expect(css).toMatch(
+      new RegExp(
+        `>\\.stColumn:has\\(\\.${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}:not[^{]*\\):not\\(:has\\(\\.${PrintLayout.FIXED_WIDTH}[^{]*\\{[^}]*fit-content;max-width:100%`
+      )
+    )
+    expect(css).not.toMatch(
+      new RegExp(
+        `>\\.stColumn:has\\(\\.${PrintLayout.GRAPHIC}[^{]*\\{[^}]*fit-content`
+      )
+    )
   })
 
   it("stacks a horizontal container that holds a chart", () => {

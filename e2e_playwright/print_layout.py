@@ -138,6 +138,11 @@ with st.container(key="deck_row"):
 
 st.markdown("After the DeckGL row")
 
+with st.container(key="content_height_chart_row"):
+    content_chart_column, content_text_column = st.columns(2, border=True)
+    content_chart_column.bar_chart(pd.DataFrame({"value": [3, 1, 2]}))
+    content_text_column.markdown("Beside the content-height chart")
+
 with st.container(horizontal=True, height=180, key="horizontal_chart"):
     st.bar_chart(pd.DataFrame({"value": [2, 3, 1]}), height=160)
     with st.container():
