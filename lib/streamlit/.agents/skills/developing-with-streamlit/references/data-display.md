@@ -22,7 +22,7 @@ Present tabular data clearly. For charts, maps, and diagrams, see [charts.md](ch
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` on tables and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence) that states the table's purpose; Markdown syntax is announced literally. Do not paste cell values into `alt`. For charts and maps, see [charts.md](charts.md#accessible-names-alt).
+Pass keyword-only `alt=` on tables and grids so assistive technologies can name them. Write a short, plain-text accessible name (about one sentence) that states the table's purpose; Markdown syntax is announced literally. Do not paste cell values into `alt`. For charts and maps, see [charts.md](charts.md#accessible-names-alt). Broader author/agent accessibility defaults are in [accessibility.md](accessibility.md).
 
 ```python
 st.dataframe(df, alt="Top 20 customers by revenue")

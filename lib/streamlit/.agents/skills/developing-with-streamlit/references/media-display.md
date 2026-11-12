@@ -4,7 +4,7 @@ Use the typed media command for images, video, audio, and PDFs — each renders 
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` so assistive technologies can name the media. Write a short, plain-text name appropriate to the media (about one sentence). Do not open with "Image of…"; do not paste the same string into `caption` and `alt`.
+Pass keyword-only `alt=` so assistive technologies can name the media. Write a short, plain-text name appropriate to the media (about one sentence). Do not open with "Image of…"; do not paste the same string into `caption` and `alt`. Broader author/agent accessibility defaults (labels, captions/transcripts, theme contrast) are in [accessibility.md](accessibility.md).
 
 - **`st.image` / `st.pyplot`:** `alt` is independent of `caption`. Use `alt=""` only for decorative images. Omitting `alt` leaves the image without an accessible name. For multiple images, pass a same-length sequence with one alt value per image (use ``None`` to skip one); a single string raises an exception.
 - **`st.video` / `st.audio`:** `alt` names the player. For video captions (WCAG 1.2.2), use `subtitles=`, not `alt`.
