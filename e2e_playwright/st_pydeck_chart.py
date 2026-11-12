@@ -590,7 +590,8 @@ def omit_fill_color_subtest():
     st.write("""
     ## Omit fill color (theme primary default)
 
-    ScatterplotLayer with no get_fill_color should use theme primary @ alpha 160.
+    A ScatterplotLayer without get_fill_color uses the theme primary color at
+    alpha 160.
     """)
 
     st.pydeck_chart(

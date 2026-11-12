@@ -39,7 +39,8 @@ export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
 export const MAP_DEFAULT_MARKER_ALPHA = 160
 
 /**
- * Theme primary as an RGBA tuple at MAP_DEFAULT_MARKER_ALPHA.
+ * Converts the theme primary CSS color to an RGBA tuple using
+ * MAP_DEFAULT_MARKER_ALPHA.
  */
 export function themePrimaryRgba(
   primaryCssColor: string
@@ -99,9 +100,38 @@ export const LAYER_TYPE_TO_FILL_FUNCTION: Partial<
 }
 
 /**
- * For solid pydeck layers that omit color accessors, inject theme primary at
- * MAP_DEFAULT_MARKER_ALPHA so defaults match st.map. Leaves present values
- * (arrays, @@= accessors, etc.) and unknown/aggregation layer types alone.
+ * Solid geometry layers that receive a theme-primary default when their color
+ * accessors are omitted. Separate from LAYER_TYPE_TO_FILL_FUNCTION, which is
+ * for selection recoloring and also includes text, icon, and mesh tint props.
+ */
+const PYDECK_SOLID_LAYER_COLOR_ACCESSORS: Partial<
+  Record<string, readonly string[]>
+> = {
+  [geoLayers.GeohashLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3ClusterLayer.layerName]: ["getFillColor"],
+  [geoLayers.H3HexagonLayer.layerName]: ["getFillColor"],
+  [geoLayers.MVTLayer.layerName]: ["getFillColor"],
+  [geoLayers.QuadkeyLayer.layerName]: ["getFillColor"],
+  [geoLayers.S2Layer.layerName]: ["getFillColor"],
+  [geoLayers.TripsLayer.layerName]: ["getColor"],
+  [layers.ArcLayer.layerName]: ["getTargetColor", "getSourceColor"],
+  [layers.ColumnLayer.layerName]: ["getFillColor"],
+  [layers.GeoJsonLayer.layerName]: ["getFillColor"],
+  [layers.LineLayer.layerName]: ["getColor"],
+  [layers.PathLayer.layerName]: ["getColor"],
+  [layers.PointCloudLayer.layerName]: ["getColor"],
+  [layers.PolygonLayer.layerName]: ["getFillColor"],
+  // Scatterplot: inject getFillColor only. Never invent getColor/getLineColor
+  // (avoids stroked outlines). An existing getColor also blocks injection —
+  // deck.gl treats getColor as a fill/line alias only when getFillColor is unset.
+  [layers.ScatterplotLayer.layerName]: ["getFillColor"],
+  [layers.SolidPolygonLayer.layerName]: ["getFillColor"],
+}
+
+/**
+ * Fills missing color accessors with the theme primary (alpha
+ * MAP_DEFAULT_MARKER_ALPHA) so pydeck defaults match st.map. Leaves explicit
+ * values (arrays, @@= expressions) and layer types without an entry unchanged.
  */
 export function applyMissingPydeckPrimaryColors<
   T extends Record<string, unknown>,
@@ -111,22 +141,21 @@ export function applyMissingPydeckPrimaryColors<
     return layer
   }
 
-  const accessors = LAYER_TYPE_TO_FILL_FUNCTION[layerType]
+  const accessors = PYDECK_SOLID_LAYER_COLOR_ACCESSORS[layerType]
   if (!accessors || accessors.length === 0) {
     return layer
   }
 
-  const primary = themePrimaryRgba(primaryCssColor)
-
-  // Scatterplot: only ever inject getFillColor when it is absent. Never invent
-  // getColor / getLineColor (avoids deprecated dual-fill and stroked outlines).
+  // Scatterplot: an explicit getFillColor or deprecated getColor alias must
+  // win. Injecting getFillColor when only getColor is set would override it.
   if (layerType === layers.ScatterplotLayer.layerName) {
-    if (layer.getFillColor !== undefined) {
+    if (layer.getFillColor !== undefined || layer.getColor !== undefined) {
       return layer
     }
-    return { ...layer, getFillColor: primary }
+    return { ...layer, getFillColor: themePrimaryRgba(primaryCssColor) }
   }
 
+  const primary = themePrimaryRgba(primaryCssColor)
   let changed = false
   const next: Record<string, unknown> = { ...layer }
   for (const key of accessors) {

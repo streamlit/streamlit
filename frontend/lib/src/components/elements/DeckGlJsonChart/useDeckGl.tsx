@@ -489,8 +489,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      // Theme omitted solid pydeck colors, then resolve st.map's "primary"
-      // placeholder, before selection styling or Deck.gl conversion.
+      // Fill omitted pydeck layer colors with the theme primary, then resolve
+      // st.map's "primary" placeholder, before selection styling or Deck.gl
+      // conversion.
       jsonCopy.layers = jsonCopy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
           return layer

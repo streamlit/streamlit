@@ -76,6 +76,14 @@ describe("#applyMissingPydeckPrimaryColors", () => {
     expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
   })
 
+  it("leaves ScatterplotLayer with only getColor unchanged", () => {
+    const layer = {
+      "@@type": "ScatterplotLayer",
+      getColor: [255, 75, 75, 127],
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
   it("leaves concrete ScatterplotLayer colors unchanged", () => {
     const layer = {
       "@@type": "ScatterplotLayer",
@@ -91,6 +99,13 @@ describe("#applyMissingPydeckPrimaryColors", () => {
       data: [],
     }
     expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("does not inject defaults for TextLayer or IconLayer", () => {
+    const textLayer = { "@@type": "TextLayer" }
+    const iconLayer = { "@@type": "IconLayer" }
+    expect(applyMissingPydeckPrimaryColors(textLayer, primary)).toBe(textLayer)
+    expect(applyMissingPydeckPrimaryColors(iconLayer, primary)).toBe(iconLayer)
   })
 
   it("injects only the missing ArcLayer endpoint color", () => {

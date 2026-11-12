@@ -113,7 +113,7 @@ def test_invalid_prop(themed_app: Page, assert_snapshot: ImageCompareFunction) -
 def test_omit_fill_color_uses_theme_primary(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
-    """Scatterplot without get_fill_color uses theme primary @ alpha 160."""
+    """A ScatterplotLayer without get_fill_color uses theme primary at alpha 160."""
     pydeck_charts = select_subtest(themed_app, "omit_fill_color_subtest")
 
     wait_for_chart_canvas(pydeck_charts.nth(0))
