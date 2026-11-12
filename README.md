@@ -13,9 +13,9 @@ for data apps and dashboards that coding agents build and data teams own.
 [![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/streamlit/streamlit/blob/develop/LICENSE)
 
-Apps are plain, readable Python, with no frontend or API layer. Streamlit handles the
-interface, state, caching, sign-in, theming, and upgrades, so your team maintains only its
-logic and can review every number in the language it already knows.
+Apps are plain, readable Python, with no separate frontend or API layer. Streamlit handles
+the interface, state, caching, sign-in, theming, and upgrades, so your team maintains only
+its logic and can review every number in the language it already knows.
 
 **The No. 1 Python framework for data apps and dashboards.** Used by millions. Trusted by
 thousands of companies, from startups to global enterprises.
@@ -85,16 +85,16 @@ Generating an app is cheap. Owning it isn't.
   between them, so there's less to generate, review, and keep in sync.
 - **Agents check their own work.** They drive the running app without a browser, and leave
   headless tests behind ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)).
-- **Apps are tools for agents.** Turn on the agent API (`server.enableAgentApi`), and other
-  agents can call the app over MCP or HTTP, with the same logic and access rules as the
-  browser.
+- **Apps are tools for agents.** Turn on the experimental agent API
+  (`server.enableAgentApi`), and other agents can call the app over MCP or HTTP, with the
+  same logic and access rules as the browser.
 - **Dashboard performance built in.** Tables that load rows as you scroll, partial and
   parallel reruns (`@st.fragment`), background cache refresh (`@st.cache_data`),
   cross-filtering selections (`on_select`), and views shared by URL
   (`bind="query-params"`).
 - **Enterprise guardrails.** Built-in sign-in (`st.login`), one brand theme across apps,
-  continuous security scanning with fixes in regular releases, and accessibility built to
-  [WCAG 2.2 A and AA](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
+  continuous security scanning with fixes in regular releases, and accessibility tracked
+  against [WCAG 2.2 A and AA](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
 - **No ceiling.** Add [custom components](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
   in React or any frontend framework, and your own API routes and middleware with
   [`st.App`](https://docs.streamlit.io/develop/api-reference/server/st.app).
