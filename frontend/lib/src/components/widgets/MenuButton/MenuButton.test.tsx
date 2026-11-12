@@ -307,7 +307,28 @@ describe("MenuButton widget", () => {
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
+    expect(button).not.toHaveAttribute("aria-label")
   })
+
+  it.each([
+    [":material/more_vert:", "", "More options"],
+    [":material/more_horiz:", "", "More options"],
+    [":material/menu:", "", "Menu"],
+    [undefined, ":material/more_vert:", "More options"],
+  ])(
+    "names the trigger by purpose when icon is %s and label is %s",
+    (icon, label, expectedName) => {
+      const props = getProps({ label, icon })
+      render(<MenuButton {...props} />)
+
+      expect(screen.getByRole("button", { name: expectedName })).toBeVisible()
+      expect(
+        screen.queryByRole("button", {
+          name: /more_vert|more_horiz|menu icon/,
+        })
+      ).not.toBeInTheDocument()
+    }
+  )
 
   describe("wrap=false", () => {
     mockEllipsizedLabels()

@@ -24,8 +24,8 @@ import {
   extractLeadingMaterialIcon,
   getFilledStarIconSrc,
   getIconAccessibleName,
+  getMenuStyleIconName,
   isMaterialIcon,
-  isMenuStyleIconLabel,
 } from "./DynamicIcon"
 
 const getProps = (
@@ -179,43 +179,43 @@ describe("extractLeadingMaterialIcon", () => {
   )
 })
 
-describe("isMenuStyleIconLabel", () => {
+describe("getMenuStyleIconName", () => {
   it.each([
-    // Menu-style icons without separate icon prop should return true
-    [undefined, ":material/menu:", true],
-    [undefined, ":material/more_vert:", true],
-    [undefined, ":material/more_horiz:", true],
-    [undefined, " :material/menu: ", true],
+    // Menu-style icons without separate icon prop return their name
+    [undefined, ":material/menu:", "Menu"],
+    [undefined, ":material/more_vert:", "More options"],
+    [undefined, ":material/more_horiz:", "More options"],
+    [undefined, " :material/menu: ", "Menu"],
 
-    // Menu-style icon prop with an empty label should return true
-    [":material/menu:", "", true],
-    [":material/more_vert:", "", true],
-    [":material/more_horiz:", undefined, true],
-    [":material/more_vert:", "  ", true],
+    // Menu-style icon prop with an empty label returns its name
+    [":material/menu:", "", "Menu"],
+    [":material/more_vert:", "", "More options"],
+    [":material/more_horiz:", undefined, "More options"],
+    [":material/more_vert:", "  ", "More options"],
 
-    // When icon prop is set, should return false (not icon-only)
-    [":material/edit:", ":material/menu:", false],
-    ["some-icon", ":material/more_vert:", false],
-    [":material/more_vert:", "Actions", false],
-    [":material/menu:", ":material/menu:", false],
+    // When icon prop is set, returns undefined (not icon-only)
+    [":material/edit:", ":material/menu:", undefined],
+    ["some-icon", ":material/more_vert:", undefined],
+    [":material/more_vert:", "Actions", undefined],
+    [":material/menu:", ":material/menu:", undefined],
 
-    // Non-menu-style icon prop with an empty label should return false
-    [":material/edit:", "", false],
-    ["spinner", "", false],
+    // Non-menu-style icon prop with an empty label returns undefined
+    [":material/edit:", "", undefined],
+    ["spinner", "", undefined],
 
-    // Non-menu-style icons should return false
-    [undefined, ":material/edit:", false],
-    [undefined, ":material/settings:", false],
+    // Non-menu-style icons return undefined
+    [undefined, ":material/edit:", undefined],
+    [undefined, ":material/settings:", undefined],
 
-    // Labels with text (not icon-only) should return false
-    [undefined, ":material/menu: Menu", false],
-    [undefined, "Menu", false],
+    // Labels with text (not icon-only) return undefined
+    [undefined, ":material/menu: Menu", undefined],
+    [undefined, "Menu", undefined],
 
     // Edge cases
-    [undefined, undefined, false],
-    [undefined, "", false],
-    ["", ":material/menu:", true],
-  ])("isMenuStyleIconLabel(%s, %s) returns %s", (icon, label, expected) => {
-    expect(isMenuStyleIconLabel(icon, label)).toBe(expected)
+    [undefined, undefined, undefined],
+    [undefined, "", undefined],
+    ["", ":material/menu:", "Menu"],
+  ])("getMenuStyleIconName(%s, %s) returns %s", (icon, label, expected) => {
+    expect(getMenuStyleIconName(icon, label)).toBe(expected)
   })
 })

@@ -42,7 +42,7 @@ import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicBut
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import {
   DynamicIcon,
-  isMenuStyleIconLabel,
+  getMenuStyleIconName,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -212,8 +212,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
-  // Hide the chevron if the only content is a menu-style icon (e.g., :material/menu:)
-  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+  // A menu-style icon (e.g. :material/more_vert:) alone replaces the chevron and
+  // names the trigger and body by its purpose ("More options") rather than its glyph.
+  const menuIconName = getMenuStyleIconName(element.icon, element.label)
+  const hideChevron = menuIconName !== undefined
 
   // Attach to a wrapper div rather than BaseButton directly. BaseButtonTooltip
   // renders children twice when `help` is set (normal + mobile), which causes
@@ -446,6 +448,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             }
             containerWidth={true}
             onClick={handleToggle}
+            aria-label={menuIconName}
             aria-expanded={open}
             aria-haspopup="dialog"
           >
@@ -485,7 +488,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             // whose dismissal logic checks this attribute.
             data-st-overlay-root="true"
             role="dialog"
-            aria-label={element.label}
+            aria-label={menuIconName ?? element.label}
             style={floatingStyles}
             $stretchWidth={stretchWidth}
             $calculatedWidth={calculatedWidth}

@@ -87,32 +87,39 @@ export function extractLeadingMaterialIcon(
   return { icon: null, text: label }
 }
 
-/** Icons that indicate a menu-style trigger where the chevron should be hidden. */
-const MENU_STYLE_ICONS = new Set([
-  ":material/menu:",
-  ":material/more_vert:",
-  ":material/more_horiz:",
+/**
+ * Icons that indicate a menu-style trigger where the chevron should be hidden,
+ * mapped to the accessible name of a trigger that shows only that icon.
+ */
+const MENU_STYLE_ICON_NAMES = new Map([
+  [":material/menu:", "Menu"],
+  [":material/more_vert:", "More options"],
+  [":material/more_horiz:", "More options"],
 ])
 
 /**
  * Checks if a trigger shows only a menu-style icon and no text, either as the
  * label (with no icon prop) or as the icon prop (with an empty label).
- * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
+ * When it does, expansion chevrons should be hidden as the icon itself indicates
+ * a menu, and the returned name labels the trigger in place of the icon name.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns true if the trigger's only content is one of the menu-style icons
+ * @returns the trigger's accessible name (e.g. "More options") if its only
+ * content is one of the menu-style icons, otherwise undefined
  */
-export function isMenuStyleIconLabel(
+export function getMenuStyleIconName(
   icon: string | undefined,
   label: string | undefined
-): boolean {
+): string | undefined {
   const trimmedIcon = icon?.trim() ?? ""
   const trimmedLabel = label?.trim() ?? ""
   if (trimmedIcon === "") {
-    return MENU_STYLE_ICONS.has(trimmedLabel)
+    return MENU_STYLE_ICON_NAMES.get(trimmedLabel)
   }
-  return trimmedLabel === "" && MENU_STYLE_ICONS.has(trimmedIcon)
+  return trimmedLabel === ""
+    ? MENU_STYLE_ICON_NAMES.get(trimmedIcon)
+    : undefined
 }
 
 /**

@@ -41,7 +41,7 @@ import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWr
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
-  isMenuStyleIconLabel,
+  getMenuStyleIconName,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -130,7 +130,10 @@ function MenuButton(props: Props): ReactElement {
   const buttonDisabled =
     disabled || element.disabled || element.options.length === 0
 
-  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+  // A menu-style icon (e.g. :material/more_vert:) alone replaces the chevron and
+  // names the trigger by its purpose ("More options") rather than its glyph.
+  const menuIconName = getMenuStyleIconName(element.icon, element.label)
+  const hideChevron = menuIconName !== undefined
 
   // When wrap resolves to no-wrap, reveal the full label on hover via a native
   // title, skipped when help is set since help provides the tooltip.
@@ -169,6 +172,7 @@ function MenuButton(props: Props): ReactElement {
           disabled={buttonDisabled}
           containerWidth={true}
           onClick={() => setIsOpen(o => !o)}
+          aria-label={menuIconName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
