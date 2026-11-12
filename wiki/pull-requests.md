@@ -110,7 +110,7 @@ Don't set `feature:*` or `area:*` labels on PRs. They are for issues.
 | Frontend unit tests | `frontend/**/*.test.ts` or `*.test.tsx` |
 | E2E tests | `e2e_playwright/**/*_test.py` |
 
-**Fill the PR template checklist** based on which test files changed. If no tests were added, explain why (e.g., "Documentation-only changes, no behavior modifications").
+**Fill the PR template's Testing Plan bullets** based on which test files changed. If no tests were added, explain why (e.g., "Documentation-only changes, no behavior modifications").
 
 **Describe testing** by listing the test files and what they cover:
 
