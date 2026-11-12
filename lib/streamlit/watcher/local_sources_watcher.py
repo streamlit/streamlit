@@ -54,6 +54,14 @@ PathWatcher: PathWatcherType | None = None
 _pending_evictions: Final[set[str]] = set()
 _pending_evictions_lock: Final = threading.Lock()
 
+# For each changed file, the modification time of its latest change and the
+# module names already queued for that change. Every session's watcher reports
+# the same change, and a later report can arrive after another session has
+# already evicted and reimported the modules. Queuing them again would evict
+# modules that session's script may still be importing, so each name is queued
+# once per change.
+_queued_changes: Final[dict[str, tuple[float, set[str]]]] = {}
+
 
 class LocalSourcesWatcher:
     """Watch local Python sources and pages to trigger app reruns.
@@ -180,8 +188,7 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            with _pending_evictions_lock:
-                _pending_evictions.update(modules_to_evict)
+            _queue_evictions(norm_filepath, modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -298,6 +305,27 @@ class LocalSourcesWatcher:
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
+
+
+def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
+    """Queue module evictions for a file change, skipping names already queued."""
+    try:
+        modification_time = os.stat(changed_path).st_mtime
+    except OSError:
+        modification_time = 0.0
+
+    with _pending_evictions_lock:
+        # Some file systems (s3fs/fuse) always report 0.0, and a deleted file
+        # has no modification time. Those changes can't be told apart, so their
+        # modules are always queued.
+        if modification_time > 0.0:
+            queued_time, queued_names = _queued_changes.get(changed_path, (0.0, set()))
+            if queued_time != modification_time:
+                queued_names = set()
+                _queued_changes[changed_path] = (modification_time, queued_names)
+            module_names = module_names.difference(queued_names)
+            queued_names.update(module_names)
+        _pending_evictions.update(module_names)
 
 
 def get_module_paths(module: ModuleType) -> set[str]:

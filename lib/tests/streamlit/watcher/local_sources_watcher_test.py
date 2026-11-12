@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pathlib
 import pickle
 import sys
+import tempfile
 import threading
 import types
 import unittest
@@ -63,9 +65,14 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         the_globals = globals()
 
-        # The pending-eviction set is process-wide, so isolate it per test.
-        local_sources_watcher._pending_evictions.clear()
-        self.addCleanup(local_sources_watcher._pending_evictions.clear)
+        # The eviction queue and its change record are process-wide, so
+        # isolate them per test.
+        for shared in (
+            local_sources_watcher._pending_evictions,
+            local_sources_watcher._queued_changes,
+        ):
+            shared.clear()
+            self.addCleanup(shared.clear)
 
         for name in modules:
             with contextlib.suppress(Exception):
@@ -830,6 +837,64 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         assert fake_modules == {}
         assert lock_held_during_pop == [True, True]
+
+    def _watcher_for(
+        self, path: str, on_changed: MagicMock | None = None
+    ) -> local_sources_watcher.LocalSourcesWatcher:
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw._watched_modules = {
+            os.path.realpath(path): local_sources_watcher.WatchedModule(
+                MagicMock(), "DUMMY_MODULE_1"
+            ),
+        }
+        if on_changed is not None:
+            lsw.register_file_change_callback(on_changed)
+        return lsw
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_later_report_of_same_change_keeps_reimported_module(self, fob):
+        """A second session's report of a change does not evict the module again."""
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        module_path = os.path.join(tmp_dir.name, "dummy.py")
+        pathlib.Path(module_path).write_text("VALUE = 1\n", encoding="utf-8")
+        os.utime(module_path, (1_000, 1_000))
+
+        first_session_lsw = self._watcher_for(module_path)
+        second_session_callback = MagicMock()
+        second_session_lsw = self._watcher_for(module_path, second_session_callback)
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            first_session_lsw.on_path_changed(module_path)
+            first_session_lsw.on_script_run()
+            assert "DUMMY_MODULE_1" not in sys.modules
+
+            # The first session reimports the module before the second
+            # session's watcher reports the same change.
+            sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+            second_session_lsw.on_path_changed(module_path)
+            second_session_lsw.on_script_run()
+            assert "DUMMY_MODULE_1" in sys.modules
+            second_session_callback.assert_called_once_with(module_path)
+
+            # A later change to the same file is queued again.
+            os.utime(module_path, (2_000, 2_000))
+            second_session_lsw.on_path_changed(module_path)
+            second_session_lsw.on_script_run()
+            assert "DUMMY_MODULE_1" not in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_change_without_modification_time_is_always_queued(self, fob):
+        """Reports for a file without a modification time each queue evictions."""
+        missing_path = os.path.join(os.path.dirname(SCRIPT_PATH), "missing.py")
+        lsw = self._watcher_for(missing_path)
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            lsw.on_path_changed(missing_path)
+            lsw.on_script_run()
+            sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+
+            lsw.on_path_changed(missing_path)
+            lsw.on_script_run()
+            assert "DUMMY_MODULE_1" not in sys.modules
 
 
 def test_get_module_paths_outputs_abs_paths():
