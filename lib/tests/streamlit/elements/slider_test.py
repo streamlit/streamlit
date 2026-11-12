@@ -1122,32 +1122,42 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError, match="containing up to two"):
             st.slider("the label", value=[1, 2, 3])
 
-    def test_mixed_types_in_value_raises(self):
-        """A list with mixed numeric types raises StreamlitInvalidParameterTypeError."""
+    def test_mixed_number_and_date_value_raises(self) -> None:
+        """A list mixing numbers and dates raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
             match="list or tuple containing values of the same type",
         ):
-            st.slider("the label", value=[1, 2.5])
+            st.slider("the label", value=[1, date(2020, 1, 1)])
 
-    def test_mismatched_arg_types_raises(self):
-        """Mismatched min/max/step types raise StreamlitInvalidParameterTypeError."""
+    @parameterized.expand(
+        [
+            ("int_value", {"min_value": 0.0, "max_value": 60.0, "value": 25}, 25.0),
+            ("int_step", {"min_value": 0.0, "max_value": 10.0, "step": 1}, 0.0),
+            ("int_min", {"min_value": 0, "max_value": 1.5}, 0.0),
+            ("numpy_int", {"max_value": 10.0, "value": np.int64(3)}, 3.0),
+            ("mixed_range", {"value": [1, 2.5]}, (1.0, 2.5)),
+        ]
+    )
+    def test_mixed_int_and_float_args_make_float_slider(
+        self, _: str, kwargs: dict[str, Any], expected: float | tuple[float, float]
+    ) -> None:
+        """Ints are promoted to floats when any numeric argument is a float."""
+        ret = st.slider("label", **kwargs)
+
+        assert ret == expected
+        values = ret if isinstance(ret, tuple) else (ret,)
+        assert all(type(v) is float for v in values)
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.data_type == SliderProto.FLOAT
+
+    def test_numeric_step_with_date_value_raises(self) -> None:
+        """A numeric step with a date value raises StreamlitInvalidParameterTypeError."""
         with pytest.raises(
             StreamlitInvalidParameterTypeError,
             match="matching numeric types",
         ):
-            # min/max are float but step is int, so the args-type-mismatch error fires.
-            st.slider("label", min_value=0.0, max_value=10.0, value=5.0, step=1)
-
-    def test_value_type_mismatch_with_args(self):
-        """Value type that doesn't match arg types raises StreamlitInvalidParameterTypeError."""
-        with pytest.raises(
-            StreamlitInvalidParameterTypeError,
-            match="value and arguments with matching types",
-        ):
-            # min/max/step are float but value is int, so data_type is INT and
-            # the value-vs-args matching-type check fails.
-            st.slider("label", min_value=0.0, max_value=10.0, value=5, step=0.5)
+            st.slider("label", value=date(2020, 1, 1), step=1.5)
 
     def test_reversed_range_swaps_start_end(self):
         """A reversed range (start > end) gets swapped automatically."""

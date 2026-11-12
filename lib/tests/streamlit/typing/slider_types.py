@@ -61,6 +61,9 @@ if TYPE_CHECKING:
 
     assert_type(slider("foo", min_value=5.0, max_value=10.0), float)
     assert_type(slider("foo", min_value=5.0, max_value=10.0, step=1.0), float)
+    # Mixed ints and floats make a float slider.
+    assert_type(slider("foo", min_value=0.0, max_value=60.0, value=25, step=2.5), float)
+    assert_type(slider("foo", value=[1, 2.5]), tuple[float, float])
 
     assert_type(slider("foo", min_value=5, value=[5, 9]), tuple[int, int])
     assert_type(

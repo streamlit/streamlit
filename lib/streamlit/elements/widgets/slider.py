@@ -145,6 +145,10 @@ _MAX_SAFE_DAY: Final = (datetime(1970, 1, 1) + _SAFE_TIMELIKE_SPAN).date() - tim
 )
 
 
+def _int_to_float(value: Any) -> Any:
+    return float(value) if isinstance(value, Integral) else value
+
+
 def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
     # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
@@ -960,6 +964,17 @@ class SliderMixin:
 
         # Simplify future logic by always making value a list
         prepared_value: Sequence[SliderScalar] = [value] if single_value else value  # ty: ignore[invalid-assignment]
+
+        # Mixing ints and floats makes a float slider, so an int default taken
+        # from data (value=25) works with float bounds (max_value=60.0).
+        numeric_args = [*prepared_value, min_value, max_value, step]
+        if all(a is None or isinstance(a, Real) for a in numeric_args) and any(
+            isinstance(a, Real) and not isinstance(a, Integral) for a in numeric_args
+        ):
+            prepared_value = [_int_to_float(v) for v in prepared_value]
+            min_value = _int_to_float(min_value)
+            max_value = _int_to_float(max_value)
+            step = _int_to_float(step)
 
         def value_to_generic_type(v: Any) -> SliderProto.DataType.ValueType:
             if isinstance(v, Integral):
