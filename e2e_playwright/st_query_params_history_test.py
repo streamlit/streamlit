@@ -16,11 +16,13 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    expect_no_exception,
     expect_prefixed_markdown,
+    get_checkbox,
     get_radio_option,
     goto_app,
     select_radio_option,
@@ -166,3 +168,35 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+
+
+def test_switch_page_with_bound_widget_values_in_url(
+    app: Page, app_base_url: str
+) -> None:
+    """st.switch_page works while the URL holds bound widget values.
+
+    Unbound params are cleared, the param of the widget that lives only on the
+    page being left is dropped, and the param of the main-script widget stays.
+    """
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url,
+            path="/query-params",
+            query={"number": "3", "region": "EU", "foo": "bar"},
+        ),
+    )
+    expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
+
+    click_button(app, "Switch to History")
+
+    expect(get_checkbox(app, "Toggle this")).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]number=1(?:&|$)"))
+    expect(app).to_have_url(re.compile(r"[?&]region=EU(?:&|$)"))
+    expect(app).not_to_have_url(re.compile(r"[?&]foo="))
+    expect_no_exception(app)
+
+    # The kept param restores the main-script widget on reload.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_radio_option(app, "EU").get_by_role("radio")).to_be_checked()
