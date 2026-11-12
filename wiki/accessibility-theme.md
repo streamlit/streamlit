@@ -45,7 +45,10 @@ In theme scorecard tables, rows are ordered **Library blocks** first, then **Lib
 | **Library blocks** | The shipped default fails this criterion. Public `theme.*` overrides can change it, but this page still counts a failing default as a library gap: a candidate for a token or chrome fix, or a later product spec. On the [command inventory](accessibility-wcag.md), the same label means no public composition can meet the criterion. |
 | **Author must** | The author sets this value (custom `theme.*` overrides, chart mark colors, `theme.baseFontSize`). A failing shipped default stays **Library blocks** until that default changes. |
 | **Library meets** | Default light and dark already meet the ratio or size for that row. |
+| **Deferred** | In scope for this inventory, but not measured or fully audited yet (no pass/fail claim). |
 | **Not this surface** | Host chrome (Community Cloud toolbar), OS, or author plot pixels — do not open a Streamlit theme spec. |
+
+On [Shared shell surfaces](#shared-shell-surfaces), when a soft focus ring is the sole indicator and fails **1.4.11**, this inventory also marks **2.4.7** as **Library blocks** for that surface. That is a scoring convention: the control may still draw a ring, but the ring does not meet the non-text contrast floor used here. Invisible focused controls (for example unlocked toolbars at `opacity: 0`) are a separate, stronger **2.4.7** fail.
 
 To measure a translucent token, alpha-blend it onto the opaque surface it is drawn on, then compare that opaque result with `color2k`'s `getContrast` (WCAG relative luminance). Do not pass the translucent color to `getContrast` directly. In theme code, `transparentize` only builds faded tokens and `mix` only blends two backgrounds (for example `bgMix`); neither step is the contrast composite. Recompute these ratios from the tokens whenever the palette changes.
 
@@ -80,7 +83,12 @@ Surfaces for pairings: `backgroundColor` (page), `secondaryBackgroundColor` (sec
 
 ## Known library gaps
 
-Sorted by criterion number. Each item is a candidate product-spec section or raise-default fix. Prefer raising defaults over new color APIs (recommendation of this inventory, not a closed product decision).
+Sorted Level A then Level AA, and by success-criterion number within each level. Each item is a candidate product-spec section or raise-default fix. Prefer raising defaults over new color APIs (recommendation of this inventory, not a closed product decision).
+
+### Level A
+
+- **2.1.1 Sidebar collapse control is hover-revealed.** The collapse control uses `visibility: hidden` until pointer hover (`StyledSidebarCollapseButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. Expand from the header remains available when collapsed. Related **2.4.7** discoverability is under Level AA. See [Sidebar chrome](#sidebar-chrome).
+- **2.4.3 Collapsed sidebar stays in the tab / AT order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so focusable controls inside can still be reached. See [Sidebar chrome](#sidebar-chrome).
 
 ### Level AA
 
@@ -90,14 +98,13 @@ Sorted by criterion number. Each item is a candidate product-spec section or rai
 - **1.4.11 Control borders use opaque `borderColor` (light `#DCD8D4`, dark `#4A4742`), about 1.4:1 on the light page and about 2.0:1 on the dark page, below 3:1.** Affects unchecked checkbox/radio indicator strokes, default widget outlines (`showWidgetBorder` on unless set to false), and other chrome that uses `borderColor`. When the author sets `theme.borderColor`, an unset dataframe border follows `borderColorLight` (`transparentize(borderColor, 0.55)`), not the full `borderColor` (see [Theme config notes](#theme-config-notes)).
 - **1.4.11 Stock `dataframeBorderColor` (light `#E8E5E2`, dark `#3A3834`) fails 3:1** on the page (~1.25 light / ~1.55 dark) and is weaker still against the stock header fill. Separate from `borderColor`; see the [1.4.11 scorecard](#1411-non-text-contrast).
 - **1.4.11 Off `st.toggle` track (`fadedText10`) fails 3:1** (~1.5 light / ~1.8 dark on page and secondary). Independent of `borderColor` (`getToggleTrackColor`); see the [1.4.11 scorecard](#1411-non-text-contrast).
-- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Full focus *behavior* (2.4.7 / 2.4.11) is not scored here.
+- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Shared shell surfaces that rely on these soft rings as the sole indicator also mark **2.4.7** Library blocks (see scoring note under buckets). Broader **2.4.11** remains unscored.
 - **1.4.11 Enabled close icons that paint `fadedText40` fail 3:1 in light.** Toast and skills-nudge close controls; dark meets. See the [1.4.11 scorecard](#1411-non-text-contrast).
+- **1.4.11 Inactive tab underline uses `borderColorLight`**, which is weaker than the already-failing stock `borderColor`. See [Shared non-text chrome](#shared-non-text-chrome).
+- **2.4.7 Sidebar collapse is not keyboard-discoverable.** Same hover-gated control as the Level A **2.1.1** gap; see [Sidebar chrome](#sidebar-chrome).
+- **2.4.7 Unlocked element / dataframe toolbars stay at `opacity: 0` under keyboard focus of their buttons.** `StyledToolbarWrapper` shows on wrapper `:hover` / `:focus-visible` and parent `:focus-visible`, but not `:focus-within`, so Tab into a toolbar action can leave the control focused and invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337)). See [Element toolbar](#element-toolbar) and [Dataframe toolbar](#dataframe-toolbar).
 - **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
 - **2.5.8 Visible checkbox, radio, and toggle labels, plus collapsed checkbox/toggle tracks, are under 24×24 CSS px.** Label paragraphs inherit `fontSizes.sm` (14px) from `isLabel`; see the [2.5.8 scorecard](#258-target-size-minimum).
-- **2.1.1 / 2.4.7 Sidebar collapse control is hover-revealed.** The collapse control uses `visibility: hidden` until pointer hover (`StyledSidebarCollapseButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. Expand from the header remains available when collapsed. See [Sidebar chrome](#sidebar-chrome).
-- **2.4.3 Collapsed sidebar stays in the tab / AT order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so focusable controls inside can still be reached. See [Sidebar chrome](#sidebar-chrome).
-- **2.4.7 Unlocked element / dataframe toolbars stay at `opacity: 0` under keyboard focus of their buttons.** `StyledToolbarWrapper` shows on wrapper `:hover` / `:focus-visible` and parent `:focus-visible`, but not `:focus-within`, so Tab into a toolbar action can leave the control focused and invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337)). See [Element toolbar](#element-toolbar) and [Dataframe toolbar](#dataframe-toolbar).
-- **1.4.11 Inactive tab underline uses `borderColorLight`**, which is weaker than the already-failing stock `borderColor`. See [Shared non-text chrome](#shared-non-text-chrome).
 
 ## Current defaults
 
