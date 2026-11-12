@@ -102,10 +102,6 @@ Generating an app is cheap. Owning it isn't.
   [Community Cloud](https://streamlit.io/cloud), and natively
   [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
 
-**When to choose something else:** use a custom web stack when the UI itself is the
-product, the app is customer-facing at large scale, or it must work offline. Keep a BI tool
-for drag-and-drop self-service and pixel-precise paginated reports.
-
 ## Resources
 
 - [Docs](https://docs.streamlit.io) to learn how Streamlit works
