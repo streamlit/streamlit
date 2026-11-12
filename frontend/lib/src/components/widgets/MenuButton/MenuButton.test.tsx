@@ -316,17 +316,22 @@ describe("MenuButton widget", () => {
     [":material/menu:", "", "Menu"],
     [undefined, ":material/more_vert:", "More options"],
   ])(
-    "names the trigger by purpose when icon is %s and label is %s",
-    (icon, label, expectedName) => {
+    "names the trigger and menu by purpose when icon is %s and label is %s",
+    async (icon, label, expectedName) => {
+      const user = userEvent.setup()
       const props = getProps({ label, icon })
       render(<MenuButton {...props} />)
 
-      expect(screen.getByRole("button", { name: expectedName })).toBeVisible()
+      const button = screen.getByRole("button", { name: expectedName })
+      expect(button).toBeVisible()
       expect(
         screen.queryByRole("button", {
           name: /more_vert|more_horiz|menu icon/,
         })
       ).not.toBeInTheDocument()
+
+      await user.click(button)
+      expect(screen.getByRole("menu", { name: expectedName })).toBeVisible()
     }
   )
 

@@ -88,8 +88,8 @@ export function extractLeadingMaterialIcon(
 }
 
 /**
- * Icons that indicate a menu-style trigger where the chevron should be hidden,
- * mapped to the accessible name of a trigger that shows only that icon.
+ * Accessible names for triggers whose only content is a menu-style icon.
+ * These icons also replace the expansion chevron.
  */
 const MENU_STYLE_ICON_NAMES = new Map([
   [":material/menu:", "Menu"],
@@ -98,17 +98,16 @@ const MENU_STYLE_ICON_NAMES = new Map([
 ])
 
 /**
- * Checks if a trigger shows only a menu-style icon and no text, either as the
- * label (with no icon prop) or as the icon prop (with an empty label).
- * When it does, expansion chevrons should be hidden as the icon itself indicates
- * a menu, and the returned name labels the trigger in place of the icon name.
+ * Returns the accessible name (e.g. "More options") for a trigger whose only
+ * content is a menu-style icon, or undefined otherwise. The icon can be the
+ * label (with no icon prop) or the icon prop (with an empty label). Callers
+ * hide the expansion chevron when a name is returned, since the icon already
+ * signals a menu.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns the trigger's accessible name (e.g. "More options") if its only
- * content is one of the menu-style icons, otherwise undefined
  */
-export function getMenuStyleIconName(
+export function getMenuTriggerAccessibleName(
   icon: string | undefined,
   label: string | undefined
 ): string | undefined {

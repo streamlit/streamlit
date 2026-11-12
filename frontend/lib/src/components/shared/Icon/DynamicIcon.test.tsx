@@ -24,7 +24,7 @@ import {
   extractLeadingMaterialIcon,
   getFilledStarIconSrc,
   getIconAccessibleName,
-  getMenuStyleIconName,
+  getMenuTriggerAccessibleName,
   isMaterialIcon,
 } from "./DynamicIcon"
 
@@ -179,7 +179,7 @@ describe("extractLeadingMaterialIcon", () => {
   )
 })
 
-describe("getMenuStyleIconName", () => {
+describe("getMenuTriggerAccessibleName", () => {
   it.each([
     // Menu-style icons without separate icon prop return their name
     [undefined, ":material/menu:", "Menu"],
@@ -193,7 +193,7 @@ describe("getMenuStyleIconName", () => {
     [":material/more_horiz:", undefined, "More options"],
     [":material/more_vert:", "  ", "More options"],
 
-    // When icon prop is set, returns undefined (not icon-only)
+    // A separate icon plus non-empty label text is not icon-only
     [":material/edit:", ":material/menu:", undefined],
     ["some-icon", ":material/more_vert:", undefined],
     [":material/more_vert:", "Actions", undefined],
@@ -215,7 +215,10 @@ describe("getMenuStyleIconName", () => {
     [undefined, undefined, undefined],
     [undefined, "", undefined],
     ["", ":material/menu:", "Menu"],
-  ])("getMenuStyleIconName(%s, %s) returns %s", (icon, label, expected) => {
-    expect(getMenuStyleIconName(icon, label)).toBe(expected)
-  })
+  ])(
+    "getMenuTriggerAccessibleName(%s, %s) returns %s",
+    (icon, label, expected) => {
+      expect(getMenuTriggerAccessibleName(icon, label)).toBe(expected)
+    }
+  )
 })

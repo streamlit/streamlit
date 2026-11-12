@@ -41,7 +41,7 @@ import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWr
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
-  getMenuStyleIconName,
+  getMenuTriggerAccessibleName,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -130,10 +130,13 @@ function MenuButton(props: Props): ReactElement {
   const buttonDisabled =
     disabled || element.disabled || element.options.length === 0
 
-  // A menu-style icon (e.g. :material/more_vert:) alone replaces the chevron and
-  // names the trigger by its purpose ("More options") rather than its glyph.
-  const menuIconName = getMenuStyleIconName(element.icon, element.label)
-  const hideChevron = menuIconName !== undefined
+  // An icon-only menu-style trigger (e.g. :material/more_vert:) skips the chevron,
+  // and its trigger and menu are named by purpose ("More options"), not by glyph.
+  const menuTriggerName = getMenuTriggerAccessibleName(
+    element.icon,
+    element.label
+  )
+  const hideChevron = menuTriggerName !== undefined
 
   // When wrap resolves to no-wrap, reveal the full label on hover via a native
   // title, skipped when help is set since help provides the tooltip.
@@ -172,7 +175,7 @@ function MenuButton(props: Props): ReactElement {
           disabled={buttonDisabled}
           containerWidth={true}
           onClick={() => setIsOpen(o => !o)}
-          aria-label={menuIconName}
+          aria-label={menuTriggerName}
           aria-haspopup="menu"
           aria-expanded={isOpen}
         >
@@ -211,7 +214,8 @@ function MenuButton(props: Props): ReactElement {
             <StyledMenuList
               onAction={handleItemSelect}
               aria-label={
-                extractLeadingMaterialIcon(element.label).text || "Menu"
+                menuTriggerName ??
+                (extractLeadingMaterialIcon(element.label).text || "Menu")
               }
               autoFocus="first"
             >

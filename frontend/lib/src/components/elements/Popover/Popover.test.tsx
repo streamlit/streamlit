@@ -884,7 +884,7 @@ describe("Popover chevron visibility", () => {
     [":material/menu:", "", "Menu"],
     [undefined, ":material/more_vert:", "More options"],
   ])(
-    "names the trigger and body by purpose when icon is %s and label is %s",
+    "names the trigger and dialog by purpose when icon is %s and label is %s",
     async (icon, label, expectedName) => {
       const user = userEvent.setup()
       const props = getProps({ label, icon })
