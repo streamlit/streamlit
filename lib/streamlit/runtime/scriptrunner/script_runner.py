@@ -697,10 +697,10 @@ class ScriptRunner:
                     # widgets on the new page if keys collide.
                     qp.set_initial_query_params_from_current()
                     if rerun_data.widget_states is None:
-                        # A page switch requested by the backend (st.switch_page)
-                        # carries no widget states. Keep bound widgets from the
-                        # main script, like the frontend does for navigation-menu
-                        # switches, so their URL params survive the cleanup.
+                        # st.switch_page sends no widget states. Treat main-script
+                        # query-param bindings as still active so the cleanup
+                        # keeps their URL params. Page-local bindings stay stale
+                        # and are removed.
                         widget_ids = qp.widget_ids_bound_in(main_script_hash)
 
                 # Now safe to do normal cleanup - filtering already done

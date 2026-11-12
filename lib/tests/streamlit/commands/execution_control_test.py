@@ -483,7 +483,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
         ({"ref": "home"}, {"ref": "home"}),
     ],
 )
-def test_st_switch_page_with_bound_query_param_in_url(
+def test_st_switch_page_drops_query_param_bound_on_source_page(
     switch_query_params: dict[str, str] | None,
     expected_query_params: dict[str, str],
 ) -> None:
@@ -547,6 +547,36 @@ def test_st_switch_page_keeps_query_param_bound_in_main_script() -> None:
         home_page = st.Page(home, title="Home", default=True)
         other_page = st.Page(other, title="Other")
         st.navigation([home_page, other_page]).run()
+
+    at = AppTest.from_function(script)
+    at.query_params["product"] = "B"
+    at.query_params["utm"] = "x"
+    at.run()
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert [text.value for text in at.text] == ["query params: {'product': 'B'}"]
+    assert at.session_state.product == "B"
+
+
+def test_st_switch_page_to_current_page_keeps_bound_query_param() -> None:
+    """st.switch_page to the current page clears unbound params only."""
+
+    def script() -> None:
+        import streamlit as st
+
+        def go() -> None:
+            st.switch_page(home_page)
+
+        def home() -> None:
+            st.segmented_control(
+                "Product", ["A", "B"], default="A", key="product", bind="query-params"
+            )
+            st.button("Go", on_click=go)
+            st.text(f"query params: {st.query_params.to_dict()}")
+
+        home_page = st.Page(home, title="Home", default=True)
+        st.navigation([home_page, st.Page(lambda: None, title="Other")]).run()
 
     at = AppTest.from_function(script)
     at.query_params["product"] = "B"
