@@ -80,8 +80,8 @@ def test_print_stacks_chart_rows_without_overlap(
 
     # At that width, wide sidebar content stays inside the sidebar and the
     # main column starts to its right, so nothing overlaps. Text wraps or
-    # shrinks to fit. A dataframe keeps its own scroller, which clips the
-    # columns that do not fit.
+    # shrinks to fit. A dataframe prints an HTML table of its visible rows,
+    # clipped at the columns that do not fit.
     main_content = app.get_by_test_id("stMainBlockContainer")
     sidebar_text = [
         sidebar.get_by_text("Sidebar_label_without", exact=False),
@@ -110,11 +110,18 @@ def test_print_stacks_chart_rows_without_overlap(
             box = part.bounding_box()
             assert box is not None
             assert box["x"] + box["width"] <= sidebar_right + 1
-        # Charts and the dataframe grid paint into SVG and canvas, so those
-        # surfaces must end inside the sidebar too.
-        graphics = sidebar.locator(
-            "[data-testid='stVegaLiteChart'] svg, [data-testid='stDataFrame'] canvas"
+        # The dataframe prints a table in place of its canvas. The table can
+        # be wider than the sidebar, so the dataframe clips its painting.
+        assert sidebar.get_by_test_id("stDataFramePrintTable").count() == 1
+        assert not sidebar.get_by_test_id("stDataFrameResizable").is_visible()
+        assert (
+            sidebar.get_by_test_id("stDataFrame").evaluate(
+                "element => getComputedStyle(element).clipPath"
+            )
+            == "inset(0px)"
         )
+        # Charts paint into SVG, so that surface must end inside the sidebar.
+        graphics = sidebar.locator("[data-testid='stVegaLiteChart'] svg")
         assert graphics.count() > 0
         for graphic_right in graphics.evaluate_all(
             "elements => elements.map(element => element.getBoundingClientRect().right)"
@@ -304,6 +311,8 @@ def test_print_stacks_chart_rows_without_overlap(
     )
 
     end_browser_print(app)
+    # The print table is removed again, so the interactive grid is unchanged.
+    expect(sidebar.get_by_test_id("stDataFramePrintTable")).to_have_count(0)
 
 
 def _assert_inside(inner: Locator, outer: Locator) -> None:

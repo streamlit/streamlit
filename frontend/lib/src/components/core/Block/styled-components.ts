@@ -33,6 +33,7 @@ import {
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -217,6 +218,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
             display: "none",
           }
         : {}),
+      // A dataframe print table can be taller than the on-screen canvas
+      // box. Drop the reserved height, flex basis, and size containment so
+      // the next element is not covered.
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+        height: "auto",
+        maxHeight: "none",
+        flex: "0 0 auto",
+        contain: "none",
+      },
     },
 
     ":has(> .stCacheSpinner)": {
