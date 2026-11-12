@@ -1105,7 +1105,10 @@ class ScriptCheckTest(RuntimeTestCase):
         self._old_home = os.environ["HOME"]
         os.environ["HOME"] = self._home
 
-        self._fd, self._path = tempfile.mkstemp()
+        # The session watches the script's folder recursively, so keep the
+        # script out of the shared system temp directory.
+        self._script_dir = tempfile.mkdtemp()
+        self._fd, self._path = tempfile.mkstemp(dir=self._script_dir)
 
         super().setUp()
 
@@ -1132,7 +1135,7 @@ class ScriptCheckTest(RuntimeTestCase):
             event_based_path_watcher._MultiPathWatcher._singleton = None
 
         os.environ["HOME"] = self._old_home
-        os.remove(self._path)
+        shutil.rmtree(self._script_dir)
         shutil.rmtree(self._home)
 
         super().tearDown()
