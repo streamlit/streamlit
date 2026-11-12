@@ -560,8 +560,13 @@ describe("useDeckGl", () => {
               pickable: true,
               // Scalar triggers such as 0 and false must be wrapped before
               // selection state is added. getFillColor runs first, so 0 must
-              // not be spread as a non-array.
-              updateTriggers: { getFillColor: 0, getLineColor: false },
+              // not be spread as a non-array. getRadius must survive as an
+              // unrelated key when fill triggers are rewritten.
+              updateTriggers: {
+                getFillColor: 0,
+                getLineColor: false,
+                getRadius: ["user"],
+              },
             },
           ],
         }
@@ -574,11 +579,22 @@ describe("useDeckGl", () => {
       const layer = result.current.deck.layers?.[0] as {
         props: { updateTriggers?: Record<string, unknown> }
       }
+      const primary = mockTheme.emotion.colors.primary
+      // Every Scatterplot fill accessor keeps its trigger; earlier ones must
+      // not be dropped when later accessors rewrite updateTriggers.
+      expect(layer.props.updateTriggers?.getFillColor).toEqual([
+        0,
+        [],
+        false,
+        primary,
+      ])
       expect(layer.props.updateTriggers?.getLineColor).toEqual([
         false,
         [],
         false,
+        primary,
       ])
+      expect(layer.props.updateTriggers?.getRadius).toEqual(["user"])
     })
 
     it("appends selection state to array update triggers", () => {
@@ -614,6 +630,7 @@ describe("useDeckGl", () => {
         1,
         [],
         false,
+        mockTheme.emotion.colors.primary,
       ])
     })
 
@@ -1456,6 +1473,170 @@ describe("useDeckGl", () => {
         props: { getFillColor?: unknown }
       }
       expect(layer.props.getFillColor).toEqual(concrete)
+    })
+  })
+
+  describe("pydeck missing solid color defaults", () => {
+    it("injects theme primary for ScatterplotLayer when getFillColor is omitted", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "omit-fill",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor).toEqual([r, g, b, 160])
+    })
+
+    it("preserves HexagonLayer's multi-stop colorRange gradient", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "HexagonLayer",
+                id: "hex",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { colorRange?: number[][]; getFillColor?: unknown }
+      }
+      // Deck.gl's default HexagonLayer colorRange is a multi-stop gradient.
+      // It must not become copies of the theme primary.
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      const colorRange = layer.props.colorRange ?? []
+      expect(colorRange.length).toBeGreaterThan(1)
+      expect(
+        colorRange.every(c => c[0] === r && c[1] === g && c[2] === b)
+      ).toBe(false)
+      expect(layer.props.getFillColor).toBeUndefined()
+    })
+
+    it("wraps injected Scatterplot fill colors when a selection is active", () => {
+      const data = [
+        { lon: 1, lat: 2 },
+        { lon: 3, lat: 4 },
+      ]
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "omit-fill-select",
+              data,
+              getPosition: "@@=[lon, lat]",
+              pickable: true,
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { "omit-fill-select": [0] },
+              objects: { "omit-fill-select": [data[0]] },
+            },
+          },
+        })
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: {
+          getFillColor?: (
+            object: unknown,
+            objectInfo: { index: number }
+          ) => unknown
+          updateTriggers?: Record<string, unknown>
+        }
+      }
+      expect(typeof layer.props.getFillColor).toBe("function")
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor?.(data[0], { index: 0 })).toEqual([
+        r,
+        g,
+        b,
+        255,
+      ])
+      expect(layer.props.getFillColor?.(data[1], { index: 1 })).toEqual([
+        r,
+        g,
+        b,
+        Math.floor(255 * 0.4),
+      ])
+      // getFillColor's trigger must survive later Scatterplot accessors so
+      // selection changes recompute the injected fill.
+      expect(layer.props.updateTriggers?.getFillColor).toEqual([
+        [0],
+        true,
+        mockTheme.emotion.colors.primary,
+      ])
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { "omit-fill-select": [1] },
+              objects: { "omit-fill-select": [data[1]] },
+            },
+          },
+        })
+      })
+
+      const afterReselect = result.current.deck.layers?.[0] as {
+        props: {
+          getFillColor?: (
+            object: unknown,
+            objectInfo: { index: number }
+          ) => unknown
+          updateTriggers?: Record<string, unknown>
+        }
+      }
+      expect(
+        afterReselect.props.getFillColor?.(data[0], { index: 0 })
+      ).toEqual([r, g, b, Math.floor(255 * 0.4)])
+      expect(
+        afterReselect.props.getFillColor?.(data[1], { index: 1 })
+      ).toEqual([r, g, b, 255])
+      expect(afterReselect.props.updateTriggers?.getFillColor).toEqual([
+        [1],
+        true,
+        mockTheme.emotion.colors.primary,
+      ])
     })
   })
 })

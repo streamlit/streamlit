@@ -17,6 +17,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    wait_for_app_loaded,
     wait_for_app_run,
     wait_until,
 )
@@ -26,6 +27,7 @@ from e2e_playwright.shared.app_utils import (
     select_selectbox_option,
 )
 from e2e_playwright.shared.pydeck_utils import wait_for_chart_canvas
+from e2e_playwright.shared.theme_utils import apply_theme_via_window
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
@@ -102,6 +104,41 @@ def test_invalid_prop(themed_app: Page, assert_snapshot: ImageCompareFunction) -
     assert_snapshot(
         pydeck_charts.nth(0).locator("canvas").nth(1),
         name="st_pydeck_chart-invalid_prop",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
+def test_omit_fill_color_uses_theme_primary(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """A ScatterplotLayer without get_fill_color uses theme primary at alpha 160."""
+    pydeck_charts = select_subtest(themed_app, "omit_fill_color_subtest")
+
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    assert_snapshot(
+        pydeck_charts.nth(0).locator("canvas").nth(1),
+        name="st_pydeck_chart-omit_fill_primary",
+        pixel_threshold=PIXEL_THRESHOLD,
+    )
+
+
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
+def test_omit_fill_color_uses_custom_primary(
+    app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    """Omitted fill follows a custom theme primaryColor (snapshot)."""
+    apply_theme_via_window(app, base="light", primaryColor="#00C853")
+    app.reload()
+    wait_for_app_loaded(app)
+
+    pydeck_charts = select_subtest(app, "omit_fill_color_subtest")
+    wait_for_chart_canvas(pydeck_charts.nth(0))
+    assert_snapshot(
+        pydeck_charts.nth(0).locator("canvas").nth(1),
+        name="st_pydeck_chart-omit_fill_custom_primary",
         pixel_threshold=PIXEL_THRESHOLD,
     )
 
