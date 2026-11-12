@@ -16,7 +16,7 @@
 
 import { type ReactElement, useMemo } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import {
   Float64,
@@ -42,6 +42,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 import { resetPageWheelClockForTests } from "./insideDataZoomWheel"
+import { resetChartFontsForTests } from "./useChartFontsReady"
 
 const LOG = getLogger("EChartsChart")
 
@@ -290,6 +291,42 @@ describe("EChartsChart", () => {
     rerender(<Wrapper element={createElement()} />)
 
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
+  })
+
+  it("waits for the theme fonts before the first layout", async () => {
+    let resolveLoad: () => void = () => undefined
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        check: vi.fn(() => false),
+        load: vi.fn(
+          () =>
+            new Promise<void>(resolve => {
+              resolveLoad = resolve
+            })
+        ),
+      },
+    })
+
+    try {
+      render(<Wrapper element={createElement()} />)
+      // Measuring text now would cache the fallback font's widths.
+      expect(mockInit).not.toHaveBeenCalled()
+
+      await act(async () => {
+        resolveLoad()
+        await Promise.resolve()
+      })
+
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: undefined,
+      })
+      resetChartFontsForTests()
+    }
   })
 
   it("prunes pixel-only brush when a new instance inits at a different size", () => {

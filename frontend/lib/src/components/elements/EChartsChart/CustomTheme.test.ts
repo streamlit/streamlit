@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { transparentize } from "color2k"
 import * as echarts from "echarts"
 import type { EChartsOption, EChartsType } from "echarts"
 
@@ -360,9 +361,41 @@ describe("buildStreamlitEChartsTheme", () => {
 
     // ECharts' default draws a marker line over 1s at a constant speed.
     const entry = { animationDuration: 300, animationEasing: "cubicOut" }
-    expect(echartsTheme.markLine).toEqual(entry)
+    expect(echartsTheme.markLine).toMatchObject(entry)
     expect(echartsTheme.markPoint).toEqual(entry)
-    expect(echartsTheme).not.toHaveProperty("markArea")
+    // A markArea is fixed to the plot and isn't animated.
+    expect(echartsTheme.markArea).not.toHaveProperty("animationDuration")
+  })
+
+  it.each([
+    ["light", lightTheme.emotion],
+    ["dark", darkTheme.emotion],
+  ])("gives marks a neutral color in %s mode", (_mode, emotionTheme) => {
+    const echartsTheme = buildStreamlitEChartsTheme(emotionTheme) as {
+      markLine: { itemStyle: { color: string } }
+      markArea: { itemStyle: { color: string } }
+    }
+
+    expect(echartsTheme.markLine.itemStyle.color).toBe(getGray70(emotionTheme))
+    // A faint body-text fill, so the label (the fill at full opacity) reads.
+    expect(echartsTheme.markArea.itemStyle.color).toBe(
+      transparentize(emotionTheme.colors.bodyText, 0.92)
+    )
+    expect(echartsTheme.markLine.itemStyle.color).not.toBe(
+      emotionTheme.colors.chartCategoricalColors[0]
+    )
+  })
+
+  it("separates heatmap cells with the app background", () => {
+    for (const emotionTheme of [lightTheme.emotion, darkTheme.emotion]) {
+      const heatmap = buildStreamlitEChartsTheme(emotionTheme).heatmap as {
+        itemStyle: { borderColor: string; borderWidth: number }
+      }
+      expect(heatmap.itemStyle).toEqual({
+        borderColor: emotionTheme.colors.bgColor,
+        borderWidth: 1,
+      })
+    }
   })
 
   it("themes components that ECharts renders with its own fixed tokens", () => {
@@ -542,6 +575,34 @@ describe("Streamlit theme resolved by ECharts", () => {
         withoutDataView.component("toolbox").get("feature") as object
       )
     ).toEqual(["saveAsImage"])
+  })
+
+  it("keeps an explicit series color on its marks over the neutral theme color", () => {
+    const marks = {
+      markLine: { data: [{ yAxis: 1 }] },
+      markArea: { data: [[{ xAxis: "A" }, { xAxis: "B" }]] },
+    }
+    const axes = {
+      xAxis: { type: "category", data: ["A", "B"] },
+      yAxis: { type: "value" },
+    }
+    // Marker models hang off their series, so read the drawn colors.
+    const neutral = renderThemed({
+      ...axes,
+      series: [{ type: "line", data: [], ...marks }],
+    }).chart.renderToSVGString()
+    const colored = renderThemed({
+      ...axes,
+      series: [
+        { type: "line", data: [], itemStyle: { color: "#e45756" }, ...marks },
+      ],
+    }).chart.renderToSVGString()
+
+    expect(neutral).toContain(`stroke="${getGray70(darkTheme.emotion)}"`)
+    expect(neutral).not.toContain("#e45756")
+    expect(colored).toContain('stroke="#e45756"')
+    // ECharts' own alpha for a markArea in the series color.
+    expect(colored).toContain('fill="rgb(228,87,86)" fill-opacity="0.4"')
   })
 
   it("outlines a selected bar in the body text color over ECharts' default", () => {
@@ -1920,6 +1981,137 @@ describe("applyStreamlitOptionDefaults", () => {
       series: [plain],
     })
     expect((bottomTitle.series as unknown[])[0]).toBe(plain)
+  })
+
+  describe("mark colors", () => {
+    const markOf = (
+      result: EChartsOptionObject,
+      key: "markLine" | "markArea",
+      seriesIndex = 0
+    ): Record<string, unknown> =>
+      (result.series as Array<Record<string, unknown>>)[seriesIndex][
+        key
+      ] as Record<string, unknown>
+
+    it("copies an explicit series color onto marks without their own", () => {
+      const series = {
+        type: "line",
+        data: [],
+        itemStyle: { color: "#e45756" },
+        markLine: { symbol: "none", data: [{ xAxis: 1 }] },
+        markArea: {
+          itemStyle: { borderWidth: 1 },
+          data: [[{ xAxis: 0 }, { xAxis: 1 }]],
+        },
+      }
+      const result = applyDefaults({ series: [series] })
+
+      expect(markOf(result, "markLine")).toEqual({
+        symbol: "none",
+        data: [{ xAxis: 1 }],
+        itemStyle: { color: "#e45756" },
+      })
+      expect(markOf(result, "markArea").itemStyle).toEqual({
+        borderWidth: 1,
+        color: "rgba(228,87,86,0.4)",
+      })
+      // The spec isn't mutated.
+      expect(series.markLine).toEqual({ symbol: "none", data: [{ xAxis: 1 }] })
+    })
+
+    it("keeps a mark's own color and skips series without a color", () => {
+      const ownColor = {
+        type: "line",
+        itemStyle: { color: "#e45756" },
+        markLine: { itemStyle: { color: "green" }, data: [{ xAxis: 1 }] },
+        markArea: { itemStyle: { color: "blue" }, data: [] },
+      }
+      const noColor = {
+        type: "line",
+        markLine: { data: [{ xAxis: 1 }] },
+      }
+      const gradient = {
+        type: "line",
+        itemStyle: { color: { type: "linear", colorStops: [] } },
+        markArea: { data: [] },
+      }
+      const result = applyDefaults({ series: [ownColor, noColor, gradient] })
+
+      const resultSeries = result.series as unknown[]
+      expect(resultSeries[0]).toBe(ownColor)
+      expect(resultSeries[1]).toBe(noColor)
+      // A non-string color can't take an alpha, so it's copied as is.
+      expect(markOf(result, "markArea", 2).itemStyle).toEqual({
+        color: gradient.itemStyle.color,
+      })
+
+      const unthemed = applyDefaults(
+        { series: [{ ...ownColor, markLine: { data: [] } }] },
+        ""
+      )
+      expect(markOf(unthemed, "markLine")).toEqual({ data: [] })
+    })
+  })
+
+  describe("area fill", () => {
+    const areaStyleOf = (
+      result: EChartsOptionObject,
+      seriesIndex = 0
+    ): unknown =>
+      (result.series as Array<Record<string, unknown>>)[seriesIndex].areaStyle
+
+    it("softens the fill of unstacked areas", () => {
+      const result = applyDefaults({
+        xAxis: { type: "category" },
+        yAxis: { type: "value" },
+        series: [
+          { type: "line", areaStyle: {}, data: [1] },
+          { type: "line", stack: "", areaStyle: { origin: "end" }, data: [1] },
+        ],
+      })
+
+      expect(areaStyleOf(result, 0)).toEqual({ opacity: 0.2 })
+      expect(areaStyleOf(result, 1)).toEqual({ origin: "end", opacity: 0.2 })
+    })
+
+    it("keeps stacked areas, user fills, and plain lines as written", () => {
+      const series = [
+        { type: "line", stack: "total", areaStyle: {}, data: [1] },
+        { type: "line", areaStyle: { opacity: 0.5 }, data: [1] },
+        { type: "line", areaStyle: { color: "rgba(0,0,0,0.3)" }, data: [1] },
+        { type: "line", data: [1] },
+        { type: "bar", areaStyle: {}, data: [1] },
+      ]
+      const result = applyDefaults({
+        xAxis: { type: "category" },
+        yAxis: { type: "value" },
+        series,
+      })
+
+      const resultSeries = result.series as unknown[]
+      series.forEach((entry, index) => {
+        expect(resultSeries[index]).toBe(entry)
+      })
+      // ECharts draws any line with an `areaStyle` as an area, so a plain
+      // line must not get one.
+      expect(areaStyleOf(result, 3)).toBeUndefined()
+
+      const unthemed = applyDefaults(
+        { series: [{ type: "line", areaStyle: {}, data: [1] }] },
+        ""
+      )
+      expect(areaStyleOf(unthemed)).toEqual({})
+    })
+
+    it("softens areas in timeline ticks", () => {
+      const result = applyDefaults({
+        baseOption: { timeline: { data: ["a"] } },
+        options: [{ series: [{ type: "line", areaStyle: {}, data: [1] }] }],
+      })
+
+      const tick = (result.options as EChartsOptionObject[])[0]
+      expect(areaStyleOf(tick)).toEqual({ opacity: 0.2 })
+    })
   })
 
   describe("markLine labels", () => {
