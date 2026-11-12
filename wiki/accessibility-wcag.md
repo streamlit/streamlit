@@ -63,7 +63,7 @@ Use **Library blocks** only when an author cannot meet the criterion with any pu
 
 **Streamlit element toolbar** ([#17211](https://github.com/streamlit/streamlit/pull/17211)): Fullscreen, Download, and related actions compose an accessible name from non-blank element `alt`, or from a single-image caption (plain text). Without that context the label stays generic (e.g. `"Fullscreen"`). Hit targets are at least `max(1.5rem, 24px)` for WCAG 2.5.8. Distinctive names still require the author to supply `alt` or caption — **Author must**. Unlocked toolbars that stay at `opacity: 0` while a child action has keyboard focus are a shell **2.4.7** gap — see [Element toolbar](accessibility-theme.md#element-toolbar) / [Dataframe toolbar](accessibility-theme.md#dataframe-toolbar) ([#17337](https://github.com/streamlit/streamlit/issues/17337)).
 
-**App shell frame** (header, sidebar chrome, page navigation, main menu, dialogs/popovers/menus, toast/skills nudge, shared non-text chrome): scored on the theme inventory under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Use that section for keyboard, focus order/visibility, name/role, and status-message accounting of the library-owned frame — not this command page.
+**App shell frame** (header, sidebar chrome, page navigation, main menu, dialogs/popovers/menus, toast/skills nudge, shared non-text chrome): scored on the theme inventory under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Use that section to assess keyboard operation, focus order and visibility, accessible names and roles, and status announcements for library-owned frame regions — not this command page.
 
 ## Media
 

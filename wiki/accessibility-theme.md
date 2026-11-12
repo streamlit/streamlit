@@ -4,7 +4,7 @@ Last updated: 2026-11-11. Re-audit when default theme tokens, focus-ring derivat
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
-This inventory records how Streamlit’s **default** light and dark themes enable or block selected **WCAG 2.2 Level AA** criteria for color contrast and control size, and how **library-owned app shell surfaces** (header, sidebar, page nav, main menu, overlays, toasts, toolbars) fare on keyboard, focus, name/role, and status-message criteria. *Shell chrome* means library-rendered UI around and inside elements (app header, sidebar toggle, element toolbars, focus rings, help icons), as opposed to content the author supplies. Conformance applies to the **app**, not the library — this page is not a claim that Streamlit itself is conformant.
+This inventory records how Streamlit’s default light and dark themes enable or block selected WCAG 2.2 A/AA criteria for contrast and control size. It also records how library-owned app-shell surfaces (header, sidebar, page navigation, main menu, overlays, toasts, and toolbars) fare on keyboard, focus, name/role, and status-message criteria. *Shell chrome* means library-rendered UI around and inside elements (app header, sidebar toggle, element toolbars, focus rings, help icons), as opposed to content the author supplies. Conformance applies to the **app**, not the library — this page is not a claim that Streamlit itself is conformant.
 
 **How to use this page**
 
@@ -22,11 +22,11 @@ Public config keys live in `lib/streamlit/config.py` (`theme`, `theme.light` / `
 
 Score the criteria below for **default** light and dark only. Do not score AAA.
 
-**Theme floors / current defaults** cover contrast and target size (plus shell **2.4.1**). **[Shared shell surfaces](#shared-shell-surfaces)** additionally scores keyboard, focus order/visibility, name/role/value, and app-shell status messages **for those frame regions only**.
+The theme floors and current-defaults scorecards cover contrast, target size, and shell **2.4.1**. **[Shared shell surfaces](#shared-shell-surfaces)** additionally scores keyboard, focus order/visibility, name/role/value, and app-shell status messages **for those frame regions only**.
 
-This is not a full shell or app audit. Still unscored here: **1.4.4**, **1.4.10**, **1.4.12**, **2.4.2**, broader **2.4.11** (beyond the visible-focus claims in Shared shell surfaces), and **3.1.1**. Command-level gaps stay on the [command inventory](accessibility-wcag.md). This inventory still does not claim full app conformance.
+This is not a full shell or app audit. Still unscored here: **1.4.4**, **1.4.10**, **1.4.12**, **2.4.2**, **2.4.11 Focus Not Obscured**, and **3.1.1**. Command-level gaps stay on the [command inventory](accessibility-wcag.md). This inventory still does not claim full app conformance.
 
-In theme scorecard tables, rows are ordered **Library blocks** first, then **Library meets**. Light and dark are scored in separate columns when they differ. Shared shell tables follow the command-inventory order (Level A by number, then Level AA).
+In theme scorecard tables, rows are ordered **Library blocks** first, then **Library meets**. Light and dark are scored in separate columns when they differ. Shared shell tables follow Level A by number, then Level AA by number (for example A: 2.1.1, 2.4.1, 2.4.3, 4.1.2; then AA: 1.4.3, 1.4.11, 2.4.7, 2.5.8, 4.1.3).
 
 | Criterion | Level | Where scored | Threshold / focus used here |
 | --------- | ----- | ------------ | --------------------------- |
@@ -48,7 +48,7 @@ In theme scorecard tables, rows are ordered **Library blocks** first, then **Lib
 | **Deferred** | In scope for this inventory, but not measured or fully audited yet (no pass/fail claim). |
 | **Not this surface** | Host chrome (Community Cloud toolbar), OS, or author plot pixels — do not open a Streamlit theme spec. |
 
-On [Shared shell surfaces](#shared-shell-surfaces), when a soft focus ring is the sole indicator and fails **1.4.11**, this inventory also marks **2.4.7** as **Library blocks** for that surface. That is a scoring convention: the control may still draw a ring, but the ring does not meet the non-text contrast floor used here. Invisible focused controls (for example unlocked toolbars at `opacity: 0`) are a separate, stronger **2.4.7** fail.
+On [Shared shell surfaces](#shared-shell-surfaces), **2.4.7** is **Library meets** when a focus indicator is drawn (including soft rings). Soft-ring contrast failures stay under **1.4.11** only — WCAG does not treat a low-contrast ring as a missing 2.4.7 indicator. Reserve **2.4.7 Library blocks** for controls that are actually invisible while focused (for example unlocked toolbars at `opacity: 0`).
 
 To measure a translucent token, alpha-blend it onto the opaque surface it is drawn on, then compare that opaque result with `color2k`'s `getContrast` (WCAG relative luminance). Do not pass the translucent color to `getContrast` directly. In theme code, `transparentize` only builds faded tokens and `mix` only blends two backgrounds (for example `bgMix`); neither step is the contrast composite. Recompute these ratios from the tokens whenever the palette changes.
 
@@ -87,8 +87,9 @@ Sorted Level A then Level AA, and by success-criterion number within each level.
 
 ### Level A
 
-- **2.1.1 Sidebar collapse control is hover-revealed.** The collapse control uses `visibility: hidden` until pointer hover (`StyledSidebarCollapseButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. Expand from the header remains available when collapsed. Related **2.4.7** discoverability is under Level AA. See [Sidebar chrome](#sidebar-chrome).
-- **2.4.3 Collapsed sidebar stays in the tab / AT order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so focusable controls inside can still be reached. See [Sidebar chrome](#sidebar-chrome).
+- **2.1.1 Sidebar collapse control is hover-revealed.** Above the `sm` breakpoint the collapse control uses `visibility: hidden` until pointer hover (`StyledCollapseSidebarButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. Expand from the header remains available when collapsed. See [Sidebar chrome](#sidebar-chrome).
+- **2.1.1 Sidebar nav section headers are pointer-only.** `NavSection` renders `StyledSidebarNavSectionHeader` as a `<header onClick={onToggle}>` with no button role, tab stop, or key handler, so keyboard users cannot expand or collapse a section. See [Page navigation](#page-navigation).
+- **2.4.3 Collapsed sidebar stays in the tab and assistive-technology order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so focusable controls inside can still be reached. See [Sidebar chrome](#sidebar-chrome).
 
 ### Level AA
 
@@ -98,10 +99,8 @@ Sorted Level A then Level AA, and by success-criterion number within each level.
 - **1.4.11 Control borders use opaque `borderColor` (light `#DCD8D4`, dark `#4A4742`), about 1.4:1 on the light page and about 2.0:1 on the dark page, below 3:1.** Affects unchecked checkbox/radio indicator strokes, default widget outlines (`showWidgetBorder` on unless set to false), and other chrome that uses `borderColor`. When the author sets `theme.borderColor`, an unset dataframe border follows `borderColorLight` (`transparentize(borderColor, 0.55)`), not the full `borderColor` (see [Theme config notes](#theme-config-notes)).
 - **1.4.11 Stock `dataframeBorderColor` (light `#E8E5E2`, dark `#3A3834`) fails 3:1** on the page (~1.25 light / ~1.55 dark) and is weaker still against the stock header fill. Separate from `borderColor`; see the [1.4.11 scorecard](#1411-non-text-contrast).
 - **1.4.11 Off `st.toggle` track (`fadedText10`) fails 3:1** (~1.5 light / ~1.8 dark on page and secondary). Independent of `borderColor` (`getToggleTrackColor`); see the [1.4.11 scorecard](#1411-non-text-contrast).
-- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Shared shell surfaces that rely on these soft rings as the sole indicator also mark **2.4.7** Library blocks (see scoring note under buckets). Broader **2.4.11** remains unscored.
+- **1.4.11 Default soft focus rings fail 3:1.** Soft `focusRing` / `focusRingMuted` measure ≈ 1.5–2.2:1. Solid `focusRingOutline` (`primary`) meets 1.4.11 on the page and default sidebar. Soft rings still count as a **2.4.7** indicator when drawn; their contrast failure stays here under **1.4.11**.
 - **1.4.11 Enabled close icons that paint `fadedText40` fail 3:1 in light.** Toast and skills-nudge close controls; dark meets. See the [1.4.11 scorecard](#1411-non-text-contrast).
-- **1.4.11 Inactive tab underline uses `borderColorLight`**, which is weaker than the already-failing stock `borderColor`. See [Shared non-text chrome](#shared-non-text-chrome).
-- **2.4.7 Sidebar collapse is not keyboard-discoverable.** Same hover-gated control as the Level A **2.1.1** gap; see [Sidebar chrome](#sidebar-chrome).
 - **2.4.7 Unlocked element / dataframe toolbars stay at `opacity: 0` under keyboard focus of their buttons.** `StyledToolbarWrapper` shows on wrapper `:hover` / `:focus-visible` and parent `:focus-visible`, but not `:focus-within`, so Tab into a toolbar action can leave the control focused and invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337)). See [Element toolbar](#element-toolbar) and [Dataframe toolbar](#dataframe-toolbar).
 - **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
 - **2.5.8 Visible checkbox, radio, and toggle labels, plus collapsed checkbox/toggle tracks, are under 24×24 CSS px.** Label paragraphs inherit `fontSizes.sm` (14px) from `isLabel`; see the [2.5.8 scorecard](#258-target-size-minimum).
@@ -190,7 +189,7 @@ Accessible names for icon-only controls were largely addressed in [#17170](https
 
 ## Shared shell surfaces
 
-Library-owned **app frame** regions (not author `st.*` content inside the sidebar or main). Contrast and hit-target rows already measured above are referenced rather than remeasured. Host chrome such as the Community Cloud toolbar remains **Not this surface**.
+Library-owned **app frame** regions (not author `st.*` content inside the sidebar or main). Rows that reuse a contrast or hit-target measurement link to it above instead of measuring it again. This section’s non-text table also notes a few shared widget-paint tracks that reuse theme tokens. Host chrome such as the Community Cloud toolbar remains **Not this surface**.
 
 ### App header / top nav chrome
 
@@ -201,10 +200,10 @@ Header toolbar, logo slot, and header icon buttons (including **Expand sidebar**
 | 2.1.1 Keyboard | A | Library meets | Header controls are native buttons / links (e.g. `stExpandSidebarButton`). |
 | 2.4.1 Bypass Blocks | A | Library meets | Skip link + landmarks scored under [2.4.1](#241-bypass-blocks) ([#17418](https://github.com/streamlit/streamlit/pull/17418)). |
 | 2.4.3 Focus Order | A | Library meets | Header sits in document order ahead of main; no known library reorder. |
-| 2.4.7 Focus Visible | AA | Library blocks | Soft `focusRingMuted` on header icon buttons fails **1.4.11** (~1.5–1.8:1); that ring is often the sole indicator — see [1.4.11](#1411-non-text-contrast). |
 | 4.1.2 Name, Role, Value | A | Library meets | Icon-only header actions carry accessible names (e.g. “Expand sidebar”, “Main menu”) ([#17170](https://github.com/streamlit/streamlit/pull/17170)). |
-| 2.5.8 Target Size | AA | Library meets | Sidebar expand / main-menu trigger use `headerItemHeight` (28px at 16px root); custom `theme.baseFontSize` that shrinks rem targets is **Author must**. |
 | 1.4.11 Icon stroke | AA | Library meets | Muted header icons use `fadedText60` on stock themes — see [1.4.11](#1411-non-text-contrast). |
+| 2.4.7 Focus Visible | AA | Library meets | Soft `focusRingMuted` is drawn on header icon buttons; contrast of that ring fails **1.4.11** (~1.5–1.8:1) — see [1.4.11](#1411-non-text-contrast). |
+| 2.5.8 Target Size | AA | Library meets | Sidebar expand / main-menu trigger use `headerItemHeight` (28px at 16px root); custom `theme.baseFontSize` that shrinks rem targets is **Author must**. |
 
 ### Main menu
 
@@ -213,9 +212,9 @@ Trigger (`stMainMenuButton`) and popover panel (`role="menu"` / `menuitem`).
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Trigger is a button; panel exposes menu semantics and keyboard activation. |
-| 2.4.3 Focus Order | A | Library meets | Opening moves into the menu; dismiss returns to the trigger path via the popover pattern. |
-| 2.4.7 Focus Visible | AA | Library blocks | Menu / trigger use soft muted focus styling that fails **1.4.11** on stock themes. |
+| 2.4.3 Focus Order | A | Library meets | Opening the menu moves focus into the panel. Escape and pointer dismiss return focus to the trigger; Tab and Shift+Tab move to the adjacent tab stop (`focusNextTabbable` / `focusPrevTabbable`). |
 | 4.1.2 Name, Role, Value | A | Library meets | Trigger `aria-label="Main menu"`; panel `role="menu"` with `menuitem` / `menuitemradio` rows (theme group labeled). |
+| 2.4.7 Focus Visible | AA | Library meets | Soft muted focus styling is drawn; contrast fails **1.4.11** on stock themes — see [1.4.11](#1411-non-text-contrast). |
 | 2.5.8 Target Size | AA | Library meets | Same `headerItemHeight` row as above. |
 
 ### Sidebar chrome
@@ -224,10 +223,10 @@ Expand/collapse chrome and collapsed-state behavior only. Author widgets rendere
 
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
-| 2.1.1 Keyboard | A | Library blocks | **Collapse** control is `visibility: hidden` until pointer hover (`showSidebarCollapse`); no global hotkey collapses the sidebar. **Expand** remains keyboard-operable from the header when collapsed. |
-| 2.4.3 Focus Order | A | Library blocks | Collapsed sidebar uses `transform: translateX(...)` with `min/max-width: 0` but is not marked `inert` / `aria-hidden`, so focusable descendants can remain in the tab order while off-screen (`StyledSidebar`). |
-| 2.4.7 Focus Visible | AA | Library blocks | Collapse control is not shown for keyboard-only discovery (hover-gated visibility). Soft muted focus on sidebar chrome fails **1.4.11** when shown. |
+| 2.1.1 Keyboard | A | Library blocks | Above the `sm` breakpoint, **Collapse** uses `visibility: hidden` until pointer hover (`StyledCollapseSidebarButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. On small viewports the control stays visible. **Expand** remains keyboard-operable from the header when collapsed. |
+| 2.4.3 Focus Order | A | Library blocks | Collapsed sidebar uses `transform: translateX(...)` with `min/max-width: 0` but is not marked `inert` / `aria-hidden`, so focusable descendants can remain in the tab and assistive-technology order while off-screen (`StyledSidebar`). |
 | 4.1.2 Name, Role, Value | A | Library meets | Sidebar `aria-label="Sidebar"`; collapse `aria-label="Collapse sidebar"` with `aria-expanded` / `aria-controls`; expand `aria-label="Expand sidebar"`. |
+| 2.4.7 Focus Visible | AA | Library meets | When the collapse control is shown, soft muted focus is drawn; contrast fails **1.4.11** — see [1.4.11](#1411-non-text-contrast). Hover-gated reachability is scored under **2.1.1**, not here. |
 | 2.5.8 Target Size | AA | Library meets | Collapse / expand share `headerItemHeight` sizing at the default root. |
 
 ### Page navigation
@@ -236,22 +235,22 @@ Sidebar multipage nav and header **top nav** / overflow menus. Landmark coverage
 
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
-| 2.1.1 Keyboard | A | Library meets | Nav links are keyboard-operable; top-nav section menus support arrow / Home / End / Escape keyboard interaction ([#17423](https://github.com/streamlit/streamlit/pull/17423)). |
+| 2.1.1 Keyboard | A | Library blocks | Sidebar nav **section headers** (`NavSection` / `StyledSidebarNavSectionHeader`) toggle only via `onClick` — no button role, tab stop, or key handler. Page links and top-nav section menus are keyboard-operable ([#17423](https://github.com/streamlit/streamlit/pull/17423)). |
 | 2.4.1 Bypass Blocks | A | Library meets | Named `navigation` landmark `aria-label="App pages"` when multipage nav is shown ([#17418](https://github.com/streamlit/streamlit/pull/17418)). |
 | 2.4.3 Focus Order | A | Library meets | Top-nav menus restore expected tab behavior on Tab / Shift+Tab dismiss (covered in TopNavSection tests). |
-| 2.4.7 Focus Visible | AA | Library blocks | Sidebar nav / top-nav use soft muted focus rings that fail **1.4.11** on stock themes. |
 | 4.1.2 Name, Role, Value | A | Library meets | Page links expose names from page titles; top-nav overflow uses `role="menu"` / `menuitem` where applicable. |
+| 2.4.7 Focus Visible | AA | Library meets | Soft muted focus rings are drawn on sidebar nav / top-nav; contrast fails **1.4.11** on stock themes — see [1.4.11](#1411-non-text-contrast). |
 
 ### Dialogs / popovers / menus
 
-`st.dialog` / app `Modal` (React Aria), `st.popover`, main-menu and top-nav menus. Not every overlay pattern is equally trapped; score the shipped primitives.
+`st.dialog` / app `Modal` (React Aria), `st.popover`, main-menu and top-nav menus. Focus containment differs by overlay; this table scores the shared primitives (`Modal`, popover, menus).
 
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Modals dismiss with keyboard when closeable; popover trigger is a button; menu keyboard paths as above. |
-| 2.4.3 Focus Order | A | Library meets | React Aria `Modal` / overlay owns focus while open (`isDismissable`); `st.popover` returns focus to its trigger on close. Full audit of every portaled overlay is not claimed. |
-| 2.4.7 Focus Visible | AA | Library blocks | Soft focus rings on many triggers / items fail **1.4.11**; solid `focusRingOutline` paths meet contrast when used. |
+| 2.4.3 Focus Order | A | Library meets | React Aria `ModalOverlay` contains focus while open and restores it on close (`isDismissable` only controls outside-click / Escape dismiss). `st.popover` returns focus to its trigger on Escape; an outside click closes without moving focus. Full audit of every portaled overlay is not claimed. |
 | 4.1.2 Name, Role, Value | A | Library meets | Dialogs expose dialog semantics via the shared Modal; popover trigger is named from the author label (**Author must** for useful label text); menus as under Main menu / Page navigation. |
+| 2.4.7 Focus Visible | AA | Library meets | Soft rings are drawn on many triggers / items (contrast under **1.4.11**); solid `focusRingOutline` paths meet contrast when used. |
 
 ### Toast / skills nudge
 
@@ -259,12 +258,12 @@ Sidebar multipage nav and header **top nav** / overflow menus. Landmark coverage
 
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
-| 4.1.3 Status Messages | AA | Library meets | Skills nudge uses `role="status"` + `aria-live="polite"`. Toasts render through React Aria’s toast region without moving focus. |
-| 4.1.2 Name, Role, Value | A | Library meets | Close controls expose accessible names (e.g. “Close”). |
 | 2.1.1 Keyboard | A | Library meets | Close / nudge actions are keyboard-operable buttons. |
-| 2.4.7 Focus Visible | AA | Library blocks | Skills-nudge chrome uses soft muted focus; close icon **1.4.11** fails in light — see [1.4.11](#1411-non-text-contrast). |
-| 1.4.11 Close icon | AA | Library blocks (light) | Enabled close paints `fadedText40` (~2.2:1 light / ~3.7:1 dark). |
+| 4.1.2 Name, Role, Value | A | Library meets | Close controls expose accessible names (e.g. “Close”). |
 | 1.4.3 Body text | AA | Library meets | Nudge / toast copy uses body or muted text tokens already covered by the **1.4.3** secondary/muted row when those tokens apply. |
+| 1.4.11 Close icon | AA | Library blocks (light) | Enabled close paints `fadedText40` (~2.2:1 light / ~3.7:1 dark). |
+| 2.4.7 Focus Visible | AA | Library meets | Toast uses soft `focusRing` and the skills nudge uses `focusRingMuted`; both fail **1.4.11** — see [1.4.11](#1411-non-text-contrast). |
+| 4.1.3 Status Messages | AA | Library meets | Skills nudge uses `role="status"` + `aria-live="polite"`. Toasts render through React Aria’s toast region without moving focus. |
 
 ### Element toolbar
 
@@ -273,8 +272,8 @@ Streamlit element toolbar (Fullscreen, Download, …). Naming detail for command
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Actions are buttons; reachable by Tab when present. |
-| 2.4.7 Focus Visible | AA | Library blocks | Unlocked toolbars default to `opacity: 0` and do not use `:focus-within`, so keyboard focus on an action can leave it invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337) pattern; shared `StyledToolbarWrapper`). |
 | 4.1.2 Name, Role, Value | A | Author must | Generic action names always exist; distinctive names need non-blank element `alt` or caption ([#17211](https://github.com/streamlit/streamlit/pull/17211)). |
+| 2.4.7 Focus Visible | AA | Library blocks | Unlocked toolbars default to `opacity: 0` and do not use `:focus-within`, so keyboard focus on an action can leave it invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337) pattern; shared `StyledToolbarWrapper`). |
 | 2.5.8 Target Size | AA | Library meets | `max(1.5rem, 24px)` ([#17211](https://github.com/streamlit/streamlit/pull/17211)). |
 
 ### Dataframe toolbar
@@ -284,20 +283,20 @@ Overlay toolbar on `st.dataframe` / `st.data_editor` (Show/hide columns, Downloa
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Toolbar actions are buttons (column ⋮ menu remains a separate **Library blocks** on the command inventory — [#13332](https://github.com/streamlit/streamlit/issues/13332)). |
+| 4.1.2 Name, Role, Value | A | Author must | Generic action names always exist; a distinctive name needs non-blank dataframe `alt`. |
 | 2.4.7 Focus Visible | AA | Library blocks | Same unlocked `opacity: 0` without `:focus-within` as element toolbar ([#17337](https://github.com/streamlit/streamlit/issues/17337)). |
-| 4.1.2 Name, Role, Value | A | Author must | Same alt/caption composition as element toolbar when applicable. |
 | 2.5.8 Target Size | AA | Library meets | Same `max(1.5rem, 24px)` toolbar actions. |
 
 ### Shared non-text chrome
 
-Grouped 1.4.11 family for recurring tracks / rules. Prefer the measured [1.4.11](#1411-non-text-contrast) table when a token is already scored.
+This table groups recurring tracks and rules that share the same 1.4.11 non-text-contrast analysis, including a few shared widget-paint tokens. Prefer the measured [1.4.11](#1411-non-text-contrast) table when a token is already scored.
 
 | Surface | Criterion | Status | Notes |
 | ------- | --------- | ------ | ----- |
-| Inactive tab underline | 1.4.11 | Library blocks | Uses `borderColorLight` (`transparentize(borderColor, 0.55)`), weaker than stock `borderColor` which already fails ~1.4:1 light / ~2.0:1 dark. |
-| Dividers / separators using border paint | 1.4.11 | Library blocks | Same **control border** / border-family failure as the measured `borderColor` row. |
-| Slider unfilled track | 1.4.11 | Deferred | Unfilled segment paints `darkenedBgMix25` (`StyledSliderTrackLine`); not separately measured on this page. Filled segment uses `primary` (see primary-as-control rows). |
-| Progress / meter track | 1.4.11 | Deferred | Track uses `secondaryBg` / `secondary` fills in `ProgressBar`; not separately measured here. |
+| Inactive tab underline | 1.4.11 | Deferred | Paints `borderColorLight` (weaker than stock `borderColor`). Tabs are also identified by their text, and the selected tab uses a `primary` indicator, so it is unclear whether this base line is required to identify the control. |
+| Dividers / separators using border paint | 1.4.11 | Deferred | Decorative separators (for example `st.divider`) are generally exempt from 1.4.11. Keep measured **control border** failures under the [1.4.11](#1411-non-text-contrast) scorecard when the stroke defines a control. |
+| Slider unfilled track | 1.4.11 | Deferred | Shared widget paint (not app-frame chrome). Unfilled segment paints `darkenedBgMix25` (`StyledSliderTrackLine`); not separately measured here. Filled segment uses `primary` (see primary-as-control rows). |
+| Progress / meter track | 1.4.11 | Deferred | Shared widget paint. The track paints `secondaryBg`; the fill paints `secondary` (`ProgressBar`); not separately measured here. |
 | Scrollbars | 1.4.11 | Not this surface | OS / browser scrollbar chrome. |
 
 ## Theme config notes
@@ -325,4 +324,4 @@ Checkbox/radio **indicator** strokes and other chrome that always use `borderCol
 
 - **Author must** — custom `theme.*` overrides (including `theme.baseFontSize` that shrinks rem-based header hit targets below 24px); chart mark palettes (`chartCategoricalColors`, `chartSequentialColors`, `chartDivergingColors`); distinctive element-toolbar names via `alt` / caption. Chart encodings are also covered in the [command inventory](accessibility-wcag.md).
 - **Not this surface** — host chrome such as the Community Cloud toolbar; OS scrollbars.
-- **Not scored here** — fonts / `fontFaces` / sizes / weights (later shell pass, e.g. 1.4.4); radii (`baseRadius`, `buttonRadius`); `theme.base` inheritance paths (audit resolved defaults, not every override file); page-level **1.4.4 / 1.4.10 / 1.4.12 / 2.4.2 / 3.1.1** and broader **2.4.11**.
+- **Not scored here** — fonts / `fontFaces` / sizes / weights (later shell pass, e.g. 1.4.4); radii (`baseRadius`, `buttonRadius`); `theme.base` inheritance paths (audit resolved defaults, not every override file); page-level **1.4.4 / 1.4.10 / 1.4.12 / 2.4.2 / 2.4.11 Focus Not Obscured / 3.1.1**.
