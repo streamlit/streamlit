@@ -113,6 +113,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
 | `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
 | `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
+| `fixing-ci-annotations` | When passing unit-test jobs on `develop` leave warnings, deprecations, or tool notices as check-run annotations that should be fixed |
 | `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |

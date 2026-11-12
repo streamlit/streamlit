@@ -51,6 +51,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
 - `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
+- `ai-fix-ci-annotations.yml` looks up the `py-unit-tests (max)` and `js-unit-tests` jobs by name. Update it when you rename them.
 
 ## Shared Composite Actions
 
@@ -154,6 +155,7 @@ runner's system Python.
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-fix-nightly.yml` | Failed `nightly.yml` run or manual | AI-powered nightly failure triage: reruns transient failures, opens a fix PR for real breakages |
 | `ai-fix-develop-ci.yml` | All watched push runs for a `develop` commit finished and at least one failed, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
+| `ai-fix-ci-annotations.yml` | Weekly (Thursdays) or manual | AI-powered cleanup of annotations (warnings, deprecations, tool notices) from the latest successful `py-unit-tests (max)` and `js-unit-tests` jobs on `develop`; opens a fix PR |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates
