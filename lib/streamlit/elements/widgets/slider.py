@@ -145,6 +145,10 @@ _MAX_SAFE_DAY: Final = (datetime(1970, 1, 1) + _SAFE_TIMELIKE_SPAN).date() - tim
 )
 
 
+def _int_to_float(value: Any) -> Any:
+    return float(value) if isinstance(value, Integral) else value
+
+
 def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
     # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
@@ -306,8 +310,8 @@ class SliderSerde:
 
 
 class SliderMixin:
-    # If min/max/value/step are not provided, then we return an int.
-    # if ONLY step is provided, then it must be an int and we return an int.
+    # No bounds or value, and step omitted or an int: return an int.
+    # A float step is handled by the numeric overload below.
     @overload
     def slider(
         self,
@@ -792,8 +796,11 @@ class SliderMixin:
         Returns
         -------
         int/float/date/time/datetime or tuple of int/float/date/time/datetime
-            The current value of the slider widget. The return type will match
-            the data type of the value parameter.
+            The current value of the slider widget. The return type matches
+            the numeric or date/time type of ``value``, ``min_value``,
+            ``max_value``, and ``step``. Mixing ``int`` and ``float`` across
+            those arguments makes a float slider that returns ``float``
+            values.
 
         Examples
         --------
@@ -960,6 +967,18 @@ class SliderMixin:
 
         # Simplify future logic by always making value a list
         prepared_value: Sequence[SliderScalar] = [value] if single_value else value  # ty: ignore[invalid-assignment]
+
+        # Mixing ints and floats makes a float slider, so an int default taken
+        # from data (value=25) works with float bounds (max_value=60.0).
+        value_and_bounds = [*prepared_value, min_value, max_value, step]
+        if all(a is None or isinstance(a, Real) for a in value_and_bounds) and any(
+            isinstance(a, Real) and not isinstance(a, Integral)
+            for a in value_and_bounds
+        ):
+            prepared_value = [_int_to_float(v) for v in prepared_value]
+            min_value = _int_to_float(min_value)
+            max_value = _int_to_float(max_value)
+            step = _int_to_float(step)
 
         def value_to_generic_type(v: Any) -> SliderProto.DataType.ValueType:
             if isinstance(v, Integral):
