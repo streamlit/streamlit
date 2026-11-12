@@ -43,7 +43,6 @@ import {
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
-import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -561,9 +560,7 @@ export function PlotlyChart({
       ref={containerRef}
       isSizeContained={isSizeContained}
       fallbackHeight={hasFallbackHeight ? fallbackHeight : undefined}
-      // Print sets the plot to width 100%, so it cannot size a fit-content
-      // stacked column. Keep that column full page width.
-      className={`stPlotlyChart ${PRINT_SIZE_CONTAINED_GRAPHIC_CLASS}`}
+      className="stPlotlyChart"
       data-testid="stPlotlyChart"
       role={accessibleName !== undefined ? "figure" : undefined}
       aria-label={accessibleName}

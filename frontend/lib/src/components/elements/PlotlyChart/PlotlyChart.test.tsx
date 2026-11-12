@@ -24,7 +24,6 @@ import {
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import type { PlotParams } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -167,9 +166,6 @@ describe("PlotlyChart Component", () => {
   it("renders without crashing", () => {
     renderComponent()
     expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
-    expect(screen.getByTestId("stPlotlyChart")).toHaveClass(
-      PRINT_SIZE_CONTAINED_GRAPHIC_CLASS
-    )
     expect(MockPlot).toHaveBeenCalled()
   })
 

@@ -17,11 +17,12 @@
 import type { CSSObject } from "@emotion/styled"
 
 /**
- * A chart whose drawn contents cannot size a `fit-content` ancestor in print:
- * size-contained stretch-width Vega, and Plotly (print forces `width: 100%`).
- * A stacked column that holds one of these stays full page width.
+ * A chart that keeps a pixel width from the on-screen layout, so it can size
+ * a `fit-content` ancestor in print. A stacked column that holds only such a
+ * chart shrinks to it. Columns with any other chart stay full page width.
  */
-export const PRINT_SIZE_CONTAINED_GRAPHIC_CLASS = "stPrintSizeContainedGraphic"
+export const PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS =
+  "stPrintIntrinsicWidthGraphic"
 
 /**
  * Keep a screen-measured chart or metric sparkline inside its column when

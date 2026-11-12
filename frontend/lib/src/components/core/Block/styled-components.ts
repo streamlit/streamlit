@@ -32,7 +32,7 @@ import {
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
-import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
 import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
@@ -514,9 +514,11 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children. Stacked columns print full
-      //   width; other children keep their width, capped to the container. A
-      //   chart keeps the width it rendered at on screen, capped to its column.
+      //   dataframe, or table stacks its children. A stacked column with only
+      //   an intrinsic-width chart shrinks to that chart; other stacked
+      //   columns print full width. Other children keep their width, capped
+      //   to the container. A chart keeps the width it rendered at on screen,
+      //   capped to its column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -584,12 +586,12 @@ export const StyledFlexContainerBlock =
                     ),
                   },
                 },
-                // A chart keeps its on-screen pixel width. A stacked column
-                // with only a chart shrinks to that width, instead of
-                // stretching the card and leaving an empty strip inside it.
-                // Size-contained stretch-width charts and Plotly cannot
-                // contribute a width, so those columns stay full page width.
-                [`> .stColumn:has(.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER})):not(:has(.${PRINT_SIZE_CONTAINED_GRAPHIC_CLASS}))`]:
+                // A stacked column with a chart that carries
+                // `PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS` and no dataframe or
+                // table shrinks to the chart's on-screen width, so the card
+                // has no empty strip. Other charts may have no in-flow width
+                // to size the column, so their columns stay full width.
+                [`> .stColumn:has(.${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}))`]:
                   {
                     width: "fit-content",
                     maxWidth: "100%",

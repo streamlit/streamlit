@@ -61,7 +61,7 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { PRINT_SIZE_CONTAINED_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { mockWindowLocation, render, renderWithContexts } from "~lib/test_util"
@@ -267,7 +267,7 @@ describe("ArrowVegaLiteChart", () => {
       render(<ArrowVegaLiteChart {...getProps({}, stretchConfigs)} />)
 
       const chart = screen.getByTestId("stVegaLiteChart")
-      expect(chart).toHaveClass(PRINT_SIZE_CONTAINED_GRAPHIC_CLASS)
+      expect(chart).not.toHaveClass(PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS)
       expect(chart).toHaveStyle("contain: size;")
       expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
       expect(chart).not.toHaveStyle("contain-intrinsic-height: none;")
@@ -299,7 +299,7 @@ describe("ArrowVegaLiteChart", () => {
       render(<ArrowVegaLiteChart {...getProps({}, contentWidthConfigs)} />)
 
       const chart = screen.getByTestId("stVegaLiteChart")
-      expect(chart).not.toHaveClass(PRINT_SIZE_CONTAINED_GRAPHIC_CLASS)
+      expect(chart).toHaveClass(PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS)
       expect(chart).toHaveStyle("contain: size;")
       expect(chart).toHaveStyle("contain-intrinsic-width: 25rem;")
       expect(chart).toHaveStyle("contain-intrinsic-height: 21.875rem;")
