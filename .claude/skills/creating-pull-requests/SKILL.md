@@ -12,14 +12,14 @@ Read `wiki/pull-requests.md` first. It defines branch names, commit messages, PR
 ## 1. Prepare the branch
 
 - If on `develop`, create a branch named `{type}/{brief-description}`.
-- Commit any remaining changes that belong to this PR (skip unrelated or scratch files) with a `<imperative verb> <what> <where>` message.
-- Push: `git push -u origin HEAD`.
+- Commit any remaining changes that belong to this PR (skip unrelated or scratch files) with a `<imperative verb> <what> <where>` message, using `uv run git commit` so the pre-commit hooks run.
+- Push: `uv run git push -u origin HEAD`.
 
 ## 2. Compose the PR
 
 - **Title:** `[type] Description of change`, ≤63 chars.
 - **Body:** Fill in the sections of `.github/pull_request_template.md`. Add `- Closes #12345` for issues this PR resolves. In the Testing Plan, keep the bullets for the test types the changed test files cover (or explain why no tests are needed), and leave "Any manual testing needed?" for the user.
-- **Labels:** Set exactly one `impact:*` label (`impact:users` or `impact:internal`) and one `change:*` label. `change:spec` PRs don't need an `impact:*` label. Don't set `feature:*` or `area:*` labels.
+- **Labels:** Set one `change:*` label and one `impact:*` label (`impact:users` or `impact:internal`). `change:spec` PRs skip `impact:*`. Don't set `feature:*` or `area:*` labels; those belong on issues.
 
 ## 3. Create the PR
 
