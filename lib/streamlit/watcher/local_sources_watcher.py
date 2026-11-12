@@ -47,10 +47,10 @@ class WatchedModule(NamedTuple):
 # thus initializing config options when this file is first imported.
 PathWatcher: PathWatcherType | None = None
 
-# Module names waiting to be removed from sys.modules. The queue is shared by
-# all sessions because sys.modules is process-wide: a session created after a
-# file change, or after every older session has closed, must still evict the
-# stale modules on its first script run.
+# Module names waiting to be removed from sys.modules. Every session shares
+# this set because sys.modules is process-wide. The next session to run a
+# script evicts those modules, including a session opened after the change
+# or after every older session has closed.
 _pending_evictions: Final[set[str]] = set()
 _pending_evictions_lock: Final = threading.Lock()
 
@@ -198,10 +198,11 @@ class LocalSourcesWatcher:
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 
-        Called at the start of each script run on the script thread so that
-        ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing. The queue is process-wide,
-        so this also flushes evictions queued by other sessions' watchers.
+        The script thread calls this at the start of a run, before user code,
+        so the file-watcher thread does not mutate ``sys.modules`` during user
+        code or cache serialization. The set is process-wide, so this run also
+        flushes evictions that other sessions' watchers queued. Another
+        session's script may still be running at that moment.
         """
         with _pending_evictions_lock:
             pending = _pending_evictions.copy()

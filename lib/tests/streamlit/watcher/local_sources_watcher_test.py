@@ -781,8 +781,8 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             new_session_lsw.on_script_run()
             assert "DUMMY_MODULE_1" not in sys.modules
 
-            # The shared queue is now empty, so the old session's next run
-            # keeps the module the new session imported.
+            # Because the shared queue is empty, the old session's next run
+            # leaves the module imported by the new session in sys.modules.
             sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
             old_session_lsw.on_script_run()
             assert "DUMMY_MODULE_1" in sys.modules
