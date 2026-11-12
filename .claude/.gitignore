@@ -32,6 +32,7 @@ skills/*
 !skills/fixing-develop-ci/
 !skills/fixing-nightly/
 !skills/implementing-feature/
+!skills/implementing-bug-fix/
 !skills/sharing-pr-agent-artifacts/
 !skills/generating-changelog/
 !skills/releasing-streamlit/
