@@ -23,6 +23,7 @@ import sys
 import threading
 import types
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import tests.streamlit.watcher.test_data.dummy_module1 as DUMMY_MODULE_1
@@ -62,7 +63,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         the_globals = globals()
 
-        # The eviction queue is process-wide, so isolate it per test.
+        # The pending-eviction set is process-wide, so isolate it per test.
         local_sources_watcher._pending_evictions.clear()
         self.addCleanup(local_sources_watcher._pending_evictions.clear)
 
@@ -781,7 +782,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             new_session_lsw.on_script_run()
             assert "DUMMY_MODULE_1" not in sys.modules
 
-            # Because the shared queue is empty, the old session's next run
+            # Because the shared set is empty, the old session's next run
             # leaves the module imported by the new session in sys.modules.
             sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
             old_session_lsw.on_script_run()
@@ -804,6 +805,31 @@ class LocalSourcesWatcherTest(unittest.TestCase):
                 PagesManager(SCRIPT_PATH)
             ).on_script_run()
             assert "DUMMY_MODULE_1" not in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_flush_holds_lock_until_modules_are_removed(self, fob):
+        """A concurrent flush cannot return before the removal finishes."""
+        lock_held_during_pop: list[bool] = []
+
+        class LockCheckingModules(dict):
+            def pop(self, *args: Any) -> Any:
+                lock_held_during_pop.append(
+                    local_sources_watcher._pending_evictions_lock.locked()
+                )
+                return super().pop(*args)
+
+        fake_modules = LockCheckingModules(
+            {"DUMMY_MODULE_1": DUMMY_MODULE_1, "DUMMY_MODULE_1.child": MagicMock()}
+        )
+        local_sources_watcher._pending_evictions.add("DUMMY_MODULE_1")
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        with patch.object(
+            local_sources_watcher, "sys", types.SimpleNamespace(modules=fake_modules)
+        ):
+            lsw.flush_pending_evictions()
+
+        assert fake_modules == {}
+        assert lock_held_during_pop == [True, True]
 
 
 def test_get_module_paths_outputs_abs_paths():

@@ -204,21 +204,21 @@ class LocalSourcesWatcher:
         flushes evictions that other sessions' watchers queued. Another
         session's script may still be running at that moment.
         """
+        # Hold the lock until the modules are removed, so a concurrent flush
+        # that finds the set empty cannot return before the removal finishes.
         with _pending_evictions_lock:
-            pending = _pending_evictions.copy()
+            if not _pending_evictions:
+                return
+
+            prefixes = tuple(f"{name}." for name in _pending_evictions)
+            all_to_evict = set(_pending_evictions)
             _pending_evictions.clear()
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
 
-        if not pending:
-            return
-
-        prefixes = tuple(f"{name}." for name in pending)
-        all_to_evict = set(pending)
-        for key in list(sys.modules.keys()):
-            if key.startswith(prefixes):
-                all_to_evict.add(key)
-
-        for name in all_to_evict:
-            sys.modules.pop(name, None)
+            for name in all_to_evict:
+                sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():
