@@ -200,9 +200,9 @@ class LocalSourcesWatcher:
 
         The script thread calls this at the start of a run, before user code,
         so the file-watcher thread does not mutate ``sys.modules`` during user
-        code or cache serialization. The set is process-wide, so this run also
-        flushes evictions that other sessions' watchers queued. Another
-        session's script may still be running at that moment.
+        code or cache serialization. Every session shares the pending names, so
+        this call also removes modules that other sessions' watchers queued. It
+        does not wait for those sessions to finish their current script.
         """
         # Hold the lock until the modules are removed, so a concurrent flush
         # that finds the set empty cannot return before the removal finishes.
