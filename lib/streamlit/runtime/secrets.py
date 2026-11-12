@@ -525,7 +525,8 @@ class Secrets(Mapping[str, Any]):
                         allow_nonexistent=True,
                     )
                 except (StreamlitMaxRetriesError, FileNotFoundError):
-                    # The file disappeared while the watcher was being installed.
+                    # The file exists but cannot be read. Raising would stop the
+                    # watcher whose reload is installing this one.
                     continue
                 self._watched_directory_secret_files.add(file_path)
 

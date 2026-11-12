@@ -34,7 +34,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitSecretNotFoundError
+from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.runtime.secrets import (
     _MISSING_ENTRY_HINT,
     AttrDict,
@@ -1177,6 +1177,69 @@ def test_parse_directory_skips_kubelet_entries_in_projected_volume(
 
     assert found is True
     assert mapping == {"api_key": "v1"}
+
+
+def test_projected_volume_watches_only_secret_files(tmp_path: Path) -> None:
+    """Kubelet's ``..`` entries at the top of a projected volume are not watched;
+    the key files reached through the secret folder links are."""
+    _skip_if_symlinks_not_supported(tmp_path)
+    volume = tmp_path / "secrets"
+    data_dir = volume / "..2026_01_01_00_00_00.1"
+    (data_dir / "api_key").mkdir(parents=True)
+    (data_dir / "api_key" / "secret_string").write_text("v1", encoding="utf-8")
+    (volume / "..data").symlink_to(data_dir.name)
+    (volume / "api_key").symlink_to("..data/api_key")
+
+    secrets = Secrets()
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(volume)]}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch("streamlit.watcher.path_watcher.watch_file") as mock_watch_file,
+    ):
+        assert secrets["api_key"] == "v1"
+
+    assert [c.args[0] for c in mock_watch_file.call_args_list] == [
+        str(volume / "api_key" / "secret_string")
+    ]
+
+
+def test_unreadable_secret_file_is_not_watched(tmp_path: Path) -> None:
+    """A file whose watcher cannot be installed is skipped, so the other secret
+    files are still watched, and it is retried on the next reload."""
+    secret_root = tmp_path / "secrets"
+    for name in ("bad", "good"):
+        (secret_root / name).mkdir(parents=True)
+        (secret_root / name / "value").write_text(name, encoding="utf-8")
+    bad_file = str(secret_root / "bad" / "value")
+
+    def watch_file(path: str, *_args: Any, **_kwargs: Any) -> bool:
+        if path == bad_file:
+            raise StreamlitMaxRetriesError("unreadable")
+        return True
+
+    secrets = Secrets()
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(secret_root)]}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch(
+            "streamlit.watcher.path_watcher.watch_file", side_effect=watch_file
+        ) as mock_watch_file,
+    ):
+        assert secrets["good"] == "good"
+        assert secrets._watched_directory_secret_files == {
+            str(secret_root / "good" / "value")
+        }
+
+        secrets._on_secrets_changed(str(secret_root))
+
+    retried = [c.args[0] for c in mock_watch_file.call_args_list].count(bad_file)
+    assert retried == 2
 
 
 def test_kubelet_update_changes_watched_file_identity(tmp_path: Path) -> None:
