@@ -677,7 +677,7 @@ class SessionState:
         default=None, repr=False
     )
 
-    # User keys that widget callbacks set before the current script run started.
+    # User keys that widget callbacks set before the script body of this run.
     # check_session_state_rules skips its duplicate-value warning for these keys,
     # because setting a key from a callback is the supported way to reset a widget.
     _keys_set_by_callbacks: frozenset[str] = field(default_factory=frozenset)
@@ -756,7 +756,7 @@ class SessionState:
         return user_key in self._new_session_state
 
     def was_set_by_callback(self, user_key: str) -> bool:
-        """True if a widget callback set the key before the current script run."""
+        """True if a widget callback set the key before the script body of this run."""
         return user_key in self._keys_set_by_callbacks
 
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
@@ -934,8 +934,8 @@ class SessionState:
                 )
             finally:
                 self._current_interaction_widget_states = None
-            # _compact_state emptied _new_session_state, so every key in it now
-            # was set by a callback.
+            # Only callbacks have written to _new_session_state since _compact_state
+            # emptied it above, so every key it holds now came from a callback.
             self._keys_set_by_callbacks = frozenset(self._new_session_state)
         if replay_trigger_states is not None:
             self._overlay_replay_trigger_states(

@@ -399,10 +399,9 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 _create_option(
     "global.disableWidgetStateDuplicationWarning",
     description="""
-        By default, Streamlit logs a warning when a user sets both a widget
-        default value in the function defining the widget and a widget value via
-        the widget's key in `st.session_state` in the script body. Values set
-        in widget callbacks don't trigger this warning.
+        By default, Streamlit logs a warning when a widget has a default value
+        and the script body also sets its value through `st.session_state`.
+        Values set in widget callbacks don't trigger this warning.
 
         If you'd like to turn off this warning, set this to True.
     """,
