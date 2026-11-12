@@ -69,7 +69,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         # isolate them per test.
         for shared in (
             local_sources_watcher._pending_evictions,
-            local_sources_watcher._queued_changes,
+            local_sources_watcher._queued_evictions_by_path,
         ):
             shared.clear()
             self.addCleanup(shared.clear)
@@ -838,9 +838,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         assert fake_modules == {}
         assert lock_held_during_pop == [True, True]
 
-    def _watcher_for(
+    def _make_watcher_for_module(
         self, path: str, on_changed: MagicMock | None = None
     ) -> local_sources_watcher.LocalSourcesWatcher:
+        """Return a watcher whose only watched module, DUMMY_MODULE_1, is at ``path``."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         lsw._watched_modules = {
             os.path.realpath(path): local_sources_watcher.WatchedModule(
@@ -860,9 +861,11 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         pathlib.Path(module_path).write_text("VALUE = 1\n", encoding="utf-8")
         os.utime(module_path, (1_000, 1_000))
 
-        first_session_lsw = self._watcher_for(module_path)
+        first_session_lsw = self._make_watcher_for_module(module_path)
         second_session_callback = MagicMock()
-        second_session_lsw = self._watcher_for(module_path, second_session_callback)
+        second_session_lsw = self._make_watcher_for_module(
+            module_path, second_session_callback
+        )
         with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
             first_session_lsw.on_path_changed(module_path)
             first_session_lsw.on_script_run()
@@ -885,16 +888,26 @@ class LocalSourcesWatcherTest(unittest.TestCase):
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_change_without_modification_time_is_always_queued(self, fob):
         """Reports for a file without a modification time each queue evictions."""
-        missing_path = os.path.join(os.path.dirname(SCRIPT_PATH), "missing.py")
-        lsw = self._watcher_for(missing_path)
-        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
-            lsw.on_path_changed(missing_path)
-            lsw.on_script_run()
-            sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        zero_mtime_path = os.path.join(tmp_dir.name, "zero_mtime.py")
+        pathlib.Path(zero_mtime_path).write_text("VALUE = 1\n", encoding="utf-8")
+        os.utime(zero_mtime_path, (0, 0))
+        missing_path = os.path.join(tmp_dir.name, "missing.py")
 
-            lsw.on_path_changed(missing_path)
-            lsw.on_script_run()
-            assert "DUMMY_MODULE_1" not in sys.modules
+        for path in (zero_mtime_path, missing_path):
+            with (
+                self.subTest(path=os.path.basename(path)),
+                patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}),
+            ):
+                lsw = self._make_watcher_for_module(path)
+                lsw.on_path_changed(path)
+                lsw.on_script_run()
+                sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+
+                lsw.on_path_changed(path)
+                lsw.on_script_run()
+                assert "DUMMY_MODULE_1" not in sys.modules
 
 
 def test_get_module_paths_outputs_abs_paths():

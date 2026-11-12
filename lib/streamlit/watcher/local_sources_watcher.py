@@ -54,13 +54,12 @@ PathWatcher: PathWatcherType | None = None
 _pending_evictions: Final[set[str]] = set()
 _pending_evictions_lock: Final = threading.Lock()
 
-# For each changed file, the modification time of its latest change and the
-# module names already queued for that change. Every session's watcher reports
-# the same change, and a later report can arrive after another session has
-# already evicted and reimported the modules. Queuing them again would evict
-# modules that session's script may still be importing, so each name is queued
-# once per change.
-_queued_changes: Final[dict[str, tuple[float, set[str]]]] = {}
+# Module names already queued for each changed file's latest change, keyed by
+# path and paired with the file's modification time. Every session's watcher
+# reports the same change. Queuing it again after one session has evicted and
+# started reimporting the modules would remove them mid-import in that
+# session's script thread.
+_queued_evictions_by_path: Final[dict[str, tuple[float, set[str]]]] = {}
 
 
 class LocalSourcesWatcher:
@@ -308,7 +307,11 @@ class LocalSourcesWatcher:
 
 
 def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
-    """Queue module evictions for a file change, skipping names already queued."""
+    """Queue module evictions for a file change.
+
+    Names that an earlier report of the same change (same modification time)
+    already queued are skipped.
+    """
     try:
         modification_time = os.stat(changed_path).st_mtime
     except OSError:
@@ -319,10 +322,15 @@ def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
         # has no modification time. Those changes can't be told apart, so their
         # modules are always queued.
         if modification_time > 0.0:
-            queued_time, queued_names = _queued_changes.get(changed_path, (0.0, set()))
+            queued_time, queued_names = _queued_evictions_by_path.get(
+                changed_path, (0.0, set())
+            )
             if queued_time != modification_time:
                 queued_names = set()
-                _queued_changes[changed_path] = (modification_time, queued_names)
+                _queued_evictions_by_path[changed_path] = (
+                    modification_time,
+                    queued_names,
+                )
             module_names = module_names.difference(queued_names)
             queued_names.update(module_names)
         _pending_evictions.update(module_names)
