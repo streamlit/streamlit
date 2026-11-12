@@ -64,6 +64,20 @@ def dumps(document: dict[str, Any]) -> str:
     return "".join(_iter_table(document, name=""))
 
 
+def dumps_assignment(key: str, value: Any) -> str:
+    """Return the TOML assignment ``key = value``, ending with a newline.
+
+    A dict value is written as an inline table, so the line stays under
+    whatever section header the caller printed before it.
+
+    Raises
+    ------
+    TypeError
+        If the value uses an unsupported type.
+    """
+    return f"{_format_key(key)} = {_format_value(value)}\n"
+
+
 def _iter_table(table: dict[Any, Any], *, name: str) -> Iterator[str]:
     """Yield a header, then assignments, then nested tables.
 

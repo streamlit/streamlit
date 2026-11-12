@@ -1445,11 +1445,11 @@ _create_option(
         the same user key, and an error will be thrown on initialization if this is
         done.
 
-        Streamlit also reads these headers from agent API requests, over HTTP
-        at `/_stcore/agent/interact` and over MCP at `/_stcore/agent/mcp`, to
-        set st.user for agent sessions. See `server.enableAgentApi`.
+        Streamlit also maps these headers into st.user for agent API sessions,
+        on both `/_stcore/agent/interact` (HTTP) and `/_stcore/agent/mcp`
+        (MCP). See `server.enableAgentApi`.
 
-        Security: Streamlit trusts these header values as they arrive. Only
+        Warning: Streamlit trusts these header values as they arrive. Only
         use this behind a proxy that sets the configured headers itself and
         removes any copies a client sent, on WebSocket connections and on
         requests to `/_stcore/agent/`. Otherwise, any client that can send
@@ -1458,6 +1458,9 @@ _create_option(
 
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
+
+        Example: { "X-Forwarded-Email" = "email" } maps the X-Forwarded-Email
+        header to st.user.email.
 
         Note: This is an experimental API subject to change.
     """,

@@ -1263,6 +1263,7 @@ class ConfigTest(unittest.TestCase):
             "server.agentSessionTTL": 900,
             "server.agentMaxSessions": 100,
             "server.agentPreviewRows": 100,
+            "server.trustedUserHeaders": {},
         }
         for key, default_val in expected_defaults.items():
             option = config._config_options[key]
