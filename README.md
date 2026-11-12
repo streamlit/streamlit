@@ -33,6 +33,9 @@ skills written by the Streamlit team. The skills ship with every release and mat
 installed version, so agents follow current best practices for layouts, theming,
 dashboards, performance, testing, and Snowflake.
 
+Agents load the skill on their own for Streamlit tasks. To make sure, name it in your
+request, for example `/developing-with-streamlit` in Claude Code.
+
 Or write an app yourself. Save this as `streamlit_app.py` and run
 `streamlit run streamlit_app.py`:
 
