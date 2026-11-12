@@ -116,6 +116,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
     // Override browser's -webkit-text-fill-color which takes precedence over color
     WebkitTextFillColor: theme.colors.fadedText40,
     backgroundColor: "transparent",
+    "::placeholder": { color: theme.colors.fadedText40 },
   },
   "&[aria-invalid='true']": {
     color: theme.colors.redTextColor,
