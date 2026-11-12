@@ -16,7 +16,7 @@ Job URLs or IDs. Without them, use the latest successful `push` run on `develop`
 | Workflow | Job | Why this job |
 |----------|-----|--------------|
 | `python-tests.yml` | `py-unit-tests (max)` | Newest supported Python, so deprecations from new Python versions and the dependencies tied to them show up here first |
-| `js-tests.yml` | `js-unit-tests` | Vitest console output and Knip configuration hints |
+| `js-tests.yml` | `js-unit-tests` | Knip configuration hints. Vitest console output, such as React `act()` warnings, shows up only in the job log, not as annotations |
 
 GitHub's REST run filters (`--branch`, `--status`) can return stale results. Check the run's branch, event, and conclusion yourself.
 
@@ -32,9 +32,9 @@ GitHub's REST run filters (`--branch`, `--status`) can return stale results. Che
 
 ### 1. Collect and group
 
-- List the annotations with `gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations --paginate`. The list is capped, so take the full set and its counts from the warnings summary in the job log.
+- List the annotations with `gh api repos/streamlit/streamlit/check-runs/<job-id>/annotations --paginate`. GitHub caps the annotations per step, so use the warnings summary in the job log for the complete set and counts.
 - Group the duplicates. The same warning often repeats with different object IDs, memory addresses, or temp paths in its message.
-- Annotations on the `.github` path come from the runner or the workflow, such as runner image migrations or deprecated actions, not from the tests. List them in the summary and leave them alone.
+- Annotations on paths under `.github` come from the runner or the workflow, such as runner image migrations or deprecated actions, not from the tests. List them in the summary and leave them alone.
 - The annotation points to where the warning was raised. That is often library code or a file under `.venv/`, not the test that caused it. The job log (`gh run view --job <job-id> --log`) shows the pytest warnings summary with test IDs and, for Vitest, the test file around the console output.
 
 ### 2. Find the trigger
@@ -47,7 +47,7 @@ GitHub's REST run filters (`--branch`, `--status`) can return stale results. Che
 
 | Decision | Signals |
 |----------|---------|
-| **fix** | Streamlit code calls a deprecated API that has a replacement. A test leaks resources (unclosed files, sockets, event loops, threads, observers), leaves a coroutine unawaited, watches a shared directory such as `/tmp`, or misses a mock. A test triggers the warning on purpose to cover an edge case, and a one-line scoped assertion or filter keeps it out of the run. Library code shows users a warning it shouldn't. React `act()` warnings and other console errors from tests. Knip configuration hints, such as stale `ignore` entries. |
+| **fix** | Streamlit code calls a deprecated API that has a replacement. A test leaks resources (unclosed files, sockets, event loops, threads, observers), leaves a coroutine unawaited, watches a shared directory such as `/tmp`, or misses a mock. A test triggers the warning on purpose to cover an edge case, and a one-line scoped assertion or filter keeps it out of the run. Library code shows users a warning it shouldn't. React `act()` warnings and other console errors in the Vitest log. Knip configuration hints, such as stale `ignore` entries. |
 | **leave** (informational) | The annotation describes expected behavior and points to no problem: progress or summary notices from a tool, a library's one-time info message, or a warning whose only fix would make the test or the code worse. Leave these alone and say why in the summary. |
 | **report** | The warning comes from third-party internals that Streamlit can't avoid, and no compatible upgrade fixes it. The fix needs a `.github/workflows/` change, a major dependency upgrade, or a product decision. A commit on `develop` since the run, or an open PR, already handles it. This includes PRs on `ai-fix-ci-annotations-*` branches from earlier runs. For unavoidable third-party warnings, suggest a module-scoped `filterwarnings` entry like those in `lib/pyproject.toml`. |
 

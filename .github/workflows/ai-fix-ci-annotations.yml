@@ -3,12 +3,12 @@
 #
 # Every week it picks the latest successful develop push run of each watched job
 # and skips the agent when those jobs have no annotations from the tests. Runner
-# and workflow notices (annotations on the .github path) don't count, because a
+# and workflow notices (annotations on paths under .github) don't count, because a
 # fix for them needs a workflow change that GITHUB_TOKEN cannot push.
 #
 # The agent runs with a read-only token and writes a decision. Later jobs act on it:
 # - fix: opens a PR against develop with the agent's changes.
-# - report: nothing beyond the job summary.
+# - report: the workflow writes only the job summary.
 name: AI Fix CI Annotations
 
 on:
@@ -111,7 +111,7 @@ jobs:
 
             count="$(
               gh api --paginate "repos/$REPOSITORY/check-runs/$job_id/annotations" |
-                jq -s '[.[][] | select(.path != ".github")] | length'
+                jq -s '[.[][] | select(.path | startswith(".github") | not)] | length'
             )"
             echo "$job_name: $count annotations from the tests ($job_url)"
             total=$((total + count))
