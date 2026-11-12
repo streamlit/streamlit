@@ -514,11 +514,11 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children. A stacked column with only
-      //   an intrinsic-width chart shrinks to that chart; other stacked
-      //   columns print full width. Other children keep their width, capped
-      //   to the container. A chart keeps the width it rendered at on screen,
-      //   capped to its column.
+      //   dataframe, or table stacks its children. A stacked column with an
+      //   intrinsic-width chart and no dataframe or table shrinks to fit its
+      //   content; other stacked columns print full width. Other children
+      //   keep their width, capped to the container. A chart keeps the width
+      //   it rendered at on screen, capped to its column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -588,8 +588,8 @@ export const StyledFlexContainerBlock =
                 },
                 // A stacked column with a chart that carries
                 // `PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS` and no dataframe or
-                // table shrinks to the chart's on-screen width, so the card
-                // has no empty strip. Other charts may have no in-flow width
+                // table shrinks to fit its content, so the card has no empty
+                // strip. Other charts may have no in-flow width
                 // to size the column, so their columns stay full width.
                 [`> .stColumn:has(.${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}))`]:
                   {

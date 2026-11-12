@@ -321,6 +321,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // fallback box would hold one panel while the rest paint over the following
   // elements.
   const isSizeContained = useStretchHeight && isSingleView
+  // Size containment hides a stretch-width chart's drawn width from a
+  // fit-content ancestor. Every other chart has a width a stacked print
+  // column can shrink to.
+  const hasIntrinsicPrintWidth = !(isSizeContained && useStretchWidth)
   // Whether Vega sizes the chart to its measured container height.
   // A composition without a definite parent height skips this, because
   // its rendered height would feed back into a content-height row.
@@ -695,17 +699,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
-        className={[
-          "stVegaLiteChart",
-          // Size containment hides a stretch-width chart's drawn width from
-          // a fit-content ancestor. Every other chart keeps its on-screen
-          // pixel width, so a stacked print column can shrink to it.
-          isSizeContained && useStretchWidth
-            ? undefined
-            : PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS,
-        ]
-          .filter(Boolean)
-          .join(" ")}
+        className={
+          hasIntrinsicPrintWidth
+            ? `stVegaLiteChart ${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}`
+            : "stVegaLiteChart"
+        }
         useContainerWidth={useStretchWidth}
         useContainerHeight={passesContainerHeight}
         isSizeContained={isSizeContained}

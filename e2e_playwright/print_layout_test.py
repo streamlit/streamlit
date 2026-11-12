@@ -415,13 +415,19 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     def content_height_chart_card_shrinks() -> None:
         row_box = content_row.bounding_box()
         chart_column_box = content_chart_column.bounding_box()
+        graphic_box = content_chart_graphic.first.bounding_box()
         text_column_box = content_columns.nth(1).bounding_box()
         assert row_box is not None
         assert chart_column_box is not None
+        assert graphic_box is not None
         assert text_column_box is not None
-        assert chart_column_box["width"] < row_box["width"] * 0.8
+        # The card is wider than the chart only by its padding, so neither a
+        # full-width card nor a collapsed one passes.
+        column_right = chart_column_box["x"] + chart_column_box["width"]
+        graphic_right = graphic_box["x"] + graphic_box["width"]
+        assert 0 <= column_right - graphic_right <= 40
+        assert chart_column_box["width"] < row_box["width"] - 40
         assert text_column_box["width"] >= row_box["width"] - 1
-        _assert_inside(content_chart_graphic.first, content_chart_column)
 
     wait_until(app, content_height_chart_card_shrinks)
 

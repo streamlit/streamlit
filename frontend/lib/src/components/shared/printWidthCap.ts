@@ -17,9 +17,10 @@
 import type { CSSObject } from "@emotion/styled"
 
 /**
- * A chart that keeps a pixel width from the on-screen layout, so it can size
- * a `fit-content` ancestor in print. A stacked column that holds only such a
- * chart shrinks to it. Columns with any other chart stay full page width.
+ * Marks a chart that keeps its on-screen pixel width in print, so a
+ * `fit-content` ancestor can size to it. A stacked print column with a
+ * visible marked chart and no dataframe or table shrinks to fit its content
+ * instead of printing full page width.
  */
 export const PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS =
   "stPrintIntrinsicWidthGraphic"

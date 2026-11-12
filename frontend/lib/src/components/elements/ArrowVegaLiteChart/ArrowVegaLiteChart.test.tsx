@@ -433,6 +433,21 @@ describe("ArrowVegaLiteChart", () => {
       )
     })
 
+    it("marks a stretch-width, content-height chart as intrinsic-width for print", () => {
+      render(
+        <ArrowVegaLiteChart
+          {...getProps(
+            {},
+            { widthConfig: { useStretch: true }, heightConfig: null }
+          )}
+        />
+      )
+
+      const chart = screen.getByTestId("stVegaLiteChart")
+      expect(chart).not.toHaveStyle("contain: size;")
+      expect(chart).toHaveClass(PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS)
+    })
+
     describe("with parameter bindings", () => {
       const OriginalResizeObserver = globalThis.ResizeObserver
       const observedCallbacks = new Map<Element, ResizeObserverCallback>()
