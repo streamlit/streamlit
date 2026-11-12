@@ -180,9 +180,7 @@ describe("StyledVegaLiteChartContainer print layout", () => {
     expect(css).toContain("@media print")
     expect(css).toContain("svg.marks")
     expect(css).toContain("canvas.marks")
-    // The graphic fills a stacked print column. The container must not
-    // use `height: auto`, which collapses the chart onto the next heading.
-    expect(css).toMatch(/svg\.marks,.*canvas\.marks\{[^}]*height:auto/)
-    expect(css).not.toMatch(/@media print\{[^}]*\.vega-embed[^}]*height:auto/)
+    // The chart keeps the size it rendered at; print only caps its width.
+    expect(css).not.toContain("height:auto!important")
   })
 })

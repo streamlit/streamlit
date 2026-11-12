@@ -583,6 +583,14 @@ export const StyledFlexContainerBlock =
                     ),
                   },
                 },
+                // A chart keeps its on-screen pixel width. A stacked column
+                // with only a chart shrinks to that width, instead of
+                // stretching the card and leaving an empty strip inside it.
+                [`> .stColumn:has(.${PrintLayout.GRAPHIC}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}))`]:
+                  {
+                    width: "fit-content",
+                    maxWidth: "100%",
+                  },
               },
               // A horizontal container with a chart stacks the same way.
               // Its children print as block boxes, because a content-height

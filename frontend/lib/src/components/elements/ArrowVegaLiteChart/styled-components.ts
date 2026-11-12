@@ -429,18 +429,7 @@ export const StyledVegaLiteChartContainer =
         },
         // Canvas and hybrid renderers paint a canvas.marks node. It keeps
         // the on-screen pixel width unless the same fit rule covers it.
-        "& svg.marks, & canvas.marks": {
-          ...printGraphicFitStyles,
-          "@media print": {
-            ...printGraphicFitStyles["@media print"],
-            // Columns with a chart stack to full page width. The graphic
-            // still has the on-screen column's pixel size; growing only
-            // width letterboxes it and leaves a gap on the right. Scale
-            // both axes with the viewBox so it fills the stacked card.
-            width: "100%",
-            height: "auto",
-          },
-        },
+        "& svg.marks, & canvas.marks": printGraphicFitStyles,
       }
     }
   )

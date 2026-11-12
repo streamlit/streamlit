@@ -92,6 +92,25 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
   })
 
+  it("shrinks a stacked column that holds only a chart to the chart's width", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+        })
+      )
+    )
+
+    // The card's content is the chart's on-screen width, so the column
+    // shrinks to it. A column with a dataframe or table keeps full width.
+    expect(css).toMatch(
+      new RegExp(
+        `>\\.stColumn:has\\(\\.${PrintLayout.GRAPHIC}[^{]*:not\\(:has\\(\\.${PrintLayout.FIXED_WIDTH}[^{]*\\{[^}]*fit-content;max-width:100%`
+      )
+    )
+  })
+
   it("stacks a horizontal container that holds a chart", () => {
     const css = cssOf(
       render(
