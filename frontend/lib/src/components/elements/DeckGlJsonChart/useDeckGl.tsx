@@ -571,9 +571,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           // aren't dropped when a layer has multiple fill functions.
           clonedLayer.updateTriggers = {
             ...clonedLayer.updateTriggers,
-            // Tell Deck.gl to recompute the fill color when the selection or
-            // theme primary changes. Without this, objects can keep stale
-            // colors — especially on URL-backed layers.
+            // Deck.gl reruns this accessor only when its trigger changes, so
+            // include the selection and the theme primary to avoid stale fill
+            // colors.
             // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
             [fillFunction]: [
               ...toUpdateTriggerList(layer.updateTriggers?.[fillFunction]),

@@ -219,7 +219,7 @@ greenTextColor = "#116329"
 
 ### Chart colors
 
-Set chart colors in any of the six sections. An unset main section inherits `[theme]`; an unset sidebar inherits the resolved main palette for that appearance (so a palette on `[theme.dark]` appears in an unset dark sidebar). Categorical and sequential palettes apply to Plotly, Altair, Vega-Lite, and ECharts. Diverging palettes apply to Plotly, Altair, and Vega-Lite (ECharts does not read `chartDivergingColors`). Sequential and diverging lists must be exactly 10 colors. Default `st.map` markers use `primaryColor` at partial opacity, not these palettes; pass `color` on `st.map` to override.
+Set chart colors in any of the six sections. An unset main section inherits `[theme]`; an unset sidebar inherits the resolved main palette for that appearance (so a palette on `[theme.dark]` appears in an unset dark sidebar). Categorical and sequential palettes apply to Plotly, Altair, Vega-Lite, and ECharts. Diverging palettes apply to Plotly, Altair, and Vega-Lite (ECharts does not read `chartDivergingColors`). Sequential and diverging lists must be exactly 10 colors. Default `st.map` markers and solid `st.pydeck_chart` layers that omit a color use `primaryColor` at partial opacity, not these palettes; pass an explicit color to override.
 
 ```toml
 [theme]

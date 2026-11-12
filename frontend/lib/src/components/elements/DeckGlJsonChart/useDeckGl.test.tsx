@@ -560,8 +560,13 @@ describe("useDeckGl", () => {
               pickable: true,
               // Scalar triggers such as 0 and false must be wrapped before
               // selection state is added. getFillColor runs first, so 0 must
-              // not be spread as a non-array.
-              updateTriggers: { getFillColor: 0, getLineColor: false },
+              // not be spread as a non-array. getRadius must survive as an
+              // unrelated key when fill triggers are rewritten.
+              updateTriggers: {
+                getFillColor: 0,
+                getLineColor: false,
+                getRadius: ["user"],
+              },
             },
           ],
         }
@@ -589,6 +594,7 @@ describe("useDeckGl", () => {
         false,
         primary,
       ])
+      expect(layer.props.updateTriggers?.getRadius).toEqual(["user"])
     })
 
     it("appends selection state to array update triggers", () => {

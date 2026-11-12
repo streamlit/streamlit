@@ -570,14 +570,14 @@ class PydeckMixin:
            To make the PyDeck chart's style consistent with Streamlit's theme,
            you can set ``map_style=None`` in the ``pydeck.Deck`` object.
 
+        .. note::
            Solid layers that don't set a color, such as a ``ScatterplotLayer``
            without ``get_fill_color``, use the theme's primary color with some
-           transparency, matching ``st.map``. Only fills are themed for
-           ``GeoJsonLayer`` and ``PolygonLayer``, so their lines and outlines
-           keep PyDeck's default black. This applies whether or not
-           ``map_style`` is set. Text, icon, and mesh layers keep PyDeck's
-           default colors, and aggregation layers like ``HexagonLayer`` keep
-           their ``color_range`` gradient.
+           transparency, matching ``st.map``, in every map style. Only fills
+           are themed for ``GeoJsonLayer`` and ``PolygonLayer``, so their lines
+           and outlines keep PyDeck's default black. Text, icon, and mesh
+           layers keep PyDeck's default colors, and aggregation layers like
+           ``HexagonLayer`` keep their ``color_range`` gradient.
 
         """
         if use_container_width is not None:

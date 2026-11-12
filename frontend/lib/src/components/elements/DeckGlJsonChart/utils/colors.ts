@@ -38,10 +38,7 @@ export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
  */
 export const MAP_DEFAULT_MARKER_ALPHA = 160
 
-/**
- * Returns the theme primary color as an RGBA tuple, using the alpha shared
- * with `st.map`'s markers so overlapping marks stay visible.
- */
+/** Returns the theme primary color as RGBA with `MAP_DEFAULT_MARKER_ALPHA`. */
 export function themePrimaryRgba(
   primaryCssColor: string
 ): [number, number, number, number] {
@@ -116,7 +113,7 @@ const PYDECK_SOLID_LAYER_COLOR_ACCESSORS: Partial<
   [geoLayers.TripsLayer.layerName]: ["getColor"],
   [layers.ArcLayer.layerName]: ["getTargetColor", "getSourceColor"],
   [layers.ColumnLayer.layerName]: ["getFillColor"],
-  // GeoJSON fills only; LineStrings and polygon outlines keep getLineColor.
+  // Fills only; LineStrings and polygon outlines keep deck.gl's default black.
   [layers.GeoJsonLayer.layerName]: ["getFillColor"],
   [layers.LineLayer.layerName]: ["getColor"],
   [layers.PathLayer.layerName]: ["getColor"],
