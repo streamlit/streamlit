@@ -54,11 +54,11 @@ PathWatcher: PathWatcherType | None = None
 _pending_evictions: Final[set[str]] = set()
 _pending_evictions_lock: Final = threading.Lock()
 
-# Module names already queued for each changed file's latest change, keyed by
-# path and paired with the file's modification time. Every session's watcher
-# reports the same change. Queuing it again after one session has evicted and
+# Ensures each file change queues its evictions once, even though every
+# session's watcher reports it. Queuing again after one session has evicted and
 # started reimporting the modules would remove them mid-import in that
-# session's script thread.
+# session's script thread. Maps path -> (modification time, queued names); a
+# new modification time replaces the entry.
 _queued_evictions_by_path: Final[dict[str, tuple[float, set[str]]]] = {}
 
 
@@ -307,32 +307,38 @@ class LocalSourcesWatcher:
 
 
 def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
-    """Queue module evictions for a file change.
+    """Queue module evictions for one file change.
 
-    Names that an earlier report of the same change (same modification time)
-    already queued are skipped.
+    Skip names that an earlier report of this change (same modification time)
+    already queued, including children of a queued package, which the flush
+    also evicts. Changes without a usable modification time always queue.
     """
-    try:
-        modification_time = os.stat(changed_path).st_mtime
-    except OSError:
-        modification_time = 0.0
-
     with _pending_evictions_lock:
-        # Some file systems (s3fs/fuse) always report 0.0, and a deleted file
-        # has no modification time. Those changes can't be told apart, so their
-        # modules are always queued.
+        # Read the time under the lock, so a delayed report can't replace a
+        # newer record that another session has already queued and flushed.
+        try:
+            modification_time = os.stat(changed_path).st_mtime
+        except OSError:
+            modification_time = 0.0
+
+        # Always queue a 0.0 time: s3fs/fuse always report 0.0, and a missing
+        # file is stored as 0.0 above, so those changes can't be told apart.
         if modification_time > 0.0:
             queued_time, queued_names = _queued_evictions_by_path.get(
                 changed_path, (0.0, set())
             )
             if queued_time != modification_time:
                 queued_names = set()
-                _queued_evictions_by_path[changed_path] = (
-                    modification_time,
-                    queued_names,
-                )
-            module_names = module_names.difference(queued_names)
-            queued_names.update(module_names)
+            queued_prefixes = tuple(f"{name}." for name in queued_names)
+            module_names = {
+                name
+                for name in module_names
+                if name not in queued_names and not name.startswith(queued_prefixes)
+            }
+            _queued_evictions_by_path[changed_path] = (
+                modification_time,
+                queued_names | module_names,
+            )
         _pending_evictions.update(module_names)
 
 
