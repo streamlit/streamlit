@@ -98,6 +98,8 @@ All PRs require two labels:
 
 **Note:** PRs labeled `change:spec` (for spec/design documents only) are exempt from the `impact:*` requirement. Do not use `change:spec` for PRs with code changes.
 
+Don't set `feature:*` or `area:*` labels on PRs. They are for issues.
+
 ## Testing plan
 
 **Where tests live:**
