@@ -60,7 +60,7 @@ Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` t
 
 ### 9. Create or update PR
 
-Run the `/creating-pull-requests` skill. If you're on `develop`, it creates a branch first. Then it pushes and either opens a non-draft PR against `develop` with the required `impact:*` and `change:*` labels, or, if a PR already exists, updates its title, description, or labels where they no longer match the changes. Steps 11 and 12 rely on those labels.
+Run the `/creating-pull-requests` skill to create or update the PR. Steps 11 and 12 rely on the `impact:*` and `change:*` labels it sets.
 
 ### 10. Upload intermediate files
 
