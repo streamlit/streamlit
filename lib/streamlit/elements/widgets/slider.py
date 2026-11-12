@@ -310,8 +310,8 @@ class SliderSerde:
 
 
 class SliderMixin:
-    # If min/max/value/step are not provided, then we return an int.
-    # if ONLY step is provided, then it must be an int and we return an int.
+    # No bounds or value, and step omitted or an int: return an int.
+    # A float step is handled by the numeric overload below.
     @overload
     def slider(
         self,
@@ -797,9 +797,10 @@ class SliderMixin:
         -------
         int/float/date/time/datetime or tuple of int/float/date/time/datetime
             The current value of the slider widget. The return type matches
-            the data type of the value and bound parameters. Mixing ``int``
-            and ``float`` arguments makes a float slider that returns
-            ``float`` values.
+            the numeric or date/time type of ``value``, ``min_value``,
+            ``max_value``, and ``step``. Mixing ``int`` and ``float`` across
+            those arguments makes a float slider that returns ``float``
+            values.
 
         Examples
         --------
@@ -969,9 +970,10 @@ class SliderMixin:
 
         # Mixing ints and floats makes a float slider, so an int default taken
         # from data (value=25) works with float bounds (max_value=60.0).
-        numeric_args = [*prepared_value, min_value, max_value, step]
-        if all(a is None or isinstance(a, Real) for a in numeric_args) and any(
-            isinstance(a, Real) and not isinstance(a, Integral) for a in numeric_args
+        value_and_bounds = [*prepared_value, min_value, max_value, step]
+        if all(a is None or isinstance(a, Real) for a in value_and_bounds) and any(
+            isinstance(a, Real) and not isinstance(a, Integral)
+            for a in value_and_bounds
         ):
             prepared_value = [_int_to_float(v) for v in prepared_value]
             min_value = _int_to_float(min_value)

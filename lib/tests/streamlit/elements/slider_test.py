@@ -1134,6 +1134,7 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
         [
             ("int_value", {"min_value": 0.0, "max_value": 60.0, "value": 25}, 25.0),
             ("int_step", {"min_value": 0.0, "max_value": 10.0, "step": 1}, 0.0),
+            ("float_step_only", {"step": 1.0}, 0.0),
             ("int_min", {"min_value": 0, "max_value": 1.5}, 0.0),
             ("numpy_int", {"max_value": 10.0, "value": np.int64(3)}, 3.0),
             ("mixed_range", {"value": [1, 2.5]}, (1.0, 2.5)),
