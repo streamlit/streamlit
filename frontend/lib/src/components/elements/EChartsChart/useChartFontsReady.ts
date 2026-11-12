@@ -72,24 +72,22 @@ function areFontsLoaded(specs: string[]): boolean {
 }
 
 /**
- * Report whether the chart's theme fonts have loaded, so the chart can wait
- * for them before its first layout.
+ * Report whether the chart's theme fonts have loaded, so its first layout
+ * can wait for them.
  *
- * ECharts measures text once per font and caches the widths for the page. A
- * chart laid out while a theme font is still loading measures and draws the
- * fallback font, and every later repaint draws the loaded font into those
- * widths: legend items run into each other and right-aligned text is clipped.
+ * ECharts caches text widths per font for the whole page. A chart laid out
+ * while a theme font is loading keeps the fallback widths, so later repaints
+ * draw the real font into them (overlapping legend items, clipped text).
  *
- * Fonts that are already loaded (the common case) report ready on the first
- * render. Once ready, the result stays true, so a later font change never
- * holds back a chart that is already showing.
- *
- * Only declared faces can be waited for: a theme font whose stylesheet hasn't
- * arrived yet is unknown to ``document.fonts`` and doesn't hold the chart
- * back. After a timeout, the fallback widths stay cached for the page.
- *
- * A chart without the Streamlit theme (``usesThemeFonts`` false) draws in
- * ECharts' own fonts, so it never waits.
+ * - Already-loaded fonts (the common case) are ready on the first render.
+ * - Once ready, the hook stays ready, so a later font change never hides a
+ *   visible chart.
+ * - The chart waits until every font has loaded or failed. After a failure
+ *   or timeout, the fallback widths stay cached for the page, and later
+ *   charts with the same fonts don't wait.
+ * - Only faces in ``document.fonts`` can be awaited. A font whose stylesheet
+ *   hasn't arrived yet doesn't hold the chart back.
+ * - Charts without the Streamlit theme use ECharts' own fonts and never wait.
  */
 export function useChartFontsReady(
   theme: EmotionTheme,
@@ -122,14 +120,15 @@ export function useChartFontsReady(
       return
     }
     let cancelled = false
-    // A font that fails to load renders with the fallback, like a timeout.
-    void Promise.all(specs.map(spec => fonts.load(spec)))
-      .catch(() => undefined)
-      .finally(() => {
+    // A font that fails to load renders with the fallback, like a timeout,
+    // while the other fonts are still awaited.
+    void Promise.allSettled(specs.map(spec => fonts.load(spec))).finally(
+      () => {
         if (!cancelled) {
           markReady()
         }
-      })
+      }
+    )
     return () => {
       cancelled = true
     }

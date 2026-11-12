@@ -320,11 +320,29 @@ describe("EChartsChart", () => {
 
       expect(mockInit).toHaveBeenCalledTimes(1)
       expect(mockChart.setOption).toHaveBeenCalledTimes(1)
-
-      // An unthemed chart uses ECharts' own fonts, so it doesn't wait.
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: undefined,
+      })
       resetChartFontsForTests()
+    }
+  })
+
+  it("doesn't wait for fonts when theme is None", () => {
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        check: vi.fn(() => false),
+        // Never settles, so only a chart that skips the wait can init.
+        load: vi.fn(() => new Promise<void>(vi.fn())),
+      },
+    })
+
+    try {
+      // An unthemed chart uses ECharts' own fonts.
       render(<Wrapper element={createElement({ theme: "" })} />)
-      expect(mockInit).toHaveBeenCalledTimes(2)
+      expect(mockInit).toHaveBeenCalledTimes(1)
     } finally {
       Object.defineProperty(document, "fonts", {
         configurable: true,

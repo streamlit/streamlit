@@ -121,6 +121,44 @@ describe("useChartFontsReady", () => {
     expect(result.current).toBe(true)
   })
 
+  it("keeps waiting for the other fonts when one fails", async () => {
+    let resolveHeading: () => void = () => undefined
+    const fonts = {
+      check: vi.fn(() => false),
+      load: vi.fn((spec: string) =>
+        spec.includes("BodyFont")
+          ? Promise.reject(new Error("network"))
+          : new Promise<void>(resolve => {
+              resolveHeading = resolve
+            })
+      ),
+    }
+    mockFonts(fonts)
+    const twoFonts = {
+      ...theme,
+      genericFonts: {
+        ...theme.genericFonts,
+        bodyFont: "BodyFont, sans-serif",
+        headingFont: "HeadingFont, serif",
+      },
+    }
+
+    const { result } = renderHook(() => useChartFontsReady(twoFonts, true))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(fonts.load).toHaveBeenCalledTimes(2)
+    // The heading font is still loading, so its widths aren't known yet.
+    expect(result.current).toBe(false)
+
+    await act(async () => {
+      resolveHeading()
+      await Promise.resolve()
+    })
+    expect(result.current).toBe(true)
+  })
+
   it("stops waiting after the timeout and stays ready", () => {
     vi.useFakeTimers()
     const fonts = {

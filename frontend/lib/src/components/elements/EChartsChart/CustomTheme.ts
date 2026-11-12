@@ -2079,11 +2079,11 @@ const AREA_FILL_OPACITY = 0.2
  * Soften the fill of unstacked area series.
  *
  * ECharts fills an area at 0.7 opacity, which hides the gridlines and any
- * area behind it. The theme can't set this: ECharts draws every line series
- * with a non-empty ``areaStyle`` as an area. Stacked areas keep ECharts' fill,
- * since there the fill is what tells the bands apart. An ``areaStyle`` with
- * its own ``color`` (often a gradient that carries its own alpha) or
- * ``opacity`` is left alone.
+ * area behind it. The theme can't set this, because ECharts draws any line
+ * series with an ``areaStyle`` (even ``{}``) as an area. Stacked areas keep
+ * ECharts' fill, since there the fill is what tells the bands apart. An
+ * ``areaStyle`` with its own ``color`` (often a gradient that carries its
+ * own alpha) or ``opacity`` is left alone.
  */
 function withSoftAreaFill(option: EChartsOptionObject): EChartsOptionObject {
   return mapOptionSeries(option, series => {
