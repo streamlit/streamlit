@@ -47,6 +47,13 @@ class WatchedModule(NamedTuple):
 # thus initializing config options when this file is first imported.
 PathWatcher: PathWatcherType | None = None
 
+# Module names waiting to be removed from sys.modules. The queue is shared by
+# all sessions because sys.modules is process-wide: a session created after a
+# file change, or after every older session has closed, must still evict the
+# stale modules on its first script run.
+_pending_evictions: Final[set[str]] = set()
+_pending_evictions_lock: Final = threading.Lock()
+
 
 class LocalSourcesWatcher:
     """Watch local Python sources and pages to trigger app reruns.
@@ -74,8 +81,6 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
-        self._pending_evictions: set[str] = set()
-        self._pending_evictions_lock = threading.Lock()
 
         self.update_watched_pages()
 
@@ -175,8 +180,8 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            with self._pending_evictions_lock:
-                self._pending_evictions.update(modules_to_evict)
+            with _pending_evictions_lock:
+                _pending_evictions.update(modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -195,11 +200,12 @@ class LocalSourcesWatcher:
 
         Called at the start of each script run on the script thread so that
         ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing.
+        code (or cache serialization) is executing. The queue is process-wide,
+        so this also flushes evictions queued by other sessions' watchers.
         """
-        with self._pending_evictions_lock:
-            pending = self._pending_evictions
-            self._pending_evictions = set()
+        with _pending_evictions_lock:
+            pending = _pending_evictions.copy()
+            _pending_evictions.clear()
 
         if not pending:
             return
@@ -218,8 +224,6 @@ class LocalSourcesWatcher:
             wm.watcher.close()
         self._watched_modules = {}
         self._watched_pages = set()
-        with self._pending_evictions_lock:
-            self._pending_evictions.clear()
         self._is_closed = True
 
     def _register_watcher(

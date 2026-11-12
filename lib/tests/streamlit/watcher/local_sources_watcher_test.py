@@ -62,6 +62,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         the_globals = globals()
 
+        # The eviction queue is process-wide, so isolate it per test.
+        local_sources_watcher._pending_evictions.clear()
+        self.addCleanup(local_sources_watcher._pending_evictions.clear)
+
         for name in modules:
             with contextlib.suppress(Exception):
                 del sys.modules[the_globals[name].__name__]
@@ -758,6 +762,48 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             lsw.on_path_changed(DUMMY_MODULE_1_FILE)
             pickle.dumps(obj)
             lsw.flush_pending_evictions()
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_watcher_created_after_change_flushes_evictions(self, fob):
+        """A session created after a file change evicts the stale modules."""
+        old_session_lsw = local_sources_watcher.LocalSourcesWatcher(
+            PagesManager(SCRIPT_PATH)
+        )
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        old_session_lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), "DUMMY_MODULE_1"),
+        }
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            old_session_lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            new_session_lsw = local_sources_watcher.LocalSourcesWatcher(
+                PagesManager(SCRIPT_PATH)
+            )
+            new_session_lsw.on_script_run()
+            assert "DUMMY_MODULE_1" not in sys.modules
+
+            # The shared queue is now empty, so the old session's next run
+            # keeps the module the new session imported.
+            sys.modules["DUMMY_MODULE_1"] = DUMMY_MODULE_1
+            old_session_lsw.on_script_run()
+            assert "DUMMY_MODULE_1" in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_close_keeps_evictions_for_other_sessions(self, fob):
+        """Closing the watcher that saw the change keeps its queued evictions."""
+        old_session_lsw = local_sources_watcher.LocalSourcesWatcher(
+            PagesManager(SCRIPT_PATH)
+        )
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        old_session_lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), "DUMMY_MODULE_1"),
+        }
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            old_session_lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            old_session_lsw.close()
+            local_sources_watcher.LocalSourcesWatcher(
+                PagesManager(SCRIPT_PATH)
+            ).on_script_run()
+            assert "DUMMY_MODULE_1" not in sys.modules
 
 
 def test_get_module_paths_outputs_abs_paths():
