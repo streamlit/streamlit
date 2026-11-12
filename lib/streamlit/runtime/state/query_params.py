@@ -667,6 +667,14 @@ class QueryParams(MutableMapping[str, str]):
         """
         return self._bindings_by_widget.get(widget_id)
 
+    def widget_ids_bound_in(self, script_hash: str) -> frozenset[str]:
+        """Return the IDs of bound widgets registered by the given script."""
+        return frozenset(
+            widget_id
+            for widget_id, binding in self._bindings_by_widget.items()
+            if binding.script_hash == script_hash
+        )
+
     def has_param(self, param_key: str) -> bool:
         """Return whether a query parameter currently exists."""
         return param_key in self._query_params

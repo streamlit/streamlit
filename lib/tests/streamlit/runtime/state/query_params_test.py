@@ -1044,6 +1044,22 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         """Test that get_binding_for_widget returns None for unknown widgets."""
         assert self.query_params.get_binding_for_widget("unknown") is None
 
+    def test_widget_ids_bound_in_filters_by_script_hash(self) -> None:
+        """Test that widget_ids_bound_in only returns widgets from that script."""
+        for widget_id, script_hash in [
+            ("main_widget", "main_hash"),
+            ("page_widget", "page_hash"),
+        ]:
+            self.query_params.bind_widget(
+                param_key=widget_id,
+                widget_id=widget_id,
+                value_type="string_value",
+                script_hash=script_hash,
+            )
+
+        assert self.query_params.widget_ids_bound_in("main_hash") == {"main_widget"}
+        assert self.query_params.widget_ids_bound_in("unknown") == frozenset()
+
 
 class ProtectedParamsBindingTest(DeltaGeneratorTestCase):
     """Tests for protected query parameter binding behavior."""

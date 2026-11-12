@@ -404,13 +404,16 @@ def switch_page(  # type: ignore[misc]
         Query parameters to apply when navigating to the target page.
         This can be a dictionary or an iterable of key-value tuples. Values can
         be strings or iterables of strings (for repeated keys). These replace
-        the current query parameters, except for embed parameters, which are
-        always kept. If this is ``None`` (default), the current query
-        parameters are cleared.
+        the current query parameters, except for embed parameters and
+        parameters bound to widgets. If this is ``None`` (default), those other
+        query parameters are cleared.
 
-        You can't set a query parameter that is bound to a widget through
-        ``bind="query-params"``; passing a bound key raises an exception.
-        Change the widget's value instead.
+        Parameters bound to widgets through ``bind="query-params"`` follow
+        their widgets, like they do when users switch pages through the
+        navigation menu: a widget in the entrypoint file keeps its parameter,
+        and a widget on the page being left loses it. You can't set a bound
+        parameter; passing a bound key raises an exception. Change the
+        widget's value instead.
 
     Examples
     --------

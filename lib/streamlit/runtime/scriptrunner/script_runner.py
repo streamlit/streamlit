@@ -696,6 +696,12 @@ class ScriptRunner:
                     # This prevents stale params from previous pages from seeding
                     # widgets on the new page if keys collide.
                     qp.set_initial_query_params_from_current()
+                    if rerun_data.widget_states is None:
+                        # A page switch requested by the backend (st.switch_page)
+                        # carries no widget states. Keep bound widgets from the
+                        # main script, like the frontend does for navigation-menu
+                        # switches, so their URL params survive the cleanup.
+                        widget_ids = qp.widget_ids_bound_in(main_script_hash)
 
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)

@@ -45,6 +45,9 @@ def query_params_page() -> None:
     st.button("Switch to History", on_click=st.switch_page, args=(history,))
 
 
+# Bound in the main script, so the param is shared by all pages.
+st.sidebar.radio("Region", options=["All", "EU"], key="region", bind="query-params")
+
 history = st.Page(history_page, title="History", default=True)
 st.navigation(
     [

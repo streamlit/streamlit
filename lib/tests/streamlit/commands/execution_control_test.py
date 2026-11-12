@@ -525,6 +525,40 @@ def test_st_switch_page_with_bound_query_param_in_url(
     ]
 
 
+def test_st_switch_page_keeps_query_param_bound_in_main_script() -> None:
+    """st.switch_page keeps the param of a widget bound in the main script."""
+
+    def script() -> None:
+        import streamlit as st
+
+        def go() -> None:
+            st.switch_page(other_page)
+
+        st.sidebar.segmented_control(
+            "Product", ["A", "B"], default="A", key="product", bind="query-params"
+        )
+
+        def home() -> None:
+            st.button("Go", on_click=go)
+
+        def other() -> None:
+            st.text(f"query params: {st.query_params.to_dict()}")
+
+        home_page = st.Page(home, title="Home", default=True)
+        other_page = st.Page(other, title="Other")
+        st.navigation([home_page, other_page]).run()
+
+    at = AppTest.from_function(script)
+    at.query_params["product"] = "B"
+    at.query_params["utm"] = "x"
+    at.run()
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert [text.value for text in at.text] == ["query params: {'product': 'B'}"]
+    assert at.session_state.product == "B"
+
+
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
 def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx):
     """Invalid query_params types raise StreamlitInvalidParameterTypeError."""
