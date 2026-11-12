@@ -1506,8 +1506,8 @@ describe("useDeckGl", () => {
       const layer = result.current.deck.layers?.[0] as {
         props: { colorRange?: number[][]; getFillColor?: unknown }
       }
-      // Deck.gl may apply its default YlOrRd colorRange; it must remain a
-      // multi-stop gradient, not six copies of theme primary.
+      // Deck.gl's default HexagonLayer colorRange is a multi-stop gradient.
+      // It must not become copies of the theme primary.
       const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
       const colorRange = layer.props.colorRange ?? []
       expect(colorRange.length).toBeGreaterThan(1)

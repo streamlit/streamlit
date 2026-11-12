@@ -67,7 +67,7 @@ describe("#applyMissingPydeckPrimaryColors", () => {
     })
   })
 
-  it("does not invent getLineColor when ScatterplotLayer already has getFillColor", () => {
+  it("leaves ScatterplotLayer with explicit getFillColor unchanged", () => {
     const fill = [200, 30, 0, 160]
     const layer = {
       "@@type": "ScatterplotLayer",
@@ -143,6 +143,16 @@ describe("#applyMissingPydeckPrimaryColors", () => {
       ...layer,
       getColor: expected,
     })
+  })
+
+  it("injects only getFillColor for GeoJsonLayer", () => {
+    const layer: Record<string, unknown> = { "@@type": "GeoJsonLayer" }
+    const result = applyMissingPydeckPrimaryColors(layer, primary)
+    expect(result).toEqual({
+      ...layer,
+      getFillColor: expected,
+    })
+    expect(result.getLineColor).toBeUndefined()
   })
 })
 

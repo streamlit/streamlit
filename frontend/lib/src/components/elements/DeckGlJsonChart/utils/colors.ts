@@ -22,8 +22,8 @@ import { parseToRgba } from "color2k"
 import { jsonConverter } from "./jsonConverter"
 
 /**
- * @file Utilities for determining fill colors for layers based on their
- *      selection state and the layer's selection color mode.
+ * @file Utilities for layer colors: theme-primary defaults for omitted
+ *      colors and selection-state fill colors.
  */
 
 /**
@@ -33,8 +33,8 @@ import { jsonConverter } from "./jsonConverter"
 export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
 
 /**
- * Alpha applied to st.map's theme-primary default markers so overlapping
- * points stay visible.
+ * Alpha for theme-primary default colors (st.map markers and uncolored
+ * pydeck layers) so overlapping marks stay visible.
  */
 export const MAP_DEFAULT_MARKER_ALPHA = 160
 
@@ -138,10 +138,12 @@ const LAYERS_WITH_GET_COLOR_ALIAS = new Set([
 ])
 
 /**
- * Fills missing color accessors with the theme primary (alpha
- * MAP_DEFAULT_MARKER_ALPHA) so pydeck defaults match st.map. Leaves explicit
- * values (arrays, `@@=` expressions, and the deprecated `getColor` alias)
- * and layer types without an entry unchanged.
+ * Sets omitted color accessors on solid pydeck layers to the theme primary
+ * (alpha `MAP_DEFAULT_MARKER_ALPHA`) so they match st.map. It never overwrites
+ * explicit values (arrays or `@@=` expressions) and returns the layer
+ * unchanged when:
+ * - its type isn't in `PYDECK_SOLID_LAYER_COLOR_ACCESSORS`, or
+ * - it sets the deprecated `getColor` alias (Column and Scatterplot).
  */
 export function applyMissingPydeckPrimaryColors<
   T extends Record<string, unknown>,
