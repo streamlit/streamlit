@@ -1105,8 +1105,9 @@ class ScriptCheckTest(RuntimeTestCase):
         self._old_home = os.environ["HOME"]
         os.environ["HOME"] = self._home
 
-        # The session watches the script's folder recursively, so keep the
-        # script out of the shared system temp directory.
+        # The session watches the script's folder recursively. Watching the shared
+        # system temp dir makes watchdog warn about unreadable subfolders, so give
+        # the script its own private directory.
         self._script_dir = tempfile.mkdtemp()
         self._fd, self._path = tempfile.mkstemp(dir=self._script_dir)
 
