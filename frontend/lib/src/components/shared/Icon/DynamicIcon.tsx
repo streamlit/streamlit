@@ -89,7 +89,8 @@ export function extractLeadingMaterialIcon(
 
 /**
  * Accessible names for triggers whose only content is a menu-style icon.
- * These icons also replace the expansion chevron.
+ * These icons already signal a menu, so such triggers hide the expansion
+ * chevron.
  */
 const MENU_STYLE_ICON_NAMES = new Map([
   [":material/menu:", "Menu"],

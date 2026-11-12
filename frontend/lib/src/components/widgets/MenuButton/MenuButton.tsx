@@ -130,8 +130,9 @@ function MenuButton(props: Props): ReactElement {
   const buttonDisabled =
     disabled || element.disabled || element.options.length === 0
 
-  // An icon-only menu-style trigger (e.g. :material/more_vert:) skips the chevron,
-  // and its trigger and menu are named by purpose ("More options"), not by glyph.
+  // An icon-only menu-style trigger (e.g. :material/more_vert:) hides the chevron,
+  // and both it and the menu it opens are named by purpose ("More options"),
+  // not by glyph.
   const menuTriggerName = getMenuTriggerAccessibleName(
     element.icon,
     element.label

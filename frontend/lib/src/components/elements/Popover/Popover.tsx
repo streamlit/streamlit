@@ -212,8 +212,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
-  // An icon-only menu-style trigger (e.g. :material/more_vert:) skips the chevron,
-  // and its trigger and dialog are named by purpose ("More options"), not by glyph.
+  // An icon-only menu-style trigger (e.g. :material/more_vert:) hides the chevron,
+  // and both it and the dialog it opens are named by purpose ("More options"),
+  // not by glyph.
   const menuTriggerName = getMenuTriggerAccessibleName(
     element.icon,
     element.label
