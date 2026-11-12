@@ -45,9 +45,10 @@ describe("withoutMarkerEntryAnimations", () => {
 
     expect(series.markLine).toEqual({ ...MARK_LINE, animationDuration: 0 })
     expect(series.markPoint).toEqual({ ...MARK_POINT, animationDuration: 0 })
-    // Only the duration skips the entry; `animation` stays unset so update
-    // tweens still run.
+    // Zero the enter duration only. `animation` and `animationDurationUpdate`
+    // stay unset, so in-place tweens still run.
     expect(series.markLine).not.toHaveProperty("animation")
+    expect(series.markLine).not.toHaveProperty("animationDurationUpdate")
     // The input option is left as is.
     expect(firstSeries(option).markLine).toBe(MARK_LINE)
     expect(MARK_LINE).not.toHaveProperty("animationDuration")
@@ -63,7 +64,7 @@ describe("withoutMarkerEntryAnimations", () => {
     expect(series.markLine).toBe(markLine)
   })
 
-  it("leaves markArea and series without markers unchanged", () => {
+  it("leaves markArea in place and adds no markers", () => {
     const option = lineChart({ markArea: MARK_AREA })
 
     const series = firstSeries(withoutMarkerEntryAnimations(option))

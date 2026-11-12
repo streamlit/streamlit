@@ -551,11 +551,10 @@ export function buildStreamlitEChartsTheme(
       label: bodyTextStyle,
       ...selectStyle,
     },
-    // Marker lines and points enter with a short ease-out so annotations don't
-    // draw the eye. ECharts' default draws a marker line over 1s at a constant
-    // speed, so a vertical line and its label crawl up from the plot's bottom.
-    // These keys apply to the marker components, so they override a chart-wide
-    // `animationDuration`; a chart-wide `animation: false` still turns them off.
+    // Markers enter with a short ease-out instead of ECharts' 1s linear line
+    // draw, where a vertical line and its label crawl up the plot. As component
+    // keys, these override a chart-wide `animationDuration`; `animation: false`
+    // still turns them off.
     markLine: MARKER_ENTRY_ANIMATION,
     markPoint: MARKER_ENTRY_ANIMATION,
     bar: selectStyle,
