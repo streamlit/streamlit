@@ -62,7 +62,7 @@ months = pd.date_range("2026-01-01", periods=6, freq="MS")
 baseline = actuals["actual"].iloc[-1] * (1 + growth / 100) ** np.arange(1, 7)
 forecast = pd.DataFrame({"month": months, "forecast": baseline.round()})
 
-# Planners adjust the forecast in place, and the chart follows
+# Planners edit the forecast, and the chart follows
 plan = st.data_editor(forecast, disabled=["month"], hide_index=True)
 st.line_chart(pd.concat([actuals, plan]), x="month")
 
