@@ -39,7 +39,7 @@ GitHub's REST run filters (`--branch`, `--status`) can return stale results. Che
 
 ### 2. Find the trigger
 
-- Reproduce locally. For Python, turn the warning into an error and run the suite: `uv run pytest lib/tests -n auto -W "error:<start of message>:<Category>"`. The failing tests are the triggers. Warnings logged through `logging` don't respond to `-W`; search the log for the test that ran when they appeared.
+- Reproduce locally. For Python, turn the warning into an error and run the suite: `uv run pytest lib/tests -W "error:<start of message>:<Category>"`. Run it serially like CI: some warnings come from process-wide state, and `-n auto` can hide them or the test that triggers them. The failing tests are the triggers. Warnings logged through `logging` don't respond to `-W`; search the log for the test that ran when they appeared.
 - For JavaScript, run the affected test files with Vitest and check the console output, or `make frontend-knip` for Knip notices.
 - Some warnings only show up on Linux, on the newest Python, or with the newest dependency versions. The CI runner is Linux. If a warning doesn't reproduce, reason from the message, the code, and the dependency version in `uv.lock`.
 
@@ -49,7 +49,7 @@ GitHub's REST run filters (`--branch`, `--status`) can return stale results. Che
 |----------|---------|
 | **fix** | Streamlit code calls a deprecated API that has a replacement. A test leaks resources (unclosed files, sockets, event loops, threads, observers), leaves a coroutine unawaited, watches a shared directory such as `/tmp`, or misses a mock. A test triggers the warning on purpose to cover an edge case, and a one-line scoped assertion or filter keeps it out of the run. Library code shows users a warning it shouldn't. React `act()` warnings and other console errors in the Vitest log. Knip configuration hints, such as stale `ignore` entries. |
 | **leave** (informational) | The annotation describes expected behavior and points to no problem: progress or summary notices from a tool, a library's one-time info message, or a warning whose only fix would make the test or the code worse. Leave these alone and say why in the summary. |
-| **report** | The warning comes from third-party internals that Streamlit can't avoid, and no compatible upgrade fixes it. The fix needs a `.github/workflows/` change, a major dependency upgrade, or a product decision. A commit on `develop` since the run, or an open PR, already handles it. This includes PRs on `ai-fix-ci-annotations-*` branches from earlier runs. For unavoidable third-party warnings, suggest a module-scoped `filterwarnings` entry like those in `lib/pyproject.toml`. |
+| **report** | The warning comes from third-party internals that Streamlit can't avoid. If a compatible upgrade would fix it, name the package and version so the weekly lock update or a maintainer picks it up. The fix needs a `.github/workflows/` change, a major dependency upgrade, or a product decision. A commit on `develop` since the run, or an open PR, already handles it. This includes PRs on `ai-fix-ci-annotations-*` branches from earlier runs. For unavoidable third-party warnings, suggest a module-scoped `filterwarnings` entry like those in `lib/pyproject.toml`. |
 
 ### 4. Fix and verify
 

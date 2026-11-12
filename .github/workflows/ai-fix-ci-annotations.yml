@@ -98,11 +98,13 @@ jobs:
               continue
             fi
 
+            # Fetch the jobs outside the process substitution, so an API error
+            # fails the step instead of reading as a missing job.
+            run_jobs="$(gh api "repos/$REPOSITORY/actions/runs/$run_id/jobs?per_page=100")"
             IFS=$'\t' read -r job_id job_url head_sha < <(
-              gh api "repos/$REPOSITORY/actions/runs/$run_id/jobs?per_page=100" |
-                jq -r --arg name "$job_name" '
-                  [.jobs[] | select(.name == $name and .conclusion == "success")]
-                  | first | [.id, .html_url, .head_sha] | @tsv'
+              jq -r --arg name "$job_name" '
+                [.jobs[] | select(.name == $name and .conclusion == "success")]
+                | first | [.id, .html_url, .head_sha] | @tsv' <<< "$run_jobs"
             ) || true
             if [ -z "${job_id:-}" ]; then
               echo "::warning::Run $run_id of $workflow has no successful '$job_name' job."
