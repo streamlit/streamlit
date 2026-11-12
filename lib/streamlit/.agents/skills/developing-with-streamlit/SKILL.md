@@ -29,9 +29,9 @@ Invoke this skill when the user's request involves:
 
 **IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Use `width="stretch"` or `width="content"` instead. Dataframes and most charts stretch to fill their container by default, but buttons, including `st.button`, `st.download_button`, `st.form_submit_button`, `st.link_button`, and `st.page_link`, default to `width="content"`; pass `width="stretch"` to make one fill its container. Remove `use_container_width` when you encounter it.
 
-**Accessibility (do not skip)** — details and the full verify checklist: `references/accessibility.md`:
-- Useful keyword `alt=` on author-content media/charts/maps/tables/dataframes/data editors that accept it (takeaway, not chart type; decorative `alt=""` only for `st.image` / `st.pyplot`). Do not pass `alt=` to `st.logo`.
-- Real widget labels (`help=` / placeholder are not substitutes); descriptive `st.set_page_config(page_title=...)` (filename-derived defaults rarely describe the app).
+**Accessibility (do not skip).** Rules and the verify checklist are in `references/accessibility.md`:
+- Give author-content displays a useful keyword-only `alt=` when the command supports it (takeaway, not chart type; decorative `alt=""` only for `st.image` / `st.pyplot`). Do not pass `alt=` to `st.logo`.
+- Real labels on input widgets (`help=` / placeholder are not substitutes); icon-only buttons use `""` plus a descriptive Material `icon=`; `st.chat_input` is named by its placeholder. Set a descriptive `st.set_page_config(page_title=...)`.
 - Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep stock tokens). Do not report the task done until the Step 4 accessibility gate passes.
 
 Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
@@ -42,9 +42,9 @@ Apply these defaults unless the user's app or request clearly needs a different 
 - Do not apply CSS to style the app unless the user actively requests it. Use native Streamlit features and `.streamlit/config.toml` to customize the appearance; see the [theming reference](references/theme.md). When the user does ask for CSS on one widget, set its `key=` and target the generated `.st-key-<key>` class in `st.html`, not private class names or `data-testid` selectors.
 - Prefer Material Symbols icons (`:material/icon_name:`) over emojis for navigation, buttons, and labels. Use emojis sparingly, only when they add a special touch.
 - Prefer sentence casing over title casing, including titles and widget labels.
-- Do not use empty widget labels; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired.
+- Do not use empty labels on input widgets; use `label_visibility="collapsed"` or `label_visibility="hidden"` when a visible label is not desired. Icon-only buttons and `st.chat_input` follow the Accessibility rules above.
 - When an alert (`st.info`, `st.success`, `st.warning`, or `st.error`) needs a headline, pass keyword-only `title=` instead of bolding the first line of the body or adding a heading above it.
-- For command-specific `alt=` patterns, see `references/media-display.md`, `references/charts.md`, and `references/data-display.md` (defaults are in the Accessibility block above and `references/accessibility.md`).
+- For command-specific `alt=` patterns, see `references/media-display.md`, `references/charts.md`, and `references/data-display.md`.
 - Use `st.container(border=True)` for simple visual grouping. Prefer `st.container(horizontal=True)` over `st.columns` for responsive row layouts; use `st.columns` for fixed grids, precise width ratios, or side-by-side cards that must share a width.
 - Align elements placed side by side: use `vertical_alignment="bottom"` for rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content (for example, all metrics with or all without `delta`) or `height="stretch"`. See "Aligning elements side by side" in `references/layouts.md`.
 - Prefer `st.navigation` and `st.Page` with an `app_pages/` folder over the legacy `pages/` directory, `st.page_link`, or other multipage-app v1 patterns.
@@ -148,7 +148,7 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **Accessibility, WCAG, screen readers, captions, contrast, or accessible apps** — what Streamlit’s defaults already cover vs author `alt`/labels/captions, theme override hazards, known library gaps, and a verify pass | read `references/accessibility.md` |
+| **Accessibility, WCAG, screen readers, captions, contrast, or accessible apps** — what Streamlit's defaults already cover vs author `alt`/labels/captions, theme override hazards, known library gaps, and a verify pass | read `references/accessibility.md` |
 | **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, native replacements for third-party components, and type checking | read `references/best-practices.md` and `references/accessibility.md` |
 | **App is slow, reruns take too long, data loads repeatedly, work is recomputed unnecessarily, or the page shows stale or shifting content while it loads** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, loading states such as `st.skeleton` that render the layout first, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers, BI patterns (filter toolbars bound to the URL, card headers with ⋮ menus, certified metrics, definition drawers), and layout-first loading where `st.skeleton` holds each slow card's size while parallel fragments load it | read `references/dashboards.md` and `references/accessibility.md` (Author must + Verify) |
