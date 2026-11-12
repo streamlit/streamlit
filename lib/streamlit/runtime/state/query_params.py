@@ -496,6 +496,30 @@ class QueryParams(MutableMapping[str, str]):
             self._query_params = old_value
             raise
 
+    def replace_unbound(
+        self,
+        _dict: Iterable[tuple[str, str | Iterable[str]]]
+        | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
+    ) -> None:
+        """Replace all unbound query params with the given ones.
+
+        Embed params and params bound to widgets are kept, matching
+        ``WidgetStateManager.filterParamsForPageChange`` in the frontend.
+        Setting a bound key raises, like ``update``, and leaves the params
+        unchanged.
+        """
+        old_value = self._query_params.copy()
+        self._query_params = {
+            key: value
+            for key, value in self._query_params.items()
+            if key.lower() in EMBED_QUERY_PARAMS_KEYS or self.is_bound(key)
+        }
+        try:
+            self.update(_dict)
+        except StreamlitAPIException:
+            self._query_params = old_value
+            raise
+
     def set_with_no_forward_msg(self, key: str, val: list[str] | str) -> None:
         self._query_params[key] = val
 

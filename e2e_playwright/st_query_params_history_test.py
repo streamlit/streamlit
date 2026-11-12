@@ -20,7 +20,10 @@ from e2e_playwright.conftest import build_app_url, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_checkbox,
+    expect_markdown,
+    expect_no_exception,
     expect_prefixed_markdown,
+    get_checkbox,
     get_radio_option,
     goto_app,
     select_radio_option,
@@ -166,3 +169,27 @@ def test_bound_widget_follows_url_on_browser_back_and_forward(
     expect(app).to_have_url(re.compile(r"[?&]number=5(?:&|$)"))
     expect(app).to_have_url(re.compile(r"[?&]value=2(?:&|$)"))
     expect_prefixed_markdown(app, "Selected:", "5", exact_match=True)
+
+
+def test_switch_page_with_bound_widget_value_in_url(
+    app: Page, app_base_url: str
+) -> None:
+    """st.switch_page works while the URL holds a bound widget value.
+
+    Unbound params are cleared and the bound param, whose widget lives only on
+    the page being left, is dropped on the target page.
+    """
+    goto_app(
+        app,
+        build_app_url(
+            app_base_url, path="/query-params", query={"number": "3", "foo": "bar"}
+        ),
+    )
+    expect_prefixed_markdown(app, "Selected:", "3", exact_match=True)
+
+    click_button(app, "Switch to History")
+
+    expect(get_checkbox(app, "Toggle this")).to_be_visible()
+    expect_markdown(app, "{'number': '1'}")
+    expect(app).to_have_url(build_app_url(app_base_url, query={"number": "1"}))
+    expect_no_exception(app)

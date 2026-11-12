@@ -39,6 +39,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
 )
+from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -389,8 +390,7 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
     assert isinstance(call_args, RerunData)
     assert call_args.page_script_hash == "target_page_hash"
     assert call_args.context_info == {"test_key": "test_value"}
-    mock_query_params.clear.assert_called_once_with()
-    mock_query_params.from_dict.assert_not_called()
+    mock_query_params.replace_unbound.assert_called_once_with()
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -409,11 +409,11 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
     query_params_cm.__exit__.return_value = False
     ctx.session_state.query_params.return_value = query_params_cm
 
-    def _from_dict_side_effect(value):
+    def _replace_unbound_side_effect(value):
         assert value == {"team": "streamlit"}
         ctx.query_string = "team=streamlit"
 
-    mock_query_params.from_dict.side_effect = _from_dict_side_effect
+    mock_query_params.replace_unbound.side_effect = _replace_unbound_side_effect
 
     mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
@@ -423,8 +423,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     switch_page(mocked_page, query_params={"team": "streamlit"})
 
-    mock_query_params.from_dict.assert_called_once_with({"team": "streamlit"})
-    mock_query_params.clear.assert_not_called()
+    mock_query_params.replace_unbound.assert_called_once_with({"team": "streamlit"})
 
     ctx.script_requests.request_rerun.assert_called_once()
     rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
@@ -454,11 +453,11 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
         ("stream", ["lit", "rocks"]),
     ]
 
-    def _from_dict_side_effect(value):
+    def _replace_unbound_side_effect(value):
         assert value == query_param_items
         ctx.query_string = "foo=bar&stream=lit&stream=rocks"
 
-    mock_query_params.from_dict.side_effect = _from_dict_side_effect
+    mock_query_params.replace_unbound.side_effect = _replace_unbound_side_effect
 
     mocked_page = MagicMock(spec=Page)
     mocked_page._script_hash = "target_page_hash"
@@ -468,14 +467,62 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     switch_page(mocked_page, query_params=query_param_items)
 
-    mock_query_params.from_dict.assert_called_once_with(query_param_items)
-    mock_query_params.clear.assert_not_called()
+    mock_query_params.replace_unbound.assert_called_once_with(query_param_items)
 
     ctx.script_requests.request_rerun.assert_called_once()
     rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
     assert isinstance(rerun_arg, RerunData)
     assert rerun_arg.query_string == "foo=bar&stream=lit&stream=rocks"
     assert rerun_arg.page_script_hash == "target_page_hash"
+
+
+@pytest.mark.parametrize(
+    ("switch_query_params", "expected_query_params"),
+    [
+        (None, {}),
+        ({"ref": "home"}, {"ref": "home"}),
+    ],
+)
+def test_st_switch_page_with_bound_query_param_in_url(
+    switch_query_params: dict[str, str] | None,
+    expected_query_params: dict[str, str],
+) -> None:
+    """st.switch_page works while the URL holds a bound widget value.
+
+    The widget only renders on the page being left, so the target page drops its
+    param along with the unbound ones.
+    """
+
+    def script() -> None:
+        import streamlit as st
+
+        def go() -> None:
+            st.switch_page(other_page, query_params=st.session_state.switch_params)
+
+        def home() -> None:
+            st.segmented_control(
+                "Product", ["A", "B"], default="A", key="product", bind="query-params"
+            )
+            st.button("Go", on_click=go)
+
+        def other() -> None:
+            st.text(f"query params: {st.query_params.to_dict()}")
+
+        home_page = st.Page(home, title="Home", default=True)
+        other_page = st.Page(other, title="Other")
+        st.navigation([home_page, other_page]).run()
+
+    at = AppTest.from_function(script)
+    at.query_params["product"] = "B"
+    at.query_params["utm"] = "x"
+    at.session_state.switch_params = switch_query_params
+    at.run()
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert [text.value for text in at.text] == [
+        f"query params: {expected_query_params}"
+    ]
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
@@ -506,8 +553,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
         switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
 
     ctx.script_requests.request_rerun.assert_not_called()
-    mock_query_params.clear.assert_not_called()
-    mock_query_params.from_dict.assert_not_called()
+    mock_query_params.replace_unbound.assert_not_called()
 
 
 @patch("streamlit.commands.execution_control.get_script_run_ctx")
