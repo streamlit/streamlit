@@ -509,10 +509,14 @@ class Secrets(Mapping[str, Any]):
                 ):
                     continue
                 try:
+                    # allow_nonexistent: a missing file is a change, not an
+                    # error. The watcher reloads when the file is removed and
+                    # keeps polling, so it also sees the file come back.
                     streamlit.watcher.path_watcher.watch_file(
                         file_path,
                         self._on_secrets_changed,
                         watcher_type="poll",
+                        allow_nonexistent=True,
                     )
                 except (StreamlitMaxRetriesError, FileNotFoundError):
                     # The file disappeared while the watcher was being installed.

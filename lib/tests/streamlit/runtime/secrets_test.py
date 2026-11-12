@@ -533,7 +533,7 @@ class SecretsDirectoryTest(unittest.TestCase):
         }
         for c in mock_watch_file.call_args_list:
             assert c.args[1] == self.secrets._on_secrets_changed
-            assert c.kwargs == {"watcher_type": "poll"}
+            assert c.kwargs == {"watcher_type": "poll", "allow_nonexistent": True}
 
     @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
@@ -1112,6 +1112,16 @@ def test_parse_directory_skips_nested_subdirectory(tmp_path: Path) -> None:
     assert mapping == {"my_secret": "abc"}
 
 
+def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
+    """Skip the test where symlinks are unavailable (they need privileges on Windows)."""
+    target = tmp_path / ".symlink_target"
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        (tmp_path / ".symlink_test").symlink_to(target)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks are not supported on this system")
+
+
 def _write_kubelet_secret_volume(
     volume: Path, files: dict[str, str], stamp: str
 ) -> None:
@@ -1133,6 +1143,7 @@ def _write_kubelet_secret_volume(
 def test_parse_directory_skips_hidden_entries(tmp_path: Path) -> None:
     """Hidden entries, such as kubelet's ``..data`` and ``..<timestamp>`` folders,
     are not secrets, and a hidden file at the top level does not raise."""
+    _skip_if_symlinks_not_supported(tmp_path)
     secret_root = tmp_path / "secret_root"
     _write_kubelet_secret_volume(
         secret_root / "api_key", {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
@@ -1153,6 +1164,7 @@ def test_parse_directory_skips_hidden_entries_in_projected_volume(
 ) -> None:
     """A single projected volume mapping items to ``<secret>/<field>`` puts the
     kubelet's hidden folders at the top level of the secrets directory."""
+    _skip_if_symlinks_not_supported(tmp_path)
     volume = tmp_path / "secrets"
     data_dir = volume / "..2026_01_01_00_00_00.1"
     (data_dir / "api_key").mkdir(parents=True)
@@ -1169,6 +1181,7 @@ def test_parse_directory_skips_hidden_entries_in_projected_volume(
 def test_kubelet_update_changes_watched_file_identity(tmp_path: Path) -> None:
     """The polling file watcher on a key link sees a kubelet update: the link
     resolves to the new file, whose modification time and content differ."""
+    _skip_if_symlinks_not_supported(tmp_path)
     from streamlit.watcher import util as watcher_util
 
     volume = tmp_path / "secrets" / "api_key"
@@ -1291,3 +1304,76 @@ def test_iter_on_secrets(mock_loaded_secrets: Secrets) -> None:
         "db_password",
         "subsection",
     }
+
+
+def test_rotated_secret_file_reloads_through_polling_watcher(tmp_path: Path) -> None:
+    """End to end through the real polling file watcher: a rotated file reloads the
+    value and sends one change signal, an identical rewrite does not, and a removed
+    file keeps being watched so its return is picked up."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "rotated_api_key" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+    # A second secret stays in place, as in a real deployment.
+    (secret_root / "other_secret").mkdir()
+    (secret_root / "other_secret" / "value").write_text("unchanged", encoding="utf-8")
+    mtime = field.stat().st_mtime
+
+    def rotate(value: str) -> None:
+        # Platforms write a temp file and rename it over the field file.
+        nonlocal mtime
+        tmp = secret_root / ".tmp"
+        tmp.write_text(value, encoding="utf-8")
+        mtime += 10
+        os.utime(tmp, (mtime, mtime))
+        os.replace(tmp, field)
+
+    tasks: list[Callable[[], None]] = []
+
+    def run_poll_tasks() -> None:
+        pending = tasks[:]
+        tasks.clear()
+        for task in pending:
+            task()
+
+    secrets = Secrets()
+    changes: list[str] = []
+    secrets.file_change_listener.connect(
+        lambda *_: changes.append("changed"), weak=False
+    )
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(secret_root)], "server.fileWatcherType": "poll"}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch(
+            "streamlit.watcher.polling_path_watcher.PollingPathWatcher._executor"
+        ) as executor,
+        patch("streamlit.watcher.polling_path_watcher.time.sleep"),
+    ):
+        executor.submit = tasks.append
+        try:
+            assert secrets["rotated_api_key"] == "v1"
+
+            rotate("v2")
+            run_poll_tasks()
+            assert secrets["rotated_api_key"] == "v2"
+            assert changes == ["changed"]
+
+            rotate("v2")
+            run_poll_tasks()
+            assert changes == ["changed"]
+
+            field.unlink()
+            run_poll_tasks()
+            assert secrets["rotated_api_key"] == {}
+            assert changes == ["changed", "changed"]
+
+            rotate("v3")
+            run_poll_tasks()
+            assert secrets["rotated_api_key"] == "v3"
+            assert secrets["other_secret"] == "unchanged"
+            assert changes == ["changed", "changed", "changed"]
+        finally:
+            secrets._reset()
