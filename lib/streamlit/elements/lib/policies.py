@@ -63,7 +63,8 @@ def check_session_state_rules(
     is not allowed.
 
     Additionally, if `global.disableWidgetStateDuplicationWarning` is False, logs a
-    warning when a widget has a default value but its value is also set via session state.
+    warning when a widget has a default value but the script body also set its value
+    via session state.
 
     Raises
     ------
@@ -82,16 +83,18 @@ def check_session_state_rules(
     if not writes_allowed:
         raise StreamlitValueAssignmentNotAllowedError(key=key)
 
+    # Setting a widget's key from a callback is the supported way to reset or
+    # change the widget, so only warn for values set in the script body.
     if (
         default_value is not None
         and not _shown_default_value_warning
+        and not session_state.was_set_by_callback(key)
         and not config.get_option("global.disableWidgetStateDuplicationWarning")
     ):
         _LOGGER.warning(
             'The widget with key "%s" was created with a default value but also had '
             "its value set via the Session State API.",
             key,
-            stack_info=True,
         )
         _shown_default_value_warning = True
 
