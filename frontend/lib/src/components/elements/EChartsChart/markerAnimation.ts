@@ -22,18 +22,13 @@ import { type EChartsOptionObject, mapOptionSeries } from "./CustomTheme"
 const ANIMATED_MARKER_KEYS = ["markLine", "markPoint"] as const
 
 /**
- * Skip the entry animation of every series' ``markLine`` and ``markPoint``,
- * unless the marker sets ``animationDuration`` itself.
+ * Skip ``markLine`` and ``markPoint`` entry animations when this option
+ * replaces one the chart already shows.
  *
- * Use it when an option replaces the one an instance already shows. A
- * ``notMerge`` ``setOption`` keeps the series views, so series tween to their
- * new values, but it rebuilds the marker views. Their entry animation would
- * replay on every such update: marker lines collapse and grow back from their
- * start point, and marker points pop in again, even where nothing moved.
- * Markers that first appear in this option also appear without one.
- *
- * Only the entry is skipped (``animationDuration: 0``), so markers still tween
- * with their series on later in-place updates, such as a legend toggle.
+ * ``notMerge`` keeps series views, so series still tween, but it rebuilds
+ * marker views and would replay their entry. Sets ``animationDuration`` to 0
+ * unless the marker already sets it. In-place updates, such as a legend toggle,
+ * still tween. Markers that first appear in this option skip their entry too.
  *
  * @param option The option about to replace the chart's current one.
  * @returns A copy of the option without marker entry animations.

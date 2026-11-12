@@ -45,7 +45,8 @@ describe("withoutMarkerEntryAnimations", () => {
 
     expect(series.markLine).toEqual({ ...MARK_LINE, animationDuration: 0 })
     expect(series.markPoint).toEqual({ ...MARK_POINT, animationDuration: 0 })
-    // Update tweens stay on.
+    // Only the duration skips the entry; `animation` stays unset so update
+    // tweens still run.
     expect(series.markLine).not.toHaveProperty("animation")
     // The input option is left as is.
     expect(firstSeries(option).markLine).toBe(MARK_LINE)

@@ -608,10 +608,10 @@ export function EChartsChart({
     }
     // Only a fresh instance plays the marker entry animations. A replacing
     // option would replay them, because `notMerge` rebuilds the marker views.
-    const optionToApply =
-      appliedOptionRef.current === null
-        ? preparedOption
-        : withoutMarkerEntryAnimations(preparedOption)
+    const isInstanceFirstOption = appliedOptionRef.current === null
+    const optionToApply = isInstanceFirstOption
+      ? preparedOption
+      : withoutMarkerEntryAnimations(preparedOption)
     // Mark this option as attempted up front so a rendering error isn't cleared
     // by a redundant retry against the same option.
     appliedOptionRef.current = preparedOption
