@@ -99,8 +99,14 @@ _MISSING_ENTRY_HINT: Final = (
 )
 
 
-def _is_hidden(name: str) -> bool:
-    return name.startswith(".")
+def _is_kubelet_entry(name: str) -> bool:
+    """Whether a name is one kubelet reserves in secret volumes.
+
+    Kubelet keeps a volume's data in ``..data`` and ``..<timestamp>`` entries.
+    Kubernetes rejects keys and paths starting with ``..``, so these never hold
+    user secrets, unlike single-dot names such as ``.dockerconfigjson``.
+    """
+    return name.startswith("..")
 
 
 def _missing_attr_error_message(attr_name: str) -> str:
@@ -259,15 +265,15 @@ class Secrets(Mapping[str, Any]):
         See: https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
         And: https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#passing-secrets-in-local-container-files
 
-        Hidden entries (names starting with ``.``) are skipped. Kubernetes keeps
-        the data of a secret volume in hidden ``..data`` and ``..<timestamp>``
-        entries next to the visible key links.
+        Entries whose names start with ``..`` are skipped. Kubernetes keeps the
+        data of a secret volume in ``..data`` and ``..<timestamp>`` entries next
+        to the key links.
         """
         secrets: dict[str, Any] = {}
         found_secrets_file = False
 
         for dirname in os.listdir(path):
-            if _is_hidden(dirname):
+            if _is_kubelet_entry(dirname):
                 continue
             sub_folder_path = os.path.join(path, dirname)
             if not os.path.isdir(sub_folder_path):
@@ -280,7 +286,7 @@ class Secrets(Mapping[str, Any]):
             sub_secrets = {}
 
             for filename in os.listdir(sub_folder_path):
-                if _is_hidden(filename):
+                if _is_kubelet_entry(filename):
                     continue
                 file_path = os.path.join(sub_folder_path, filename)
 
@@ -498,12 +504,12 @@ class Secrets(Mapping[str, Any]):
         """
         for dirname in os.listdir(path):
             sub_folder_path = os.path.join(path, dirname)
-            if _is_hidden(dirname) or not os.path.isdir(sub_folder_path):
+            if _is_kubelet_entry(dirname) or not os.path.isdir(sub_folder_path):
                 continue
             for filename in os.listdir(sub_folder_path):
                 file_path = os.path.join(sub_folder_path, filename)
                 if (
-                    _is_hidden(filename)
+                    _is_kubelet_entry(filename)
                     or not os.path.isfile(file_path)
                     or file_path in self._watched_directory_secret_files
                 ):

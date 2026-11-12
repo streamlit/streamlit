@@ -1125,9 +1125,9 @@ def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
 def _write_kubelet_secret_volume(
     volume: Path, files: dict[str, str], stamp: str
 ) -> None:
-    """Write files the way kubelet updates a secret volume: into a new hidden
-    ``..<timestamp>`` folder, then swap the ``..data`` link to it. The visible
-    keys are links into ``..data``."""
+    """Write files the way kubelet updates a secret volume: into a new
+    ``..<timestamp>`` folder, then swap the ``..data`` link to it. The keys are
+    links into ``..data``."""
     data_dir = volume / f"..{stamp}"
     data_dir.mkdir(parents=True)
     for name, value in files.items():
@@ -1140,30 +1140,31 @@ def _write_kubelet_secret_volume(
             (volume / name).symlink_to(f"..data/{name}")
 
 
-def test_parse_directory_skips_hidden_entries(tmp_path: Path) -> None:
-    """Hidden entries, such as kubelet's ``..data`` and ``..<timestamp>`` folders,
-    are not secrets, and a hidden file at the top level does not raise."""
+def test_parse_directory_skips_kubelet_entries(tmp_path: Path) -> None:
+    """Kubelet's ``..data`` and ``..<timestamp>`` entries are not secrets, while
+    single-dot keys such as ``.dockerconfigjson`` are user secrets and load."""
     _skip_if_symlinks_not_supported(tmp_path)
     secret_root = tmp_path / "secret_root"
     _write_kubelet_secret_volume(
         secret_root / "api_key", {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
     )
-    (secret_root / ".DS_Store").write_text("", encoding="utf-8")
-    (secret_root / "login").mkdir()
-    (secret_root / "login" / "username").write_text("jane", encoding="utf-8")
-    (secret_root / "login" / ".hidden").write_text("x", encoding="utf-8")
+    _write_kubelet_secret_volume(
+        secret_root / "regcred", {".dockerconfigjson": "{}"}, "2026_01_01_00_00_00.2"
+    )
+    (secret_root / ".dotted_secret").mkdir()
+    (secret_root / ".dotted_secret" / "value").write_text("kept", encoding="utf-8")
 
     mapping, found = Secrets()._parse_directory(str(secret_root))
 
     assert found is True
-    assert mapping == {"api_key": "v1", "login": "jane"}
+    assert mapping == {"api_key": "v1", "regcred": "{}", ".dotted_secret": "kept"}
 
 
-def test_parse_directory_skips_hidden_entries_in_projected_volume(
+def test_parse_directory_skips_kubelet_entries_in_projected_volume(
     tmp_path: Path,
 ) -> None:
     """A single projected volume mapping items to ``<secret>/<field>`` puts the
-    kubelet's hidden folders at the top level of the secrets directory."""
+    kubelet's ``..`` folders at the top level of the secrets directory."""
     _skip_if_symlinks_not_supported(tmp_path)
     volume = tmp_path / "secrets"
     data_dir = volume / "..2026_01_01_00_00_00.1"
