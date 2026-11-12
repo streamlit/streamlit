@@ -99,7 +99,7 @@ jobs:
           The dev environment is set up - you can run make commands.
 
           ## Task
-          Run the /improving-frontend-coverage skill to systematically increase frontend test coverage
+          Read .claude/skills/improving-frontend-coverage/SKILL.md and follow it to systematically increase frontend test coverage
           by approximately 0.2%.
 
           Implement all test improvements directly. Do not ask for confirmation.
@@ -197,7 +197,7 @@ jobs:
           The dev environment is set up - you can run make commands.
 
           ## Task
-          Run the /improving-python-coverage skill to systematically increase Python test coverage
+          Read .claude/skills/improving-python-coverage/SKILL.md and follow it to systematically increase Python test coverage
           by approximately 0.2%.
 
           Implement all test improvements directly. Do not ask for confirmation.

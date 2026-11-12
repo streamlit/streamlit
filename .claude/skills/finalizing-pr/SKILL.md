@@ -1,7 +1,6 @@
 ---
 name: finalizing-pr
 description: Finalizes branch changes for merging by simplifying code, running checks, reviewing changes, and creating a PR if needed. Use when ready to merge changes into the target branch.
-disable-model-invocation: true
 ---
 
 # Finalizing PR
@@ -69,7 +68,7 @@ Check if a PR exists for the current branch:
 gh pr view --json number,title,url
 ```
 
-**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!) and the title/description guidance in the `/reviewing-pr-description` skill. Add appropriate labels and fill in the body based on `.github/pull_request_template.md`.
+**If no PR exists**, create one following the guidelines in `wiki/pull-requests.md` (please read!) and the title/description guidance in `.claude/skills/reviewing-pr-description/SKILL.md`. Add appropriate labels and fill in the body based on `.github/pull_request_template.md`.
 
 **Link related issues:** Add `- Closes #12345` to the PR description for any known GitHub issues this PR resolves.
 

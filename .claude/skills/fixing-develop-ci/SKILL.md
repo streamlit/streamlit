@@ -1,6 +1,7 @@
 ---
 name: fixing-develop-ci
 description: Triages failed CI runs for a commit merged into develop and resolves them. Reruns the failed jobs when the failure is transient (flaky test, network or runner hiccup), fixes a real breakage on develop and opens a PR, or reports failures that need a maintainer, such as missing secrets or an external outage. Use when push CI on develop fails, when asked to investigate or fix a red develop commit, or when the ai-fix-develop-ci workflow runs.
+disable-model-invocation: true
 ---
 
 # Fixing CI on develop

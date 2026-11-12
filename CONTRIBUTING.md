@@ -111,22 +111,22 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
 | `fixing-streamlit-ci` | When CI checks fail on your branch or PR and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
-| `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
-| `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
-| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically. Manual only (`/implementing-feature`); not auto-invoked. |
+| `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer. Manual only (`/fixing-develop-ci`); not auto-invoked. |
+| `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer. Manual only (`/fixing-nightly`); not auto-invoked. |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting. Manual only (`/creating-pull-requests`); not auto-invoked. |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
 | `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
 | `sharing-pr-agent-artifacts` | When you have agent-generated artifacts (specs, plans) relevant for the current PR to share for reviewing |
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
-| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR. Manual only (`/finalizing-pr`); not auto-invoked. |
-| `generating-changelog` | When preparing release notes between two git tags |
+| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| `generating-changelog` | When preparing release notes between two git tags. Manual only (`/generating-changelog`); not auto-invoked. |
 | `releasing-streamlit` | Explicit `/releasing-streamlit <version>` only: drives a core or patch release from `wiki/release-process.md`, checking what is already done and pausing at each human gate |
 | `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases. Manual only (`/improving-frontend-coverage`); not auto-invoked. |
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases. Manual only (`/improving-python-coverage`); not auto-invoked. |
-| `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |
-| `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness |
+| `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites. Manual only (`/reviewing-readability`); not auto-invoked. |
+| `reviewing-pr-description` | When reviewing a PR's title and description for clarity and conciseness. Manual only (`/reviewing-pr-description`); not auto-invoked. |
 
 ### Subagents
 

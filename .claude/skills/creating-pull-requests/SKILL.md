@@ -60,7 +60,7 @@ Examples: `Add height parameter to plotly charts`, `Fix memory leak in dataframe
 
 ## Step 3: Compose and create PR
 
-When drafting the title and description below, follow the title/description guidance in the `/reviewing-pr-description` skill so they are clear and concise from the start.
+When drafting the title and description below, follow the title/description guidance in `.claude/skills/reviewing-pr-description/SKILL.md` so they are clear and concise from the start.
 
 ### 3.1 Determine labels
 

@@ -2,8 +2,6 @@
 name: simplifying-local-changes
 description: Simplify and refine code for clarity, consistency, and maintainability while preserving all functionality. Focuses on changes in the current branch.
 model: inherit
-skills:
-  - reviewing-readability
 memory: user
 ---
 
@@ -49,7 +47,7 @@ git diff "origin/$BASE_BRANCH"
 1. Determine the base branch and identify changed files (see above)
 2. Analyze changed code for improvement opportunities
 3. Apply simplifications while preserving behavior
-4. Evaluate comments, docstrings, and naming with the `/reviewing-readability` skill and apply its proposed rewrites (subject to the scope constraint below)
+4. Evaluate comments, docstrings, and naming by reading and following `.claude/skills/reviewing-readability/SKILL.md`, and apply its proposed rewrites (subject to the scope constraint below)
 5. Verify functionality remains unchanged
 6. Run `make check` or the `/checking-changes` skill to validate changes
 
@@ -66,7 +64,7 @@ git diff "origin/$BASE_BRANCH"
 
 ### Comments, docstrings, and naming
 
-Follow the `/reviewing-readability` skill to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.** When the branch introduced or changed a comment, rewrite it so it describes current behavior or why the code exists — not a previous state or change history.
+Follow `.claude/skills/reviewing-readability/SKILL.md` to evaluate comments, docstrings, and names (variables, functions, parameters) in the changed code, and apply its proposed rewrites. Scope constraint: **only touch comments and names on lines you are actively changing — never modify or remove comments in surrounding unchanged code.** When the branch introduced or changed a comment, rewrite it so it describes current behavior or why the code exists — not a previous state or change history.
 
 ### Python
 

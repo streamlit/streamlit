@@ -1,6 +1,7 @@
 ---
 name: generating-changelog
 description: Generates polished website release notes between two git tags for docs.streamlit.io. Use when preparing a new Streamlit release or reviewing changes between versions.
+disable-model-invocation: true
 ---
 
 # Generating changelog

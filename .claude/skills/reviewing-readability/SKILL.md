@@ -1,6 +1,7 @@
 ---
 name: reviewing-readability
 description: Evaluates comments, docstrings, and naming in code for readability by a developer new to the codebase — is the documentation clear and concise, and is non-obvious logic documented? Produces findings with concrete proposed rewrites (or additions where documentation is missing); the caller decides whether to apply them or present them as feedback. Use when reviewing a PR, branch, or set of changes for comment quality, naming clarity, or documentation readability. For a PR's title and description, use reviewing-pr-description instead.
+disable-model-invocation: true
 ---
 
 # Reviewing Readability

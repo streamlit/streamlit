@@ -1,6 +1,7 @@
 ---
 name: fixing-nightly
 description: Triages a failed Nightly Build run and resolves it. Reruns the failed jobs when the failure is transient (flaky test, network or runner hiccup), fixes a real breakage on develop and opens a PR, or reports failures that need a maintainer, such as PyPI publishing errors. Use when the nightly build fails, when asked to investigate or fix the nightly, or when the ai-fix-nightly workflow runs.
+disable-model-invocation: true
 ---
 
 # Fixing nightly builds

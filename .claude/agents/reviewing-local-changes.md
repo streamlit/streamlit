@@ -4,10 +4,6 @@ description: Review the current branch's changes for code quality, test coverage
 model: inherit
 readonly: true
 disallowedTools: Write, Edit
-skills:
-  - assessing-external-test-risk
-  - reviewing-readability
-  - reviewing-pr-description
 memory: user
 ---
 
@@ -138,7 +134,7 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
   - iframe embedding and `postMessage` handling
   - Sensitive data handling (secrets, credentials, tokens)
   - `st.login()`/`st.logout()` and OAuth token handling
-- External-test risk is explicitly assessed using `/assessing-external-test-risk`, and the review includes a clear `external_test` recommendation.
+- External-test risk is explicitly assessed by following `.claude/skills/assessing-external-test-risk/SKILL.md`, and the review includes a clear `external_test` recommendation.
 - Frontend changes follow accessibility best practices.
 - The code follows other best practices from the Streamlit code base.
 
@@ -154,8 +150,8 @@ Review this branch's changes and ensure the changes are bug-free, backwards comp
    checklist. If it does not, mark the Product Alignment section as not applicable and explain why
    briefly.
 6. Assess performance impact, including the backend and frontend hot paths.
-7. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
-8. Evaluate readability: run the `/reviewing-readability` skill on the changed code (comments, docstrings, naming) and the `/reviewing-pr-description` skill on the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
+7. Run an explicit external-test risk assessment by reading and following `.claude/skills/assessing-external-test-risk/SKILL.md`, and determine whether this branch should include `@pytest.mark.external_test` coverage.
+8. Evaluate readability: read and follow `.claude/skills/reviewing-readability/SKILL.md` for the changed code (comments, docstrings, naming) and `.claude/skills/reviewing-pr-description/SKILL.md` for the PR title/description if a PR exists, and include their findings and proposed rewrites in your review.
 9. Perform a thorough code review based on the checklist above.
 10. Write your review following the output format below.
 
@@ -218,7 +214,7 @@ meaningful performance impact, say why briefly.]
 
 ## Readability
 
-[Findings from the `/reviewing-readability` skill (comments, docstrings, naming) and, if a PR exists, the `/reviewing-pr-description` skill (title/description). Group by file; give the location, the issue, and the proposed rewrite.]
+[Findings from the `reviewing-readability` check (comments, docstrings, naming) and, if a PR exists, the `reviewing-pr-description` check (title/description). Group by file; give the location, the issue, and the proposed rewrite.]
 
 ## Recommendations
 

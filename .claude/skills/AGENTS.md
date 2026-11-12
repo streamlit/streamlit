@@ -47,7 +47,9 @@ Instructions for the AI agent...
 
 | Field | Description |
 |-------|-------------|
-| `disable-model-invocation` | Set to `true` so the skill is never auto-invoked. Claude Code and Cursor then run it only when the user types `/skill-name`. Use for workflows with side effects. |
+| `disable-model-invocation` | Set to `true` so the skill is never auto-invoked. Claude Code and Cursor then load it only when the user types `/skill-name`. Use for workflows with side effects or skills that only run as a step of another workflow. |
+
+An agent cannot load a skill with `disable-model-invocation: true` through its skill tool, and subagents cannot preload it in their `skills:` list. When another skill, subagent, or workflow prompt needs such a skill, tell the agent to read and follow its file path (e.g., `.claude/skills/reviewing-readability/SKILL.md`) instead of naming the skill or `/skill-name`.
 
 ## Naming conventions
 
