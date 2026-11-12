@@ -15,12 +15,12 @@ Do not rebuild headers, sidebars, menus, or toasts in raw HTML to “fix” acce
 ## Author must (always do these)
 
 - Pass keyword-only `alt=` on author-content media and data displays that accept it: `st.image`, `st.pyplot`, charts, maps, `st.video`, `st.audio`, `st.iframe`, `st.pdf`, `st.table`, `st.dataframe`, and `st.data_editor`. Short plain text that states the **takeaway or purpose** — not the chart type, not `"Image of…"`, not a data dump. Decorative `alt=""` is only for `st.image` / `st.pyplot`. Whitespace-only `alt` is ignored. Do not pass `alt=` to app-chrome commands such as `st.logo` (no such parameter).
-- On `st.echarts_chart`, `alt` replaces the data-derived description, so a vague name is worse than omitting `alt`. On `st.image` / `st.pyplot` with several images, pass a same-length sequence (use `None` to skip one); a single string raises an error.
+- On `st.echarts_chart`, `alt` replaces the data-derived description, so a vague name is worse than omitting `alt`. On `st.image` with several images, pass a same-length sequence (use `None` to skip one); a single string raises an error. `st.pyplot` takes one figure and one `alt` string (describe the whole figure, including subplots).
 - Give input widgets a real label. Never `label=""` on inputs. Use `label_visibility="collapsed"` or `"hidden"` on widgets that accept it when the visible UI already names the control. Do not use `help=` or `placeholder=` as a substitute for a label on those widgets.
 - Buttons have no `label_visibility`: for an icon-only button, pass `""` as the label with `icon=":material/…:"` and pick an icon whose name describes the action; otherwise use a visible text label. Avoid emoji-only labels.
 - `st.chat_input` has no `label`; its `placeholder` is the accessible name, so keep it descriptive and non-empty.
 - Set a descriptive browser tab title with `st.set_page_config(page_title=...)`; the filename-derived default (for example `"streamlit_app"`) rarely describes the app.
-- For native video files, supply captions with `st.video(..., subtitles=...)` when speech matters. YouTube embeds cannot take `subtitles=` (raises an error); rely on the YouTube video's own captions, or place a transcript next to the player. For `st.audio`, place a transcript nearby when the recording is essential content (there is no `transcript=` parameter).
+- For video with meaningful speech, provide synchronized captions: native files need `st.video(..., subtitles=...)`; YouTube embeds cannot take `subtitles=` (raises an error), so use a video that already has on-platform captions or switch to a captioned native file. A nearby transcript is supplementary and does not replace captions. For `st.audio`, place a transcript nearby when the recording is essential content (there is no `transcript=` parameter).
 - Do not encode meaning with color alone in charts, `st.metric` deltas, or status text. Pair color with text, pattern, or direct labels.
 - Put **critical** errors in `st.error` / on-page alerts when the user must notice them — not only in `st.toast`.
 - If you customize `theme.*` or use colored markdown (`:orange[…]`, status fills as plain text), re-check contrast (see [Theme override hazards](#theme-override-hazards)).
@@ -86,7 +86,7 @@ Scan the app you generated or edited:
 1. Every `st.image`, chart, map, media, iframe, PDF, table, dataframe, and `st.data_editor` that accepts `alt=` has a **useful** value (takeaway, not chart type); decorative `alt=""` only on image/pyplot when intentional. Do not pass `alt=` to `st.logo`.
 2. No empty labels on input widgets (icon-only buttons with a descriptive Material icon are fine; `st.chat_input` is named by its placeholder); collapsed labels are intentional, and `help=` / `placeholder` are not substitutes elsewhere.
 3. `st.set_page_config(page_title=...)` sets a descriptive tab title (not the filename-derived default).
-4. Native video with speech has `subtitles=`; YouTube uses on-platform captions or a nearby transcript; audio has a transcript path when needed.
+4. Video with speech has synchronized captions (`subtitles=` for native files, or on-platform captions / a captioned native alternative for YouTube) — a transcript alone does not pass; audio has a transcript path when needed.
 5. Meaning is not color-only (charts, metrics, status).
 6. Custom theme or colored markdown was contrast-checked, or you stayed on stock tokens.
 7. You did not add custom HTML/CSS to replace native chrome or to “fix” a known library gap above.
