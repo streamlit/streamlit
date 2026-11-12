@@ -1445,6 +1445,17 @@ _create_option(
         the same user key, and an error will be thrown on initialization if this is
         done.
 
+        Streamlit also reads these headers from agent API requests, over HTTP
+        at `/_stcore/agent/interact` and over MCP at `/_stcore/agent/mcp`, to
+        set st.user for agent sessions. See `server.enableAgentApi`.
+
+        Security: Streamlit trusts these header values as they arrive. Only
+        use this behind a proxy that sets the configured headers itself and
+        removes any copies a client sent, on WebSocket connections and on
+        requests to `/_stcore/agent/`. Otherwise, any client that can send
+        these headers, for example by reaching Streamlit directly, can claim
+        any identity.
+
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
 
@@ -1453,8 +1464,6 @@ _create_option(
     default_val={},
     # This is used by click. We accept a JSON string, so this is a str.
     type_=str,
-    # Hide until API is finalized.
-    visibility="hidden",
 )
 
 _create_option(
