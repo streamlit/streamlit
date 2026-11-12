@@ -141,15 +141,6 @@ bound_minmax_dt = st.datetime_input(
 )
 st.write("Bound minmax datetime:", bound_minmax_dt)
 
-bound_step30_dt = st.datetime_input(
-    "Bound step30 datetime",
-    value=BASE_DATETIME,
-    step=30,
-    key="bound_step30_dt",
-    bind="query-params",
-)
-st.write("Bound step30 datetime:", bound_step30_dt)
-
 st.datetime_input(
     "Datetime input narrow",
     BASE_DATETIME,
@@ -255,3 +246,13 @@ v_step30 = st.datetime_input(
     step=30,
 )
 st.write("Value step30:", v_step30)
+
+# After snapshotted widgets so adding it does not shift their layout.
+bound_step30_dt = st.datetime_input(
+    "Bound step30 datetime",
+    value=BASE_DATETIME,
+    step=30,
+    key="bound_step30_dt",
+    bind="query-params",
+)
+st.write("Bound step30 datetime:", bound_step30_dt)
