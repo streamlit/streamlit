@@ -1159,6 +1159,16 @@ class SliderEdgeCasesTest(DeltaGeneratorTestCase):
         ):
             st.slider("label", value=date(2020, 1, 1), step=1.5)
 
+    def test_date_value_with_numeric_args_raises(self) -> None:
+        """A date value with numeric bounds raises StreamlitInvalidParameterTypeError."""
+        with pytest.raises(
+            StreamlitInvalidParameterTypeError,
+            match="value and arguments with matching types",
+        ):
+            st.slider(
+                "label", value=date(2020, 1, 1), min_value=0, max_value=10, step=1
+            )
+
     def test_reversed_range_swaps_start_end(self):
         """A reversed range (start > end) gets swapped automatically."""
         assert st.slider("label", value=(80, 20), min_value=0, max_value=100) == (

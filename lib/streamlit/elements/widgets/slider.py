@@ -796,8 +796,10 @@ class SliderMixin:
         Returns
         -------
         int/float/date/time/datetime or tuple of int/float/date/time/datetime
-            The current value of the slider widget. The return type will match
-            the data type of the value parameter.
+            The current value of the slider widget. The return type matches
+            the data type of the value and bound parameters. Mixing ``int``
+            and ``float`` arguments makes a float slider that returns
+            ``float`` values.
 
         Examples
         --------

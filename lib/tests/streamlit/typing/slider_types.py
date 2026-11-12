@@ -56,8 +56,7 @@ if TYPE_CHECKING:
     )
     assert_type(slider("foo", max_value=10.0, value=5.0, step=1.0), float)
     assert_type(slider("foo", max_value=10.0, step=1.0), float)
-    # kwsingularfloat7 = slider("foo", step=1.0)  # noqa: ERA001
-    # ^ This actually raises an exception and is an invalid signature
+    assert_type(slider("foo", step=1.0), float)
 
     assert_type(slider("foo", min_value=5.0, max_value=10.0), float)
     assert_type(slider("foo", min_value=5.0, max_value=10.0, step=1.0), float)
