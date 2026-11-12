@@ -401,7 +401,8 @@ _create_option(
     description="""
         By default, Streamlit logs a warning when a user sets both a widget
         default value in the function defining the widget and a widget value via
-        the widget's key in `st.session_state`.
+        the widget's key in `st.session_state` in the script body. Values set
+        in widget callbacks don't trigger this warning.
 
         If you'd like to turn off this warning, set this to True.
     """,

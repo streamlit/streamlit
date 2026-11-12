@@ -678,7 +678,8 @@ class SessionState:
     )
 
     # User keys that widget callbacks set before the current script run started.
-    # Those values are still in _new_session_state when their widgets register.
+    # check_session_state_rules skips its duplicate-value warning for these keys,
+    # because setting a key from a callback is the supported way to reset a widget.
     _keys_set_by_callbacks: frozenset[str] = field(default_factory=frozenset)
 
     def __repr__(self) -> str:
