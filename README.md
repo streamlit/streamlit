@@ -73,12 +73,17 @@ if st.button("Submit for sign-off", type="primary"):
 
 ## What teams build
 
-- **Apps that compute:** forecasts with what-if levers, pricing and demand simulators,
-  risk models, and AI analysis over your data.
-- **Apps that act:** review and approval queues, sign-offs, and planning input, with
-  editable tables (`st.data_editor`), forms (`st.form`), and writeback.
-- **Advanced dashboards:** KPI and operating dashboards with drill-down and
-  cross-filtering over large data.
+- **[Apps that compute](https://apps-that-compute-demo.streamlit.app/):** forecasts with
+  what-if levers, pricing and demand simulators, risk models, and AI analysis over your
+  data.
+- **[Apps that act](https://apps-that-act-demo.streamlit.app/):** review and approval
+  queues, sign-offs, and planning input, with editable tables (`st.data_editor`), forms
+  (`st.form`), and writeback.
+- **[Advanced dashboards](https://advanced-dashboard-demo.streamlit.app/):** KPI and
+  operating dashboards with drill-down and cross-filtering over large data.
+
+Each links to a live reference app. Their source is in
+[streamlit/demos](https://github.com/streamlit/demos).
 
 ## Why Streamlit
 
