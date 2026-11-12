@@ -54,6 +54,13 @@ PathWatcher: PathWatcherType | None = None
 _pending_evictions: Final[set[str]] = set()
 _pending_evictions_lock: Final = threading.Lock()
 
+# Ensures each file change queues its evictions once, even though every
+# session's watcher reports it. Queuing again after one session has evicted and
+# started reimporting the modules would remove them mid-import in that
+# session's script thread. Maps path -> (modification time, queued names); a
+# new modification time replaces the entry.
+_queued_evictions_by_path: Final[dict[str, tuple[float, set[str]]]] = {}
+
 
 class LocalSourcesWatcher:
     """Watch local Python sources and pages to trigger app reruns.
@@ -180,8 +187,7 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            with _pending_evictions_lock:
-                _pending_evictions.update(modules_to_evict)
+            _queue_evictions(norm_filepath, modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -298,6 +304,42 @@ class LocalSourcesWatcher:
 
     def _exclude_blacklisted_paths(self, paths: set[str]) -> set[str]:
         return {p for p in paths if not self._folder_black_list.is_blacklisted(p)}
+
+
+def _queue_evictions(changed_path: str, module_names: set[str]) -> None:
+    """Queue module evictions for one file change.
+
+    Skip names that an earlier report of this change (same modification time)
+    already queued, including children of a queued package, which the flush
+    also evicts. Changes without a usable modification time always queue.
+    """
+    with _pending_evictions_lock:
+        # Read the time under the lock, so a delayed report can't replace a
+        # newer record that another session has already queued and flushed.
+        try:
+            modification_time = os.stat(changed_path).st_mtime
+        except OSError:
+            modification_time = 0.0
+
+        # Always queue a 0.0 time: s3fs/fuse always report 0.0, and a missing
+        # file is stored as 0.0 above, so those changes can't be told apart.
+        if modification_time > 0.0:
+            queued_time, queued_names = _queued_evictions_by_path.get(
+                changed_path, (0.0, set())
+            )
+            if queued_time != modification_time:
+                queued_names = set()
+            queued_prefixes = tuple(f"{name}." for name in queued_names)
+            module_names = {
+                name
+                for name in module_names
+                if name not in queued_names and not name.startswith(queued_prefixes)
+            }
+            _queued_evictions_by_path[changed_path] = (
+                modification_time,
+                queued_names | module_names,
+            )
+        _pending_evictions.update(module_names)
 
 
 def get_module_paths(module: ModuleType) -> set[str]:
