@@ -1,6 +1,6 @@
 # Streamlit WCAG theme & shell chrome inventory
 
-Last updated: 2026-11-11. Re-audit when default theme tokens, focus-ring derivation, library icon hit targets, or shared shell chrome behavior change.
+Last updated: 2026-11-11. Re-audit when default theme tokens, focus-ring derivation, library icon hit targets, or shared shell chrome behavior changes.
 
 This page is the **theme & shell chrome** inventory. For per-command `st.*` tables, see the [command inventory](accessibility-wcag.md).
 
@@ -13,7 +13,7 @@ This inventory records how Streamlit’s default light and dark themes enable or
 | [Default theme floors](#default-theme-floors) | Minimum ratios any shipped default palette must meet |
 | [Known library gaps](#known-library-gaps) | What fails today and is a candidate fix / raise-default |
 | [Current defaults](#current-defaults) | Measured light/dark pass/fail for today’s `develop` theme |
-| [Shared shell surfaces](#shared-shell-surfaces) | Per-surface keyboard / focus / name / status accounting for the app frame |
+| [Shared shell surfaces](#shared-shell-surfaces) | Per-surface keyboard, focus, name, and status scores for the app frame |
 | [Theme config notes](#theme-config-notes) | Non-obvious `theme.*` defaults (dataframe, `showWidgetBorder`) and what this page does **not** score |
 
 Public config keys live in `lib/streamlit/config.py` (`theme`, `theme.light` / `theme.dark`, sidebar sections). Theme floors score **roles** (how color is used), not every key as its own row. Shared shell surfaces score **library-owned frame regions**.
@@ -26,14 +26,14 @@ The theme floors and current-defaults scorecards cover contrast, target size, an
 
 This is not a full shell or app audit. Still unscored here: **1.4.4**, **1.4.10**, **1.4.12**, **2.4.2**, **2.4.11 Focus Not Obscured**, and **3.1.1**. Command-level gaps stay on the [command inventory](accessibility-wcag.md). This inventory still does not claim full app conformance.
 
-In theme scorecard tables, rows are ordered **Library blocks** first, then **Library meets**. Light and dark are scored in separate columns when they differ. Shared shell tables follow Level A by number, then Level AA by number (for example A: 2.1.1, 2.4.1, 2.4.3, 4.1.2; then AA: 1.4.3, 1.4.11, 2.4.7, 2.5.8, 4.1.3).
+In theme scorecard tables, rows are ordered **Library blocks** first, then **Library meets**. Light and dark are scored in separate columns when they differ. Shared shell tables list Level A criteria first, then Level AA, each in success-criterion order.
 
 | Criterion | Level | Where scored | Threshold / focus used here |
 | --------- | ----- | ------------ | --------------------------- |
 | **1.4.3 Contrast (Minimum)** | AA | Theme floors | Normal text ≥ 4.5:1 vs adjacent background |
 | **1.4.11 Non-text Contrast** | AA | Theme floors (+ shell notes) | UI components / graphical objects needed to identify controls ≥ 3:1 |
 | **2.1.1 Keyboard** | A | Shared shell surfaces | Frame controls operable without a pointer |
-| **2.4.1 Bypass Blocks** | A | Theme floors + shell | Mechanism to skip repeated chrome (landmarks and/or skip link) |
+| **2.4.1 Bypass Blocks** | A | Current defaults + Shared shell surfaces | Mechanism to skip repeated chrome (landmarks and/or skip link) |
 | **2.4.3 Focus Order** | A | Shared shell surfaces | Meaningful sequence; collapsed / overlay focus not stranded |
 | **2.4.7 Focus Visible** | AA | Shared shell surfaces | Visible focus indicator when a control has keyboard focus |
 | **2.5.8 Target Size (Minimum)** | AA | Theme floors | CSS box ≥ 24×24 CSS px (see [2.5.8](#258-target-size-minimum) for exceptions) |
@@ -43,8 +43,8 @@ In theme scorecard tables, rows are ordered **Library blocks** first, then **Lib
 | Bucket | Meaning |
 | ------ | ------- |
 | **Library blocks** | The shipped default fails this criterion. Public `theme.*` overrides can change it, but this page still counts a failing default as a library gap: a candidate for a token or chrome fix, or a later product spec. On the [command inventory](accessibility-wcag.md), the same label means no public composition can meet the criterion. |
-| **Author must** | The author sets this value (custom `theme.*` overrides, chart mark colors, `theme.baseFontSize`). A failing shipped default stays **Library blocks** until that default changes. |
-| **Library meets** | Default light and dark already meet the ratio or size for that row. |
+| **Author must** | The author sets this value (custom `theme.*` overrides, chart mark colors, `theme.baseFontSize`). A failing shipped default stays **Library blocks** until that default changes. On shared shell rows, the author supplies the accessible-name text (`alt` or caption). |
+| **Library meets** | Default light and dark already meet the criterion for that row. |
 | **Deferred** | In scope for this inventory, but not measured or fully audited yet (no pass/fail claim). |
 | **Not this surface** | Host chrome (Community Cloud toolbar), OS, or author plot pixels — do not open a Streamlit theme spec. |
 
@@ -89,8 +89,9 @@ Sorted Level A then Level AA, and by success-criterion number within each level.
 
 - **2.1.1 Sidebar collapse control is hover-revealed.** Above the `sm` breakpoint the collapse control uses `visibility: hidden` until pointer hover (`StyledCollapseSidebarButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. Expand from the header remains available when collapsed. See [Sidebar chrome](#sidebar-chrome).
 - **2.1.1 Sidebar nav section headers are pointer-only.** `NavSection` renders `StyledSidebarNavSectionHeader` as a `<header onClick={onToggle}>` with no button role, tab stop, or key handler, so keyboard users cannot expand or collapse a section. See [Page navigation](#page-navigation).
-- **2.4.3 Collapsed sidebar stays in the tab and assistive-technology order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so focusable controls inside can still be reached. See [Sidebar chrome](#sidebar-chrome).
+- **2.4.3 Collapsed sidebar stays in the tab and assistive-technology order.** Collapsed chrome uses `translateX` off-screen without `inert` / `aria-hidden` on the sidebar section, so Tab and assistive technology can still reach focusable descendants while the sidebar is off-screen. See [Sidebar chrome](#sidebar-chrome).
 - **4.1.2 Sidebar nav section toggles lack name/role/state.** The same `NavSection` headers have no button role and no `aria-expanded`; `isExpanded` only drives styling and whether children render. See [Page navigation](#page-navigation).
+- **4.1.2 `st.toast` alertdialog has no accessible name.** React Aria `useToast` sets `aria-labelledby` to a title id that `StreamlitToastItem` never mounts; close-button “Close” does not name the toast. See [Toast / skills nudge](#toast--skills-nudge).
 
 ### Level AA
 
@@ -104,6 +105,7 @@ Sorted Level A then Level AA, and by success-criterion number within each level.
 - **1.4.11 Enabled close icons that paint `fadedText40` fail 3:1 in light.** Toast and skills-nudge close controls; dark meets. See the [1.4.11 scorecard](#1411-non-text-contrast).
 - **2.4.7 Unlocked element / dataframe toolbars stay at `opacity: 0` under keyboard focus of their buttons.** `StyledToolbarWrapper` shows on wrapper `:hover` / `:focus-visible` and parent `:focus-visible`, but not `:focus-within`, so Tab into a toolbar action can leave the control focused and invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337)). See [Element toolbar](#element-toolbar) and [Dataframe toolbar](#dataframe-toolbar).
 - **2.4.7 Sidebar and toast View more/less buttons clear focus styling.** `StyledViewButton` sets `outline` / `boxShadow` to `none` on `:focus` with no replacement indicator (`Navigation/styled-components.ts`, `Toast/styled-components.tsx`). Distinct from soft-ring **1.4.11** contrast failures. See [Page navigation](#page-navigation) and [Toast / skills nudge](#toast--skills-nudge).
+- **4.1.3 `st.toast` is not announced as a status message.** React Aria’s toast region is a `role="region"` landmark (not live). Announcing `role="alert"` / `aria-atomic` props live on `contentProps` / `ToastContent`, which `StreamlitToastItem` never renders — so not moving focus is not enough for **4.1.3**. The skills nudge does meet (`role="status"` + `aria-live="polite"`). See [Toast / skills nudge](#toast--skills-nudge).
 - **2.5.8 Heading link icon and default help tooltip triggers are ~16×16 CSS px** (`iconSizes.base`, no 24px minimum hit box). This inventory scores the CSS box only. Heading link and heading help are 16px targets with an 8px (`spacing.sm`) gap, so the 24px spacing circles are tangent. Main-menu trigger, sidebar expand/collapse, and element toolbar actions ([#17211](https://github.com/streamlit/streamlit/pull/17211)) meet 2.5.8 at the default 16px root.
 - **2.5.8 Visible checkbox, radio, and toggle labels, plus collapsed checkbox/toggle tracks, are under 24×24 CSS px.** Label paragraphs inherit `fontSizes.sm` (14px) from `isLabel`; see the [2.5.8 scorecard](#258-target-size-minimum).
 
@@ -226,7 +228,7 @@ Expand/collapse chrome and collapsed-state behavior only. Author widgets rendere
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library blocks | Above the `sm` breakpoint, **Collapse** uses `visibility: hidden` until pointer hover (`StyledCollapseSidebarButton` / `showSidebarCollapse`); there is no keyboard shortcut to collapse. On small viewports the control stays visible. **Expand** remains keyboard-operable from the header when collapsed. |
-| 2.4.3 Focus Order | A | Library blocks | Collapsed sidebar uses `transform: translateX(...)` with `min/max-width: 0` but is not marked `inert` / `aria-hidden`, so focusable descendants can remain in the tab and assistive-technology order while off-screen (`StyledSidebar`). |
+| 2.4.3 Focus Order | A | Library blocks | Collapsed sidebar uses `transform: translateX(...)` with `min/max-width: 0` but is not marked `inert` / `aria-hidden`, so Tab and assistive technology can still reach focusable descendants while the sidebar is off-screen (`StyledSidebar`). |
 | 4.1.2 Name, Role, Value | A | Library meets | Sidebar `aria-label="Sidebar"`; collapse `aria-label="Collapse sidebar"` with `aria-expanded` / `aria-controls`; expand `aria-label="Expand sidebar"`. |
 | 2.4.7 Focus Visible | AA | Library meets | When the collapse control is shown, soft muted focus is drawn; contrast fails **1.4.11** — see [1.4.11](#1411-non-text-contrast). Hover-gated reachability is scored under **2.1.1**, not here. |
 | 2.5.8 Target Size | AA | Library meets | Collapse / expand share `headerItemHeight` sizing at the default root. |
@@ -239,7 +241,7 @@ Sidebar multipage nav and header **top nav** / overflow menus. Landmark coverage
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library blocks | Sidebar nav **section headers** (`NavSection` / `StyledSidebarNavSectionHeader`) toggle only via `onClick` — no button role, tab stop, or key handler. Page links and top-nav section menus are keyboard-operable ([#17423](https://github.com/streamlit/streamlit/pull/17423)). |
 | 2.4.1 Bypass Blocks | A | Library meets | Named `navigation` landmark `aria-label="App pages"` when multipage nav is shown ([#17418](https://github.com/streamlit/streamlit/pull/17418)). |
-| 2.4.3 Focus Order | A | Library meets | Top-nav menus restore expected tab behavior on Tab / Shift+Tab dismiss (covered in TopNavSection tests). |
+| 2.4.3 Focus Order | A | Library meets | Top-nav Tab / Shift+Tab dismiss moves to the adjacent tab stop. Collapsed-sidebar tab order is scored under [Sidebar chrome](#sidebar-chrome). |
 | 4.1.2 Name, Role, Value | A | Library blocks | Sidebar nav **section toggles** have no button role and no `aria-expanded` (`NavSection`). Page links expose names from page titles; top-nav overflow uses `role="menu"` / `menuitem` where applicable. |
 | 2.4.7 Focus Visible | AA | Library blocks | Sidebar **View more/less** (`StyledViewButton`) clears `outline` / `boxShadow` on focus with no replacement indicator. Soft muted rings on other sidebar / top-nav controls are drawn (contrast under **1.4.11**); page links use a background change rather than that ring. |
 
@@ -249,8 +251,8 @@ Sidebar multipage nav and header **top nav** / overflow menus. Landmark coverage
 
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
-| 2.1.1 Keyboard | A | Library meets | Modals dismiss with keyboard when closeable; popover trigger is a button; menu keyboard paths as above. |
-| 2.4.3 Focus Order | A | Library meets | React Aria `ModalOverlay` contains focus while open and restores it on close (`isDismissable` only controls outside-click / Escape dismiss). `st.popover` returns focus to its trigger on Escape; an outside click closes without moving focus. Full audit of every portaled overlay is not claimed. |
+| 2.1.1 Keyboard | A | Library meets | Modals dismiss with keyboard when closeable; popover trigger is a button; menu keyboard paths match [Main menu](#main-menu). |
+| 2.4.3 Focus Order | A | Library meets | React Aria `ModalOverlay` contains focus while open and restores it on close. `closeable` gates outside-click and Escape dismiss (`isDismissable` / `isKeyboardDismissDisabled`); it does not affect focus containment. `st.popover` returns focus to its trigger on Escape; an outside click closes without moving focus. Full audit of every portaled overlay is not claimed. |
 | 4.1.2 Name, Role, Value | A | Library meets | Dialogs expose dialog semantics via the shared Modal; popover trigger is named from the author label (**Author must** for useful label text); menus as under Main menu / Page navigation. |
 | 2.4.7 Focus Visible | AA | Library meets | Soft rings are drawn on many triggers / items (contrast under **1.4.11**); solid `focusRingOutline` paths meet contrast when used. |
 
@@ -261,11 +263,11 @@ Sidebar multipage nav and header **top nav** / overflow menus. Landmark coverage
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Close / nudge actions are keyboard-operable buttons. |
-| 4.1.2 Name, Role, Value | A | Library meets | Close controls expose accessible names (e.g. “Close”). |
+| 4.1.2 Name, Role, Value | A | Library blocks | Close controls expose accessible names (e.g. “Close”). `st.toast` itself uses `role="alertdialog"` with `aria-labelledby` pointing at a title id that `StreamlitToastItem` never mounts, so the toast has no accessible name. Skills nudge content is named in the status region. |
 | 1.4.3 Body text | AA | Library meets | Nudge / toast copy uses body or muted text tokens already covered by the **1.4.3** secondary/muted row when those tokens apply. |
 | 1.4.11 Close icon | AA | Library blocks (light) | Enabled close paints `fadedText40` (~2.2:1 light / ~3.7:1 dark). |
 | 2.4.7 Focus Visible | AA | Library blocks | Toast **view more/less** (`StyledViewButton`) clears outline / border / shadow on focus with no replacement indicator. Soft `focusRing` on the toast card / close control and skills-nudge `focusRingMuted` are drawn (contrast under **1.4.11**) but do not identify the focused view-more action. |
-| 4.1.3 Status Messages | AA | Library meets | Skills nudge uses `role="status"` + `aria-live="polite"`. Toasts render through React Aria’s toast region without moving focus. |
+| 4.1.3 Status Messages | AA | Library blocks | Skills nudge meets (`role="status"` + `aria-live="polite"`). `st.toast` does not: the React Aria toast region is a landmark, not a live region, and `StreamlitToastItem` never renders `ToastContent`, so announcing `role="alert"` / `aria-atomic` props never reach the DOM. Not moving focus alone does not satisfy **4.1.3**. |
 
 ### Element toolbar
 
@@ -274,8 +276,8 @@ Streamlit element toolbar (Fullscreen, Download, …). Naming detail for command
 | Criterion | Level | Status | Notes |
 | --------- | ----- | ------ | ----- |
 | 2.1.1 Keyboard | A | Library meets | Actions are buttons; reachable by Tab when present. |
-| 4.1.2 Name, Role, Value | A | Author must | Generic action names always exist; distinctive names need non-blank element `alt` or caption ([#17211](https://github.com/streamlit/streamlit/pull/17211)). |
-| 2.4.7 Focus Visible | AA | Library blocks | Unlocked toolbars default to `opacity: 0` and do not use `:focus-within`, so keyboard focus on an action can leave it invisible ([#17337](https://github.com/streamlit/streamlit/issues/17337) pattern; shared `StyledToolbarWrapper`). |
+| 4.1.2 Name, Role, Value | A | Author must | Generic action names always exist; a distinctive name needs non-blank `alt`, or a single image’s rendered caption ([#17211](https://github.com/streamlit/streamlit/pull/17211)). |
+| 2.4.7 Focus Visible | AA | Library blocks | Unlocked toolbars default to `opacity: 0` and `StyledToolbarWrapper` does not reveal on `:focus-within`, so keyboard focus on an action can leave it invisible (same root cause as [#17337](https://github.com/streamlit/streamlit/issues/17337)). |
 | 2.5.8 Target Size | AA | Library meets | `max(1.5rem, 24px)` ([#17211](https://github.com/streamlit/streamlit/pull/17211)). |
 
 ### Dataframe toolbar

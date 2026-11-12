@@ -8,7 +8,7 @@ How Streamlit enables or blocks authors from meeting **WCAG 2.2 Level A and AA**
 
 Accessibility audits (US Section 508, EN 301 549, and similar) evaluate the app an author ships, not Streamlit itself. Use this inventory to see, per command, whether public Streamlit **blocks** a criterion, **meets** it already, leaves it to the **author**, or treats it as **not this surface**.
 
-**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus the shared chrome those commands use (accessible names for 4.1.2 and element-toolbar target size for 2.5.8). Other widgets are out of scope until audited. Theme floors (1.4.3, 1.4.11, 2.5.8) and shell **2.4.1** are on the [theme inventory](accessibility-theme.md). Library-owned frame regions (header, sidebar, page nav, main menu, dialogs/popovers, toasts, toolbars) are scored under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Page-level criteria such as 1.4.4 / 1.4.10 / 1.4.12 / 2.4.2 / 3.1.1 remain unscored.
+**Current documented coverage:** media, charts, maps, data, embeds, and images audited during the `alt` rollout, plus the shared chrome those commands use (accessible names for 4.1.2 and element-toolbar target size for 2.5.8). Other widgets are out of scope until audited. Theme floors (1.4.3, 1.4.11, 2.5.8) and shell **2.4.1** are on the [theme inventory](accessibility-theme.md). Library-owned frame regions (header, sidebar, page nav, main menu, dialogs/popovers, toasts, toolbars) are scored under [Shared shell surfaces](accessibility-theme.md#shared-shell-surfaces). Page-level criteria such as 1.4.4 / 1.4.10 / 1.4.12 / 2.4.2 / 2.4.11 / 3.1.1 remain unscored.
 
 ## What we are scoring
 
@@ -206,7 +206,7 @@ Scored: 1.1.1 (dataframe non-text cells), 1.3.1, 2.1.1, 2.1.2, 2.4.7, 2.5.7, 3.3
 | 2.1.2 No Keyboard Trap | A | Library meets | Streamlit leaves Glide's focus trap off, so Tab can leave the grid. Overlay focus has no end-to-end coverage. |
 | 3.3.2 Labels or Instructions | A | Author must | For `st.data_editor`, `alt` is the grid-level name hook when one is needed beyond visible headers. |
 | 4.1.2 Name, Role, Value | A | Author must | Grid-level name from `alt`; Glide keeps `role="grid"` on the canvas. Toolbar via Shared chrome. |
-| 2.4.7 Focus Visible | AA | Library meets | Glide `drawFocusRing` defaults true (Streamlit does not disable); menus use `:focus-visible` + theme focus ring. |
+| 2.4.7 Focus Visible | AA | Library blocks | Grid focus ring is drawn (Glide `drawFocusRing`); unlocked toolbar actions stay at `opacity: 0` under keyboard focus — see [Dataframe toolbar](accessibility-theme.md#dataframe-toolbar) ([#17337](https://github.com/streamlit/streamlit/issues/17337)). Menus use `:focus-visible` + theme focus ring. |
 | 2.5.7 Dragging Movements | AA | Library blocks | Arbitrary column resize/reorder stay drag-only. The column menu offers single-pointer Autosize and Pin. Fill-down has Ctrl/Cmd+D (`downFill`) for keyboard under 2.1.1; a non-dragging pointer alternative is still required for 2.5.7. The container height handle (`Resizable`, on unless the grid is in a horizontal layout or content-width outside the root) is also drag-only. |
 | 4.1.3 Status Messages | AA | Library blocks | No `aria-live` for sort/search/edit/lazy-load feedback. |
 
