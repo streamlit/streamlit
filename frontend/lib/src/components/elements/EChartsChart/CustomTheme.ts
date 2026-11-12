@@ -295,6 +295,12 @@ const ECHARTS_TITLE_ITEM_GAP_PX = 10
 /** ECharts' default treemap breadcrumb height. */
 const ECHARTS_BREADCRUMB_HEIGHT_PX = 22
 
+/** The entry animation of marker lines and points in the Streamlit theme. */
+const MARKER_ENTRY_ANIMATION = {
+  animationDuration: 300,
+  animationEasing: "cubicOut",
+}
+
 /**
  * Treemap insets for the Streamlit theme.
  *
@@ -545,6 +551,12 @@ export function buildStreamlitEChartsTheme(
       label: bodyTextStyle,
       ...selectStyle,
     },
+    // Markers enter with a short ease-out instead of ECharts' 1s linear line
+    // draw, where a vertical line and its label crawl up the plot. As component
+    // keys, these override a chart-wide `animationDuration`; `animation: false`
+    // still turns them off.
+    markLine: MARKER_ENTRY_ANIMATION,
+    markPoint: MARKER_ENTRY_ANIMATION,
     bar: selectStyle,
     pictorialBar: selectStyle,
     scatter: selectStyle,

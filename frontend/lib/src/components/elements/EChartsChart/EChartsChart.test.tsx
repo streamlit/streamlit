@@ -820,6 +820,53 @@ describe("EChartsChart", () => {
     expect(mockChart.dispose).not.toHaveBeenCalled()
   })
 
+  it("plays marker entry animations only for an instance's first option", () => {
+    const createMarkerElement = (
+      data: number[],
+      overrides: Partial<EChartsChartProto> = {}
+    ): EChartsChartProto =>
+      createElement({
+        spec: JSON.stringify({
+          xAxis: { type: "category", data: ["A", "B", "C"] },
+          yAxis: { type: "value" },
+          series: [
+            {
+              type: "line",
+              data,
+              markLine: { data: [{ name: "Launch", xAxis: "B" }] },
+              markPoint: { data: [{ type: "max" }] },
+            },
+          ],
+        }),
+        ...overrides,
+      })
+    const appliedSeries = (
+      callIndex: number
+    ): Record<string, Record<string, unknown>> =>
+      mockChart.setOption.mock.calls[callIndex][0].series[0]
+
+    const { rerender } = render(
+      <Wrapper element={createMarkerElement([1, 2, 3])} />
+    )
+    expect(appliedSeries(0).markLine).not.toHaveProperty("animationDuration")
+    expect(appliedSeries(0).markPoint).not.toHaveProperty("animationDuration")
+
+    // A rerun with new data replaces the option on the same instance.
+    rerender(<Wrapper element={createMarkerElement([3, 2, 1])} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(appliedSeries(1).markLine.animationDuration).toBe(0)
+    expect(appliedSeries(1).markPoint.animationDuration).toBe(0)
+
+    // A recreated instance plays them again.
+    const svgElement = createMarkerElement([1, 2, 3], {
+      renderer: EChartsChartProto.Renderer.SVG,
+    })
+    rerender(<Wrapper element={svgElement} />)
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(mockChart.setOption).toHaveBeenCalledTimes(3)
+    expect(appliedSeries(2).markLine).not.toHaveProperty("animationDuration")
+  })
+
   it("renders a styled error instead of throwing when setOption fails", () => {
     mockChart.setOption.mockImplementationOnce(() => {
       throw new Error("invalid option")

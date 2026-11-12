@@ -68,6 +68,7 @@ import {
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
 import { applyLargeDataDefaults } from "./largeDataDefaults"
+import { withoutMarkerEntryAnimations } from "./markerAnimation"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -605,6 +606,12 @@ export function EChartsChart({
       setInstanceGeneration(generation => generation + 1)
       return
     }
+    // Only a fresh instance plays the marker entry animations. A replacing
+    // option would replay them, because `notMerge` rebuilds the marker views.
+    const isInstanceFirstOption = appliedOptionRef.current === null
+    const optionToApply = isInstanceFirstOption
+      ? preparedOption
+      : withoutMarkerEntryAnimations(preparedOption)
     // Mark this option as attempted up front so a rendering error isn't cleared
     // by a redundant retry against the same option.
     appliedOptionRef.current = preparedOption
@@ -618,7 +625,7 @@ export function EChartsChart({
       if (containerRef.current && isNullOrEmptyString(element.alt)) {
         containerRef.current.removeAttribute("aria-label")
       }
-      chartInstance.setOption(preparedOption as echarts.EChartsOption, {
+      chartInstance.setOption(optionToApply as echarts.EChartsOption, {
         notMerge: true,
       })
       if (containerRef.current) {
