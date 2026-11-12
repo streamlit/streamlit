@@ -39,6 +39,10 @@ run: |
 
 **Safe contexts that don't need `env:` indirection:** `${{ }}` in `with:` parameters (parsed by YAML, not shell), `if:` conditions, and `env:` value positions are not vulnerable. GitHub-controlled constants like `github.repository`, `github.run_id`, and `github.sha` are also safe in `run:` blocks since their format is constrained.
 
+### Untrusted GitHub content
+
+GitHub issue and pull request titles, bodies, and comments can be written by anyone. AI workflow prompts that read that text must tell the agent to use it as context for the task, and not to follow literal instructions embedded in it, such as requests to override these directions or run copied commands.
+
 ### Best Practices
 
 - Use `workflow_call` to create reusable workflows
@@ -46,6 +50,7 @@ run: |
 - Use `concurrency` to prevent duplicate runs
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
+- `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
 
 ## Shared Composite Actions
 
@@ -56,7 +61,7 @@ Reusable composite actions in `.github/actions/` encapsulate common setup steps.
 | `build_info` | Sets Python version env vars (`PYTHON_MIN_VERSION`, `PYTHON_MAX_VERSION`, `PYTHON_VERSIONS`). Call early in workflows. |
 | `make_init` | Locked dev environment setup: latest compatible uv, Python, Node/Yarn, protoc, lock-keyed virtualenv, protobufs. Does NOT install Playwright. Lock enforcement defaults on; only lock-repair workflows may disable it. |
 | `setup_automation` | Locked Python 3.12 environment containing only the dependencies used by lightweight CI and release utility scripts. |
-| `playwright_install` | Installs Playwright browsers with caching (by OS/arch/version). Call after `make_init` for E2E tests. |
+| `playwright_install` | Installs Playwright browsers with caching (by OS/arch/distro/version). Call after `make_init` for E2E tests. |
 | `apt_mirror_fix` | Fixes slow Azure apt mirrors on Ubuntu runners. Called automatically by `playwright_install`. |
 | `preview_branch` | Sets `PREVIEW_BRANCH` and `BRANCH` env vars for PR preview deployments. Uses action inputs to mitigate script injection. |
 | `find_latest_workflow_artifact` | Selects the newest unexpired artifact from a successful branch push. Avoids GitHub REST run filters, which can return stale results. |
@@ -93,8 +98,9 @@ runner's system Python.
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
-| `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
+| `load-testing.yml` | Push to `develop`, `run-load-testing` label, or manual | Server load testing with concurrent Playwright sessions |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
+| `meta-skill-discovery.yml` | Push/PR to `develop` (meta-skill changes) | Tests the meta-skill's `discover.py` on Windows and macOS with only pytest installed |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
 | `flaky-js-test-verification.yml` | `flaky-verify-js` label | Runs JS unit tests multiple times to verify flakiness fixes |
 
@@ -105,7 +111,7 @@ runner's system Python.
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
 | `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
-| `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
+| `snapshot-hygiene.yml` | Push to `develop`, PR (`e2e_playwright/` changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 
 ### Security & Analysis
@@ -113,7 +119,6 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `codeql-analysis.yml` | Push/PR to `develop`, weekly | GitHub CodeQL security scanning for JS and Python |
-| `semgrep.yml` | PR | Semgrep static analysis via Snowflake reusable workflow |
 
 ### Release & Publishing
 
@@ -134,9 +139,9 @@ runner's system Python.
 |----------|---------|-------------|
 | `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, and comments the download links on the PR |
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
-| `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
+| `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
-| `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
+| `autoapprove-dependabot-prs.yml` | Weekdays 11:30 UTC, or manual with a dry run | Approves open Dependabot PRs whose CI passed, whose commits all come from Dependabot or `github-actions[bot]`, and that change no E2E snapshots; merging stays manual |
 
 ### AI-Assisted Workflows
 
@@ -147,6 +152,8 @@ runner's system Python.
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
 | `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review; weekly/full mode uses recently merged PRs as leads, including bundled skills |
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
+| `ai-fix-nightly.yml` | Failed `nightly.yml` run or manual | AI-powered nightly failure triage: reruns transient failures, opens a fix PR for real breakages |
+| `ai-fix-develop-ci.yml` | All watched push runs for a `develop` commit finished and at least one failed, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates
@@ -163,4 +170,3 @@ runner's system Python.
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `copilot-setup-steps.yml` | Manual, on workflow changes | Setup steps for GitHub Copilot Workspace |
-| `static-deploy.yml` | Manual | Deploys static frontend build to S3 |

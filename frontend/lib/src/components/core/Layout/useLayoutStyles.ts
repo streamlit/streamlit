@@ -16,13 +16,21 @@
 
 import { useContext, useMemo } from "react"
 
-import { Block as BlockProto, Element, streamlit } from "@streamlit/protobuf"
+import type {
+  Block as BlockProto,
+  Element,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { convertRemToPx } from "~lib/theme/utils"
 import { assertNever } from "~lib/util/assertNever"
 
-import { FlexContext, IFlexContext } from "./FlexContext"
-import { Direction, getTextAlignmentStyle, MinFlexElementWidth } from "./utils"
+import { FlexContext, type IFlexContext } from "./FlexContext"
+import {
+  Direction,
+  getTextAlignmentStyle,
+  type MinFlexElementWidth,
+} from "./utils"
 
 type SubElement = {
   useContainerWidth?: boolean | null
@@ -92,10 +100,10 @@ export type UseLayoutStylesArgs = {
 }
 
 const isPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value >= 0 && !isNaN(value)
+  typeof value === "number" && value >= 0 && !Number.isNaN(value)
 
 const isNonZeroPositiveNumber = (value: unknown): value is number =>
-  typeof value === "number" && value > 0 && !isNaN(value)
+  typeof value === "number" && value > 0 && !Number.isNaN(value)
 
 enum DimensionType {
   PIXEL = "pixel",
@@ -120,7 +128,7 @@ const getWidth = (
 ): LayoutDimensionConfig => {
   // The current behaviour is for useContainerWidth to take precedence over
   // width, see arrow.py for reference.
-  if (subElement?.useContainerWidth) {
+  if (subElement?.useContainerWidth === true) {
     return { type: DimensionType.STRETCH }
   }
 
@@ -128,12 +136,17 @@ const getWidth = (
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
   const isStretch =
-    element.widthConfig?.useStretch || subElement?.widthConfig?.useStretch
+    element.widthConfig?.useStretch === true ||
+    subElement?.widthConfig?.useStretch === true
   const isContent =
-    element?.widthConfig?.useContent || subElement?.widthConfig?.useContent
+    element.widthConfig?.useContent === true ||
+    subElement?.widthConfig?.useContent === true
+  // An explicit element width of 0 still counts as a pixel width; `!!` alone
+  // would treat it as unset. A sub-element `pixelWidth` of 0 stays unset,
+  // because `isPositiveNumber(0)` would otherwise turn it into a 0px width.
   const isPixel =
-    element?.widthConfig?.pixelWidth ||
-    subElement?.widthConfig?.pixelWidth ||
+    !!element.widthConfig?.pixelWidth ||
+    !!subElement?.widthConfig?.pixelWidth ||
     element.widthConfig?.pixelWidth === 0
   const isRem = element.widthConfig?.remWidth
 
@@ -175,8 +188,8 @@ const getHeight = (
   // We need to support old height configurations for backwards compatibility,
   // since some integrations cache the messages and we want to ensure that the FE
   // can still support old message formats.
-  const isStretch = !!element.heightConfig?.useStretch
-  const isContent = !!element.heightConfig?.useContent
+  const isStretch = element.heightConfig?.useStretch === true
+  const isContent = element.heightConfig?.useContent === true
   const isPixel =
     !!element.heightConfig?.pixelHeight ||
     element.heightConfig?.pixelHeight === 0
@@ -287,6 +300,9 @@ export type UseLayoutStylesShape = {
   flex?: React.CSSProperties["flex"]
   minWidth?: React.CSSProperties["minWidth"]
   textAlign?: React.CSSProperties["textAlign"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
 }
 
 /**
@@ -300,14 +316,6 @@ export const useLayoutStyles = ({
 }: UseLayoutStylesArgs): UseLayoutStylesShape => {
   const flexContext = useContext(FlexContext)
   const layoutStyles = useMemo((): UseLayoutStylesShape => {
-    if (!element) {
-      return {
-        width: "auto",
-        height: "auto",
-        overflow: "visible",
-      }
-    }
-
     const widthConfig = getWidth(element, subElement)
     let width: React.CSSProperties["width"]
     let minWidth: React.CSSProperties["minWidth"]
@@ -337,23 +345,38 @@ export const useLayoutStyles = ({
     // Apply min-width protection inside content-width containers to prevent elements
     // from becoming too narrow when the container shrinks to fit its content.
     if (
-      flexContext?.isInContentWidthContainer &&
+      flexContext?.isInContentWidthContainer === true &&
       widthConfig.type === DimensionType.STRETCH &&
       minStretchBehavior !== undefined
     ) {
       minWidth = calculateMinWidthWithParentConstraint(
         minStretchBehavior,
-        flexContext?.parentWidth
+        flexContext.parentWidth
       )
     }
 
     const heightConfig = getHeight(element, subElement)
     let height: React.CSSProperties["height"]
+    let alignSelf: React.CSSProperties["alignSelf"]
+    let minHeight: React.CSSProperties["minHeight"]
+    let maxHeight: React.CSSProperties["maxHeight"]
     let overflow: React.CSSProperties["overflow"] = "visible"
 
     switch (heightConfig.type) {
       case DimensionType.STRETCH:
-        height = "100%"
+        if (direction === Direction.HORIZONTAL) {
+          // A percentage height can't resolve against a content-sized row, so
+          // stretch along the cross axis to match the tallest sibling instead.
+          height = "auto"
+          alignSelf = "stretch"
+          // Percentage min/max heights resolve only when the row has a
+          // definite height (pixel or stretched), where they keep the element
+          // exactly as tall as the row.
+          minHeight = "100%"
+          maxHeight = "100%"
+        } else {
+          height = "100%"
+        }
         break
       case DimensionType.CONTENT:
         height = "auto"
@@ -372,12 +395,25 @@ export const useLayoutStyles = ({
         assertNever(heightConfig)
     }
 
-    const flex = getFlex(
+    let flex = getFlex(
       widthConfig,
       heightConfig,
       direction,
       minStretchBehavior
     )
+
+    // A pixel `row_height` cell is a definite-height column. Stretch
+    // children take the leftover space (`flex-basis: 0%`) so a heading
+    // above a chart does not make the chart 100% of the whole cell.
+    // Horizontal stretch keeps the min/max heights set above.
+    if (
+      flexContext?.verticalStretchGrows === true &&
+      direction === Direction.VERTICAL &&
+      heightConfig.type === DimensionType.STRETCH
+    ) {
+      flex = "1 1 0%"
+      minHeight = 0
+    }
 
     const textAlign = getTextAlignmentStyle(
       "textAlignmentConfig" in element
@@ -392,6 +428,9 @@ export const useLayoutStyles = ({
       flex,
       minWidth,
       textAlign,
+      alignSelf,
+      minHeight,
+      maxHeight,
     }
 
     return {

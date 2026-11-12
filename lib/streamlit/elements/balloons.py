@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from streamlit.elements.lib import agent_spec
 from streamlit.proto.Balloons_pb2 import Balloons as BalloonsProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -39,7 +40,12 @@ class BalloonsMixin:
         """
         balloons_proto = BalloonsProto()
         balloons_proto.show = True
-        return self.dg._enqueue("balloons", balloons_proto, has_one_shot_effect=True)
+        return self.dg._enqueue(
+            "balloons",
+            balloons_proto,
+            has_one_shot_effect=True,
+            agent_props=agent_spec.element("balloons"),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

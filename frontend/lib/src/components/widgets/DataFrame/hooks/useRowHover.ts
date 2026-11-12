@@ -16,13 +16,13 @@
 
 import { useCallback, useState } from "react"
 
-import {
+import type {
   DataEditorProps,
   GetRowThemeCallback,
   GridMouseEventArgs,
 } from "@glideapps/glide-data-grid"
 
-import { CustomGridTheme } from "./useCustomTheme"
+import type { CustomGridTheme } from "./useCustomTheme"
 
 type RowHoverReturn = Pick<
   DataEditorProps,

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import { Progress as ProgressProto } from "@streamlit/protobuf"
+import type { Progress as ProgressProto } from "@streamlit/protobuf"
 
 import { StyledProgressLabelContainer } from "~lib/components/elements/Progress/styled-components"
 import ProgressBar from "~lib/components/shared/ProgressBar/ProgressBar"

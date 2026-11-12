@@ -388,10 +388,11 @@ reset — a `LockedCursor` always points to index 0.
 
 **`EVENT` root does not need a wrapper.** `st.toast` and dialogs route to the `EVENT` root,
 which `_needs_outside_wrapper` excludes by design. The delta-level collision exists
-mechanically, but it causes no user-visible loss: toasts are one-shot effects (the frontend
-forces fresh payloads / re-fire and auto-dismiss rather than reusing element payloads), and
-dialogs are modal singletons with no variable-count positional interleaving. Wrapping it
-would serve no purpose and could interfere with one-shot rendering.
+mechanically, but its effect is limited: the frontend identifies a toast by its delta
+path, so a colliding toast with different content replaces (closes early) a still-visible
+toast at that position, and toasts auto-dismiss. Dialogs are modal singletons with no
+variable-count positional interleaving. Wrapping it would serve no purpose and could
+interfere with one-shot rendering.
 
 ## Behavior Decisions
 

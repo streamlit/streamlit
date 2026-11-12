@@ -23,7 +23,7 @@ import textwrap
 from typing import Final, NamedTuple, NoReturn, cast
 from uuid import uuid4
 
-from streamlit import cli_util, config, env_util, file_util, util
+from streamlit import cli_util, config, env_util, file_util, toml_writer, util
 from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
@@ -145,11 +145,11 @@ class Credentials:
             _LOGGER.error("Credentials already loaded. Not rereading file.")
             return
 
-        import toml
+        import tomllib
 
         try:
-            with open(self._conf_file, encoding="utf-8") as f:
-                data = toml.load(f).get("general")
+            with open(self._conf_file, "rb") as f:
+                data = tomllib.load(f).get("general")
             if data is None:
                 raise RuntimeError  # noqa: TRY301
             self.activation = _verify_email(data.get("email"))
@@ -207,19 +207,17 @@ class Credentials:
         """Save to toml file and send email."""
         from requests.exceptions import RequestException
 
-        if self.activation is None:
+        if self.activation is None or not self.activation.is_valid:
             return
 
         # Create intermediate directories if necessary
         os.makedirs(os.path.dirname(self._conf_file), exist_ok=True)
 
-        # Write the file
-        data = {"email": self.activation.email}
-
-        import toml
+        # TOML has no null, so a missing email is stored as an empty string.
+        email = self.activation.email or ""
 
         with open(self._conf_file, "w", encoding="utf-8") as f:
-            toml.dump({"general": data}, f)
+            f.write(toml_writer.dumps({"general": {"email": email}}))
 
         try:
             _send_email(self.activation.email)

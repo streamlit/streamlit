@@ -22,9 +22,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, TypeAlias, Union, cast
 
 from streamlit import runtime, type_util, url_util
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import WidthWithoutContent, validate_width
 from streamlit.elements.lib.subtitle_utils import process_subtitle_data
-from streamlit.elements.lib.utils import compute_and_register_element_id
+from streamlit.elements.lib.utils import compute_and_register_element_id, normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
@@ -87,6 +88,7 @@ class MediaMixin:
         end_time: MediaTime | None = None,
         loop: bool = False,
         autoplay: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display an audio player.
@@ -151,6 +153,19 @@ class MediaMixin:
             Whether the audio file should start playing automatically. This is
             ``False`` by default. Browsers will not autoplay audio files if the
             user has not interacted with the page by clicking somewhere.
+        alt : str or None
+            A description of the audio for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the player.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe the content of the audio rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is a short description, not a substitute for a
+            transcript of the audio.
         width : "stretch" or int
             The width of the audio player element. This can be one of the
             following:
@@ -169,7 +184,12 @@ class MediaMixin:
 
         >>> import streamlit as st
         >>>
-        >>> st.audio("cat-purr.mp3", format="audio/mpeg", loop=True)
+        >>> st.audio(
+        ...     "cat-purr.mp3",
+        ...     format="audio/mpeg",
+        ...     loop=True,
+        ...     alt="A cat purring contentedly",
+        ... )
 
         .. output::
            https://doc-audio-purr.streamlit.app/
@@ -231,9 +251,25 @@ class MediaMixin:
             end_time,
             loop,
             autoplay,
+            alt=alt,
             width=width,
         )
-        return self.dg._enqueue("audio", audio_proto)
+        return self.dg._enqueue(
+            "audio",
+            audio_proto,
+            agent_props=agent_spec.element(
+                "audio",
+                # The already-registered media URL, which is all a non-browser
+                # client can act on.
+                url=audio_proto.url or None,
+                alt=audio_proto.alt or None,
+                format=format,
+                start_time=start_time,
+                end_time=end_time,
+                loop=loop,
+                autoplay=autoplay,
+            ),
+        )
 
     @gather_metrics("video")
     def video(
@@ -247,6 +283,7 @@ class MediaMixin:
         loop: bool = False,
         autoplay: bool = False,
         muted: bool = False,
+        alt: str | None = None,
         width: WidthWithoutContent = "stretch",
     ) -> DeltaGenerator:
         """Display a video player.
@@ -334,6 +371,20 @@ class MediaMixin:
             Whether the video should play with the audio silenced. This is
             ``False`` by default. Use this in conjunction with ``autoplay=True``
             to enable autoplay without user interaction.
+        alt : str or None
+            A description of the video for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for a native player. A YouTube iframe
+            continues to use its embed URL as its title.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Describe the content of the video rather than repeating text that is
+            already visible on the page, which assistive technologies can read
+            already. This is not a replacement for ``subtitles``, which serve
+            viewers who can see the video but not hear it.
         width : "stretch" or int
             The width of the video player element. This can be one of the
             following:
@@ -352,7 +403,7 @@ class MediaMixin:
         >>> video_file = open("myvideo.mp4", "rb")
         >>> video_bytes = video_file.read()
         >>>
-        >>> st.video(video_bytes)
+        >>> st.video(video_bytes, alt="A timelapse of a city skyline at sunset")
 
         .. output::
            https://doc-video.streamlit.app/
@@ -413,9 +464,28 @@ class MediaMixin:
             loop,
             autoplay,
             muted,
+            alt=alt,
             width=width,
         )
-        return self.dg._enqueue("video", video_proto)
+        return self.dg._enqueue(
+            "video",
+            video_proto,
+            agent_props=agent_spec.element(
+                "video",
+                url=video_proto.url or None,
+                alt=video_proto.alt or None,
+                format=format,
+                start_time=start_time,
+                end_time=end_time,
+                loop=loop,
+                autoplay=autoplay,
+                muted=muted,
+                # Labels in player order. The first track is shown by default,
+                # including "default" for a single subtitle file.
+                subtitles=[subtitle.label for subtitle in video_proto.subtitles]
+                or None,
+            ),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:
@@ -528,6 +598,7 @@ def marshall_video(
     loop: bool = False,
     autoplay: bool = False,
     muted: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls a video proto, using url processors as needed.
@@ -572,6 +643,10 @@ def marshall_video(
     muted: bool
         Whether the video should play with the audio silenced. This can be used to
         enable autoplay without user interaction. Defaults to False.
+    alt: str or None
+        A description of the video exposed to assistive technologies as the
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the video player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -598,6 +673,10 @@ def marshall_video(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     # "type" distinguishes between YouTube and non-YouTube links
     proto.type = VideoProto.Type.NATIVE
@@ -670,6 +749,9 @@ def marshall_video(
 
     if autoplay:
         proto.autoplay = autoplay
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "video",
             # video does not yet allow setting a user-defined key
@@ -683,6 +765,7 @@ def marshall_video(
             loop=loop,
             autoplay=autoplay,
             muted=muted,
+            alt=normalized_alt,
             width=width,
         )
 
@@ -812,6 +895,7 @@ def marshall_audio(
     end_time: int | None = None,
     loop: bool = False,
     autoplay: bool = False,
+    alt: str | None = None,
     width: WidthWithoutContent = "stretch",
 ) -> None:
     """Marshalls an audio proto, using data and url processors as needed.
@@ -839,6 +923,10 @@ def marshall_audio(
     autoplay : bool
         Whether the audio should start playing automatically.
         Browsers will not autoplay audio files if the user has not interacted with the page yet.
+    alt: str or None
+        A description of the audio exposed to assistive technologies as the
+        accessible name. Defaults to None. Empty or whitespace-only values are
+        treated as unset (and logged); leading/trailing whitespace is stripped.
     width: int or "stretch"
         The width of the audio player. This can be one of the following:
         - An int: The width in pixels, e.g. 200 for a width of 200 pixels.
@@ -857,6 +945,10 @@ def marshall_audio(
     else:
         width_config.use_stretch = True
     proto.width_config.CopyFrom(width_config)
+
+    normalized_alt = normalize_alt(alt)
+    if normalized_alt is not None:
+        proto.alt = normalized_alt
 
     if isinstance(data, Path):
         data = str(data)  # Convert Path to string
@@ -877,6 +969,9 @@ def marshall_audio(
 
     if autoplay:
         proto.autoplay = autoplay
+        # Include `alt` like other stable kwargs. Changing `alt` remounts an
+        # unkeyed autoplaying player (and may re-trigger autoplay), matching
+        # the approved element-identity contract for `alt`.
         proto.id = compute_and_register_element_id(
             "audio",
             user_key=None,
@@ -889,5 +984,6 @@ def marshall_audio(
             end_time=end_time,
             loop=loop,
             autoplay=autoplay,
+            alt=normalized_alt,
             width=width,
         )

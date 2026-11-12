@@ -36,8 +36,8 @@ frontend-tests            Run frontend unit tests and generate coverage report.
 frontend-knip             Run Knip unused-export and unused-dependency analysis.
 frontend-typesync         Check for unsynced frontend types.
 update-frontend-typesync  Installs missing typescript typings for dependencies.
-update-snapshots          Update e2e playwright snapshots based on the latest completed CI run.
-update-snapshots-changed  Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
+update-snapshots          Update e2e snapshots from the failed Playwright run for the current commit.
+update-snapshots-changed  Update changed-file e2e snapshots from the failed Playwright run for this commit.
 update-material-icons     Update material icons based on latest Google material symbol version.
 update-emojis             Update emojis from Unicode's latest emoji-test.txt.
 update-notices            Update the notices file (licenses of frontend assets and dependencies).

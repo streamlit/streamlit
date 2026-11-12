@@ -20,7 +20,7 @@ import { Help as HelpProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
 
-import Help, { HelpProps, Member } from "./Help"
+import Help, { type HelpProps, Member } from "./Help"
 
 const getProps = (elementProps: Partial<HelpProto> = {}): HelpProps => ({
   element: HelpProto.create({

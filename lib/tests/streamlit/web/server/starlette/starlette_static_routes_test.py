@@ -18,21 +18,28 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, patch
+from urllib.parse import urljoin
 
 import pytest
 from starlette.applications import Starlette
-from starlette.routing import Mount
+from starlette.responses import RedirectResponse, Response
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
     STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+    create_streamlit_static_assets_routes,
     create_streamlit_static_handler,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
+
+    from starlette.requests import Request
 
 
 @pytest.fixture
@@ -183,6 +190,78 @@ class TestReservedPaths:
 
         assert response.status_code == 404
 
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/page2/_stcore/agent/openapi.json",
+            "/page2/_stcore/agent/interact",
+            "/page2/_stcore/agent/mcp",
+        ],
+    )
+    def test_agent_route_under_a_page_path_returns_404(
+        self, static_app: TestClient, path: str
+    ) -> None:
+        """An agent route appended to a page's URL is not the app's HTML.
+
+        The app's HTML names the description's path for readers without
+        JavaScript, so a 200 here would read as having found it.
+        """
+        response = static_app.get(path)
+
+        assert response.status_code == 404
+        assert "text/html" not in response.headers.get("content-type", "")
+
+    def test_post_to_a_reserved_path_returns_404(self, static_app: TestClient) -> None:
+        """A reserved path is a 404 for a `POST` too, not the 405 static files
+        answer to methods other than GET, so an MCP client that adds a page's
+        URL learns that no server is there.
+        """
+        response = static_app.post("/page2/_stcore/agent/mcp", json={})
+
+        assert response.status_code == 404
+
+    def test_post_to_a_reserved_path_at_the_root_keeps_the_405(
+        self, static_app: TestClient
+    ) -> None:
+        """At the app's root, a reserved path whose route does not take the
+        method keeps the 405 static files answer.
+        """
+        response = static_app.post("/_stcore/health")
+
+        assert response.status_code == 405
+
+    @pytest.mark.parametrize("method", ["GET", "POST"])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/_stcore/agent",
+            "/_stcore/agent/foo",
+            "/_stcore/agent/interact/extra",
+            "/page2/_stcore/agent/foo",
+        ],
+    )
+    def test_unknown_agent_path_returns_404(
+        self, static_app: TestClient, method: str, path: str
+    ) -> None:
+        """A path under the agent prefix that no route serves is a 404 for
+        every method, rather than the app's HTML or a 405 that reads as a
+        route that exists.
+        """
+        response = static_app.request(method, path)
+
+        assert response.status_code == 404
+        assert "text/html" not in response.headers.get("content-type", "")
+
+    def test_path_merely_containing_agent_is_not_reserved(
+        self, static_app: TestClient
+    ) -> None:
+        """Only the `_stcore/agent` segment is reserved, not a page whose
+        name contains it.
+        """
+        response = static_app.get("/my_stcore/agentic")
+
+        assert response.status_code == 200
+
 
 class TestWithBaseUrl:
     """Tests for static files with base URL."""
@@ -204,6 +283,53 @@ class TestWithBaseUrl:
 
             assert response.status_code == 200
             assert response.text == "<html>Base</html>"
+
+    def test_reserved_paths_under_a_base_url_tell_root_from_page(
+        self, tmp_path: Path
+    ) -> None:
+        """Under a base URL, a reserved path at the app's root keeps the
+        static files' 405 for a `POST`, and one under a page's URL is a 404.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Base</html>")
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url="myapp"
+        )
+        app = Starlette(routes=[Mount("/myapp", app=static_files)])
+
+        with TestClient(app) as client:
+            root = client.post("/myapp/_stcore/health")
+            under_a_page = client.post("/myapp/page2/_stcore/agent/mcp", json={})
+
+        assert root.status_code == 405
+        assert under_a_page.status_code == 404
+
+    def test_agent_paths_under_a_base_url_check_the_mount_relative_path(
+        self, tmp_path: Path
+    ) -> None:
+        """Under a base URL, an unknown agent path is a 404, and a base URL
+        that itself contains the agent prefix does not reserve its pages.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Base</html>")
+        base_url = "tools/_stcore/agent/reports"
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=base_url
+        )
+        app = Starlette(routes=[Mount(f"/{base_url}", app=static_files)])
+
+        with TestClient(app) as client:
+            page = client.get(f"/{base_url}/page2")
+            fetched = client.get(f"/{base_url}/_stcore/agent/foo")
+            posted = client.post(f"/{base_url}/_stcore/agent/foo", json={})
+
+        assert page.status_code == 200
+        assert page.text == "<html>Base</html>"
+        assert fetched.status_code == 404
+        assert "<html>" not in fetched.text
+        assert posted.status_code == 404
 
     def test_no_redirect_loop_when_mounted(self, tmp_path: Path) -> None:
         """Test that mount root with trailing slash doesn't cause redirect loop.
@@ -411,7 +537,7 @@ class TestDoubleSlashProtection:
 
 
 class TestTrailingSlashRedirect:
-    """Tests for trailing slash redirect behavior (301 redirects)."""
+    """Tests for trailing slash redirect behavior for GET (301 redirects)."""
 
     def test_trailing_slash_redirects_to_without(self, tmp_path: Path) -> None:
         """Test that paths with trailing slash redirect to path without."""
@@ -485,6 +611,140 @@ class TestTrailingSlashRedirect:
             assert response.status_code == 200
             assert response.text == "<html>Home</html>"
 
+    def test_head_keeps_the_301(self, static_app: TestClient) -> None:
+        """HEAD is answered like GET, with the 301 to the absolute path."""
+        response = static_app.head("/somepath/", follow_redirects=False)
+
+        assert response.status_code == 301
+        assert response.headers["location"] == "/somepath"
+
+
+class TestTrailingSlashRedirectForOtherMethods:
+    """A method other than GET and HEAD gets a 308 with a relative Location,
+    which keeps the method and the body, so an MCP client posting to
+    `/_stcore/agent/mcp/` follows it to the route.
+    """
+
+    @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+    def test_other_methods_get_a_relative_308(
+        self, static_app: TestClient, method: str
+    ) -> None:
+        """Every method but GET and HEAD gets the 308, which no cache keeps."""
+        response = static_app.request(
+            method, "/_stcore/agent/mcp/", follow_redirects=False
+        )
+
+        assert response.status_code == 308
+        assert response.headers["location"] == "../mcp"
+        assert response.headers["Cache-Control"] == "no-cache"
+
+    def test_the_308_keeps_the_query_string(self, static_app: TestClient) -> None:
+        """The query string follows the redirect, as with the 301."""
+        response = static_app.post(
+            "/_stcore/agent/mcp/?foo=bar&baz=qux", follow_redirects=False
+        )
+
+        assert response.status_code == 308
+        assert response.headers["location"] == "../mcp?foo=bar&baz=qux"
+
+    @pytest.mark.parametrize(
+        ("path", "location"),
+        [
+            ("/_stcore/agent/mcp/", "../mcp"),
+            ("/somepath/", "../somepath"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "prefix", ["http://testserver", "https://proxy.example/~/+"]
+    )
+    def test_the_308_resolves_to_the_path_without_its_slash(
+        self, static_app: TestClient, path: str, location: str, prefix: str
+    ) -> None:
+        """The Location resolves against the URL the client called, so it
+        keeps a path prefix that a proxy strips before forwarding.
+        """
+        response = static_app.post(path, follow_redirects=False)
+
+        assert response.status_code == 308
+        assert response.headers["location"] == location
+        assert urljoin(prefix + path, location) == prefix + path.rstrip("/")
+
+    @pytest.mark.parametrize(
+        ("path", "location"),
+        [
+            ("/_stcore/agent/mcp///", "../../../mcp"),
+            ("/deep//nested/", "../nested"),
+        ],
+    )
+    def test_the_308_climbs_one_segment_per_trailing_slash(
+        self, static_app: TestClient, path: str, location: str
+    ) -> None:
+        """Each trailing slash ends an empty segment, which RFC 3986 and the
+        WHATWG URL parser (browsers, the TypeScript MCP SDK) keep when they
+        resolve the Location, so it climbs past each one. Python's `urljoin`
+        drops empty segments, so these cases are not resolved with it here.
+        """
+        response = static_app.post(path, follow_redirects=False)
+
+        assert response.status_code == 308
+        assert response.headers["location"] == location
+
+    def test_a_followed_308_posts_the_same_body_again(self, tmp_path: Path) -> None:
+        """A client that follows the 308 sends the same method and body to the
+        path without the slash.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+        received: list[tuple[str, str, bytes]] = []
+
+        async def echo(request: Request) -> Response:
+            received.append((request.method, request.url.path, await request.body()))
+            return Response("ok")
+
+        app = Starlette(
+            routes=[
+                Route("/_stcore/agent/mcp", echo, methods=["POST"]),
+                Mount(
+                    "/",
+                    app=create_streamlit_static_handler(
+                        directory=str(static_dir), base_url=None
+                    ),
+                ),
+            ]
+        )
+        with TestClient(app) as client:
+            response = client.post("/_stcore/agent/mcp/", content=b'{"id":1}')
+
+        assert response.status_code == 200
+        assert [r.status_code for r in response.history] == [308]
+        assert received == [("POST", "/_stcore/agent/mcp", b'{"id":1}')]
+
+    def test_under_a_base_url_the_308_is_relative_and_the_mount_root_is_served(
+        self, tmp_path: Path
+    ) -> None:
+        """Under a base URL, the Location climbs only past the slashes, and
+        the mount root is still answered rather than redirected.
+        """
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url="app"
+        )
+        app = Starlette(routes=[Mount("/app", app=static_files)])
+
+        with TestClient(app, follow_redirects=False) as client:
+            redirected = client.post("/app/_stcore/agent/mcp/")
+            mount_root = client.post("/app/")
+
+        assert redirected.status_code == 308
+        assert redirected.headers["location"] == "../mcp"
+        # The mount root is never redirected, so the static files answer
+        # their 405 to a method other than GET or HEAD.
+        assert mount_root.status_code == 405
+
 
 class TestCacheHeadersOnRedirects:
     """Tests for cache headers behavior on redirect responses."""
@@ -513,6 +773,18 @@ class TestCacheHeadersOnRedirects:
             assert response.status_code == 301
             assert response.headers["Cache-Control"] == "no-cache"
             assert "immutable" not in response.headers["Cache-Control"]
+
+    def test_apply_cache_headers_skips_redirect_status_codes(
+        self, tmp_path: Path
+    ) -> None:
+        """Redirect responses keep their own cache headers."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        response = RedirectResponse(url="/elsewhere", status_code=302)
+        original = dict(response.headers)
+        static_files._apply_cache_headers(response, "index.html")
+        assert dict(response.headers) == original
 
     def test_regular_html_has_no_cache(self, static_app: TestClient) -> None:
         """Test that regular HTML files have no-cache header (not redirect)."""
@@ -604,3 +876,68 @@ class TestSymlinkSupport:
 
             assert response.status_code == 200
             assert response.text == "body { color: red; }"
+
+
+class TestStaticHandlerSecurityAndLifecycle:
+    """Edge cases for ASGI dispatch, unsafe paths, and missing assets."""
+
+    @pytest.mark.anyio
+    async def test_non_http_scopes_are_delegated(self, tmp_path: Path) -> None:
+        """Non-HTTP ASGI scopes fall through to Starlette's StaticFiles."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        scope = {"type": "websocket"}
+        receive = AsyncMock()
+        send = AsyncMock()
+
+        # Starlette's StaticFiles only accepts HTTP scopes. The Streamlit
+        # wrapper still must delegate non-HTTP scopes instead of applying
+        # its HTTP-only security checks.
+        with patch.object(
+            StaticFiles, "__call__", new_callable=AsyncMock
+        ) as super_call:
+            await static_files(scope, receive, send)
+            super_call.assert_awaited_once_with(scope, receive, send)
+
+    @pytest.mark.anyio
+    async def test_unsafe_relative_path_returns_400(self, tmp_path: Path) -> None:
+        """Path traversal segments are rejected before filesystem access."""
+        static_files = create_streamlit_static_handler(
+            directory=str(tmp_path), base_url=None
+        )
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/../../etc/passwd",
+            "query_string": b"",
+            "root_path": "",
+            "headers": [],
+        }
+        response_status = 0
+        response_body = b""
+
+        async def receive() -> dict[str, object]:
+            return {"type": "http.request", "body": b""}
+
+        async def send(message: dict[str, object]) -> None:
+            nonlocal response_status, response_body
+            if message["type"] == "http.response.start":
+                response_status = message["status"]
+            elif message["type"] == "http.response.body":
+                response_body += message.get("body", b"")
+
+        await static_files(scope, receive, send)
+
+        assert response_status == 400
+        assert response_body == b"Bad Request"
+
+    def test_missing_static_directory_yields_no_asset_routes(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Production static serving is skipped when the assets dir is absent."""
+        monkeypatch.setattr(
+            "streamlit.web.server.starlette.starlette_static_routes.file_util.get_static_dir",
+            lambda: "/definitely/not/a/real/static/dir",
+        )
+        assert create_streamlit_static_assets_routes(base_url=None) == []

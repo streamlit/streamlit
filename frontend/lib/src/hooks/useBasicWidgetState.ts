@@ -15,8 +15,8 @@
  */
 
 import {
-  Dispatch,
-  SetStateAction,
+  type Dispatch,
+  type SetStateAction,
   useCallback,
   useEffect,
   useMemo,
@@ -25,7 +25,7 @@ import {
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { isNullOrUndefined } from "~lib/util/utils"
-import {
+import type {
   DateType,
   Source,
   WidgetStateManager,
@@ -329,25 +329,17 @@ export function useBasicWidgetState<
       : undefined
   const defaultValueForBinding = useMemo(() => {
     if (!hasQueryParamBinding) return undefined
-    return queryParamBinding?.urlDefault !== undefined
+    return queryParamBinding.urlDefault !== undefined
       ? queryParamBinding.urlDefault
       : getDefaultStateFromProto(element)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- urlDefaultKey provides value-based comparison
   }, [hasQueryParamBinding, element, getDefaultStateFromProto, urlDefaultKey])
 
+  const urlFormat = queryParamBinding?.urlFormat
+  const dateType = queryParamBinding?.dateType
   const queryParamBindingOptions = useMemo(
-    () =>
-      hasQueryParamBinding
-        ? {
-            urlFormat: queryParamBinding?.urlFormat,
-            dateType: queryParamBinding?.dateType,
-          }
-        : undefined,
-    [
-      hasQueryParamBinding,
-      queryParamBinding?.urlFormat,
-      queryParamBinding?.dateType,
-    ]
+    () => (hasQueryParamBinding ? { urlFormat, dateType } : undefined),
+    [hasQueryParamBinding, urlFormat, dateType]
   )
 
   // Query param binding registration (optional, integrated for convenience)

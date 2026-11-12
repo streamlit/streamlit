@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, MutableMapping, Sequence
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -30,6 +30,7 @@ from typing import (
 
 from streamlit import config, runtime
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import (
     enforce_filename_restriction,
     normalize_upload_file_type,
@@ -76,6 +77,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.session_state_proxy import get_session_state
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
@@ -206,7 +208,7 @@ class ChatInputValue(MutableMapping[str, _ChatInputValueItem]):
         return f"{type(self).__name__}({args})"
 
 
-class PresetNames(str, Enum):
+class PresetNames(StrEnum):
     USER = "user"
     ASSISTANT = "assistant"
     AI = "ai"  # Equivalent to assistant
@@ -370,7 +372,7 @@ def _pop_audio_file(
     # Only MemoryUploadedFileManager implements remove_file (not part of the
     # UploadedFileManager Protocol). This explicit type check ensures we only
     # use this cleanup logic with manager types we've explicitly approved.
-    if audio_file_info and isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
+    if isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
         ctx.uploaded_file_mgr.remove_file(
             session_id=ctx.session_id,
             file_id=audio_file_info.file_id,
@@ -384,14 +386,17 @@ class ChatInputSerde:
     accept_files: bool = False
     accept_audio: bool = False
     allowed_types: Sequence[str] | None = None
+    # The browser stops input at this length, and 0 or None means no limit.
+    max_chars: int | None = None
 
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
         if ui_value is None or not ui_value.HasField("data"):
             return None
+        text = ui_value.data[: self.max_chars] if self.max_chars else ui_value.data
         if not self.accept_files and not self.accept_audio:
-            return ui_value.data
+            return text
         uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
         for file in uploaded_files:
             if self.allowed_types and not isinstance(file, DeletedFile):
@@ -403,7 +408,7 @@ class ChatInputSerde:
         )
 
         return ChatInputValue(
-            text=ui_value.data,
+            text=text,
             files=uploaded_files,
             audio=audio_file,
             _include_files=self.accept_files,
@@ -557,7 +562,12 @@ class ChatMixin:
         block_proto.chat_message.CopyFrom(message_container_proto)
         block_proto.width_config.CopyFrom(width_config)
 
-        return self.dg._block(block_proto=block_proto)
+        return self.dg._block(
+            block_proto=block_proto,
+            agent_props=agent_spec.block(
+                "chat_message", name=name, avatar=block_proto.chat_message.avatar
+            ),
+        )
 
     @overload
     def chat_input(
@@ -976,6 +986,11 @@ class ChatMixin:
 
         """
         key = to_key(key)
+        on_submit = validate_on_change_mode(
+            on_submit,
+            supported_modes=(),
+            param_name="on_submit",
+        )
 
         check_widget_policies(
             self.dg,
@@ -1064,10 +1079,9 @@ class ChatMixin:
                 "`st.chat_input()` can't be used in a `st.form()`."
             )
 
-        # Determine the position of the chat input:
-        # Use bottom position if chat input is within the main container
-        # either directly or within a vertical container. If it has any
-        # other container types as parents, we use inline position.
+        # Streamlit auto-moves a chat input into the bottom container only when it is
+        # called from the main app body with no layout ancestors. Calls already inside
+        # `st.bottom` or other containers stay where they were created.
         ancestor_block_types = set(self.dg._active_dg._ancestor_block_types)
         if (
             self.dg._active_dg._root_container == RootContainer.MAIN
@@ -1080,6 +1094,7 @@ class ChatMixin:
         chat_input_proto = ChatInputProto()
         chat_input_proto.id = element_id
         chat_input_proto.placeholder = str(placeholder)
+        chat_input_proto.is_auto_positioned_at_bottom = position == "bottom"
 
         if max_chars is not None:
             chat_input_proto.max_chars = max_chars
@@ -1107,6 +1122,7 @@ class ChatMixin:
             accept_files=accept_file in {True, "multiple", "directory"},
             accept_audio=accept_audio,
             allowed_types=file_type,
+            max_chars=max_chars,
         )
         widget_state = register_widget(
             chat_input_proto.id,
@@ -1157,6 +1173,24 @@ class ChatMixin:
         has_one_shot = widget_state.value_changed and isinstance(
             widget_state.value, str
         )
+        chat_input_agent_props = agent_spec.element(
+            "chat_input",
+            key=element_id,
+            # A payload-bearing trigger: the request carries the prompt text
+            # as the trigger's value.
+            action="trigger",
+            value_schema=agent_spec.STRING,
+            placeholder=placeholder,
+            max_chars=max_chars,
+            accept_file=accept_file,
+            file_type=list(file_type) if file_type else None,
+            # The cap the browser enforces, including the server default.
+            max_upload_size=chat_input_proto.max_upload_size_mb,
+            accept_audio=accept_audio,
+            audio_sample_rate=audio_sample_rate,
+            disabled=disabled,
+            submit_mode=submit_mode,
+        )
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
@@ -1165,6 +1199,7 @@ class ChatMixin:
                 chat_input_proto,
                 layout_config=layout_config,
                 has_one_shot_effect=has_one_shot,
+                agent_props=chat_input_agent_props,
             )
         else:
             self.dg._enqueue(
@@ -1172,6 +1207,7 @@ class ChatMixin:
                 chat_input_proto,
                 layout_config=layout_config,
                 has_one_shot_effect=has_one_shot,
+                agent_props=chat_input_agent_props,
             )
 
         return widget_state.value if not widget_state.value_changed else None

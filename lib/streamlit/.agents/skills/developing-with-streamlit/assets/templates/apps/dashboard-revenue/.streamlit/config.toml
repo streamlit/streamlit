@@ -1,0 +1,130 @@
+# BI dashboard dual light/dark Streamlit theme
+# Indigo primary, Geist fonts, compact bold metric values, and tight padding for
+# KPI and card layouts; the settings appearance toggle stays available.
+# Categorical palettes were checked for color-vision deficiencies in both modes
+# (adjacent pairs; the first three slots also pass all pairs, for scatter charts).
+
+[theme]
+font = "'Geist':https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+headingFont = "'Geist':https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap"
+codeFont = "'Geist Mono':https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap"
+baseFontSize = 14
+baseFontWeight = 400
+codeFontSize = "13px"
+headingFontSizes = ["28px", "20px", "16px", "15px", "14px", "12px"]
+headingFontWeights = [650, 600, 600, 600, 500, 500]
+metricValueFontSize = "1.85rem"
+metricValueFontWeight = 650
+baseRadius = "0.75rem"
+buttonRadius = "0.6rem"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+paddingTop = "1rem"
+paddingBottom = "3rem"
+
+[theme.sidebar]
+paddingTop = "1rem"
+paddingBottom = "1.5rem"
+
+[theme.light]
+primaryColor = "#5B5BD6"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F4F8"
+codeBackgroundColor = "#F4F4F8"
+textColor = "#14151C"
+linkColor = "#4F4FC4"
+borderColor = "#E4E4EC"
+codeTextColor = "#3E3F52"
+blueColor = "#0B84E5"
+greenColor = "#16A34A"
+yellowColor = "#CA8A04"
+orangeColor = "#EA580C"
+redColor = "#DC2626"
+violetColor = "#7C5BD6"
+grayColor = "#71727F"
+chartCategoricalColors = [
+    "#5B5BD6",
+    "#0F9D8A",
+    "#E2590F",
+    "#D6409F",
+    "#0B84E5",
+    "#B87A00",
+    "#8E4EC6",
+    "#E5484D",
+]
+chartSequentialColors = [
+    "#EEF0FF",
+    "#DDE1FE",
+    "#C5CAFB",
+    "#A9AEF5",
+    "#8D91ED",
+    "#7477E3",
+    "#5B5BD6",
+    "#4A49BE",
+    "#3B399E",
+    "#2C2A7A",
+]
+dataframeBorderColor = "#E4E4EC"
+dataframeHeaderBackgroundColor = "#F7F7FA"
+dataframeHeaderTextColor = "#5A5B6B"
+
+[theme.dark]
+primaryColor = "#5E5CE6"
+backgroundColor = "#0B0C11"
+secondaryBackgroundColor = "#16171F"
+codeBackgroundColor = "#16171F"
+textColor = "#E9E9F1"
+linkColor = "#A3A6FF"
+borderColor = "#262833"
+codeTextColor = "#C9CADB"
+blueColor = "#3B9BFF"
+greenColor = "#34D399"
+yellowColor = "#FACC15"
+orangeColor = "#FB923C"
+redColor = "#F87171"
+violetColor = "#A78BFA"
+grayColor = "#8E90A2"
+chartCategoricalColors = [
+    "#6E6AE8",
+    "#14A08C",
+    "#E5641A",
+    "#D9529F",
+    "#2F8FE8",
+    "#BC8000",
+    "#9A6BE0",
+    "#E5534B",
+]
+chartSequentialColors = [
+    "#171833",
+    "#1F2148",
+    "#292B60",
+    "#33357A",
+    "#3F4195",
+    "#4D4FB0",
+    "#5E5FCA",
+    "#7577DE",
+    "#9597EC",
+    "#BABBF6",
+]
+dataframeBorderColor = "#262833"
+dataframeHeaderBackgroundColor = "#12131A"
+dataframeHeaderTextColor = "#A4A5B8"
+
+[theme.light.sidebar]
+backgroundColor = "#FAFAFC"
+secondaryBackgroundColor = "#F0F0F5"
+codeBackgroundColor = "#F0F0F5"
+textColor = "#14151C"
+borderColor = "#E4E4EC"
+primaryColor = "#5B5BD6"
+linkColor = "#4F4FC4"
+
+[theme.dark.sidebar]
+backgroundColor = "#0F1016"
+secondaryBackgroundColor = "#1A1B24"
+codeBackgroundColor = "#1A1B24"
+textColor = "#E9E9F1"
+borderColor = "#262833"
+primaryColor = "#5E5CE6"
+linkColor = "#A3A6FF"

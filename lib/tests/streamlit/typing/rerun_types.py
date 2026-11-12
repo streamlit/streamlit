@@ -21,9 +21,7 @@ isn't erased by ``@gather_metrics``, and keep a single positive assertion.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NoReturn
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, NoReturn, assert_type
 
 if TYPE_CHECKING:
     from streamlit.commands.execution_control import rerun

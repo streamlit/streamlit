@@ -16,7 +16,7 @@
 
 import {
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,22 +35,29 @@ import {
 } from "@emotion-icons/material-outlined"
 import {
   CompactSelection,
-  DataEditorRef,
+  type DataEditorRef,
   DataEditor as GlideDataEditor,
-  GridCell,
-  GridColumn,
-  GridMouseEventArgs,
-  GridSelection,
+  type GridCell,
+  type GridColumn,
+  type GridMouseEventArgs,
+  type GridSelection,
   type Item,
-  Rectangle,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import { Resizable } from "re-resizable"
-import { createPortal } from "react-dom"
+import { createPortal, flushSync } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  type streamlit,
+} from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
-import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { DATAFRAME_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -65,10 +72,10 @@ import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   getTextCell,
   ImageCellEditor,
   toGlideColumn,
@@ -99,6 +106,13 @@ import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
+import { DATAFRAME_PRINT_SLOT_CLASS } from "./printClassNames"
+import {
+  clearDataFramePrintSlot,
+  fillDataFramePrintSlot,
+  isHiddenFromPrint,
+  visibleRowsFromRegion,
+} from "./printDataFrame"
 import { StyledResizableContainer } from "./styled-components"
 import Tooltip from "./Tooltip"
 
@@ -190,10 +204,16 @@ function DataFrame({
     height: fullScreenHeight,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+  const flexContext = useRequiredContext(FlexContext)
+  const { isInHorizontalLayout, isInRoot } = flexContext
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  const printSlotRef = useRef<HTMLDivElement>(null)
+  // Rows currently painted in the grid viewport. Printing builds an HTML
+  // table of this range so the page can split instead of leaving a blank
+  // strip behind a non-fragmenting canvas.
+  const visibleRegionRef = useRef<Rectangle | null>(null)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -242,11 +262,10 @@ function DataFrame({
     []
   )
 
-  // This is done to keep some backwards compatibility
-  // so that old arrow proto messages from the st.dataframe
-  // would still work. Those messages don't have the
-  // editingMode field defined.
+  // Old Arrow proto messages omit editingMode, even though the generated type
+  // marks it as required.
   const editingMode =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy messages omit editingMode
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
   const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
   const isClipboardCopyDisabled = disableDataExport && isReadOnly
@@ -436,8 +455,8 @@ function DataFrame({
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
 
-  // Ref to track the last processed selectionState to avoid proto mutation.
-  // Used to detect when a new programmatic selection arrives from the backend.
+  // Last applied programmatic selectionState JSON. Reset when the one-shot
+  // field is absent so a later identical payload can apply.
   const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
@@ -660,21 +679,22 @@ function DataFrame({
 
   /**
    * Apply programmatic selection changes set via st.session_state.
-   * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed). We track processed values via ref
-   * to avoid mutating the proto object.
+   * The backend sends selectionState only on the rerun where the value
+   * changed. This effect skips identical payloads across React re-renders
+   * of that message, and clears processedSelectionStateRef when
+   * selectionState is absent so a later identical value can apply.
    */
   useEffect(() => {
-    // Skip if no selectionState or we've already processed this exact value
-    if (
-      !element.selectionState ||
-      element.selectionState === processedSelectionStateRef.current
-    ) {
+    if (isNullOrEmptyString(element.selectionState)) {
+      processedSelectionStateRef.current = null
+      return
+    }
+
+    if (element.selectionState === processedSelectionStateRef.current) {
       return
     }
 
     const selectionState = element.selectionState
-    // Mark as processed (using ref instead of proto mutation)
     processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -782,6 +802,7 @@ function DataFrame({
   // To activate the group row feature (multi-level headers),
   // we need more than one header row.
   const usesGroupRow = data.dimensions.numHeaderRows > 1
+  const hasFallbackHeight = hasStretchHeightFallback(flexContext)
   const {
     minHeight,
     maxHeight,
@@ -795,13 +816,13 @@ function DataFrame({
     gridTheme,
     numRows,
     usesGroupRow,
-    containerWidth || 0,
+    containerWidth ?? 0,
     fullScreenHeight,
     isFullScreen,
     widthConfig,
     heightConfig,
     measuredContainerHeight,
-    isInRoot
+    hasFallbackHeight
   )
   // This is used as fallback in case the table is empty to
   // insert cells indicating this state:
@@ -832,7 +853,7 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    containerWidth ?? 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
@@ -855,7 +876,7 @@ function DataFrame({
       // Get the bounds of the glide-data-grid scroll area (dvn-stack):
       // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
       const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
+        .querySelector(".dvn-stack")
         ?.getBoundingClientRect()
 
       // We might also be able to use the following as an alternative,
@@ -928,7 +949,7 @@ function DataFrame({
   // which cannot be determined when the parent container has a fit-content width or when there are multiple siblings
   // in a nested container.
   const disableResize =
-    isInHorizontalLayout || Boolean(widthConfig?.useContent && !isInRoot)
+    isInHorizontalLayout || (widthConfig?.useContent === true && !isInRoot)
 
   // The search overlay may only be open while search is actually enabled.
   // Deriving it from `canSearch` ensures the overlay is hidden (instead of
@@ -936,6 +957,72 @@ function DataFrame({
   // since both the toolbar search button and the Ctrl/Cmd+F shortcut are
   // disabled in that case.
   const isSearchOpen = canSearch && showSearch
+
+  // Name the grid (not the toolbar wrapper) only when alt is non-blank.
+  // role="region" (not "img") exposes the name without making Glide's
+  // operable canvas presentational.
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
+
+  // A canvas cannot fragment across pages, so beforeprint fills an HTML
+  // table of the rows on screen and afterprint clears it again.
+  useEffect(() => {
+    const slot = printSlotRef.current
+    if (!slot) {
+      return
+    }
+
+    const handleBeforePrint = (): void => {
+      const frame = slot.closest(".stDataFrame")
+      if (
+        isEmptyTable ||
+        (frame instanceof HTMLElement && isHiddenFromPrint(frame))
+      ) {
+        clearDataFramePrintSlot(slot)
+        return
+      }
+      fillDataFramePrintSlot(
+        slot,
+        columns,
+        getCellContent,
+        visibleRowsFromRegion(visibleRegionRef.current, numRows),
+        {
+          missingPlaceholder: element.placeholder ?? undefined,
+          accessibleName,
+        }
+      )
+    }
+    const handleAfterPrint = (): void => {
+      clearDataFramePrintSlot(slot)
+    }
+
+    window.addEventListener("beforeprint", handleBeforePrint)
+    window.addEventListener("afterprint", handleAfterPrint)
+    return () => {
+      window.removeEventListener("beforeprint", handleBeforePrint)
+      window.removeEventListener("afterprint", handleAfterPrint)
+      clearDataFramePrintSlot(slot)
+    }
+  }, [
+    accessibleName,
+    columns,
+    element.placeholder,
+    getCellContent,
+    isEmptyTable,
+    numRows,
+  ])
+
+  const handleVisibleRegionChanged = useCallback(
+    (range: Rectangle): void => {
+      visibleRegionRef.current = range
+      if (isLazy) {
+        onVisibleRegionChanged(range)
+      }
+    },
+    [isLazy, onVisibleRegionChanged]
+  )
 
   return (
     <StyledResizableContainer
@@ -1006,6 +1093,7 @@ function DataFrame({
         onExpand={expand}
         onCollapse={collapse}
         target={StyledResizableContainer}
+        labelContext={accessibleName}
       >
         {customToolbarActions?.map(action => action)}
         {((isRowSelectionActivated &&
@@ -1025,6 +1113,7 @@ function DataFrame({
               clearSelection()
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
         {canDeleteRows && isRowSelected && (
@@ -1037,6 +1126,7 @@ function DataFrame({
                 clearTooltip()
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {canAddRows && !isRowSelected && (
@@ -1053,6 +1143,7 @@ function DataFrame({
                 dataEditorRef.current?.scrollTo(0, numRows, "vertical")
               }
             }}
+            labelContext={accessibleName}
           />
         )}
         {!isEmptyTable && allColumns.length > 0 && (
@@ -1069,6 +1160,7 @@ function DataFrame({
               label="Show/hide columns"
               icon={Visibility}
               onClick={handleToggleColumnVisibilityMenu}
+              labelContext={accessibleName}
             />
           </ColumnVisibilityMenu>
         )}
@@ -1077,6 +1169,7 @@ function DataFrame({
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
+            labelContext={accessibleName}
           />
         )}
         {canSearch && (
@@ -1092,12 +1185,16 @@ function DataFrame({
               }
               clearTooltip()
             }}
+            labelContext={accessibleName}
           />
         )}
       </Toolbar>
       <Resizable
+        className="stDataFrameResizable"
         data-testid="stDataFrameResizable"
         ref={resizableRef}
+        aria-label={accessibleName}
+        {...(accessibleName !== undefined ? { role: "region" } : {})}
         defaultSize={resizableSize}
         style={{
           border: `${gridTheme.tableBorderWidth}px solid ${gridTheme.glideTheme.borderColor}`,
@@ -1124,6 +1221,24 @@ function DataFrame({
         }}
         grid={[1, rowHeight]}
         snapGap={rowHeight / 3}
+        onResizeStart={() => {
+          // Start the drag in pixels. re-resizable resizes in the unit of the
+          // size prop, and a percentage height ("100%" for stretch) can't grow
+          // the parent, so the table would overflow it during the drag.
+          if (
+            resizableRef.current &&
+            typeof resizableSize.height === "string"
+          ) {
+            const { height } = resizableRef.current.size
+            /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
+             * re-resizable reads the size prop right after this callback
+             * returns and uses that unit for the drag. Render the pixel height
+             * before returning. This runs once per drag. */
+            flushSync(() => {
+              setResizableSize(prev => ({ ...prev, height }))
+            })
+          }
+        }}
         onResizeStop={(_event, _direction, _ref, _delta) => {
           if (resizableRef.current) {
             const borderThreshold = 2 * gridTheme.tableBorderWidth
@@ -1195,9 +1310,9 @@ function DataFrame({
                 }
               : {}),
           }}
-          // Request chunks for the visible range (plus a small buffer) when the
-          // user scrolls a lazy dataframe.
-          onVisibleRegionChanged={isLazy ? onVisibleRegionChanged : undefined}
+          // Track the painted viewport for print, and request chunks for a
+          // lazy dataframe when the user scrolls.
+          onVisibleRegionChanged={handleVisibleRegionChanged}
           // Search needs to be activated manually, to support search
           // via the toolbar. Disabled for lazy dataframes since search would
           // only operate on loaded chunks.
@@ -1398,7 +1513,8 @@ function DataFrame({
           })}
         />
       </Resizable>
-      {tooltip?.content && (
+      <div className={DATAFRAME_PRINT_SLOT_CLASS} ref={printSlotRef} />
+      {tooltip !== undefined && (
         <Tooltip
           top={tooltip.top}
           left={tooltip.left}

@@ -568,6 +568,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
 
     def tearDown(self):
         st.cache_resource.clear()
+        super().tearDown()
 
     @parameterized.expand(WIDGET_ELEMENTS)
     def test_shows_cached_widget_replay_warning(
@@ -952,15 +953,43 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
         singleton = object()
         cache.write_result("k", singleton, [])
 
-        cache.write_background_refresh_result(
-            "k",
-            singleton,
-            expected_generation=cache.generation,
-            expected_key_generation=cache.key_generation("k"),
+        assert (
+            cache.write_background_refresh_result(
+                "k",
+                singleton,
+                expected_generation=cache.generation,
+                expected_key_generation=cache.key_generation("k"),
+            )
+            is True
         )
 
         assert released == []
         assert cache.read_result("k").value is singleton
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_records_expire_a_fresh_ttl_after_their_write(
+        self, timer_patch: Mock
+    ) -> None:
+        """Refresh records for keys that are never read again don't accumulate."""
+        cache: ResourceCache[int] = ResourceCache(
+            key="records",
+            max_entries=float("inf"),
+            ttl_seconds=_BG_TTL * 2,
+            validate=None,
+            display_name="records",
+            on_release=lambda _: None,
+            fresh_ttl_seconds=_BG_TTL,
+            refresh_mode="background",
+        )
+
+        timer_patch.return_value = 0
+        cache.record_refresh_written("a", 0)
+        timer_patch.return_value = _BG_TTL
+        cache.record_refresh_written("b", _BG_TTL)
+
+        assert not cache.refreshed_since("a", -1)
+        assert cache.refreshed_since("b", _BG_TTL - 1)
+        assert list(cache._refresh_written) == ["b"]
 
     def test_orphan_discard_swallows_release_error(self) -> None:
         """A raising on_release while discarding an orphaned refresh must not propagate.
@@ -989,11 +1018,14 @@ class CacheResourceBackgroundRefreshTest(unittest.TestCase):
 
         # A stale generation orphans the write-back, so the produced value (2) is
         # discarded and released; the raising on_release must not escape.
-        cache.write_background_refresh_result(
-            "k",
-            2,
-            expected_generation=cache.generation + 1,
-            expected_key_generation=cache.key_generation("k"),
+        assert (
+            cache.write_background_refresh_result(
+                "k",
+                2,
+                expected_generation=cache.generation + 1,
+                expected_key_generation=cache.key_generation("k"),
+            )
+            is False
         )
 
         assert released == [2]

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import { Text as TextProto } from "@streamlit/protobuf"
+import type { Text as TextProto } from "@streamlit/protobuf"
 
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
@@ -40,7 +40,7 @@ export interface TextProps {
  * which would otherwise honor newlines as extra rows.
  */
 function collapseNewlines(body: string): string {
-  return body.replace(/\r\n|\r|\n/g, " ")
+  return body.replaceAll(/\r\n|\r|\n/g, " ")
 }
 
 /**

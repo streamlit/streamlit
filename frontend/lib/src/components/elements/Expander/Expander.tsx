@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, type ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
-
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { isNullOrEmptyString, notNullOrUndefined } from "@streamlit/utils"
 
 import {
-  StepIconTone,
+  DynamicIcon,
+  getIconAccessibleName,
+} from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
+
+import {
+  type StepIconTone,
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
@@ -103,6 +107,29 @@ function resolveStepIcon(
     : { iconValue: DEFAULT_STEP_ICON, tone: "muted" }
 }
 
+/** Accessible name for an expander whose Markdown label renders no text. */
+function resolveBlankLabelName(
+  label: string,
+  icon: string,
+  isStep: boolean,
+  hasStepState: boolean
+): string | undefined {
+  if (label.trim()) {
+    return undefined
+  }
+  // st.status always encodes progress into `icon`. For status steps that
+  // would duplicate the appended state text ("Loading — running" / "check
+  // icon — complete"); use the stable "Step" fallback instead. Blank-label
+  // expander steps with a user icon (no status state) still name from icon.
+  if (isStep && hasStepState) {
+    return "Step"
+  }
+  if (icon) {
+    return getIconAccessibleName(icon)
+  }
+  return isStep ? "Step" : "Expander"
+}
+
 interface ExpanderIconProps {
   icon?: string
 }
@@ -115,20 +142,18 @@ interface ExpanderIconProps {
  * Otherwise, it will render nothing.
  *
  * @param {string} icon - The icon to render.
- * @returns {ReactElement}
+ * @returns {ReactElement | null}
  */
-const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
+const ExpanderIcon = (props: ExpanderIconProps): ReactElement | null => {
   const { icon } = props
 
-  return icon ? (
+  return !isNullOrEmptyString(icon) ? (
     <DynamicIcon
       size="base"
       iconValue={icon}
       testid={STATUS_ICON_TEST_IDS[icon] || "stExpanderIcon"}
     />
-  ) : (
-    <></>
-  )
+  ) : null
 }
 
 export interface ExpanderProps {
@@ -155,11 +180,23 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const [isHovered, setIsHovered] = useState(false)
 
   // element.id is only set when the backend registers the expander as a
-  // stateful widget (on_change="rerun"). block.id may still be set for
-  // CSS key styling without implying widget mode.
-  const widgetId = element.id || undefined
-  const isWidget = Boolean(widgetMgr && widgetId)
+  // stateful widget (on_change="rerun" or bind="query-params"). block.id may
+  // still be set for CSS key styling without implying widget mode.
+  const widgetId = isNullOrEmptyString(element.id) ? undefined : element.id
+  const isWidget = Boolean(widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget
+
+  // Bind using the original `expanded=` default, not the current backend state.
+  // Otherwise a URL-seeded non-default value is treated as the default and
+  // stripped from the URL on load.
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    isWidget ? (element.queryParamKey ?? null) : null,
+    "bool_value",
+    element.defaultExpanded ?? false,
+    false
+  )
 
   // Persist expanded state across remounts via elementStates.
   // The hook is always called (Rules of Hooks) but only effective when
@@ -179,7 +216,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // widget manager retains the stale value and sends it back on the next
   // rerun, causing the expander to revert to its old state.
   useExecuteWhenChanged(() => {
-    if (!widgetId || !notNullOrUndefined(element.expanded)) {
+    if (widgetId === undefined || !notNullOrUndefined(element.expanded)) {
       return
     }
     widgetMgr.setBoolValue(widgetId, element.expanded, {
@@ -192,7 +229,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
-      if (widgetMgr && widgetId) {
+      if (widgetId !== undefined) {
         widgetMgr.setBoolValue(widgetId, newOpen, {
           formId: undefined,
           fragmentId,
@@ -236,7 +273,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const showLeadingChevron = !isCompact && (!icon || isHovered)
   const showLeadingUserIcon = isCompact
     ? Boolean(icon) && !hideCompactSpinnerForShimmer
-    : icon && !isHovered
+    : Boolean(icon) && !isHovered
 
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
@@ -257,6 +294,15 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const stepState = STEP_STATES[state]
   const stepIcon = resolveStepIcon(stepState, icon)
   const stepStateLabel = isStep ? stepState?.stateLabel : undefined
+  // Material/emoji icons and chevrons are aria-hidden. Inject a content-based
+  // name (not aria-label) when the markdown label is blank so step status
+  // text (" — running") can still append to the accessible name.
+  const blankLabelAccessibleName = resolveBlankLabelName(
+    label,
+    icon,
+    isStep,
+    Boolean(stepState)
+  )
 
   const summaryHeading = (
     <StyledSummaryHeading expanderType={type}>
@@ -304,10 +350,14 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         <StreamlitMarkdown source={label} allowHTML={false} isLabel />
       </StyledSummaryLabelWrapper>
 
+      {!isNullOrEmptyString(blankLabelAccessibleName) && (
+        <StyledVisuallyHidden>{blankLabelAccessibleName}</StyledVisuallyHidden>
+      )}
+
       {/* Append the state as hidden text rather than setting an aria-label:
-          this keeps the rendered markdown label as the accessible name, and it
+          this keeps the markdown or injected empty-label name, and it
           also reaches non-collapsible steps, which ignore aria-label. */}
-      {stepStateLabel && (
+      {stepStateLabel !== undefined && (
         <StyledVisuallyHidden>{` — ${stepStateLabel}`}</StyledVisuallyHidden>
       )}
 

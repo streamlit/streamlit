@@ -33,10 +33,13 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    described_column_config,
+    described_hide_index,
     extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
@@ -53,7 +56,12 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.elements.lib.policies import check_widget_policies
-from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
+from streamlit.elements.lib.utils import (
+    Key,
+    compute_and_register_element_id,
+    normalize_alt,
+    to_key,
+)
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitIncompatibleParametersError,
@@ -69,7 +77,11 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     get_script_run_ctx,
 )
-from streamlit.runtime.state import WidgetCallback, register_widget
+from streamlit.runtime.state import (
+    WidgetCallback,
+    register_widget,
+    validate_on_change_mode,
+)
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -619,6 +631,26 @@ def _marshall_lazy_dataframe(
     return True
 
 
+def _lazy_dataframe_data(lazy_data: LazyDataframeProto) -> dict[str, Any] | None:
+    """A lazily loaded dataframe's agent ``data``, previewed from its first chunk.
+
+    The preview is the first ``server.agentPreviewRows`` rows of the chunk the
+    browser receives, the same cap as any table. Rows past the chunk are only
+    fetched by a browser as it scrolls, so nothing serves them, and the chunk
+    alone would pass for the whole table. The row count is the source's,
+    reported only when the source knows it.
+    """
+    data = agent_data.summarize_arrow(lazy_data.initial_chunk.data)
+    if data is None:
+        return None
+    data.update(agent_data.unavailable("lazy_loading"))
+    if lazy_data.HasField("row_count"):
+        data["row_count"] = lazy_data.row_count
+    else:
+        del data["row_count"]
+    return data
+
+
 class ArrowMixin:
     @overload
     def dataframe(
@@ -638,6 +670,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -658,6 +691,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -678,6 +712,7 @@ class ArrowMixin:
         row_height: int | None = None,
         placeholder: str | None = None,
         lazy: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -752,11 +787,13 @@ class ArrowMixin:
               performance issues with very large dataframes.
             - ``"stretch"``: The height of the element expands to fill the
               available vertical space in its parent container. When multiple
-              elements with stretch height are in the same container, they
-              share the available vertical space evenly. The dataframe will
-              maintain a minimum height to display up to three rows, but
-              otherwise won't exceed the available height in its parent
-              container.
+              elements with stretch height are in the same vertical container,
+              they share the available vertical space evenly. In a fixed-height
+              container, or a stretch container that fills one, the dataframe
+              keeps a minimum height that displays up to three rows and shrinks
+              to the remaining space when that minimum fits. Otherwise, the
+              dataframe uses its default height (at most ten rows) and still
+              grows to match a taller sibling.
             - An integer specifying the height in pixels: The element has a
               fixed height.
 
@@ -934,6 +971,18 @@ class ArrowMixin:
                 supported. Server-side sorting is supported. To use these
                 features, set ``lazy=False``.
 
+        alt : str or None
+            A short, plain-text accessible name for the dataframe. If this is
+            ``None`` (default), the grid has no element-level accessible name.
+            Cell values remain available through the grid's own accessibility
+            tree.
+
+            An empty or whitespace-only string is treated the same as ``None``.
+
+            Prefer naming what the data is (for example, "Top 20 customers by
+            revenue") rather than pasting cell contents. This is a short name
+            for findability, not a full text alternative for the table.
+
         Returns
         -------
         element or DataframeState
@@ -1041,7 +1090,7 @@ class ArrowMixin:
         ...             "Total": np.random.randint(1000, 5000, size=3),
         ...         }
         ...     )
-        >>>     df.set_index("Date", inplace=True)
+        >>>     df = df.set_index("Date")
         >>>     return df
         >>>
         >>> df = load_data()
@@ -1059,10 +1108,12 @@ class ArrowMixin:
         """
         import pyarrow as pa
 
-        if on_select not in {"ignore", "rerun"} and not callable(on_select):
-            raise StreamlitValueError(
-                "on_select", ["'rerun'", "'ignore'", "a callback function"]
-            )
+        on_select_callback = validate_on_change_mode(
+            on_select,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_select",
+        )
 
         key = to_key(key)
         is_selection_activated = on_select != "ignore"
@@ -1080,13 +1131,11 @@ class ArrowMixin:
 
         if is_selection_activated:
             # Run some checks that are only relevant when selections are activated
-            is_callback = callable(on_select)
+            is_callback = on_select_callback is not None
             check_widget_policies(
                 self.dg,
                 key,
-                on_change=cast("WidgetCallback", on_select)  # ty: ignore[redundant-cast]
-                if is_callback
-                else None,
+                on_change=on_select_callback,
                 default_value=None,
                 writes_allowed=True,
                 enable_check_callback_rules=is_callback,
@@ -1137,6 +1186,10 @@ class ArrowMixin:
         column_config_mapping = process_config_mapping(processed_column_config)
 
         proto = DataframeProto()
+
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            proto.alt = normalized_alt
 
         if row_height:
             proto.row_height = row_height
@@ -1209,20 +1262,23 @@ class ArrowMixin:
             num_rows = len(data_df)
             column_names = list(data_df.columns)
 
-        if hide_index is not None:
-            update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": hide_index}
-            )
-
-        elif (
-            # Hide index column if row selections are activated and the dataframe has a range index.
-            # The range index usually does not add a lot of value.
-            is_selection_activated
+        # A selectable range index is hidden even when the author left
+        # hide_index unset. The description has to report that effective value:
+        # the index entry's own hidden flag is stripped because hide_index
+        # carries it.
+        effective_hide_index = hide_index
+        if (
+            effective_hide_index is None
+            and is_selection_activated
             and has_range_index
             and selection_mode_set & _ROW_SELECTION_MODES
         ):
+            effective_hide_index = True
+        if effective_hide_index is not None:
             update_column_config(
-                column_config_mapping, INDEX_IDENTIFIER, {"hidden": True}
+                column_config_mapping,
+                INDEX_IDENTIFIER,
+                {"hidden": effective_hide_index},
             )
 
         marshall_column_config(proto, column_config_mapping)
@@ -1248,6 +1304,51 @@ class ArrowMixin:
         layout_config = LayoutConfig(
             width=width, height=height if height != "auto" else None
         )
+
+        def dataframe_agent_props() -> str | None:
+            """The agent description for this dataframe.
+
+            Called at each enqueue so the selection path can read ``proto.id``
+            after it is assigned. Column config is walked and the data block
+            built only while recording.
+            """
+            if not agent_spec.is_recording():
+                return None
+            return agent_spec.element(
+                "dataframe",
+                # A display dataframe has no element ID, only the author's key.
+                key=proto.id or key,
+                # A lazy table has no `arrow_data`, so nothing is served: its
+                # first chunk, served alone, would pass for the whole table.
+                data_builder=(
+                    lambda: (
+                        _lazy_dataframe_data(proto.lazy_data)
+                        if lazy_marshalled
+                        else agent_data.arrow(
+                            proto.arrow_data.data,
+                            coordinates=self.dg._get_write_delta_path_str(),
+                        )
+                    )
+                ),
+                # A browser user can select rows or press a button column. This
+                # API only reports that. A display-only table has nothing to
+                # withhold, so it is fully supported.
+                support="action_unsupported"
+                if is_selection_activated or button_columns
+                else None,
+                column_config=described_column_config(column_config_mapping),
+                column_order=list(proto.column_order) or None,
+                hide_index=described_hide_index(column_config_mapping),
+                selection_mode=sorted(selection_mode_set) or None,
+                # Reported only with selections on; the documented default,
+                # "ignore", is left out. A callback reaches the server too, so
+                # it is "rerun".
+                on_select="rerun" if is_selection_activated else None,
+                # The text shown for missing values, which the preview reports
+                # as null.
+                placeholder=placeholder,
+                alt=normalized_alt,
+            )
 
         if is_selection_activated:
             # If selection events are activated, we need to register the dataframe
@@ -1290,6 +1391,7 @@ class ArrowMixin:
                 selection_default=selection_default_json,
                 row_height=row_height,
                 placeholder=placeholder,
+                alt=normalized_alt,
             )
 
             serde = DataframeSelectionSerde(
@@ -1299,7 +1401,7 @@ class ArrowMixin:
             )
             widget_state = register_widget(
                 proto.id,
-                on_change_handler=on_select if callable(on_select) else None,
+                on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -1320,6 +1422,7 @@ class ArrowMixin:
                     proto,
                     layout_config=layout_config,
                     has_one_shot_effect=True,
+                    agent_props=dataframe_agent_props(),
                 )
                 # Eagerly wrap like deserialize so nested selection identity
                 # stays stable on this one-shot programmatic path.
@@ -1331,9 +1434,19 @@ class ArrowMixin:
                     }
                 )
 
-            self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+            self.dg._enqueue(
+                "dataframe",
+                proto,
+                layout_config=layout_config,
+                agent_props=dataframe_agent_props(),
+            )
             return DataframeState(widget_state.value)
-        return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "dataframe",
+            proto,
+            layout_config=layout_config,
+            agent_props=dataframe_agent_props(),
+        )
 
     @property
     def dg(self) -> DeltaGenerator:

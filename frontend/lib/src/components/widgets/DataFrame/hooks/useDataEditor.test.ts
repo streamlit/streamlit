@@ -16,14 +16,14 @@
 
 import {
   CompactSelection,
-  GridSelection,
-  TextCell,
+  type GridSelection,
+  type TextCell,
 } from "@glideapps/glide-data-grid"
 import { renderHook } from "@testing-library/react"
 import { Field, Int64, Utf8 } from "apache-arrow"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   NumberColumn,
   TextColumn,
 } from "~lib/components/widgets/DataFrame/columns"
@@ -151,7 +151,7 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(editedCell)).toBe(true)
 
-    // @ts-expect-error
+    // @ts-expect-error - edited cell is not narrowed from undefined
     expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
 
     // Check with full editing state
@@ -245,7 +245,7 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(editedCell)).toBe(true)
 
-    // @ts-expect-error
+    // @ts-expect-error - edited cell is not narrowed from undefined
     expect(columnToEdit.getCellValue(editedCell)).toEqual("bar")
 
     // Check with full editing state
@@ -288,14 +288,14 @@ describe("useDataEditor hook", () => {
     const cell1 = editingState.current.getCell(0, 1)
     expect(notNullOrUndefined(cell1)).toBe(true)
 
-    // @ts-expect-error
+    // @ts-expect-error - edited cell is not narrowed from undefined
     expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(321)
 
     // Check data from second column
     const cell2 = editingState.current.getCell(1, 1)
     expect(cell2).not.toBeNull()
 
-    // @ts-expect-error
+    // @ts-expect-error - edited cell is not narrowed from undefined
     expect(MOCK_COLUMNS[1].getCellValue(cell2)).toEqual("bar")
 
     // Check with full editing state
@@ -659,7 +659,7 @@ describe("useDataEditor hook", () => {
 
     expect(notNullOrUndefined(cell1)).toBe(true)
 
-    // @ts-expect-error
+    // @ts-expect-error - edited cell is not narrowed from undefined
     expect(MOCK_COLUMNS[0].getCellValue(cell1)).toEqual(null)
 
     // Check with full editing state

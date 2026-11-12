@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 /**
  * Think of useState, but the state is also persisted in the widget manager.
@@ -61,7 +61,7 @@ const useWidgetManagerElementState = <T,>({
     [widgetMgr, id, key]
   )
 
-  const element = useMemo(() => ({ formId: formId || "" }), [formId])
+  const element = useMemo(() => ({ formId: formId ?? "" }), [formId])
   const onFormCleared = useCallback(
     () => setState(defaultValue),
     [defaultValue, setState]

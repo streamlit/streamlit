@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, type ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { streamlit, Table as TableProto } from "@streamlit/protobuf"
+import { type streamlit, Table as TableProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -34,7 +35,7 @@ import { Quiver } from "~lib/dataframes/Quiver"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import {
-  StickyType,
+  type StickyType,
   StyledEmptyTableCell,
   StyledTable,
   StyledTableBorder,
@@ -101,8 +102,8 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   const borderMode = props.element.borderMode
 
   // Hide index and header settings from proto
-  const hideIndex = props.element.hideIndex ?? false
-  const hideHeader = props.element.hideHeader ?? false
+  const hideIndex = props.element.hideIndex
+  const hideHeader = props.element.hideHeader
 
   // Calculate visible columns based on hideIndex
   const visibleNumIndexColumns = hideIndex ? 0 : numIndexColumns
@@ -110,8 +111,13 @@ export function Table(props: Readonly<TableProps>): ReactElement {
     ? numColumns - numIndexColumns
     : numColumns
 
-  // Scrolling is enabled when a fixed pixel height or width is specified
+  // Pixel height makes an on-screen scroll box. Stretch and pixel both
+  // reserve a box in print so the table does not paint over later
+  // elements. Content height can split.
   const hasScrollableHeight = Boolean(props.heightConfig?.pixelHeight)
+  const hasReservedHeight = Boolean(
+    hasScrollableHeight || props.heightConfig?.useStretch
+  )
   const hasScrollableWidth = Boolean(props.widthConfig?.pixelWidth)
 
   // Table sizes to content (width="content") instead of filling space
@@ -137,14 +143,28 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // With sticky index limited to single index columns, the offset is always 0
   const indexLeftOffsets = [0]
 
+  // Only name the <table> when the author provided a non-blank alt.
+  // Blank input is treated as absent: aria-label=" " computes to an empty
+  // accessible name, which is worse than none. Native <table> already has
+  // the table role — do not add role="figure" or role="img".
+  const trimmedAlt = element.alt?.trim()
+  const accessibleName = isNullOrEmptyString(trimmedAlt)
+    ? undefined
+    : trimmedAlt
+
   return (
-    <StyledTableContainer className="stTable" data-testid="stTable">
-      {cssStyles && <style>{cssStyles}</style>}
+    <StyledTableContainer
+      className="stTable"
+      data-testid="stTable"
+      hasReservedHeight={hasReservedHeight}
+    >
+      {!isNullOrEmptyString(cssStyles) && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
       <StyledTableBorder
         borderMode={borderMode}
         hasScrollableHeight={hasScrollableHeight}
+        hasReservedHeight={hasReservedHeight}
         // A11y: When scrolling is enabled, make the wrapper focusable so keyboard users
         // can discover and scroll the table content
         tabIndex={hasScrollableHeight || hasScrollableWidth ? 0 : undefined}
@@ -160,6 +180,7 @@ export function Table(props: Readonly<TableProps>): ReactElement {
           data-testid="stTableStyledTable"
           useContentWidth={useContentWidth}
           hasScrollableWidth={hasScrollableWidth}
+          aria-label={accessibleName}
         >
           {numHeaderRows > 0 &&
             !hideHeader &&
@@ -211,7 +232,9 @@ export function Table(props: Readonly<TableProps>): ReactElement {
       function) and I couldn't find a single example on GitHub that actually does this
       for `st.table`. We might want to revisit this if we add captions/labels as a
       native feature or do a pass on accessibility. */}
-      {caption && <StyledTableCaption>{caption}</StyledTableCaption>}
+      {!isNullOrEmptyString(caption) && (
+        <StyledTableCaption>{caption}</StyledTableCaption>
+      )}
     </StyledTableContainer>
   )
 }
@@ -347,14 +370,14 @@ function generateTableCell(
   const styledCell = getStyledCell(table, rowIndex, columnIndex)
 
   let formattedContent =
-    styledCell?.displayContent || formatArrowCell(content, contentType)
+    styledCell?.displayContent ?? formatArrowCell(content, contentType)
   let hasStylerTooltip: boolean = false
 
   const style: React.CSSProperties = {
     textAlign: isNumericType(contentType) ? "right" : "left",
   }
 
-  if (formattedContent?.endsWith(`<span class="pd-t"></span>`)) {
+  if (formattedContent.endsWith(`<span class="pd-t"></span>`)) {
     // This is a bit hacky, but to support the Pandas Styler's tooltip feature,
     // we need to convert the specific HTML element (used for tooltips) from
     // the display value into an actual span element.

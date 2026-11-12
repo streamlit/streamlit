@@ -13,5 +13,5 @@
 # limitations under the License.
 
 name = "fixing-pr"
-description = "Fix CI failures and address PR review comments for the current branch."
+description = "Fix CI failures, resolve merge conflicts with the base branch, and address PR review comments for the current branch."
 developer_instructions = "Read and follow the instructions in `.claude/agents/fixing-pr.md`."

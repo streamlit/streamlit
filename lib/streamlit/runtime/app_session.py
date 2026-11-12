@@ -18,6 +18,7 @@ import asyncio
 import json
 import os
 import sys
+import threading
 import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final
@@ -50,7 +51,13 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner import RerunData, ScriptRunner, ScriptRunnerEvent
+from streamlit.runtime.scriptrunner import (
+    RerunData,
+    RunDescriptor,
+    ScriptRunContext,
+    ScriptRunner,
+    ScriptRunnerEvent,
+)
 from streamlit.runtime.secrets import secrets_singleton
 from streamlit.runtime.state.query_params import sanitize_query_string
 from streamlit.runtime.theme_util import parse_fonts_with_source
@@ -67,6 +74,7 @@ if TYPE_CHECKING:
         BackendOperationRequest,
         BackMsg,
     )
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -148,11 +156,6 @@ class AppSessionState(Enum):
     APP_NOT_RUNNING = "APP_NOT_RUNNING"
     APP_IS_RUNNING = "APP_IS_RUNNING"
     SHUTDOWN_REQUESTED = "SHUTDOWN_REQUESTED"
-
-
-def _generate_scriptrun_id() -> str:
-    """Randomly generate a unique ID for a script execution."""
-    return str(uuid.uuid4())
 
 
 class AppSession:
@@ -257,14 +260,27 @@ class AppSession:
         self._run_on_save = config.get_option("server.runOnSave")
 
         self._scriptrunner: ScriptRunner | None = None
+        # Set while the session is settled: no run chain is going, and every
+        # message the last one produced has been sent to the client. The agent
+        # API answers a request only then, because nothing in the message
+        # stream says so: `script_finished` also arrives between the runs of one
+        # chain (a callback, `st.rerun()`), and the Runtime sends messages after
+        # they are enqueued. None until `track_settling` is called, so a browser
+        # session, which nothing waits on, skips the bookkeeping.
+        self._settled: asyncio.Event | None = None
+        # True once the last run chain has ended, until the Runtime confirms
+        # that every message the chain enqueued has been sent to the client.
+        self._settle_pending = False
 
         # This needs to be lazily imported to avoid a dependency cycle.
         from streamlit.runtime.state import SessionState
 
         self._session_state = SessionState()
         self._user_info = user_info
-
-        self._debug_last_backmsg_id: str | None = None
+        self._resumable = True
+        # Pairs the resume flag with the owner dict. clear_user_info() and
+        # matches_user_info() must observe both together.
+        self._user_info_lock = threading.Lock()
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
@@ -373,6 +389,111 @@ class AppSession:
         """
         return self._browser_queue.flush()
 
+    def on_flushed_messages_sent(self) -> None:
+        """Settle a tracked session once its last run chain's messages are sent.
+
+        The Runtime loop calls this after it has sent the session's client
+        every message that ``flush_browser_queue`` returned. A tracked session
+        whose run chain has ended settles here if nothing has been enqueued
+        since that flush. Otherwise, the enqueue has already requested another
+        flush cycle, which ends with another call.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop.
+        """
+        if (
+            self._settle_pending
+            and self._settled is not None
+            and self._browser_queue.is_empty()
+        ):
+            self._settle_pending = False
+            self._settled.set()
+
+    def track_settling(self) -> None:
+        """Start tracking whether the session is settled.
+
+        ``is_settled`` and ``wait_until_settled`` need this. Call it before the
+        session's first run. A session that never calls it skips the
+        bookkeeping, including the extra flush cycle the end of each run chain
+        requests.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop. The
+        settle state is only kept consistent on that loop, so a tracked session
+        should not rerun on source file changes, which a file watcher thread
+        starts.
+        """
+        if self._settled is None:
+            self._settled = asyncio.Event()
+            if self._scriptrunner is None:
+                self._settled.set()
+
+    @property
+    def is_settled(self) -> bool:
+        """Whether the session's last run chain is over and fully delivered.
+
+        A session is settled when no ScriptRunner exists or is queued to run,
+        and every message the last run chain enqueued has been sent to the
+        session's client. A run chain is everything one ScriptRunner runs
+        before it shuts down, including reruns from callbacks, ``st.rerun``,
+        ``st.switch_page``, and queued fragment runs.
+
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
+        """
+        return self._tracked_settled().is_set()
+
+    async def wait_until_settled(self) -> None:
+        """Wait until the session is settled or shut down.
+
+        Returns at once if the session is already settled. The wait has no
+        bound of its own, because a run that never finishes never settles, so
+        callers should bound it, for example with ``asyncio.timeout``.
+
+        Raises
+        ------
+        RuntimeError
+            If ``track_settling`` was not called.
+
+        Notes
+        -----
+        Threading: UNSAFE. Must be called on the session's event loop.
+        """
+        settled = self._tracked_settled()
+        # A new run can start between the event being set and this coroutine
+        # resuming, so recheck before returning.
+        while not settled.is_set():
+            await settled.wait()
+
+    def _tracked_settled(self) -> asyncio.Event:
+        if self._settled is None:
+            raise RuntimeError(
+                "This session does not track settling; call track_settling() first."
+            )
+        return self._settled
+
+    def _unsettle(self) -> None:
+        """Mark a tracked session as not settled until its next run chain ends."""
+        if self._settled is not None:
+            self._settle_pending = False
+            self._settled.clear()
+
+    def _settle_once_delivered(self) -> None:
+        """Settle a tracked session once every queued message has been sent to the client."""
+        if self._settled is None:
+            return
+        self._settle_pending = True
+        # The Runtime loop only runs a flush cycle after a message is enqueued,
+        # and the session settles at the end of one. When the run chain's last
+        # messages were already flushed, nothing else may be enqueued, so ask
+        # for a cycle here.
+        if self._message_enqueued_callback:
+            self._message_enqueued_callback()
+
     def shutdown(self) -> None:
         """Shut down the AppSession.
 
@@ -398,6 +519,12 @@ class AppSession:
 
             self._state = AppSessionState.SHUTDOWN_REQUESTED
 
+            # A closed session is never flushed again, so nothing may keep
+            # waiting for it to settle.
+            if self._settled is not None:
+                self._settle_pending = False
+                self._settled.set()
+
             # Disconnect all file watchers if we haven't already, although we will have
             # generally already done so by the time we get here.
             self.disconnect_file_watchers()
@@ -416,8 +543,10 @@ class AppSession:
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
 
-        This can be called on both the main thread and a ScriptRunner
-        run thread.
+        Call this only on this session's event loop (``self._event_loop``).
+        ForwardMsgQueue is not thread-safe, so callers on other threads, such
+        as ScriptRunner or file-watcher threads, must schedule the call with
+        ``_call_soon_on_event_loop``.
 
         Parameters
         ----------
@@ -425,10 +554,6 @@ class AppSession:
             The message to enqueue
 
         """
-
-        if self._debug_last_backmsg_id:
-            msg.debug_last_backmsg_id = self._debug_last_backmsg_id
-
         self._browser_queue.enqueue(msg)
         if self._message_enqueued_callback:
             self._message_enqueued_callback()
@@ -438,9 +563,6 @@ class AppSession:
         try:
             msg_type = msg.WhichOneof("type")
             if msg_type == "rerun_script":
-                if msg.debug_last_backmsg_id:
-                    self._debug_last_backmsg_id = msg.debug_last_backmsg_id
-
                 self._handle_rerun_script_request(msg.rerun_script)
             elif msg_type == "load_git_info":
                 self._handle_git_information_request()
@@ -480,16 +602,22 @@ class AppSession:
         # 3) HACK: Resets any script params that may have been broken (e.g. the
         # command-line when rerunning with wrong argv[0])
 
+        # Ends whatever run was in progress. Only that run's ScriptRunner knows
+        # its descriptor, so this script_finished carries no run identity.
         self._on_scriptrunner_event(
             self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
         )
+        error_run_descriptor = RunDescriptor.create()
         self._on_scriptrunner_event(
             self._scriptrunner,
             ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=error_run_descriptor,
         )
         self._on_scriptrunner_event(
-            self._scriptrunner, ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS
+            self._scriptrunner,
+            ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+            run_descriptor=error_run_descriptor,
         )
 
         # Send an Exception message to the frontend.
@@ -537,7 +665,7 @@ class AppSession:
             # example app described in
             # https://github.com/streamlit/streamlit/issues/9921, where the dialog
             # sometimes stays open.
-            if fragment_id and not self._fragment_storage.contains(fragment_id):
+            if fragment_id and not self.has_fragment(fragment_id):
                 _LOGGER.info(
                     "The fragment with id %s does not exist anymore - "
                     "it might have been removed during a preceding full-app rerun.",
@@ -556,8 +684,13 @@ class AppSession:
                 page_name=client_state.page_name,
                 fragment_id=fragment_id or None,
                 is_auto_rerun=client_state.is_auto_rerun,
+                is_history_navigation=client_state.is_history_navigation,
                 cached_message_hashes=frozenset(client_state.cached_message_hashes),
-                context_info=client_state.context_info,
+                # None, not an empty proto, when the client sent no browser
+                # context, so the run and its saved client state keep saying so.
+                context_info=client_state.context_info
+                if client_state.HasField("context_info")
+                else None,
             )
         else:
             rerun_data = RerunData()
@@ -594,9 +727,18 @@ class AppSession:
         if self._scriptrunner is not None:
             self._scriptrunner.request_stop()
 
+    def is_resumable(self) -> bool:
+        """Return whether a later connection may resume this session."""
+        with self._user_info_lock:
+            return self._resumable
+
     def clear_user_info(self) -> None:
-        """Clear the user info for this session."""
-        self._user_info.clear()
+        """Clear this session's user info so later connections cannot resume it."""
+        # Hold the flag and the dict together. A reconnect must not observe a
+        # resumable flag and then compare the dict after it has been cleared.
+        with self._user_info_lock:
+            self._resumable = False
+            self._user_info.clear()
 
     def matches_user_info(self, user_info: UserInfoType) -> bool:
         """Return whether ``user_info`` matches this session's owner identity.
@@ -608,8 +750,14 @@ class AppSession:
         merely by presenting its id. The comparison is intentionally strict
         (full equality) so any identity difference fails closed to a fresh
         session rather than allowing a takeover.
+
+        After ``clear_user_info`` runs, this returns ``False`` for every
+        identity, including the anonymous ``{}``.
         """
-        return self._user_info == user_info
+        with self._user_info_lock:
+            if not self._resumable:
+                return False
+            return self._user_info == user_info
 
     def _create_scriptrunner(self, initial_rerun_data: RerunData) -> None:
         """Create and run a new ScriptRunner with the given RerunData."""
@@ -638,11 +786,106 @@ class AppSession:
             event_loop=self._script_event_loop,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
-        self._scriptrunner.start()
+        try:
+            self._scriptrunner.start()
+        except Exception:
+            # A runner that never started would still accept rerun requests
+            # when fastReruns is off, and they would never run.
+            self._scriptrunner = None
+            raise
+        # Only once the runner has started, so a runner that fails to start
+        # leaves the session settled. Its events reach this loop later, so none
+        # can settle the session before this line runs.
+        self._unsettle()
 
     @property
     def session_state(self) -> SessionState:
         return self._session_state
+
+    @property
+    def page_script_hash(self) -> PageHash:
+        """The script hash of the page the latest run is on, or "" before any run."""
+        return self._client_state.page_script_hash
+
+    def get_pages(self) -> dict[PageHash, PageInfo]:
+        """Return a copy of the app's pages, keyed by page script hash.
+
+        Before ``st.navigation`` has run, this holds a single default entry for
+        the main script.
+        """
+        return self._pages_manager.get_pages()
+
+    def has_fragment(self, fragment_id: str) -> bool:
+        """Return whether this session still holds the fragment ``fragment_id``.
+
+        A full run drops every fragment it did not register, and
+        ``request_rerun`` ignores a rerun of a fragment this session no longer
+        holds.
+
+        Notes
+        -----
+        Threading: SAFE. The fragment storage takes its own lock.
+        """
+        return self._fragment_storage.contains(fragment_id)
+
+    def set_run_on_save(self, enabled: bool) -> None:
+        """Set whether a change to a source file reruns the script.
+
+        Unlike the ``set_run_on_save`` BackMsg, this does not notify the
+        client. The next ``new_session`` message carries the value.
+
+        Parameters
+        ----------
+        enabled : bool
+            Whether a source file change reruns the script. When this is
+            ``False``, the client is told that the script changed on disk.
+        """
+        self._run_on_save = enabled
+
+    def create_detached_script_run_ctx(
+        self, *, query_string: str, context_info: ContextInfo | None
+    ) -> ScriptRunContext:
+        """Create a script context for reading this session's state outside a run.
+
+        App code that reads ``st.session_state`` or ``st.context``, such as a
+        widget's ``format_func``, needs a script context to find its session.
+        The returned context shares this session's state, user info, fragment
+        storage, pages, and upload manager. It drops every message enqueued
+        through it, cannot request a rerun, and is not attached to any thread.
+
+        Its session state wrapper has its own lock, which does not exclude a
+        running ScriptRunner. Only read through it while no run can start.
+
+        Parameters
+        ----------
+        query_string : str
+            The query string the context reports.
+        context_info : ContextInfo or None
+            The browser context that ``st.context`` reports, or ``None`` when
+            the client stated none.
+
+        Returns
+        -------
+        ScriptRunContext
+            A new context for this session.
+        """
+        # This needs to be lazily imported to avoid a dependency cycle.
+        from streamlit.runtime.state import SafeSessionState
+
+        return ScriptRunContext(
+            session_id=self.id,
+            _enqueue=lambda _msg: None,
+            query_string=query_string,
+            session_state=SafeSessionState(
+                self._session_state, yield_callback=lambda: None
+            ),
+            uploaded_file_mgr=self._uploaded_file_mgr,
+            main_script_path=self._script_data.main_script_path,
+            user_info=self._user_info,
+            fragment_storage=self._fragment_storage,
+            pages_manager=self._pages_manager,
+            context_info=context_info,
+        )
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         pages = self._pages_manager.get_pages()
@@ -670,7 +913,12 @@ class AppSession:
         if self._run_on_save:
             self.request_rerun(self._client_state)
         else:
-            self._enqueue_forward_msg(self._create_file_change_message())
+            # File watchers run off the event loop, and ForwardMsgQueue is
+            # single-threaded. This handoff prevents delta coalescing from
+            # overwriting the notification.
+            self._call_soon_on_event_loop(
+                lambda: self._enqueue_forward_msg(self._create_file_change_message())
+            )
 
     def _on_secrets_file_changed(self, _: Any) -> None:
         """Called when `secrets.file_change_listener` emits a Signal."""
@@ -699,6 +947,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Called when our ScriptRunner emits an event.
 
@@ -716,6 +965,7 @@ class AppSession:
                 page_script_hash,
                 fragment_ids_this_run,
                 pages,
+                run_descriptor,
             )
         )
 
@@ -743,6 +993,7 @@ class AppSession:
         page_script_hash: str | None = None,
         fragment_ids_this_run: list[str] | None = None,
         pages: dict[PageHash, PageInfo] | None = None,
+        run_descriptor: RunDescriptor | None = None,
     ) -> None:
         """Handle a ScriptRunner event.
 
@@ -779,6 +1030,28 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
+
+        pages : dict[PageHash, PageInfo] | None
+            The app's pages at the start of the run. Set only for the
+            SCRIPT_STARTED event.
+
+        run_descriptor : RunDescriptor | None
+            The run that the event starts or finishes, which AppSession copies
+            into the new_session or script_finished metadata.
+
+            - ScriptRunner always sends it, on SCRIPT_STARTED and on that
+              run's finish event.
+            - It is None only when the server fails to handle a request from
+              the browser, for example a rerun or "Clear caches" request that
+              raises. The app then replaces its content with the error, and
+              handle_backmsg_exception first ends whatever run was in progress
+              with a SCRIPT_STOPPED_WITH_SUCCESS. Only that run's ScriptRunner
+              holds its descriptor.
+
+            A script_finished without it has no metadata.run, so nothing can
+            tell which run it ended. Neither the frontend nor the agent client
+            reads run identity from script_finished, so they handle it like
+            any other finish.
         """
 
         if (
@@ -807,6 +1080,10 @@ class AppSession:
                 raise RuntimeError(
                     "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
                 )
+            if run_descriptor is None:  # pragma: no cover - defensive
+                raise RuntimeError(
+                    "run_descriptor must be set for the SCRIPT_STARTED event. This should never happen."
+                )
 
             # Update the client state with the new page_script_hash if
             # necessary. This handles an edge case where a script is never
@@ -818,7 +1095,7 @@ class AppSession:
             self._clear_queue(fragment_ids_this_run)
 
             msg = self._create_new_session_message(
-                page_script_hash, fragment_ids_this_run, pages
+                page_script_hash, run_descriptor, pages
             )
 
             self._enqueue_forward_msg(msg)
@@ -838,8 +1115,9 @@ class AppSession:
             else:
                 status = ForwardMsg.FINISHED_WITH_COMPILE_ERROR
 
-            self._enqueue_forward_msg(self._create_script_finished_message(status))
-            self._debug_last_backmsg_id = None
+            self._enqueue_forward_msg(
+                self._create_script_finished_message(status, run_descriptor)
+            )
 
             if event in {
                 ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
@@ -869,7 +1147,7 @@ class AppSession:
             self._state = AppSessionState.APP_NOT_RUNNING
             self._enqueue_forward_msg(
                 self._create_script_finished_message(
-                    ForwardMsg.FINISHED_EARLY_FOR_RERUN
+                    ForwardMsg.FINISHED_EARLY_FOR_RERUN, run_descriptor
                 )
             )
             if self._local_sources_watcher:
@@ -892,6 +1170,10 @@ class AppSession:
                 # Final runner state must be retained and the completed runner
                 # released even when best-effort teardown cannot close the loop.
                 self._scriptrunner = None
+                if self._state != AppSessionState.SHUTDOWN_REQUESTED:
+                    # The run chain's messages were all enqueued before this
+                    # event, since every runner event reaches this loop in order.
+                    self._settle_once_delivered()
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
             if forward_msg is None:  # pragma: no cover - defensive
@@ -924,20 +1206,17 @@ class AppSession:
     def _create_new_session_message(
         self,
         page_script_hash: str,
-        fragment_ids_this_run: list[str] | None = None,
+        run_descriptor: RunDescriptor,
         pages: dict[PageHash, PageInfo] | None = None,
     ) -> ForwardMsg:
         """Create and return a new_session ForwardMsg."""
         msg = ForwardMsg()
+        _set_run_identity(msg, run_descriptor)
 
-        msg.new_session.script_run_id = _generate_scriptrun_id()
         msg.new_session.name = self._script_data.name
         msg.new_session.main_script_path = self._pages_manager.main_script_path
         msg.new_session.main_script_hash = self._pages_manager.main_script_hash
         msg.new_session.page_script_hash = page_script_hash
-
-        if fragment_ids_this_run:
-            msg.new_session.fragment_ids_this_run.extend(fragment_ids_this_run)
 
         self._populate_app_pages(
             msg.new_session, pages or self._pages_manager.get_pages()
@@ -1061,10 +1340,14 @@ class AppSession:
             return False, ""
 
     def _create_script_finished_message(
-        self, status: ForwardMsg.ScriptFinishedStatus.ValueType
+        self,
+        status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        run_descriptor: RunDescriptor | None = None,
     ) -> ForwardMsg:
-        """Create and return a script_finished ForwardMsg."""
+        """Create a script_finished ForwardMsg, tagged with run_descriptor's run when given."""
         msg = ForwardMsg()
+        if run_descriptor is not None:
+            _set_run_identity(msg, run_descriptor)
         msg.script_finished = status
         return msg
 
@@ -1177,7 +1460,7 @@ class AppSession:
             New run_on_save value
 
         """
-        self._run_on_save = new_value
+        self.set_run_on_save(new_value)
         self._enqueue_forward_msg(self._create_session_status_changed_message())
 
     def _handle_file_urls_request(self, file_urls_request: FileURLsRequest) -> None:
@@ -1239,6 +1522,12 @@ class AppSession:
             page_proto.page_name = page_info["page_name"].replace("_", " ")
             page_proto.url_pathname = page_info["page_name"]
             page_proto.icon = page_info["icon"]
+
+
+def _set_run_identity(msg: ForwardMsg, run_descriptor: RunDescriptor) -> None:
+    """Tag a lifecycle message (new_session or script_finished) with its run."""
+    msg.metadata.run.script_run_id = run_descriptor.script_run_id
+    msg.metadata.run.fragment_ids.extend(run_descriptor.fragment_ids)
 
 
 # Config.ToolbarMode.ValueType does not exist at runtime (only in the pyi stubs), so
@@ -1350,7 +1639,7 @@ def _parse_and_populate_chart_colors(
         for color in colors:
             try:
                 msg_field.append(color)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.%s config option: %s.",
                     config_key,
@@ -1369,7 +1658,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         # and cannot directly be set on the protobuf.
         if (
             option_name
-            not in {
+            in {
                 "base",
                 "font",
                 "fontFaces",
@@ -1381,9 +1670,26 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                 "chartSequentialColors",
                 "chartDivergingColors",
             }
-            and option_val is not None
+            or option_val is None
         ):
-            setattr(msg, to_snake_case(option_name), option_val)
+            continue
+
+        # Protobuf string fields reject non-string values, so an unquoted TOML
+        # number (e.g. `paddingTop = 0`) would raise TypeError and break
+        # session startup.
+        if option_name in {"paddingTop", "paddingBottom"} and not isinstance(
+            option_val, str
+        ):
+            _LOGGER.warning(
+                'Theme option %s.%s must be a quoted string (for example "0" or '
+                '"1rem"), got %r. Ignoring.',
+                section,
+                option_name,
+                option_val,
+            )
+            continue
+
+        setattr(msg, to_snake_case(option_name), option_val)
 
     # NOTE: If unset, base will default to the protobuf enum zero value,
     # which is BaseTheme.LIGHT. This is why we don't handle the case
@@ -1443,7 +1749,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
                     ):
                         font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.fontFaces config option: %s.",
                     font_face,
@@ -1482,7 +1788,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for size in heading_font_sizes:
             try:
                 msg.heading_font_sizes.append(size)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontSizes config option: %s.",
                     size,
@@ -1523,7 +1829,7 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         for weight in heading_weights:
             try:
                 msg.heading_font_weights.append(weight)
-            except Exception as e:  # noqa: PERF203
+            except Exception as e:
                 _LOGGER.warning(
                     "Failed to parse the theme.headingFontWeights config option: %s.",
                     weight,

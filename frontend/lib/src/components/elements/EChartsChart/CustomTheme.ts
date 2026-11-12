@@ -15,11 +15,16 @@
  */
 
 import { transparentize } from "color2k"
-import { isPlainObject } from "lodash-es"
+import * as echarts from "echarts"
+import { get, isPlainObject, omit } from "lodash-es"
+
+import { isNullOrUndefined } from "@streamlit/utils"
 
 import {
+  getDecreasingRed,
   getGray30,
   getGray70,
+  getIncreasingGreen,
   hasLightBackgroundColor,
 } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -35,16 +40,147 @@ export const STREAMLIT_THEME = "streamlit"
  */
 export type EChartsOptionObject = Record<string, unknown>
 
+const TOOLTIP_FRACTION_DIGITS = 4
+
+const TOOLTIP_SIGNIFICANT_DIGITS = 6
+
+// Reused across tooltip updates. The digit options are a fixed set, so a
+// hover should not construct a new formatter for every series value.
+const scientificTooltipFormat = new Intl.NumberFormat("en-US", {
+  notation: "scientific",
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+})
+
+const significantTooltipFormat = new Intl.NumberFormat("en-US", {
+  maximumSignificantDigits: TOOLTIP_SIGNIFICANT_DIGITS,
+  useGrouping: true,
+})
+
+const shortTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+const paddedTooltipFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  maximumFractionDigits: TOOLTIP_FRACTION_DIGITS,
+  useGrouping: true,
+})
+
+/** Label templates at day and second precision, matching ECharts' own. */
+const DATE_LABEL_TEMPLATE = "{yyyy}-{MM}-{dd}"
+const DATE_TIME_LABEL_TEMPLATE = `${DATE_LABEL_TEMPLATE} {HH}:{mm}:{ss}`
+
 /**
- * Build the per-axis theming defaults shared by all axis types
- * (``categoryAxis``/``valueAxis``/``logAxis``/``timeAxis`` as well as the
- * non-cartesian axes ``angleAxis``/``radiusAxis``/``parallelAxis``/
- * ``singleAxis``).
+ * The datetime strings that dataframe sources hold: ISO-8601 to the
+ * millisecond, with a trailing ``Z`` when timezone-aware. Any tooltip string
+ * of this shape is formatted, including one written inline in the option.
+ */
+const MILLISECOND_ISO_DATETIME =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z?$/
+
+/**
+ * Format a time value as its date when it is exactly midnight, and as its
+ * date and time to the second otherwise.
+ */
+export function formatTimeLabel(value: unknown, useUTC: boolean): string {
+  const date = echarts.time.parse(value)
+  // Format through ECharts so the check uses the label's UTC or local clock.
+  // Milliseconds count, so 00:00:00.250 is not midnight.
+  const isMidnight =
+    echarts.time.format(date, "{HH}{mm}{ss}{SSS}", useUTC) === "000000000"
+  return echarts.time.format(
+    date,
+    isMidnight ? DATE_LABEL_TEMPLATE : DATE_TIME_LABEL_TEMPLATE,
+    useUTC
+  )
+}
+
+/**
+ * Format one tooltip value as plain text.
+ *
+ * Shortens numbers, shows dataframe datetimes like time axis labels, renders
+ * blank and unsupported values as ``-``, and passes other strings and
+ * booleans through.
+ */
+export function formatTooltipItem(value: unknown): string {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? formatTooltipNumber(value) : "-"
+  }
+  if (typeof value === "string") {
+    if (MILLISECOND_ISO_DATETIME.test(value)) {
+      // In local time, as on a time axis without ``useUTC``. ECharts reads a
+      // naive datetime as local time, so it keeps its wall-clock time.
+      return formatTimeLabel(value, false)
+    }
+    // Blank text is missing. Other strings, including numeric ones, pass
+    // through so an id or year is not grouped.
+    return value.trim() === "" ? "-" : value
+  }
+  // Chart specs are JSON, so booleans are the only other expected type.
+  // Anything else (null, Date, bigint) renders as a dash.
+  if (typeof value === "boolean") {
+    return String(value)
+  }
+  return "-"
+}
+
+/**
+ * Choose the formatter for tooltip numbers of magnitude 1 or greater.
+ *
+ * Pad to four fraction digits only when rounding changed the value, so
+ * readers can tell it was rounded (``76.2380``). Exact shorter values stay
+ * short (``12.5``, integers). Binary float noise such as ``1.1 + 2.2`` also
+ * fails that equality check, so those values pad (``3.3000``).
+ */
+function selectOrdinaryTooltipFormat(value: number): Intl.NumberFormat {
+  const rounded = Number(value.toFixed(TOOLTIP_FRACTION_DIGITS))
+  return rounded === value ? shortTooltipFormat : paddedTooltipFormat
+}
+
+function formatTooltipNumber(value: number): string {
+  if (Object.is(value, -0)) {
+    return "0"
+  }
+  const absolute = Math.abs(value)
+  // Values below 0.0001 use scientific notation instead of rounding to zero.
+  if (absolute !== 0 && absolute < 10 ** -TOOLTIP_FRACTION_DIGITS) {
+    return scientificTooltipFormat.format(value)
+  }
+  // Four decimal places would clip a small fraction (0.000123456 → 0.0001).
+  const format =
+    absolute >= 1
+      ? selectOrdinaryTooltipFormat(value)
+      : significantTooltipFormat
+  return format.format(value)
+}
+
+/**
+ * Tooltip ``valueFormatter`` for the Streamlit theme.
+ *
+ * Returns plain text that ECharts escapes: one string, or one string per
+ * entry for multi-value points such as candlesticks. An author's
+ * ``tooltip.formatter`` replaces this, as does a ``tooltip.valueFormatter``
+ * number format (``applyTooltipFormatters`` turns it into a function).
+ */
+export function formatEChartsTooltipValue(value: unknown): string | string[] {
+  if (Array.isArray(value)) {
+    return value.map(item => formatTooltipItem(item))
+  }
+  return formatTooltipItem(value)
+}
+
+/**
+ * Build the base axis styling (colors, fonts, label margin) that every axis
+ * theme key starts from. Value, log, and time axes extend it to hide
+ * overlapping labels (see ``continuousAxisDefaults`` in
+ * ``buildStreamlitEChartsTheme``).
  */
 function buildAxisDefaults(
   theme: EmotionTheme,
   fontSize: number
-): Record<string, unknown> {
+): Record<string, Record<string, unknown>> {
   const axisLineColor = getGray30(theme)
   const labelColor = getGray70(theme)
 
@@ -63,6 +199,12 @@ function buildAxisDefaults(
       color: labelColor,
       fontFamily: theme.genericFonts.bodyFont,
       fontSize,
+      // ECharts' default margin is a fixed 8px. Scale the gap with the base font.
+      margin: convertRemToPx(theme.spacing.sm),
+      // Paint a page-colored stroke around the glyphs so a series or gridline
+      // that crosses a label stays readable.
+      textBorderColor: theme.colors.bgColor,
+      textBorderWidth: 2,
     },
     nameTextStyle: {
       color: labelColor,
@@ -127,17 +269,80 @@ function buildChartTitleDefaults(theme: EmotionTheme): {
 }
 
 /**
- * Vertical offset for a legend lifted under a top title.
+ * Label style for text drawn on palette fills of varying lightness. Dark text
+ * with a light halo stays readable on every palette color, whereas any single
+ * fixed color disappears on part of the palette.
  *
- * Legend ``top`` is measured from the container, not the title box, so this
- * covers ECharts' title inset (~``spacing.lg``), the title font, and the
- * title's bottom padding.
+ * Both colors must stay the same in light and dark mode:
+ * ``withInsideLabelStyle`` writes them into the option, and
+ * EChartsChart doesn't rebuild the option on a color-only theme change.
  */
-function liftedLegendTopPx(theme: EmotionTheme): number {
+function buildOnFillLabelStyle(theme: EmotionTheme): {
+  color: string
+  textBorderColor: string
+  textBorderWidth: number
+} {
+  return {
+    color: theme.colors.gray100,
+    textBorderColor: theme.colors.white,
+    textBorderWidth: 2,
+  }
+}
+
+/** ECharts' default gap between a title's text and its subtext. */
+const ECHARTS_TITLE_ITEM_GAP_PX = 10
+
+/** ECharts' default treemap breadcrumb height. */
+const ECHARTS_BREADCRUMB_HEIGHT_PX = 22
+
+/** The entry animation of marker lines and points in the Streamlit theme. */
+const MARKER_ENTRY_ANIMATION = {
+  animationDuration: 300,
+  animationEasing: "cubicOut",
+}
+
+/**
+ * Treemap insets for the Streamlit theme.
+ *
+ * ECharts insets a treemap 20px at the sides and 50px at the top and bottom,
+ * which leaves a wide empty band in a short chart. ``bottom`` keeps room for
+ * the breadcrumb, which sits ``inset`` above the container edge.
+ */
+function buildTreemapInsets(theme: EmotionTheme): {
+  inset: number
+  bottom: number
+} {
+  const inset = convertRemToPx(theme.spacing.sm)
+  return { inset, bottom: inset + ECHARTS_BREADCRUMB_HEIGHT_PX + inset }
+}
+
+/**
+ * Vertical offset that clears a top title, for a legend or treemap under it.
+ *
+ * Legend and treemap ``top`` are measured from the container, not the title
+ * box, so this covers ECharts' title inset (~``spacing.lg``), the title font,
+ * a subtext line when a top title has one, and the title's bottom padding.
+ */
+function belowTopTitlePx(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): number {
+  const { spacing, fontSizes } = theme
+  const hasSubtext = toComponentList(option.title).some(
+    title =>
+      title.show !== false &&
+      !isTitleAtBottom(title) &&
+      typeof title.subtext === "string" &&
+      title.subtext !== ""
+  )
+  const subtextPx = hasSubtext
+    ? ECHARTS_TITLE_ITEM_GAP_PX + convertRemToPx(fontSizes.twoSm)
+    : 0
   return (
-    convertRemToPx(theme.spacing.lg) +
-    convertRemToPx(theme.fontSizes.sm) +
-    convertRemToPx(theme.spacing.lg)
+    convertRemToPx(spacing.lg) +
+    convertRemToPx(fontSizes.sm) +
+    subtextPx +
+    convertRemToPx(spacing.lg)
   )
 }
 
@@ -157,9 +362,19 @@ export function buildStreamlitEChartsTheme(
 ): Record<string, unknown> {
   const { colors, genericFonts, fontSizes } = theme
   const bodyFontSize = convertRemToPx(fontSizes.twoSm)
+  const treemapInsets = buildTreemapInsets(theme)
   const labelColor = getGray70(theme)
   const axisLineColor = getGray30(theme)
   const axisDefaults = buildAxisDefaults(theme, bodyFontSize)
+  // Hide colliding tick labels on time, value, and log axes. ECharts spaces
+  // their ticks by the data range, not the chart width, so a narrow chart can
+  // draw labels on top of each other. Category axes already thin their labels
+  // (`interval: "auto"`). ECharts looks up this theme key by axis type, so
+  // value- and time-typed single, parallel, and radius axes get it too.
+  const continuousAxisDefaults = {
+    ...axisDefaults,
+    axisLabel: { ...axisDefaults.axisLabel, hideOverlap: true },
+  }
   const titleDefaults = buildChartTitleDefaults(theme)
   // Shared text style for component labels/names that would otherwise fall back
   // to ECharts' default (un-themed) gray.
@@ -168,6 +383,23 @@ export function buildStreamlitEChartsTheme(
     fontFamily: genericFonts.bodyFont,
     fontSize: bodyFontSize,
   }
+  // ECharts outlines a selected item in a fixed dark gray that disappears on a
+  // dark background. Body text stays near-black in light mode and turns light
+  // in dark mode, so the outline stays visible in both.
+  const selectStyle = {
+    select: {
+      itemStyle: {
+        borderColor: colors.bodyText,
+      },
+    },
+  }
+  // Line markers default to `emptyCircle`, whose hollow center ECharts fills
+  // with white. On a dark background that reads as a white dot, so use a
+  // filled marker there, as ECharts' own dark theme does. Light mode keeps
+  // ECharts' line defaults.
+  const lineMarkerDefaults = hasLightBackgroundColor(theme)
+    ? {}
+    : { line: { symbol: "circle" } }
 
   return {
     // Series palette (shared with Plotly/Vega/Altair, honors config overrides).
@@ -188,6 +420,20 @@ export function buildStreamlitEChartsTheme(
         fontFamily: genericFonts.bodyFont,
         fontSize: bodyFontSize,
       },
+      // ECharts dims a toggled-off entry to a fixed light gray, which looks
+      // almost like an active label on a dark background.
+      inactiveColor: colors.fadedText20,
+      inactiveBorderColor: colors.fadedText20,
+      lineStyle: {
+        inactiveColor: colors.fadedText20,
+      },
+      // A scrolling legend's page arrows are a fixed blue, and the disabled
+      // arrow is near-white, which reads as the active one in dark mode.
+      pageIconColor: labelColor,
+      pageIconInactiveColor: colors.fadedText20,
+      pageTextStyle: {
+        color: labelColor,
+      },
     },
     tooltip: {
       backgroundColor: colors.bgColor,
@@ -196,12 +442,33 @@ export function buildStreamlitEChartsTheme(
         color: colors.bodyText,
         fontFamily: genericFonts.bodyFont,
         fontSize: bodyFontSize,
+        // ECharts paints tooltip values at weight 900 when fontWeight is unset.
+        // Use the theme's normal weight so values match the series name.
+        fontWeight: theme.fontWeights.normal,
+      },
+      // Returns plain text, which ECharts HTML-escapes. Never set an HTML
+      // formatter here (see the product spec's tooltip XSS note). This
+      // replaces ECharts' time-aware default, so a time or ordinal dimension
+      // that is itself the tooltip value is shortened like any other number.
+      // On an ordinary time-series chart the date stays in the header.
+      valueFormatter: formatEChartsTooltipValue,
+    },
+    // A `cross` tooltip, or an axis pointer with `label.show`, draws value
+    // chips on the axes in a fixed blue with white text. Style them like the
+    // tooltip, since both describe the hovered point.
+    axisPointer: {
+      label: {
+        color: colors.bodyText,
+        backgroundColor: colors.bgColor,
+        borderColor: colors.borderColor,
+        // ECharts takes a pixel number, and `borderWidth` is a px token.
+        borderWidth: Number.parseFloat(theme.sizes.borderWidth),
       },
     },
     categoryAxis: axisDefaults,
-    valueAxis: axisDefaults,
-    logAxis: axisDefaults,
-    timeAxis: axisDefaults,
+    valueAxis: continuousAxisDefaults,
+    logAxis: continuousAxisDefaults,
+    timeAxis: continuousAxisDefaults,
     // Polar coordinate axes.
     angleAxis: axisDefaults,
     radiusAxis: axisDefaults,
@@ -282,24 +549,84 @@ export function buildStreamlitEChartsTheme(
         opacity: hasLightBackgroundColor(theme) ? 0.2 : 0.35,
       },
       label: bodyTextStyle,
+      ...selectStyle,
     },
-    // Sunburst and funnel draw labels on top of palette-colored shapes whose
-    // lightness varies, so pin a dark label with a light halo instead of
-    // ECharts' fixed default (dark for sunburst, white for funnel) — either one
-    // disappears on part of the palette.
-    sunburst: {
-      label: {
-        color: colors.gray100,
-        textBorderColor: colors.white,
-        textBorderWidth: 2,
+    // Markers enter with a short ease-out instead of ECharts' 1s linear line
+    // draw, where a vertical line and its label crawl up the plot. As component
+    // keys, these override a chart-wide `animationDuration`; `animation: false`
+    // still turns them off.
+    markPoint: MARKER_ENTRY_ANIMATION,
+    // Reference lines and shaded ranges are neutral rather than series-colored,
+    // so a "Target" line or forecast band doesn't read as a second copy of the
+    // data. ECharts draws a markLine's line and label in its `itemStyle.color`,
+    // and a markArea label in its fill color at full opacity, so the label
+    // stays readable over the faint band. A series with an explicit color keeps
+    // it on its marks (see `withSeriesColoredMarkers`).
+    markLine: {
+      ...MARKER_ENTRY_ANIMATION,
+      itemStyle: {
+        color: labelColor,
       },
     },
+    markArea: {
+      itemStyle: {
+        color: transparentize(colors.bodyText, 0.92),
+      },
+    },
+    bar: selectStyle,
+    pictorialBar: selectStyle,
+    scatter: selectStyle,
+    // Gaps in the app background color separate the cells, as for treemap
+    // tiles.
+    heatmap: {
+      itemStyle: {
+        borderColor: colors.bgColor,
+        // ECharts takes a pixel number, and `borderWidth` is a px token.
+        borderWidth: Number.parseFloat(theme.sizes.borderWidth),
+      },
+      ...selectStyle,
+    },
+    graph: selectStyle,
+    ...lineMarkerDefaults,
+    // ECharts separates sunburst segments and funnel stages with a white line,
+    // which glares on a dark background. The app background reads as a gap,
+    // as it does for treemap tiles. Sunburst labels sit on the segments, so
+    // they use the on-fill halo instead of ECharts' fixed dark default.
+    sunburst: {
+      label: buildOnFillLabelStyle(theme),
+      itemStyle: {
+        borderColor: colors.bgColor,
+      },
+    },
+    // Funnel and pie labels sit outside the shapes by default, on the app
+    // background, where ECharts draws them in its own fixed grays. The theme
+    // can't branch on the label position, so inside labels get the on-fill
+    // halo in the option instead (see `withInsideLabelStyle`).
     funnel: {
-      label: {
-        color: colors.gray100,
-        textBorderColor: colors.white,
-        textBorderWidth: 2,
-        fontFamily: genericFonts.bodyFont,
+      label: bodyTextStyle,
+      itemStyle: {
+        borderColor: colors.bgColor,
+      },
+      ...selectStyle,
+    },
+    pie: {
+      label: bodyTextStyle,
+    },
+    // Tree labels default to dark text with a white halo, which smears on a
+    // dark background. The node markers keep ECharts' hollow default: their
+    // white center is fixed, and a filled marker would hide which nodes are
+    // collapsed.
+    tree: {
+      label: bodyTextStyle,
+    },
+    // Candlesticks use the same rising green and falling red as
+    // st.plotly_chart. ECharts' fixed default paints rising candles red.
+    candlestick: {
+      itemStyle: {
+        color: getIncreasingGreen(theme),
+        color0: getDecreasingRed(theme),
+        borderColor: getIncreasingGreen(theme),
+        borderColor0: getDecreasingRed(theme),
       },
     },
     // Boxplot: ECharts fills the box with opaque white, which glares against a
@@ -342,9 +669,15 @@ export function buildStreamlitEChartsTheme(
         fontFamily: genericFonts.bodyFont,
       },
     },
-    // Treemap: theme the breadcrumb trail and the parent-node header band
-    // (their default light-gray surfaces clash with the app background).
+    // Treemap: tighten the layout insets, and theme the breadcrumb trail and
+    // the parent-node header band (their default light-gray surfaces clash
+    // with the app background). A top title, a top-anchored breadcrumb, or a
+    // hidden breadcrumb adjusts the insets per series (see `withTreemapInsets`).
     treemap: {
+      left: treemapInsets.inset,
+      right: treemapInsets.inset,
+      top: treemapInsets.inset,
+      bottom: treemapInsets.bottom,
       // `upperLabel` (the parent header text) is deliberately absent: ECharts
       // resolves it from its own defaults and ignores the themed value, so it
       // stays white. It is only legible on darker tiles, but fixing it would
@@ -353,6 +686,7 @@ export function buildStreamlitEChartsTheme(
         borderColor: colors.bgColor,
       },
       breadcrumb: {
+        bottom: treemapInsets.inset,
         itemStyle: {
           color: colors.secondaryBg,
           borderColor: colors.borderColor,
@@ -383,11 +717,12 @@ export function buildStreamlitEChartsTheme(
       monthLabel: bodyTextStyle,
       yearLabel: bodyTextStyle,
     },
-    // Continuous color scale for visualMap-driven charts (e.g. heatmaps).
+    // Default color scale for a visualMap without `inRange` or `color` (e.g. a
+    // heatmap). ECharts deep-merges a component theme into every visualMap,
+    // so a themed `visualMap.inRange.color` would also recolor visualMaps
+    // that map only another channel, such as `symbolSize`.
+    gradientColor: [...colors.chartSequentialColors],
     visualMap: {
-      inRange: {
-        color: [...colors.chartSequentialColors],
-      },
       textStyle: bodyTextStyle,
     },
     // Timeline: ECharts' defaults are a fixed light blue-gray that reads as
@@ -457,12 +792,31 @@ export function buildStreamlitEChartsTheme(
           textBorderRadius: convertRemToPx(theme.radii.sm),
         },
       },
+      // The data view panel is a light surface with blue buttons by default.
+      // ECharts merges a theme feature only into features the spec enables, so
+      // this styles the panel without adding a data view button.
+      feature: {
+        dataView: {
+          backgroundColor: colors.bgColor,
+          textColor: colors.bodyText,
+          textareaColor: colors.secondaryBg,
+          textareaBorderColor: colors.borderColor,
+          // Matches Streamlit's primary button.
+          buttonColor: colors.primary,
+          buttonTextColor: colors.white,
+        },
+      },
     },
   }
 }
 
-/** Read ``option[key]`` as a list of component configs, ignoring other shapes. */
-function toComponentList(value: unknown): Array<Record<string, unknown>> {
+/**
+ * Normalize a component config, or a list of them, to a list of plain
+ * objects. Other shapes give an empty list.
+ */
+export function toComponentList(
+  value: unknown
+): Array<Record<string, unknown>> {
   if (isPlainObject(value)) {
     return [value as Record<string, unknown>]
   }
@@ -494,7 +848,6 @@ function withTitleStyleDefaults(
     fontWeight: titleTextStyle.fontWeight,
   }
 
-  let changed = false
   const next = titles.map(title => {
     if (title.show === false) {
       return title
@@ -502,7 +855,6 @@ function withTitleStyleDefaults(
     const userTextStyle = isPlainObject(title.textStyle)
       ? (title.textStyle as Record<string, unknown>)
       : {}
-    changed = true
     const extra: Record<string, unknown> = {
       textStyle: { ...sizeAndWeight, ...userTextStyle },
     }
@@ -511,7 +863,8 @@ function withTitleStyleDefaults(
     }
     return { ...title, ...extra }
   })
-  if (!changed) {
+  // Return the original option when no title was replaced.
+  if (next.every((title, i) => title === titles[i])) {
     return option
   }
   return {
@@ -567,6 +920,259 @@ function horizontalVisualMaps(
 }
 
 /**
+ * ECharts' ``visualMap`` defaults (``VisualMapModel``, ``PiecewiseModel``,
+ * ``ContinuousModel``) that decide how wide a vertical map is drawn. A
+ * continuous map's drag handles are 120% of the bar width. Recheck these
+ * when upgrading ECharts.
+ */
+const VISUAL_MAP_DEFAULT_PADDING_PX = 15
+const VISUAL_MAP_DEFAULT_ITEM_WIDTH_PX = 20
+const VISUAL_MAP_DEFAULT_TEXT_GAP_PX = 10
+const VISUAL_MAP_DEFAULT_MAX = 200
+const VISUAL_MAP_DEFAULT_SPLIT_NUMBER = 5
+const VISUAL_MAP_HANDLE_SCALE = 1.2
+
+/**
+ * Average glyph width of digits, separators, and short words, as a share of
+ * the font size. The width estimate uses this instead of measuring text, so
+ * it underestimates labels in wider scripts, such as CJK.
+ */
+const AVERAGE_GLYPH_WIDTH_EM = 0.55
+
+/** True if a position is unset. ECharts reads ``"auto"`` as unset too. */
+function isUnsetPosition(value: unknown): boolean {
+  return isNullOrUndefined(value) || value === "auto"
+}
+
+/**
+ * The plot side a vertical ``visualMap`` sits on and its pixel offset from
+ * that edge. Only an unpositioned map (ECharts' default is bottom-left) or one
+ * offset in pixels from the left or right edge counts. Other positions, such
+ * as ``"center"`` or a percentage, are left to the spec and return
+ * ``undefined``.
+ */
+function verticalVisualMapEdge(
+  visualMap: Record<string, unknown>
+): { side: "left" | "right"; offsetPx: number } | undefined {
+  if (visualMap.show === false || visualMap.orient === "horizontal") {
+    return undefined
+  }
+  const { left, right } = visualMap
+  // ECharts also accepts the edge keywords "left" and "right" as a `left` value.
+  if (left === "right") {
+    return { side: "right", offsetPx: 0 }
+  }
+  if (isUnsetPosition(left)) {
+    if (isUnsetPosition(right)) {
+      return { side: "left", offsetPx: 0 }
+    }
+    return typeof right === "number"
+      ? { side: "right", offsetPx: right }
+      : undefined
+  }
+  if (left === "left") {
+    return { side: "left", offsetPx: 0 }
+  }
+  return typeof left === "number"
+    ? { side: "left", offsetPx: left }
+    : undefined
+}
+
+/** ``value`` if it is a number, else ``fallback``. */
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === "number" ? value : fallback
+}
+
+/**
+ * True if ECharts draws this ``visualMap`` as piecewise. An explicit ``type``
+ * wins. Otherwise ``categories`` select piecewise, as do ``pieces`` or a
+ * positive ``splitNumber`` unless ``calculable`` is set.
+ */
+function isPiecewiseVisualMap(visualMap: Record<string, unknown>): boolean {
+  const { type, categories, pieces, splitNumber, calculable } = visualMap
+  if (type !== undefined) {
+    return type === "piecewise"
+  }
+  const hasPieces = Array.isArray(pieces)
+    ? pieces.length > 0
+    : numberOr(splitNumber, 0) > 0
+  return Boolean(categories) || (hasPieces && !calculable)
+}
+
+/**
+ * Strings as wide as the piece labels ECharts draws beside a piecewise
+ * ``visualMap``, approximated from its default formatting. They are used
+ * only to estimate width. Custom formatters are not evaluated.
+ */
+function pieceLabels(visualMap: Record<string, unknown>): string[] {
+  const { categories, pieces } = visualMap
+  const min = numberOr(visualMap.min, 0)
+  const max = numberOr(visualMap.max, VISUAL_MAP_DEFAULT_MAX)
+  let precision = numberOr(visualMap.precision, 0)
+
+  if (Array.isArray(categories)) {
+    return categories.map(String)
+  }
+  if (Array.isArray(pieces)) {
+    return pieces.map((entry: unknown) => {
+      // ECharts reads a primitive entry as ``{ value: entry }``.
+      const piece = isPlainObject(entry) ? entry : { value: entry }
+      const {
+        label,
+        value,
+        gte,
+        gt,
+        min: low,
+        lte,
+        lt,
+        max: high,
+      } = piece as Record<string, unknown>
+      // ECharts draws the formatted value or bounds for an empty label.
+      const text = label === "" ? value : (label ?? value)
+      if (typeof text === "string" || typeof text === "number") {
+        return String(text)
+      }
+      const ends = [gte ?? gt ?? low, lte ?? lt ?? high]
+        .filter(bound => typeof bound === "number")
+        .map(bound => bound.toFixed(precision))
+      // ECharts writes an open-ended piece as "< 5", "≥ 5", and so on; the
+      // symbol doesn't change the width.
+      return ends.length === 2 ? ends.join(" - ") : `< ${ends.join("")}`
+    })
+  }
+  // Even splits. ECharts raises the precision until the step is exact.
+  const splitNumber = numberOr(
+    visualMap.splitNumber,
+    VISUAL_MAP_DEFAULT_SPLIT_NUMBER
+  )
+  const step = (max - min) / Math.max(Math.floor(splitNumber), 1)
+  while (+step.toFixed(precision) !== step && precision < 5) {
+    precision++
+  }
+  // Width proxy, not the drawn label: the widest split is no wider than the
+  // longer end bound repeated on both sides of " - ".
+  return [min, max].map(bound => {
+    const text = bound.toFixed(precision)
+    return `${text} - ${text}`
+  })
+}
+
+/**
+ * Estimated pixel width of a vertical ``visualMap``: its padding, the color
+ * bar or piece symbols with the labels beside them, and the end ``text``
+ * centered above and below.
+ */
+function estimateVerticalVisualMapWidth(
+  visualMap: Record<string, unknown>,
+  defaultFontSizePx: number
+): number {
+  const { padding, text, showLabel, calculable } = visualMap
+  let paddingPx: number
+  if (Array.isArray(padding)) {
+    // CSS order: [top, right, bottom, left], [vertical, horizontal], or [all].
+    const [top, right = top, , left = right] = padding as unknown[]
+    paddingPx = (Number(left) || 0) + (Number(right) || 0)
+  } else {
+    paddingPx = 2 * numberOr(padding, VISUAL_MAP_DEFAULT_PADDING_PX)
+  }
+  const fontSize = numberOr(
+    get(visualMap, ["textStyle", "fontSize"]),
+    defaultFontSizePx
+  )
+  const textWidth = (texts: unknown[]): number =>
+    Math.max(0, ...texts.map(entry => String(entry).length)) *
+    fontSize *
+    AVERAGE_GLYPH_WIDTH_EM
+  const endTexts = Array.isArray(text) ? text : []
+  const barPx = numberOr(visualMap.itemWidth, VISUAL_MAP_DEFAULT_ITEM_WIDTH_PX)
+
+  let contentPx = barPx
+  if (isPiecewiseVisualMap(visualMap)) {
+    // ECharts hides the piece labels when the map has end text.
+    if (
+      isNullOrUndefined(showLabel) ? endTexts.length === 0 : showLabel === true
+    ) {
+      contentPx +=
+        numberOr(visualMap.textGap, VISUAL_MAP_DEFAULT_TEXT_GAP_PX) +
+        textWidth(pieceLabels(visualMap))
+    }
+  } else if (calculable === true) {
+    // The handle's value label starts past the handle's overhang of the bar
+    // edge, the bar's center, and then one handle width.
+    const labelStartPx =
+      barPx *
+      ((VISUAL_MAP_HANDLE_SCALE - 1) / 2 + 0.5 + VISUAL_MAP_HANDLE_SCALE)
+    const precision = numberOr(visualMap.precision, 0)
+    contentPx =
+      labelStartPx +
+      textWidth(
+        [
+          numberOr(visualMap.min, 0),
+          numberOr(visualMap.max, VISUAL_MAP_DEFAULT_MAX),
+        ].map(bound => bound.toFixed(precision))
+      )
+  }
+  return Math.ceil(paddingPx + Math.max(contentPx, textWidth(endTexts)))
+}
+
+/**
+ * The room each side of the plot needs for vertical ``visualMap``s beside it.
+ * ECharts positions a ``visualMap`` against the container, not the grid, so
+ * the grid has to leave that room or the map is drawn over the axis labels.
+ */
+function verticalVisualMapRoom(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): { left: number; right: number } {
+  const fontSizePx = convertRemToPx(theme.fontSizes.twoSm)
+  const room = { left: 0, right: 0 }
+  for (const visualMap of toComponentList(option.visualMap)) {
+    const edge = verticalVisualMapEdge(visualMap)
+    if (edge !== undefined) {
+      room[edge.side] = Math.max(
+        room[edge.side],
+        edge.offsetPx + estimateVerticalVisualMapWidth(visualMap, fontSizePx)
+      )
+    }
+  }
+  return room
+}
+
+/**
+ * Copy the spec's root ``gradientColor`` onto each ``visualMap`` whose series
+ * would fall back to it. ECharts fills a shorter spec ``gradientColor`` with
+ * the theme's palette entry by entry, so without the copy the scale would
+ * continue in Streamlit's colors.
+ */
+function withSpecGradientColor(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  const { gradientColor, visualMap } = option
+  if (!Array.isArray(gradientColor) || visualMap === undefined) {
+    return option
+  }
+  const withColor = (item: unknown): unknown => {
+    if (!isPlainObject(item)) {
+      return item
+    }
+    const entry = item as Record<string, unknown>
+    const usesGradientFallback =
+      entry.inRange === undefined &&
+      get(entry, ["target", "inRange"]) === undefined &&
+      !Array.isArray(entry.color)
+    return usesGradientFallback
+      ? { ...entry, inRange: { color: [...gradientColor] } }
+      : entry
+  }
+  return {
+    ...option,
+    visualMap: Array.isArray(visualMap)
+      ? visualMap.map(withColor)
+      : withColor(visualMap),
+  }
+}
+
+/**
  * True if any ``dataZoom``/``visualMap``/``timeline`` component occupies the
  * strip below the plot, where it would otherwise be drawn over the x-axis
  * labels.
@@ -583,13 +1189,15 @@ function hasBottomAnchoredComponent(option: EChartsOptionObject): boolean {
   ].some(isBottomAnchored)
 }
 
+type WheelModifierEvent = Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+
 /**
  * ECharts ``zoomOnMouseWheel`` / ``moveOnMouseWheel``: ``true``, ``false``, or
  * a modifier name. Matches RoamController's ``isAvailableBehavior``.
  */
 function isEChartsWheelSettingActive(
   setting: unknown,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
   if (setting === true) {
     return true
@@ -606,12 +1214,16 @@ function isEChartsWheelSettingActive(
   return false
 }
 
-function forEachEnabledInsideDataZoom(
+/**
+ * True when an enabled inside ``dataZoom`` on the option, or on a timeline
+ * ``baseOption``, matches ``predicate``.
+ */
+function someEnabledInsideDataZoom(
   option: EChartsOptionObject | null,
-  visit: (zoom: Record<string, unknown>) => void
-): void {
+  predicate: (zoom: Record<string, unknown>) => boolean
+): boolean {
   if (option === null) {
-    return
+    return false
   }
   const targets: EChartsOptionObject[] = [option]
   if (isPlainObject(option.baseOption)) {
@@ -619,32 +1231,36 @@ function forEachEnabledInsideDataZoom(
   }
   for (const target of targets) {
     for (const zoom of toComponentList(target.dataZoom)) {
-      if (zoom.type === "inside" && zoom.disabled !== true) {
-        visit(zoom)
+      if (
+        zoom.type === "inside" &&
+        zoom.disabled !== true &&
+        predicate(zoom)
+      ) {
+        return true
       }
     }
   }
+  return false
 }
 
-function insideDataZoomMayConsumeWheel(
-  zoom: Record<string, unknown>
-): boolean {
-  // Inside defaults: zoom on wheel, do not pan on wheel.
-  const zoomOnWheel =
-    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
-  const moveOnWheel =
-    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
-  return zoomOnWheel !== false || moveOnWheel !== false
+/** Inside ``dataZoom`` defaults: zoom on wheel, do not pan on wheel. */
+function insideWheelActions(zoom: Record<string, unknown>): {
+  zoomOnWheel: unknown
+  moveOnWheel: unknown
+} {
+  return {
+    zoomOnWheel:
+      zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel,
+    moveOnWheel:
+      zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel,
+  }
 }
 
 function insideDataZoomConsumesEvent(
   zoom: Record<string, unknown>,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
-  const zoomOnWheel =
-    zoom.zoomOnMouseWheel === undefined ? true : zoom.zoomOnMouseWheel
-  const moveOnWheel =
-    zoom.moveOnMouseWheel === undefined ? false : zoom.moveOnMouseWheel
+  const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
   return (
     isEChartsWheelSettingActive(zoomOnWheel, event) ||
     isEChartsWheelSettingActive(moveOnWheel, event)
@@ -652,42 +1268,139 @@ function insideDataZoomConsumesEvent(
 }
 
 /**
- * True when the option enables an inside ``dataZoom`` that can consume wheel
- * events (zoom and/or pan), possibly only while a modifier is held.
+ * True when an enabled inside ``dataZoom`` installs ECharts' wheel handler.
  *
- * Used to attach a non-passive wheel listener so the page does not steal
- * those events.
+ * ECharts 6 calls ``preventDefault`` for every wheel over the plot once that
+ * handler is installed — including wheels that ``zoomOnMouseWheel: false``
+ * or a modifier would not zoom. ``zoomLock`` only pans on drag, so those
+ * charts still scroll.
  */
-export function optionHasInsideDataZoom(
+export function insideDataZoomCapturesWheel(
   option: EChartsOptionObject | null
 ): boolean {
-  let found = false
-  forEachEnabledInsideDataZoom(option, zoom => {
-    if (insideDataZoomMayConsumeWheel(zoom)) {
-      found = true
-    }
-  })
-  return found
+  return someEnabledInsideDataZoom(option, zoom => zoom.zoomLock !== true)
 }
 
 /**
  * True when this wheel event would zoom or pan an inside ``dataZoom``.
  *
  * ``zoomOnMouseWheel`` / ``moveOnMouseWheel`` may be ``true`` or a modifier
- * (``"shift"`` / ``"ctrl"`` / ``"alt"``). Only matching events should call
- * ``preventDefault``; otherwise the page cannot scroll.
+ * (``"shift"`` / ``"ctrl"`` / ``"alt"``).
  */
 export function insideDataZoomConsumesWheelEvent(
   option: EChartsOptionObject | null,
-  event: Pick<WheelEvent, "shiftKey" | "ctrlKey" | "altKey">
+  event: WheelModifierEvent
 ): boolean {
-  let consumes = false
-  forEachEnabledInsideDataZoom(option, zoom => {
-    if (insideDataZoomConsumesEvent(zoom, event)) {
-      consumes = true
-    }
+  return someEnabledInsideDataZoom(option, zoom =>
+    insideDataZoomConsumesEvent(zoom, event)
+  )
+}
+
+/** Roam values that install ECharts' mousewheel listener. */
+function roamInstallsWheelListener(roam: unknown): boolean {
+  return roam === true || roam === "scale" || roam === "zoom"
+}
+
+/** Series whose ``roam`` defaults to ``false`` but can install wheel roam. */
+const OPT_IN_ROAM_SERIES_TYPES: ReadonlySet<unknown> = new Set([
+  "map",
+  "graph",
+  "tree",
+  "sankey",
+])
+
+function seriesHasWheelRoam(series: Record<string, unknown>): boolean {
+  if (series.type === "treemap") {
+    // ECharts' treemap defaults to ``roam: true``.
+    return roamInstallsWheelListener(series.roam ?? true)
+  }
+  return (
+    OPT_IN_ROAM_SERIES_TYPES.has(series.type) &&
+    roamInstallsWheelListener(series.roam)
+  )
+}
+
+function targetHasWheelRoam(option: EChartsOptionObject): boolean {
+  if (
+    toComponentList(option.geo).some(geo =>
+      roamInstallsWheelListener(geo.roam)
+    )
+  ) {
+    return true
+  }
+  return toComponentList(option.series).some(seriesHasWheelRoam)
+}
+
+/**
+ * True when ``geo`` or a series turns on wheel roam: any treemap that keeps
+ * its default ``roam: true``, or a map, graph, tree, or sankey series that
+ * opts in.
+ *
+ * ``RoamController`` registers a mousewheel listener for ``roam: true``,
+ * ``"scale"``, and ``"zoom"``. ``"move"`` and ``"pan"`` are drag-only.
+ * That listener is separate from inside ``dataZoom``. After the pointer
+ * rests, the guard still delivers a wheel that ``dataZoom`` would ignore so
+ * this listener can zoom.
+ */
+export function optionHasWheelRoam(
+  option: EChartsOptionObject | null
+): boolean {
+  if (option === null) {
+    return false
+  }
+  if (targetHasWheelRoam(option)) {
+    return true
+  }
+  return (
+    isPlainObject(option.baseOption) &&
+    targetHasWheelRoam(option.baseOption as EChartsOptionObject)
+  )
+}
+
+/**
+ * True when a pinch should roam immediately.
+ *
+ * ``RoamController`` defaults ``zoomOnMouseWheel`` to ``true`` (series
+ * options do not set it), so a pinch (``ctrlKey``) skips the rest timer. An
+ * ordinary wheel still waits.
+ */
+export function wheelRoamSkipsSettle(
+  option: EChartsOptionObject | null,
+  event: WheelModifierEvent
+): boolean {
+  return optionHasWheelRoam(option) && event.ctrlKey
+}
+
+/**
+ * True when the user is pinching or holding the configured modifier, so the
+ * chart zooms or pans without waiting for the pointer to rest.
+ *
+ * Trackpad pinch is a wheel with ``ctrlKey`` set. It counts when unmodified
+ * wheel zoom or pan is on. A ``"shift"`` / ``"ctrl"`` / ``"alt"`` setting
+ * counts when that key is held.
+ */
+export function insideDataZoomWheelSkipsSettle(
+  option: EChartsOptionObject | null,
+  event: WheelModifierEvent
+): boolean {
+  return someEnabledInsideDataZoom(option, zoom => {
+    const { zoomOnWheel, moveOnWheel } = insideWheelActions(zoom)
+    return (
+      wheelSettingSkipsSettle(zoomOnWheel, event) ||
+      wheelSettingSkipsSettle(moveOnWheel, event)
+    )
   })
-  return consumes
+}
+
+function wheelSettingSkipsSettle(
+  setting: unknown,
+  event: WheelModifierEvent
+): boolean {
+  // Unmodified zoom or pan: only pinch (ctrlKey) is a deliberate gesture.
+  if (setting === true) {
+    return event.ctrlKey
+  }
+  return isEChartsWheelSettingActive(setting, event)
 }
 
 function isTitleAtBottom(title: Record<string, unknown>): boolean {
@@ -771,31 +1484,52 @@ function isDefaultBottomLegend(legend: Record<string, unknown>): boolean {
 }
 
 /**
- * Copy ``legend`` with ``top`` filled in for default-bottom entries. Legend,
- * dataZoom, visualMap, and timeline are positioned against the chart
- * container, not the grid, so extra ``grid.bottom`` cannot unstack them.
+ * True when a legend sits in the top strip that ECharts' default title uses:
+ * visible, horizontal, pinned to the top edge, and horizontally centered.
+ * A legend placed to one side or lower down usually doesn't overlap a title.
+ * The title's own alignment isn't checked, so any visible top title moves
+ * such a legend below it.
  */
-function withLegendLiftedToTop(
+function isLegendInTitleStrip(legend: Record<string, unknown>): boolean {
+  const centered =
+    legend.left === "center" ||
+    (legend.left === undefined && legend.right === undefined)
+  return (
+    legend.show !== false &&
+    legend.orient !== "vertical" &&
+    (legend.top === "top" || legend.top === 0) &&
+    centered
+  )
+}
+
+/**
+ * Copy ``legend`` with ``top`` set on the entries ``shouldMove`` selects.
+ * Legend, dataZoom, visualMap, and timeline are positioned against the chart
+ * container, not the grid, so extra ``grid`` margins cannot unstack them.
+ */
+function withLegendsMovedTo(
   option: EChartsOptionObject,
-  legendTop: number
+  legendTop: number,
+  shouldMove: (legend: Record<string, unknown>) => boolean
 ): EChartsOptionObject {
   const legends = toComponentList(option.legend)
   if (legends.length === 0) {
-    if (option.legend !== undefined && option.legend !== false) {
+    // A non-object legend (for example ``true``) uses ECharts' defaults.
+    if (
+      option.legend !== undefined &&
+      option.legend !== false &&
+      shouldMove({})
+    ) {
       return { ...option, legend: { top: legendTop } }
     }
     return option
   }
 
-  let changed = false
-  const next = legends.map(legend => {
-    if (!isDefaultBottomLegend(legend)) {
-      return legend
-    }
-    changed = true
-    return { ...legend, top: legendTop }
-  })
-  if (!changed) {
+  const next = legends.map(legend =>
+    shouldMove(legend) ? { ...legend, top: legendTop } : legend
+  )
+  // Return the original option when no legend was replaced.
+  if (next.every((legend, i) => legend === legends[i])) {
     return option
   }
   return {
@@ -837,7 +1571,7 @@ function withBottoms(
       : { ...(value as Record<string, unknown>), bottom }
   }
   if (Array.isArray(value)) {
-    return value.map(item => {
+    return (value as unknown[]).map((item: unknown) => {
       if (!isPlainObject(item)) {
         return item
       }
@@ -919,24 +1653,50 @@ function stackBottomAnchoredControls(
 }
 
 /**
- * Move a default-bottom legend off the footer when bottom-anchored controls
- * are present, then stack those controls if more than one shares the strip.
+ * Lay out the legend and chart controls around the plot.
+ *
+ * A default-bottom legend moves off the footer when bottom-anchored controls
+ * are present. In a cartesian chart with a single grid, a legend in the top
+ * title strip also moves below the title, and ``stackedTop`` is the height of
+ * that title and legend stack, used as ``grid.top``. Other charts keep the
+ * legend in the strip, since their series (pie, funnel, ...) and array grids
+ * don't move down to clear it. Bottom-anchored controls are then stacked if
+ * more than one shares the strip.
  */
 function applyControlLayout(
   option: EChartsOptionObject,
   theme: EmotionTheme
-): { option: EChartsOptionObject; stackedBottom?: number } {
+): {
+  option: EChartsOptionObject
+  stackedTop?: number
+  stackedBottom?: number
+} {
+  const titleAtTop = titlePlacement(option).occupiesTop
+  const hasDefaultGrid =
+    ("xAxis" in option || "yAxis" in option) && !Array.isArray(option.grid)
+  const legendTop = titleAtTop ? belowTopTitlePx(option, theme) : 0
   let next = option
   if (
     hasBottomAnchoredComponent(next) &&
     legendPlacement(next).occupiesBottom
   ) {
-    const legendTop = titlePlacement(next).occupiesTop
-      ? liftedLegendTopPx(theme)
-      : 0
-    next = withLegendLiftedToTop(next, legendTop)
+    next = withLegendsMovedTo(next, legendTop, isDefaultBottomLegend)
   }
-  return stackBottomAnchoredControls(next, theme)
+  let stackedTop: number | undefined
+  if (titleAtTop && hasDefaultGrid) {
+    next = withLegendsMovedTo(next, legendTop, isLegendInTitleStrip)
+    // Either move above can place a legend under the title.
+    if (next !== option) {
+      // Assume one legend row (ECharts' 14px item plus 5px padding on each
+      // side), then a small gap above the plot. A wrapped legend needs an
+      // explicit grid.top.
+      stackedTop =
+        legendTop +
+        convertRemToPx(theme.spacing.twoXL) +
+        convertRemToPx(theme.spacing.twoXS)
+    }
+  }
+  return { ...stackBottomAnchoredControls(next, theme), stackedTop }
 }
 
 /**
@@ -945,13 +1705,16 @@ function applyControlLayout(
  * ECharts' built-in grid reserves large margins (``left: '15%'``,
  * ``right: '10%'``, ``top: 65``, ``bottom: 80``), which leaves charts heavily
  * inset compared to other Streamlit charts. We tighten the side margins to fill
- * the width, and tighten the top/bottom only on a side that carries nothing but
- * the plot. On a side that *does* carry a title, legend, or bottom-anchored
- * control we leave the margin unset so ECharts' generous default reserves room
- * for it (guessing a fixed pixel value risks clipping a title+subtitle, a
- * multi-item legend, or a dataZoom slider). When Streamlit has stacked more
- * than one bottom-anchored control, ``stackedBottom`` is that stack's height
- * and is written as ``grid.bottom`` so the plot sits above the stack.
+ * the width, except that a side with a vertical ``visualMap`` reserves at
+ * least the map's estimated width. We tighten the top/bottom only on a side
+ * that carries nothing but the plot. On a side that *does* carry a title,
+ * legend, or bottom-anchored control we leave the margin unset so ECharts'
+ * generous default reserves room for it (guessing a fixed pixel value risks
+ * clipping a title+subtitle, a multi-item legend, or a dataZoom slider). When
+ * Streamlit has placed a legend under a top title, ``stackedTop`` is that
+ * stack's height and is written as ``grid.top``. When it has stacked more than
+ * one bottom-anchored control, ``stackedBottom`` is that stack's height and is
+ * written as ``grid.bottom``.
  *
  * Insets are rem spacing tokens converted to pixels so they track the
  * configured base font size like axis labels. ECharts only accepts pixel
@@ -964,20 +1727,26 @@ function applyControlLayout(
 function buildDefaultGrid(
   option: EChartsOptionObject,
   theme: EmotionTheme,
-  stackedBottom?: number
+  {
+    stackedTop,
+    stackedBottom,
+  }: { stackedTop?: number; stackedBottom?: number }
 ): Record<string, unknown> {
   const { occupiesTop: titleAtTop, occupiesBottom: titleAtBottom } =
     titlePlacement(option)
   const { occupiesTop: legendAtTop, occupiesBottom: legendAtBottom } =
     legendPlacement(option)
 
+  const visualMapRoom = verticalVisualMapRoom(option, theme)
   const grid: Record<string, unknown> = {
-    left: convertRemToPx(theme.spacing.sm),
-    right: convertRemToPx(theme.spacing.twoXL),
+    left: Math.max(convertRemToPx(theme.spacing.sm), visualMapRoom.left),
+    right: Math.max(convertRemToPx(theme.spacing.twoXL), visualMapRoom.right),
     outerBoundsMode: "same",
   }
   if (!titleAtTop && !legendAtTop) {
     grid.top = convertRemToPx(theme.spacing.lg)
+  } else if (stackedTop !== undefined) {
+    grid.top = stackedTop
   }
   if (
     !titleAtBottom &&
@@ -994,22 +1763,32 @@ function buildDefaultGrid(
 /**
  * Non-destructively fill a small number of option-level gaps that the init
  * theme cannot cover (``aria.enabled``, title size/weight/padding, the
- * ``grid`` layout, and stacking of bottom-anchored chart controls).
+ * ``grid`` layout, legend placement around titles and stacking of
+ * bottom-anchored chart controls, the style of inside funnel and pie labels,
+ * treemap insets around a title or breadcrumb, the label position
+ * of horizontal markLines, an explicit series color on that series' marks,
+ * the fill opacity of unstacked areas, and a spec ``gradientColor`` for its
+ * visualMaps).
  *
  * ``aria.enabled`` is filled regardless of the theme: ``theme=None`` opts out of
  * Streamlit's *visual* styling, and dropping the screen-reader description along
  * with it would make an accessibility regression a side effect of a styling
- * choice. Title size, ``grid``, and control stacking are purely visual, so they
- * only run under ``theme="streamlit"``.
+ * choice. The other defaults are purely visual, so they only run under
+ * ``theme="streamlit"``.
  *
  * Only keys the user has not set are written, so explicit user values (e.g.
  * ``series[0].itemStyle.color`` or a top-level ``color``) always survive. For
- * security, it never injects a tooltip/label ``formatter`` and never changes
- * ``tooltip.renderMode`` — ECharts' default escaping of tooltip/label values is
- * relied upon.
+ * security, this function never injects a tooltip or label formatter and never
+ * changes ``tooltip.renderMode``. ECharts escapes tooltip and label text by
+ * default. The theme ``valueFormatter`` shortens tooltip numbers and returns
+ * plain text that ECharts escapes.
  *
  * Timeline specs nest the chart under ``baseOption``, which is where ECharts
  * reads ``aria`` and ``grid`` from, so the defaults are filled in there instead.
+ * Inside labels are styled in every series variant that declares
+ * ``type: "funnel"`` or ``type: "pie"`` (see ``mapOptionSeries``). A per-tick
+ * or media override without a ``type`` is skipped, since it only merges into a
+ * series by index.
  *
  * @param option The parsed ECharts option object.
  * @param themeStr The chart's theme string (``"streamlit"`` or ``""``).
@@ -1024,17 +1803,392 @@ export function applyStreamlitOptionDefaults(
   const applyVisualDefaults = themeStr === STREAMLIT_THEME
 
   const baseOption = option.baseOption
-  if (isPlainObject(baseOption)) {
+  const filled = isPlainObject(baseOption)
+    ? {
+        ...option,
+        baseOption: fillOptionDefaults(
+          baseOption as EChartsOptionObject,
+          applyVisualDefaults,
+          theme
+        ),
+      }
+    : fillOptionDefaults(option, applyVisualDefaults, theme)
+  if (!applyVisualDefaults) {
+    return filled
+  }
+  return withSoftAreaFill(
+    withSeriesColoredMarkers(
+      withHorizontalMarkLineLabels(
+        withTreemapInsets(withInsideLabelStyle(filled, theme), theme)
+      )
+    )
+  )
+}
+
+/**
+ * Fit a treemap's insets to the title and breadcrumb around it.
+ *
+ * The theme's treemap insets assume a bottom breadcrumb and nothing above the
+ * tiles, and the theme can't branch on the spec. A top title gets room above
+ * the tiles, a top-anchored breadcrumb takes its room from the top instead of
+ * the bottom, and a hidden breadcrumb drops its room. A series that sets
+ * ``height``, or the inset in question, keeps its own layout.
+ */
+function withTreemapInsets(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): EChartsOptionObject {
+  const { inset, bottom: breadcrumbRoom } = buildTreemapInsets(theme)
+  const chart = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const titleRoom = titlePlacement(chart).occupiesTop
+    ? belowTopTitlePx(chart, theme)
+    : undefined
+  return mapOptionSeries(option, series => {
+    if (series.type !== "treemap" || series.height !== undefined) {
+      return series
+    }
+    const breadcrumb = isPlainObject(series.breadcrumb)
+      ? (series.breadcrumb as Record<string, unknown>)
+      : {}
+    const showsBreadcrumb = breadcrumb.show !== false
+    const breadcrumbAtTop =
+      showsBreadcrumb &&
+      breadcrumb.top !== undefined &&
+      breadcrumb.top !== "bottom"
+    let top: number | undefined
+    if (series.top === undefined) {
+      top = breadcrumbAtTop ? breadcrumbRoom : titleRoom
+    }
+    const bottom =
+      series.bottom === undefined && (!showsBreadcrumb || breadcrumbAtTop)
+        ? inset
+        : undefined
+    if (top === undefined && bottom === undefined) {
+      return series
+    }
     return {
-      ...option,
-      baseOption: fillOptionDefaults(
-        baseOption as EChartsOptionObject,
-        applyVisualDefaults,
-        theme
+      ...series,
+      ...(top !== undefined && { top }),
+      ...(bottom !== undefined && { bottom }),
+    }
+  })
+}
+
+/** markLine ``type`` values that draw a line at a computed axis value. */
+const STAT_MARK_LINE_TYPES: ReadonlySet<string> = new Set([
+  "min",
+  "max",
+  "average",
+  "median",
+])
+
+/** A cartesian axis' type, defaulted like ECharts' ``getAxisType``. */
+function cartesianAxisType(axis: Record<string, unknown>): unknown {
+  if (axis.type !== undefined) {
+    return axis.type
+  }
+  return axis.data ? "category" : "value"
+}
+
+/**
+ * True when ECharts picks the y axis as a grid's base axis, the axis bars grow
+ * from. The base axis is the first category axis, else the first time axis,
+ * else x.
+ */
+export function isYBaseAxis(
+  xAxis: Record<string, unknown>,
+  yAxis: Record<string, unknown>
+): boolean {
+  const xType = cartesianAxisType(xAxis)
+  const yType = cartesianAxisType(yAxis)
+  return (
+    (yType === "category" && xType !== "category") ||
+    (yType === "time" && xType !== "category" && xType !== "time")
+  )
+}
+
+/**
+ * True when ``min``/``max``/``average``/``median`` markLine entries measure
+ * the y axis, so they draw horizontal lines.
+ *
+ * ECharts measures the axis opposite the base axis (see ``isYBaseAxis``).
+ * Charts with more than one x or y axis return false.
+ */
+function statMarkLinesAreHorizontal(option: EChartsOptionObject): boolean {
+  const xAxes = toComponentList(option.xAxis)
+  const yAxes = toComponentList(option.yAxis)
+  if (xAxes.length !== 1 || yAxes.length !== 1) {
+    return false
+  }
+  return !isYBaseAxis(xAxes[0], yAxes[0])
+}
+
+/**
+ * True for a single-value markLine entry that draws a horizontal line.
+ *
+ * ``yAxis`` wins over ``xAxis`` in ECharts. Two-point segments (arrays) and
+ * statistic entries that pick their own value dimension are skipped.
+ */
+function drawsHorizontalMarkLine(
+  entry: unknown,
+  statLinesHorizontal: boolean
+): boolean {
+  if (!isPlainObject(entry)) {
+    return false
+  }
+  const { xAxis, yAxis, type, valueDim, valueIndex } = entry as Record<
+    string,
+    unknown
+  >
+  if (yAxis !== undefined && yAxis !== null) {
+    return true
+  }
+  if (xAxis !== undefined && xAxis !== null) {
+    return false
+  }
+  return (
+    statLinesHorizontal &&
+    typeof type === "string" &&
+    STAT_MARK_LINE_TYPES.has(type) &&
+    valueDim === undefined &&
+    valueIndex === undefined
+  )
+}
+
+/**
+ * Keep horizontal reference-line labels inside the plot.
+ *
+ * A markLine label defaults to ``position: "end"``, past the line's right end,
+ * where Streamlit's tight ``grid.right`` clips it. Horizontal lines on
+ * cartesian series get ``"insideEndTop"`` instead, unless the entry or the
+ * markLine sets a label position. Vertical lines keep ``"end"``, which sits
+ * above the plot.
+ */
+function withHorizontalMarkLineLabels(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  const chart = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : option
+  const statLinesHorizontal = statMarkLinesAreHorizontal(chart)
+  const needsInsideLabel = (entry: unknown): boolean =>
+    drawsHorizontalMarkLine(entry, statLinesHorizontal) &&
+    getLabelObject(entry).position === undefined
+
+  return mapOptionSeries(option, series => {
+    const { markLine, coordinateSystem } = series
+    if (
+      !isPlainObject(markLine) ||
+      (coordinateSystem !== undefined && coordinateSystem !== "cartesian2d")
+    ) {
+      return series
+    }
+    const markLineObject = markLine as Record<string, unknown>
+    const { data } = markLineObject
+    if (
+      getLabelObject(markLineObject).position !== undefined ||
+      !Array.isArray(data) ||
+      !data.some(needsInsideLabel)
+    ) {
+      return series
+    }
+    return {
+      ...series,
+      markLine: {
+        ...markLineObject,
+        data: data.map((entry: unknown) =>
+          needsInsideLabel(entry)
+            ? {
+                ...(entry as Record<string, unknown>),
+                label: { ...getLabelObject(entry), position: "insideEndTop" },
+              }
+            : entry
+        ),
+      },
+    }
+  })
+}
+
+/** ECharts' markArea fill alpha when the area takes the series color. */
+const SERIES_MARK_AREA_ALPHA = 0.4
+
+/**
+ * Keep an explicit series color on the series' markLine and markArea.
+ *
+ * The theme gives marks a neutral color, which would otherwise win over the
+ * series color ECharts falls back to. A series that sets ``itemStyle.color``
+ * or its own ``color`` (for example an empty series that only carries marks)
+ * chose that color for its marks too, so this copies it onto marks that don't
+ * set their own. The markArea fill gets the alpha ECharts applies to a series
+ * color.
+ */
+function withSeriesColoredMarkers(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  return mapOptionSeries(option, series => {
+    // `itemStyle.color` wins over the series `color`, which may be a palette.
+    const ownColor: unknown = Array.isArray(series.color)
+      ? series.color[0]
+      : series.color
+    const seriesColor: unknown =
+      get(series, ["itemStyle", "color"]) ?? ownColor
+    if (isNullOrUndefined(seriesColor)) {
+      return series
+    }
+    const withMarkColor = (
+      key: "markLine" | "markArea",
+      color: unknown
+    ): Record<string, unknown> | undefined => {
+      const marker = series[key]
+      if (
+        !isPlainObject(marker) ||
+        !isNullOrUndefined(get(marker, ["itemStyle", "color"]))
+      ) {
+        return undefined
+      }
+      const markerObject = marker as Record<string, unknown>
+      const itemStyle = isPlainObject(markerObject.itemStyle)
+        ? (markerObject.itemStyle as Record<string, unknown>)
+        : {}
+      return { ...markerObject, itemStyle: { ...itemStyle, color } }
+    }
+    const markLine = withMarkColor("markLine", seriesColor)
+    const markArea = withMarkColor(
+      "markArea",
+      typeof seriesColor === "string"
+        ? echarts.color.modifyAlpha(seriesColor, SERIES_MARK_AREA_ALPHA)
+        : seriesColor
+    )
+    if (markLine === undefined && markArea === undefined) {
+      return series
+    }
+    return {
+      ...series,
+      ...(markLine && { markLine }),
+      ...(markArea && { markArea }),
+    }
+  })
+}
+
+/** Fill opacity of an unstacked area series under the Streamlit theme. */
+const AREA_FILL_OPACITY = 0.2
+
+/**
+ * Soften the fill of unstacked area series.
+ *
+ * ECharts fills an area at 0.7 opacity, which hides the gridlines and any
+ * area behind it. The theme can't set this, because ECharts draws any line
+ * series with an ``areaStyle`` (even ``{}``) as an area. Stacked areas keep
+ * ECharts' fill, since there the fill is what tells the bands apart. An
+ * ``areaStyle`` with its own ``color`` (often a gradient that carries its
+ * own alpha) or ``opacity`` is left alone.
+ */
+function withSoftAreaFill(option: EChartsOptionObject): EChartsOptionObject {
+  return mapOptionSeries(option, series => {
+    const { type, areaStyle, stack } = series
+    if (
+      type !== "line" ||
+      !isPlainObject(areaStyle) ||
+      (!isNullOrUndefined(stack) && stack !== "")
+    ) {
+      return series
+    }
+    const areaStyleObject = areaStyle as Record<string, unknown>
+    if (
+      areaStyleObject.color !== undefined ||
+      areaStyleObject.opacity !== undefined
+    ) {
+      return series
+    }
+    return {
+      ...series,
+      areaStyle: { ...areaStyleObject, opacity: AREA_FILL_OPACITY },
+    }
+  })
+}
+
+/**
+ * Label positions that draw the text on the shape itself, per series type.
+ * The funnel set mirrors ``isLabelInside`` in ECharts' ``funnelLayout``, and
+ * the pie set the one in its ``labelLayout``. A pie's ``"center"`` label sits
+ * in the donut hole, on the app background, so it doesn't count as inside.
+ */
+const INSIDE_LABEL_POSITIONS: ReadonlyMap<
+  string,
+  ReadonlySet<string>
+> = new Map([
+  [
+    "funnel",
+    new Set(["inner", "inside", "center", "insideLeft", "insideRight"]),
+  ],
+  ["pie", new Set(["inner", "inside"])],
+])
+
+/** The ``label`` of a series or data item, or an empty object if it has none. */
+function getLabelObject(entry: unknown): Record<string, unknown> {
+  if (!isPlainObject(entry)) {
+    return {}
+  }
+  const { label } = entry as Record<string, unknown>
+  return isPlainObject(label) ? (label as Record<string, unknown>) : {}
+}
+
+/**
+ * Give inside funnel and pie labels the on-fill label style.
+ *
+ * The theme styles funnel and pie labels for ECharts' default outside
+ * position, on the app background. The init theme can't branch on a label's
+ * position, so this option-level pass adds the on-fill halo when a series
+ * places its labels inside, or when a data item moves its own label inside.
+ * Label keys the user set on the series or the item win. A data item that
+ * moves its label outside a series with inside labels keeps the series' halo.
+ *
+ * Each series entry is styled on its own. A data item's halo keys skip only
+ * label keys set on the same entry, so a timeline or ``media`` override that
+ * restyles that series' label doesn't reach the item, whose keys win.
+ */
+function withInsideLabelStyle(
+  option: EChartsOptionObject,
+  theme: EmotionTheme
+): EChartsOptionObject {
+  const onFillLabel = buildOnFillLabelStyle(theme)
+  return mapOptionSeries(option, series => {
+    const insidePositions =
+      typeof series.type === "string"
+        ? INSIDE_LABEL_POSITIONS.get(series.type)
+        : undefined
+    if (insidePositions === undefined) {
+      return series
+    }
+    const hasInsideLabel = (entry: unknown): boolean => {
+      const { position } = getLabelObject(entry)
+      return typeof position === "string" && insidePositions.has(position)
+    }
+    const seriesLabel = getLabelObject(series)
+    if (hasInsideLabel(series)) {
+      // Data items inherit the series label, halo included.
+      return { ...series, label: { ...onFillLabel, ...seriesLabel } }
+    }
+    const { data } = series
+    if (!Array.isArray(data) || !data.some(hasInsideLabel)) {
+      return series
+    }
+    // Items inherit the series label, so a key the user set there still wins.
+    const itemDefaults = omit(onFillLabel, Object.keys(seriesLabel))
+    return {
+      ...series,
+      data: data.map((item: unknown) =>
+        hasInsideLabel(item)
+          ? {
+              ...(item as Record<string, unknown>),
+              label: { ...itemDefaults, ...getLabelObject(item) },
+            }
+          : item
       ),
     }
-  }
-  return fillOptionDefaults(option, applyVisualDefaults, theme)
+  })
 }
 
 /** Fill the ``aria`` and ``grid`` defaults on a single (non-timeline) option. */
@@ -1060,8 +2214,12 @@ function fillOptionDefaults(
     return result
   }
 
-  const titled = withTitleStyleDefaults(result, theme)
-  const { option: laidOut, stackedBottom } = applyControlLayout(titled, theme)
+  const titled = withSpecGradientColor(withTitleStyleDefaults(result, theme))
+  const {
+    option: laidOut,
+    stackedTop,
+    stackedBottom,
+  } = applyControlLayout(titled, theme)
 
   // For cartesian charts, default the grid so the plot fills its container and
   // axis labels and names stay inside it. Any grid key the user set wins; we
@@ -1069,7 +2227,10 @@ function fillOptionDefaults(
   const hasCartesianAxis = "xAxis" in laidOut || "yAxis" in laidOut
   const grid = laidOut.grid
   if (hasCartesianAxis && !Array.isArray(grid)) {
-    const defaults = buildDefaultGrid(laidOut, theme, stackedBottom)
+    const defaults = buildDefaultGrid(laidOut, theme, {
+      stackedTop,
+      stackedBottom,
+    })
     if (grid === undefined) {
       laidOut.grid = defaults
     } else if (isPlainObject(grid)) {
@@ -1078,6 +2239,73 @@ function fillOptionDefaults(
   }
 
   return laidOut
+}
+
+/**
+ * Apply ``mapSeries`` to every series entry an option can define.
+ *
+ * Besides the root ``series``, timeline specs nest series under
+ * ``baseOption`` and per-tick ``options[*]``, and responsive specs nest them
+ * under ``media[*].option`` at either level. Non-object entries are returned
+ * unchanged.
+ */
+export function mapOptionSeries(
+  option: EChartsOptionObject,
+  mapSeries: (series: Record<string, unknown>) => Record<string, unknown>
+): EChartsOptionObject {
+  const mapEntry = (entry: unknown): unknown =>
+    isPlainObject(entry) ? mapSeries(entry as Record<string, unknown>) : entry
+  const applyToSeries = (target: EChartsOptionObject): EChartsOptionObject => {
+    const { series } = target
+    if (Array.isArray(series)) {
+      return { ...target, series: series.map(mapEntry) }
+    }
+    if (isPlainObject(series)) {
+      return { ...target, series: mapEntry(series) }
+    }
+    return target
+  }
+  const applyToMedia = (target: EChartsOptionObject): EChartsOptionObject => {
+    const withSeries = applyToSeries(target)
+    const media = withSeries.media
+    if (!Array.isArray(media)) {
+      return withSeries
+    }
+    return {
+      ...withSeries,
+      media: (media as unknown[]).map((entry: unknown) => {
+        if (!isPlainObject(entry)) {
+          return entry
+        }
+        const mediaEntry = entry as Record<string, unknown>
+        if (!isPlainObject(mediaEntry.option)) {
+          return entry
+        }
+        return {
+          ...mediaEntry,
+          option: applyToSeries(mediaEntry.option as EChartsOptionObject),
+        }
+      }),
+    }
+  }
+
+  let result = applyToMedia(option)
+  const baseOption = result.baseOption
+  if (isPlainObject(baseOption)) {
+    result = {
+      ...result,
+      baseOption: applyToMedia(baseOption as EChartsOptionObject),
+    }
+  }
+  if (Array.isArray(result.options)) {
+    result = {
+      ...result,
+      options: (result.options as unknown[]).map((tick: unknown) =>
+        isPlainObject(tick) ? applyToMedia(tick as EChartsOptionObject) : tick
+      ),
+    }
+  }
+  return result
 }
 
 /**
@@ -1096,43 +2324,68 @@ function fillOptionDefaults(
  * the line itself (or anywhere in an area fill) still shows a click cursor.
  * There is no option-level fix: ``silent`` would remove it but also disables
  * hover emphasis and item tooltips.
+ *
+ * Series in timeline and responsive variants get the same default (see
+ * ``mapOptionSeries``).
  */
 export function withDefaultSeriesCursor(
   option: EChartsOptionObject
 ): EChartsOptionObject {
-  const withCursor = (entry: unknown): unknown => {
-    if (!isPlainObject(entry)) {
-      return entry
-    }
-    const seriesObject = entry as Record<string, unknown>
-    if ("cursor" in seriesObject) {
-      return entry
-    }
-    return { ...seriesObject, cursor: "default" }
-  }
-  const applyCursorToSeries = (
+  return mapOptionSeries(option, series =>
+    "cursor" in series ? series : { ...series, cursor: "default" }
+  )
+}
+
+/**
+ * Apply Streamlit ``alt`` as ECharts ``aria.label.description``.
+ *
+ * Forces ``aria.enabled`` and ``aria.label.enabled`` so an authored name
+ * cannot be silenced by ``aria: {enabled: false}`` or
+ * ``aria: {label: {enabled: false}}``. Timeline specs nest chart ``aria``
+ * under ``baseOption`` (matching Streamlit's ``aria.enabled`` fill);
+ * per-tick ``options[*]`` and responsive ``media[*].option`` overlays can
+ * still redefine ``aria``, so those variants are stamped too.
+ */
+export function applyAltToOption(
+  option: EChartsOptionObject,
+  alt: string
+): EChartsOptionObject {
+  const withDescription = (
     target: EChartsOptionObject
   ): EChartsOptionObject => {
-    const { series } = target
-    if (Array.isArray(series)) {
-      return { ...target, series: series.map(withCursor) }
+    const aria = isPlainObject(target.aria)
+      ? { ...(target.aria as Record<string, unknown>) }
+      : {}
+    const label = isPlainObject(aria.label)
+      ? { ...(aria.label as Record<string, unknown>) }
+      : {}
+    return {
+      ...target,
+      aria: {
+        ...aria,
+        enabled: true,
+        label: {
+          ...label,
+          // ECharts setLabel returns early when label.enabled is false,
+          // before writing role / aria-label — force it on with alt.
+          enabled: true,
+          description: alt,
+        },
+      },
     }
-    if (isPlainObject(series)) {
-      return { ...target, series: withCursor(series) }
-    }
-    return target
   }
-  const applyCursorToMedia = (
+
+  // Stamp ``media[*].option`` overlays without naming the parent node itself.
+  const applyToMediaEntries = (
     target: EChartsOptionObject
   ): EChartsOptionObject => {
-    const withSeries = applyCursorToSeries(target)
-    const media = withSeries.media
+    const media = target.media
     if (!Array.isArray(media)) {
-      return withSeries
+      return target
     }
     return {
-      ...withSeries,
-      media: media.map(entry => {
+      ...target,
+      media: (media as unknown[]).map((entry: unknown) => {
         if (!isPlainObject(entry)) {
           return entry
         }
@@ -1142,35 +2395,39 @@ export function withDefaultSeriesCursor(
         }
         return {
           ...mediaEntry,
-          option: applyCursorToSeries(
-            mediaEntry.option as EChartsOptionObject
-          ),
+          option: withDescription(mediaEntry.option as EChartsOptionObject),
         }
       }),
     }
   }
 
-  // Timeline specs nest series under ``baseOption`` and per-tick ``options``.
-  // Responsive specs nest series under ``media[*].option``. Apply the cursor
-  // default in all of those places so display-only charts don't keep ECharts'
-  // pointer cursor.
-  let result = applyCursorToMedia(option)
-  const baseOption = result.baseOption
-  if (isPlainObject(baseOption)) {
+  // Name a chart option node and any nested media overrides under it.
+  const applyToVariant = (target: EChartsOptionObject): EChartsOptionObject =>
+    applyToMediaEntries(withDescription(target))
+
+  let result: EChartsOptionObject
+  if (isPlainObject(option.baseOption)) {
+    // Timeline wrapper: ECharts reads chart aria from baseOption, not the root.
     result = {
-      ...result,
-      baseOption: applyCursorToMedia(baseOption as EChartsOptionObject),
+      ...option,
+      baseOption: applyToVariant(option.baseOption as EChartsOptionObject),
     }
+    // Responsive media can sit beside baseOption on the timeline root.
+    result = applyToMediaEntries(result)
+  } else {
+    result = applyToVariant(option)
   }
+
   if (Array.isArray(result.options)) {
     result = {
       ...result,
-      options: result.options.map(tick =>
+      options: (result.options as unknown[]).map((tick: unknown) =>
         isPlainObject(tick)
-          ? applyCursorToMedia(tick as EChartsOptionObject)
+          ? applyToVariant(tick as EChartsOptionObject)
           : tick
       ),
     }
   }
+
   return result
 }

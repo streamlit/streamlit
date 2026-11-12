@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.text_input
 # The return type depends on the value parameter:
@@ -105,6 +103,14 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", disabled=True), str)
     assert_type(text_input("Enter text", disabled=False), str)
     assert_type(text_input("Enter text", value=None, disabled=True), str | None)
+
+    # =====================================================================
+    # Test required parameter (keyword-only)
+    # =====================================================================
+
+    assert_type(text_input("Enter text", required=True), str)
+    assert_type(text_input("Enter text", required=False), str)
+    assert_type(text_input("Enter text", value=None, required=True), str | None)
 
     # =====================================================================
     # Test label_visibility parameter (keyword-only)
@@ -210,6 +216,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Type something...",
             disabled=False,
+            required=True,
             label_visibility="visible",
             icon=":material/edit:",
             width="stretch",
@@ -236,6 +243,7 @@ if TYPE_CHECKING:
             kwargs=None,
             placeholder="Password",
             disabled=False,
+            required=True,
             label_visibility="visible",
             icon=":material/lock:",
             width=300,

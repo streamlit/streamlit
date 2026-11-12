@@ -53,7 +53,9 @@ describe("utils/idBuilder", () => {
     })
 
     it("throws when base contains the delimiter", () => {
-      expect(() => makeTriggerAggregatorId("bad__base")).toThrow()
+      expect(() => makeTriggerAggregatorId("bad__base")).toThrow(
+        "Base component id must not contain the delimiter sequence"
+      )
     })
   })
 })

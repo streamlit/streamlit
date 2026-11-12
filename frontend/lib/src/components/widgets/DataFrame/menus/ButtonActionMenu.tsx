@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect } from "react"
+import { memo, type ReactElement, useCallback, useEffect } from "react"
 
 import {
   DynamicIcon,
@@ -56,7 +56,7 @@ function ButtonActionMenu({
   onSelectAction,
   onCloseMenu,
 }: ButtonActionMenuProps): ReactElement {
-  const { refs, floatingStyles } = useFloatingOverlay({
+  const { floatingStyles, setFloating, setReference } = useFloatingOverlay({
     open: true,
     placement: "bottom-end",
     offsetPx: COLUMN_MENU_OFFSET,
@@ -66,8 +66,8 @@ function ButtonActionMenu({
   const { panelRef, setFloatingRef, setReferenceRef } = useOverlayDismissal({
     isOpen: true,
     onClose: onCloseMenu,
-    floatingSetFn: refs.setFloating,
-    referenceSetFn: refs.setReference,
+    floatingSetFn: setFloating,
+    referenceSetFn: setReference,
   })
 
   // Close menu on any scroll in the document (fixed positioning would misalign
@@ -77,7 +77,7 @@ function ButtonActionMenu({
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
-      if (panelRef.current?.contains(event.target as Node)) {
+      if (panelRef.current?.contains(event.target as Node) === true) {
         return
       }
       // Close on any scroll event outside the menu (including dataframe scroll,
@@ -155,10 +155,13 @@ function ButtonActionMenu({
                   // Labels are user-provided and can be long, so allow wrapping
                   // instead of forcing a single line (which would overflow).
                   allowWrap
-                  // Provide aria-label for icon-only menu items (where text is empty)
-                  aria-label={text || icon || label}
+                  // Icon-only items (empty text) use the icon as their
+                  // accessible name, or the raw label when there is no icon.
+                  aria-label={text || (icon ?? label)}
                 >
-                  {icon && <DynamicIcon size="base" iconValue={icon} />}
+                  {icon !== null && (
+                    <DynamicIcon size="base" iconValue={icon} />
+                  )}
                   <StreamlitMarkdown
                     source={text}
                     allowHTML={false}

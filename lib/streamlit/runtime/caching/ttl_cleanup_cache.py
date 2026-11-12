@@ -22,7 +22,11 @@ from typing import TypeVar
 from typing_extensions import override
 
 from streamlit.runtime.caching.cache_utils import OnRelease
-from streamlit.runtime.caching.ttl_cache import TTLCache
+from streamlit.runtime.caching.ttl_cache import (
+    OnEvict,
+    TTLCache,
+    TTLCacheEvictionReason,
+)
 
 K = TypeVar("K")
 V = TypeVar("V")
@@ -42,6 +46,7 @@ class TTLCleanupCache(TTLCache[K, V]):
         ttl: float,
         timer: Callable[[], float],
         on_release: OnRelease,
+        on_evict: OnEvict | None = None,
     ) -> None:
         """Create a cache with the given size, TTL, and release hook.
 
@@ -56,8 +61,11 @@ class TTLCleanupCache(TTLCache[K, V]):
         on_release : OnRelease
             The function to call with cache entries when they are removed from the
             cache.
+        on_evict : OnEvict | None
+            The function to call with a reason and an entry count when the cache
+            evicts entries on its own. See ``TTLCache``.
         """
-        super().__init__(maxsize=maxsize, ttl=ttl, timer=timer)
+        super().__init__(maxsize=maxsize, ttl=ttl, timer=timer, on_evict=on_evict)
         self._on_release = on_release
 
     @override
@@ -65,6 +73,12 @@ class TTLCleanupCache(TTLCache[K, V]):
         key, value = super().popitem()
         self._on_release(value)
         return key, value
+
+    @override
+    def _evict_lru(self, reason: TTLCacheEvictionReason) -> V:
+        value = super()._evict_lru(reason)
+        self._on_release(value)
+        return value
 
     @override
     def expire(self, at_time: float | None = None) -> list[tuple[K, V]]:
@@ -76,13 +90,12 @@ class TTLCleanupCache(TTLCache[K, V]):
 
     @override
     def clear(self) -> None:
-        # The base TTLCache.clear() is O(1) and bypasses popitem(), so it would
-        # not invoke our release hooks. Clear via popitem() instead to ensure
-        # on_release is called for every entry.
+        # Base clear() removes entries through _remove() and bypasses popitem(),
+        # so it would skip release hooks. Clear via popitem() instead.
         while True:
             try:
                 self.popitem()
-            except KeyError:  # noqa: PERF203
+            except KeyError:
                 break
 
     def safe_del(self, key: K) -> None:

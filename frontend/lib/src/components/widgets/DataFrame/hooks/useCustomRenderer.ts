@@ -17,12 +17,12 @@
 import { useCallback, useMemo } from "react"
 
 import {
-  BaseDrawArgs,
-  DataEditorProps,
-  DrawCellCallback,
+  type BaseDrawArgs,
+  type DataEditorProps,
+  type DrawCellCallback,
   drawTextCell,
-  Theme as GlideTheme,
-  Rectangle,
+  type Theme as GlideTheme,
+  type Rectangle,
 } from "@glideapps/glide-data-grid"
 import {
   DatePickerCell,
@@ -32,14 +32,13 @@ import {
 } from "@glideapps/glide-data-grid-cells"
 
 import {
-  BaseColumn,
+  type BaseColumn,
   CustomCells,
+  DEFAULT_MISSING_PLACEHOLDER,
   isErrorCell,
   isMissingValueCell,
+  SELF_DRAWN_MISSING_KINDS,
 } from "~lib/components/widgets/DataFrame/columns"
-
-// Default token used for missing values (null, NaN, etc.)
-const DEFAULT_MISSING_PLACEHOLDER = "None"
 
 /**
  * Draw a red indicator in the top right corner of the cell
@@ -86,8 +85,8 @@ const drawMissingPlaceholder = (
         baseFontFull: `${theme.baseFontStyle} ${theme.fontFamily}`,
         markerFontFull: `${theme.markerFontStyle} ${theme.fontFamily}`,
       },
-      // The following props are just added for technical reasons:
-      // @ts-expect-error
+      // drawTextCell only reads rect, ctx, and theme.
+      // @ts-expect-error - {} is not a SpriteManager
       spriteManager: {},
       hyperWrapping: false,
     },
@@ -139,17 +138,13 @@ function useCustomRenderer(
         // We explicitly ignore some cell types here (e.g. checkbox, progress...) since
         // they are taking care of rendering their missing value state themselves (usually as empty cell).
         // All other cell types are rendered with a placeholder symbol and a faded text color via drawMissingPlaceholder.
-        if (
-          ["checkbox", "line_chart", "bar_chart", "progress"].includes(
-            column.kind
-          )
-        ) {
+        if (SELF_DRAWN_MISSING_KINDS.has(column.kind)) {
           draw()
         } else {
           drawMissingPlaceholder(args as BaseDrawArgs, placeholderToken)
         }
 
-        if (column.isRequired && column.isEditable) {
+        if (column.isRequired === true && column.isEditable) {
           // If the column is configured as required & editable,
           // we draw a red indicator in the top right corner of the cell.
           drawAttentionIndicator(ctx, rect, theme)

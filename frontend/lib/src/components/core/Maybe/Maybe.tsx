@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { memo, PropsWithChildren } from "react"
+import { memo, type PropsWithChildren } from "react"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface MaybeProps extends PropsWithChildren<{
@@ -22,7 +22,7 @@ interface MaybeProps extends PropsWithChildren<{
 
 const Maybe: React.FC<MaybeProps> = memo(
   function Maybe({ children }) {
-    return <>{children}</>
+    return children
   },
   (prevProps, nextProps) => {
     // If either prevProps.enable OR nextProps.enable is true, we want to update

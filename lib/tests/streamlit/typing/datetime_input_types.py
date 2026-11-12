@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 if TYPE_CHECKING:
     from datetime import date, datetime, time, timedelta
@@ -100,6 +98,19 @@ if TYPE_CHECKING:
         ),
         datetime,
     )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change=None),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="rerun"),
+        datetime,
+    )
+    assert_type(
+        datetime_input("foo", datetime(2025, 11, 19, 16, 45), on_change="ignore"),
+        datetime,
+    )
+    assert_type(datetime_input("foo", value=None, on_change="ignore"), datetime | None)
 
     # With key and help
     assert_type(
@@ -128,5 +139,32 @@ if TYPE_CHECKING:
     )
     assert_type(
         datetime_input("foo", datetime(2025, 11, 19, 16, 45), key="my_key", bind=None),
+        datetime,
+    )
+
+    # Test required parameter (keyword-only). Return types do not narrow.
+    assert_type(datetime_input("foo", required=True), datetime)
+    assert_type(datetime_input("foo", required=False), datetime)
+    assert_type(datetime_input("foo", value=None, required=True), datetime | None)
+    assert_type(
+        datetime_input("foo", value=None, required=True, on_change="ignore"),
+        datetime | None,
+    )
+
+    assert_type(
+        datetime_input(
+            "foo",
+            datetime(2025, 11, 19, 16, 45),
+            key="required_datetime",
+            help="Pick a datetime",
+            on_change=on_change_callback,
+            format="YYYY/MM/DD",
+            step=timedelta(minutes=30),
+            disabled=False,
+            required=True,
+            label_visibility="visible",
+            width=240,
+            persist_state="page",
+        ),
         datetime,
     )

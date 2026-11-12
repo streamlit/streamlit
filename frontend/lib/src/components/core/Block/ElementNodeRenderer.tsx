@@ -14,63 +14,63 @@
  * limitations under the License.
  */
 
-import { lazy, ReactElement, useContext } from "react"
+import { lazy, type ReactElement, useContext } from "react"
 
 import {
-  Alert as AlertProto,
-  AudioInput as AudioInputProto,
-  Audio as AudioProto,
-  BidiComponent as BidiComponentProto,
-  ButtonGroup as ButtonGroupProto,
-  Button as ButtonProto,
-  CameraInput as CameraInputProto,
-  ChatInput as ChatInputProto,
-  Checkbox as CheckboxProto,
-  Code as CodeProto,
-  ColorPicker as ColorPickerProto,
-  ComponentInstance as ComponentInstanceProto,
-  Dataframe as DataframeProto,
-  DateInput as DateInputProto,
-  DateTimeInput as DateTimeInputProto,
-  DeckGlJsonChart as DeckGlJsonChartProto,
-  DownloadButton as DownloadButtonProto,
-  EChartsChart as EChartsChartProto,
-  Exception as ExceptionProto,
-  Feedback as FeedbackProto,
-  FileUploader as FileUploaderProto,
-  GraphVizChart as GraphVizChartProto,
-  Heading as HeadingProto,
-  Help as HelpProto,
-  Html as HtmlProto,
-  IFrame as IFrameProto,
-  ImageList as ImageListProto,
-  Json as JsonProto,
-  LinkButton as LinkButtonProto,
-  Markdown as MarkdownProto,
-  MenuButton as MenuButtonProto,
-  Metric as MetricProto,
-  MultiSelect as MultiSelectProto,
-  NumberInput as NumberInputProto,
-  PageLink as PageLinkProto,
-  Pagination as PaginationProto,
-  PlotlyChart as PlotlyChartProto,
-  Progress as ProgressProto,
-  Radio as RadioProto,
-  Selectbox as SelectboxProto,
+  type Alert as AlertProto,
+  type AudioInput as AudioInputProto,
+  type Audio as AudioProto,
+  type BidiComponent as BidiComponentProto,
+  type ButtonGroup as ButtonGroupProto,
+  type Button as ButtonProto,
+  type CameraInput as CameraInputProto,
+  type ChatInput as ChatInputProto,
+  type Checkbox as CheckboxProto,
+  type Code as CodeProto,
+  type ColorPicker as ColorPickerProto,
+  type ComponentInstance as ComponentInstanceProto,
+  type Dataframe as DataframeProto,
+  type DateInput as DateInputProto,
+  type DateTimeInput as DateTimeInputProto,
+  type DeckGlJsonChart as DeckGlJsonChartProto,
+  type DownloadButton as DownloadButtonProto,
+  type EChartsChart as EChartsChartProto,
+  type Exception as ExceptionProto,
+  type Feedback as FeedbackProto,
+  type FileUploader as FileUploaderProto,
+  type GraphVizChart as GraphVizChartProto,
+  type Heading as HeadingProto,
+  type Help as HelpProto,
+  type Html as HtmlProto,
+  type IFrame as IFrameProto,
+  type ImageList as ImageListProto,
+  type Json as JsonProto,
+  type LinkButton as LinkButtonProto,
+  type Markdown as MarkdownProto,
+  type MenuButton as MenuButtonProto,
+  type Metric as MetricProto,
+  type MultiSelect as MultiSelectProto,
+  type NumberInput as NumberInputProto,
+  type PageLink as PageLinkProto,
+  type Pagination as PaginationProto,
+  type PlotlyChart as PlotlyChartProto,
+  type Progress as ProgressProto,
+  type Radio as RadioProto,
+  type Selectbox as SelectboxProto,
   Skeleton as SkeletonProto,
-  Slider as SliderProto,
-  Spinner as SpinnerProto,
-  Table as TableProto,
-  TextArea as TextAreaProto,
-  TextInput as TextInputProto,
-  Text as TextProto,
-  TimeInput as TimeInputProto,
-  Toast as ToastProto,
-  VegaLiteChart as VegaLiteChartProto,
-  Video as VideoProto,
+  type Slider as SliderProto,
+  type Spinner as SpinnerProto,
+  type Table as TableProto,
+  type TextArea as TextAreaProto,
+  type TextInput as TextInputProto,
+  type Text as TextProto,
+  type TimeInput as TimeInputProto,
+  type Toast as ToastProto,
+  type VegaLiteChart as VegaLiteChartProto,
+  type Video as VideoProto,
 } from "@streamlit/protobuf"
 
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import Maybe from "~lib/components/core/Maybe/Maybe"
@@ -84,16 +84,19 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainer } from "./ElementContainer"
 import {
   ElementContainerConfig,
   MinStretchWidth,
+  PrintLayout,
 } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
 import { StyledSpace } from "./styled-components"
 import {
-  BaseBlockProps,
+  type BaseBlockProps,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
@@ -185,11 +188,6 @@ const Feedback = lazy(
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
 )
-const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
-    default: module.FormSubmitContent,
-  }))
-)
 const Multiselect = lazy(
   () => import("~lib/components/widgets/Multiselect/Multiselect")
 )
@@ -221,28 +219,36 @@ const BidiComponent = lazy(
   () => import("~lib/components/widgets/BidiComponent/BidiComponent")
 )
 
+const CHART_CONFIG = ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.with({
+  printLayout: PrintLayout.GRAPHIC,
+})
+
 export interface ElementNodeRendererProps extends BaseBlockProps {
   node: ElementNode
+  /**
+   * Whether this renders a retained copy of a displaced prior-run element.
+   * Retained elements are hidden unless they hold focus.
+   */
+  isRetained?: boolean
 }
 
 interface RawElementNodeRendererProps extends ElementNodeRendererProps {
   isStale: boolean
 }
 
-function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
-  return isStale ? <></> : component
+function hideIfStale(
+  isStale: boolean,
+  component: ReactElement
+): ReactElement | null {
+  return isStale ? null : component
 }
 
 // Render ElementNodes (i.e. leaf nodes).
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
-): ReactElement => {
+): ReactElement | null => {
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
-
-  if (!node) {
-    throw new Error("ElementNode not found.")
-  }
 
   const elementProps = {
     disableFullscreenMode: props.disableFullscreenMode,
@@ -283,7 +289,9 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          config={ElementContainerConfig.LARGE_ELEMENT.with({
+            printLayout: PrintLayout.FIXED_WIDTH,
+          })}
           isStale={isStale}
         >
           <Table
@@ -347,11 +355,7 @@ const RawElementNodeRenderer = (
     case "deckGlJsonChart": {
       const deckGlProto = node.element.deckGlJsonChart as DeckGlJsonChartProto
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={CHART_CONFIG} isStale={isStale}>
           <DeckGlJsonChart
             element={deckGlProto}
             // DeckGL chart can be used as a widget (when selections are activated) or
@@ -406,11 +410,7 @@ const RawElementNodeRenderer = (
 
     case "graphvizChart":
       return (
-        <ElementContainer
-          node={node}
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
-          isStale={isStale}
-        >
+        <ElementContainer node={node} config={CHART_CONFIG} isStale={isStale}>
           <GraphVizChart
             element={node.element.graphvizChart as GraphVizChartProto}
             {...elementProps}
@@ -456,7 +456,8 @@ const RawElementNodeRenderer = (
       // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
       // This is consistent with how useLayoutStyles handles missing config for other elements.
       const isUsingStretch =
-        !node.element.widthConfig || node.element.widthConfig.useStretch
+        !node.element.widthConfig ||
+        node.element.widthConfig.useStretch === true
 
       const config = isUsingStretch
         ? ElementContainerConfig.FULL_WIDTH
@@ -511,8 +512,7 @@ const RawElementNodeRenderer = (
 
     case "metric": {
       const metricProto = node.element.metric as MetricProto
-      const hasChart =
-        metricProto.chartData && metricProto.chartData.length > 0
+      const hasChart = metricProto.chartData.length > 0
       return (
         <ElementContainer
           node={node}
@@ -585,11 +585,10 @@ const RawElementNodeRenderer = (
       // container. The deprecated internal _skeleton() carries no layout config,
       // so it always renders at the default element height.
       const { heightConfig } = node.element
-      const fillContainerHeight = Boolean(
-        heightConfig?.useStretch ||
-        heightConfig?.pixelHeight ||
-        heightConfig?.remHeight
-      )
+      const fillContainerHeight =
+        heightConfig?.useStretch === true ||
+        !!heightConfig?.pixelHeight ||
+        !!heightConfig?.remHeight
       return (
         <ElementContainer
           node={node}
@@ -688,12 +687,13 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           <Toast
-            // Keyed by scriptRunId so the toast remounts on each run; a
-            // still-visible toast at the same position is de-duped in Toast.
+            // Keyed by scriptRunId so the toast remounts on each run, while
+            // msg.toast() updates within a run reach the same instance.
             key={node.scriptRunId}
             element={toastProto}
-            // The delta path is a stable per-position identity used to de-dupe
-            // the toast across the remounts that happen on every rerun.
+            // The delta path is a stable per-position identity. Toast uses it
+            // to keep a still-visible toast with identical content, or replace
+            // it when the content changed.
             toastId={node.metadata.deltaPath.join("-")}
             {...elementProps}
           />
@@ -709,13 +709,17 @@ const RawElementNodeRenderer = (
       // Resizable dataframes measure parent container width for the resize feature.
       // Parent needs defined width (not fit-content) for measurement to work.
       // Only needed in root where resize is enabled; disabled in nested containers.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       const config = needsFullWidth
         ? new ElementContainerConfig({
             minStretchWidth: MinStretchWidth.LARGE,
             styleOverrides: { overflow: "visible", width: "100%" },
+            printLayout: PrintLayout.FIXED_WIDTH,
           })
-        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.with({
+            printLayout: PrintLayout.FIXED_WIDTH,
+          })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -739,7 +743,8 @@ const RawElementNodeRenderer = (
       // VegaLite charts with embedded dataframes need a defined parent width
       // (not fit-content) for proper measurement and rendering due to the resize feature.
       // Resize is disabled in nested containers, so this is only necessary in the root container.
-      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const needsFullWidth =
+        node.element.widthConfig?.useContent === true && isInRoot
       // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
       const needsFlex = isInHorizontalLayout && !node.element.widthConfig
       const config =
@@ -751,8 +756,9 @@ const RawElementNodeRenderer = (
                 ...(needsFullWidth && { width: "100%" }),
                 ...(needsFlex && { flex: "1 1 14rem" }),
               },
+              printLayout: PrintLayout.GRAPHIC,
             })
-          : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+          : CHART_CONFIG
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
@@ -800,6 +806,8 @@ const RawElementNodeRenderer = (
           isStale={isStale}
         >
           {buttonProto.isFormSubmitter ? (
+            // Eager so enter-to-submit follows the first-registered submit button.
+            // Lazy + Suspense can mount an enabled secondary button first.
             <FormSubmitContent element={buttonProto} {...widgetProps} />
           ) : (
             <Button element={buttonProto} {...widgetProps} />
@@ -911,21 +919,25 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
 
       // Height configuration for chat input (same pattern as textArea):
-      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min
+      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min.
+      //   In horizontal layouts, the default layout styles stretch it to the row.
       // - pixel: container allows expansion, inner component handles height
       // - content (default): auto-expand with text
       const heightConfig = node.element.heightConfig
       const chatInputConfig = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
-        styleOverrides: heightConfig?.useStretch
-          ? { height: "100%", flex: "1 1 8rem" }
-          : heightConfig?.pixelHeight
-            ? {
-                height: "auto",
-                overflow: "visible",
-                ...(isInHorizontalLayout ? {} : { flex: "" }),
-              }
-            : undefined,
+        styleOverrides:
+          heightConfig?.useStretch === true
+            ? isInHorizontalLayout
+              ? undefined
+              : { height: "100%", flex: "1 1 8rem" }
+            : heightConfig?.pixelHeight
+              ? {
+                  height: "auto",
+                  overflow: "visible",
+                  ...(isInHorizontalLayout ? {} : { flex: "" }),
+                }
+              : undefined,
       })
 
       return (
@@ -1107,16 +1119,16 @@ const RawElementNodeRenderer = (
           // Use overflow-visible (like other charts) so the hover toolbar, which
           // floats above the chart, and tooltips aren't clipped by the
           // overflow:auto that a pixel `height` otherwise applies.
-          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          config={CHART_CONFIG}
           isStale={isStale}
         >
           <EChartsChart
-            // An ECharts chart only has an id when the user gave it a key.
-            // An unkeyed chart has none, so it falls back to positional
-            // identity like other elements.
+            // An ECharts chart only has an id when selections are activated or
+            // the user gave it a key. An unkeyed display-only chart has none,
+            // so it falls back to positional identity like other elements.
             key={echartsProto.id || undefined}
             element={echartsProto}
-            {...elementProps}
+            {...widgetProps}
           />
         </ElementContainer>
       )
@@ -1127,7 +1139,9 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          config={ElementContainerConfig.LARGE_ELEMENT.with({
+            printLayout: PrintLayout.GRAPHIC,
+          })}
           isStale={isStale}
         >
           <PlotlyChart
@@ -1196,12 +1210,16 @@ const RawElementNodeRenderer = (
       // The st.text_area element has a legacy implementation where the height
       // is measuring only the input box so the pixel height must be set in the element
       // and the container must be allowed to expand. Additionally, we don't want the
-      // flex with height to be set on the element container.
-      const useStretchHeight = node.element.heightConfig?.useStretch
+      // flex with height to be set on the element container. In horizontal
+      // layouts, the default layout styles stretch a stretch-height text area
+      // to the row.
+      const useStretchHeight = node.element.heightConfig?.useStretch === true
       const config = new ElementContainerConfig({
         minStretchWidth: MinStretchWidth.MEDIUM,
         styleOverrides: useStretchHeight
-          ? { height: "100%", flex: "1 1 8rem" }
+          ? isInHorizontalLayout
+            ? undefined
+            : { height: "100%", flex: "1 1 8rem" }
           : // Content height text area in vertical layout cannot have flex.
             { height: "auto", ...(isInHorizontalLayout ? {} : { flex: "" }) },
       })
@@ -1305,7 +1323,7 @@ const ElementNodeRenderer = (
     useContext(ScriptRunContext)
   const { node } = props
 
-  const elementType = node.element.type || ""
+  const elementType = node.element.type ?? ""
 
   const enable = shouldComponentBeEnabled(elementType, scriptRunState)
   const isStale = isComponentStale(
@@ -1320,9 +1338,11 @@ const ElementNodeRenderer = (
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
   return (
-    <Maybe enable={enable}>
-      <RawElementNodeRenderer {...props} isStale={isStale} />
-    </Maybe>
+    <RetainedElementContext.Provider value={props.isRetained === true}>
+      <Maybe enable={enable}>
+        <RawElementNodeRenderer {...props} isStale={isStale} />
+      </Maybe>
+    </RetainedElementContext.Provider>
   )
 }
 

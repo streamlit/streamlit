@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -50,6 +48,11 @@ if TYPE_CHECKING:
     assert_type(pyplot(fig, use_container_width=False), DeltaGenerator)
     assert_type(pyplot(fig, use_container_width=None), DeltaGenerator)
 
+    # pyplot with alt parameter (before **kwargs)
+    assert_type(pyplot(fig, alt="Histogram of samples"), DeltaGenerator)
+    assert_type(pyplot(fig, alt=""), DeltaGenerator)
+    assert_type(pyplot(fig, alt=None), DeltaGenerator)
+
     # pyplot with deprecated savefig kwargs (**kwargs: Any)
     assert_type(pyplot(fig, dpi=300, transparent=True), DeltaGenerator)
 
@@ -60,6 +63,7 @@ if TYPE_CHECKING:
             clear_figure=True,
             width="stretch",
             use_container_width=None,
+            alt="Named chart",
             dpi=200,  # deprecated savefig kwarg
         ),
         DeltaGenerator,

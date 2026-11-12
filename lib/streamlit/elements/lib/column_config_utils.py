@@ -18,7 +18,7 @@ import copy
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -41,7 +41,7 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ NUMERICAL_POSITION_PREFIX = "_pos:"
 
 
 # The column data kind is used to describe the type of the data within the column.
-class ColumnDataKind(str, Enum):
+class ColumnDataKind(StrEnum):
     INTEGER = "integer"
     FLOAT = "float"
     DATE = "date"
@@ -549,10 +549,15 @@ def register_button_column_widgets(
     """Register widgets for interactive button columns and attach them to a dataframe proto."""
     button_serde = ButtonClickSerde()
     for col_name, button_col in button_columns.items():
+        on_click = validate_on_change_mode(
+            button_col.on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
         check_widget_policies(
             dg,
             button_col.key,
-            on_change=button_col.on_click,
+            on_change=on_click,
             default_value=None,
             writes_allowed=False,
         )
@@ -564,7 +569,7 @@ def register_button_column_widgets(
         )
         register_widget(
             widget_id,
-            on_change_handler=button_col.on_click,
+            on_change_handler=on_click,
             args=button_col.args,
             kwargs=button_col.kwargs,
             deserializer=button_serde.deserialize,
@@ -643,6 +648,57 @@ def update_column_config(
         column_config_mapping[column] = {}
 
     column_config_mapping[column].update(column_config)
+
+
+# Presentation keys carry no meaning for a non-visual client.
+_COLUMN_PRESENTATION_KEYS: Final = frozenset({"width", "pinned", "alignment"})
+
+
+def described_column_config(column_config_mapping: Any) -> Any:
+    """The agent-facing view of a resolved column configuration.
+
+    The resolved mapping already has defaults applied, and it states "hide this
+    column" as ``{"hidden": True}`` rather than the bare ``None`` the author may
+    have written. Width, pinning, and alignment are presentation and are
+    removed. The index entry keeps its label, type, format, and other semantic
+    settings; its ``hidden`` flag is removed because ``hide_index`` reports
+    whether the index is shown. A column left with nothing to say is dropped.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return column_config_mapping
+
+    described: dict[Any, Any] = {}
+    for name, config in column_config_mapping.items():
+        if not isinstance(config, dict):
+            described[name] = config
+            continue
+
+        dropped_keys = _COLUMN_PRESENTATION_KEYS
+        if name == INDEX_IDENTIFIER:
+            dropped_keys = _COLUMN_PRESENTATION_KEYS | {"hidden"}
+        kept = {key: value for key, value in config.items() if key not in dropped_keys}
+        if kept:
+            described[name] = kept
+    return described or None
+
+
+def described_hide_index(column_config_mapping: Any) -> bool | None:
+    """Whether the resolved index column is hidden.
+
+    ``apply_data_specific_configs`` hides the index for formats that have no
+    meaningful index, and the selection and data-editor paths write their own
+    override. ``described_column_config`` drops that ``hidden`` flag, so the
+    description reports it here. An index with no resolved flag is omitted.
+    """
+    if not isinstance(column_config_mapping, dict):
+        return None
+    index_config = column_config_mapping.get(INDEX_IDENTIFIER)
+    if not isinstance(index_config, dict):
+        return None
+    hidden = index_config.get("hidden")
+    if isinstance(hidden, bool):
+        return hidden
+    return None
 
 
 def apply_data_specific_configs(

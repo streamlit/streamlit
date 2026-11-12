@@ -20,9 +20,18 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import {
+  aliasDatasetReferences,
+  getAliasedDataSets,
+  type VegaLiteChartElement,
+} from "./arrowUtils"
 import { resolveNamedColorsInSpec } from "./colorUtils"
 import { applyStreamlitTheme, applyThemeDefaults } from "./CustomTheme"
+import {
+  applyLargeDataDefaults,
+  type DatasetRowCounts,
+  getDatasetRowCounts,
+} from "./largeDataDefaults"
 
 /**
  * A loosely-typed VegaLite spec after JSON parsing.
@@ -33,7 +42,9 @@ type VegaLiteSpec = Record<string, unknown>
 
 /** A single VegaLite selection/binding parameter within spec.params. */
 interface VegaLiteParam {
+  /** Parsed from the user's spec JSON, so it can be `null`. */
   select?:
+    | null
     | string
     | {
         type?: string
@@ -136,7 +147,7 @@ function sanitizeUsermetaEmbedOptions(spec: VegaLiteSpec): void {
   }
 
   const renderer = sanitizeRenderer(embedOptions?.renderer)
-  if (renderer) {
+  if (renderer !== undefined) {
     sanitizedEmbedOptions.renderer = renderer
   }
 
@@ -223,10 +234,21 @@ const generateSpec = (
   vegaLiteTheme: string,
   selectionMode: string[],
   theme: EmotionTheme,
+  rowCounts: DatasetRowCounts,
   containerWidth: number,
-  containerHeight?: number
+  containerHeight?: number,
+  alt: string = ""
 ): VegaLiteSpec => {
-  const spec = JSON.parse(inputSpec)
+  const spec = JSON.parse(inputSpec) as VegaLiteSpec & {
+    title?: string | { text?: string; limit?: number }
+    padding?: { bottom?: number }
+    config?: object
+  }
+
+  // Author `alt` wins over any top-level description already in the spec JSON.
+  if (alt) {
+    spec.description = alt
+  }
 
   // Normalize legacy "0"/non-positive sizing semantics: Historically, a
   // top-level width/height of 0 behaved like "unspecified" (Vega-Lite fell back
@@ -256,18 +278,22 @@ const generateSpec = (
   // same-origin pages with serialized spec contents.
   sanitizeUsermetaEmbedOptions(spec)
 
-  if (spec.title) {
-    if (typeof spec.title === "string") {
-      spec.title = { text: spec.title }
-    }
+  // Render large charts to canvas and skip per-mark ARIA, unless the author
+  // set the renderer or ARIA.
+  applyLargeDataDefaults(spec, rowCounts)
 
-    spec.title.limit =
+  // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- title may be a string, array, object, or null; a missing or empty title is left unchanged
+  if (spec.title) {
+    const title =
+      typeof spec.title === "string" ? { text: spec.title } : spec.title
+    title.limit =
       // Preserve existing limit if it exists,
-      spec.title.limit ??
+      title.limit ??
       // Otherwise, calculate the width - 40px to give some padding, especially
       // for the ... menu button. If the width is less than 40px, we set it to
       // 0 to avoid negative values.
       Math.max(containerWidth - 40, 0)
+    spec.title = title
   }
 
   // Only apply a container-derived height when we have a positive measurement.
@@ -311,6 +337,7 @@ const generateSpec = (
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- falsy padding, including 0, is replaced so bottom can be set
   if (!spec.padding) {
     spec.padding = {}
   }
@@ -354,6 +381,7 @@ export const useVegaElementPreprocessor = (
     datasets,
     vegaLiteTheme,
     selectionMode: inputSelectionMode,
+    alt = "",
   } = element
 
   // Selection Mode is an array, so we want to update it only when the contents
@@ -364,6 +392,31 @@ export const useVegaElementPreprocessor = (
     return inputSelectionMode
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
+
+  // Compare row counts by value so the spec regenerates only when a count
+  // changes. Every rerun delivers new dataset objects.
+  const rowCountsKey = JSON.stringify(getDatasetRowCounts(data, datasets))
+  const rowCounts = useMemo(
+    () => JSON.parse(rowCountsKey) as DatasetRowCounts,
+    [rowCountsKey]
+  )
+
+  // Map each dataset name to its alias. Memoize on the serialized names,
+  // because every rerun delivers new dataset objects.
+  const datasetNamesKey = JSON.stringify(
+    datasets.map(({ hasName, name }) => (hasName ? name : null))
+  )
+  const datasetAliases = useMemo(
+    () =>
+      new Map(
+        Array.from(getAliasedDataSets(datasets), ([alias, { name }]) => [
+          name,
+          alias,
+        ])
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
+    [datasetNamesKey]
+  )
 
   // The structural spec generated with neutral (0) container dimensions. This is
   // only recomputed when non-dimension inputs change, keeping it stable across
@@ -377,8 +430,10 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         0, // Use 0 for container dimensions
-        0
+        0,
+        alt
       ),
     [
       inputSpec,
@@ -387,6 +442,8 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
+      alt,
     ]
   )
 
@@ -426,15 +483,22 @@ export const useVegaElementPreprocessor = (
     }
     // Include the sizing mode flags so that transitioning to/from
     // container-driven sizing triggers a view recreation.
-    return JSON.stringify({
-      spec: specForKey,
-      useContainerWidth,
-      useContainerHeight,
-      concatWidth,
-      concatHeight,
-    })
+    return JSON.stringify(
+      {
+        spec: specForKey,
+        useContainerWidth,
+        useContainerHeight,
+        concatWidth,
+        concatHeight,
+      },
+      // Key dataset references by alias, not name. Altair names a dataset by
+      // a hash of its contents, so new data would otherwise rebuild the view
+      // instead of swapping the new rows into it.
+      aliasDatasetReferences(datasetAliases)
+    )
   }, [
     baseSpec,
+    datasetAliases,
     useContainerWidth,
     useContainerHeight,
     concatWidth,
@@ -450,8 +514,10 @@ export const useVegaElementPreprocessor = (
         vegaLiteTheme,
         selectionMode,
         theme,
+        rowCounts,
         containerWidth,
-        containerHeight
+        containerHeight,
+        alt
       ),
     [
       inputSpec,
@@ -460,8 +526,10 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
+      rowCounts,
       containerWidth,
       containerHeight,
+      alt,
     ]
   )
 
@@ -477,6 +545,7 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    alt,
     baseSpecKey,
   }
 }

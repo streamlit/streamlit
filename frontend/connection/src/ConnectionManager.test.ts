@@ -44,8 +44,8 @@ import { ConnectionState } from "./ConnectionState"
 import { MAX_RETRIES_BEFORE_CLIENT_ERROR } from "./constants"
 import { establishStaticConnection } from "./StaticConnection"
 import { mockEndpoints } from "./testUtils"
-import { ErrorDetails } from "./types"
-import { WebsocketConnection } from "./WebsocketConnection"
+import type { ErrorDetails } from "./types"
+import type { WebsocketConnection } from "./WebsocketConnection"
 
 /**
  * Test timeout for heartbeat acknowledgment in milliseconds.

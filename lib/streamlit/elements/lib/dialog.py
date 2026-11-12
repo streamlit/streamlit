@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, cast
-
-from typing_extensions import Self
+from typing import TYPE_CHECKING, Final, Literal, Self, TypeAlias, cast
 
 from streamlit.delta_generator import DeltaGenerator
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitInvalidLayoutContextError, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
@@ -27,7 +26,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
 )
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import register_widget, validate_on_change_mode
 from streamlit.string_util import validate_icon_or_emoji
 
 if TYPE_CHECKING:
@@ -36,22 +35,96 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.runtime.state import WidgetCallback
 
-DialogWidth: TypeAlias = Literal["small", "large", "medium"]
+DialogWidth: TypeAlias = Literal["small", "medium", "large"] | int
+DialogPosition: TypeAlias = Literal["left", "center", "right"]
+
+# pixel_width is a uint32. Values above this cannot be stored on the proto.
+_MAX_DIALOG_PIXEL_WIDTH = 2**32 - 1
 
 
 def _process_dialog_width_input(
     width: DialogWidth,
-) -> BlockProto.Dialog.DialogWidth.ValueType:
-    """Maps the user-provided literal to a value of the DialogWidth proto enum.
+) -> tuple[BlockProto.Dialog.DialogWidth.ValueType, int | None]:
+    """Map a dialog width to the proto enum and an optional pixel width.
 
-    Returns the mapped enum field for "small" by default and otherwise the mapped type.
+    Presets map to the enum and leave the pixel width unset. A positive int
+    sets the pixel width and uses SMALL so a client that ignores the pixel
+    field still renders the small preset.
     """
     if width == "large":
-        return BlockProto.Dialog.DialogWidth.LARGE
+        return BlockProto.Dialog.DialogWidth.LARGE, None
     if width == "medium":
-        return BlockProto.Dialog.DialogWidth.MEDIUM
+        return BlockProto.Dialog.DialogWidth.MEDIUM, None
+    if width == "small":
+        return BlockProto.Dialog.DialogWidth.SMALL, None
+    # bool subclasses int. Reject it so True is not a 1px dialog.
+    # Also reject ints that do not fit in the uint32 proto field.
+    if (
+        isinstance(width, int)
+        and not isinstance(width, bool)
+        and 0 < width <= _MAX_DIALOG_PIXEL_WIDTH
+    ):
+        return BlockProto.Dialog.DialogWidth.SMALL, width
 
-    return BlockProto.Dialog.DialogWidth.SMALL
+    raise StreamlitValueError(
+        "width",
+        ["'small'", "'medium'", "'large'", "a positive integer"],
+        detail=f"Got {width!r}.",
+    )
+
+
+_POSITION_NAMES: Final = {
+    BlockProto.Dialog.DialogPosition.CENTER: "center",
+    BlockProto.Dialog.DialogPosition.LEFT: "left",
+    BlockProto.Dialog.DialogPosition.RIGHT: "right",
+}
+
+
+def _dialog_agent_props(block_proto: BlockProto, *, is_open: bool) -> str | None:
+    """Describe this dialog for the agent API.
+
+    Called when the dialog is created and again when it is re-sent, so
+    ``is_open`` matches that message. ``key`` is set only when ``on_dismiss``
+    registered a widget, and ``action`` only when a browser user can also
+    dismiss the dialog. The block id only keeps the frontend from showing a
+    stale dialog, and nothing is registered under it.
+    """
+    dialog = block_proto.dialog
+    # Empty means no dismiss widget. A callback reaches the server, which is
+    # the same mode as "rerun": firing the overlay's key closes the dialog.
+    has_dismiss_widget = bool(dialog.id)
+    # The browser gives the user no way to dismiss this dialog, so its key is
+    # reported without an action and a request that fires it is refused.
+    can_dismiss = has_dismiss_widget and dialog.dismissible
+    return agent_spec.block(
+        "dialog",
+        key=dialog.id if has_dismiss_widget else None,
+        action="trigger" if can_dismiss else None,
+        title=dialog.title,
+        icon=dialog.icon or None,
+        position=_POSITION_NAMES.get(dialog.position, "center"),
+        dismissible=dialog.dismissible,
+        on_dismiss="rerun" if has_dismiss_widget else "ignore",
+        is_open=is_open,
+    )
+
+
+def _process_dialog_position_input(
+    position: DialogPosition,
+) -> BlockProto.Dialog.DialogPosition.ValueType:
+    """Map a user-facing position literal to the DialogPosition proto enum.
+
+    Unrecognized positions raise StreamlitValueError. There is no fallback
+    to center.
+    """
+    if position == "left":
+        return BlockProto.Dialog.DialogPosition.LEFT
+    if position == "right":
+        return BlockProto.Dialog.DialogPosition.RIGHT
+    if position == "center":
+        return BlockProto.Dialog.DialogPosition.CENTER
+
+    raise StreamlitValueError("position", ["'left'", "'center'", "'right'"])
 
 
 def _assert_first_dialog_to_be_opened(should_open: bool) -> None:
@@ -85,21 +158,28 @@ class Dialog(DeltaGenerator):
         parent: DeltaGenerator,
         title: str,
         *,
-        dismissible: bool = True,
         width: DialogWidth = "small",
+        position: DialogPosition = "center",
+        dismissible: bool = True,
         icon: str | None = None,
         on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     ) -> Dialog:
-        # Validation for on_dismiss parameter
-        if on_dismiss not in {"ignore", "rerun"} and not callable(on_dismiss):
-            raise StreamlitValueError(
-                "on_dismiss", ["'ignore'", "'rerun'", "a callback function"]
-            )
+        on_dismiss_callback = validate_on_change_mode(
+            on_dismiss,
+            supported_modes=("rerun", "ignore"),
+            none_supported=False,
+            param_name="on_dismiss",
+        )
 
         block_proto = BlockProto()
         block_proto.dialog.title = title
         block_proto.dialog.dismissible = dismissible
-        block_proto.dialog.width = _process_dialog_width_input(width)
+        dialog_width, pixel_width = _process_dialog_width_input(width)
+        block_proto.dialog.width = dialog_width
+        # Presets leave pixel_width unset so the frontend uses the enum.
+        if pixel_width is not None:
+            block_proto.dialog.pixel_width = pixel_width
+        block_proto.dialog.position = _process_dialog_position_input(position)
         block_proto.dialog.icon = validate_icon_or_emoji(icon)
 
         # Compute a stable identity for the dialog based on its attributes.
@@ -116,6 +196,7 @@ class Dialog(DeltaGenerator):
             title=title,
             dismissible=dismissible,
             width=width,
+            position=position,
             icon=icon,
             on_dismiss=str(on_dismiss) if not callable(on_dismiss) else "callback",
         )
@@ -139,14 +220,21 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
-                on_change_handler=on_dismiss if callable(on_dismiss) else None,
+                on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values
                 ctx=ctx,
                 value_type="trigger_value",
             )
 
-        dialog = cast("Dialog", parent._block(block_proto=block_proto, dg_type=Dialog))
+        dialog = cast(
+            "Dialog",
+            parent._block(
+                block_proto=block_proto,
+                dg_type=Dialog,
+                agent_props=_dialog_agent_props(block_proto, is_open=False),
+            ),
+        )
 
         # `_update` re-sends the block proto at this path. Use the path `_block()` wrote
         # to, not the parent cursor, so the update targets the block even if a wrapper
@@ -185,8 +273,19 @@ class Dialog(DeltaGenerator):
         msg = ForwardMsg()
         msg.metadata.delta_path[:] = self._delta_path
         msg.delta.add_block.CopyFrom(self._current_proto)
+        # This message replaces the one sent at the same delta path, so it has
+        # to carry a description too, rebuilt so `is_open` reflects this update
+        # rather than the value the dialog was created with.
+        agent_props = _dialog_agent_props(self._current_proto, is_open=should_open)
+        if agent_props is not None:
+            msg.metadata.agent_props = agent_props
         msg.delta.add_block.dialog.is_open = should_open
         self._current_proto = msg.delta.add_block
+        # Without a script run context (for example, `python app.py`) there
+        # is no session to enqueue to. Skip it so open() / close() do not
+        # raise NoSessionContext.
+        if get_script_run_ctx(suppress_warning=True) is None:
+            return
 
         enqueue_message(msg)
 

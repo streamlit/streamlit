@@ -509,12 +509,12 @@ update-frontend-typesync:
 	cd frontend/ ; yarn
 
 .PHONY: update-snapshots
-# Update e2e playwright snapshots based on the latest completed CI run.
+# Update e2e snapshots from the failed Playwright run for the current commit.
 update-snapshots:
 	uv run python ./scripts/update_e2e_snapshots.py
 
 .PHONY: update-snapshots-changed
-# Update e2e playwright snapshots of changed e2e files based on the latest completed CI run.
+# Update changed-file e2e snapshots from the failed Playwright run for this commit.
 update-snapshots-changed:
 	uv run python ./scripts/update_e2e_snapshots.py --changed
 
@@ -535,6 +535,11 @@ update-notices:
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
 	# Normalize line endings to LF (yarn output may contain CRLF from some packages)
 	perl -i -pe 's/\r$$//' NOTICES
+
+	# yarn-plugin-licenses can omit transitive dependencies reached through a
+	# patched virtual package. Each fallback fails when it is no longer needed.
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/@linaria/react
+	node ./scripts/append_missing_dependency_license.mjs NOTICES frontend/node_modules/react-number-format
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE

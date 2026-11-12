@@ -15,11 +15,11 @@
  */
 
 import {
-  CompositionEvent,
-  FocusEvent,
+  type CompositionEvent,
+  type FocusEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -35,6 +35,7 @@ import { getLogger } from "loglevel"
 import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import {
@@ -44,11 +45,15 @@ import {
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import {
+  isRequiredEmptyText,
+  requiredFieldError,
+} from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
@@ -62,7 +67,7 @@ import {
   labelVisibilityProtoValueToEnum,
   notNullOrUndefined,
 } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledClearButton,
@@ -207,15 +212,17 @@ function TextInput({
   // rerun while the widget identity stays stable (only the regex is part of
   // the widget ID), and a stored string would otherwise go stale.
   const [hasUserError, setHasUserError] = useState(false)
+  const [hasRequiredError, setHasRequiredError] = useState(false)
 
   const onFormCleared = useCallback(() => {
     uiValueRef.current = element.default ?? null
     setUiValue(element.default ?? null)
     setDirtyAndRef(true)
     setHasUserError(false)
+    setHasRequiredError(false)
   }, [element.default, setDirtyAndRef])
 
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
@@ -306,8 +313,10 @@ function TextInput({
   const isSearch = element.type === TextInputProto.Type.SEARCH
   // Show a Streamlit-styled clear (×) button for search inputs holding a value,
   // replacing the browser's native (and visually inconsistent) search-clear
-  // control, which we hide via CSS.
-  const showClearButton = isSearch && !disabled && Boolean(uiValue)
+  // control, which we hide via CSS. Required fields hide the X because it
+  // would commit empty; keyboard emptying still works.
+  const showClearButton =
+    isSearch && !disabled && !element.required && Boolean(uiValue)
 
   const compiledValidationResult = useMemo(
     () => compileTextInputValidationRegex(element.validateRegex),
@@ -326,15 +335,34 @@ function TextInput({
   // the displayed error defensively so it's never shown without an active
   // config. The user-error message is derived from the current
   // `element.validateMessage` so it stays in sync when only the message changes.
+  // A blank validation message uses the generated fallback.
+  const customMessage = isNullOrEmptyString(element.validateMessage)
+    ? undefined
+    : element.validateMessage
   const userError = hasUserError
-    ? element.validateMessage ||
+    ? (customMessage ??
       (validateRegex
         ? getInvalidTextInputMessage(validateRegex)
-        : INVALID_TEXT_INPUT_MESSAGE)
+        : INVALID_TEXT_INPUT_MESSAGE))
     : null
-  const displayedError = hasValidationConfig
+  // Gate on the current proto flag and UI value: required is not part of
+  // keyed widget identity, so hasRequiredError can survive a rerun that
+  // turns required off or writes a non-empty session_state value. Also
+  // drop the stored flag when the mask would hide it, so required off→on
+  // or a programmatic fill-then-clear does not resurrect the error
+  // without a new user commit/submit.
+  const requiredError = requiredFieldError(
+    element.required,
+    hasRequiredError,
+    isRequiredEmptyText(uiValue)
+  )
+  if (hasRequiredError && requiredError === null) {
+    setHasRequiredError(false)
+  }
+  const validateDisplayed = hasValidationConfig
     ? (configError ?? userError)
     : null
+  const displayedError = requiredError ?? validateDisplayed
 
   const commitWidgetValue = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
@@ -360,19 +388,40 @@ function TextInput({
     [validateRegex]
   )
 
-  // Runs validation for the given value, updates the displayed user error,
-  // and returns whether the value may be committed.
+  /**
+   * Runs the required and `validate` checks for the given value, updates the
+   * displayed error, and returns whether the value may be committed.
+   *
+   * Required-empty is checked first so whitespace-only values show the required
+   * message rather than the validate message. Live debounce can pass
+   * `showRequiredError: false` so an empty mid-edit block does not paint
+   * until blur, Enter, or form submit.
+   */
   const validateBeforeCommit = useCallback(
-    (valueToValidate: string | null = uiValueRef.current): boolean => {
+    (
+      valueToValidate: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
+      if (element.required && isRequiredEmptyText(valueToValidate)) {
+        if (showRequiredError) {
+          setHasRequiredError(true)
+        }
+        setHasUserError(false)
+        return false
+      }
+
+      setHasRequiredError(false)
+
       // Empty values always bypass validation — including when the regex config
       // itself is broken — so users can still clear the field or submit an empty
-      // form input. The config error remains visible via `displayedError`.
+      // form input when the field is not required. The config error remains
+      // visible via `displayedError`.
       if (valueToValidate === null || valueToValidate === "") {
         setHasUserError(false)
         return true
       }
 
-      if (configError) {
+      if (configError !== null) {
         return false
       }
 
@@ -380,13 +429,23 @@ function TextInput({
       setHasUserError(invalid)
       return !invalid
     },
-    [configError, isUserValueInvalid]
+    [configError, element.required, isUserValueInvalid]
   )
 
   const tryCommitOutsideForm = useCallback(
-    (valueToCommit: string | null = uiValueRef.current): boolean => {
+    (
+      valueToCommit: string | null = uiValueRef.current,
+      { showRequiredError = true }: { showRequiredError?: boolean } = {}
+    ): boolean => {
       if (!dirtyRef.current) {
         return true
+      }
+
+      // Validate before the same-value short-circuit. An empty default is also
+      // the last accepted value, so typing then clearing would otherwise skip
+      // the required error.
+      if (!validateBeforeCommit(valueToCommit, { showRequiredError })) {
+        return false
       }
 
       // Skip a second commit of the same value (e.g. a trailing input event
@@ -398,10 +457,6 @@ function TextInput({
         return true
       }
 
-      if (!validateBeforeCommit(valueToCommit)) {
-        return false
-      }
-
       droppedIncomingWhileDirtyRef.current = false
       commitWidgetValue(valueToCommit)
       return true
@@ -409,8 +464,16 @@ function TextInput({
     [commitWidgetValue, setDirtyAndRef, validateBeforeCommit]
   )
 
+  // Live debounce blocks empty required commits without painting the error
+  // while the user is still editing. Blur, Enter, and form submit paint.
+  const tryLiveCommit = useCallback((): boolean => {
+    return tryCommitOutsideForm(uiValueRef.current, {
+      showRequiredError: false,
+    })
+  }, [tryCommitOutsideForm])
+
   const { debouncedCallback: scheduleLiveCommit, cancel: cancelLiveCommit } =
-    useDebouncedCallback(tryCommitOutsideForm, liveDebounceMs)
+    useDebouncedCallback(tryLiveCommit, liveDebounceMs)
 
   // useDebouncedCallback (autoStart: false) does not cancel a manually
   // started timer when the delay changes. Cancel when live is disabled or
@@ -432,11 +495,11 @@ function TextInput({
       return
     }
     if (liveDebounceMs === 0) {
-      tryCommitOutsideForm()
+      tryLiveCommit()
       return
     }
     scheduleLiveCommit()
-  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryCommitOutsideForm])
+  }, [liveDebounceMs, liveEnabled, scheduleLiveCommit, tryLiveCommit])
 
   const commitOrScheduleLive = useCallback(
     (valueToCommit: string | null = uiValueRef.current): void => {
@@ -444,7 +507,7 @@ function TextInput({
         return
       }
       if (liveDebounceMs === 0) {
-        tryCommitOutsideForm(valueToCommit)
+        tryCommitOutsideForm(valueToCommit, { showRequiredError: false })
         return
       }
       // Debounce > 0: fire with uiValueRef at timer time, not this keystroke.
@@ -456,6 +519,7 @@ function TextInput({
   const handleAcceptedChange = useCallback(
     (newValue: string): void => {
       setHasUserError(false)
+      setHasRequiredError(false)
       commitOrScheduleLive(newValue)
     },
     [commitOrScheduleLive]
@@ -497,7 +561,7 @@ function TextInput({
     (e: FocusEvent<HTMLInputElement>): void => {
       // When keyboard Tab moves focus to the password toggle, focus stays
       // within the widget — don't commit yet, the user is still composing.
-      if (elementRef.current?.contains(e.relatedTarget)) {
+      if (elementRef.current?.contains(e.relatedTarget) === true) {
         setFocused(false)
         return
       }
@@ -532,14 +596,34 @@ function TextInput({
     setShowPassword(prev => !prev)
   }, [])
 
-  // Clear the search input and commit the empty value so results update
-  // immediately (empty values bypass validation).
   const handleClear = useCallback((): void => {
+    // Commits "" immediately so search results update. Unreachable when
+    // element.required is true: showClearButton already hides the X.
+    // Required-error state is not reset here; that path never renders
+    // the button.
     cancelLiveCommit()
     setUiValueAndRef("")
     setHasUserError(false)
+    // Clearing uncommitted text over an empty committed value is not a
+    // change, so skip the commit (and its rerun), except:
+    // - inside a form, where a script write can change value without
+    //   replacing the text staged in the form
+    // - after a dirty edit dropped an incoming value, so Python does not keep
+    //   the dropped write
+    if (!inForm && value === "" && !droppedIncomingWhileDirtyRef.current) {
+      setDirtyAndRef(false)
+      return
+    }
+    droppedIncomingWhileDirtyRef.current = false
     commitWidgetValue("")
-  }, [cancelLiveCommit, commitWidgetValue, setUiValueAndRef])
+  }, [
+    cancelLiveCommit,
+    commitWidgetValue,
+    inForm,
+    setDirtyAndRef,
+    setUiValueAndRef,
+    value,
+  ])
 
   const onChange = useOnInputChange({
     formId,
@@ -625,13 +709,13 @@ function TextInput({
   // given regex is fixed for a widget's identity, so this logs once per distinct
   // config error.
   useEffect(() => {
-    if (configError) {
+    if (configError !== null) {
       LOG.error(configError)
     }
   }, [configError])
 
   useEffect(() => {
-    if (!inForm || !hasValidationConfig) {
+    if (!inForm || (!element.required && !hasValidationConfig)) {
       return undefined
     }
 
@@ -641,7 +725,14 @@ function TextInput({
     return () => {
       widgetMgr.removeFormSubmitValidator(formId, element.id)
     }
-  }, [element.id, formId, hasValidationConfig, inForm, widgetMgr])
+  }, [
+    element.id,
+    element.required,
+    formId,
+    hasValidationConfig,
+    inForm,
+    widgetMgr,
+  ])
 
   return (
     <StyledTextInput
@@ -659,6 +750,7 @@ function TextInput({
       <WidgetLabel
         label={element.label}
         disabled={disabled}
+        required={element.required}
         labelVisibility={labelVisibilityProtoValueToEnum(
           element.labelVisibility?.value
         )}
@@ -695,8 +787,9 @@ function TextInput({
             id={id}
             data-testid="stTextInputField"
             aria-label={element.label}
-            aria-invalid={displayedError ? true : undefined}
-            aria-describedby={displayedError ? errorId : undefined}
+            aria-required={element.required ? true : undefined}
+            aria-invalid={displayedError !== null ? true : undefined}
+            aria-describedby={displayedError !== null ? errorId : undefined}
             value={uiValue ?? ""}
             placeholder={placeholder}
             type={showPassword ? "text" : getTypeString(element)}
@@ -717,7 +810,7 @@ function TextInput({
             onCompositionEnd={handleCompositionEnd}
           />
           <StyledEndEnhancers>
-            {displayedError && (
+            {displayedError !== null && (
               <StyledErrorEnhancer data-testid="stTextInputErrorIcon">
                 <Tooltip
                   content={displayedError}
@@ -765,7 +858,7 @@ function TextInput({
           </StyledEndEnhancers>
         </StyledInputRoot>
       </TextField>
-      {displayedError && (
+      {displayedError !== null && (
         // The error message is shown visually in a tooltip on hover. The tooltip
         // trigger isn't focusable, so we also expose the message to assistive
         // tech via a visually hidden, aria-describedby-linked alert.
@@ -828,7 +921,7 @@ function updateWidgetMgrState(
  * Maps each `TextInputProto.Type` enum value to its native DOM `<input type>`.
  * `PHONE` is the only entry whose DOM type (`"tel"`) differs from its name.
  */
-const DOM_INPUT_TYPE_BY_PROTO: Record<number, string> = {
+const DOM_INPUT_TYPE_BY_PROTO: Partial<Record<number, string>> = {
   [TextInputProto.Type.DEFAULT]: "text",
   [TextInputProto.Type.PASSWORD]: "password",
   [TextInputProto.Type.EMAIL]: "email",

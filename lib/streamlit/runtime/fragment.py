@@ -20,6 +20,8 @@ import threading
 from abc import abstractmethod
 from collections.abc import Callable, Container, Iterator, Sequence
 from copy import deepcopy
+from dataclasses import dataclass
+from enum import Enum, auto
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
@@ -85,6 +87,16 @@ F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
 
 
+class _FragmentLifetime(Enum):
+    """The rerun boundary that can remove a fragment."""
+
+    # Removed when its parent executes without re-registering it, or when its
+    # parent is itself removed.
+    PARENT_SCOPED = auto()
+    # Retained across fragment reruns and removed only by full-app cleanup.
+    FULL_APP_SCOPED = auto()
+
+
 class FragmentStorage(Protocol):
     """A key-value store for Fragments. Used to implement the @st.fragment decorator.
 
@@ -122,6 +134,7 @@ class FragmentStorage(Protocol):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         """Store a fragment definition.
 
@@ -137,6 +150,12 @@ class FragmentStorage(Protocol):
             fragment id is indexed under this name so ``st.rerun(<key>)`` can
             resolve it. A name may map to several ids if the fragment function is
             called from multiple sites.
+
+        lifetime
+            The rerun boundary that can remove the fragment. Parent-scoped fragments
+            are removed when an enclosing fragment reruns without registering them.
+            Full-app-scoped fragments survive fragment reruns and are removed only
+            when a full app run does not register them.
         """
         raise NotImplementedError
 
@@ -156,12 +175,15 @@ class FragmentStorage(Protocol):
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
     ) -> list[str]:
-        """Remove stored fragments that are strict descendants of ``root_fragment_id``
-        but were not re-registered during the latest run of that root.
+        """Remove stale parent-scoped descendants of ``root_fragment_id``.
 
-        Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
-        removed ``run_every`` child) do not keep stale closures in storage. Returns
-        the list of removed fragment IDs.
+        Starting at the cleanup root, re-registered children are retained and
+        reconciled recursively. Missing parent-scoped children are removed along
+        with their stale parent-scoped descendants. A missing full-app-scoped
+        child and its previously registered subtree are retained.
+
+        Returns the removed fragment IDs so callers can react, such as cancelling
+        frontend auto-rerun timers.
         """
         raise NotImplementedError
 
@@ -252,7 +274,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     MemoryFragmentStorage is just a wrapper around a plain Python dict that complies with
     the FragmentStorage protocol. A single lock guards the fragment closures plus the
-    ancestry and registration metadata that need to stay in sync with them.
+    ancestry, lifetime, and registration metadata that need to stay in sync with them.
     """
 
     def __init__(self) -> None:
@@ -260,6 +282,8 @@ class MemoryFragmentStorage(FragmentStorage):
         self._fragments: dict[str, Fragment] = {}
         # Enclosing fragment id for nested fragments; top-level fragments use None.
         self._parent_by_id: dict[str, str | None] = {}
+        # Rerun boundary that may remove each fragment.
+        self._lifetime_by_id: dict[str, _FragmentLifetime] = {}
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
         self._outside_wrappers: dict[tuple[str, str], OutsideContainerWrapper] = {}
@@ -311,6 +335,7 @@ class MemoryFragmentStorage(FragmentStorage):
     def _remove(self, fragment_id: str, *, evict_wrappers: bool = True) -> None:
         del self._fragments[fragment_id]
         self._parent_by_id.pop(fragment_id, None)
+        self._lifetime_by_id.pop(fragment_id, None)
         self._registration_sequence_by_id.pop(fragment_id, None)
         self._unindex_target_key(fragment_id)
         if evict_wrappers:
@@ -342,11 +367,13 @@ class MemoryFragmentStorage(FragmentStorage):
         *,
         parent_fragment_id: str | None = None,
         target_key: str | None = None,
+        lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
             self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
+            self._lifetime_by_id[key] = lifetime
             self._registration_sequence_by_id[key] = self._registration_sequence
             self._index_target_key(key, target_key)
 
@@ -379,20 +406,45 @@ class MemoryFragmentStorage(FragmentStorage):
         root_fragment_id: str,
         newly_registered_ids: frozenset[str],
     ) -> list[str]:
-        """Drop descendant fragments under ``root_fragment_id`` not seen this run.
+        """Drop stale parent-scoped descendants under ``root_fragment_id``.
 
-        Returns the list of fragment IDs that were removed so the caller can, for
-        example, tell the frontend to cancel their auto-rerun timers.
+        Traverse from the cleanup root through children that executed or are being
+        removed. A retained full-app-scoped child stops traversal into its
+        previously registered subtree.
         """
 
         with self._lock:
-            to_remove = [
-                fragment_id
-                for fragment_id in self._fragments
-                if fragment_id != root_fragment_id
-                and fragment_id not in newly_registered_ids
-                and root_fragment_id in self._iter_ancestor_ids(fragment_id)
-            ]
+            children_by_parent: dict[str | None, list[str]] = {}
+            for fragment_id, parent_fragment_id in self._parent_by_id.items():
+                children_by_parent.setdefault(parent_fragment_id, []).append(
+                    fragment_id
+                )
+
+            parents_to_reconcile = [root_fragment_id]
+            visited_ids = {root_fragment_id}
+            to_remove: list[str] = []
+            parent_index = 0
+
+            while parent_index < len(parents_to_reconcile):
+                parent_fragment_id = parents_to_reconcile[parent_index]
+                parent_index += 1
+
+                for fragment_id in children_by_parent.get(parent_fragment_id, []):
+                    if fragment_id in visited_ids:
+                        continue
+                    visited_ids.add(fragment_id)
+
+                    if fragment_id in newly_registered_ids:
+                        parents_to_reconcile.append(fragment_id)
+                    elif (
+                        self._lifetime_by_id.get(
+                            fragment_id, _FragmentLifetime.PARENT_SCOPED
+                        )
+                        is not _FragmentLifetime.FULL_APP_SCOPED
+                    ):
+                        to_remove.append(fragment_id)
+                        parents_to_reconcile.append(fragment_id)
+
             for fragment_id in to_remove:
                 self._remove(fragment_id)
             return to_remove
@@ -532,13 +584,47 @@ def _reset_outside_wrappers(
     # See docstring — tag wrappers with fragment_id for stale-child GC.
     with ThreadState.scoped(fragment_id=fragment_id):
         for wrapper in fragment_storage.outside_wrappers_for(fragment_id):
-            _enqueue_add_block(wrapper.creation_delta_path, wrapper.block_proto)
+            _enqueue_add_block(
+                wrapper.creation_delta_path,
+                wrapper.block_proto,
+                agent_props=wrapper.agent_props,
+            )
 
             wrapper_cursor = wrapper.delta_generator._cursor
             if not isinstance(wrapper_cursor, RunningCursor):
                 # LockedCursor (st.empty wrappers) always points at index 0.
                 continue
             wrapper_cursor.reset()
+
+
+@dataclass(frozen=True, slots=True)
+class _FragmentIdentity:
+    """Definition and call-site IDs for one fragment invocation.
+
+    ``definition_id`` is shared by every call site and is what duplicate-key
+    detection compares. ``fragment_id`` is unique per delta path.
+    """
+
+    definition_id: str
+    fragment_id: str
+
+
+def _make_fragment_identity(
+    func: Callable[..., Any],
+    *,
+    delta_path: str,
+    additional_hash_info: str,
+) -> _FragmentIdentity:
+    """Build the definition ID and call-site ID from one ``{module}.{qualname}`` token."""
+    # Keep additional_hash_info after delta_path so fragment IDs stay
+    # byte-identical to earlier releases. Hashing definition_id + delta_path
+    # would change dialog fragment IDs, the fragment_id stored on widget
+    # metadata, and run_every auto-rerun targets.
+    definition_token = f"{func.__module__}.{get_object_name(func)}"
+    return _FragmentIdentity(
+        definition_id=f"{definition_token}{additional_hash_info}",
+        fragment_id=calc_hash(f"{definition_token}{delta_path}{additional_hash_info}"),
+    )
 
 
 def _fragment(
@@ -548,6 +634,7 @@ def _fragment(
     parallel: bool = False,
     key: str | int | None = None,
     additional_hash_info: str = "",
+    lifetime: _FragmentLifetime = _FragmentLifetime.PARENT_SCOPED,
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -596,18 +683,17 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_hash(
-            f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
+        identity = _make_fragment_identity(
+            non_optional_func,
+            delta_path=dg_stack_snapshot[-1]._get_delta_path_str(),
+            additional_hash_info=additional_hash_info,
         )
+        fragment_id = identity.fragment_id
 
-        fragment_definition_id: str | None = None
-        if key is not None:
-            fragment_definition_id = (
-                f"{non_optional_func.__module__}."
-                f"{get_object_name(non_optional_func)}{additional_hash_info}"
-            )
-            if not ctx.shared.register_fragment_user_key(key, fragment_definition_id):
-                raise StreamlitDuplicateElementKey(key)
+        if key is not None and not ctx.shared.register_fragment_user_key(
+            key, identity.definition_id
+        ):
+            raise StreamlitDuplicateElementKey(key)
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
@@ -735,6 +821,7 @@ def _fragment(
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,
             target_key=key,
+            lifetime=lifetime,
         )
 
         if run_every:
@@ -817,7 +904,9 @@ def fragment(
     writing fragment, not the full app.
 
     To populate an outside container from a fragment, the container must first
-    receive at least one write during the initial full app run.
+    receive at least one write during the initial full app run. Parallel
+    fragments (``parallel=True``) cannot write to outside containers at all,
+    including ``st.sidebar`` and ``st.bottom``.
 
     Fragment code can interact with Session State, imported modules, and
     other Streamlit elements created outside the fragment. Note that these
@@ -859,10 +948,14 @@ def fragment(
 
         During the initial parallel run, some Streamlit commands are
         restricted because they are not safe to call from concurrent
-        threads. These include ``st.dialog``, ``st.switch_page``, and
-        writing to containers created outside the fragment. These
-        commands work normally during sequential fragment reruns
+        threads. These include ``st.dialog`` and ``st.switch_page``.
+        Those commands work normally during sequential fragment reruns
         (e.g., after a widget interaction).
+
+        Writing to containers created outside the fragment, including
+        ``st.sidebar`` and ``st.bottom``, is not supported in a
+        parallel fragment on the initial parallel run or a later
+        fragment rerun.
 
         .. warning::
 
@@ -1054,6 +1147,10 @@ def _run_parallel_fragment(
     ThreadState.update(
         pre_allocated_container_fragment_id=fragment_id,
         is_parallel_worker=True,
+        # Workers are a new nesting stack. Clear a flag copied from an
+        # in-flight parent command so it cannot suppress this worker's
+        # top-level commands.
+        command_tracking_deactivated=False,
     )
 
     coordinator = ctx.parallel_coordinator

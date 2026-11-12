@@ -83,9 +83,10 @@ const IconRunning: React.FC = () => {
       data-testid="stStatusWidgetRunningIcon"
     >
       {isNewYear ? (
+        // Inner image is decorative; the wrapper already names this "Running...".
         <img
           src={newYearsRunning}
-          alt="New Year's Celebration"
+          alt=""
           style={{
             width: "100%",
             height: "100%",

@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 
 import {
   filterVisiblePages,

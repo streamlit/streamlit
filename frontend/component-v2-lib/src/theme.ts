@@ -72,6 +72,7 @@ export interface StreamlitTheme {
   borderColor: string
   dataframeBorderColor: string
   dataframeHeaderBackgroundColor: string
+  dataframeHeaderTextColor: string
   codeBackgroundColor: string
   font: string
   chartCategoricalColors: string[]

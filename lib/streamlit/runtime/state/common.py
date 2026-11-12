@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
+from collections.abc import Callable, Collection
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -35,6 +36,7 @@ from streamlit import util
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 
 if TYPE_CHECKING:
+    from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
     from streamlit.runtime.state.session_state import SessionState
 
 GENERATED_ELEMENT_ID_PREFIX: Final = "$$ID"
@@ -118,6 +120,23 @@ ValueFieldName: TypeAlias = Literal[
 
 def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
     return obj in _ARRAY_VALUE_FIELD_NAMES
+
+
+def unpack_widget_state_value(widget_state: WidgetStateProto) -> Any:
+    """Return what a widget's deserializer receives for ``widget_state``.
+
+    That is the set ``value`` field, with a message that keeps its payload in
+    ``data`` unwrapped and JSON text parsed. A cleared value is ``None``.
+    """
+    field_name = widget_state.WhichOneof("value")
+    if field_name is None:
+        return None
+    value = getattr(widget_state, field_name)
+    if is_array_value_field_name(field_name) or field_name == "string_trigger_value":
+        return value.data
+    if field_name == "json_value":
+        return json.loads(value)
+    return value
 
 
 # Optional hook that allows a widget to customize how its value should be
@@ -300,24 +319,47 @@ def require_valid_user_key(key: str) -> None:
         )
 
 
-def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> None:
-    """Reject `on_change` values that are neither a callback nor a supported mode.
+def validate_on_change_mode(
+    callback: object,
+    *,
+    supported_modes: Collection[OnChangeMode],
+    none_supported: bool = True,
+    param_name: str = "on_change",
+) -> WidgetCallback | None:
+    """Validate a callback parameter and return its normalized callback.
 
-    `None` is accepted as a legacy alias for `"rerun"`.
+    Callables are always valid. ``None`` is valid only when ``none_supported``
+    is true, and mode strings are valid only when included in
+    ``supported_modes``. Valid non-callback values normalize to ``None`` because
+    their behavior is handled separately by the widget.
 
     Raises
     ------
+    StreamlitAPIException
+        If `callback` is a valid mode string but the widget does not support
+        callback modes.
     StreamlitValueError
-        If `on_change` is not `None`, not callable, and not a valid mode string.
+        If `callback` is not `None`, not callable, and not a valid supported
+        mode string.
     """
-    if on_change is None or callable(on_change):
-        return
+    if callback is None and none_supported:
+        return None
+    if callable(callback):
+        return cast("WidgetCallback", callback)
 
     # Require a str before membership so array-like values (e.g. NumPy arrays)
     # cannot raise an ambiguous-truth ValueError from ``==``.
-    supported_modes = get_args(OnChangeMode)
-    if not isinstance(on_change, str) or on_change not in supported_modes:
-        raise StreamlitValueError(
-            "on_change",
-            [repr(mode) for mode in supported_modes] + ["a callback function"],
+    all_modes = get_args(OnChangeMode)
+    if isinstance(callback, str) and callback in all_modes:
+        if callback in supported_modes:
+            return None
+        raise StreamlitAPIException(
+            f'`{param_name}="{callback}"` is not supported on this widget. '
+            f"Pass a callback, or omit `{param_name}`.",
+            error_id="unsupported-on-change-mode",
         )
+
+    valid_values = ["a callback function"]
+    if supported_modes:
+        valid_values = [repr(mode) for mode in supported_modes] + valid_values
+    raise StreamlitValueError(param_name, valid_values)

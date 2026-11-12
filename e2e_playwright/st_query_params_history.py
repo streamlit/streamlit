@@ -14,8 +14,44 @@
 
 import streamlit as st
 
-st.checkbox("Toggle this")
-st.query_params["number"] = 1
-if st.button("Set extra param"):
-    st.query_params["extra"] = "yes"
-st.markdown(str(st.query_params))
+
+def history_page() -> None:
+    st.checkbox("Toggle this")
+    st.query_params["number"] = "1"
+    if st.button("Set extra param"):
+        st.query_params["extra"] = "yes"
+    st.markdown(str(st.query_params))
+
+
+def query_params_page() -> None:
+    number = st.radio(
+        "Number",
+        options=["1", "3", "5"],
+        index=0,
+        key="number",
+        bind="query-params",
+        horizontal=True,
+    )
+    st.markdown(f"Selected: {number}")
+
+    if st.button("Increment Query Param"):
+        value = int(st.query_params.get("value", "0"))
+        st.query_params["value"] = str(value + 1)
+
+    st.markdown(f"Query params: {dict(st.query_params)}")
+
+    # Calls st.switch_page from a callback while the URL holds the bound
+    # "number" value.
+    st.button("Switch to History", on_click=st.switch_page, args=(history,))
+
+
+# Bound in the main script, so the param is shared by all pages.
+st.sidebar.radio("Region", options=["All", "EU"], key="region", bind="query-params")
+
+history = st.Page(history_page, title="History", default=True)
+st.navigation(
+    [
+        history,
+        st.Page(query_params_page, title="Query Params", url_path="query-params"),
+    ]
+).run()

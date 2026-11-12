@@ -21,6 +21,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from starlette.websockets import WebSocketDisconnect
 
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime import runtime_util
@@ -28,15 +29,15 @@ from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_websocket import (
     StarletteClientContext,
     StarletteSessionClient,
-    _gather_user_info,
     _get_signed_cookie_with_chunks,
-    _is_host_allowed,
     _is_origin_allowed,
     _parse_decoded_user_cookie,
     _parse_subprotocols,
     _parse_user_cookie_signed,
     create_websocket_handler,
     create_websocket_routes,
+    gather_user_info,
+    is_host_allowed,
 )
 from tests.testutil import patch_config_options
 
@@ -123,14 +124,14 @@ class TestParseSubprotocols:
 
 
 class TestGatherUserInfo:
-    """Tests for _gather_user_info function."""
+    """Tests for gather_user_info function."""
 
     @patch_config_options({"server.trustedUserHeaders": {}})
     def test_returns_empty_dict_when_no_mapping(self) -> None:
         """Test that empty dict is returned when no header mapping configured."""
         headers = MagicMock()
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {}
 
@@ -139,7 +140,7 @@ class TestGatherUserInfo:
         """Test that empty dict is returned when mapping is not a dict."""
         headers = MagicMock()
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {}
 
@@ -149,7 +150,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = ["user@example.com"]
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "user@example.com"}
         headers.getlist.assert_called_with("X-User-Email")
@@ -160,7 +161,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = []
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": None}
 
@@ -180,7 +181,7 @@ class TestGatherUserInfo:
             "X-User-Name": ["John Doe"],
         }.get(h, [])
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "user@example.com", "name": "John Doe"}
 
@@ -190,7 +191,7 @@ class TestGatherUserInfo:
         headers = MagicMock()
         headers.getlist.return_value = ["first@example.com", "second@example.com"]
 
-        result = _gather_user_info(headers)
+        result = gather_user_info(headers)
 
         assert result == {"email": "first@example.com"}
 
@@ -364,7 +365,7 @@ class TestParseUserCookieSigned:
 
 
 class TestIsHostAllowed:
-    """Tests for _is_host_allowed function."""
+    """Tests for is_host_allowed function."""
 
     @pytest.mark.parametrize(
         ("host", "expected"),
@@ -404,20 +405,20 @@ class TestIsHostAllowed:
     )
     def test_host_allowlist(self, host: str | None, expected: bool) -> None:
         """Test exact, wildcard, and IP Host allow-list entries."""
-        assert _is_host_allowed(host) is expected
+        assert is_host_allowed(host) is expected
 
     @patch_config_options({"server.allowedHosts": []})
     def test_empty_host_allowlist_preserves_existing_behavior(self) -> None:
         """Test that Host validation remains opt-in for compatibility."""
-        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
-        assert _is_host_allowed(None) is True
+        assert is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert is_host_allowed(None) is True
 
     @patch_config_options({"server.allowedHosts": ["*"]})
     def test_global_host_wildcard_allows_any_valid_host(self) -> None:
         """Test that the global wildcard accepts any valid Host header."""
-        assert _is_host_allowed("dynamic-proxy.example.com:8501") is True
-        assert _is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
-        assert _is_host_allowed(None) is False
+        assert is_host_allowed("dynamic-proxy.example.com:8501") is True
+        assert is_host_allowed("dynamic-proxy.example.com:not-a-port") is False
+        assert is_host_allowed(None) is False
 
 
 class TestIsOriginAllowed:
@@ -904,6 +905,59 @@ class TestStarletteSessionClient:
 
         assert client._closed.is_set()
         assert client._sender_task.cancelled()
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        ("error_type", "expect_exception_log"),
+        [(WebSocketDisconnect, False), (RuntimeError, True)],
+        ids=["disconnect", "generic-error"],
+    )
+    async def test_sender_closes_client_on_send_failure(
+        self, error_type: type[BaseException], expect_exception_log: bool
+    ) -> None:
+        """Send failures close the client without propagating to the caller."""
+        mock_websocket = MagicMock()
+        mock_websocket.send_bytes = AsyncMock(side_effect=error_type())
+        client = StarletteSessionClient(mock_websocket)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket._LOGGER"
+        ) as mock_logger:
+            await client._send_queue.put(b"payload")
+            await asyncio.wait_for(client._closed.wait(), timeout=1)
+            mock_websocket.send_bytes.assert_awaited_once_with(b"payload")
+            if expect_exception_log:
+                mock_logger.exception.assert_called_once()
+            else:
+                mock_logger.exception.assert_not_called()
+        await client.aclose()
+
+
+class TestWebsocketOriginRejection:
+    """The websocket handler must close disallowed origins before accepting."""
+
+    @patch_config_options({"server.enableCORS": True})
+    def test_rejects_disallowed_origin(self) -> None:
+        """Cross-origin connections are closed with policy-violation code 1008."""
+        mock_websocket = MagicMock()
+        mock_websocket.headers = MagicMock()
+        mock_websocket.headers.get.side_effect = lambda key: {
+            "Origin": "http://evil.com",
+            "Host": "localhost:8501",
+        }.get(key)
+        mock_websocket.close = AsyncMock()
+        mock_runtime = MagicMock()
+
+        handler = create_websocket_handler(mock_runtime)
+        with patch(
+            "streamlit.web.server.starlette.starlette_websocket.is_url_from_allowed_origins",
+            return_value=False,
+        ) as mock_allowed_origin:
+            asyncio.run(handler(mock_websocket))
+
+        mock_allowed_origin.assert_called_once_with("http://evil.com")
+        mock_websocket.close.assert_awaited_once_with(code=1008)
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
 
 
 class TestCreateWebsocketRoutes:

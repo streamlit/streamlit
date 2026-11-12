@@ -16,9 +16,11 @@
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
@@ -227,6 +229,39 @@ class TestPaginationSessionState(DeltaGeneratorTestCase):
         assert metadata is not None
         assert metadata.callback is not None
 
+    @parameterized.expand(
+        [
+            ("string", "bogus", True),
+            ("zero", 0, True),
+            ("above_max", 11, True),
+            ("bool", True, False),
+        ]
+    )
+    def test_invalid_widget_value_resets_to_default(
+        self, _case: str, invalid_value: object, expect_proto_update: bool
+    ) -> None:
+        """Invalid widget values that bypass serde fall back to the default page.
+
+        For most invalid values the widget rewrites the proto to page 1. ``True``
+        is an exception: Python treats ``1 == True``, so the proto is left
+        unchanged.
+        """
+        widget_state = MagicMock()
+        widget_state.value = invalid_value
+        widget_state.value_changed = False
+        with patch(
+            "streamlit.elements.widgets.pagination.register_widget",
+            return_value=widget_state,
+        ):
+            val = st.pagination(10, key="pag_invalid")
+        assert val == 1
+        proto = self.get_delta_from_queue().new_element.pagination
+        if expect_proto_update:
+            assert proto.value == 1
+            assert proto.set_value is True
+        else:
+            assert proto.set_value is False
+
 
 class TestPaginationFormIntegration(DeltaGeneratorTestCase):
     """Tests for st.pagination form integration."""
@@ -335,3 +370,50 @@ class TestPaginationBindQueryParams(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.pagination
         assert proto.query_param_key == "my_key"
         assert proto.default == 5
+
+
+class PaginationOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        st.pagination(10, on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.pagination
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pagination(10, on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.pagination(10, on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.pagination(10, on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.pagination
+        assert c.ignore_rerun is True

@@ -62,6 +62,45 @@ class StMapTest(DeltaGeneratorTestCase):
         assert c.get("initialViewState").get("pitch") == 0
         assert c.get("layers")[0].get("@@type") == "ScatterplotLayer"
 
+    def test_default_color_is_primary_placeholder(self):
+        """Default markers use the primary theme placeholder, not a baked RGBA."""
+        st.map(mock_df)
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_explicit_primary_color_passes_placeholder(self):
+        """color="primary" is sent as the theme placeholder when it is not a column name."""
+        st.map(mock_df, color="primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_mixed_case_primary_color_is_lowercased(self):
+        """Backend lowercases color='Primary' so the frontend sentinel matches."""
+        st.map(mock_df, color="Primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "primary"
+
+    def test_primary_column_name_wins_over_theme_placeholder(self):
+        """A dataframe column named primary is used as the color accessor."""
+        df = pd.DataFrame(
+            {
+                "lat": [1.0, 2.0],
+                "lon": [10.0, 20.0],
+                "primary": ["#ff0000", "#00ff00"],
+            }
+        )
+        st.map(df, color="primary")
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == "@@=primary"
+        assert c["layers"][0]["data"][0]["primary"] == [255, 0, 0, 255]
+        assert c["layers"][0]["data"][1]["primary"] == [0, 255, 0, 255]
+
+    def test_explicit_tuple_color_is_not_placeholder(self):
+        """Explicit RGBA colors remain concrete int tuples in the Deck JSON."""
+        st.map(mock_df, color=(200, 30, 0, 160))
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c["layers"][0]["getFillColor"] == [200, 30, 0, 160]
+
     def test_alternative_names_columns(self):
         """Test that it can be called with alternative names of lat/lon columns."""
         name_combination = itertools.product(
@@ -527,3 +566,40 @@ class StMapWidthHeightTest(DeltaGeneratorTestCase):
         kwargs = {param_name: invalid_value}
         with pytest.raises(StreamlitAPIException):
             st.map(mock_df, **kwargs)
+
+    def test_map_alt_sets_proto_field_and_drops_blank_values(self):
+        """A non-empty alt is stored on the proto; omitted/None/blank leave it unset."""
+        st.map(mock_df, alt="Sample points near San Francisco")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+        st.map(mock_df)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt=None)
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+        st.map(mock_df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.deck_gl_json_chart.HasField(
+            "alt"
+        )
+
+    def test_map_alt_strips_whitespace(self):
+        """Leading and trailing whitespace is stripped from alt."""
+        st.map(mock_df, alt="  Sample points near San Francisco  ")
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == "Sample points near San Francisco"
+
+    def test_map_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Map of "A < B" & hubs <script>alert(1)</script>'
+        st.map(mock_df, alt=adversarial)
+        el = self.get_delta_from_queue().new_element.deck_gl_json_chart
+        assert el.HasField("alt")
+        assert el.alt == adversarial

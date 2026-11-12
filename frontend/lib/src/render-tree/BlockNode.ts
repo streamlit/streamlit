@@ -16,12 +16,16 @@
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
-import { ElementNode } from "./ElementNode"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import type { ElementNode } from "./ElementNode"
+import type { RetainedElement } from "./elementRetention"
 import { TransientNode } from "./TransientNode"
-import { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
+
+/** Shared empty list so blocks without retained elements allocate nothing. */
+const NO_RETAINED_ELEMENTS: readonly RetainedElement[] = []
 
 /**
  * A container AppNode that holds children.
@@ -40,13 +44,28 @@ export class BlockNode implements AppNode {
   // The hash of the script that created this block.
   public readonly activeScriptHash: string
 
+  /**
+   * Displaced prior-run elements that stay mounted (hidden) until the current
+   * run re-emits them or stale cleanup removes them. Ordered by `before`. Not
+   * part of delta-path addressing; see `elementRetention.ts`.
+   */
+  public readonly retained: readonly RetainedElement[]
+
+  /**
+   * The skeleton a later run sent to this slot. The block stays mounted under
+   * it until new content arrives or the run ends (`ElementNode` has the same).
+   */
+  public readonly pendingSkeleton?: ElementNode
+
   public constructor(
     activeScriptHash: string,
     children?: AppNode[],
     deltaBlock?: BlockProto,
     scriptRunId?: string,
     fragmentId?: string,
-    deltaMsgReceivedAt?: number
+    deltaMsgReceivedAt?: number,
+    retained?: readonly RetainedElement[],
+    pendingSkeleton?: ElementNode
   ) {
     this.activeScriptHash = activeScriptHash
     this.children = children ?? []
@@ -54,6 +73,22 @@ export class BlockNode implements AppNode {
     this.scriptRunId = scriptRunId ?? NO_SCRIPT_RUN_ID
     this.fragmentId = fragmentId
     this.deltaMsgReceivedAt = deltaMsgReceivedAt
+    this.retained = retained ?? NO_RETAINED_ELEMENTS
+    this.pendingSkeleton = pendingSkeleton
+  }
+
+  /** Return a copy of this node that waits for content under `skeleton`. */
+  public withPendingSkeleton(skeleton: ElementNode): BlockNode {
+    return new BlockNode(
+      this.activeScriptHash,
+      this.children,
+      this.deltaBlock,
+      this.scriptRunId,
+      this.fragmentId,
+      this.deltaMsgReceivedAt,
+      this.retained,
+      skeleton
+    )
   }
 
   /** True if this Block has no children. */

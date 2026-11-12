@@ -14,15 +14,23 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
+import {
+  memo,
+  type ReactElement,
+  type ReactNode,
+  Suspense,
+  useContext,
+} from "react"
 
-import { ElementNode } from "~lib/AppNode"
+import type { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
-import { ElementContainerConfig } from "./ElementContainerConfig"
+import type { ElementContainerConfig } from "./ElementContainerConfig"
+import { RetainedElementContext } from "./RetainedElementContext"
+import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
@@ -68,10 +76,15 @@ export const ElementContainer = memo(function ElementContainer({
   children,
 }: ElementContainerProps): ReactElement {
   const { isFullScreen } = useContext(ViewStateContext)
+  const isRetained = useContext(RetainedElementContext)
 
-  const elementType = node.element.type || ""
+  const elementType = node.element.type ?? ""
   const elementId = getElementId(node.element)
   const userKey = getKeyFromId(elementId)
+  // A skeleton waits to replace this element, which stays mounted until then.
+  // Like the stale fade, the overlay is off while any element is in fullscreen.
+  const hasPendingSkeleton =
+    node.pendingSkeleton !== undefined && !isFullScreen
 
   return (
     <StyledElementContainerLayoutWrapper
@@ -79,12 +92,17 @@ export const ElementContainer = memo(function ElementContainer({
         "stElementContainer",
         "element-container",
         convertKeyToClassName(userKey),
+        config.printLayout,
       ]
         .filter(Boolean)
         .join(" ")}
       data-testid="stElementContainer"
       data-stale={isStale}
+      data-retained={isRetained || undefined}
+      aria-busy={hasPendingSkeleton || undefined}
       isStale={isStale && !isFullScreen}
+      isRetained={isRetained}
+      hasPendingSkeleton={hasPendingSkeleton}
       elementType={elementType}
       node={node}
       config={config}
@@ -98,6 +116,7 @@ export const ElementContainer = memo(function ElementContainer({
           {children}
         </Suspense>
       </ErrorBoundary>
+      {hasPendingSkeleton && <PendingSkeletonOverlay />}
     </StyledElementContainerLayoutWrapper>
   )
 })

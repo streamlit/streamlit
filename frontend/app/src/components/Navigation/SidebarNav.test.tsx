@@ -18,14 +18,14 @@ import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import * as LibModule from "@streamlit/lib"
-import { mockEndpoints, NavigationContextProps } from "@streamlit/lib"
+import { mockEndpoints, type NavigationContextProps } from "@streamlit/lib"
 import {
   renderWithContexts,
-  RenderWithContextsOptions,
+  type RenderWithContextsOptions,
 } from "@streamlit/lib/testing"
 import { type AppPage, PageConfig } from "@streamlit/protobuf"
 
-import SidebarNav, { Props } from "./SidebarNav"
+import SidebarNav, { type Props } from "./SidebarNav"
 
 vi.mock("~lib/util/Hooks", async () => ({
   __esModule: true,
@@ -73,7 +73,7 @@ const generateAdditionalPage = (
     icons?: boolean
   }
 ): AppPage.$Properties => {
-  const { sectionHeaders, icons } = options
+  const { sectionHeaders, icons = false } = options
   const suffix = generatePageSuffix(pageIndex, totalPages)
 
   return {
@@ -125,9 +125,9 @@ const createAppPagesForSections = (sectionPageCounts: {
     for (let i = 0; i < count; i++) {
       const pageName = `${sectionHeader} page ${i + 1}`
       pages.push({
-        pageScriptHash: `hash_${pageName.replace(/ /g, "_")}`,
+        pageScriptHash: `hash_${pageName.replaceAll(" ", "_")}`,
         pageName: pageName,
-        urlPathname: pageName.replace(/ /g, "_"),
+        urlPathname: pageName.replaceAll(" ", "_"),
         sectionHeader: sectionHeader,
         isDefault: pageIndex === 0,
       })
@@ -180,11 +180,11 @@ function renderSidebarNav(
   }
 ): ReturnType<typeof renderWithContexts> {
   const sidebarConfigContextValues = getSidebarConfigContextOutput(
-    overrides?.sidebarConfigContext || {}
+    overrides?.sidebarConfigContext ?? {}
   )
 
   const navigationContextValues = getNavigationContextOutput(
-    overrides?.navigationContext || {}
+    overrides?.navigationContext ?? {}
   )
 
   return renderWithContexts(<SidebarNav {...getProps(props)} />, {
@@ -207,6 +207,38 @@ describe("SidebarNav", () => {
 
     expect(screen.getByText("streamlit app")).toBeInTheDocument()
     expect(screen.getByText("my other page")).toBeInTheDocument()
+  })
+
+  it("exposes a named navigation landmark", () => {
+    renderSidebarNav()
+
+    const nav = screen.getByRole("navigation", { name: "App pages" })
+    expect(nav).toHaveAttribute("data-testid", "stSidebarNav")
+  })
+
+  it("describes each link with its page's help", () => {
+    renderSidebarNav(
+      {},
+      {
+        navigationContext: {
+          appPages: [
+            { ...generateMainPage(), help: "The app's start page." },
+            {
+              pageScriptHash: "other_page_hash",
+              pageName: "Other",
+              urlPathname: "other",
+            },
+          ],
+        },
+      }
+    )
+
+    expect(
+      screen.getByRole("link", { name: "streamlit app" })
+    ).toHaveAccessibleDescription("The app's start page.")
+    expect(screen.getByRole("link", { name: "Other" })).not.toHaveAttribute(
+      "aria-describedby"
+    )
   })
 
   describe("page links", () => {
@@ -604,7 +636,7 @@ describe("SidebarNav", () => {
 
     // isActive prop used to style background color, so check that
     expect(links[0]).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
-    expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
+    expect(links[1]).toHaveStyle("background-color: rgba(187, 187, 165, 0.25)")
   })
 
   describe("custom visibleItems via sidebarNavVisibleItems", () => {

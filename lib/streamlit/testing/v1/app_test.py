@@ -13,16 +13,18 @@
 # limitations under the License.
 from __future__ import annotations
 
+import copy
 import inspect
 import tempfile
 import textwrap
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock
 from urllib import parse
 
 from streamlit.components.v2.component_manager import BidiComponentManager
+from streamlit.proto.ClientState_pb2 import ContextInfo
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -40,10 +42,12 @@ from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import SessionState
 from streamlit.source_util import page_icon_and_name
 from streamlit.testing.v1.element_tree import (
+    AudioInput,
     Block,
     BlockList,
     Button,
     ButtonGroup,
+    CameraInput,
     Caption,
     ChatInput,
     ChatMessage,
@@ -63,21 +67,30 @@ from streamlit.testing.v1.element_tree import (
     Expander,
     Feedback,
     FileUploader,
+    Grid,
     Header,
+    Help,
+    Html,
     Image,
     Info,
+    InitialValue,
     Json,
     Latex,
+    LinkButton,
     Markdown,
     MenuButton,
     Metric,
     Multiselect,
     Node,
     NumberInput,
+    PageLink,
+    Pagination,
+    Progress,
     Radio,
     Selectbox,
     SelectSlider,
     Slider,
+    Space,
     Status,
     Subheader,
     Success,
@@ -92,19 +105,220 @@ from streamlit.testing.v1.element_tree import (
     Toggle,
     Warning,  # noqa: A004
     WidgetList,
+    _form_clear_flags,
+    _submitted_form_ids,
+    _use_form_clear_defaults,
+    _widget_form_id,
     repr_,
 )
+from streamlit.testing.v1.errors import AppTestError
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import (
+        Callable,
+        ItemsView,
+        Iterator,
+        KeysView,
+        Sequence,
+        ValuesView,
+    )
 
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.source_util import PageHash, PageInfo
 
 TMP_DIR = tempfile.TemporaryDirectory()
+
+# The st.context properties a browser sends with every rerun, mapped to the
+# ContextInfo field that carries each one and the type of its value.
+# headers, cookies, and ip_address come from the session's client instead,
+# so AppTest.context cannot seed them.
+_CONTEXT_INFO_FIELDS: Final[dict[str, tuple[str, type]]] = {
+    "timezone": ("timezone", str),
+    "timezone_offset": ("timezone_offset", int),
+    "locale": ("locale", str),
+    "url": ("url", str),
+    "is_embedded": ("is_embedded", bool),
+    "theme": ("color_scheme", str),
+}
+_CONTEXT_THEMES: Final = ("light", "dark")
+
+
+# A dict subclass rather than UserDict, because ScriptRunContext.user_info
+# must be a dict.
+class _SeededUserInfo(dict[str, Any]):  # noqa: FURB189
+    """User dict for one ``AppTest`` run.
+
+    ``st.logout()`` clears this dict in place. When it contained
+    ``is_logged_in``, ``clear()`` sets that key back to ``False`` so the
+    rest of the run, including an internal ``st.rerun()``, reads a
+    logged-out user. ``st.user`` supplies that default only when an
+    ``[auth]`` secrets section exists, and ``at.secrets`` does not reach the
+    section ``st.user`` checks.
+    """
+
+    def clear(self) -> None:
+        had_login_flag = "is_logged_in" in self
+        super().clear()
+        if had_login_flag:
+            self["is_logged_in"] = False
+
+    def copy(self) -> dict[str, Any]:
+        # st.user.to_dict() returns this copy. Return a plain dict, as a real
+        # session does.
+        return dict(self)
+
+
+def _user_info_for_run(user: object) -> _SeededUserInfo:
+    """Copy ``AppTest.user`` into the dict that a run reads as ``st.user``.
+
+    The copy keeps ``st.logout()`` from clearing the test's own dict. Raises
+    ``AppTestError`` when ``user`` is not a dict.
+    """
+    if not isinstance(user, dict):
+        raise AppTestError(f"AppTest.user must be a dict, not {type(user).__name__}.")
+    return _SeededUserInfo(copy.deepcopy(user))
+
+
+def _context_info_from_dict(context: object) -> ContextInfo | None:
+    """Build the ``ContextInfo`` that ``AppTest.context`` seeds for a run.
+
+    Returns ``None`` when ``context`` is empty. A ``None`` value leaves that
+    field unset, so ``st.context`` reads it as ``None``, matching a client
+    that omitted the field. Raises ``AppTestError`` when ``context`` is not a
+    dict, and for an unknown key, a value of the wrong type, a
+    ``timezone_offset`` outside the int32 range, or a theme other than
+    ``"light"`` or ``"dark"``.
+    """
+    if not isinstance(context, dict):
+        raise AppTestError(
+            f"AppTest.context must be a dict, not {type(context).__name__}."
+        )
+    if not context:
+        return None
+    info = ContextInfo()
+    for key, value in context.items():
+        if key not in _CONTEXT_INFO_FIELDS:
+            supported = ", ".join(repr(name) for name in sorted(_CONTEXT_INFO_FIELDS))
+            raise AppTestError(
+                f"AppTest.context does not support {key!r}. Supported keys: "
+                f"{supported}."
+            )
+        if value is None:
+            continue
+        field, value_type = _CONTEXT_INFO_FIELDS[key]
+        # Reject bool explicitly: protobuf would otherwise coerce True to a
+        # one-minute offset.
+        if not isinstance(value, value_type) or (
+            value_type is int and isinstance(value, bool)
+        ):
+            raise AppTestError(
+                f"AppTest.context[{key!r}] must be {value_type.__name__}, not "
+                f"{type(value).__name__}."
+            )
+        if key == "theme" and value not in _CONTEXT_THEMES:
+            themes = " or ".join(repr(theme) for theme in _CONTEXT_THEMES)
+            raise AppTestError(
+                f"AppTest.context['theme'] must be {themes}, not {value!r}."
+            )
+        try:
+            setattr(info, field, value)
+        except ValueError as ex:
+            # An int outside the int32 range of timezone_offset.
+            raise AppTestError(
+                f"AppTest.context[{key!r}] has an invalid value {value!r}: {ex}"
+            ) from ex
+    return info
+
+
+def _query_params_from_query_string(query_string: str) -> dict[str, str | list[str]]:
+    """Parse a query string into the value shapes a test author assigns to ``AppTest.query_params``.
+
+    Single values become ``str`` so ``at.query_params["x"] = "1"`` round-trips.
+    Repeated keys stay ``list[str]`` so the next run still encodes each value
+    as its own ``key=value`` pair. Blank values (``?foo=``) are kept as ``""``
+    rather than dropped.
+    """
+    parsed = parse.parse_qs(query_string, keep_blank_values=True)
+    # Same single-value unwrap as QueryParams.populate_from_query_string.
+    return {
+        key: values[0] if len(values) == 1 else values for key, values in parsed.items()
+    }
+
+
+class _AppTestSessionState:
+    """Dict-like session state for AppTest testers.
+
+    Item and attribute access match ``st.session_state``. Mapping methods
+    (``get``, ``keys``, ``items``, ``values``, ``to_dict``, iteration)
+    expose filtered user state and keyed widgets, not internal Streamlit
+    keys.
+    """
+
+    _state: SafeSessionState
+
+    def __init__(self, state: SafeSessionState) -> None:
+        object.__setattr__(self, "_state", state)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Return the value for ``key``, or ``default`` if it is unset."""
+        try:
+            return self._state[key]
+        except KeyError:
+            return default
+
+    def keys(self) -> KeysView[str]:
+        return self._state.filtered_state.keys()
+
+    def items(self) -> ItemsView[str, Any]:
+        return self._state.filtered_state.items()
+
+    def values(self) -> ValuesView[Any]:
+        return self._state.filtered_state.values()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return user state and keyed widget values."""
+        return self._state.filtered_state
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._state.filtered_state)
+
+    def __len__(self) -> int:
+        return len(self._state.filtered_state)
+
+    def __getitem__(self, key: str) -> Any:
+        return self._state[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self._state[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self._state[key]
+
+    def __contains__(self, key: object) -> bool:
+        # Membership follows the tester-facing filtered view; item access
+        # still reaches internal keys that AppTest itself reads.
+        return key in self._state.filtered_state
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        self[key] = value
+
+    def __delattr__(self, key: str) -> None:
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError(f"{key} not found in session_state.")
+
+    def __repr__(self) -> str:
+        return repr(self._state.filtered_state)
 
 
 class AppTest:
@@ -159,13 +373,55 @@ class AppTest:
         Dictionary of secrets to be used by the simulated app. Use dict-like
         syntax to set secret values for the simulated app.
 
-    session_state: SafeSessionState
-        Session State for the simulated app. SafeSessionState object supports
-        read and write operations as usual for Streamlit apps.
+    session_state
+        Session State for the simulated app. Supports item and attribute
+        access plus dict-style operations from ``st.session_state``: ``get``,
+        ``keys``, ``items``, ``values``, ``to_dict``, ``len``, and iteration.
 
     query_params: dict[str, Any]
-        Dictionary of query parameters to be used by the simulated app. Use
-        dict-like syntax to set ``query_params`` values for the simulated app.
+        Dictionary of query parameters for the simulated app. Use dict-like
+        syntax to set values before ``.run()``. After ``.run()``, a single
+        occurrence is ``str`` (a one-element list collapses to ``str``),
+        blank values are preserved as ``""``, and repeated keys stay
+        ``list[str]``. That last case differs from ``st.query_params``,
+        which returns only the last value.
+
+    user: dict[str, Any]
+        Dictionary of user information that the simulated app reads as
+        ``st.user``. The default is ``{"email": "test@example.com"}``. To
+        test a logged-in user, set ``"is_logged_in"`` to ``True`` and add the
+        identity claims the app reads, such as ``"name"`` and ``"email"``.
+        Put the tokens the app reads from ``st.user.tokens`` in a
+        ``"tokens"`` dictionary. To test a logged-out user, set
+        ``"is_logged_in"`` to ``False``.
+
+        ``st.logout()`` leaves the dict you assigned unchanged and replaces
+        ``user`` with a new dict. That dict applies to the rest of the run,
+        including an internal ``st.rerun()``, and to later ``.run()`` calls:
+
+        - If ``user`` contained ``"is_logged_in"``, it becomes
+          ``{"is_logged_in": False}``, so those runs take the logged-out
+          branch.
+        - Otherwise, logout leaves ``user`` empty.
+
+    context: dict[str, Any]
+        Dictionary of browser information that the simulated app reads from
+        ``st.context``. The supported keys are:
+
+        - ``"timezone"``: A timezone name, such as ``"Europe/Berlin"``.
+        - ``"timezone_offset"``: Minutes behind UTC, such as ``-60`` for
+          UTC+1. AppTest does not derive this from ``"timezone"``: the
+          offset depends on the date, so a derived value would change a
+          test's result across daylight-saving transitions. Set both when
+          the app reads both.
+        - ``"locale"``: A language tag, such as ``"de-DE"``.
+        - ``"url"``: The URL of the app.
+        - ``"is_embedded"``: Whether the app is embedded.
+        - ``"theme"``: ``"light"`` or ``"dark"``, read as
+          ``st.context.theme.type``.
+
+        A missing key or a ``None`` value reads as ``None``. Any other key or
+        an invalid value raises ``AppTestError`` before the script runs.
     """
 
     def __init__(
@@ -180,12 +436,18 @@ class AppTest:
         self.default_timeout = default_timeout
         session_state = SessionState()
         session_state[TESTING_KEY] = {}
-        self.session_state = SafeSessionState(session_state, lambda: None)
+        self._session_state = SafeSessionState(session_state, lambda: None)
+        self.session_state = _AppTestSessionState(self._session_state)
         self.query_params: dict[str, Any] = {}
         self.secrets: dict[str, Any] = {}
+        self.user: dict[str, Any] = {"email": "test@example.com"}
+        self.context: dict[str, Any] = {}
         self.args = args
         self.kwargs = kwargs
         self._page_hash = ""
+        # Page hash at the end of the previous run. A new PagesManager starts at
+        # "", and ScriptRunner treats that mismatch as a page change.
+        self._finished_page_script_hash = ""
         # Pages registered by the most recent run, used to resolve switch_page()
         # against st.navigation hashes (which follow url_path, not filename).
         self._registered_pages: dict[PageHash, PageInfo] = {}
@@ -196,6 +458,10 @@ class AppTest:
         # still resolvable by callbacks that fire before the script body
         # re-registers them in the next run.
         self._fragment_storage = MemoryFragmentStorage()
+        # Form ids whose last submit used clear_on_submit. The next submit of
+        # those forms serializes proto defaults for widgets the test has not
+        # set, matching frontend pending-clear without an extra rerun.
+        self._cleared_form_ids: set[str] = set()
 
         tree = ElementTree()
         tree._runner = self
@@ -374,6 +640,12 @@ class AppTest:
         if timeout is None:
             timeout = self.default_timeout
 
+        # Validate first: the mock Runtime and st.secrets below are only
+        # restored after a run completes, so raising after the swap would
+        # leak them into later tests.
+        context_info = _context_info_from_dict(self.context)
+        user_info = _user_info_for_run(self.user)
+
         # setup
         mock_runtime = MagicMock(spec=Runtime)
         mock_runtime.media_file_mgr = MediaFileManager(
@@ -395,30 +667,42 @@ class AppTest:
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
+        pages_manager.set_current_page_script_hash(self._finished_page_script_hash)
 
         saved_secrets: Secrets = st.secrets
         # Only modify global secrets stuff if we have been given secrets
         if self.secrets:
             new_secrets = Secrets()
-            new_secrets._secrets = self.secrets
+            new_secrets._secrets = self.secrets  # ty: ignore[invalid-assignment]
             st.secrets = new_secrets
 
         script_runner = LocalScriptRunner(
             self._script_path,
-            self.session_state,
+            self._session_state,
             pages_manager,
             args=self.args,
             kwargs=self.kwargs,
             fragment_storage=self._fragment_storage,
+            user_info=user_info,
         )
 
-        # Register any files from FileUploader widgets with the file manager
+        # Register recordings and uploads before the script reads them.
         self._register_uploaded_files(script_runner)
 
         with patch_config_options({"global.appTest": True}):
+            # switch_page() sets _page_hash to the destination. An empty
+            # request stays on the page the previous run finished on. Sending
+            # "" would substitute the main-script hash, which does not match
+            # the url-path hash a multipage app finished on.
+            requested_page_hash = self._page_hash or self._finished_page_script_hash
             self._tree = script_runner.run(
-                widget_state, self.query_params, timeout, self._page_hash
+                widget_state,
+                self.query_params,
+                timeout,
+                requested_page_hash,
+                context_info=context_info,
             )
+            self._finished_page_script_hash = pages_manager.current_page_script_hash
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
             # main-page-only fallback. Keep the last navigation registry in
@@ -433,7 +717,8 @@ class AppTest:
                 self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
         query_string = script_runner.event_data[-1]["client_state"].query_string
-        self.query_params = parse.parse_qs(query_string)
+        self.query_params = _query_params_from_query_string(query_string)
+        self.user = dict(user_info)
 
         if self.secrets:
             if st.secrets._secrets is not None:
@@ -444,16 +729,46 @@ class AppTest:
         return self
 
     def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
-        """Register files from FileUploader widgets with the file manager."""
+        """Register bytes for widgets that upload files.
+
+        Covers ``st.file_uploader``, ``st.audio_input``, ``st.camera_input``,
+        and files attached to ``st.chat_input``. Those widgets read the bytes
+        back from ``MemoryUploadedFileManager`` while deserializing widget
+        state.
+        """
         from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
-        for widget in self._tree.file_uploader:
+        submitted = _submitted_form_ids(self._tree)
+        form_clears = _form_clear_flags(self._tree)
+        for widget in (
+            *self._tree.file_uploader,
+            *self._tree.audio_input,
+            *self._tree.camera_input,
+            *self._tree.chat_input,
+        ):
+            form_id = _widget_form_id(widget)
+            saved_files = widget._files
+            if form_id and form_id not in submitted:
+                # Re-register only the files committed by the last submit;
+                # newly staged uploads wait for this form's submit button.
+                widget._files = InitialValue()
+            elif _use_form_clear_defaults(
+                widget,
+                submitted=submitted,
+                cleared=self._cleared_form_ids,
+                form_clears=form_clears,
+            ):
+                continue
+            try:
+                files_to_register = widget._get_files_to_register()
+            finally:
+                widget._files = saved_files
             for (
                 file_id,
                 filename,
                 content,
                 mime_type,
-            ) in widget._get_files_to_register():
+            ) in files_to_register:
                 file_rec = UploadedFileRec(
                     file_id=file_id,
                     name=filename,
@@ -615,6 +930,20 @@ class AppTest:
         return self._tree.sidebar
 
     @property
+    def audio_input(self) -> WidgetList[AudioInput]:
+        """Sequence of all ``st.audio_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of AudioInput
+            Sequence of all ``st.audio_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.audio_input[0]`` for the first widget or
+            ``at.audio_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.audio_input
+
+    @property
     def button(self) -> WidgetList[Button]:
         """Sequence of all ``st.button`` and ``st.form_submit_button`` widgets.
 
@@ -675,6 +1004,20 @@ class AppTest:
         return self._tree.segmented_control
 
     @property
+    def camera_input(self) -> WidgetList[CameraInput]:
+        """Sequence of all ``st.camera_input`` widgets.
+
+        Returns
+        -------
+        WidgetList of CameraInput
+            Sequence of all ``st.camera_input`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.camera_input[0]`` for the first widget or
+            ``at.camera_input(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.camera_input
+
+    @property
     def caption(self) -> ElementList[Caption]:
         """Sequence of all ``st.caption`` elements.
 
@@ -703,16 +1046,15 @@ class AppTest:
         return self._tree.chat_input
 
     @property
-    def chat_message(self) -> Sequence[ChatMessage]:
-        """Sequence of all ``st.chat_message`` elements.
+    def chat_message(self) -> BlockList[ChatMessage]:
+        """Sequence of all ``st.chat_message`` blocks.
 
         Returns
         -------
-        Sequence of ChatMessage
-            Sequence of all ``st.chat_message`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.chat_message[0]`` for the first element.  ChatMessage
-            is an extension of the Block class.
+        BlockList of ChatMessage
+            Individual messages can be accessed by index. For example,
+            ``at.chat_message[0]``. ``st.chat_message`` has no key.
+            ChatMessage is an extension of the Block class.
         """
         return self._tree.chat_message
 
@@ -759,7 +1101,7 @@ class AppTest:
         return self._tree.color_picker
 
     @property
-    def columns(self) -> Sequence[Column]:
+    def columns(self) -> BlockList[Column]:
         """Sequence of all columns within ``st.columns`` elements.
 
         Each column within a single ``st.columns`` will be returned as a
@@ -767,16 +1109,15 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Column
-            Sequence of all columns within ``st.columns`` elements. Individual
-            columns can be accessed from an ElementList by index (order on the
-            page). For example, ``at.columns[0]`` for the first column. Column
-            is an extension of the Block class.
+        BlockList of Column
+            Individual columns can be accessed by index. For example,
+            ``at.columns[0]``. ``st.columns`` has no key. Column is an
+            extension of the Block class.
         """
         return self._tree.columns
 
     @property
-    def container(self) -> BlockList:
+    def container(self) -> BlockList[Block]:
         """Sequence of all ``st.container`` blocks, including horizontal containers.
 
         The implicit row that ``st.columns`` creates is not included.
@@ -791,17 +1132,47 @@ class AppTest:
 
     @property
     def dataframe(self) -> ElementList[Dataframe]:
-        """Sequence of all ``st.dataframe`` elements.
+        """Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+
+        ``st.data_editor`` elements are also available from ``at.data_editor``.
 
         Returns
         -------
         ElementList of Dataframe
-            Sequence of all ``st.dataframe`` elements. Individual elements can be
-            accessed from an ElementList by index (order on the page). For
-            example, ``at.dataframe[0]`` for the first element. Dataframe is an
-            extension of the Element class.
+            Sequence of all ``st.dataframe`` and ``st.data_editor`` elements.
+            Individual elements can be accessed from an ElementList by index
+            (order on the page) or, when the element has a key, by key. For
+            example, ``at.dataframe[0]`` for the first element or
+            ``at.dataframe(key="editor")`` for an element with a given key.
+            Dataframe is an extension of the Element class.
         """
         return self._tree.dataframe
+
+    @property
+    def data_editor(self) -> ElementList[Dataframe]:
+        """Sequence of all ``st.data_editor`` elements.
+
+        ``at.dataframe`` includes these elements too. A table is included here
+        when ``editing_mode`` is not ``"read_only"``.
+
+        - ``.value`` is the table passed to the editor, without cell edits.
+        - ``set_value()`` raises ``AppTestError``.
+        - A keyed editor's session state value is the edit state
+          (``edited_rows``, ``added_rows``, ``deleted_rows``). Assigning
+          that state on ``at.session_state`` before ``.run()`` changes the
+          table the script receives. ``.value`` stays the input table.
+        - The script rejects ``st.session_state`` writes to that key.
+
+        Returns
+        -------
+        ElementList of Dataframe
+            Sequence of all ``st.data_editor`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.data_editor[0]`` for the first element
+            or ``at.data_editor(key="editor")`` for an element with a given
+            key.
+        """
+        return self._tree.data_editor
 
     @property
     def date_input(self) -> WidgetList[DateInput]:
@@ -916,16 +1287,63 @@ class AppTest:
         return self._tree.file_uploader
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        """Sequence of all ``st.expander`` elements.
+    def form(self) -> BlockList[Block]:
+        """Sequence of all ``st.form`` blocks.
 
         Returns
         -------
-        Sequence of Expandable
-            Sequence of all ``st.expander`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.expander[0]`` for the first element. Expandable is an
-            extension of the Block class.
+        BlockList
+            Individual forms can be accessed by index or by the form's
+            ``key`` (the form ID). For example, ``at.form[0]`` or
+            ``at.form(key="name-form")``.
+        """
+        return self._tree.form
+
+    @property
+    def form_submit_button(self) -> WidgetList[Button]:
+        """Sequence of all ``st.form_submit_button`` widgets.
+
+        These are also included in ``at.button``. Form widget values are only
+        sent to the script when the form's submit button is clicked, for
+        example ``at.form_submit_button[0].click().run()``.
+
+        Returns
+        -------
+        WidgetList of Button
+            Sequence of all ``st.form_submit_button`` widgets. Individual
+            widgets can be accessed from a WidgetList by index (order on the
+            page) or key. For example, ``at.form_submit_button[0]`` for the
+            first widget or ``at.form_submit_button(key="save")`` for a
+            widget with a given key.
+        """
+        return self._tree.form_submit_button
+
+    @property
+    def grid(self) -> BlockList[Grid]:
+        """Sequence of all ``st.grid`` blocks.
+
+        Returns
+        -------
+        BlockList of Grid
+            Individual grids can be accessed by index or key. For example,
+            ``at.grid[0]`` or ``at.grid(key="cards")``. ``column_count``,
+            ``min_column_width``, ``wrap``, ``gap``, ``vertical_alignment``,
+            ``border``, ``row_height``, ``width``, ``height``, and ``dense``
+            are available on each grid. ``columns`` stays the nested
+            ``st.columns`` collection. ``grid.cell()`` is not included.
+        """
+        return self._tree.grid
+
+    @property
+    def expander(self) -> BlockList[Expander]:
+        """Sequence of all ``st.expander`` blocks.
+
+        Returns
+        -------
+        BlockList of Expander
+            Individual expanders can be accessed by index or key. For example,
+            ``at.expander[0]`` or ``at.expander(key="details")``. Expander is
+            an extension of the Block class.
         """
         return self._tree.expander
 
@@ -942,6 +1360,34 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.header
+
+    @property
+    def help(self) -> ElementList[Help]:
+        """Sequence of all ``st.help`` elements.
+
+        Returns
+        -------
+        ElementList of Help
+            Sequence of all ``st.help`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.help[0]`` for the first element. Help is an
+            extension of the Element class.
+        """
+        return self._tree.help
+
+    @property
+    def html(self) -> ElementList[Html]:
+        """Sequence of all ``st.html`` elements.
+
+        Returns
+        -------
+        ElementList of Html
+            Sequence of all ``st.html`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.html[0]`` for the first element. Html is an
+            extension of the Element class.
+        """
+        return self._tree.html
 
     @property
     def image(self) -> ElementList[Image]:
@@ -998,6 +1444,21 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.latex
+
+    @property
+    def link_button(self) -> ElementList[LinkButton]:
+        """Sequence of all ``st.link_button`` elements.
+
+        Returns
+        -------
+        ElementList of LinkButton
+            Sequence of all ``st.link_button`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or key. For example, ``at.link_button[0]`` for the first element
+            or ``at.link_button(key="docs")`` for an element with a given key.
+            LinkButton is an extension of the Element class.
+        """
+        return self._tree.link_button
 
     @property
     def markdown(self) -> ElementList[Markdown]:
@@ -1070,6 +1531,49 @@ class AppTest:
         return self._tree.number_input
 
     @property
+    def page_link(self) -> ElementList[PageLink]:
+        """Sequence of all ``st.page_link`` elements.
+
+        Returns
+        -------
+        ElementList of PageLink
+            Sequence of all ``st.page_link`` elements. Individual elements can
+            be accessed from an ElementList by index (order on the page). For
+            example, ``at.page_link[0]`` for the first element. PageLink is an
+            extension of the Element class.
+        """
+        return self._tree.page_link
+
+    @property
+    def pagination(self) -> WidgetList[Pagination]:
+        """Sequence of all ``st.pagination`` widgets.
+
+        Returns
+        -------
+        WidgetList of Pagination
+            Sequence of all ``st.pagination`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pagination[0]`` for the first widget or
+            ``at.pagination(key="my_key")`` for a widget with a given key.
+            ``set_value`` and ``select`` choose a page (1-indexed).
+        """
+        return self._tree.pagination
+
+    @property
+    def progress(self) -> ElementList[Progress]:
+        """Sequence of all ``st.progress`` elements.
+
+        Returns
+        -------
+        ElementList of Progress
+            Sequence of all ``st.progress`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.progress[0]`` for the first element. Progress is an
+            extension of the Element class.
+        """
+        return self._tree.progress
+
+    @property
     def radio(self) -> WidgetList[Radio[Any]]:
         """Sequence of all ``st.radio`` widgets.
 
@@ -1126,6 +1630,20 @@ class AppTest:
         return self._tree.slider
 
     @property
+    def space(self) -> ElementList[Space]:
+        """Sequence of all ``st.space`` elements.
+
+        Returns
+        -------
+        ElementList of Space
+            Sequence of all ``st.space`` elements. Individual elements can be
+            accessed from an ElementList by index (order on the page). For
+            example, ``at.space[0]`` for the first element. Space is an
+            extension of the Element class.
+        """
+        return self._tree.space
+
+    @property
     def subheader(self) -> ElementList[Subheader]:
         """Sequence of all ``st.subheader`` elements.
 
@@ -1154,16 +1672,15 @@ class AppTest:
         return self._tree.success
 
     @property
-    def status(self) -> Sequence[Status]:
-        """Sequence of all ``st.status`` elements.
+    def status(self) -> BlockList[Status]:
+        """Sequence of all ``st.status`` blocks.
 
         Returns
         -------
-        Sequence of Status
-            Sequence of all ``st.status`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.status[0]`` for the first element. Status is an
-            extension of the Block class.
+        BlockList of Status
+            Individual status containers can be accessed by index. For
+            example, ``at.status[0]``. ``st.status`` has no key. Status is
+            an extension of the Block class.
         """
         return self._tree.status
 
@@ -1182,7 +1699,7 @@ class AppTest:
         return self._tree.table
 
     @property
-    def tabs(self) -> Sequence[Tab]:
+    def tabs(self) -> BlockList[Tab]:
         """Sequence of all tabs within ``st.tabs`` elements.
 
         Each tab within a single ``st.tabs`` will be returned as a separate Tab
@@ -1193,11 +1710,11 @@ class AppTest:
 
         Returns
         -------
-        Sequence of Tab
-            Sequence of all tabs within ``st.tabs`` elements. Individual
-            tabs can be accessed from an ElementList by index (order on the
-            page). For example, ``at.tabs[0]`` for the first tab. Tab is an
-            extension of the Block class.
+        BlockList of Tab
+            Individual tab panels can be accessed by index. For example,
+            ``at.tabs[0]``. A ``key`` on ``st.tabs`` belongs to the tab
+            container, not each panel; look it up with ``get_by_key``. Tab
+            is an extension of the Block class.
         """
         return self._tree.tabs
 
@@ -1326,24 +1843,27 @@ class AppTest:
         """Get elements or widgets of the specified type.
 
         This method returns the collection of all elements or widgets of
-        the specified type on the current page. Retrieve a specific element by
-        using its index (order on page) or key lookup.
+        the specified type on the current page. Retrieve a specific element
+        by index. Key lookup lives on typed collections
+        (``at.slider(key=...)``) or ``get_by_key``.
 
         Parameters
         ----------
         element_type: str
-            An element attribute of ``AppTest``. For example, "button",
-            "caption", or "chat_input".
+            An ``AppTest`` collection name such as ``"button"``,
+            ``"datetime_input"``, ``"pills"``, ``"form"``, or ``"tabs"``.
+            Internal node type names such as ``"date_time_input"`` and
+            ``"help_info"`` also work.
+            ``"form_submit_button"`` selects submit buttons inside forms.
+            ``"data_editor"`` selects dataframes that are not read-only.
 
         Returns
         -------
         Sequence of Elements
-            Sequence of elements of the given type. Individual elements can
-            be accessed from a Sequence by index (order on the page). When
-            getting and ``element_type`` that is a widget, individual widgets
-            can be accessed by key. For example, ``at.get("text")[0]`` for the
-            first ``st.text`` element or ``at.get("slider")(key="my_key")`` for
-            the ``st.slider`` widget with a given key.
+            Sequence of matching nodes, accessed by index. For example,
+            ``at.get("text")[0]`` for the first ``st.text`` element. Widgets
+            with a key are looked up on the typed collection
+            (``at.slider(key="my_key")``) or with ``get_by_key``.
         """
         return self._tree.get(element_type)
 

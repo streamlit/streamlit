@@ -27,6 +27,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements import deck_gl_json_chart
+from streamlit.elements.lib import agent_data, agent_spec
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
@@ -38,6 +39,7 @@ from streamlit.elements.lib.layout_utils import (
     WidthWithoutContent,
     create_layout_config,
 )
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.DeckGlJsonChart_pb2 import DeckGlJsonChart as DeckGlJsonChartProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -56,7 +58,8 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+# The frontend resolves this placeholder to the theme primary color at alpha 160.
+_DEFAULT_COLOR: Final = "primary"
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
@@ -98,6 +101,7 @@ class MapMixin:
         width: WidthWithoutContent = "stretch",
         height: HeightWithoutContent = 500,
         use_container_width: bool | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Display a map with a scatterplot overlaid onto it.
 
@@ -149,7 +153,12 @@ class MapMixin:
 
             Can be:
 
-            - None, to use the default color.
+            - ``None`` (default): Markers use the theme primary color, partly
+              transparent so overlapping points stay visible. Customize it with
+              ``theme.primaryColor``.
+            - ``"primary"``: Same fill as ``None``. If the data has a column
+              named ``primary``, Streamlit colors the markers from that column
+              instead.
             - A hex string like "#ffaa00" or "#ffaa0088".
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
@@ -210,6 +219,18 @@ class MapMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
+        alt : str or None
+            A description of the map for screen readers and other assistive
+            technologies. If this is ``None`` (default), Streamlit does not
+            provide an accessible name for the map.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+
+            Keep this to a short description of the visual; it is not a full
+            text alternative for dense graphics.
+
         Examples
         --------
         >>> import pandas as pd
@@ -221,7 +242,7 @@ class MapMixin:
         >>>     columns=["lat", "lon"],
         >>> )
         >>>
-        >>> st.map(df)
+        >>> st.map(df, alt="Sample points near San Francisco")
 
         .. output::
            https://doc-map.streamlit.app/
@@ -279,8 +300,28 @@ class MapMixin:
 
         marshall(map_proto, deck_gl_json)
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            # st.map has no element ID today. Do not start hashing one just to include alt.
+            map_proto.alt = normalized_alt
+
         return self.dg._enqueue(
-            "deck_gl_json_chart", map_proto, layout_config=layout_config
+            "deck_gl_json_chart",
+            map_proto,
+            layout_config=layout_config,
+            # st.map and st.pydeck_chart share a proto. Size and color are the
+            # arguments the author passed; the generated Deck.gl spec is the
+            # map's data.
+            agent_props=agent_spec.element(
+                "map",
+                latitude=latitude,
+                longitude=longitude,
+                size=size,
+                color=color,
+                zoom=zoom,
+                alt=map_proto.alt or None,
+                data_builder=lambda: agent_data.raw_spec(map_proto.json),
+            ),
         )
 
     @property
@@ -297,6 +338,7 @@ def to_deckgl_json(
     color: str | Collection[float] | None,
     zoom: int | None,
 ) -> str:
+    """Serialize the map to a PyDeck JSON string."""
     if data is None:
         return json.dumps(_DEFAULT_MAP)
 
@@ -460,7 +502,13 @@ def _convert_color_arg_or_column(
         color_arg_out = color_arg
 
     elif color_arg is not None:
-        color_arg_out = to_int_color_tuple(color_arg)
+        # "primary" is a placeholder that the frontend resolves to
+        # theme.colors.primary at a fixed marker alpha. Other values are
+        # converted to Deck.gl int color tuples here.
+        if isinstance(color_arg, str) and color_arg.lower() == "primary":
+            color_arg_out = "primary"
+        else:
+            color_arg_out = to_int_color_tuple(color_arg)
 
     return color_arg_out
 

@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { Block as BlockProto, Delta as DeltaProto } from "@streamlit/protobuf"
+import {
+  type Block as BlockProto,
+  Delta as DeltaProto,
+} from "@streamlit/protobuf"
 
 import { BlockNode } from "~lib/render-tree/BlockNode"
 import {

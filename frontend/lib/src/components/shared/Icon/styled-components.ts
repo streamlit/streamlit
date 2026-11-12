@@ -17,7 +17,9 @@
 import isPropValid from "@emotion/is-prop-valid"
 import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
-import { EmotionIcon } from "@emotion-icons/emotion-icon"
+import type { EmotionIcon } from "@emotion-icons/emotion-icon"
+
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import type { IconSizeProp } from "~lib/theme/types"
 import { computeSpacingStyle } from "~lib/theme/utils"
@@ -87,7 +89,7 @@ export const StyledIcon = styled("span", {
 })<StyledIconProps>(({ color, size, margin, padding, theme }) => {
   const iconCssSize = getIconCssSize(size, theme.iconSizes)
   return {
-    color: color || "inherit",
+    color: isNullOrEmptyString(color) ? "inherit" : color,
     fill: "currentColor",
     display: "inline-flex",
     alignItems: "center",

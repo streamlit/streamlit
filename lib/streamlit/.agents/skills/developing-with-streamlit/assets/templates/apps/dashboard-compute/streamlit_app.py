@@ -15,33 +15,36 @@
 """Compute/resource dashboard template.
 
 Demonstrates:
-- Multiple metric cards in a grid layout
+- Bordered metric cards in two columns above a full-width card
 - ``@st.fragment(parallel=True)`` so cards load concurrently on full reruns and
   rerun in isolation on widget interactions
-- ``st.skeleton`` placeholders while each card's data loads
-- ``@st.cache_data(ttl=...)`` loaders that keep data fresh and bounded
+- ``st.skeleton`` slots that keep each chart's size while its data loads
+- One ``@st.cache_data(ttl=...)`` loader, cached per dimension, that keeps data
+  fresh and bounded
+- ``st.echarts_chart`` line and stacked bar charts that animate when a filter
+  changes, morph between chart types, and zoom with a ``dataZoom`` slider
 - Popover filters for each metric card
 - Chart/table view toggle
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
 - Percentage normalization toggle
 - Multiple breakdown dimensions
+- A reset button whose callback restores every card's controls
 
-This template uses synthetic data. Replace ``generate_*_data()`` with your
+This template uses synthetic data. Replace ``load_credits()`` with your
 actual data source (e.g., Snowflake queries, cloud APIs, etc.).
 """
 
 import hashlib
-from collections.abc import Callable
 from datetime import date, timedelta
+from typing import Any
 
-import altair as alt
 import numpy as np
 import pandas as pd
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="Compute Dashboard",
+    page_title="Compute usage",
     page_icon=":material/bolt:",
     layout="wide",
 )
@@ -52,10 +55,42 @@ st.set_page_config(
 # =============================================================================
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
-ACCOUNT_TYPES = ["Paying", "Trial", "Internal"]
-INSTANCE_TYPES = ["Standard", "High Memory", "High CPU", "GPU"]
-REGIONS = ["us-west-2", "us-east-1", "eu-west-1", "ap-northeast-1"]
 CHART_HEIGHT = 350
+VIEWS = {"chart": ":material/show_chart:", "table": ":material/table:"}
+CHARTS = {"line": ":material/show_chart: Line", "bar": ":material/bar_chart: Bar"}
+
+# Each card's breakdown: its pills label, each category's base daily credits,
+# and the categories and chart type it shows by default.
+DIMENSIONS: dict[str, dict[str, Any]] = {
+    "account_type": {
+        "label": "Account types",
+        "base_values": {"Paying": 8000, "Trial": 2000, "Internal": 1000},
+        "default_selection": ["Paying"],
+        "default_chart": "line",
+    },
+    "instance_type": {
+        "label": "Instance types",
+        "base_values": {
+            "Standard": 5000,
+            "High Memory": 3000,
+            "High CPU": 2000,
+            "GPU": 1500,
+        },
+        "default_selection": ["Standard", "High Memory", "High CPU", "GPU"],
+        "default_chart": "line",
+    },
+    "region": {
+        "label": "Regions",
+        "base_values": {
+            "us-west-2": 4000,
+            "us-east-1": 3500,
+            "eu-west-1": 2500,
+            "ap-northeast-1": 1500,
+        },
+        "default_selection": ["us-west-2", "us-east-1", "eu-west-1", "ap-northeast-1"],
+        "default_chart": "bar",
+    },
+}
 
 
 # =============================================================================
@@ -64,11 +99,10 @@ CHART_HEIGHT = 350
 
 
 def generate_time_series(
-    categories: list[str],
     category_name: str,
     start_date: date,
     end_date: date,
-    base_values: dict[str, float] | None = None,
+    base_values: dict[str, float],
 ) -> pd.DataFrame:
     """Generate synthetic time series data by category."""
     seed = int(hashlib.sha256(category_name.encode()).hexdigest(), 16) % 2**32
@@ -77,15 +111,12 @@ def generate_time_series(
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     records = []
 
-    for category in categories:
-        base = (
-            base_values.get(category, 1000) if base_values else rng.integers(500, 5000)
-        )
+    for category, base in base_values.items():
         growth = rng.uniform(0.001, 0.005)
 
         for i, dt in enumerate(dates):
             trend = base * (1 + growth) ** i
-            if dt.dayofweek >= 5:
+            if dt.day_of_week >= 5:
                 trend *= 0.4
 
             daily = max(0, trend * rng.uniform(0.8, 1.2))
@@ -108,56 +139,17 @@ def generate_time_series(
     return df
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
-def load_account_type_data() -> pd.DataFrame:
-    """Load credits by account type."""
+@st.cache_data(ttl="1h", show_spinner="Loading credit usage...")
+def load_credits(dimension: str) -> pd.DataFrame:
+    """Load daily credits by one of the ``DIMENSIONS``.
+
+    Each dimension is cached on its own, so the cards load concurrently as
+    parallel fragments.
+    """
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=730)  # 2 years
-    return generate_time_series(
-        ACCOUNT_TYPES,
-        "account_type",
-        start_date,
-        end_date,
-        base_values={"Paying": 8000, "Trial": 2000, "Internal": 1000},
-    )
-
-
-@st.cache_data(ttl="1h", show_spinner=False)
-def load_instance_type_data() -> pd.DataFrame:
-    """Load credits by instance type."""
-    end_date = date.today() - timedelta(days=1)
-    start_date = end_date - timedelta(days=730)
-    return generate_time_series(
-        INSTANCE_TYPES,
-        "instance_type",
-        start_date,
-        end_date,
-        base_values={
-            "Standard": 5000,
-            "High Memory": 3000,
-            "High CPU": 2000,
-            "GPU": 1500,
-        },
-    )
-
-
-@st.cache_data(ttl="1h", show_spinner=False)
-def load_region_data() -> pd.DataFrame:
-    """Load credits by region."""
-    end_date = date.today() - timedelta(days=1)
-    start_date = end_date - timedelta(days=730)
-    return generate_time_series(
-        REGIONS,
-        "region",
-        start_date,
-        end_date,
-        base_values={
-            "us-west-2": 4000,
-            "us-east-1": 3500,
-            "eu-west-1": 2500,
-            "ap-northeast-1": 1500,
-        },
-    )
+    base_values = DIMENSIONS[dimension]["base_values"]
+    return generate_time_series(dimension, start_date, end_date, base_values)
 
 
 # =============================================================================
@@ -192,70 +184,107 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     return filtered
 
 
-def create_line_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_col: str,
-    color_col: str,
-    height: int,
-    show_percent: bool = False,
-) -> alt.Chart:
-    """Create a line chart."""
-    y_format = ".1%" if show_percent else ",.0f"
+def pivot_by_dimension(
+    df: pd.DataFrame, x_col: str, y_col: str, dim_col: str, categories: list[str]
+) -> pd.DataFrame:
+    """Pivot long data to one column per category, in ``categories`` order.
 
-    chart: alt.Chart = (
-        alt.Chart(df)
-        .mark_line()
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y(f"{y_col}:Q", title="Credits", axis=alt.Axis(format=y_format)),
-            color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip(
-                    f"{color_col}:N", title=color_col.replace("_", " ").title()
-                ),
-                alt.Tooltip(f"{y_col}:Q", title="Credits", format=y_format),
-            ],
-        )
-        .properties(height=height)
-        .interactive()
+    Each column becomes one ECharts series that reads it through ``encode``.
+    """
+    wide = df.pivot_table(index=x_col, columns=dim_col, values=y_col)
+    wide = wide.reindex(columns=categories).rename_axis(columns=None)
+    return wide.reset_index()
+
+
+def describe_credits(
+    source: pd.DataFrame, x_col: str, title: str, series: str, *, shares: bool
+) -> str:
+    """Summarize a chart's ``dataset.source`` frame for its ``alt`` text.
+
+    Shares always stack to 100%, so they report the leader's latest share.
+    """
+    values = source.drop(columns=x_col)
+    if values.empty:
+        return f"{title} ({series}): no data"
+    latest = values.iloc[-1]
+    span = (
+        f"{title} ({series}) from {source[x_col].iloc[0]:%Y-%m-%d} to "
+        f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
-    return chart
+    if shares:
+        return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
+    totals = values.sum(axis=1)
+    if totals.iloc[0]:
+        trend = f"total {totals.iloc[-1] / totals.iloc[0] - 1:+.1%}"
+    else:
+        trend = f"latest total {totals.iloc[-1]:,.0f}"
+    return f"{span}: {trend}, {latest.idxmax()} highest"
+
+
+def _credits_option(
+    wide: pd.DataFrame, series: list[dict[str, Any]], *, show_percent: bool = False
+) -> dict[str, Any]:
+    """Build an ECharts option for credit series that share a time x-axis.
+
+    The dataframe goes in ``dataset.source``, so Streamlit sends it as Arrow.
+    ``universalTransition`` on each series morphs the chart when the card
+    switches between line and bar.
+    """
+    y_axis: dict[str, Any] = {"type": "value"}
+    if show_percent:
+        # ECharts label templates can't multiply values, so create_bar_chart
+        # scales shares to 0-100 before they reach the chart.
+        y_axis |= {"max": 100, "axisLabel": {"formatter": "{value}%"}}
+    return {
+        "dataset": {"source": wide},
+        "legend": {},
+        "tooltip": {
+            "trigger": "axis",
+            # Number formats use the same strings as ``st.metric``.
+            "valueFormatter": "%.1f%%" if show_percent else "%,.0f",
+        },
+        "xAxis": {"type": "time"},
+        "yAxis": y_axis,
+        "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+        "series": [{**s, "universalTransition": True} for s in series],
+    }
+
+
+def create_line_chart(
+    wide: pd.DataFrame, x_col: str, categories: list[str]
+) -> dict[str, Any]:
+    """Create a line chart with one line per category."""
+    series = [
+        {
+            "type": "line",
+            "name": category,
+            "encode": {"x": x_col, "y": category},
+            "showSymbol": False,
+        }
+        for category in categories
+    ]
+    return _credits_option(wide, series)
 
 
 def create_bar_chart(
-    df: pd.DataFrame,
-    x_col: str,
-    y_col: str,
-    color_col: str,
-    height: int,
-    show_percent: bool = False,
-) -> alt.Chart:
-    """Create a stacked bar chart."""
-    y_format = ".1%" if show_percent else ",.0f"
+    wide: pd.DataFrame, x_col: str, categories: list[str], show_percent: bool = False
+) -> dict[str, Any]:
+    """Create a stacked bar chart, optionally as each category's daily share."""
+    if show_percent:
+        wide = wide.copy()
+        values = wide[categories]
+        wide[categories] = values.div(values.sum(axis=1), axis=0) * 100
 
-    chart: alt.Chart = (
-        alt.Chart(df)
-        .mark_bar()
-        .encode(
-            x=alt.X(f"{x_col}:T", title=None),
-            y=alt.Y(
-                f"{y_col}:Q",
-                title="Credits",
-                stack="normalize" if show_percent else True,
-                axis=alt.Axis(format=y_format),
-            ),
-            color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip(f"{color_col}:N"),
-                alt.Tooltip(f"{y_col}:Q", format=",.0f"),
-            ],
-        )
-        .properties(height=height)
-    )
-    return chart
+    series = [
+        {
+            "type": "bar",
+            "name": category,
+            "stack": "credits",
+            "encode": {"x": x_col, "y": category},
+        }
+        for category in categories
+    ]
+    return _credits_option(wide, series, show_percent=show_percent)
 
 
 # =============================================================================
@@ -263,15 +292,30 @@ def create_bar_chart(
 # =============================================================================
 
 
-def render_page_header(title: str) -> None:
+def reset_cards() -> None:
+    """Restore every card's controls to their defaults."""
+    # Assigning a widget's key in a callback also updates it in the browser.
+    for dimension, config in DIMENSIONS.items():
+        st.session_state[f"{dimension}_view"] = "chart"
+        st.session_state[f"{dimension}_select"] = config["default_selection"]
+        st.session_state[f"{dimension}_lines"] = ["7-day MA"]
+        st.session_state[f"{dimension}_chart"] = config["default_chart"]
+        st.session_state[f"{dimension}_pct"] = False
+        st.session_state[f"{dimension}_time"] = "All"
+
+
+def render_page_header(title: str, icon: str) -> None:
     """Render page header with title and reset button."""
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
     ):
-        st.markdown(title)
-        if st.button(":material/restart_alt: Reset", type="tertiary"):
-            st.session_state.clear()
-            st.rerun()
+        st.title(title, icon=icon, anchor=False)
+        st.button(
+            "Reset",
+            icon=":material/restart_alt:",
+            type="tertiary",
+            on_click=reset_cards,
+        )
 
 
 # =============================================================================
@@ -280,50 +324,17 @@ def render_page_header(title: str) -> None:
 
 
 @st.fragment(parallel=True)
-def dimension_metric(
-    *,
-    title: str,
-    loader: Callable[[], pd.DataFrame],
-    dim_col: str,
-    options: list[str],
-    options_label: str,
-    default_selection: list[str],
-    default_chart: str = "Line",
-    key_prefix: str,
-) -> None:
-    """Metric card broken down by a single dimension, with independent state.
+def dimension_metric(title: str, dimension: str) -> None:
+    """Metric card that breaks credits down by one of the ``DIMENSIONS``.
 
     The card is a parallel fragment: on a full app rerun each card loads its
     own data concurrently in a thread pool, and clicking a popover filter only
-    reruns this card, not the whole page. Data is loaded inside ``st.skeleton``
-    so the controls stay stable while the chart fills in.
-
-    Parameters
-    ----------
-    title : str
-        Card header text.
-    loader : Callable[[], pd.DataFrame]
-        Cached loader returning a frame with ``ds``, ``daily_credits``,
-        ``credits_7d_ma``, and ``dim_col``. Called inside the fragment so the
-        load runs concurrently with the other cards.
-    dim_col : str
-        Column name to split series on (e.g. ``"account_type"``).
-    options : list[str]
-        All possible values of ``dim_col``.
-    options_label : str
-        Label shown above the dimension selector pills.
-    default_selection : list[str]
-        Subset of ``options`` pre-selected when the card first renders.
-    default_chart : str
-        ``"Line"`` or ``"Bar"``.
-    key_prefix : str
-        Unique prefix used for every widget key inside the card.
+    reruns this card, not the whole page. Its controls must be in the fragment,
+    so the card draws its own ``st.skeleton`` below them to hold the chart's size.
+    Its widget keys start with ``dimension``, so ``reset_cards`` can reset them.
     """
-    chart_default = (
-        ":material/bar_chart: Bar"
-        if default_chart == "Bar"
-        else ":material/show_chart: Line"
-    )
+    config = DIMENSIONS[dimension]
+    options = list(config["base_values"])
 
     with st.container(border=True):
         with st.container(
@@ -335,69 +346,88 @@ def dimension_metric(
 
             view_mode = st.segmented_control(
                 "View",
-                options=[":material/show_chart:", ":material/table:"],
-                default=":material/show_chart:",
-                key=f"{key_prefix}_view",
+                options=VIEWS.keys(),
+                format_func=lambda view: VIEWS[view],
+                default="chart",
+                required=True,
+                key=f"{dimension}_view",
                 label_visibility="collapsed",
             )
 
-            with st.popover("Filters", type="tertiary"):
+            with st.popover("Filters", icon=":material/tune:", type="tertiary"):
                 selected = st.pills(
-                    options_label,
+                    config["label"],
                     options=options,
-                    default=default_selection,
+                    default=config["default_selection"],
                     selection_mode="multi",
-                    key=f"{key_prefix}_select",
+                    key=f"{dimension}_select",
                 )
                 line_options = st.pills(
                     "Lines",
                     options=["Daily", "7-day MA"],
                     default=["7-day MA"],
                     selection_mode="multi",
-                    key=f"{key_prefix}_lines",
+                    key=f"{dimension}_lines",
                 )
                 chart_type = st.segmented_control(
                     "Chart type",
-                    options=[":material/show_chart: Line", ":material/bar_chart: Bar"],
-                    default=chart_default,
-                    key=f"{key_prefix}_chart",
+                    options=CHARTS.keys(),
+                    format_func=lambda chart: CHARTS[chart],
+                    default=config["default_chart"],
+                    required=True,
+                    key=f"{dimension}_chart",
                 )
                 show_percent = st.toggle(
                     "Show %",
                     value=False,
-                    key=f"{key_prefix}_pct",
-                    disabled="Line" in (chart_type or ""),
+                    key=f"{dimension}_pct",
+                    disabled=chart_type == "line",
                 )
                 time_range = st.segmented_control(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
-                    key=f"{key_prefix}_time",
+                    required=True,
+                    key=f"{dimension}_time",
                 )
 
-        # Load this card's data and render inside a skeleton placeholder so each
-        # card fills in as soon as its own (cached) data is ready.
+        # The chart replaces the skeleton. On a cache miss, the skeleton covers the
+        # previous chart after half a second and shows the loader's spinner text.
         with st.skeleton(height=CHART_HEIGHT):
-            data = loader()
+            data = load_credits(dimension)
 
-            selected = selected or default_selection
+            # Cleared pills fall back to the card's defaults, so the chart has a series.
+            selected = selected or config["default_selection"]
             line_options = line_options or ["7-day MA"]
-            filtered = data[data[dim_col].isin(selected)]
-            filtered = filter_by_time_range(filtered, "ds", time_range or "All")
+            filtered = data[data[dimension].isin(selected)]
+            filtered = filter_by_time_range(filtered, "ds", time_range)
 
             y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
+            series = "7-day average" if "7-day MA" in line_options else "daily"
 
-            if "table" in (view_mode or ""):
-                st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
-            elif "Bar" in (chart_type or ""):
-                st.altair_chart(
-                    create_bar_chart(
-                        filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
-                    ),
+            if view_mode == "table":
+                st.dataframe(
+                    filtered,
+                    height=CHART_HEIGHT,
+                    hide_index=True,
+                    alt=f"{title} data",
                 )
             else:
-                st.altair_chart(
-                    create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
+                categories = [category for category in options if category in selected]
+                wide = pivot_by_dimension(filtered, "ds", y_col, dimension, categories)
+                shares = False
+                if chart_type == "bar":
+                    shares = show_percent
+                    option = create_bar_chart(wide, "ds", categories, shares)
+                    if shares:
+                        series = f"{series} share"
+                else:
+                    option = create_line_chart(wide, "ds", categories)
+                source = option["dataset"]["source"]
+                st.echarts_chart(
+                    option,
+                    height=CHART_HEIGHT,
+                    alt=describe_credits(source, "ds", title, series, shares=shares),
                 )
 
 
@@ -405,43 +435,16 @@ def dimension_metric(
 # Page Layout
 # =============================================================================
 
-render_page_header("# :material/bolt: Compute Dashboard")
+render_page_header("Compute usage", ":material/bolt:")
 
 # Row 1: Two metrics
 col1, col2 = st.columns(2)
 
 with col1:
-    dimension_metric(
-        title="Credits by account type",
-        loader=load_account_type_data,
-        dim_col="account_type",
-        options=ACCOUNT_TYPES,
-        options_label="Account types",
-        default_selection=["Paying"],
-        default_chart="Line",
-        key_prefix="acct",
-    )
+    dimension_metric("Credits by account type", "account_type")
 
 with col2:
-    dimension_metric(
-        title="Credits by instance type",
-        loader=load_instance_type_data,
-        dim_col="instance_type",
-        options=INSTANCE_TYPES,
-        options_label="Instance types",
-        default_selection=INSTANCE_TYPES,
-        default_chart="Line",
-        key_prefix="inst",
-    )
+    dimension_metric("Credits by instance type", "instance_type")
 
 # Row 2: One metric (full width for region breakdown)
-dimension_metric(
-    title="Credits by region",
-    loader=load_region_data,
-    dim_col="region",
-    options=REGIONS,
-    options_label="Regions",
-    default_selection=REGIONS,
-    default_chart="Bar",
-    key_prefix="region",
-)
+dimension_metric("Credits by region", "region")

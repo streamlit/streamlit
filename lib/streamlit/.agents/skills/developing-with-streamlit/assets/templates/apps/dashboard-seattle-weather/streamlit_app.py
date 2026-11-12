@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Seattle Weather dashboard exploring the classic Altair case study dataset."""
+"""Seattle weather dashboard exploring the classic Altair case study dataset."""
 
 import altair as alt
 import pandas as pd
@@ -22,11 +22,32 @@ import streamlit as st
 
 st.set_page_config(
     # Title and icon for the browser's tab bar:
-    page_title="Seattle Weather",
+    page_title="Seattle weather",
     page_icon=":material/wb_sunny:",
     # Make the content take up the width of the page:
     layout="wide",
 )
+
+# Summary metrics as (label, column, aggregation, unit).
+SUMMARY_METRICS = [
+    ("Max temperature", "temp_max", "max", "°C"),
+    ("Min temperature", "temp_min", "min", "°C"),
+    ("Max precipitation", "precipitation", "max", "mm"),
+    ("Min precipitation", "precipitation", "min", "mm"),
+    ("Max wind", "wind", "max", "m/s"),
+    ("Min wind", "wind", "min", "m/s"),
+]
+
+WEATHER_ICONS = {
+    "sun": ":material/sunny:",
+    "snow": ":material/weather_snowy:",
+    "rain": ":material/rainy:",
+    "fog": ":material/foggy:",
+    "drizzle": ":material/rainy:",
+}
+
+# Charts that share a row need the same height.
+CHART_HEIGHT = 300
 
 
 @st.cache_data(show_spinner="Loading weather data...")
@@ -37,135 +58,54 @@ def load_weather_data() -> pd.DataFrame:
 
 full_df = load_weather_data()
 
-"""
-# Seattle Weather
-
-Let's explore the [classic Seattle Weather
-dataset](https://altair-viz.github.io/case_studies/exploring-weather.html)!
-"""
+st.title("Seattle weather", icon=":material/wb_sunny:")
+st.markdown(
+    "Let's explore the [classic Seattle Weather dataset]"
+    "(https://altair-viz.github.io/case_studies/exploring-weather.html)!"
+)
 
 st.space("medium")
-
-"""
-## 2015 Summary
-"""
-
-st.space("small")
+st.header("2015 summary")
 
 df_2015 = full_df[full_df["date"].dt.year == 2015]
 df_2014 = full_df[full_df["date"].dt.year == 2014]
+weather_counts = df_2015["weather"].value_counts()
 
-max_temp_2015 = df_2015["temp_max"].max()
-max_temp_2014 = df_2014["temp_max"].max()
-
-min_temp_2015 = df_2015["temp_min"].min()
-min_temp_2014 = df_2014["temp_min"].min()
-
-max_wind_2015 = df_2015["wind"].max()
-max_wind_2014 = df_2014["wind"].max()
-
-min_wind_2015 = df_2015["wind"].min()
-min_wind_2014 = df_2014["wind"].min()
-
-max_prec_2015 = df_2015["precipitation"].max()
-max_prec_2014 = df_2014["precipitation"].max()
-
-min_prec_2015 = df_2015["precipitation"].min()
-min_prec_2014 = df_2014["precipitation"].min()
-
-
-with st.container(horizontal=True, gap="medium"):
-    cols = st.columns(2, gap="medium", width=300)
-
-    with cols[0]:
+with st.grid(4, gap="medium"):
+    for label, column, agg, unit in SUMMARY_METRICS:
+        value = df_2015[column].agg(agg)
         st.metric(
-            "Max temperature",
-            f"{max_temp_2015:0.1f}C",
-            delta=f"{max_temp_2015 - max_temp_2014:0.1f}C",
-            width="content",
+            label,
+            value,
+            delta=value - df_2014[column].agg(agg),
+            format=f"%.1f {unit}",
+            delta_description="vs. 2014",
+            border=True,
+            height="stretch",
         )
-
-    with cols[1]:
+    for label, weather in [
+        ("Most common weather", weather_counts.idxmax()),
+        ("Least common weather", weather_counts.idxmin()),
+    ]:
         st.metric(
-            "Min temperature",
-            f"{min_temp_2015:0.1f}C",
-            delta=f"{min_temp_2015 - min_temp_2014:0.1f}C",
-            width="content",
-        )
-
-    cols = st.columns(2, gap="medium", width=300)
-
-    with cols[0]:
-        st.metric(
-            "Max precipitation",
-            f"{max_prec_2015:0.1f}mm",
-            delta=f"{max_prec_2015 - max_prec_2014:0.1f}mm",
-            width="content",
-        )
-
-    with cols[1]:
-        st.metric(
-            "Min precipitation",
-            f"{min_prec_2015:0.1f}mm",
-            delta=f"{min_prec_2015 - min_prec_2014:0.1f}mm",
-            width="content",
-        )
-
-    cols = st.columns(2, gap="medium", width=300)
-
-    with cols[0]:
-        st.metric(
-            "Max wind",
-            f"{max_wind_2015:0.1f}m/s",
-            delta=f"{max_wind_2015 - max_wind_2014:0.1f}m/s",
-            width="content",
-        )
-
-    with cols[1]:
-        st.metric(
-            "Min wind",
-            f"{min_wind_2015:0.1f}m/s",
-            delta=f"{min_wind_2015 - min_wind_2014:0.1f}m/s",
-            width="content",
-        )
-
-    weather_icons = {
-        "sun": "sunny",
-        "snow": "weather_snowy",
-        "rain": "rainy",
-        "fog": "foggy",
-        "drizzle": "rainy",
-    }
-
-    cols = st.columns(2, gap="large")
-
-    with cols[0]:
-        weather_name = (
-            full_df["weather"].value_counts().head(1).reset_index()["weather"][0]
-        )
-        st.metric(
-            "Most common weather",
-            f":material/{weather_icons[weather_name]}: {weather_name.upper()}",
-        )
-
-    with cols[1]:
-        weather_name = (
-            full_df["weather"].value_counts().tail(1).reset_index()["weather"][0]
-        )
-        st.metric(
-            "Least common weather",
-            f":material/{weather_icons[weather_name]}: {weather_name.upper()}",
+            label,
+            weather.capitalize(),
+            icon=WEATHER_ICONS[weather],
+            border=True,
+            height="stretch",
         )
 
 st.space("medium")
-
-"""
-## Compare different years
-"""
+st.header("Compare different years")
 
 YEARS = full_df["date"].dt.year.unique()
 selected_years = st.pills(
-    "Years to compare", YEARS, default=YEARS, selection_mode="multi"
+    "Years to compare",
+    YEARS,
+    default=YEARS,
+    selection_mode="multi",
+    key="years",  # Repeated params: ?years=2014&years=2015
+    bind="query-params",
 )
 
 if not selected_years:
@@ -174,10 +114,10 @@ if not selected_years:
 
 df = full_df[full_df["date"].dt.year.isin(selected_years)]
 
-cols = st.columns([3, 1])
+ratio_cols = st.columns([3, 1])
 
-with cols[0].container(border=True, height="stretch"):
-    "### :material/thermostat: Temperature"
+with ratio_cols[0].container(border=True, height="stretch"):
+    st.subheader("Temperature", icon=":material/thermostat:")
 
     st.altair_chart(
         alt.Chart(df)
@@ -190,16 +130,18 @@ with cols[0].container(border=True, height="stretch"):
             alt.XOffset("year(date):N"),
             tooltip=[
                 alt.Tooltip("monthdate(date):T", title="Date"),
-                alt.Tooltip("temp_max:Q", title="Max Temp (C)"),
-                alt.Tooltip("temp_min:Q", title="Min Temp (C)"),
+                alt.Tooltip("temp_max:Q", title="Max temp (C)"),
+                alt.Tooltip("temp_min:Q", title="Min temp (C)"),
                 alt.Tooltip("year(date):N", title="Year"),
             ],
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        height=CHART_HEIGHT,
+        alt="Daily high and low temperatures by year",
     )
 
-with cols[1].container(border=True, height="stretch"):
-    "### Weather distribution"
+with ratio_cols[1].container(border=True, height="stretch"):
+    st.subheader("Weather distribution")
 
     st.altair_chart(
         alt.Chart(df)
@@ -208,29 +150,37 @@ with cols[1].container(border=True, height="stretch"):
             alt.Theta("count()"),
             alt.Color("weather:N"),
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        height=CHART_HEIGHT,
+        alt="Share of days by weather type",
     )
 
 
 cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
-    "### :material/air: Wind"
+    st.subheader("Wind", icon=":material/air:")
 
-    # Prepare data for st.line_chart - pivot by year
-    wind_df = df.copy()
-    wind_df["month_day"] = wind_df["date"].dt.strftime("%m-%d")
-    wind_df["year"] = wind_df["date"].dt.year
-
-    # Calculate 14-day rolling average per year
-    wind_pivot = wind_df.pivot_table(
-        index="month_day", columns="year", values="wind", aggfunc="mean"
-    ).sort_index()
-
-    st.line_chart(wind_pivot, height=300)
+    st.altair_chart(
+        alt.Chart(df)
+        .mark_line()
+        .encode(
+            alt.X("monthdate(date):T").title("date"),
+            alt.Y("mean(wind):Q").title("wind speed (m/s)"),
+            alt.Color("year(date):N").title("year"),
+            tooltip=[
+                alt.Tooltip("monthdate(date):T", title="Date"),
+                alt.Tooltip("mean(wind):Q", title="Wind (m/s)"),
+                alt.Tooltip("year(date):N", title="Year"),
+            ],
+        )
+        .configure_legend(orient="bottom"),
+        height=CHART_HEIGHT,
+        alt="Average wind speed by day of year",
+    )
 
 with cols[1].container(border=True, height="stretch"):
-    "### :material/water_drop: Precipitation"
+    st.subheader("Precipitation", icon=":material/water_drop:")
 
     st.altair_chart(
         alt.Chart(df)
@@ -245,13 +195,15 @@ with cols[1].container(border=True, height="stretch"):
                 alt.Tooltip("year(date):N", title="Year"),
             ],
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        height=CHART_HEIGHT,
+        alt="Monthly precipitation totals by year",
     )
 
 cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
-    "### :material/calendar_month: Monthly weather breakdown"
+    st.subheader("Monthly weather breakdown", icon=":material/calendar_month:")
 
     st.altair_chart(
         alt.Chart(df)
@@ -261,10 +213,14 @@ with cols[0].container(border=True, height="stretch"):
             alt.Y("count():Q", title="days", stack="normalize"),
             alt.Color("weather:N"),
         )
-        .configure_legend(orient="bottom")
+        .configure_legend(orient="bottom"),
+        height=CHART_HEIGHT,
+        alt="Monthly mix of weather types",
     )
 
 with cols[1].container(border=True, height="stretch"):
-    "### :material/table: Raw data"
+    st.subheader("Raw data", icon=":material/table:")
 
-    st.dataframe(df, hide_index=True)
+    st.dataframe(
+        df, height=CHART_HEIGHT, hide_index=True, alt="Seattle weather observations"
+    )

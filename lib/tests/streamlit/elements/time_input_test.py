@@ -15,6 +15,7 @@
 """time_input unit test."""
 
 from datetime import date, datetime, time, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -55,6 +56,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
         assert datetime.strptime(c.default, "%H:%M").time() <= datetime.now().time()
         assert c.HasField("default")
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -62,6 +64,63 @@ class TimeInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.time_input
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.time_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.required is required
+
+    @parameterized.expand(
+        [
+            ("unkeyed", None, False),
+            ("keyed", "time_input_key", True),
+        ]
+    )
+    def test_required_changes_widget_id_only_without_key(
+        self, _: str, key: str | None, expect_same_id: bool
+    ) -> None:
+        """Toggling required changes the widget id only when it has no key."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.time_input("the label", key=key, required=False)
+            id1 = self.get_delta_from_queue().new_element.time_input.id
+            st.time_input("the label", key=key, required=True)
+            id2 = self.get_delta_from_queue().new_element.time_input.id
+
+            if expect_same_id:
+                assert id1 == id2
+            else:
+                assert id1 != id2
+
+    def test_disabled_required_does_not_raise(self) -> None:
+        """Disabled required time inputs are valid and can start empty."""
+        st.time_input("label", value=None, disabled=True, required=True)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.disabled
+        assert c.required
+        assert not c.HasField("default")
+
+    def test_required_true_keeps_default_time(self) -> None:
+        """required=True does not change the current-time default."""
+        st.time_input("label", required=True)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.required
+        assert c.HasField("default")
+
+    def test_value_none_required_has_no_default(self) -> None:
+        """value=None with required=True is an empty required field."""
+        st.time_input("label", value=None, required=True)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.required
+        assert not c.HasField("default")
 
     def test_none_value(self):
         """Test that it can be called with None as initial value."""
@@ -257,6 +316,7 @@ class TimeInputTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
+                required=True,
                 # Keep whitelisted the same to ensure ID stability
                 step=timedelta(minutes=15),
             )
@@ -312,6 +372,26 @@ def test_time_input_interaction():
     assert time_input.value == time(8, 45)
 
     # # Clear the value
+    at = time_input.set_value(None).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None
+
+
+def test_required_time_input_accepts_apptest_none() -> None:
+    """AppTest can still set None on a required time input.
+
+    Required is enforced in the browser. A test client bypasses that check.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.time_input("the label", value=None, required=True)
+
+    at = AppTest.from_function(script).run()
+    time_input = at.time_input[0]
+    assert time_input.value is None
+
     at = time_input.set_value(None).run()
     time_input = at.time_input[0]
     assert time_input.value is None
@@ -656,3 +736,50 @@ class TestFormatProtoField(DeltaGeneratorTestCase):
             st.time_input("label", time(8, 45), format="6h", key="fmt_6h")  # type: ignore[arg-type]
         with pytest.raises(StreamlitValueError, match=r"Invalid `format` value"):
             st.time_input("label", time(8, 45), format="auto", key="fmt_auto")  # type: ignore[arg-type]
+
+
+class TimeInputOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ) -> None:
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.time_input("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.time_input
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.time_input("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    def test_on_change_non_string_value_raises_exception(self) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            st.time_input("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(self) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            st.time_input("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.time_input
+        assert c.ignore_rerun is True

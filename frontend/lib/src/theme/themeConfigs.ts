@@ -17,7 +17,7 @@
 import emotionBaseTheme from "./emotionBaseTheme"
 import emotionDarkTheme from "./emotionDarkTheme"
 import emotionLightTheme from "./emotionLightTheme"
-import { ThemeConfig } from "./types"
+import type { ThemeConfig } from "./types"
 
 export const baseTheme: ThemeConfig = {
   name: "base",

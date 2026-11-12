@@ -16,13 +16,13 @@
 
 /* eslint-disable  @typescript-eslint/no-non-null-assertion */
 
-import { GridCellKind, TextCell } from "@glideapps/glide-data-grid"
+import { GridCellKind, type TextCell } from "@glideapps/glide-data-grid"
 import { Field, Utf8 } from "apache-arrow"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import TextColumn from "./TextColumn"
-import { ErrorCell, isErrorCell } from "./utils"
+import { type ErrorCell, isErrorCell } from "./utils"
 
 const MOCK_TEXT_COLUMN_PROPS = {
   id: "1",

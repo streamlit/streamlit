@@ -21,7 +21,7 @@ import { render } from "~lib/test_util"
 import StreamlitSyntaxHighlighter, {
   exceedsLineLimit,
   MAX_HIGHLIGHTED_LINES,
-  StreamlitSyntaxHighlighterProps,
+  type StreamlitSyntaxHighlighterProps,
 } from "./StreamlitSyntaxHighlighter"
 
 const getStreamlitSyntaxHighlighterProps = (

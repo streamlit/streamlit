@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
-import { AppNode, BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import {
+  type AppNode,
+  BlockNode,
+  type ElementNode,
+  TransientNode,
+} from "~lib/AppNode"
+import { getRetainedAfterRemoval } from "~lib/render-tree/elementRetention"
 
-import { AppNodeVisitor } from "./AppNodeVisitor.interface"
+import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
 
 /**
  * Visitor that clears stale nodes from the render tree. It does this by:
@@ -30,9 +36,24 @@ import { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *    which means they are stale.
  * 4. We recursively clear our children.
  *
+ * Nodes of a fragment in `preservedFragmentIds` are kept with their whole
+ * subtree. The server lists a fragment there when it dropped that fragment's
+ * output from this run because the fragment is about to rerun, so its existing
+ * content stays until its own rerun cleans it up.
+ *
+ * If a node's `pendingSkeleton` comes from this run, no new content replaced
+ * the node, so the visitor swaps in that skeleton. The agent API needs no
+ * matching rule: its message buffer already holds the skeleton delta.
+ *
+ * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
+ * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
+ * the agent API's message buffer. The agent API checks writes against what
+ * that buffer keeps, so a rule that differs lets an agent write to widgets the
+ * browser removed.
+ *
  * Usage:
  * ```typescript
- * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock)
+ * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock, preservedFragmentIds)
  * const newNode = node.accept(visitor)
  * // newNode will be undefined if the node should be filtered out
  * ```
@@ -43,22 +64,41 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
   private readonly fragmentIdOfBlock?: string
+  private readonly preservedFragmentIds: ReadonlySet<string>
 
   constructor(
     currentScriptRunId: string,
     fragmentIdsThisRun?: string[],
-    fragmentIdOfBlock?: string
+    fragmentIdOfBlock?: string,
+    preservedFragmentIds: ReadonlySet<string> = new Set()
   ) {
     this.currentScriptRunId = currentScriptRunId
     this.fragmentIdsThisRun = fragmentIdsThisRun ?? []
     this.fragmentIdOfBlock = fragmentIdOfBlock
+    this.preservedFragmentIds = preservedFragmentIds
   }
 
   get isFragmentRun(): boolean {
     return this.fragmentIdsThisRun.length > 0
   }
 
+  private isPreserved(node: BlockNode | ElementNode): boolean {
+    return (
+      node.fragmentId !== undefined &&
+      this.preservedFragmentIds.has(node.fragmentId)
+    )
+  }
+
   visitBlockNode(node: BlockNode): AppNode | undefined {
+    if (this.isPreserved(node)) {
+      return node
+    }
+
+    // No new content replaced the skeleton this run, so it takes the slot.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
+    }
+
     let clearStaleNodeVisitor: ClearStaleNodeVisitor | null = null
 
     if (!this.isFragmentRun) {
@@ -89,26 +129,43 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
         clearStaleNodeVisitor = new ClearStaleNodeVisitor(
           this.currentScriptRunId,
           this.fragmentIdsThisRun,
-          node.fragmentId
+          node.fragmentId,
+          this.preservedFragmentIds
         )
       }
     }
 
     // Recursively clear our children.
+    const childVisitor = clearStaleNodeVisitor ?? this
     const newChildren: AppNode[] = []
+    // Only blocks with retained elements need to know which children survived.
+    const keptChildren: boolean[] | undefined =
+      node.retained.length > 0 ? [] : undefined
     let childrenChanged = false
-    node.children.forEach(child => {
-      const filteredChild = child.accept(clearStaleNodeVisitor ?? this)
+    for (const child of node.children) {
+      const filteredChild = child.accept(childVisitor)
       if (filteredChild !== child) {
         childrenChanged = true
       }
+      keptChildren?.push(filteredChild !== undefined)
       if (filteredChild !== undefined) {
         newChildren.push(filteredChild)
       }
-    })
+    }
+
+    // Retained elements are prior-run nodes, so they follow the same rule as
+    // stale children of this block.
+    const retained =
+      keptChildren === undefined
+        ? node.retained
+        : getRetainedAfterRemoval(
+            node.retained,
+            keptChildren,
+            entry => entry.node.accept(childVisitor) !== undefined
+          )
 
     // Performance optimization: If the children haven't changed, return the same node.
-    if (!childrenChanged) {
+    if (!childrenChanged && retained === node.retained) {
       return node
     }
 
@@ -118,7 +175,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       node.deltaBlock,
       this.currentScriptRunId,
       node.fragmentId,
-      node.deltaMsgReceivedAt
+      node.deltaMsgReceivedAt,
+      retained
     )
   }
 
@@ -136,6 +194,15 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     // at the same delta path.
     if (node.element.type === "toast") {
       return node
+    }
+
+    if (this.isPreserved(node)) {
+      return node
+    }
+
+    // No new content replaced the skeleton this run, so it takes the slot.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
     }
 
     if (this.isFragmentRun) {

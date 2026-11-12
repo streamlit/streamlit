@@ -43,18 +43,26 @@ Singleton managing the application lifecycle. Access via `Runtime.instance()`.
 
 ## AppSession (`lib/streamlit/runtime/app_session.py`)
 
-Represents a single browser tab.
+Represents a single browser tab or agent API session.
 
-**Lifecycle**:
+**Lifecycle (browser)**:
 1. WebSocket connects -> `Runtime.connect_session()`
 2. Creates `AppSession` (ScriptRunner starts when the first `rerun_script` BackMsg arrives)
 3. Widget interaction -> `handle_backmsg()` -> `request_rerun()`
 4. Script produces ForwardMsgs -> queued -> flushed to browser
 5. WebSocket disconnects -> cleanup
 
+An agent API session uses the same `AppSession`. Its client buffers messages instead of sending them, and `POST /_stcore/agent/interact` calls `request_rerun()` directly and waits for the settle signal below. The rerun's client state carries the request's widget states, which `runtime/agent/widget_writes.py` validates against the session's last snapshot. When every widget the request sets is in one fragment, it reruns only that fragment, as the browser would. The session's copies of its table and chart data live in media storage beside its images, so they are released the same way: at the end of a full run that no longer renders them, and on shutdown.
+
 **File watchers**: Monitors script, config.toml, secrets.toml, pages/ for changes.
 
 **Script event loop**: Owns one non-running asyncio loop for the script thread, reused across `ScriptRunner` instances and closed on session shutdown.
+
+**Settle signal**: `is_settled` is true when no `ScriptRunner` exists or is queued and every message of the last run chain has been sent to the client. A run chain is one `ScriptRunner`'s work: callback reruns, `st.rerun()`, `st.switch_page`, and queued fragment runs. Only sessions that call `track_settling()` (agent sessions) keep it.
+
+- Creating a runner clears the signal.
+- The runner's `SHUTDOWN` marks a settle as pending and requests a flush cycle. After sending a session's flushed batch, the Runtime loop calls `on_flushed_messages_sent()`, which settles the session once its queue is empty.
+- `await wait_until_settled()` has no timeout of its own, so callers wrap it in `asyncio.timeout`.
 
 ## Session bootstrap ordering
 
@@ -125,10 +133,12 @@ The `st` object users interact with.
 ```
 st.button("Click")
   -> ButtonMixin.button()
-  -> _enqueue("button", ButtonProto(...))
-  -> ForwardMsg with delta path
+  -> _enqueue("button", ButtonProto(...), agent_props=...)
+  -> ForwardMsg with delta path; agent_props on metadata when set
   -> ScriptRunContext.enqueue()
 ```
+
+`agent_props` is JSON describing the command that emitted the delta: the public command name, its parameters, and a widget's value schema. Only a session the agent API created attaches it (`agent_spec.is_recording()`); a browser session passes `None`. See [communication.md](communication.md#agent-command-descriptions).
 
 ## SessionState (`lib/streamlit/runtime/state/session_state.py`)
 
@@ -168,6 +178,8 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
+Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay. A replayed description whose `data` has a `url` registers its Arrow copy again from the element's payload, under the replayed element's delta path; the entry stores no copy of its own.
+
 ## Web server (`lib/streamlit/web/server/`)
 
 **Key endpoints**:
@@ -177,6 +189,9 @@ register_widget(
 - `/media/*`: Media files (images, videos)
 - `/component/*`: Custom component v1 resources
 - `/_stcore/bidi-components/*`: v2 bidi component resources
+- `/_stcore/agent/interact`: Agent API (POST only; off unless `server.enableAgentApi` is set)
+- `/_stcore/agent/openapi.json`: The agent API's OpenAPI document (GET; always served, and with the API off it only reports that the API is disabled, via `info.x-streamlit-agent-api`)
+- `/_stcore/agent/mcp`: The agent API as a remote MCP server (POST only, JSON-RPC; same switch and checks as the interact route, but answers 400 rather than 403 while the API is off)
 
 **WebSocket handler** (`starlette/starlette_websocket.py`):
 ```
@@ -187,6 +202,10 @@ Browser connects -> Runtime.connect_session()
                  -> Messages flow bidirectionally
                  -> Browser disconnects -> Runtime.disconnect_session()
 ```
+
+**Agent sessions** (`runtime/agent/interaction.py`, `starlette/starlette_agent_routes.py`): `POST /_stcore/agent/interact` drives the app without a browser. An agent session is an ordinary `AppSession` whose `AgentSessionClient` buffers ForwardMsgs instead of sending them. Each request becomes a `request_rerun()` call, made directly rather than through `handle_backmsg()` so a failure to start the run surfaces as `internal_error`; the route then waits for `wait_until_settled()` up to `server.agentWaitTimeout` and builds the snapshot JSON off the event loop. A run past the timeout answers 202 `wait_timed_out` and keeps going, so a retry with only `session_id` collects it. `AgentSessionRegistry` hands out opaque `s_<hex>` handles, allows one interaction in flight per session, caps sessions at `server.agentMaxSessions`, and reclaims them after `server.agentSessionTTL` idle. The route applies the WebSocket's Host allow-list and trusted identity headers, refuses any `Origin` not in `server.corsAllowedOrigins`, and never reads cookies. `GET /_stcore/agent/openapi.json` serves the OpenAPI document `runtime/agent/protocol.py` builds from the error catalog and the request validator; with the API off, it only reports that.
+
+`POST /_stcore/agent/mcp` (`runtime/agent/mcp.py`) serves the same protocol over MCP's Streamable HTTP transport, with no MCP session. Its `interact` tool runs the interact route's code path and returns that route's response body as the tool result's text. Its `get_data` tool reads stored media files (table pages as JSON rows) through `MediaFileManager.read_file` after the registry's identity check, and does not take the in-flight lock. `protocol.py` holds both tool descriptions and the inlined input schema. While `browser.gatherUsageStats` is on, `runtime/agent/usage.py` counts each `interact()` call on the counter of the route it came from, HTTP or MCP, each session created, and, with the API off, each POST to either route that passes the Host, Origin, and content-type checks. The next page profile a browser session reports carries the counts. Every response from any of the three routes carries `Link: <openapi.json>; rel="service-desc"`, and the app's `index.html` links the document too.
 
 ## Key abstractions
 
@@ -342,7 +361,7 @@ disrupt the newly reconnected client.
 
 ## Media file management (`lib/streamlit/runtime/media_file_manager.py`)
 
-Media files (images, audio, video) are managed separately from the protobuf element tree.
+Media files (images, audio, video, and an agent session's Arrow data copies from `elements/lib/agent_data.py`) are managed separately from the protobuf element tree.
 
 **Flow**:
 1. `st.image(data)` -> `MediaFileManager.add()` registers file with unique ID
@@ -355,6 +374,7 @@ Media files (images, audio, video) are managed separately from the protobuf elem
 - **Coordinates**: Each file tracks its location in the app (delta path) to handle replacements (e.g., animation frames)
 - **Session tracking**: Files are associated with sessions; removed when no sessions reference them
 - **Deferred callables**: `st.download_button` with callable data uses `DeferredCallableEntry` for lazy evaluation
+- **Reads**: `read_file` returns a stored file for the agent API's MCP `get_data` tool. Only the built-in `MemoryMediaFileStorage` supports it (`can_read_files`); `MediaFileStorage` has no read method, so a host-provided storage serves its files itself
 
 **Multi-server considerations**:
 - Media requests may hit different servers than the WebSocket connection

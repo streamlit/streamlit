@@ -1,0 +1,255 @@
+# Approves open Dependabot PRs whose full CI has passed. Merging stays manual.
+#
+# Runs on weekdays shortly before the Cursor Dependabot automation, which enables
+# auto-merge on green Dependabot PRs. A PR is approved when every PR workflow run for
+# its head commit has finished and passed, no check run failed, and no commit status
+# (such as Snyk) failed or is still pending. That also covers checks from outside
+# GitHub Actions, such as code scanning alerts.
+#
+# Every commit on the PR must be signed by GitHub (committer web-flow) and authored by
+# Dependabot or github-actions[bot]. A commit from anyone else, such as a human push or
+# "Update branch", leaves the PR for a manual review. So does a PR that changes E2E
+# snapshots, for example after a merged snapshot PR.
+#
+# github-actions[bot] commits are the squash merges of [autofix] and [snapshots] PRs,
+# which a maintainer merges. Trusting them is a deliberate trade-off, even though the
+# squash commit hides who wrote the merged changes: it keeps green Dependabot PRs
+# auto-approved after an autofix lands.
+#
+# A PR that a reviewer already approved or requested changes on is left alone. The
+# approval stays on the PR after later pushes unless branch protection dismisses it.
+#
+# The approval does not count as a code-owner review, so Dependabot PRs that change
+# code-owned paths, such as `.github/` or `lib/pyproject.toml`, still need one.
+#
+# PRs that GitHub Actions opens (`bot-pr`) are not approved: GITHUB_TOKEN acts as
+# github-actions[bot], and GitHub does not let it approve its own PRs.
+name: Autoapprove Dependabot PRs
+
+on:
+  schedule:
+    # 11:30 UTC on weekdays, so approvals land before the Cursor Dependabot automation
+    # (12:00 UTC, configured in Cursor) enables auto-merge.
+    - cron: "30 11 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "When true, only report which PRs would be approved. The default approves them."
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autoapprove-dependabot-prs
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    if: github.repository == 'streamlit/streamlit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      checks: read
+      pull-requests: write
+      statuses: read
+    steps:
+      - name: Approve green Dependabot PRs
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const dryRun = process.env.DRY_RUN === 'true';
+            const dependabot = 'dependabot[bot]';
+            const trustedCommitAuthors = [dependabot, 'github-actions[bot]'];
+            // Label-gated workflows (Autofix, AI review, Performance) finish as skipped when their
+            // label is absent. neutral is a finished run with no pass or fail result.
+            const passedRunConclusions = ['success', 'skipped', 'neutral'];
+            // Cancelled check runs don't block approval. Label-triggered workflows such as Autofix
+            // cancel each other's runs, and the workflow-run check already requires CI to pass.
+            const failedCheckConclusions = ['failure', 'timed_out', 'action_required', 'startup_failure'];
+
+            // Returns why the PR can't be approved, or null when it can.
+            async function findApprovalBlocker(pr) {
+              const sha = pr.head.sha;
+
+              const commits = await github.paginate(github.rest.pulls.listCommits, {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              // A verified signature only proves the committer, and anyone can set the author.
+              // Requiring web-flow as committer rules out signed local commits with a
+              // Dependabot author.
+              const untrusted = commits.filter(
+                (commit) =>
+                  !trustedCommitAuthors.includes(commit.author?.login) ||
+                  commit.committer?.login !== 'web-flow' ||
+                  !commit.commit.verification?.verified
+              );
+              if (untrusted.length > 0) {
+                const list = untrusted
+                  .map((commit) => `${commit.sha.slice(0, 10)} (${commit.author?.login ?? 'unknown'})`)
+                  .join(', ');
+                return `commits need a manual review: ${list}`;
+              }
+
+              const files = await github.paginate(github.rest.pulls.listFiles, {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              if (files.some((file) => file.filename.startsWith('e2e_playwright/__snapshots__/'))) {
+                return 'changes E2E snapshots';
+              }
+
+              // GitHub's REST run filters are not always reliable, so check them again locally.
+              const runs = (
+                await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+                  owner,
+                  repo,
+                  head_sha: sha,
+                  event: 'pull_request',
+                  per_page: 100,
+                })
+              ).filter((run) => run.head_sha === sha && run.event === 'pull_request');
+              if (runs.length === 0) {
+                return 'no CI runs yet';
+              }
+              // Reopening the PR or changing its labels starts new runs for the same commit;
+              // only the newest run of each workflow counts.
+              const newestRuns = new Map();
+              for (const run of runs) {
+                const current = newestRuns.get(run.workflow_id);
+                if (!current || run.id > current.id) {
+                  newestRuns.set(run.workflow_id, run);
+                }
+              }
+              for (const run of newestRuns.values()) {
+                if (run.status !== 'completed') {
+                  return `${run.name} is still ${run.status}`;
+                }
+                if (!passedRunConclusions.includes(run.conclusion)) {
+                  return `${run.name} concluded ${run.conclusion}`;
+                }
+              }
+
+              const checkRuns = await github.paginate(github.rest.checks.listForRef, {
+                owner,
+                repo,
+                ref: sha,
+                filter: 'latest',
+                per_page: 100,
+              });
+              // Some services, such as Snyk, report commit statuses instead of check runs.
+              const { data: combinedStatus } = await github.rest.repos.getCombinedStatusForRef({
+                owner,
+                repo,
+                ref: sha,
+                per_page: 100,
+              });
+              const failedChecks = [
+                ...checkRuns
+                  .filter((check) => failedCheckConclusions.includes(check.conclusion))
+                  .map((check) => `${check.name} (${check.conclusion})`),
+                ...combinedStatus.statuses
+                  .filter((status) => ['failure', 'error'].includes(status.state))
+                  .map((status) => `${status.context} (${status.state})`),
+              ];
+              // The combined state covers every status, including those past the first page.
+              if (failedChecks.length > 0 || combinedStatus.state === 'failure') {
+                return `checks failed: ${failedChecks.join(', ') || 'a commit status beyond the first 100'}`;
+              }
+              // The combined state is also `pending` for a commit without statuses.
+              if (combinedStatus.total_count > 0 && combinedStatus.state === 'pending') {
+                return 'commit statuses are still pending';
+              }
+
+              const reviews = await github.paginate(github.rest.pulls.listReviews, {
+                owner,
+                repo,
+                pull_number: pr.number,
+                per_page: 100,
+              });
+              // Keep each reviewer's latest decision (reviews come oldest first). A comment does
+              // not withdraw an approval, and a dismissed approval shows up as DISMISSED.
+              const latestStates = new Map();
+              for (const review of reviews) {
+                if (review.user && review.state !== 'COMMENTED') {
+                  latestStates.set(review.user.login, review.state);
+                }
+              }
+              const decisiveReviews = [...latestStates].filter(([, state]) =>
+                ['APPROVED', 'CHANGES_REQUESTED'].includes(state)
+              );
+              if (decisiveReviews.length > 0) {
+                const list = decisiveReviews.map(([login, state]) => `${login} (${state})`).join(', ');
+                return `already reviewed: ${list}`;
+              }
+              return null;
+            }
+
+            const openPrs = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const dependabotPrs = openPrs.filter(
+              (pr) =>
+                pr.user.login === dependabot &&
+                !pr.draft &&
+                pr.head.repo?.full_name === `${owner}/${repo}`
+            );
+
+            const rows = [];
+            let errors = 0;
+            for (const pr of dependabotPrs) {
+              let result;
+              try {
+                const reason = await findApprovalBlocker(pr);
+                if (reason) {
+                  result = `Skipped: ${reason}`;
+                } else if (dryRun) {
+                  result = 'Would approve';
+                } else {
+                  await github.rest.pulls.createReview({
+                    owner,
+                    repo,
+                    pull_number: pr.number,
+                    commit_id: pr.head.sha,
+                    event: 'APPROVE',
+                    body: `Auto-approved: all CI passed for ${pr.head.sha} ([workflow run](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})).`,
+                  });
+                  result = 'Approved';
+                }
+              } catch (error) {
+                errors += 1;
+                result = `Error: ${error.message}`;
+                core.warning(`#${pr.number}: ${error.message}`);
+              }
+              core.info(`#${pr.number}: ${result}`);
+              rows.push([`#${pr.number}`, pr.title, result]);
+            }
+
+            await core.summary
+              .addHeading(`Autoapprove Dependabot PRs${dryRun ? ' (dry run)' : ''}`)
+              .addTable([
+                [
+                  { data: 'PR', header: true },
+                  { data: 'Title', header: true },
+                  { data: 'Result', header: true },
+                ],
+                ...rows,
+              ])
+              .write();
+            if (errors > 0) {
+              core.setFailed(`${errors} PR(s) could not be checked or approved.`);
+            }

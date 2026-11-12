@@ -43,6 +43,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     RerunData,
     ScriptRequests,
@@ -123,6 +124,16 @@ Streamlit functions. We restrict the ScriptRunner's execution control to the
 script thread. Calling Streamlit functions from other threads is unlikely to
 work correctly due to lack of ScriptRunContext, so we may add a guard against
 it in the future.
+Script threads are daemons so the process can exit even when a user script is
+stuck in a loop with no st.* interrupt points. Consequences:
+- Threads the script starts inherit daemon=True, so they no longer keep the
+  process alive at interpreter shutdown. A thread that must block shutdown has
+  to set daemon=False explicitly.
+- ThreadPoolExecutor workers inherit it too, but concurrent.futures joins its
+  workers at interpreter shutdown, so a task hung in an executor still blocks
+  exit.
+- Cooperative stop is unchanged: it only takes effect once the script reaches
+  an st.* call.
 """
 
 
@@ -263,9 +274,15 @@ class ScriptRunner:
         # receiver(sender, event=..., **payload); events not listed below carry
         # no payload:
         # - ENQUEUE_FORWARD_MSG: forward_msg
-        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception
+        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages,
+        #   run_descriptor
+        # - SCRIPT_STOPPED_WITH_COMPILE_ERROR: exception, run_descriptor
+        # - SCRIPT_STOPPED_WITH_SUCCESS: run_descriptor
+        # - FRAGMENT_STOPPED_WITH_SUCCESS: run_descriptor
+        # - SCRIPT_STOPPED_FOR_RERUN: run_descriptor
         # - SHUTDOWN: client_state (None if setup failed before context creation)
-        # - SCRIPT_STARTED: page_script_hash, fragment_ids_this_run, pages
+        # Each run creates one RunDescriptor and sends the same one on its start
+        # and finish events, so AppSession can tag both messages with that run.
         self.on_event = Signal()
 
         # Set to true while we're executing. Used by
@@ -343,6 +360,9 @@ class ScriptRunner:
         self._script_thread = threading.Thread(
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
+            # Daemon so a hung script cannot block process exit.
+            # See Note [Threading] above for the full consequences.
+            daemon=True,
         )
         self._script_thread.start()
 
@@ -676,6 +696,12 @@ class ScriptRunner:
                     # This prevents stale params from previous pages from seeding
                     # widgets on the new page if keys collide.
                     qp.set_initial_query_params_from_current()
+                    if rerun_data.widget_states is None:
+                        # st.switch_page sends no widget states. Treat main-script
+                        # query-param bindings as still active so the cleanup
+                        # keeps their URL params. Page-local bindings stay stale
+                        # and are removed.
+                        widget_ids = qp.widget_ids_bound_in(main_script_hash)
 
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
@@ -692,17 +718,22 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                is_history_navigation=rerun_data.is_history_navigation,
                 yield_check=self._maybe_handle_execution_control_request,
             )
             with self._join_wake_lock:
                 self._join_wake_coordinator = ctx.parallel_coordinator
 
+            run_descriptor = RunDescriptor.create(fragment_ids_this_run)
+            # AppSession._clear_queue and LocalScriptRunner take the fragment
+            # list directly, so it's sent next to the descriptor.
             self.on_event.send(
                 self,
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=page_script_hash,
                 fragment_ids_this_run=fragment_ids_this_run,
                 pages=self._pages_manager.get_pages(),
+                run_descriptor=run_descriptor,
             )
 
             # Compile the script. Any errors thrown here will be surfaced
@@ -738,6 +769,7 @@ class ScriptRunner:
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
                     exception=ex,
+                    run_descriptor=run_descriptor,
                 )
                 return
 
@@ -775,17 +807,22 @@ class ScriptRunner:
                     self._set_execing_flag(),
                 ):
                     # Run callbacks for widgets whose values have changed.
-                    if rerun_data.widget_states is not None:
+                    if (
+                        rerun_data.widget_states is not None
+                        or rerun_data.replay_trigger_states is not None
+                        or rerun_data.replay_trigger_values is not None
+                    ):
                         self._session_state.on_script_will_rerun(
                             rerun_data.widget_states,
-                            suppress_callbacks=rerun_data.suppress_callbacks,
+                            replay_trigger_states=rerun_data.replay_trigger_states,
+                            replay_trigger_values=rerun_data.replay_trigger_values,
+                            is_history_navigation=rerun_data.is_history_navigation,
                         )
                         # Check for pending rerun/stop requests while
                         # has_script_started is still False so on_script_finished
                         # preserves this run's widget values.  On the normal path a
-                        # callback may have queued st.rerun(); on the suppressed path
-                        # an external request (e.g. new client interaction) may have
-                        # arrived during state application.
+                        # callback may have queued st.rerun(); an external request
+                        # may also have arrived during state application.
                         self._maybe_handle_execution_control_request()
 
                     ctx.on_script_start()
@@ -933,8 +970,7 @@ class ScriptRunner:
             self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = run_without_errors
 
             if rerun_exception_data:
-                # The handling for when a full script run or a fragment is stopped early
-                # is the same, so we only have one ScriptRunnerEvent for this scenario.
+                # A rerun request stops full scripts and fragments with the same event.
                 finished_event = ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN
             elif rerun_data.fragment_id_queue:
                 finished_event = ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS
@@ -960,7 +996,9 @@ class ScriptRunner:
                     # Always capture all exceptions since we want to make sure that
                     # the telemetry never causes any issues.
                     _LOGGER.debug("Failed to create page profile", exc_info=ex)
-            self._on_script_finished(ctx, finished_event, premature_stop)
+            self._on_script_finished(
+                ctx, finished_event, premature_stop, run_descriptor
+            )
 
             # # Use _log_if_error() to make sure we never ever ever stop running the
             # # script without meaning to.
@@ -972,7 +1010,11 @@ class ScriptRunner:
                 break
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor,
     ) -> None:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
@@ -995,13 +1037,15 @@ class ScriptRunner:
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
-        # Both cleanups below assume the body re-registered whatever is still in use, so
-        # a run that never reached its body would make everything look orphaned. The
-        # session refs were already cleared before this run, so deleting now would take
-        # files the app still displays with it. The next run that renders collects them.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran: this run already cleared session refs and
+        #   registered nothing, so collecting now would delete files the app
+        #   still displays. The next run that renders re-registers them.
+        # - No Runtime singleton exists: get_instance() would raise on the
+        #   script thread. There is nothing registered to collect without a Runtime.
+        if ctx.has_script_started and runtime.exists():
             # Remove orphaned files now that the script has run and files in use
             # are marked as active.
             runtime.get_instance().media_file_mgr.remove_orphaned_files()

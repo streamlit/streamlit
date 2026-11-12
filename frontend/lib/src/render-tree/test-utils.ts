@@ -28,7 +28,7 @@ import {
   isNullOrUndefined,
 } from "~lib/util/utils"
 
-import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
+import { type AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 
@@ -87,6 +87,43 @@ export function block(
     children,
     makeProto(BlockProto, {}),
     scriptRunId
+  )
+}
+
+/** Create a loading block (`Block.loading`) with a 200px skeleton. */
+export function loadingBlock(
+  children: AppNode[] = [],
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  fragmentId?: string
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, {
+      allowEmpty: true,
+      flexContainer: {
+        direction: BlockProto.FlexContainer.Direction.VERTICAL,
+      },
+      loading: { skeletonHeight: { pixelHeight: 200 } },
+    }),
+    scriptRunId,
+    fragmentId
+  )
+}
+
+/** Create a spinner element node that was created in a skeleton slot. */
+export function skeletonSpinner(
+  label: string,
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  showTime = false
+): ElementNode {
+  return new ElementNode(
+    makeProto(Element, {
+      spinner: { text: label, inSkeletonSlot: true, showTime },
+    }),
+    ForwardMsgMetadata.create(),
+    scriptRunId,
+    FAKE_SCRIPT_HASH
   )
 }
 

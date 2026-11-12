@@ -1,0 +1,159 @@
+# Close autofix and snapshot PRs whose target PR is merged or closed, or whose
+# target branch was deleted. GitHub otherwise retargets them at develop.
+name: Cleanup orphaned fix PRs
+
+on:
+  schedule:
+    # Daily at 08:00 UTC, after the stale-PR job.
+    - cron: "0 8 * * *"
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run in dry-run mode (do not close PRs)
+        required: false
+        default: false
+        type: boolean
+
+# One cleanup pass at a time. A follow-up run waits instead of cancelling
+# a pass that is already closing pull requests.
+concurrency:
+  group: cleanup-orphaned-fix-prs
+  cancel-in-progress: false
+
+permissions:
+  # contents: write deletes generated autofix/ and snapshots/ branches.
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  cleanup-orphaned-fix-prs:
+    if: >-
+      github.repository == 'streamlit/streamlit' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close orphaned autofix and snapshot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN_INPUT: ${{ inputs.dry_run }}
+          PR_TITLE: ${{ github.event.pull_request.title || '' }}
+        run: |
+          set -euo pipefail
+
+          # Closing a bot PR retriggers this workflow. Nothing else is left to do.
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            case "$PR_TITLE" in
+              "[autofix] Automated fixes for #"*| "[snapshots] Update E2E snapshots for #"*)
+                echo "Closed pull request is an autofix or snapshot PR; skipping."
+                exit 0
+                ;;
+            esac
+          fi
+
+          dry_run=false
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$DRY_RUN_INPUT" = "true" ]; then
+            dry_run=true
+          fi
+
+          branch_missing() {
+            local branch="$1"
+            local encoded response code
+            encoded="$(jq -rn --arg branch "$branch" '$branch | @uri')"
+            response="$(gh api --include "repos/${REPO}/branches/${encoded}")"
+            code="$(printf '%s\n' "$response" | awk 'NR == 1 { print $2; exit }')"
+            case "$code" in
+              200) return 1 ;;
+              404) return 0 ;;
+              *)
+                echo "Failed to check branch ${branch} (HTTP ${code:-unknown})" >&2
+                exit 1
+                ;;
+            esac
+          }
+
+          autofix_prs="$(gh pr list --repo "$REPO" --limit 200 \
+            --search 'is:open "[autofix] Automated fixes for" in:title' \
+            --json number,title,baseRefName,headRefName,url,isCrossRepository,headRepositoryOwner)"
+          snapshot_prs="$(gh pr list --repo "$REPO" --limit 200 \
+            --search 'is:open "[snapshots] Update E2E snapshots for" in:title' \
+            --json number,title,baseRefName,headRefName,url,isCrossRepository,headRepositoryOwner)"
+          prs="$(jq -n --argjson autofix "$autofix_prs" --argjson snapshots "$snapshot_prs" \
+            '$autofix + $snapshots | unique_by(.number) | sort_by(.number)')"
+          echo "Found $(jq 'length' <<<"$prs") open autofix/snapshot pull request(s)."
+
+          while IFS= read -r pr; do
+            number="$(jq -r '.number' <<<"$pr")"
+            title="$(jq -r '.title' <<<"$pr")"
+            base="$(jq -r '.baseRefName' <<<"$pr")"
+            head="$(jq -r '.headRefName' <<<"$pr")"
+            url="$(jq -r '.url' <<<"$pr")"
+            cross="$(jq -r '.isCrossRepository' <<<"$pr")"
+            head_owner="$(jq -r '.headRepositoryOwner.login // ""' <<<"$pr")"
+            repo_owner="${REPO%%/*}"
+
+            # Fork PRs are not bot PRs. Never close them or delete a same-named
+            # branch in this repository.
+            if [ "$cross" = "true" ] || [ "$head_owner" != "$repo_owner" ]; then
+              echo "Skipping #${number}: head repository is ${head_owner:-unknown}"
+              continue
+            fi
+
+            if [[ "$title" =~ ^\[autofix\]\ Automated\ fixes\ for\ #([0-9]+) ]]; then
+              target="${BASH_REMATCH[1]}"
+            elif [[ "$title" =~ ^\[snapshots\]\ Update\ E2E\ snapshots\ for\ #([0-9]+) ]]; then
+              target="${BASH_REMATCH[1]}"
+            else
+              echo "Skipping #${number}: unrecognized title"
+              continue
+            fi
+
+            err="$(mktemp)"
+            if target_json="$(gh pr view "$target" --repo "$REPO" --json state,headRefName 2>"$err")"; then
+              state="$(jq -r '.state' <<<"$target_json")"
+              target_head="$(jq -r '.headRefName' <<<"$target_json")"
+            elif grep -q "Could not resolve to a PullRequest" "$err"; then
+              state="MISSING"
+              target_head=""
+            else
+              cat "$err" >&2
+              rm -f "$err"
+              exit 1
+            fi
+            rm -f "$err"
+
+            reason=""
+            if [ "$state" = "MISSING" ]; then
+              reason="its target pull request #${target} could not be found"
+            elif [ "$state" != "OPEN" ]; then
+              reason="its target pull request #${target} is $(printf '%s' "$state" | tr '[:upper:]' '[:lower:]')"
+            elif branch_missing "$target_head"; then
+              reason="its target branch \`${target_head}\` was deleted"
+            elif [ "$base" != "$target_head" ] && branch_missing "$base"; then
+              reason="its base branch \`${base}\` was deleted"
+            fi
+
+            if [ -z "$reason" ]; then
+              echo "Keeping #${number} (${url})"
+              continue
+            fi
+
+            if [ "$dry_run" = "true" ]; then
+              echo "Would close #${number}: ${reason} (${url})"
+              continue
+            fi
+
+            echo "Closing #${number}: ${reason} (${url})"
+            comment="Closing this automated pull request because ${reason}."
+            comment+=$'\n\nAutofix and snapshot pull requests stay open only while their target pull request is open and its branch still exists.'
+            close_args=(pr close "$number" --repo "$REPO" --comment "$comment")
+            case "$head" in
+              autofix/*|snapshots/*) close_args+=(--delete-branch) ;;
+            esac
+            gh "${close_args[@]}"
+          done < <(jq -c '.[]' <<<"$prs")

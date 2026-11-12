@@ -36,7 +36,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Generator
 
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         ScriptRunContext,
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
 
 @contextlib.contextmanager
-def _scoped_ctx_attach(ctx: ScriptRunContext | None) -> Iterator[None]:
+def _scoped_ctx_attach(ctx: ScriptRunContext | None) -> Generator[None, None, None]:
     """Bind *ctx* as the active ScriptRunContext on the current thread for
     the duration of the block; restore the prior binding on exit.
 

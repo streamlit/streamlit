@@ -32,6 +32,25 @@ def _get_basic_column_container(app: Page, index: int = 0) -> Locator:
     return column_container
 
 
+def _expect_equal_column_heights(app: Page, column_container: Locator) -> None:
+    """Columns stay as tall as their row; vertical alignment only moves content."""
+    columns = column_container.get_by_test_id("stColumn")
+
+    def _heights_are_equal() -> bool:
+        column_list = columns.all()
+        if len(column_list) < 2:
+            return False
+        heights = set()
+        for column in column_list:
+            box = column.bounding_box()
+            if box is None:
+                return False
+            heights.add(round(box["height"]))
+        return len(heights) == 1
+
+    wait_until(app, _heights_are_equal)
+
+
 def test_show_columns_horizontally_when_viewport_allows(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -197,6 +216,7 @@ def test_column_vertical_alignment_center(
     expect(column.get_by_test_id("stCheckbox").first).to_be_visible()
     expect(column.get_by_test_id("stButton").last).to_be_visible()
     expect(column.get_by_test_id("stTextInput").first).to_be_visible()
+    _expect_equal_column_heights(app, column)
 
     assert_snapshot(
         column,
@@ -207,7 +227,7 @@ def test_column_vertical_alignment_center(
 def test_column_vertical_alignment_bottom(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that vertical alignment center works correctly."""
+    """Test that vertical alignment bottom works correctly."""
     column = (
         get_expander(app, "Vertical alignment - bottom")
         .get_by_test_id("stHorizontalBlock")
@@ -221,6 +241,7 @@ def test_column_vertical_alignment_bottom(
     # Should apply a bottom margin to the last checkbox for
     # simpler visual alignment with other elements.
     expect(column.get_by_test_id("stCheckbox").last).to_have_css("margin-bottom", "8px")
+    _expect_equal_column_heights(app, column)
     assert_snapshot(
         column,
         name="st_columns-vertical_alignment_bottom",
@@ -246,6 +267,31 @@ def test_column_vertical_alignment_applies_to_toggles(app: Page):
     expect(bottom_toggles.last).to_have_css("margin-bottom", "8px")
     # The bottom rule must not also apply a top margin.
     expect(bottom_toggles.first).to_have_css("margin-top", "0px")
+
+
+def test_bordered_bottom_aligned_columns_keep_equal_height(app: Page):
+    """Bordered columns match the row height; only their content moves down."""
+    column_group = get_element_by_key(app, "columns_bordered_bottom").get_by_test_id(
+        "stHorizontalBlock"
+    )
+    _expect_equal_column_heights(app, column_group)
+
+    columns = column_group.get_by_test_id("stColumn")
+    tall_last_line = columns.nth(0).get_by_test_id("stMarkdown").last
+    short_content = columns.nth(1).get_by_test_id("stMarkdown")
+    expect(short_content).to_be_visible()
+
+    # The short column's content is aligned with the bottom of the tall column.
+    def _short_content_is_bottom_aligned() -> bool:
+        tall_box = tall_last_line.bounding_box()
+        short_box = short_content.bounding_box()
+        if tall_box is None or short_box is None:
+            return False
+        tall_bottom = tall_box["y"] + tall_box["height"]
+        short_bottom = short_box["y"] + short_box["height"]
+        return abs(tall_bottom - short_bottom) < 2
+
+    wait_until(app, _short_content_is_bottom_aligned)
 
 
 def test_nesting_columns_is_allowed(app: Page):

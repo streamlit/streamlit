@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
-import Particles, { ParticleProps, Props } from "./Particles"
+import Particles, { type ParticleProps, type Props } from "./Particles"
 
 const DummyParticle: FC<React.PropsWithChildren<ParticleProps>> = () => (
   <span />

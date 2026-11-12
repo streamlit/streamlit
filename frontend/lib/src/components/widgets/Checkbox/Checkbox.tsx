@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback } from "react"
+import { memo, type ReactElement, useCallback } from "react"
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { useResolvedWrap } from "~lib/components/shared/BaseButton/useResolvedWrap"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
@@ -24,11 +25,11 @@ import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledCheckboxButton,
@@ -55,7 +56,7 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
-  const queryParamBinding = element.queryParamKey
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
     ? {
         paramKey: element.queryParamKey,
         valueType: "bool_value" as const,
@@ -90,10 +91,8 @@ function Checkbox({
     element.labelVisibility?.value
   )
 
-  // When wrap resolves to no-wrap, a native title on the label reveals the full
-  // label on hover. Unlike a button (whose help tooltip covers the whole control),
-  // help here lives on a separate icon, so the title and help never compete and
-  // both stay enabled.
+  // Checkbox help uses a separate icon, so a clipped label can keep its
+  // native title alongside the help tooltip.
   const wrap = useResolvedWrap(element.wrap)
   const truncate = !wrap
   const { titleRef, labelTextRef } = useLabelTitleTooltip(
@@ -172,11 +171,12 @@ function Checkbox({
       aria-label={element.label}
     >
       <StyledCheckboxButton $truncate={truncate}>
-        {({ isSelected, isFocusVisible, isDisabled: isDisab }) => (
+        {({ isSelected, isFocusVisible, isHovered, isDisabled: isDisab }) => (
           <>
             <StyledCheckboxIndicator
               $isSelected={isSelected}
               $isFocusVisible={isFocusVisible}
+              $isHovered={isHovered}
               $isDisabled={isDisab}
             >
               {isSelected && (
@@ -201,11 +201,11 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? false
+  return element.default
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? false
+  return element.value
 }
 
 function updateWidgetMgrState(
@@ -218,6 +218,10 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: vws.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 

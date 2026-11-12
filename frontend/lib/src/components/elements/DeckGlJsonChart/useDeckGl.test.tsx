@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import {
   MapView,
   OrbitView,
-  PickingInfo,
-  ViewStateChangeParameters,
+  type PickingInfo,
+  type ViewStateChangeParameters,
 } from "@deck.gl/core"
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 
 import {
@@ -40,7 +41,7 @@ import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+import { useDeckGl, type UseDeckGlProps } from "./useDeckGl"
 import { PYDECK_UNSET_MAP_STYLE } from "./utils/mapShell"
 
 /** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */
@@ -157,6 +158,11 @@ describe("useDeckGl", () => {
         props: { tooltip: "" },
         info: { object: { elevationValue: 10 } } as PickingInfo,
       },
+      {
+        description: "tooltip has neither html nor text",
+        props: { tooltip: JSON.stringify({ style: { color: "red" } }) },
+        info: { object: { elevationValue: 10 } } as PickingInfo,
+      },
     ])("should return null when $description", ({ props, info }) => {
       const {
         result: { current },
@@ -181,6 +187,20 @@ describe("useDeckGl", () => {
       {
         description: "unexpected schema (no interpolation)",
         object: { unexpectedSchema: { elevationValue: 10 } },
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
+      {
+        description: "properties missing the variable (no interpolation)",
+        object: { properties: { otherValue: 10 } },
+        expected: "<b>Elevation Value:</b> {elevationValue}",
+      },
+      {
+        description: "inherited properties getter (no interpolation)",
+        object: Object.create({
+          get properties() {
+            throw new Error("inherited properties should not be read")
+          },
+        }),
         expected: "<b>Elevation Value:</b> {elevationValue}",
       },
     ])(
@@ -452,7 +472,186 @@ describe("useDeckGl", () => {
     })
   })
 
+  describe("server view state sync", () => {
+    it("keeps user camera changes when the server changes initialViewState but not views", () => {
+      const initialProps = getUseDeckGlProps()
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      act(() => {
+        result.current.onViewStateChange({
+          viewState: { ...mockInitialViewState, latitude: 55 },
+        } as ViewStateChangeParameters)
+      })
+
+      rerender({
+        ...initialProps,
+        element: getUseDeckGlProps({}, { zoom: 8 }).element,
+      })
+
+      expect(result.current.viewState).toEqual({
+        ...mockInitialViewState,
+        latitude: 55,
+        zoom: 8,
+      })
+    })
+
+    it.each([
+      ["a new", { latitude: 20, longitude: 10, zoom: 0 }],
+      ["an unchanged", mockInitialViewState],
+    ])(
+      "resets the camera when the views change with %s initialViewState",
+      (_, nextViewState) => {
+        const initialProps = getUseDeckGlProps()
+        const { result, rerender } = renderHook(props => useDeckGl(props), {
+          initialProps,
+        })
+
+        // MapController reports its full viewport props, including the default
+        // Web Mercator maxBounds that GlobeController would clamp its zoom to.
+        act(() => {
+          result.current.onViewStateChange({
+            viewState: {
+              ...mockInitialViewState,
+              zoom: 7,
+              maxBounds: [
+                [-Infinity, -90],
+                [Infinity, 90],
+              ],
+              normalize: true,
+            },
+          } as ViewStateChangeParameters)
+        })
+
+        rerender({
+          ...initialProps,
+          element: getUseDeckGlProps(
+            {},
+            {},
+            {
+              initialViewState: nextViewState,
+              views: [{ "@@type": "_GlobeView", controller: true }],
+            }
+          ).element,
+        })
+
+        expect(result.current.viewState).toEqual(nextViewState)
+        expect(result.current.viewState).not.toHaveProperty("maxBounds")
+      }
+    )
+  })
+
   describe("selection sanitization", () => {
+    it("keeps a false update trigger when selection rewrites fill colors", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              // Scalar triggers such as 0 and false must be wrapped before
+              // selection state is added. getFillColor runs first, so 0 must
+              // not be spread as a non-array.
+              updateTriggers: { getFillColor: 0, getLineColor: false },
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { updateTriggers?: Record<string, unknown> }
+      }
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        false,
+        [],
+        false,
+      ])
+    })
+
+    it("appends selection state to array update triggers", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              updateTriggers: { getLineColor: ["user-trigger", 1] },
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { updateTriggers?: Record<string, unknown> }
+      }
+      expect(layer.props.updateTriggers?.getLineColor).toEqual([
+        "user-trigger",
+        1,
+        [],
+        false,
+      ])
+    })
+
+    it("skips null layers when selection mode makes layers pickable", () => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        },
+        {},
+        {
+          // pydeck serializes a `None` layer as JSON `null`.
+          layers: [
+            null,
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data: [{ lng: 1, lat: 1 }],
+              getPosition: "@@=[lng, lat]",
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      const layers = result.current.deck.layers as Array<{
+        id: string
+        props: { pickable?: boolean }
+      } | null>
+      expect(layers).toHaveLength(2)
+      expect(layers[0]).toBeNull()
+      expect(layers[1]?.id).toBe("points")
+      expect(layers[1]?.props.pickable).toBe(true)
+    })
+
     const getPropsWithArrayData = (
       data: unknown[],
       layerId: string | null = "test-layer"
@@ -775,6 +974,43 @@ describe("useDeckGl", () => {
       ])
     })
 
+    it("should preserve URL-data layer selections when the spec changes", () => {
+      const elementProps = {
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        id: "test-element-id",
+      }
+      const initialProps = getUseDeckGlProps(elementProps)
+
+      const { result, rerender } = renderHook(props => useDeckGl(props), {
+        initialProps,
+      })
+
+      const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+      const objects = [{ elevationValue: 1 }, { elevationValue: 2 }]
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { [layerId]: [5, 10] },
+              objects: { [layerId]: objects },
+            },
+          },
+        })
+      })
+
+      rerender({
+        ...initialProps,
+        element: getUseDeckGlProps(elementProps, { zoom: 9 }).element,
+      })
+
+      expect(result.current.viewState).toEqual(
+        expect.objectContaining({ zoom: 9 })
+      )
+      expect(result.current.data.selection.indices[layerId]).toEqual([5, 10])
+      expect(result.current.data.selection.objects[layerId]).toEqual(objects)
+    })
+
     it("should clear all selections when data shrinks to empty", () => {
       // Start with data
       const initialData = [
@@ -847,10 +1083,173 @@ describe("useDeckGl", () => {
       const updatedProps = getPropsWithArrayData(updatedData, "object-layer")
       rerender(updatedProps)
 
-      expect(result.current.data.selection.objects["object-layer"][0]).toEqual(
-        updatedData[1]
-      )
+      expect(
+        result.current.data.selection.objects["object-layer"]?.[0]
+      ).toEqual(updatedData[1])
     })
+  })
+
+  describe("selection fill colors", () => {
+    type FillAccessor = (
+      object: unknown,
+      objectInfo: { index: number }
+    ) => unknown
+
+    const data = [
+      { lng: 1, lat: 1 },
+      { lng: 2, lat: 2 },
+      { lng: 3, lat: 3 },
+    ]
+
+    const getFillColorAfterSelecting = (
+      layerOverrides: Record<string, unknown>,
+      selectedIndices: number[]
+    ): unknown => {
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "points",
+              data,
+              getPosition: "@@=[lng, lat]",
+              pickable: true,
+              ...layerOverrides,
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { points: selectedIndices },
+              objects: { points: selectedIndices.map(i => data[i]) },
+            },
+          },
+        })
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      return layer.props.getFillColor
+    }
+
+    it("keeps the original fill color for selected objects and dims the rest", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: [200, 30, 0, 160] },
+        [1]
+      ) as FillAccessor
+
+      expect(typeof getFillColor).toBe("function")
+      expect(getFillColor(data[1], { index: 1 })).toEqual([200, 30, 0, 255])
+      expect(getFillColor(data[0], { index: 0 })).toEqual([200, 30, 0, 102])
+      expect(getFillColor(data[2], { index: 2 })).toEqual([200, 30, 0, 102])
+    })
+
+    it("falls back to theme colors when the original fill color cannot be parsed", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: "not-a-color" },
+        [0]
+      ) as FillAccessor
+
+      const [pr, pg, pb] = parseToRgba(mockTheme.emotion.colors.primary)
+      const [gr, gg, gb] = parseToRgba(mockTheme.emotion.colors.gray20)
+      expect(getFillColor(data[0], { index: 0 })).toEqual([pr, pg, pb, 255])
+      expect(getFillColor(data[1], { index: 1 })).toEqual([gr, gg, gb, 102])
+    })
+
+    it("does not rewrite the fill color when the selection is out of bounds", () => {
+      const getFillColor = getFillColorAfterSelecting(
+        { getFillColor: [200, 30, 0, 160] },
+        [10]
+      )
+
+      expect(getFillColor).toEqual([200, 30, 0, 160])
+    })
+  })
+
+  describe("form clear", () => {
+    const layerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
+    const userSelection = {
+      selection: {
+        indices: { [layerId]: [3] },
+        objects: { [layerId]: [{ elevationValue: 3 }] },
+      },
+    }
+    const storedSelection = {
+      selection: {
+        indices: { [layerId]: [1] },
+        objects: { [layerId]: [{ elevationValue: 1 }] },
+      },
+    }
+    const emptySelection = { selection: { indices: {}, objects: {} } }
+
+    it.each([
+      {
+        description: "the stored element state when the element has an id",
+        id: "test-element-id",
+        storedState: storedSelection,
+        expected: storedSelection,
+      },
+      {
+        description: "an empty selection when no element state is stored",
+        id: "test-element-id",
+        storedState: undefined,
+        expected: emptySelection,
+      },
+      {
+        description: "an empty selection when the element has no id",
+        id: "",
+        storedState: undefined,
+        expected: emptySelection,
+      },
+    ])(
+      "resets the selection to $description",
+      ({ id, storedState, expected }) => {
+        const props = getUseDeckGlProps({
+          id,
+          formId: "form",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+        })
+        props.widgetMgr.setFormSubmitBehaviors("form", true)
+        if (storedState) {
+          props.widgetMgr.setElementState(id, "selection", storedState)
+        }
+
+        const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+          initialProps: props,
+        })
+
+        act(() => {
+          result.current.setSelection({
+            fromUser: true,
+            value: userSelection,
+          })
+        })
+
+        expect(result.current.data).toEqual(userSelection)
+
+        act(() => {
+          props.widgetMgr.submitForm("form", undefined)
+        })
+
+        expect(result.current.data).toEqual(expected)
+        expect(result.current.hasActiveSelection).toBe(!!storedState)
+      }
+    )
   })
 
   describe("width configuration", () => {
@@ -974,6 +1373,89 @@ describe("useDeckGl", () => {
 
       expect(result.current.deck.views).toBeUndefined()
       expect(result.current.deck.mapStyle).toBe(CARTO_DARK)
+    })
+
+    it.each([
+      {
+        description: "the Streamlit key when mapProvider is carto",
+        jsonOverrides: { mapProvider: "carto" },
+        expected: "x7g2plm9yq8vfrc",
+      },
+      {
+        description: "the Streamlit key when mapStyle points to cartocdn",
+        jsonOverrides: { mapStyle: CARTO_DARK },
+        expected: "x7g2plm9yq8vfrc",
+      },
+      {
+        description: "a user-provided key",
+        jsonOverrides: { mapProvider: "carto", cartoKey: "user-key" },
+        expected: "user-key",
+      },
+      {
+        description: "no key for non-Carto map styles",
+        jsonOverrides: {},
+        expected: undefined,
+      },
+    ])("uses $description", ({ jsonOverrides, expected }) => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps({}, {}, jsonOverrides),
+      })
+
+      expect(result.current.deck.cartoKey).toBe(expected)
+    })
+  })
+
+  describe("st.map primary fill placeholder", () => {
+    it("resolves getFillColor primary to theme primary with default alpha", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: "primary",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor).toEqual([r, g, b, 160])
+    })
+
+    it("does not rewrite concrete getFillColor arrays", () => {
+      const concrete = [200, 30, 0, 160]
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "map-points",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+                getFillColor: concrete,
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      expect(layer.props.getFillColor).toEqual(concrete)
     })
   })
 })

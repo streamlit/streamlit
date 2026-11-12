@@ -26,16 +26,18 @@ from e2e_playwright.conftest import (
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    clear_date_segments,
     click_toggle,
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
     get_datetime_input,
     get_element_by_key,
+    paste_into,
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 20
+NUM_DATETIME_INPUTS = 24
 
 
 def test_datetime_input_widget_rendering(
@@ -522,3 +524,198 @@ def test_year_picker_lists_boundary_year_when_bounds_cross_a_year(app: Page):
     year_popover = app.get_by_test_id("stDateInputHeaderPickerPopover")
     expect(year_popover).to_be_visible()
     expect(year_popover.get_by_role("option")).to_have_text(["2024", "2025"])
+
+
+def test_datetime_input_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_datetime="))
+
+    datetime_field = get_datetime_input(
+        app, "Ignore change datetime input"
+    ).get_by_test_id("stDateTimeInputField")
+
+    # Typing without committing must not update the URL or Python.
+    type_date(datetime_field, "2025", "11", "20", "09", "30", commit=False)
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_datetime="))
+
+    # Escape commits the buffered value without a rerun, and updates the URL.
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-11-19 16:45:00")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-20T09%3A30"))
+    spinbuttons = datetime_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("11")
+    expect(spinbuttons.nth(2)).to_have_text("20")
+    expect(spinbuttons.nth(3)).to_have_text("09")
+    expect(spinbuttons.nth(4)).to_have_text("30")
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore datetime", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-20 09:30:00", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text(
+            "Applied ignore datetime value: 2025-11-20 09:30:00", exact=True
+        )
+    ).to_be_visible()
+
+    # Type-then-click: Apply lives in the sidebar so the calendar overlay cannot
+    # intercept it. Blur/close commits the dirty value, then the button reruns.
+    type_date(datetime_field, "2025", "11", "21", "10", "00", commit=False)
+    app.get_by_role("button", name="Apply ignore datetime", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(
+        app.get_by_text(
+            "Applied ignore datetime value: 2025-11-21 10:00:00", exact=True
+        )
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-21T10%3A00"))
+
+    # Calendar selection commits when the popover closes, without a rerun.
+    # Time typed earlier (10:00) is preserved.
+    datetime_field.get_by_role("spinbutton").first.click()
+    app.get_by_test_id("stDateTimeInputCalendar").get_by_role(
+        "button", name=re.compile(r"November 25")
+    ).click()
+    app.keyboard.press("Escape")
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-11-25T10%3A00"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("11")
+    expect(spinbuttons.nth(2)).to_have_text("25")
+    expect(spinbuttons.nth(3)).to_have_text("10")
+    expect(spinbuttons.nth(4)).to_have_text("00")
+
+    # Paste commits immediately without a rerun, and updates the URL.
+    datetime_field.get_by_role("spinbutton").first.click()
+    paste_into(datetime_field.get_by_role("spinbutton").first, "2025-12-01T08:15")
+    wait_for_app_run(app)
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+    expect(
+        app.get_by_text("Ignore datetime value: 2025-11-21 10:00:00", exact=True)
+    ).to_be_visible()
+    expect(app).to_have_url(re.compile(r"[?&]ignore_datetime=2025-12-01T08%3A15"))
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("12")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+    expect(spinbuttons.nth(3)).to_have_text("08")
+    expect(spinbuttons.nth(4)).to_have_text("15")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect_prefixed_markdown(app, "Ignore datetime value:", "2025-12-01 08:15:00")
+    spinbuttons = datetime_field.get_by_role("spinbutton")
+    expect(spinbuttons.nth(0)).to_have_text("2025")
+    expect(spinbuttons.nth(1)).to_have_text("12")
+    expect(spinbuttons.nth(2)).to_have_text("01")
+    expect(spinbuttons.nth(3)).to_have_text("08")
+    expect(spinbuttons.nth(4)).to_have_text("15")
+
+
+def test_datetime_input_required_blocks_empty_commits_and_form_submits(app: Page):
+    """Verify required datetime inputs block empty form submissions and commits
+    while preserving hidden-label accessibility.
+    """
+    form_widget = get_element_by_key(app, "required_datetime")
+    form_field = form_widget.get_by_test_id("stDateTimeInputField")
+
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+    expect(form_field).to_have_attribute("aria-required", "true")
+    expect(form_widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+
+    submit_button = app.get_by_role(
+        "button", name="Submit required datetime input form", exact=True
+    )
+    submit_button.click()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(form_widget.get_by_role("alert")).to_have_text("This field is required.")
+    expect_markdown(app, "required form submitted: False")
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+
+    type_date(form_field, "2025", "12", "24", "12", "00")
+    submit_button.click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "required form submitted: True")
+    expect_markdown(app, "required datetime: 2025-12-24 12:00:00")
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(form_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    standalone_widget = get_element_by_key(app, "required_standalone_datetime")
+    standalone_field = standalone_widget.get_by_test_id("stDateTimeInputField")
+    type_date(standalone_field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(
+        standalone_widget.get_by_test_id("stDateTimeInputClearButton")
+    ).to_have_count(0)
+
+    clear_date_segments(standalone_field)
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    expect(standalone_widget.get_by_role("alert")).to_have_text(
+        "This field is required."
+    )
+    expect_markdown(app, "required standalone datetime: 2025-11-19 10:15:00")
+    expect(app.get_by_text("Runs: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 4", exact=True)).not_to_be_visible()
+
+    type_date(standalone_field, "2025", "11", "20", "08", "30")
+    wait_for_app_run(app)
+    expect_markdown(app, "required standalone datetime: 2025-11-20 08:30:00")
+    expect(app.get_by_text("Runs: 4", exact=True)).to_be_visible()
+    expect(standalone_widget.get_by_test_id("stDateTimeInputError")).not_to_be_visible()
+
+    hidden_widget = get_element_by_key(app, "required_hidden_datetime")
+    expect(hidden_widget.get_by_test_id("stDateTimeInputField")).to_have_attribute(
+        "aria-required", "true"
+    )
+    expect(hidden_widget.get_by_test_id("stWidgetLabelRequired")).to_have_count(0)
+
+
+def test_datetime_input_required_marker_and_error_rendering(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Snapshot the required marker and the required error state."""
+    widget = get_element_by_key(themed_app, "required_standalone_datetime")
+    expect(widget.get_by_test_id("stWidgetLabelRequired")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_marker")
+
+    field = widget.get_by_test_id("stDateTimeInputField")
+    type_date(field, "2025", "11", "19", "10", "15")
+    wait_for_app_run(themed_app)
+    clear_date_segments(field)
+    expect(widget.get_by_test_id("stDateTimeInputError")).to_be_visible()
+    assert_snapshot(widget, name="st_datetime_input-required_error")

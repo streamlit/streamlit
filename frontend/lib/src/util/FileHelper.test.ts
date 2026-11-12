@@ -63,10 +63,6 @@ describe("getSizeDisplay", () => {
     )
   })
 
-  it("falls back to bytes for an empty unit", () => {
-    expect(getSizeDisplay(10, "" as FileSize)).toEqual("10.0B")
-  })
-
   it("rounds up to the next unit", () => {
     expect(getSizeDisplay(500, FileSize.Byte)).toEqual("500.0B")
     expect(getSizeDisplay(800, FileSize.Byte)).toEqual("0.8KB")

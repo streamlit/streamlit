@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform type checking tests for st.data_editor.
 # The return type depends on the data parameter:
@@ -110,9 +108,16 @@ if TYPE_CHECKING:
             kwargs={},
             row_height=35,
             placeholder="-",
+            alt="Editable customer list",
         ),
         pd.DataFrame,
     )
+
+    # on_change modes all return a DataFrame.
+    assert_type(data_editor(df, on_change=None), pd.DataFrame)
+    assert_type(data_editor(df, on_change="rerun"), pd.DataFrame)
+    assert_type(data_editor(df, on_change="ignore"), pd.DataFrame)
+    assert_type(data_editor(df, on_change=lambda: None), pd.DataFrame)
 
     # Return type preserved with optional parameters for non-DataFrame types
     assert_type(data_editor(list_data, num_rows="dynamic"), list[dict[str, int]])

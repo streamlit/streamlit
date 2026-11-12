@@ -19,9 +19,9 @@ import { getLogger } from "loglevel"
 
 import { IS_DEV_ENV } from "@streamlit/connection"
 import {
-  DeployedAppMetadata,
-  IGuestToHostMessage,
-  SessionInfo,
+  type DeployedAppMetadata,
+  type IGuestToHostMessage,
+  type SessionInfo,
   setCookie,
 } from "@streamlit/lib"
 import { MetricsEvent } from "@streamlit/protobuf"
@@ -237,7 +237,7 @@ export class MetricsManager {
     evName: EventName,
     data: Partial<MetricsEvent.$Properties>
   ): MetricsEvent {
-    const eventProto = new MetricsEvent({
+    const eventProperties: MetricsEvent.$Properties = {
       event: evName,
       anonymousId: this.anonymousId,
       ...this.getHostTrackingData(),
@@ -254,21 +254,22 @@ export class MetricsManager {
       hasDisplay: this.sessionInfo.current.hasDisplay,
       isWebdriver: isWebdriver(),
       ...this.getContextData(),
-    })
+    }
 
     if (evName === "menuClick") {
-      eventProto.label = data.label as string
+      eventProperties.label = data.label
       // Optional surface dimension (e.g. "toast", "errorCallout") attributing
       // the click to the UI surface that emitted it. Left unset for menu
       // clicks that don't provide one.
       if (data.surface) {
-        eventProto.surface = data.surface
+        eventProperties.surface = data.surface
       }
     } else if (evName === "pageProfile") {
-      return new MetricsEvent({ ...eventProto, ...data })
+      // Merge plain property objects; a MetricsEvent instance is not a plain record.
+      return new MetricsEvent({ ...eventProperties, ...data })
     }
 
-    return eventProto
+    return new MetricsEvent(eventProperties)
   }
 
   // Get the installation IDs from the session
@@ -281,17 +282,14 @@ export class MetricsManager {
 
   // Use the tracking data injected by the host of the app if included.
   private getHostTrackingData(): DeployedAppMetadata {
-    if (this.metadata) {
-      return pick(this.metadata, [
-        "hostedAt",
-        "owner",
-        "repo",
-        "branch",
-        "mainModule",
-        "creatorId",
-      ])
-    }
-    return {}
+    return pick(this.metadata, [
+      "hostedAt",
+      "owner",
+      "repo",
+      "branch",
+      "mainModule",
+      "creatorId",
+    ])
   }
 
   // Get context data for events
@@ -355,5 +353,7 @@ export class MetricsManager {
 }
 
 function isWebdriver(): boolean {
-  return window.navigator?.webdriver ?? false
+  // The DOM lib types navigator.webdriver as always present, but some embedded
+  // WebViews and older browsers leave it undefined. Report those as false.
+  return Boolean(window.navigator.webdriver)
 }

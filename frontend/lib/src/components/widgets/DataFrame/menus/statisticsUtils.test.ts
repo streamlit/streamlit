@@ -14,9 +14,14 @@
  * limitations under the License.
  */
 
+import { Duration, Field, TimeUnit } from "apache-arrow"
 import { describe, expect, it } from "vitest"
 
-import { Quiver } from "~lib/dataframes/Quiver"
+import {
+  type ArrowType,
+  DataFrameCellType,
+} from "~lib/dataframes/arrowTypeUtils"
+import type { Quiver } from "~lib/dataframes/Quiver"
 
 import {
   computeBooleanStatistics,
@@ -26,7 +31,7 @@ import {
   computeStatistics,
   computeTextStatistics,
   createLabeledBarDatum,
-  DateTimeStatistics,
+  type DateTimeStatistics,
   formatChartCount,
   formatChartPercent,
   formatCountWithPercent,
@@ -40,23 +45,41 @@ import {
 } from "./statisticsUtils"
 
 /**
- * Builds a minimal Quiver-like mock for `computeStatistics`, which only relies
- * on `dimensions.numDataRows` and `getCell(row, col).content`.
+ * Builds a minimal single-column Quiver-like mock for `computeStatistics`,
+ * which only relies on `dimensions.numDataRows`, `columnTypes`, and
+ * `getCell(row, col)`.
  */
 function makeMockQuiver(
   contentFn: (row: number) => unknown,
   numDataRows = 5,
-  throwOnGetCell = false
+  throwOnGetCell = false,
+  cellMeta?: { contentType?: ArrowType; field?: Field }
 ): Quiver {
   return {
     dimensions: { numDataRows },
+    columnTypes: [cellMeta?.contentType],
     getCell: (row: number) => {
       if (throwOnGetCell) {
         throw new Error("malformed Arrow buffer")
       }
-      return { content: contentFn(row) }
+      return { content: contentFn(row), ...cellMeta }
     },
   } as unknown as Quiver
+}
+
+function durationArrowType(unit: TimeUnit): ArrowType {
+  const arrowField = new Field("duration", new Duration(unit), true)
+  return {
+    type: DataFrameCellType.DATA,
+    arrowField,
+    pandasType: {
+      field_name: "duration",
+      name: "duration",
+      pandas_type: "timedelta",
+      numpy_type: "timedelta64[ns]",
+      metadata: null,
+    },
+  }
 }
 
 describe("statisticsUtils", () => {
@@ -478,30 +501,86 @@ describe("statisticsUtils", () => {
       expect(stats?.count).toBe(10)
     })
 
-    it("returns null when cell extraction fails", () => {
-      const data = makeMockQuiver(row => row, 5, true)
-      expect(computeStatistics("number", data, 0)).toBeNull()
+    it.each(["number", "text", "datetime", "checkbox"])(
+      "returns null when cell extraction fails for %s columns",
+      kind => {
+        const data = makeMockQuiver(row => row, 5, true)
+        expect(() => computeStatistics(kind, data, 0)).not.toThrow()
+        expect(computeStatistics(kind, data, 0)).toBeNull()
+      }
+    )
+
+    it.each([
+      [
+        "nanosecond",
+        TimeUnit.NANOSECOND,
+        (row: number) => BigInt((row + 1) * 1_000_000_000),
+      ],
+      ["millisecond", TimeUnit.MILLISECOND, (row: number) => (row + 1) * 1000],
+    ])(
+      "converts %s duration ticks to seconds before numeric stats",
+      (_label, unit, contentFn) => {
+        const contentType = durationArrowType(unit)
+        const data = makeMockQuiver(contentFn, 3, false, {
+          contentType,
+          field: contentType.arrowField,
+        })
+        const stats = computeStatistics("number", data, 0)
+
+        expect(stats?.type).toBe("numeric")
+        expect(stats).toMatchObject({
+          sum: 6,
+          min: 1,
+          max: 3,
+          mean: 2,
+        })
+      }
+    )
+
+    it("skips stats for duration data on non-numeric column kinds", () => {
+      const contentType = durationArrowType(TimeUnit.NANOSECOND)
+      const data = makeMockQuiver(
+        (row: number) => BigInt((row + 1) * 1_000_000_000),
+        3,
+        false,
+        { contentType, field: contentType.arrowField }
+      )
+
+      expect(computeStatistics("text", data, 0)).toBeNull()
+      expect(computeStatistics("datetime", data, 0)).toBeNull()
+      expect(computeStatistics("number", data, 0)?.type).toBe("numeric")
+    })
+
+    it("skips duration stats on non-numeric kinds without reading cells", () => {
+      const contentType = durationArrowType(TimeUnit.NANOSECOND)
+      const data = makeMockQuiver(row => row, 3, true, {
+        contentType,
+        field: contentType.arrowField,
+      })
+
+      expect(() => computeStatistics("text", data, 0)).not.toThrow()
+      expect(computeStatistics("text", data, 0)).toBeNull()
     })
   })
 
   describe("formatNumber", () => {
     it("returns '-' for non-finite values", () => {
-      expect(formatNumber(NaN)).toBe("-")
+      expect(formatNumber(Number.NaN)).toBe("-")
       expect(formatNumber(Infinity)).toBe("-")
       expect(formatNumber(-Infinity)).toBe("-")
     })
 
     it("formats integers without fraction digits", () => {
       // Strip grouping/decimal separators so the assertion is locale-independent.
-      expect(formatNumber(1000).replace(/\D/g, "")).toBe("1000")
-      expect(formatNumber(42, 0).replace(/\D/g, "")).toBe("42")
+      expect(formatNumber(1000).replaceAll(/\D/g, "")).toBe("1000")
+      expect(formatNumber(42, 0).replaceAll(/\D/g, "")).toBe("42")
     })
 
     it("rounds to the requested precision", () => {
       // Separators vary by locale, so match digits around an arbitrary separator.
       expect(formatNumber(3.14159, 2)).toMatch(/^3\D14$/)
       expect(formatNumber(2.5)).toMatch(/^2\D5$/)
-      expect(formatNumber(2.6, 0).replace(/\D/g, "")).toBe("3")
+      expect(formatNumber(2.6, 0).replaceAll(/\D/g, "")).toBe("3")
     })
   })
 
@@ -552,8 +631,8 @@ describe("statisticsUtils", () => {
       const [countPart, percentPart] = result.split(" (")
 
       expect(result.endsWith("%)")).toBe(true)
-      expect(countPart.replace(/\D/g, "")).toBe("1234")
-      expect(percentPart.replace(/\D/g, "")).toBe("50")
+      expect(countPart.replaceAll(/\D/g, "")).toBe("1234")
+      expect(percentPart.replaceAll(/\D/g, "")).toBe("50")
     })
   })
 
@@ -587,7 +666,7 @@ describe("statisticsUtils", () => {
 
   describe("formatTooltipNumber", () => {
     it("formats integers without decimals", () => {
-      expect(formatTooltipNumber(1000).replace(/\D/g, "")).toBe("1000")
+      expect(formatTooltipNumber(1000).replaceAll(/\D/g, "")).toBe("1000")
       expect(formatTooltipNumber(0)).toBe("0")
     })
 
@@ -598,7 +677,7 @@ describe("statisticsUtils", () => {
 
   describe("formatChartCount", () => {
     it("rounds to a whole number", () => {
-      expect(formatChartCount(1234.6).replace(/\D/g, "")).toBe("1235")
+      expect(formatChartCount(1234.6).replaceAll(/\D/g, "")).toBe("1235")
       expect(formatChartCount(0)).toBe("0")
     })
   })
@@ -612,7 +691,7 @@ describe("statisticsUtils", () => {
       const result = formatChartPercent(33.33)
       expect(result.endsWith("%")).toBe(true)
       // 33.33 -> "33.3%"; digits only (separator-agnostic) are "333".
-      expect(result.replace(/\D/g, "")).toBe("333")
+      expect(result.replaceAll(/\D/g, "")).toBe("333")
     })
   })
 

@@ -22,12 +22,12 @@ import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   FlexContext,
-  IFlexContext,
+  type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 
-import Heading, { HeadingProtoProps } from "./Heading"
+import Heading, { type HeadingProtoProps } from "./Heading"
 
 const getHeadingProps = (
   elementProps: Partial<HeadingProto> = {}
@@ -42,6 +42,8 @@ const getHeadingProps = (
 })
 
 describe("Heading", () => {
+  mockEllipsizedLabels()
+
   beforeAll(async () => {
     await import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
   }, 30_000)

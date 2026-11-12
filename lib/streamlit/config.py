@@ -24,10 +24,10 @@ import re
 import secrets
 import threading
 from collections import OrderedDict
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any, Final, Literal
 
-from streamlit import config_util, development, env_util, file_util, util
+from streamlit import byte_util, config_util, development, env_util, file_util, util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidThemeSectionError
 from streamlit.signal_util import Signal
@@ -93,7 +93,7 @@ _DEFINED_BY_ENV_VAR: Final = "environment variable"
 _LOGGER: Final = logging.getLogger(__name__)
 
 
-class ShowErrorDetailsConfigOptions(str, Enum):
+class ShowErrorDetailsConfigOptions(StrEnum):
     """Valid options for the "client.showErrorDetails" config."""
 
     FULL = "full"
@@ -115,7 +115,7 @@ class ShowErrorDetailsConfigOptions(str, Enum):
         # (e.g. st.set_option("client.showErrorDetails", False)).
 
 
-class CustomThemeCategories(str, Enum):
+class CustomThemeCategories(StrEnum):
     """Theme categories that can be set with custom theme config."""
 
     SIDEBAR = "sidebar"
@@ -399,9 +399,9 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 _create_option(
     "global.disableWidgetStateDuplicationWarning",
     description="""
-        By default, Streamlit logs a warning when a user sets both a widget
-        default value in the function defining the widget and a widget value via
-        the widget's key in `st.session_state`.
+        By default, Streamlit logs a warning when a widget has a default value
+        and the script body also sets its value through `st.session_state`.
+        Values set in widget callbacks don't trigger this warning.
 
         If you'd like to turn off this warning, set this to True.
     """,
@@ -626,8 +626,11 @@ _create_option(
         - "viewer"    : Hide the developer options, including the rerun, clear
                         cache, and deploy button from the toolbar and menu.
         - "minimal"   : Show only options set externally (e.g. through
-                        Streamlit Community Cloud) or through st.set_page_config.
-                        If there are no options left, hide the menu.
+                        Streamlit Community Cloud) or through
+                        st.set_page_config. If there are no such options,
+                        hide the menu. When the menu is shown and there is
+                        more than one theme to choose from, it also includes
+                        the theme selector.
     """,
     default_val="auto",
     type_=str,
@@ -854,6 +857,25 @@ _create_option(
 )
 
 _create_option(
+    "runner.connectionDefaultTTL",
+    description="""
+        Default time to live, in seconds, for ``st.connection`` when its
+        ``ttl`` argument is omitted entirely.
+
+        ``None`` (default) leaves such connections cached until they are
+        cleared. Passing ``ttl`` explicitly to ``st.connection`` -- including
+        ``ttl=None`` -- always uses that value and ignores this default.
+
+        This default applies to every connection type, including caller's-rights
+        connections and the Snowflake connection in Streamlit in Snowflake.
+        Expiry closes the connection, and the next ``st.connection`` call opens
+        a new one. Pass an explicit ``ttl`` to override it for one connection.
+    """,
+    default_val=None,
+    type_=float,
+)
+
+_create_option(
     "runner.cacheHashSeed",
     description="""
         Escape hatch for an app whose @st.cache_data / @st.cache_resource cache
@@ -952,6 +974,25 @@ _create_option(
     """,
     default_val=False,
     type_=bool,
+)
+
+_create_option(
+    "server.maxCacheDataSize",
+    description="""
+        Maximum combined serialized size of all in-memory @st.cache_data entries
+        across functions and sessions. This limit counts serialized bytes, not
+        process RSS, and does not apply to st.cache_resource.
+        Use a binary-unit string such as "2gb" or "500mb" (units are powers of
+        1024). Leave unset (the default), or set to bare TOML 0 or the string
+        "0", to disable the limit.
+        When the total exceeds the limit, Streamlit evicts the least-recently-used
+        in-memory entries; persisted disk entries are not deleted. A single value
+        larger than the limit is still cached. Budget enforcement runs when entries
+        are inserted and can reduce throughput when many sessions populate caches
+        concurrently. Streamlit reads this value when the server starts.
+    """,
+    default_val=None,
+    type_=str,
 )
 
 
@@ -1174,6 +1215,43 @@ _create_option(
 )
 
 _create_option(
+    "server.xsrfCookiePartitioned",
+    description="""
+        Whether to add the ``Partitioned`` attribute to the cookie Streamlit
+        uses for Cross-Site Request Forgery (XSRF) protection. Enable this when
+        your app is embedded in an iframe on a different site and
+        ``st.file_uploader`` fails because the browser blocks third-party
+        cookies.
+
+        The attribute opts the cookie into partitioned storage (CHIPS, Cookies
+        Having Independent Partitioned State), so the browser keeps a separate
+        copy of the cookie for each top-level site that embeds your app. This
+        only has an effect when XSRF protection is enabled (via
+        ``server.enableXsrfProtection`` or an ``[auth]`` section in your
+        secrets). It does not affect authentication cookies.
+
+        This option requires ``server.xsrfCookieSameSite`` to be "none",
+        because the browser never sends a Lax or Strict cookie in a cross-site
+        context. Browsers also require partitioned cookies to be ``Secure``,
+        so Streamlit sets ``Secure`` automatically and your app must be served
+        over HTTPS (either directly or via a TLS-terminating proxy).
+
+        Notes:
+        - Browsers store a partitioned cookie separately from an existing
+          unpartitioned cookie with the same name. A browser that still holds
+          the old cookie may send both until its session ends. Both normally
+          carry the same token, but in rare cases requests can be rejected.
+        - Safari 18.5 through 26.1 (including iOS) do not support
+          ``Partitioned`` cookies, and Safari 18.5 is reported to reject
+          cookies that carry the attribute, so uploads can fail in those
+          versions while this option is on. Support returns in Safari 26.2.
+          Leave this option off if you need to support those versions.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
     "server.maxUploadSize",
     description="""
         Max size, in megabytes, for files uploaded with the file_uploader.
@@ -1254,6 +1332,104 @@ _create_option(
         more information, see https://docs.streamlit.io/replication.
     """,
     default_val=120,
+    type_=int,
+)
+
+_create_option(
+    "server.enableAgentApi",
+    description="""
+        Enable the agent API, which lets a non-browser client drive the app
+        over HTTP at `/_stcore/agent/interact`, or as a remote MCP server at
+        `/_stcore/agent/mcp`. `/_stcore/agent/openapi.json` describes the
+        protocol, and reports whether the API is on.
+
+        The API is off by default. Once on, it is served wherever the app is,
+        with the same Host allow-list as the app's WebSocket, and a caller gets
+        no more access than the app gives a browser. Requests from web pages
+        are refused unless their origin is in `server.corsAllowedOrigins`.
+        Identity comes from `server.trustedUserHeaders`; without it, agent
+        sessions are anonymous. A proxy that strips client-supplied identity
+        headers must also strip them from requests to `/_stcore/agent/`, not
+        only from the WebSocket.
+
+        Note: This is an experimental feature. The API and its options are
+        subject to change.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
+_create_option(
+    "server.agentWaitTimeout",
+    description="""
+        Maximum number of seconds an agent API request waits for the app to
+        finish running, including any reruns it triggers, before returning
+        `wait_timed_out`.
+
+        This bounds the wait, not the run: the app keeps running. To keep
+        waiting, send only the `session_id` from the `wait_timed_out`
+        response; that request waits for the same run instead of starting
+        another. Resending a request without a `session_id` starts a new
+        session and runs the app again. Keep this below the request timeout
+        of the clients you expect.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
+    """,
+    default_val=30,
+    type_=int,
+)
+
+_create_option(
+    "server.agentSessionTTL",
+    description="""
+        TTL in seconds for idle agent API sessions.
+
+        Streamlit closes an agent session after it has been idle this long, so
+        clients do not have to close sessions. A later request with that
+        session's ID gets `unknown_session`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
+    """,
+    default_val=900,
+    type_=int,
+)
+
+_create_option(
+    "server.agentMaxSessions",
+    description="""
+        Maximum number of agent API sessions the server holds at once.
+
+        Each session stays in memory after the request that created it, so
+        this limit caps the memory a client can use by creating sessions
+        repeatedly. At the limit, Streamlit first closes sessions idle longer
+        than `server.agentSessionTTL`, then refuses new ones with
+        `too_many_sessions`.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
+    """,
+    default_val=100,
+    type_=int,
+)
+
+_create_option(
+    "server.agentPreviewRows",
+    description="""
+        Maximum number of rows an agent API response includes inline in the
+        `data.preview` of a table or chart: `st.dataframe`, `st.data_editor`,
+        `st.table`, and Vega-Lite charts (`st.altair_chart`,
+        `st.vega_lite_chart`, and built-in charts such as `st.line_chart`).
+
+        For an element with more rows, the response reports
+        `data.complete: false` and serves the full data at `data.url`, unless
+        `data.unavailable` says why it cannot.
+
+        Note: This is part of the experimental agent API. See
+        `server.enableAgentApi`.
+    """,
+    default_val=100,
     type_=int,
 )
 
@@ -1504,6 +1680,8 @@ _create_theme_options(
     ],
     description="""
         Primary accent color.
+
+        Defaults to #c53948 for the light theme and #cf4250 for the dark theme.
     """,
 )
 
@@ -1519,6 +1697,12 @@ _create_theme_options(
     ],
     description="""
         Background color of the app.
+
+        Defaults to #ffffff for the light theme and #171614 for the dark theme.
+        When a sidebar section doesn't set this, the sidebar uses #f8f8f7
+        (light) or #21201d (dark) if backgroundColor and
+        secondaryBackgroundColor both still match their defaults. Otherwise,
+        the sidebar uses the app's secondaryBackgroundColor.
     """,
 )
 
@@ -1534,6 +1718,12 @@ _create_theme_options(
     ],
     description="""
         Background color used for most interactive widgets.
+
+        Defaults to #f8f8f7 for the light theme and #2d2b27 for the dark theme.
+        When a sidebar section doesn't set this, the sidebar uses #f1f0ee
+        (light) or #2d2b27 (dark) if backgroundColor and
+        secondaryBackgroundColor both still match their defaults. Otherwise,
+        the sidebar uses the app's backgroundColor.
     """,
 )
 
@@ -1549,6 +1739,8 @@ _create_theme_options(
     ],
     description="""
         Color used for almost all text.
+
+        Defaults to #2f2d2b for the light theme and #edebe8 for the dark theme.
     """,
 )
 
@@ -1565,12 +1757,13 @@ _create_theme_options(
     description="""
         Red color used in the basic color palette.
 
-        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        By default, this is #d94a57 for the light theme and #f2919a for the
         dark theme.
 
-        If `redColor` is provided, and `redBackgroundColor` isn't, then
-        `redBackgroundColor` will be derived from `redColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `redColor` without `redBackgroundColor` replaces the opaque
+        `redBackgroundColor` default with a translucent color Streamlit derives
+        from `redColor` (10% opacity in light themes, 20% in dark), even when
+        `redColor` equals its documented default.
     """,
 )
 
@@ -1587,12 +1780,13 @@ _create_theme_options(
     description="""
         Orange color used in the basic color palette.
 
-        By default, this is #ffa421 for the light theme and #ff8700 for the
+        By default, this is #e0682b for the light theme and #f2a56d for the
         dark theme.
 
-        If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
-        `orangeBackgroundColor` will be derived from `orangeColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `orangeColor` without `orangeBackgroundColor` replaces the opaque
+        `orangeBackgroundColor` default with a translucent color Streamlit derives
+        from `orangeColor` (10% opacity in light themes, 20% in dark), even when
+        `orangeColor` equals its documented default.
     """,
 )
 
@@ -1609,12 +1803,13 @@ _create_theme_options(
     description="""
         Yellow color used in the basic color palette.
 
-        By default, this is #faca2b for the light theme and #ffe312 for the
+        By default, this is #bb8300 for the light theme and #fbd54f for the
         dark theme.
 
-        If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
-        `yellowBackgroundColor` will be derived from `yellowColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `yellowColor` without `yellowBackgroundColor` replaces the opaque
+        `yellowBackgroundColor` default with a translucent color Streamlit derives
+        from `yellowColor` (10% opacity in light themes, 20% in dark), even when
+        `yellowColor` equals its documented default.
     """,
 )
 
@@ -1631,12 +1826,13 @@ _create_theme_options(
     description="""
         Blue color used in the basic color palette.
 
-        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        By default, this is #3b82f6 for the light theme and #85b8f8 for the
         dark theme.
 
-        If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
-        `blueBackgroundColor` will be derived from `blueColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `blueColor` without `blueBackgroundColor` replaces the opaque
+        `blueBackgroundColor` default with a translucent color Streamlit derives
+        from `blueColor` (10% opacity in light themes, 20% in dark), even when
+        `blueColor` equals its documented default.
     """,
 )
 
@@ -1653,12 +1849,13 @@ _create_theme_options(
     description="""
         Green color used in the basic color palette.
 
-        By default, this is #21c354 for the light theme and #09ab3b for the
+        By default, this is #079464 for the light theme and #7ed5b0 for the
         dark theme.
 
-        If `greenColor` is provided, and `greenBackgroundColor` isn't, then
-        `greenBackgroundColor` will be derived from `greenColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `greenColor` without `greenBackgroundColor` replaces the opaque
+        `greenBackgroundColor` default with a translucent color Streamlit derives
+        from `greenColor` (10% opacity in light themes, 20% in dark), even when
+        `greenColor` equals its documented default.
     """,
 )
 
@@ -1675,11 +1872,13 @@ _create_theme_options(
     description="""
         Violet color used in the basic color palette.
 
-        By default, this is #803df5 for both the light and dark themes.
+        By default, this is #9b5de5 for the light theme and #bf8ef7 for the
+        dark theme.
 
-        If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
-        `violetBackgroundColor` will be derived from `violetColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `violetColor` without `violetBackgroundColor` replaces the opaque
+        `violetBackgroundColor` default with a translucent color Streamlit derives
+        from `violetColor` (10% opacity in light themes, 20% in dark), even when
+        `violetColor` equals its documented default.
     """,
 )
 
@@ -1696,12 +1895,13 @@ _create_theme_options(
     description="""
         Gray color used in the basic color palette.
 
-        By default, this is #a3a8b8 for the light theme and #555867 for the
+        By default, this is #6b7280 for the light theme and #a9a5a0 for the
         dark theme.
 
-        If `grayColor` is provided, and `grayBackgroundColor` isn't, then
-        `grayBackgroundColor` will be derived from `grayColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        Setting `grayColor` without `grayBackgroundColor` replaces the opaque
+        `grayBackgroundColor` default with a translucent color Streamlit derives
+        from `grayColor` (10% opacity in light themes, 20% in dark), even when
+        `grayColor` equals its documented default.
     """,
 )
 
@@ -1718,11 +1918,13 @@ _create_theme_options(
     description="""
         Red background color used in the basic color palette.
 
-        If `redColor` is provided, this defaults to `redColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fff1f2 for the light theme and #412023 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ff2b2b with 10% opacity for light theme and
-        #ff6c6c with 20% opacity for dark theme.
+        If `redColor` is set and this option is unset, Streamlit derives a
+        translucent background from `redColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `redColor` equals its
+        documented default.
     """,
 )
 
@@ -1739,11 +1941,13 @@ _create_theme_options(
     description="""
         Orange background color used for the basic color palette.
 
-        If `orangeColor` is provided, this defaults to `orangeColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fff6ed for the light theme and #342414 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ffa421 with 10% opacity for the light theme and
-        #ff8700 with 20% opacity for the dark theme.
+        If `orangeColor` is set and this option is unset, Streamlit derives a
+        translucent background from `orangeColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `orangeColor` equals its
+        documented default.
     """,
 )
 
@@ -1760,11 +1964,13 @@ _create_theme_options(
     description="""
         Yellow background color used for the basic color palette.
 
-        If `yellowColor` is provided, this defaults to `yellowColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #fffae5 for the light theme and #302917 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #ffff12 with 10% opacity for the light theme and
-        #ffff12 with 20% opacity for the dark theme.
+        If `yellowColor` is set and this option is unset, Streamlit derives a
+        translucent background from `yellowColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `yellowColor` equals its
+        documented default.
     """,
 )
 
@@ -1781,11 +1987,13 @@ _create_theme_options(
     description="""
         Blue background color used for the basic color palette.
 
-        If `blueColor` is provided, this defaults to `blueColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #edf5ff for the light theme and #1e2a3d for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #1c83ff with 10% opacity for the light theme and
-        #3d9df3 with 20% opacity for the dark theme.
+        If `blueColor` is set and this option is unset, Streamlit derives a
+        translucent background from `blueColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `blueColor` equals its
+        documented default.
     """,
 )
 
@@ -1802,11 +2010,13 @@ _create_theme_options(
     description="""
         Green background color used for the basic color palette.
 
-        If `greenColor` is provided, this defaults to `greenColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f1fbf6 for the light theme and #0e2f24 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #21c354 with 10% opacity for the light theme and
-        #3dd56d with 20% opacity for the dark theme.
+        If `greenColor` is set and this option is unset, Streamlit derives a
+        translucent background from `greenColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `greenColor` equals its
+        documented default.
     """,
 )
 
@@ -1823,11 +2033,13 @@ _create_theme_options(
     description="""
         Violet background color used for the basic color palette.
 
-        If `violetColor` is provided, this defaults to `violetColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f8f2ff for the light theme and #332244 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #9a5dff with 10% opacity for light theme and
-        #9a5dff with 20% opacity for dark theme.
+        If `violetColor` is set and this option is unset, Streamlit derives a
+        translucent background from `violetColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `violetColor` equals its
+        documented default.
     """,
 )
 
@@ -1844,11 +2056,13 @@ _create_theme_options(
     description="""
         Gray background color used for the basic color palette.
 
-        If `grayColor` is provided, this defaults to `grayColor` using 10%
-        opacity for the light theme and 20% opacity for the dark theme.
+        When unset, this is #f5f4f2 for the light theme and #2c2925 for the dark
+        theme (opaque defaults).
 
-        Otherwise, this is #31333f with 10% opacity for the light theme and
-        #808495 with 20% opacity for the dark theme.
+        If `grayColor` is set and this option is unset, Streamlit derives a
+        translucent background from `grayColor` (10% opacity in light
+        themes, 20% in dark) instead — even when `grayColor` equals its
+        documented default.
     """,
 )
 
@@ -1865,11 +2079,13 @@ _create_theme_options(
     description="""
         Red text color used for the basic color palette.
 
-        If `redColor` is provided, this defaults to `redColor`, darkened by 15%
-        for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        Defaults to #9e303b for the light theme and #f2919a for the dark
         theme.
+
+        If `redColor` is set and this option is unset, Streamlit derives the
+        text color from `redColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `redColor` equals
+        its documented default.
     """,
 )
 
@@ -1886,11 +2102,13 @@ _create_theme_options(
     description="""
         Orange text color used for the basic color palette.
 
-        If `orangeColor` is provided, this defaults to `orangeColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        Defaults to #9b4519 for the light theme and #f2a56d for the dark
         theme.
+
+        If `orangeColor` is set and this option is unset, Streamlit derives the
+        text color from `orangeColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `orangeColor` equals
+        its documented default.
     """,
 )
 
@@ -1907,11 +2125,13 @@ _create_theme_options(
     description="""
         Yellow text color used for the basic color palette.
 
-        If `yellowColor` is provided, this defaults to `yellowColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        Defaults to #956b0f for the light theme and #fbd54f for the dark
         theme.
+
+        If `yellowColor` is set and this option is unset, Streamlit derives the
+        text color from `yellowColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `yellowColor` equals
+        its documented default.
     """,
 )
 
@@ -1928,11 +2148,13 @@ _create_theme_options(
     description="""
         Blue text color used for the basic color palette.
 
-        If `blueColor` is provided, this defaults to `blueColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        Defaults to #244fb4 for the light theme and #85b8f8 for the dark
         theme.
+
+        If `blueColor` is set and this option is unset, Streamlit derives the
+        text color from `blueColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `blueColor` equals
+        its documented default.
     """,
 )
 
@@ -1949,11 +2171,13 @@ _create_theme_options(
     description="""
         Green text color used for the basic color palette.
 
-        If `greenColor` is provided, this defaults to `greenColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        Defaults to #0c5a44 for the light theme and #7ed5b0 for the dark
         theme.
+
+        If `greenColor` is set and this option is unset, Streamlit derives the
+        text color from `greenColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `greenColor` equals
+        its documented default.
     """,
 )
 
@@ -1970,11 +2194,13 @@ _create_theme_options(
     description="""
         Violet text color used for the basic color palette.
 
-        If `violetColor` is provided, this defaults to `violetColor`, darkened
-        by 15% for the light theme and lightened by 15% for the dark theme.
-
-        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        Defaults to #6f33b8 for the light theme and #bf8ef7 for the dark
         theme.
+
+        If `violetColor` is set and this option is unset, Streamlit derives the
+        text color from `violetColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `violetColor` equals
+        its documented default.
     """,
 )
 
@@ -1991,11 +2217,13 @@ _create_theme_options(
     description="""
         Gray text color used for the basic color palette.
 
-        If `grayColor` is provided, this defaults to `grayColor`, darkened by
-        15% for the light theme and lightened by 15% for the dark theme.
+        Defaults to #686255 for the light theme and #b8b3a8 for the dark
+        theme.
 
-        Otherwise, this is #31333f with 60% opacity for the light theme and
-        #fafafa with 60% opacity for the dark theme.
+        If `grayColor` is set and this option is unset, Streamlit derives the
+        text color from `grayColor` (darkened by 15% in light themes,
+        lightened by 15% in dark) instead — even when `grayColor` equals
+        its documented default.
     """,
 )
 
@@ -2045,7 +2273,10 @@ _create_theme_options(
     description="""
         Text color used for code blocks.
 
-        This defaults to the resolved value of `greenTextColor`.
+        If this isn't set, Streamlit uses the resolved body text color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme, Streamlit uses the resolved
+        `greenTextColor` instead.
     """,
 )
 
@@ -2061,6 +2292,11 @@ _create_theme_options(
     ],
     description="""
         Background color used for code blocks.
+
+        If this isn't set, Streamlit uses the theme's default code
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
     """,
 )
 
@@ -2415,6 +2651,81 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "paddingTop",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The gap under the header to the first widget in the main content area
+        or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "1rem",
+        "16px", or "16"). A numeric string without a unit is treated as
+        pixels ("16" is 16px; "1.5" is 1.5px). Zero is allowed ("0", "0rem",
+        "0px"). An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back to
+        the default.
+
+        Prefer rem (for example "1.5rem") so spacing scales with font size.
+
+        Main area: The value is the gap below any visible header chrome
+        (toolbar, logo, expand button, top nav). Streamlit adds the header
+        height automatically so content clears the overlay. A value of "0"
+        places the first widget flush under that chrome (not flush to the top
+        of the viewport). Embed options such as show_padding / show_toolbar
+        do not override a configured value. In a bare embed with no header
+        chrome, the configured value is used alone — very small values
+        (including "0") can clip the first element's overlay toolbar. Leave
+        this unset for compact embeds that need the default clearance, or use
+        a small non-zero gap. Print uses the configured value with no header
+        reservation. If unset, Streamlit uses its built-in defaults
+        (typically 6rem, or 8rem with top nav).
+
+        Sidebar: The same gap under the sidebar's own chrome (the logo and
+        collapse row, plus page navigation when it is shown). Streamlit does
+        not add the main header height on top of this value. With page
+        navigation, the gap is from the nav to the first widget. Without page
+        navigation, the gap is from the header row to the first widget. If
+        unset, Streamlit uses its built-in sidebar spacing.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
+    "paddingBottom",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The aesthetic bottom inset after the last widget in the main content
+        area or sidebar.
+
+        Set this as a quoted string in "rem" or "px" (for example "2rem" or
+        "32px"). A numeric string without a unit is treated as pixels. Zero
+        is allowed. An integer or float without quotes is ignored. Negative
+        values, percentages, and other CSS units are rejected and fall back
+        to the default.
+
+        When set, this replaces Streamlit's built-in bottom spacing: typically
+        10rem in the main area with no st.bottom content (or 1rem when
+        st.bottom is present), and 6rem in the sidebar. Sticky st.bottom
+        content is not affected. Horizontal padding is not configurable yet.
+        If unset, Streamlit uses its built-in defaults.
+    """,
+    type_=str,
+)
+
+_create_theme_options(
     "borderColor",
     categories=[
         "theme",
@@ -2442,7 +2753,12 @@ _create_theme_options(
     description="""
         The color of the border around dataframes and tables.
 
-        If this isn't set, Streamlit uses `theme.borderColor` instead.
+        If this isn't set and `theme.borderColor` is set, Streamlit uses a
+        lighter version of `theme.borderColor`. If neither is set, Streamlit
+        uses the theme's default dataframe border color. If
+        `backgroundColor`, `secondaryBackgroundColor`, or `primaryColor`
+        differs from the base theme and neither border is set, Streamlit
+        derives a light border from text color.
     """,
 )
 
@@ -2462,8 +2778,33 @@ _create_theme_options(
         This color applies to all non-interior cells of the dataframe. This
         includes the header row, the row-selection column (if present), and
         the bottom row of data editors with a dynamic number of rows. If this
-        isn't set, Streamlit uses a mix of `theme.backgroundColor` and
-        `theme.secondaryBackgroundColor`.
+        isn't set, Streamlit uses the theme's default dataframe header
+        background. If `backgroundColor`, `secondaryBackgroundColor`, or
+        `primaryColor` differs from the base theme, Streamlit derives the
+        fill from those colors.
+    """,
+)
+
+_create_theme_options(
+    "dataframeHeaderTextColor",
+    categories=[
+        "theme",
+        CustomThemeCategories.SIDEBAR,
+        CustomThemeCategories.LIGHT,
+        CustomThemeCategories.DARK,
+        CustomThemeCategories.LIGHT_SIDEBAR,
+        CustomThemeCategories.DARK_SIDEBAR,
+    ],
+    description="""
+        The text color of the dataframe's header.
+
+        This color applies to column headers, grouped column headers, and
+        header icons such as sort and edit. It doesn't apply to the text in
+        body cells. If this is set, Streamlit uses it as-is. If it isn't
+        set, Streamlit uses a faded version of `theme.textColor` (the
+        configured `textColor`, or the theme default if `textColor` is also
+        unset). When a column is selected, its header text and icons stay
+        white, matching existing selection behavior.
     """,
 )
 
@@ -2479,6 +2820,9 @@ _create_theme_options(
     ],
     description="""
         Whether to show a border around input widgets.
+
+        If this is unset or `true`, Streamlit draws widget borders using
+        `borderColor`. Set it to `false` to hide them.
     """,
     type_=bool,
 )
@@ -2489,6 +2833,9 @@ _create_theme_options(
     description="""
         Whether to show a vertical separator between the sidebar and the main
         content area.
+
+        If this is unset or `true`, Streamlit shows the separator. Set it to
+        `false` to hide it.
     """,
     type_=bool,
 )
@@ -2829,9 +3176,9 @@ def _update_config_with_toml(raw_toml: str, where_defined: str) -> None:
 
     """
     try:
-        import toml
+        import tomllib
 
-        parsed_config_file = toml.loads(raw_toml)
+        parsed_config_file = tomllib.loads(raw_toml)
     except Exception:
         # Catching any parsing exception to prevent this from breaking our
         # config change watcher logic.
@@ -3075,6 +3422,15 @@ def _check_conflicts() -> None:
 
     logger: Final = get_logger(__name__)
 
+    # Validate this option at config-load time so an invalid value is reported as a
+    # config error instead of failing later during Runtime construction.
+    try:
+        byte_util.config_max_cache_data_size_to_bytes(
+            get_option("server.maxCacheDataSize")
+        )
+    except StreamlitAPIException as exc:
+        raise RuntimeError(str(exc)) from exc
+
     if get_option("global.developmentMode"):
         if not _is_unset("server.port"):
             raise RuntimeError(
@@ -3130,6 +3486,23 @@ WebSocket connection.
             "Invalid value for config option server.xsrfCookieSameSite: "
             f'"{xsrf_cookie_same_site}". '
             'Valid values are "lax", "strict", and "none".'
+        )
+
+    # Partitioned only matters for cookies sent cross-site, which requires
+    # SameSite=None, so reject combinations where it would silently do nothing.
+    # As with SameSite, require a real bool rather than coercing.
+    xsrf_cookie_partitioned = get_option("server.xsrfCookiePartitioned")
+    if not isinstance(xsrf_cookie_partitioned, bool):
+        raise RuntimeError(
+            "Invalid value for config option server.xsrfCookiePartitioned: "
+            f'"{xsrf_cookie_partitioned}". Valid values are true and false.'
+        )
+    if xsrf_cookie_partitioned and xsrf_cookie_same_site.lower() != "none":
+        raise RuntimeError(
+            "The config option 'server.xsrfCookiePartitioned=true' requires "
+            "'server.xsrfCookieSameSite=\"none\"'. Browsers never send a Lax "
+            "or Strict cookie in a cross-site context, so a partitioned cookie "
+            "would have no effect."
         )
 
     # Warn about combinations where SameSite="none" silently has no effect or

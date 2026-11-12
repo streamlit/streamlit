@@ -52,7 +52,12 @@ message MultiSelect {
   // -1: always show (Python select_all=True), still subject to the 2+ minimum.
   optional int32 select_all = 18;
 
-  // Next: 19
+  // Set by on_change="ignore": do not schedule a rerun; buffer the value until
+  // the next rerun. Bound widgets still update the URL when the value is
+  // committed. Inside a form, this flag has no effect because the form batches
+  // values until submit.
+  bool ignore_rerun = 19;
+  // Next: 20
 
   reserved 7;
 }

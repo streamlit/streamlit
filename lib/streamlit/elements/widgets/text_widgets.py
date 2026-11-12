@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, cast, overload
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -276,6 +277,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -304,6 +306,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -332,6 +335,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -494,6 +498,24 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean that disables the text input if set to
             ``True``. The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            and whitespace-only values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            When used with ``validate``, empty values fail this check and
+            skip validation.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -716,6 +738,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             icon=icon,
             validate=validate,
@@ -741,6 +764,7 @@ class TextWidgetsMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         validate: str | tuple[str, str] | None = None,
@@ -752,12 +776,11 @@ class TextWidgetsMixin:
     ) -> str | None:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-        live_debounce_ms = _parse_text_input_live(live)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
+        live_debounce_ms = _parse_text_input_live(live)
 
         type_defaults = _TEXT_INPUT_TYPE_DEFAULTS.get(type)
         if type_defaults is None:
@@ -784,10 +807,12 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_input",
             user_key=key,
-            # Explicitly whitelist max_chars and validate so the ID changes when
+            # Explicitly allowlist max_chars and validate so the ID changes when
             # they change, since the widget value might become invalid based on a
             # different max_chars or validation regex. Only the regex (not the
             # message) is used for identity, since the message is purely cosmetic.
+            # `required` is hashed for unkeyed widgets but is not on this
+            # allowlist: toggling it cannot make a stored value incompatible.
             key_as_main_identity={"max_chars", "validate"},
             dg=self.dg,
             label=label,
@@ -802,6 +827,7 @@ class TextWidgetsMixin:
             # Normalized milliseconds so `True` and `"250ms"` share an ID.
             live=live_debounce_ms,
             validate=identity_validate_regex,
+            required=required,
         )
 
         # Resolve the effective values from the type defaults now that the
@@ -809,10 +835,6 @@ class TextWidgetsMixin:
         # Precedence per property: explicit user value -> type default -> off.
         if icon is None:
             icon = type_defaults.icon
-        elif icon == "":
-            # `icon=""` opts out of the icon. Map it to None so it isn't passed
-            # to `validate_icon_or_emoji`, which raises on an empty string.
-            icon = None
 
         if placeholder is None:
             placeholder = type_defaults.placeholder
@@ -826,9 +848,6 @@ class TextWidgetsMixin:
             effective_validate
         )
 
-        if autocomplete is None:
-            autocomplete = type_defaults.autocomplete
-
         session_state = get_session_state().filtered_state
         if key is not None and key in session_state and session_state[key] is None:
             value = None
@@ -840,6 +859,7 @@ class TextWidgetsMixin:
             text_input_proto.default = value
         text_input_proto.form_id = current_form_id(self.dg)
         text_input_proto.disabled = disabled
+        text_input_proto.required = required
         text_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -864,7 +884,9 @@ class TextWidgetsMixin:
 
         text_input_proto.type = type_defaults.proto_type
 
-        text_input_proto.autocomplete = autocomplete
+        text_input_proto.autocomplete = (
+            type_defaults.autocomplete if autocomplete is None else autocomplete
+        )
 
         # Prevent binding password inputs to query params (exposes secrets in URL)
         if bind == "query-params" and type == "password":
@@ -914,6 +936,36 @@ class TextWidgetsMixin:
             text_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_input",
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.STRING,
+                label=label,
+                max_chars=max_chars,
+                type=type,
+                help=text_input_proto.help or None,
+                placeholder=placeholder,
+                icon=icon,
+                disabled=disabled,
+                # `required` and `validate` are checked by the browser, not by
+                # this interface, so a client has to send values that pass
+                # them. `validate` is the effective rule, including the one
+                # `type` implies. `live` is left out: it only times the
+                # browser's commits, and every value a client sets reruns.
+                required=required,
+                validate=(
+                    [validate_regex, validate_message]
+                    if validate_message
+                    else validate_regex
+                )
+                or None,
+                # The resolved value, including the default `type` implies and
+                # an explicit empty string.
+                autocomplete=text_input_proto.autocomplete,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 
@@ -926,12 +978,13 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -948,12 +1001,13 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -970,12 +1024,13 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1029,7 +1084,7 @@ class TextWidgetsMixin:
 
             The widget's height can't be smaller than the height of two lines.
             When ``label_visibility="collapsed"``, the minimum height is 68
-            pixels. Otherwise, the minimum height is 98 pixels.
+            pixels. Otherwise, the minimum height is 96 pixels.
 
         max_chars : int or None
             Maximum number of characters allowed in text area.
@@ -1062,8 +1117,29 @@ class TextWidgetsMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this text_area's value changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the text area should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the text area. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (blurring the field, or pressing
+              Ctrl+Enter / Cmd+Enter).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The text area still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. Ignored
+              commits are held in the browser and are lost if the page is
+              refreshed before that rerun, unless ``bind="query-params"``
+              is set (see ``bind``). Inside ``st.form``, this has no
+              effect: the form already defers all commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -1078,6 +1154,21 @@ class TextWidgetsMixin:
         disabled : bool
             An optional boolean that disables the text area if set to ``True``.
             The default is ``False``.
+
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            and whitespace-only values cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
 
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
@@ -1113,6 +1204,13 @@ class TextWidgetsMixin:
 
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
+
+            When ``on_change="ignore"``, the URL is updated as soon as the
+            value is committed (blurring the field, or pressing Ctrl+Enter /
+            Cmd+Enter); typing alone does not update it. As with widgets
+            inside a form, the URL can show a value that Python hasn't
+            received yet. Python receives the new value on the next rerun,
+            so a page load or share uses the updated URL value.
 
         persist_state : "page", "session", or None
             How long to preserve the widget's value when it isn't rendered.
@@ -1168,6 +1266,7 @@ class TextWidgetsMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             width=width,
             bind=bind,
@@ -1183,12 +1282,13 @@ class TextWidgetsMixin:
         max_chars: int | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
@@ -1196,11 +1296,15 @@ class TextWidgetsMixin:
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None if value == "" else value,
         )
         label = maybe_raise_label_warnings(label, label_visibility)
@@ -1210,8 +1314,10 @@ class TextWidgetsMixin:
         element_id = compute_and_register_element_id(
             "text_area",
             user_key=key,
-            # Explicitly whitelist max_chars to make sure the ID changes when it changes
-            # since the widget value might become invalid based on a different max_chars
+            # Explicitly allowlist max_chars so the ID changes when it changes,
+            # since the widget value might become invalid based on a different
+            # max_chars. `required` is hashed for unkeyed widgets but is not on
+            # this allowlist: toggling it cannot make a stored value incompatible.
             key_as_main_identity={"max_chars"},
             dg=self.dg,
             label=label,
@@ -1221,6 +1327,7 @@ class TextWidgetsMixin:
             help=help,
             placeholder=str(placeholder),
             width=width,
+            required=required,
         )
 
         session_state = get_session_state().filtered_state
@@ -1234,6 +1341,7 @@ class TextWidgetsMixin:
             text_area_proto.default = value
         text_area_proto.form_id = current_form_id(self.dg)
         text_area_proto.disabled = disabled
+        text_area_proto.required = required
         text_area_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -1251,10 +1359,13 @@ class TextWidgetsMixin:
         if bind == "query-params" and key is not None:
             text_area_proto.query_param_key = str(key)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            text_area_proto.ignore_rerun = True
+
         serde = TextAreaSerde(value, max_chars)
         widget_state = register_widget(
             text_area_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -1289,6 +1400,22 @@ class TextWidgetsMixin:
             text_area_proto,
             layout_config=layout_config,
             has_one_shot_effect=widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "text_area",
+                key=element_id,
+                action="value",
+                value_schema=agent_spec.STRING,
+                label=label,
+                max_chars=max_chars,
+                help=text_area_proto.help or None,
+                placeholder=placeholder,
+                disabled=disabled,
+                # `required` is checked by the browser, not by this interface,
+                # so a client has to send values that pass it.
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return widget_state.value
 

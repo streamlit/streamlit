@@ -25,12 +25,14 @@ import unittest
 from typing import Any
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import numpy as np
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
 from streamlit import file_util
 from streamlit.errors import (
+    StreamlitAPIException,
     StreamlitIncompatibleParametersError,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
@@ -39,7 +41,9 @@ from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.runtime.caching.cache_data_api import (
+    DataCache,
     _data_caches,
+    clear_session_cache,
     get_data_cache_stats_provider,
 )
 from streamlit.runtime.caching.cache_errors import CacheError
@@ -47,6 +51,7 @@ from streamlit.runtime.caching.cached_message_replay import (
     CachedResult,
     ElementMsgData,
 )
+from streamlit.runtime.caching.global_cache_budget import GlobalCacheBudget
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.caching.storage import (
     CacheStorage,
@@ -54,6 +59,7 @@ from streamlit.runtime.caching.storage import (
     CacheStorageManager,
 )
 from streamlit.runtime.caching.storage.cache_storage_protocol import (
+    CacheStorageError,
     InvalidCacheStorageContextError,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -82,6 +88,13 @@ def as_cached_result(value: Any) -> CachedResult:
     return _as_cached_result(value)
 
 
+class _Unpicklable:
+    """Value whose pickle serialization always fails with PicklingError."""
+
+    def __getstate__(self) -> object:
+        raise pickle.PicklingError("intentionally unpicklable")
+
+
 def as_replay_test_data() -> CachedResult:
     """Creates cached results for a function that returned 1
     and executed `st.text(1)`.
@@ -106,6 +119,170 @@ class CacheDataTest(unittest.TestCase):
         # Some of these tests reach directly into _cache_info and twiddle it.
         # Reset default values on teardown.
         st.cache_data.clear()
+
+    def test_cache_drop_paths_unregister_global_budget_storage(self) -> None:
+        """Replacement, session clear, and clear-all remove accounted bytes."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            original = _data_caches.get_cache(key="replace", **common)
+            original.write_result("value", 1, [])
+            assert budget.total_bytes > 0
+
+            replacement = _data_caches.get_cache(
+                key="replace", max_size_bytes=1024, **common
+            )
+            assert budget.total_bytes == 0
+            replacement.write_result("value", 2, [])
+            assert budget.total_bytes > 0
+
+            with patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ):
+                session_cache = _data_caches.get_cache(
+                    key="session", scope="session", **common
+                )
+            session_cache.write_result("value", 3, [])
+            before_session_clear = budget.total_bytes
+            clear_session_cache("session")
+            assert 0 < budget.total_bytes < before_session_clear
+
+            _data_caches.clear_all()
+            assert budget.total_bytes == 0
+
+    def test_session_clear_continues_cleanup_after_cache_clear_error(self) -> None:
+        """A failed cache clear does not leak any session storage registrations."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+            "scope": "session",
+        }
+
+        with (
+            patch(
+                "streamlit.runtime.caching.storage."
+                "in_memory_cache_storage_wrapper.get_global_cache_budget",
+                return_value=budget,
+            ),
+            patch(
+                "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+                return_value="session",
+            ),
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+
+            with (
+                patch.object(first, "clear", side_effect=RuntimeError("clear failed")),
+                patch.object(
+                    first.storage, "close", wraps=first.storage.close
+                ) as first_close,
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="clear failed"),
+            ):
+                clear_session_cache("session")
+
+        first_close.assert_called_once()
+        second_close.assert_called_once()
+        assert budget.total_bytes == 0
+
+    def test_clear_all_continues_cleanup_after_manager_error(self) -> None:
+        """A failed manager clear still closes caches and detaches the registry."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+
+            with (
+                patch.object(
+                    Runtime.instance().cache_storage_manager,
+                    "clear_all",
+                    side_effect=RuntimeError("manager failed"),
+                ),
+                patch.object(
+                    first.storage, "close", wraps=first.storage.close
+                ) as first_close,
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="manager failed"),
+            ):
+                _data_caches.clear_all()
+
+            replacement = _data_caches.get_cache(key="first", **common)
+
+        first_close.assert_called_once()
+        second_close.assert_called_once()
+        assert replacement is not first
+        assert budget.total_bytes == 0
+
+    def test_clear_all_continues_cleanup_after_storage_close_error(self) -> None:
+        """A failed storage close does not skip later storage cleanup."""
+        budget = GlobalCacheBudget(max_bytes=1_000_000)
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "budgeted",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.storage."
+            "in_memory_cache_storage_wrapper.get_global_cache_budget",
+            return_value=budget,
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+            first.write_result("value", 1, [])
+            second.write_result("value", 2, [])
+            original_first_close = first.storage.close
+
+            def fail_after_first_close() -> None:
+                original_first_close()
+                raise RuntimeError("close failed")
+
+            with (
+                patch.object(first.storage, "close", fail_after_first_close),
+                patch.object(
+                    second.storage, "close", wraps=second.storage.close
+                ) as second_close,
+                pytest.raises(RuntimeError, match="close failed"),
+            ):
+                _data_caches.clear_all()
+
+        second_close.assert_called_once()
+        assert budget.total_bytes == 0
 
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
@@ -275,6 +452,98 @@ If you think this is actually a Streamlit bug, please
         # calling foo.clear() should clear all cached values:
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
+
+    def test_max_size_evicts_by_serialized_bytes(self) -> None:
+        """A per-function byte limit evicts entries by serialized size."""
+        executions: dict[str, int] = {}
+
+        @st.cache_data(max_size="1MiB")
+        def foo(key: str) -> bytes:
+            executions[key] = executions.get(key, 0) + 1
+            return bytes(400_000)
+
+        foo("a")
+        foo("b")
+        foo("a")
+        foo("c")
+        foo("a")
+        foo("b")
+
+        assert executions == {"a": 1, "b": 2, "c": 1}
+
+    def test_oversized_value_remains_cached(self) -> None:
+        """A single value larger than max_size remains cached."""
+        executions = 0
+
+        @st.cache_data(max_size=1)
+        def foo() -> bytes:
+            nonlocal executions
+            executions += 1
+            return bytes(100)
+
+        assert foo() == bytes(100)
+        assert foo() == bytes(100)
+        assert executions == 1
+
+    def test_numpy_integer_max_size(self) -> None:
+        """A NumPy integer is accepted as a max_size byte count."""
+
+        @st.cache_data(max_size=np.int64(1024))  # type: ignore[arg-type]
+        def foo() -> int:
+            return 1
+
+        assert foo() == 1
+
+    def test_cache_recreated_when_max_size_changes(self) -> None:
+        """A changed max_size replaces the previous function cache."""
+        common_kwargs = {
+            "key": "max_size_change",
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "max_size_change",
+        }
+        with self.assertLogs(
+            "streamlit.runtime.caching.cache_data_api", level=logging.DEBUG
+        ) as logs:
+            first = _data_caches.get_cache(**common_kwargs, max_size_bytes=100)
+            second = _data_caches.get_cache(**common_kwargs, max_size_bytes=200)
+
+        assert second is not first
+        assert first.is_active is False
+        output = "\n".join(logs.output)
+        assert "max_size_bytes=100" in output
+        assert "max_size_bytes=200" in output
+
+    def test_max_size_is_propagated_to_custom_storage_manager(self) -> None:
+        """Custom storage managers receive the parsed limit during validation and use."""
+        manager = RecordingMaxSizeStorageManager()
+        Runtime._instance.cache_storage_manager = manager
+        executions = 0
+
+        @st.cache_data(max_entries=7, max_size="2KiB")
+        def foo() -> int:
+            nonlocal executions
+            executions += 1
+            return executions
+
+        assert foo() == 1
+        assert foo() == 1
+
+        assert len(manager.checked_contexts) == 1
+        checked_context = manager.checked_contexts[0]
+        assert checked_context.function_key == "DUMMY_KEY"
+        assert checked_context.function_display_name == "foo"
+        assert checked_context.max_entries == 7
+        assert checked_context.max_size_bytes == 2048
+
+        assert len(manager.created_contexts) == 1
+        created_context = manager.created_contexts[0]
+        assert created_context.function_key != "DUMMY_KEY"
+        assert created_context.function_display_name.endswith(".foo")
+        assert created_context.max_entries == 7
+        assert created_context.max_size_bytes == 2048
+        assert executions == 1
 
 
 class CacheDataPersistTest(DeltaGeneratorTestCase):
@@ -620,6 +889,21 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         assert CACHE_MEMORY_FAMILY in stats_dict
         assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
+    def test_data_cache_get_stats_delegates_to_stats_provider_storage(self) -> None:
+        """DataCache.get_stats returns storage stats when storage is a StatsProvider."""
+        cache = _data_caches.get_cache(
+            key="stats_key",
+            persist=None,
+            max_entries=None,
+            ttl=None,
+            display_name="stats_fn",
+        )
+        cache.write_result("vk", 123, [])
+        stats = cache.get_stats()
+        family_stats = stats[CACHE_MEMORY_FAMILY]
+        assert family_stats
+        assert all(stat.byte_length > 0 for stat in family_stats)
+
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -645,6 +929,26 @@ class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
         assert str(e.value) == "This CacheStorageManager always fails"
         output = "".join(logs.output)
         assert "This CacheStorageManager always fails" in output
+
+    @parameterized.expand(
+        [
+            ("boolean", True),
+            ("zero", 0),
+            ("negative", -1),
+            ("unitless_string", "10"),
+            ("unknown_unit", "10XB"),
+            ("float", 1.5),
+        ]
+    )
+    def test_invalid_max_size_fails_at_decoration(
+        self, _name: str, max_size: object
+    ) -> None:
+        """Invalid max_size values fail when the decorator is created."""
+        with pytest.raises(StreamlitAPIException):
+
+            @st.cache_data(max_size=max_size)  # type: ignore[arg-type]
+            def foo() -> int:
+                return 1
 
 
 class CacheDataMessageReplayTest(DeltaGeneratorTestCase):
@@ -876,6 +1180,24 @@ class AlwaysFailingTestCacheStorageManager(CacheStorageManager):
         raise InvalidCacheStorageContextError("This CacheStorageManager always fails")
 
 
+class RecordingMaxSizeStorageManager(CacheStorageManager):
+    """Storage manager that records contexts before using the built-in wrapper."""
+
+    def __init__(self) -> None:
+        self.checked_contexts: list[CacheStorageContext] = []
+        self.created_contexts: list[CacheStorageContext] = []
+
+    def create(self, context: CacheStorageContext) -> CacheStorage:
+        self.created_contexts.append(context)
+        return MemoryCacheStorageManager().create(context)
+
+    def clear_all(self) -> None:
+        pass
+
+    def check_context(self, context: CacheStorageContext) -> None:
+        self.checked_contexts.append(context)
+
+
 class CacheDataBackgroundRefreshTest(unittest.TestCase):
     """st.cache_data refresh_mode="background" tests."""
 
@@ -887,6 +1209,31 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         st.cache_data.clear()
+
+    def _cache(self, key: str, **kwargs: Any) -> DataCache[Any]:
+        params: dict[str, Any] = {
+            "key": key,
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": key,
+        }
+        params.update(kwargs)
+        return _data_caches.get_cache(**params)
+
+    def _background_cache(self, key: str) -> DataCache[Any]:
+        """Return a background-mode cache that already has ``vk`` stored."""
+        cache = self._cache(key, ttl=100, refresh_mode="background")
+        cache.write_result("vk", 123, [])
+        return cache
+
+    def _write_background(self, cache: DataCache[Any], value: object = 456) -> bool:
+        return cache.write_background_refresh_result(
+            "vk",
+            value,
+            expected_generation=cache.generation,
+            expected_key_generation=cache.key_generation("vk"),
+        )
 
     def test_background_without_ttl_raises(self) -> None:
         """refresh_mode="background" without a ttl requires a positive ttl."""
@@ -1021,11 +1368,14 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
             patch.object(cache.storage, "has", wraps=cache.storage.has) as mock_has,
             patch.object(cache.storage, "get", wraps=cache.storage.get) as mock_get,
         ):
-            cache.write_background_refresh_result(
-                "vk",
-                456,
-                expected_generation=cache.generation,
-                expected_key_generation=cache.key_generation("vk"),
+            assert (
+                cache.write_background_refresh_result(
+                    "vk",
+                    456,
+                    expected_generation=cache.generation,
+                    expected_key_generation=cache.key_generation("vk"),
+                )
+                is True
             )
             mock_has.assert_called_once_with("vk")
             mock_get.assert_not_called()
@@ -1052,3 +1402,88 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
         assert cache_bg is not cache_fg
         # The replaced cache is detached so an in-flight refresh would be discarded.
         assert cache_fg.is_active is False
+
+    def test_write_result_if_current_reraises_pickle_error_when_still_current(
+        self,
+    ) -> None:
+        """A pickle failure is re-raised if the cache was not invalidated during it."""
+        cache = self._cache("pickle_still_current")
+        token = cache.capture_invalidation_token("vk")
+        with (
+            patch.object(cache, "_pickle_result", side_effect=CacheError("nope")),
+            pytest.raises(CacheError, match="nope"),
+        ):
+            cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+
+    def test_write_result_if_current_returns_false_if_invalidated_during_pickle(
+        self,
+    ) -> None:
+        """A pickle failure is ignored when a clear landed while serializing."""
+        cache = self._cache("pickle_invalidated")
+        token = cache.capture_invalidation_token("vk")
+
+        def _pickle_then_clear(*_args: object, **_kwargs: object) -> bytes:
+            cache.clear()
+            raise CacheError("nope")
+
+        with patch.object(cache, "_pickle_result", side_effect=_pickle_then_clear):
+            assert (
+                cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+                is False
+            )
+
+    def test_background_writeback_raises_on_unpicklable_value(self) -> None:
+        """Unpicklable background refresh results surface as CacheError."""
+        cache = self._background_cache("bg_unpicklable")
+        with pytest.raises(CacheError, match="Failed to pickle"):
+            self._write_background(cache, _Unpicklable())
+
+    @parameterized.expand(
+        [
+            ("missing_entry", {"return_value": False}),
+            ("storage_error", {"side_effect": CacheStorageError("boom")}),
+        ]
+    )
+    def test_background_writeback_skips_when_presence_check_fails(
+        self, case: str, has_kwargs: dict[str, object]
+    ) -> None:
+        """A failed presence check discards the refresh write-back."""
+        cache = self._background_cache(f"bg_{case}")
+        with (
+            patch.object(cache.storage, "has", **has_kwargs),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            assert self._write_background(cache) is False
+            mock_set.assert_not_called()
+
+    @patch("streamlit.runtime.caching.cache_utils.TTLCACHE_TIMER")
+    def test_refresh_records_expire_a_fresh_ttl_after_their_write(
+        self, timer_patch: Mock
+    ) -> None:
+        """Refresh records for keys that are never read again don't accumulate."""
+        cache = self._cache("bg_records", ttl=100, refresh_mode="background")
+
+        timer_patch.return_value = 0
+        cache.record_refresh_written("a", 0)
+        timer_patch.return_value = 50
+        cache.record_refresh_written("b", 50)
+        timer_patch.return_value = 99
+        cache.record_refresh_written("a", 99)
+        assert cache.refreshed_since("a", 98)
+        assert cache.refreshed_since("b", 49)
+
+        timer_patch.return_value = 150
+        cache.record_refresh_written("c", 150)
+        assert not cache.refreshed_since("b", 49)
+        assert cache.refreshed_since("a", 98)
+        assert list(cache._refresh_written) == ["a", "c"]
+
+    def test_background_writeback_skips_when_orphaned_under_lock(self) -> None:
+        """A refresh that becomes orphaned after pickling is not written."""
+        cache = self._background_cache("bg_orphaned_lock")
+        with (
+            patch.object(cache, "_refresh_is_orphaned", side_effect=[False, True]),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            assert self._write_background(cache) is False
+            mock_set.assert_not_called()

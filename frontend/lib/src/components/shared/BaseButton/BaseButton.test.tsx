@@ -16,15 +16,18 @@
 
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { darken, getContrast } from "color2k"
 
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
-import { lightTheme } from "~lib/theme/themeConfigs"
+import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import BaseButton, {
   BaseButtonKind,
-  BaseButtonProps,
+  type BaseButtonProps,
   BaseButtonSize,
 } from "./BaseButton"
+import { getTertiaryActiveColor } from "./styled-components"
 
 const getProps = (
   propOverrides: Partial<BaseButtonProps> = {}
@@ -113,4 +116,76 @@ describe("Button element", () => {
     const buttonWidget = screen.getByRole("button")
     expect(buttonWidget).toHaveStyle("width: 100%")
   })
+
+  it("omits an empty aria-label so visible text remains the accessible name", () => {
+    render(<BaseButton {...getProps({ "aria-label": "" })}>Hello</BaseButton>)
+
+    const buttonWidget = screen.getByRole("button", { name: "Hello" })
+    expect(buttonWidget).not.toHaveAttribute("aria-label")
+  })
+
+  it("applies the tertiary active color when aria-expanded is true", () => {
+    const activeColor = getTertiaryActiveColor(mockTheme.emotion)
+    render(
+      <>
+        <BaseButton
+          {...getProps({
+            kind: BaseButtonKind.TERTIARY,
+            "aria-expanded": true,
+          })}
+        >
+          Open
+        </BaseButton>
+        <BaseButton
+          {...getProps({
+            kind: BaseButtonKind.TERTIARY,
+            "aria-expanded": false,
+          })}
+        >
+          Closed
+        </BaseButton>
+      </>
+    )
+
+    expect(screen.getByRole("button", { name: "Open" })).toHaveStyle({
+      color: activeColor,
+    })
+    expect(screen.getByRole("button", { name: "Closed" })).not.toHaveStyle({
+      color: activeColor,
+    })
+  })
+})
+
+describe("getTertiaryActiveColor", () => {
+  const midGrayTheme = {
+    ...darkTheme.emotion,
+    colors: {
+      ...darkTheme.emotion.colors,
+      bgColor: "#b0b0b0",
+      primary: "#004080",
+    },
+  }
+
+  it("keeps the darkened primary color in the light theme", () => {
+    const { primary } = lightTheme.emotion.colors
+
+    expect(getTertiaryActiveColor(lightTheme.emotion)).toBe(
+      darken(primary, 0.25)
+    )
+  })
+
+  it.each([
+    ["light", lightTheme.emotion],
+    ["dark", darkTheme.emotion],
+    ["mid-gray background with dark primary", midGrayTheme],
+  ] as const)(
+    "has more contrast against the background than the primary color (%s theme)",
+    (_name, theme) => {
+      const { primary, bgColor } = theme.colors
+
+      expect(
+        getContrast(getTertiaryActiveColor(theme), bgColor)
+      ).toBeGreaterThan(getContrast(primary, bgColor))
+    }
+  )
 })

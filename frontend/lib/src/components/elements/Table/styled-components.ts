@@ -14,14 +14,35 @@
  * limitations under the License.
  */
 
-import styled, { CSSObject } from "@emotion/styled"
+import styled, { type CSSObject } from "@emotion/styled"
 
 import { Table } from "@streamlit/protobuf"
 
+import {
+  printAllowSplitRules,
+  printTableSplitRules,
+} from "~lib/components/shared/printPageBreak"
 import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import type { EmotionTheme } from "~lib/theme/types"
 
-export const StyledTableContainer = styled.div(({ theme }) => ({
+/**
+ * Print rules that let a content-height table split across pages. A
+ * fixed-height table keeps its scroll box, because its element container
+ * reserves only that height and a released table would paint over the
+ * elements below it.
+ */
+const printReleaseScrollBox: CSSObject = {
+  // A scroll or clip box cannot fragment across pages. Release both so a
+  // tall table continues instead of jumping and leaving a blank strip.
+  ...printAllowSplitRules,
+  height: "auto",
+  maxHeight: "none",
+  overflow: "visible",
+}
+
+export const StyledTableContainer = styled.div<{
+  hasReservedHeight?: boolean
+}>(({ theme, hasReservedHeight = false }) => ({
   // Match st.dataframe / widgets (fontSizes.sm = 14px at default root).
   fontSize: theme.fontSizes.sm,
   fontFamily: theme.genericFonts.bodyFont,
@@ -36,6 +57,8 @@ export const StyledTableContainer = styled.div(({ theme }) => ({
   overflow: "clip",
   // Use block display to let table expand naturally
   display: "block",
+
+  ...(hasReservedHeight ? {} : { "@media print": printReleaseScrollBox }),
 }))
 
 export const StyledTableCaption = styled.div(({ theme }) => ({
@@ -43,7 +66,7 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   paddingTop: theme.spacing.sm,
   paddingBottom: 0,
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
   textAlign: "left",
   wordWrap: "break-word",
   display: "inline-block",
@@ -52,35 +75,54 @@ export const StyledTableCaption = styled.div(({ theme }) => ({
 export const StyledTableBorder = styled.div<{
   borderMode: Table.BorderMode
   hasScrollableHeight?: boolean
-}>(({ theme, borderMode, hasScrollableHeight }) => ({
-  // Add the enclosing border on an extra wrapper around the table. This ensures that
-  // when the table scrolls horizontally on small windows, it still shows a border all
-  // around the table and the table doesn't look cut off.
-  border:
-    borderMode === Table.BorderMode.ALL
-      ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
-      : "none",
-  borderRadius: theme.radii.default,
-  overflow: "auto",
-  // Constrain width to parent to prevent overflow from pushing parent containers wider.
-  // This ensures horizontal scroll is contained within this wrapper.
-  width: "100%",
-  maxWidth: "100%",
-  // When a fixed height is specified, constrain to 100% of parent
-  height: hasScrollableHeight ? "100%" : undefined,
-  // Create positioning context for absolutely positioned children (e.g., Pandas Styler tooltips)
-  // This ensures such elements are contained within this wrapper for scroll calculations
-  position: "relative",
-  // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
-  display: "block",
-  // This prevents accidental overscrolling that triggers the browser's Back button.
-  overscrollBehaviorX: "contain",
-}))
+  hasReservedHeight?: boolean
+}>(
+  ({
+    theme,
+    borderMode,
+    hasScrollableHeight = false,
+    hasReservedHeight = false,
+  }) => ({
+    // Add the enclosing border on an extra wrapper around the table. This ensures that
+    // when the table scrolls horizontally on small windows, it still shows a border all
+    // around the table and the table doesn't look cut off.
+    border:
+      borderMode === Table.BorderMode.ALL
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`
+        : "none",
+    borderRadius: theme.radii.default,
+    overflow: "auto",
+    // Constrain width to parent to prevent overflow from pushing parent containers wider.
+    // This ensures horizontal scroll is contained within this wrapper.
+    width: "100%",
+    maxWidth: "100%",
+    // When a fixed height is specified, constrain to 100% of parent
+    height: hasScrollableHeight ? "100%" : undefined,
+    // Create positioning context for absolutely positioned children (e.g., Pandas Styler tooltips)
+    // This ensures such elements are contained within this wrapper for scroll calculations
+    position: "relative",
+    // Use block display with hidden vertical overflow to eliminate inline-table baseline gap
+    display: "block",
+    // This prevents accidental overscrolling that triggers the browser's Back button.
+    overscrollBehaviorX: "contain",
+
+    ...(hasReservedHeight
+      ? {}
+      : {
+          "@media print": {
+            ...printReleaseScrollBox,
+            // Clip painting so a table wider than its printed column is cut
+            // at the border. Unlike overflow, this does not block page breaks.
+            clipPath: "inset(0)",
+          },
+        }),
+  })
+)
 
 export const StyledTable = styled.table<{
   useContentWidth?: boolean
   hasScrollableWidth?: boolean
-}>(({ theme, useContentWidth, hasScrollableWidth }) => ({
+}>(({ theme, useContentWidth = false, hasScrollableWidth = false }) => ({
   color: theme.colors.bodyText,
   borderSpacing: 0,
   // Inline-table helps preserve content-based column sizing, so narrow
@@ -93,6 +135,13 @@ export const StyledTable = styled.table<{
   // - hasScrollableWidth is true (fixed pixel width with horizontal scroll)
   // In both cases, table should size to content and scroll if needed.
   minWidth: useContentWidth || hasScrollableWidth ? undefined : "100%",
+
+  "@media print": {
+    // `inline-table` can refuse to fragment in some print engines. A table
+    // box splits cleanly and repeats the header after each page break.
+    display: "table",
+    ...printTableSplitRules,
+  },
 }))
 
 const styleCellFunction = (
@@ -236,7 +285,7 @@ export const StyledTableCellHeader = styled.th<{
     const baseStyles = {
       ...styleCellFunction(theme, borderMode, truncateContent),
       textAlign: "inherit" as const,
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       // Remove left padding from first cell when no borders, so that the table aligns
       // with the rest of the page.
       "&:first-of-type": {

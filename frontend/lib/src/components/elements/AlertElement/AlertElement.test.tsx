@@ -21,7 +21,7 @@ import { Alert as AlertProto } from "@streamlit/protobuf"
 import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { render } from "~lib/test_util"
 
-import AlertElement, { AlertElementProps } from "./AlertElement"
+import AlertElement, { type AlertElementProps } from "./AlertElement"
 import { getAlertElementKind } from "./utils"
 
 const getProps = (

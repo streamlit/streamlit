@@ -325,3 +325,18 @@ st.file_uploader(
     type=["jpg", "tif", "pdf"],
     key="multiple_paired_dedup",
 )
+
+# --- on_change="ignore" file uploader ---
+ignore_file = st.file_uploader(
+    "Ignore change file uploader",
+    type=["txt"],
+    key="ignore_file",
+    on_change="ignore",
+)
+st.write("Ignore file value:", ignore_file.name if ignore_file else None)
+
+if st.button("Apply ignore file", key="apply_ignore_file"):
+    st.write(
+        "Applied ignore file value:",
+        ignore_file.name if ignore_file else None,
+    )

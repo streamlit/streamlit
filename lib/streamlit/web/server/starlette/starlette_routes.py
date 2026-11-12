@@ -26,7 +26,7 @@ from contextlib import aclosing
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
 
-from streamlit import config, file_util
+from streamlit import config, file_util, url_util
 from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
@@ -166,6 +166,8 @@ BASE_ROUTE_UPLOAD_FILE: Final = f"{BASE_ROUTE_CORE}/upload_file"
 BASE_ROUTE_COMPONENT: Final = "component"
 # Route prefix for serving static Streamlit frontend assets (JS, CSS, etc.)
 BASE_ROUTE_STATIC: Final = "static"
+# Route prefix for the app's own static files (`server.enableStaticServing`).
+BASE_ROUTE_APP_STATIC: Final = url_util.STATIC_SERVING_ENDPOINT.strip("/")
 
 # Health check routes
 ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
@@ -194,7 +196,7 @@ _SAME_SITE_HEADER_VALUES: Final = {
 }
 
 # App static files
-_ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+_ROUTE_APP_STATIC: Final = f"{BASE_ROUTE_APP_STATIC}/{{path:path}}"
 
 # Framing margin for the streaming upload-size cap in `_upload_put`: the raw
 # request body is rejected once it exceeds `server.maxUploadSize` plus this
@@ -318,7 +320,9 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     The cookie is only set if XSRF protection is enabled in the configuration.
     The SameSite attribute is controlled by server.xsrfCookieSameSite. The
     Secure flag is added when SSL is configured, and is always added when
-    SameSite is "none" (browsers require Secure for SameSite=None).
+    SameSite is "none" (browsers require Secure for SameSite=None) or when
+    server.xsrfCookiePartitioned adds the Partitioned attribute (browsers
+    require Secure for partitioned cookies).
 
     Note: The XSRF cookie intentionally does NOT have the HttpOnly flag. This
     is required for the double-submit cookie pattern: JavaScript reads the
@@ -358,9 +362,16 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         else "lax",
         "Lax",
     )
-    # Browsers reject SameSite=None cookies without the Secure flag, so force
-    # Secure in that case.
-    secure = bool(config.get_option("server.sslCertFile")) or same_site == "None"
+    # Only a real True enables Partitioned; config validation rejects other
+    # values, and this keeps a stray value from being coerced into it.
+    partitioned = config.get_option("server.xsrfCookiePartitioned") is True
+    # Browsers reject SameSite=None and Partitioned cookies without the Secure
+    # flag, so force Secure in both cases.
+    secure = (
+        bool(config.get_option("server.sslCertFile"))
+        or same_site == "None"
+        or partitioned
+    )
 
     _set_unquoted_cookie(
         response,
@@ -368,6 +379,7 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
         cookie_value,
         same_site=same_site,
         secure=secure,
+        partitioned=partitioned,
     )
 
 
@@ -378,6 +390,7 @@ def _set_unquoted_cookie(
     *,
     same_site: str = "Lax",
     secure: bool,
+    partitioned: bool = False,
 ) -> None:
     """Set a cookie without URL-encoding or quoting the value.
 
@@ -393,6 +406,8 @@ def _set_unquoted_cookie(
       protects against CSRF while allowing top-level navigations; "None" enables
       cross-origin (iframe) usage and requires Secure.
     - Secure (conditional): Added when SSL is configured or `secure` is True.
+    - Partitioned (conditional): Added when `partitioned` is True, opting the
+      cookie into per-top-level-site storage (CHIPS). Requires Secure.
 
     HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
     read the cookie value to include it in request headers (double-submit pattern).
@@ -410,7 +425,14 @@ def _set_unquoted_cookie(
         Defaults to "Lax".
     secure
         Whether to add the Secure flag (should be True when using HTTPS).
+    partitioned
+        Whether to add the Partitioned attribute. Browsers drop a partitioned
+        cookie that is not also Secure, so `secure` must be True when this is
+        True.
     """
+    if partitioned and not secure:
+        raise ValueError("A Partitioned cookie must also be Secure.")
+
     # Build the Set-Cookie header value manually to avoid encoding
     header_value = "; ".join(
         [
@@ -418,6 +440,7 @@ def _set_unquoted_cookie(
             "Path=/",
             f"SameSite={same_site}",
             *(["Secure"] if secure else []),
+            *(["Partitioned"] if partitioned else []),
         ]
     )
 

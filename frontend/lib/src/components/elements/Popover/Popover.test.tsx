@@ -21,11 +21,11 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import * as UseFloatingOverlay from "~lib/hooks/useFloatingOverlay"
-import { render } from "~lib/test_util"
+import { mockEllipsizedLabels, render } from "~lib/test_util"
 import { iconSizes } from "~lib/theme/primitives/iconSizes"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Popover, { clampPopoverSize, PopoverProps } from "./Popover"
+import Popover, { clampPopoverSize, type PopoverProps } from "./Popover"
 
 const createWidgetMgr = (): WidgetStateManager =>
   new WidgetStateManager({
@@ -91,6 +91,8 @@ describe("Popover container", () => {
   )
 
   describe("wrap=false", () => {
+    mockEllipsizedLabels()
+
     it("keeps the chevron visible and sets the full label as a native title", () => {
       const props = getProps({
         label: "A very long popover label",
@@ -161,7 +163,9 @@ describe("Popover container", () => {
     expect(screen.queryByText("test")).toBeVisible()
 
     // Wait past the "just opened" guard that ignores the opening click.
-    await new Promise(resolve => setTimeout(resolve, 60))
+    await new Promise(resolve => {
+      setTimeout(resolve, 60)
+    })
 
     await user.click(screen.getByText("outside"))
     expect(screen.queryByText("test")).not.toBeInTheDocument()
@@ -194,7 +198,9 @@ describe("Popover container", () => {
 
       // Wait past the "just opened" guard so this click is treated as a real
       // outside interaction (which would otherwise close the popover).
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       await user.click(screen.getByText("dropdown option"))
       // The popover must remain open after interacting with the overlay root.
@@ -232,7 +238,9 @@ describe("Popover container", () => {
       await user.click(screen.getByText("label"))
       expect(screen.queryByText("test")).toBeVisible()
 
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       await user.click(screen.getByText("day 15"))
       // pointerdown captured the click as inside an overlay root before the
@@ -271,7 +279,9 @@ describe("Popover container", () => {
       await user.click(screen.getByText("label"))
       expect(screen.queryByText("test")).toBeVisible()
 
-      await new Promise(resolve => setTimeout(resolve, 60))
+      await new Promise(resolve => {
+        setTimeout(resolve, 60)
+      })
 
       // Enter keydown inside the overlay records the interaction origin before
       // the overlay detaches the option node...
@@ -489,7 +499,9 @@ describe("Dynamic popover (widget mode)", () => {
       name: "clicking outside",
       dismiss: async (user: ReturnType<typeof userEvent.setup>) => {
         // Wait past the "just opened" guard that ignores the opening click.
-        await new Promise(resolve => setTimeout(resolve, 60))
+        await new Promise(resolve => {
+          setTimeout(resolve, 60)
+        })
         await user.click(screen.getByText("outside"))
       },
       wrapOutside: true,
@@ -813,6 +825,27 @@ describe("Popover chevron visibility", () => {
     expect(button).not.toHaveTextContent("expand_more")
 
     // Open popover and check chevron is still not shown
+    await user.click(button)
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when icon is %s and label is empty", async icon => {
+    const user = userEvent.setup()
+    const props = getProps({ label: "", icon })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent(icon.slice(":material/".length, -1))
+    expect(button).not.toHaveTextContent("expand_more")
+
     await user.click(button)
     expect(button).not.toHaveTextContent("expand_less")
   })

@@ -61,8 +61,8 @@ class ToastTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             st.toast("toast text", icon="invalid")
         assert str(e.value) == (
-            'The value "invalid" is not a valid emoji. Shortcodes '
-            "are not allowed, please use a single character instead."
+            'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )
 
     @parameterized.expand([("short", 4), ("long", 10), ("infinite", 0), (10, 10)])

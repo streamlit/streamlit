@@ -513,6 +513,82 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 100
 
+    @parameterized.expand(
+        [
+            (True,),
+            (False,),
+            ("always",),
+            ("auto",),
+            ("never",),
+            ("foo",),
+            (1,),
+        ]
+    )
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_column_width_is_ignored_noop(
+        self, use_column_width: object, show_warning_mock: mock.Mock
+    ) -> None:
+        """use_column_width is accepted, warned about, and does not change width."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_column_width=use_column_width)
+
+        show_warning_mock.assert_called_once()
+        warning_message = show_warning_mock.call_args.args[0]
+        assert "use_column_width" in warning_message
+        assert "no effect" in warning_message
+        assert "stretch" in warning_message
+        assert "content" in warning_message
+        assert show_warning_mock.call_args.kwargs.get("show_in_browser", True) is True
+        assert show_warning_mock.call_args.kwargs.get("show_once", False) is False
+
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_content
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_column_width_does_not_override_width(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """width remains authoritative when use_column_width is also passed."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, width=100, use_column_width=True)
+
+        show_warning_mock.assert_called_once()
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.pixel_width == 100
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_use_container_width_remains_authoritative(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """use_container_width still maps width when use_column_width is ignored."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, use_container_width=True, use_column_width=True)
+
+        assert show_warning_mock.call_count == 2
+        el = self.get_delta_from_queue().new_element
+        assert el.width_config.use_stretch
+
+    @mock.patch("streamlit.elements.image.show_deprecation_warning")
+    def test_st_image_omits_use_column_width_warning_when_unset(
+        self, show_warning_mock: mock.Mock
+    ) -> None:
+        """Omitting use_column_width does not emit its deprecation warning."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        show_warning_mock.assert_not_called()
+
+    def test_st_image_unknown_keyword_still_raises(self) -> None:
+        """Other unexpected keywords still raise TypeError."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(TypeError, match="unexpected keyword argument"):
+            st.image(img, not_a_real_param=True)
+
     def test_st_image_width_stretch(self):
         """Test st.image with width='stretch'."""
         img = Image.new("RGB", (64, 64), color="red")
@@ -630,6 +706,104 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
+
+    def test_st_image_alt_distinguishes_omitted_empty_and_whitespace(
+        self,
+    ) -> None:
+        """Non-empty alt is stored; omitted/None/whitespace leave it unset; "" is decorative."""
+        url = "http://server/fake0.jpg"
+
+        st.image(url, alt="Sunrise over a mountain ridge")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Sunrise over a mountain ridge"
+
+        st.image(url)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+        st.image(url, alt=None)
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+        st.image(url, alt="")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == ""
+
+        st.image(url, alt="  ")
+        assert not self.get_delta_from_queue().new_element.imgs.imgs[0].HasField("alt")
+
+    def test_st_image_alt_coerces_non_string_values_and_rejects_scalar_with_many_images(
+        self,
+    ) -> None:
+        """Non-string scalars and bytes are coerced via to_str (spec value table)."""
+        url = "http://server/fake0.jpg"
+
+        st.image(url, alt=42)
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "42"
+
+        st.image(url, alt=b"photo")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "b'photo'"
+
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+        st.image(urls, alt=np.array(["Cat", "Dog"]))
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].alt == "Cat"
+        assert imgs[1].alt == "Dog"
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt=42)
+        assert "single" in str(exc_info.value).lower()
+
+    def test_st_image_alt_strips_whitespace(self) -> None:
+        """Leading and trailing whitespace is stripped from alt."""
+        st.image("http://server/fake0.jpg", alt="  Sunrise  ")
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == "Sunrise"
+
+    def test_st_image_alt_list_pairs_with_images(self) -> None:
+        """A sequence of alt values pairs positionally with multiple images."""
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+        st.image(urls, alt=["Cat", None])
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].alt == "Cat"
+        assert not imgs[1].HasField("alt")
+
+        st.image(urls, alt=["", "Dog"])
+        imgs = self.get_delta_from_queue().new_element.imgs.imgs
+        assert imgs[0].HasField("alt")
+        assert imgs[0].alt == ""
+        assert imgs[1].alt == "Dog"
+
+    def test_st_image_alt_length_mismatch_raises(self) -> None:
+        """Alt list length must match image count; single string with many images fails."""
+        urls = ["http://server/a.jpg", "http://server/b.jpg"]
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt=["only one"])
+        assert "alt" in str(exc_info.value).lower()
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(urls, alt="single string")
+        assert "single" in str(exc_info.value).lower()
+
+    def test_st_image_alt_with_set_of_images_raises(self) -> None:
+        """Sequence-valued alt cannot pair with a set of images."""
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image({"http://server/a.jpg", "http://server/b.jpg"}, alt=["a", "b"])
+        assert "set" in str(exc_info.value).lower()
+
+    def test_st_image_alt_preserves_adversarial_plain_text(self) -> None:
+        """Quotes, brackets, and script-like text stay literal on the proto."""
+        adversarial = 'Say "hi" <b>bold</b> <script>alert(1)</script>'
+        st.image("http://server/fake0.jpg", alt=adversarial)
+        el = self.get_delta_from_queue().new_element.imgs.imgs[0]
+        assert el.HasField("alt")
+        assert el.alt == adversarial
 
 
 @pytest.mark.parametrize(

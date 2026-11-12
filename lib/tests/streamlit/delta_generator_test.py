@@ -227,6 +227,36 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert not dg._cursor.is_locked
         assert dg._cursor.index == 0
 
+    def test_constructing_delta_generators_leaves_method_modules_unchanged(
+        self,
+    ) -> None:
+        """Constructing a DeltaGenerator or container doesn't mutate shared methods,
+        and each mixin method reports the module that defines it.
+        """
+        owners = (DeltaGenerator, *DeltaGenerator.__bases__)
+
+        def method_modules() -> dict[tuple[str, str], str]:
+            return {
+                (owner.__qualname__, name): func.__module__
+                for owner in owners
+                for name, func in vars(owner).items()
+                if callable(func)
+            }
+
+        before = method_modules()
+
+        DeltaGenerator()
+        st.expander("expander")
+        st.tabs(["tab"])
+        st.status("status")
+        st.popover("popover")
+
+        assert method_modules() == before
+        for mixin in DeltaGenerator.__bases__:
+            for name, func in vars(mixin).items():
+                if callable(func):
+                    assert func.__module__ == mixin.__module__, (mixin, name)
+
     def test_constructor_with_id(self):
         """Test DeltaGenerator() with an id."""
         cursor = LockedCursor(root_container=RootContainer.MAIN, index=1234)
@@ -259,6 +289,78 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         dg = DeltaGenerator(root_container=None)
         new_dg = dg._enqueue("empty", EmptyProto())
         assert dg == new_dg
+
+    def test_block_without_script_context_returns_subclass_parented_on_caller(self):
+        """Without a script run context, _block returns the subclass on the caller.
+
+        The enqueued path uses parent=dg; this path must match so walks of
+        ``_parent`` (for example ``current_form_id``) stay consistent.
+        """
+        from streamlit.elements.lib.mutable_status_container import StatusContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.expandable.SetInParent()
+        result = dg._block(block_proto, dg_type=StatusContainer)
+        assert isinstance(result, StatusContainer)
+        assert result._parent is dg
+        assert not isinstance(result._parent, StatusContainer)
+
+    def test_nested_block_without_script_context_is_a_new_instance(self):
+        """Without a script run context, a nested block is a new instance."""
+        from streamlit.elements.lib.grid_container import GridContainer
+
+        dg = DeltaGenerator(root_container=None)
+        block_proto = Block_pb2.Block()
+        block_proto.grid_container.SetInParent()
+        outer = dg._block(block_proto, dg_type=GridContainer)
+        assert isinstance(outer, GridContainer)
+        inner = outer._block(block_proto, dg_type=GridContainer)
+        assert isinstance(inner, GridContainer)
+        assert inner is not outer
+        assert inner._parent is outer
+
+    def _without_script_context(self):
+        add_script_run_ctx(threading.current_thread(), None)
+        self.addCleanup(
+            add_script_run_ctx, threading.current_thread(), self.script_run_ctx
+        )
+
+    def test_status_without_script_context_does_not_raise(self):
+        """Bare `with st.status` must not raise, including when the body does."""
+        self._without_script_context()
+        with st.status("label"):
+            pass
+
+        with pytest.raises(RuntimeError, match="from body"):
+            with st.status("label"):
+                raise RuntimeError("from body")
+
+    def test_nested_grid_without_script_context_keeps_parent_columns(self):
+        """A nested bare-mode grid must not overwrite the parent's column count."""
+        self._without_script_context()
+        outer = st.grid(4)
+        with outer:
+            inner = st.grid(2)
+        assert inner is not outer
+        assert outer._declared_columns == 4
+        assert inner._declared_columns == 2
+
+    def test_dialog_open_close_without_script_context_does_not_raise(self):
+        """Dialog open/close must not enqueue when there is no session."""
+        from streamlit.elements.lib.dialog import Dialog
+
+        self._without_script_context()
+        dialog = Dialog(
+            root_container=None,
+            cursor=None,
+            parent=None,
+            block_type="dialog",
+        )
+        dialog._current_proto = Block_pb2.Block()
+        dialog._delta_path = []
+        dialog.open()
+        dialog.close()
 
     @parameterized.expand([(RootContainer.MAIN,), (RootContainer.SIDEBAR,)])
     def test_enqueue(self, container):
@@ -1260,8 +1362,16 @@ class ParallelWorkerExternalContainerWriteTest(DeltaGeneratorTestCase):
             with pytest.raises(
                 StreamlitInvalidLayoutContextError,
                 match="outside a parallel fragment",
-            ):
+            ) as exc_info:
                 outside_dg._enqueue("text", TextProto())
+
+            message = str(exc_info.value)
+            assert "`st.sidebar`" in message
+            assert "`st.bottom`" in message
+            assert "full app run" in message
+            assert "later fragment rerun" in message
+            assert "if st.button" not in message
+            assert "sequential fragment rerun" not in message
         finally:
             ThreadState.update(is_parallel_worker=False, delta_path=())
 
@@ -1607,8 +1717,12 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
         assert wrapper_a.creation_delta_path != wrapper_b.creation_delta_path
 
     def test_fragment_only_rerun_without_prior_write_raises(self) -> None:
-        """If the outside container was never written to during a full app run, a
-        fragment-only rerun raises.
+        """A fragment-only rerun raises when that fragment did not write to the
+        outside container on the last full app run.
+
+        The message is shared with ``parallel=True`` fragments, which cannot
+        reserve that slot, so it also states that outside writes are
+        unsupported for them.
         """
         outside = st.container()
         self.script_run_ctx.fragment_ids_this_run = ["frag"]
@@ -1616,7 +1730,36 @@ class OutsideWrapperCreationTest(DeltaGeneratorTestCase):
 
         with pytest.raises(
             StreamlitInvalidLayoutContextError,
-            match="could not reserve a stable position",
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
+        ) as exc_info:
+            outside.markdown("hi")
+
+        message = str(exc_info.value)
+        assert "`parallel=True`" in message
+        assert "is not supported" in message
+        assert "`st.sidebar`" in message
+        assert "`st.bottom`" in message
+        assert "outside_container.empty()" in message
+        assert "inside the fragment function" in message
+
+    def test_fragment_only_rerun_after_main_script_empty_raises(self) -> None:
+        """A main-script write does not reserve a wrapper, so a fragment-only
+        rerun still raises.
+        """
+        outside = st.container()
+        outside.empty()
+        self.script_run_ctx.fragment_ids_this_run = ["frag"]
+        _enter_fragment(self)
+
+        with pytest.raises(
+            StreamlitInvalidLayoutContextError,
+            match=(
+                "the fragment did not write to that container during the last full "
+                "app run"
+            ),
         ):
             outside.markdown("hi")
 

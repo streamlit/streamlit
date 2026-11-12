@@ -16,10 +16,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import {
-  type CellClickedEventArgs,
-  type DataEditorProps,
-  type Item,
+import type {
+  CellClickedEventArgs,
+  DataEditorProps,
+  Item,
 } from "@glideapps/glide-data-grid"
 
 import type { Dataframe as DataframeProto } from "@streamlit/protobuf"
@@ -209,11 +209,14 @@ function useButtonColumnInteractions({
         return
       }
 
-      const column = columns[col]
-      if (column === undefined) {
+      // `columns[col]` is typed as always defined, but `col` can fall outside
+      // the list.
+      if (col < 0 || col >= columns.length) {
         clearButtonActionMenuForIgnoredClick()
         return
       }
+
+      const column = columns[col]
 
       const cell = getCellContent([col, row])
       if (!isButtonCell(cell)) {

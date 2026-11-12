@@ -16,11 +16,17 @@
 
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
 
-import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import type { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
-import { parseFormatOrder } from "~lib/components/widgets/DateInput/dateInputUtils"
-import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import {
+  parseFormatOrder,
+  SEGMENT_SELECTOR,
+} from "~lib/components/widgets/DateInput/dateInputUtils"
+import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
+
+export { SEGMENT_SELECTOR }
 
 function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
@@ -30,7 +36,7 @@ function pad(value: number, length: number): string {
 export function isoToCalendarDateTime(
   value: string | null | undefined
 ): CalendarDateTime | null {
-  if (!value) return null
+  if (isNullOrEmptyString(value)) return null
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::[0-5]\d)?$/.exec(
     value.trim()
   )
@@ -128,7 +134,7 @@ export function parsePastedDateTime(
   if (isoResult) return isoResult
 
   const { order, separator } = parseFormatOrder(dateFormat)
-  const escapedSep = separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const datePartRe = `(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})`
   const timePartRe = `(\\d{1,2}):(\\d{2})`
   const re = new RegExp(`^${datePartRe}[,\\s]+${timePartRe}$`)
@@ -214,10 +220,6 @@ export interface SegmentState {
   isPartiallyTyped: boolean
   isFullyCleared: boolean
 }
-
-/** Editable segments. Matched on `data-type` rather than `role`, which React Aria
- * replaces with `textbox` on iOS. Literals are the separators between segments. */
-export const SEGMENT_SELECTOR = '[data-type]:not([data-type="literal"])'
 
 /** Query the editable segments in a container to determine their placeholder state. */
 export function getSegmentState(container: HTMLElement): SegmentState {
@@ -335,13 +337,13 @@ export function getStateFromWidgetMgr(
 export function getDefaultStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.default?.length ? element.default[0] : null
+  return element.default.length ? element.default[0] : null
 }
 
 export function getCurrStateFromProto(
   element: DateTimeInputProto
 ): string | null {
-  return element.value?.length ? element.value[0] : null
+  return element.value.length ? element.value[0] : null
 }
 
 export function updateWidgetMgrState(
@@ -354,14 +356,22 @@ export function updateWidgetMgrState(
   const maxDateTime = isoToCalendarDateTime(element.max)
 
   const setArrayValue = (val: string | null): void => {
-    widgetMgr.setStringArrayValue(element.id, val ? [val] : [], {
-      formId: element.formId,
-      fragmentId,
-      fromUser: vws.fromUser,
-    })
+    widgetMgr.setStringArrayValue(
+      element.id,
+      isNullOrEmptyString(val) ? [] : [val],
+      {
+        formId: element.formId,
+        fragmentId,
+        fromUser: vws.fromUser,
+        // on_change="ignore" buffers the value without scheduling a rerun.
+        // WidgetStateManager ignores triggerRerun inside forms (the form owns
+        // commit timing).
+        ...(element.ignoreRerun ? { triggerRerun: false } : {}),
+      }
+    )
   }
 
-  if (vws.value) {
+  if (!isNullOrEmptyString(vws.value)) {
     const dt = isoToCalendarDateTime(vws.value)
     if (dt) {
       const isOutOfBounds = !!validateDateTime(dt, minDateTime, maxDateTime)

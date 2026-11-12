@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-CHECKBOX_ELEMENTS = 24
+CHECKBOX_ELEMENTS = 25
 
 WRAP_LABEL = "Include archived projects from the last several quarters"
 
@@ -98,6 +98,21 @@ def test_checkbox_widget_display(
         get_checkbox(themed_app, "checkbox with 200px width"),
         name="st_checkbox-width_200px",
     )
+
+
+def test_checkbox_unchecked_hover(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Verify unchecked checkbox hover matches the secondary button in both themes."""
+    checkbox = get_checkbox(themed_app, "checkbox 2 (False)")
+    label = checkbox.locator("label").first
+
+    reset_hovering(themed_app)
+    expect(checkbox.locator("[data-hovered]")).to_have_count(0)
+
+    label.hover()
+    expect(label).to_have_attribute("data-hovered", "true")
+    assert_snapshot(checkbox, name="st_checkbox-unchecked_hover")
 
 
 def test_help_tooltip_works(app: Page):
@@ -340,3 +355,43 @@ def test_checkbox_unbind_clears_url_param(page: Page, app_base_url: str):
     # Widget value should still be True (preserved in session state)
     expect_prefixed_markdown(page, "unbindable value:", "True")
     expect_prefixed_markdown(page, "bind active:", "False")
+
+
+def test_checkbox_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on click, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "False")
+    # Default is omitted from the URL.
+    expect(app).not_to_have_url(re.compile(r"[?&]ignore_checkbox="))
+
+    ignore_checkbox = get_checkbox(app, "Ignore change checkbox")
+
+    # Clicking the checkbox updates the URL without rerunning the app.
+    click_checkbox(app, "Ignore change checkbox")
+
+    # Catch a delayed rerun that click_checkbox's wait might miss.
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(ignore_checkbox.get_by_role("checkbox")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "False")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_checkbox=true"))
+
+    # A later rerun should send the buffered value.
+    app.get_by_role("button", name="Apply ignore checkbox", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect(app.get_by_text("Ignore checkbox value: True", exact=True)).to_be_visible()
+    expect(
+        app.get_by_text("Applied ignore checkbox value: True", exact=True)
+    ).to_be_visible()
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(ignore_checkbox.get_by_role("checkbox")).to_be_checked()
+    expect_prefixed_markdown(app, "Ignore checkbox value:", "True")

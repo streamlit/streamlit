@@ -18,7 +18,7 @@ import { memo } from "react"
 
 import Dropzone, {
   type DropzoneInputProps,
-  FileRejection,
+  type FileRejection,
 } from "react-dropzone"
 
 import BaseButton, {
@@ -107,6 +107,7 @@ const FileDropzone = ({
               </StyledDragDropText>
             </StyledDragDropOverlay>
           )}
+          {/* eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- a falsy ReactNode means there is no file list to show */}
           {hasFiles && uploadedFiles ? (
             uploadedFiles
           ) : (

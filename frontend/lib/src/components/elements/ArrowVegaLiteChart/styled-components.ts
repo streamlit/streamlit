@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-import { CSSObject } from "@emotion/react"
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 import { transparentize } from "color2k"
 
+import {
+  printGraphicFitStyles,
+  printWidthCapRules,
+} from "~lib/components/shared/printWidthCap"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import type { EmotionTheme } from "~lib/theme/types"
 
@@ -248,7 +252,7 @@ export const getVegaBindingStyles = (theme: EmotionTheme): CSSObject => {
     // Vega appends an unclassed <span> with the current slider value.
     "& input[type='range'] + span": {
       fontSize: theme.fontSizes.sm,
-      color: theme.colors.fadedText60,
+      color: theme.colors.fadedText70,
       lineHeight: theme.lineHeights.small,
       minWidth: "3em",
     },
@@ -321,7 +325,7 @@ export const StyledVegaLiteChartTooltips = (
           // This should use a max of 40% of the available width (- padding):
           maxWidth: `calc((${theme.sizes.maxChartTooltipWidth} - 2 * ${theme.spacing.md}) * 0.4)`,
           textAlign: "right",
-          color: theme.colors.fadedText60,
+          color: theme.colors.fadedText70,
           whiteSpace: "nowrap",
           paddingRight: theme.spacing.twoXS,
         },
@@ -347,32 +351,85 @@ export const StyledVegaLiteChartTooltips = (
 interface StyledVegaLiteChartContainerProps {
   useContainerWidth: boolean
   useContainerHeight: boolean
+  /**
+   * Whether to size-contain the chart, so its rendered size can't feed back
+   * into the layout and it can shrink with its parent.
+   */
+  isSizeContained: boolean
+  /**
+   * Pixel width of a size-contained content-width chart, from its spec.
+   * Without it, the chart uses the default chart width.
+   */
+  contentWidth?: number
+  /**
+   * Whether a size-contained chart uses the default chart height when its
+   * parent has no definite height to fill.
+   */
+  hasFallbackHeight: boolean
 }
 
 export const StyledVegaLiteChartContainer =
   styled.div<StyledVegaLiteChartContainerProps>(
-    ({ theme, useContainerWidth, useContainerHeight }) => ({
-      width: useContainerWidth ? "100%" : "auto",
-      height: useContainerHeight ? "100%" : "auto",
-      // These styles come from VegaLite Library
-      "&.vega-embed": {
-        position: "relative",
-        display: "inline-block",
-        boxSizing: "border-box",
+    ({
+      theme,
+      useContainerWidth,
+      useContainerHeight,
+      isSizeContained,
+      contentWidth,
+      hasFallbackHeight,
+    }) => {
+      return {
+        width: useContainerWidth ? "100%" : "auto",
+        height: useContainerHeight ? "100%" : "auto",
+        ...(isSizeContained && {
+          contain: "size",
+          containIntrinsicHeight: hasFallbackHeight
+            ? theme.sizes.defaultChartHeight
+            : "none",
+          // Containment drops the rendered width, so a content-width chart
+          // needs its own width as the intrinsic width.
+          ...(!useContainerWidth && {
+            containIntrinsicWidth:
+              contentWidth === undefined
+                ? theme.sizes.defaultChartWidth
+                : `${contentWidth}px`,
+          }),
+        }),
+        // These styles come from VegaLite Library
+        "&.vega-embed": {
+          position: "relative",
+          // An inline-block's baseline would still let the rendered chart grow
+          // its parent's line box despite the size containment.
+          display: isSizeContained ? "block" : "inline-block",
+          boxSizing: "border-box",
 
-        "&.fit-x": {
-          width: "100%",
-        },
-        "&.fit-y": {
-          height: "100%",
-        },
-        // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
-        "svg.marks g.role-scope": {
-          "path.background, path.foreground": {
-            pointerEvents: "auto",
+          "&.fit-x": {
+            width: "100%",
+          },
+          "&.fit-y": {
+            height: "100%",
+          },
+          // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
+          "svg.marks g.role-scope": {
+            "path.background, path.foreground": {
+              pointerEvents: "auto",
+            },
           },
         },
-      },
-      "& form.vega-bindings": getVegaBindingStyles(theme),
-    })
+        "& form.vega-bindings": getVegaBindingStyles(theme),
+        "@media print": {
+          // Vega locks the SVG to the on-screen pixel width. Cap that width
+          // when the printed page is narrower, without shrinking the height.
+          ...printWidthCapRules,
+          // Print can release the parent's height, for example when a
+          // fixed-height horizontal container stacks its children. Contain
+          // only the width, so the chart takes the height it rendered at
+          // instead of collapsing.
+          ...(isSizeContained && { contain: "inline-size" }),
+        },
+        // Canvas and hybrid renderers paint a canvas.marks node. It keeps
+        // the on-screen pixel width unless the same fit rule covers it.
+        "& svg.marks, & canvas.marks": printGraphicFitStyles,
+      }
+    }
   )

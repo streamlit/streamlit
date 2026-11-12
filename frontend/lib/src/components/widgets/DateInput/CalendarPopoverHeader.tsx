@@ -15,9 +15,9 @@
  */
 
 import {
-  ContextType,
-  KeyboardEvent,
-  ReactElement,
+  type ContextType,
+  type KeyboardEvent,
+  type ReactElement,
   useCallback,
   useContext,
   useRef,
@@ -27,8 +27,8 @@ import {
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import { ArrowBack, ArrowForward } from "@emotion-icons/material-rounded"
 import {
-  CalendarDate,
-  DateValue,
+  type CalendarDate,
+  type DateValue,
   endOfMonth,
   startOfMonth,
   toCalendar,
@@ -40,7 +40,7 @@ import {
   CalendarStateContext,
   CalendarYearPicker,
   Heading,
-  Key,
+  type Key,
   RangeCalendarStateContext,
 } from "react-aria-components"
 
@@ -154,7 +154,7 @@ function HeaderPickerSelect({
       >
         {selectedLabel}
         <StyledCalendarHeaderSelectChevron>
-          <KeyboardArrowDown size={theme.iconSizes.base} />
+          <KeyboardArrowDown size={theme.iconSizes.base} aria-hidden="true" />
         </StyledCalendarHeaderSelectChevron>
       </StyledCalendarHeaderSelectTrigger>
       <StyledDropdownPopover
@@ -321,7 +321,7 @@ function markUnavailableMonths(
 export function CalendarPopoverHeader(): ReactElement {
   const calendarState = useContext(CalendarStateContext)
   const rangeCalendarState = useContext(RangeCalendarStateContext)
-  const state = calendarState || rangeCalendarState
+  const state = calendarState ?? rangeCalendarState
   const { items: yearItems, value: yearValue } = useYearPickerItems(state)
 
   // Keys are year numbers, so picking one changes only the year and keeps the

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Never, overload
 
 from streamlit import util
 from streamlit.errors import StreamlitAPIException
@@ -52,6 +52,23 @@ class BaseCustomComponent(ABC):
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+    # The ``Never`` overload rejects positional arguments. The keyword-only
+    # overload is the supported call. Runtime still accepts ``*args`` and raises
+    # ``MarshallComponentException``.
+    @overload
+    def __call__(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def __call__(
+        self,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
+        **kwargs: Any,
+    ) -> Any: ...
 
     def __call__(
         self,
@@ -109,6 +126,22 @@ class BaseCustomComponent(ABC):
     def __ne__(self, other: object) -> bool:
         """Inequality operator."""
         return NotImplemented
+
+    # Same ``Never`` overload for ``create_instance``: type checkers reject
+    # positional calls, and runtime raises ``MarshallComponentException``.
+    @overload
+    def create_instance(self, *args: Never, **kwargs: Never) -> Any: ...
+
+    @overload
+    def create_instance(
+        self,
+        *,
+        default: Any = ...,
+        key: str | None = ...,
+        on_change: WidgetCallback | None = ...,
+        tab_index: int | None = ...,
+        **kwargs: Any,
+    ) -> Any: ...
 
     @abstractmethod
     def create_instance(

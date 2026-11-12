@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast
 
 from streamlit import runtime
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.options_selector_utils import create_mappings
@@ -43,6 +44,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
 from streamlit.type_util import check_python_comparable
@@ -266,10 +268,10 @@ class MenuButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. The icon and expansion arrow
-            remain visible. This parameter controls only the trigger label;
-            menu option labels are unaffected.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. The icon and
+            expansion arrow remain visible. This parameter controls only the
+            trigger label; menu option labels are unaffected.
 
         Returns
         -------
@@ -337,6 +339,11 @@ class MenuButtonMixin:
     ) -> T | None:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
 
         check_widget_policies(
             self.dg,
@@ -441,7 +448,31 @@ class MenuButtonMixin:
                 },
             )
 
-        self.dg._enqueue("menu_button", menu_button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "menu_button",
+            menu_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "menu_button",
+                key=element_id,
+                # A payload-bearing trigger: the fired option is the trigger's
+                # value.
+                action="trigger",
+                value_schema=agent_spec.STRING,
+                label=label,
+                # Copied only while recording: this argument runs before the
+                # gate inside element().
+                options=(
+                    list(menu_button_proto.options)
+                    if agent_spec.is_recording()
+                    else None
+                ),
+                help=menu_button_proto.help or None,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
+        )
         return widget_state.value
 
     @property

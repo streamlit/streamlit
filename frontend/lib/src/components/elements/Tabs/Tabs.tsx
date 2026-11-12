@@ -17,7 +17,7 @@
 import {
   type JSX,
   memo,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
@@ -27,10 +27,12 @@ import {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import { Key, SelectionIndicator } from "react-aria-components"
+import { type Key, SelectionIndicator } from "react-aria-components"
 
-import { AppNode, BlockNode } from "~lib/AppNode"
-import { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
+import { isNullOrEmptyString } from "@streamlit/utils"
+
+import type { AppNode, BlockNode } from "~lib/AppNode"
+import type { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
 import {
   convertKeyToClassName,
   getKeyFromId,
@@ -38,9 +40,11 @@ import {
 } from "~lib/components/core/Block/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
+import { PRINT_INACTIVE_ATTRIBUTE } from "~lib/components/shared/printPageBreak"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useHorizontalScrollOverflow } from "~lib/hooks/useHorizontalScrollOverflow"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledScrollArrow,
@@ -64,7 +68,7 @@ function getPersistedTabIndex(
   allTabLabels: string[]
 ): { index: number; label: string } | null {
   const stored = widgetMgr.getElementState<string>(blockId, "activeTabLabel")
-  if (!stored) return null
+  if (isNullOrEmptyString(stored)) return null
   const idx = allTabLabels.indexOf(stored)
   return idx >= 0 ? { index: idx, label: stored } : null
 }
@@ -79,6 +83,9 @@ export interface TabProps extends BlockPropsWithoutWidth {
   width: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
+  alignSelf?: React.CSSProperties["alignSelf"]
+  minHeight?: React.CSSProperties["minHeight"]
+  maxHeight?: React.CSSProperties["maxHeight"]
   fragmentId?: string
 }
 
@@ -90,32 +97,49 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     width,
     height,
     flex,
+    alignSelf,
+    minHeight,
+    maxHeight,
     widgetMgr,
     fragmentId,
   } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
-  const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
+  const defaultTabIndex = node.deltaBlock.tabContainer?.defaultTabIndex ?? 0
+  const tabContainer = node.deltaBlock.tabContainer
   // widgetId is only set when the backend registers tabs as a stateful widget
-  // (on_change="rerun"). blockId is set whenever key= is provided.
-  const widgetId = node.deltaBlock?.tabContainer?.id
-  const blockId = node.deltaBlock?.id ?? ""
+  // (on_change="rerun" or bind="query-params"). blockId is set whenever key= is provided.
+  const widgetId = tabContainer?.id
+  const blockId = node.deltaBlock.id ?? ""
   const isDynamic = Boolean(widgetId)
   // Passive keyed tabs: have a stable blockId (key= provided) but are NOT
-  // dynamic widgets (no on_change="rerun"). These persist the active tab label
-  // in elementStates so the selection survives component remounts. Dynamic tabs
-  // are excluded because the backend manages their state via session_state.
+  // dynamic widgets (no on_change="rerun" or bind="query-params"). These persist
+  // the active tab label in elementStates so the selection survives component
+  // remounts. Dynamic tabs are excluded because the backend manages their state
+  // via session_state.
   const isPassivelyKeyed = Boolean(blockId) && !isDynamic
   const userKey = getKeyFromId(blockId)
 
   // Memoize tab labels to prevent unnecessary effect reruns
   const allTabLabels = useMemo(
     () =>
-      node.children.map((child, index) => {
-        const tabNode = child as BlockNode
-        return tabNode?.deltaBlock?.tab?.label ?? index.toString()
-      }),
+      node.children.map(
+        (child, index) =>
+          (child as BlockNode).deltaBlock.tab?.label ?? index.toString()
+      ),
     [node.children]
+  )
+
+  // Bind against the original default label, not the active tab.
+  // defaultTabIndex is the current selection; using it as the omit-default
+  // target would leave the param in the URL after switching back to default=.
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    isDynamic ? (tabContainer?.queryParamKey ?? null) : null,
+    "string_value",
+    tabContainer?.defaultTabLabel ?? "",
+    false
   )
 
   // Memoize stale flags once so both the tab-button and tab-panel maps share
@@ -150,8 +174,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
 
     if (activeTabNameRef.current === undefined) {
-      const tab = node.children[defaultTabIndex] as BlockNode
-      activeTabNameRef.current = tab?.deltaBlock?.tab?.label ?? "0"
+      // The tab container can render before all of its tab blocks arrive.
+      const tab = node.children[defaultTabIndex] as BlockNode | undefined
+      activeTabNameRef.current = tab?.deltaBlock.tab?.label ?? "0"
     }
   }
 
@@ -193,7 +218,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
           // Without this, subsequent reruns would send a stale widget value that
           // overrides session_state, making tab.open return False for the new tab.
           // fromUser: false avoids scheduling a spurious rerun.
-          if (widgetId && widgetMgr) {
+          if (!isNullOrEmptyString(widgetId)) {
             widgetMgr.setStringValue(widgetId, newLabel, {
               formId: "",
               fragmentId,
@@ -216,6 +241,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   // Reconciles active key & tab name when tab list changes.
   // When isPassivelyKeyed, also check elementStates so that the persisted
   // label survives even if the tracked active label no longer matches a tab.
+  // The fallback is not persisted: a block shifted to a new delta path briefly
+  // renders with the tabs it inherited from that path, and persisting a
+  // fallback then would overwrite the user's selection.
   useEffect(() => {
     if (isPassivelyKeyed) {
       const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
@@ -228,12 +256,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
     const newTabKey = allTabLabels.indexOf(activeTabNameRef.current ?? "0")
     if (newTabKey === -1) {
-      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      activeTabNameRef.current = fallbackLabel
-      if (isPassivelyKeyed) {
-        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
-      }
+      activeTabNameRef.current = allTabLabels[defaultTabIndex]
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
@@ -275,12 +299,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       setActiveTabKey(newTabKey)
       activeTabNameRef.current = allTabLabels[newTabKey]
     } else {
-      const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
-      activeTabNameRef.current = fallbackLabel
-      if (isPassivelyKeyed) {
-        widgetMgr.setElementState(blockId, "activeTabLabel", fallbackLabel)
-      }
+      activeTabNameRef.current = allTabLabels[defaultTabIndex]
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-run when tab count changes; other deps are stable across renders
   }, [node.children.length])
@@ -291,6 +311,10 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       // RAC guarantees key matches the id prop passed to <Tab> (always String(index)),
       // but guard against NaN in case id generation ever changes.
       if (Number.isNaN(newIndex)) return
+      // RAC also reports the already-active key (clicking the active tab,
+      // Home on the first tab, End on the last); skip it so dynamic tabs
+      // don't rerun without a change.
+      if (newIndex === activeTabKey) return
       const newLabel = allTabLabels[newIndex]
       setActiveTabKey(newIndex)
       activeTabNameRef.current = newLabel
@@ -299,7 +323,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
       }
 
-      if (isDynamic && widgetId && widgetMgr) {
+      if (isDynamic && !isNullOrEmptyString(widgetId)) {
         widgetMgr.setStringValue(widgetId, newLabel, {
           formId: "",
           fragmentId,
@@ -308,6 +332,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     },
     [
+      activeTabKey,
       allTabLabels,
       blockId,
       fragmentId,
@@ -330,6 +355,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       width={width}
       height={height}
       flex={flex}
+      alignSelf={alignSelf}
+      minHeight={minHeight}
+      maxHeight={maxHeight}
     >
       <StyledTabsRoot
         selectedKey={String(activeTabKey)}
@@ -375,12 +403,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             }
             return (
               <StyledTabPanel
-                data-testid="stTabPanel"
-                id={String(index)}
-                $isActive={activeTabKey === index}
                 // TODO: Update to match React best practices
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={index}
+                data-testid="stTabPanel"
+                id={String(index)}
+                // A closed panel stays mounted but is not printed. Print
+                // layout uses this to ignore the charts and dataframes inside it.
+                {...{
+                  [PRINT_INACTIVE_ATTRIBUTE]:
+                    activeTabKey === index ? undefined : "",
+                }}
+                $isActive={activeTabKey === index}
                 shouldForceMount
                 $constrainedHeight={hasConstrainedHeight}
               >

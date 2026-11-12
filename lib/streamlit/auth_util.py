@@ -18,7 +18,7 @@ import json
 import re
 import warnings
 from collections.abc import Callable, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import cache
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
 from urllib.parse import urlencode, urlparse
@@ -243,7 +243,7 @@ def build_logout_url(
 
 def _get_provider_token_expiration_timestamp() -> int:
     """Return the expiration timestamp for short-lived provider tokens."""
-    return int((datetime.now(timezone.utc) + timedelta(minutes=2)).timestamp())
+    return int((datetime.now(UTC) + timedelta(minutes=2)).timestamp())
 
 
 def _ensure_joserfc_security_warning_suppressed() -> None:
@@ -347,7 +347,7 @@ def _validate_provider_token_claims(
         raise ValueError("exp claim is missing")
     if isinstance(exp, bool) or not isinstance(exp, (int, float)):
         raise TypeError("exp claim is invalid")
-    if exp <= datetime.now(timezone.utc).timestamp():
+    if exp <= datetime.now(UTC).timestamp():
         raise ValueError("token has expired")
 
     return {"provider": provider, "exp": int(exp)}

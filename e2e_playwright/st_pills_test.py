@@ -766,3 +766,105 @@ def test_pills_wrap_behavior(app: Page, assert_snapshot: ImageCompareFunction):
     click_toggle(app, "Enable wrap")
     wait_for_app_run(app)
     expect_text(app, "pills_wrap_preserve: Beta")
+
+
+def test_pills_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun, updates bound query params
+    on commit, and sends the buffered value on the next rerun.
+    """
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills: None")
+    expect_text(app, "ignore_pills_multi: []")
+    # Empty selection equals the default, so the param is omitted.
+    expect(app).not_to_have_url(re.compile(r"ignore_pills="))
+    expect(app).not_to_have_url(re.compile(r"ignore_pills_multi="))
+
+    ignore_single = get_element_by_key(app, "ignore_pills")
+    ignore_multi = get_element_by_key(app, "ignore_pills_multi")
+
+    # Single select updates the URL without rerunning the app.
+    get_pill_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(app.get_by_text("Runs: 2", exact=True)).not_to_be_visible()
+    expect(get_pill_button(ignore_single, "beta")).to_be_checked()
+    expect_text(app, "ignore_pills: None")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pills=beta"))
+
+    # Single deselect (toggle off) clears the param without rerunning.
+    get_pill_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect(get_pill_button(ignore_single, "beta")).not_to_be_checked()
+    expect_text(app, "ignore_pills: None")
+    expect(app).not_to_have_url(re.compile(r"ignore_pills="))
+
+    # Reselect so the buffered value is non-empty.
+    get_pill_button(ignore_single, "beta").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills: None")
+    expect(app).to_have_url(re.compile(r"[?&]ignore_pills=beta"))
+
+    # Multi add. Assert each repeated param so order cannot flake.
+    get_pill_button(ignore_multi, "Red").click()
+    wait_for_app_run(app)
+    get_pill_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills_multi: []")
+    expect(app).to_have_url(re.compile(r"ignore_pills_multi=Red"))
+    expect(app).to_have_url(re.compile(r"ignore_pills_multi=Green"))
+    # Multi-select pills expose the selected state with data-selected.
+    expect(get_pill_button(ignore_multi, "Red")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect(get_pill_button(ignore_multi, "Green")).to_have_attribute(
+        "data-selected", "true"
+    )
+
+    # Multi remove.
+    get_pill_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills_multi: []")
+    expect(app).to_have_url(re.compile(r"ignore_pills_multi=Red"))
+    expect(app).not_to_have_url(re.compile(r"ignore_pills_multi=Green"))
+    expect(get_pill_button(ignore_multi, "Green")).not_to_have_attribute(
+        "data-selected"
+    )
+
+    # Click Green again so the buffered list is Red and Green.
+    get_pill_button(ignore_multi, "Green").click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 1", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills_multi: []")
+
+    # A later rerun delivers both buffered values.
+    app.get_by_role("button", name="Apply ignore pills", exact=True).click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("Runs: 2", exact=True)).to_be_visible()
+    expect_text(app, "ignore_pills: beta")
+    expect_text(app, "ignore_pills_multi: ['Red', 'Green']")
+    expect_text(app, "Applied ignore pills: beta")
+    expect_text(app, "Applied ignore multi pills: ['Red', 'Green']")
+
+    # Bound ignore-mode values persist across reload via the URL.
+    app.reload()
+    wait_for_app_loaded(app)
+    expect(get_pill_button(ignore_single, "beta")).to_be_checked()
+    expect(get_pill_button(ignore_multi, "Red")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect(get_pill_button(ignore_multi, "Green")).to_have_attribute(
+        "data-selected", "true"
+    )
+    expect_text(app, "ignore_pills: beta")
+    expect_text(app, "ignore_pills_multi: ['Red', 'Green']")

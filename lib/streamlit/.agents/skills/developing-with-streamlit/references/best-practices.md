@@ -4,6 +4,19 @@ Opinionated examples for writing clean, performant, and maintainable Streamlit a
 
 Use this reference when reviewing an app, starting a new app, or applying the quick-reference rules from `SKILL.md`.
 
+## Contents
+
+- [Styling and copy](#styling-and-copy)
+- [HTML and iframes](#html-and-iframes)
+- [Custom components](#custom-components)
+- [Layout](#layout)
+- [Navigation and pages](#navigation-and-pages)
+- [Performance](#performance)
+- [Data and charts](#data-and-charts)
+- [Widgets and state](#widgets-and-state)
+- [Secrets and queries](#secrets-and-queries)
+- [Type checking](#type-checking)
+
 ## Styling and copy
 
 Do not use custom CSS for app styling unless the user actively requests it. Prefer native Streamlit APIs and `.streamlit/config.toml` to customize the appearance.
@@ -18,11 +31,14 @@ st.markdown(
 
 ```toml
 # GOOD: Configure theme tokens in .streamlit/config.toml
+# Locked look: colors on [theme]. For light/dark, padding, or theme.base, see "Choose a config shape" in theme.md; for palettes and fonts, see its cheat sheet.
 [theme]
 primaryColor = "#ff4b4b"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"
 textColor = "#262730"
+baseRadius = "0.5rem"
+showWidgetBorder = true
 ```
 
 Prefer Material Symbols icons over emojis in UI labels, and use sentence casing.
@@ -52,29 +68,53 @@ query = st.text_input(
 )
 ```
 
+Pass keyword-only `alt=` on images, charts, maps, media, iframes, PDFs, tables, dataframes, and data editors so assistive technologies can name them. Keep it short and specific; see [media-display.md](media-display.md), [charts.md](charts.md#accessible-names-alt), and [data-display.md](data-display.md).
+
+```python
+# BAD: Meaningful image with no alt
+st.image("revenue.png", caption="Q3 revenue")
+
+# GOOD: Short accessible name, independent of caption
+st.image(
+    "revenue.png",
+    caption="Q3 revenue",
+    alt="Bar chart of monthly Q3 revenue rising to $1.2M in September",
+)
+```
+
 ## HTML and iframes
 
 Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 
 Do not use the deprecated `st.components.v1.html` or `st.components.v1.iframe` commands.
 
-- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command.
+- Use `st.iframe` for URLs or HTML that should render inside an iframe. It is the iframe-based replacement for either legacy command. Pass `alt=` to set the iframe `title`. The default is a shared `"st.iframe"` name on every embed.
 - Use `st.html` for static HTML or CSS that should render directly in the app instead of inside an iframe. JavaScript is ignored by default; only enable it with `unsafe_allow_javascript=True` when necessary, and never enable it for untrusted content.
+
+## Custom components
+
+When a native Streamlit command covers the behavior, use it instead of a third-party package or a new custom component. Most community packages are not maintained by Streamlit and often miss theming, accessibility, and performance fixes. Use one only for behavior Streamlit does not provide.
+
+Common replacements are `@st.fragment(run_every=...)` for `streamlit-autorefresh`, `st.dataframe` or `st.data_editor` for `streamlit-aggrid`, and `st.map` or `st.pydeck_chart` for `streamlit-folium`. The full mapping, including cases that still need a package, is in [third-party-components.md](third-party-components.md).
 
 ## Layout
 
-Use `width` instead of deprecated `use_container_width`.
+Use `width` instead of deprecated `use_container_width`. Dataframes and most charts stretch by default; buttons default to `width="content"`.
 
 ```python
 # BAD: Deprecated
 st.dataframe(df, use_container_width=True)
+st.download_button("Download CSV", df.to_csv(), "orders.csv", use_container_width=True)
 
-# GOOD: Default is stretch; set content width only when needed
+# GOOD: Dataframes stretch by default; set content width only when needed
 st.dataframe(df)
 st.dataframe(df, width="content")
+
+# GOOD: Buttons fit their content by default; stretch them explicitly
+st.download_button("Download CSV", df.to_csv(), "orders.csv", width="stretch")
 ```
 
-Prefer horizontal containers for responsive rows, and reserve columns for fixed grids or specific width ratios.
+Prefer horizontal containers for responsive rows, and reserve columns for fixed grids, specific width ratios, or cards that must share a width.
 
 ```python
 # BAD: Columns for a simple button row
@@ -86,6 +126,30 @@ right.button("Save", type="primary")
 with st.container(horizontal=True, horizontal_alignment="right"):
     st.button("Cancel")
     st.button("Save", type="primary")
+```
+
+Align elements placed side by side. Bottom-align rows that mix labeled inputs with buttons, checkboxes, or toggles, and give sibling cards consistent content or `height="stretch"`. See "Aligning elements side by side" in [layouts.md](layouts.md) for element sizes and more patterns.
+
+```python
+# BAD: The button and toggle sit above the input field; the cards have uneven heights
+with st.container(horizontal=True):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True)
+orders_col.metric("Orders", "1.4k", border=True)
+
+# GOOD: Everything lines up with the input field, and the cards share a height
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.toggle("Active only")
+    st.button("Search")
+
+revenue_col, orders_col = st.columns(2)
+revenue_col.metric("Revenue", "$1.2M", "+8%", border=True, height="stretch")
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
 ```
 
 Use bordered containers for visual grouping.
@@ -133,7 +197,7 @@ import streamlit as st
 from utils.data import load_sales
 
 st.title("Sales")
-st.line_chart(load_sales())
+st.line_chart(load_sales(), alt="Sales over time")
 ```
 
 ## Performance
@@ -153,8 +217,8 @@ orders = load_filtered_orders(region)
 ```
 
 ```python
-# GOOD: Cache the expensive source load with a practical bound
-@st.cache_data(ttl="15m", max_entries=20)
+# GOOD: Cache the expensive source load with a freshness bound
+@st.cache_data(ttl="15m")
 def load_orders() -> pd.DataFrame:
     return fetch_orders()
 
@@ -173,7 +237,7 @@ def load_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
 ```
 
-Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, reserve the slow result's position with `st.container()`, then fill that slot once the work completes — wrap the slow work in `with container.skeleton():` to show a loading placeholder, and write results explicitly to the container (e.g. `container.dataframe(...)`), since the block doesn't redirect bare `st.*` calls into it. Avoid standalone `st.empty()`/`st.skeleton()` placeholders that you fill after slow work: the delay unmounts the old element and resets stateful widgets (e.g. a dataframe's scroll, sort, and selection), whereas a reserved container keeps it mounted at a stable position. Give stateful elements a stable `key`.
+Render stable UI before slow calls. Streamlit emits UI updates top to bottom during each rerun, so slow code before downstream elements leaves faded stale content from the previous run on screen while it runs. Render fast UI first, then wrap the slow work and the element it feeds in `with st.skeleton():`. The skeleton reserves the slot, and on reruns the previous element stays mounted at a stable position (keeping a dataframe's scroll, sort, and selection); the skeleton only covers it if the new data takes longer than half a second. Avoid `st.empty()` placeholders that you fill after slow work: they clear the slot at the top of the rerun, which unmounts the old element and resets its state. Give stateful elements a stable `key`.
 
 ```python
 # BAD: The whole page is stuck behind a slow load and greys out
@@ -182,21 +246,33 @@ st.title("Orders")
 region = st.selectbox("Region", regions)
 st.dataframe(orders)
 
-# GOOD: Title and filter paint immediately; a container reserves the table's slot and
-# shows a skeleton while it loads, so the table keeps its state at a stable position.
+# GOOD: Title and filter paint immediately; the skeleton reserves the table's slot
+# while it loads, and the table keeps its state at a stable position across reruns.
 st.title("Orders")
 region = st.selectbox("Region", regions)
-table_slot = st.container()  # Reserve the table's position up front
-with table_slot.skeleton():
+with st.skeleton(height=400):
     orders = load_orders()
-    table_slot.dataframe(orders, key="orders")  # Write into the reserved slot
+    st.dataframe(orders, height=400, key="orders")  # Same height as its skeleton
 ```
 
-See `performance.md` for the rendering-order details and a fuller placeholder example.
+With several slow sections, each skeleton still waits for the slow work above it. Call each section's `@st.fragment(parallel=True)` inside its skeleton so the sections load concurrently (see "Layout-first loading" in `dashboards.md`). See `performance.md` for the rendering-order details and a fuller placeholder example.
 
-Use fragments for independent sections that can rerun separately from the page.
+Use fragments for independent sections that can rerun separately from the page. For a timer, refresh that section with `@st.fragment(run_every=...)` instead of looping the script or adding `streamlit-autorefresh`.
 
 ```python
+# BAD: Blocks the script in an endless loop
+placeholder = st.empty()
+while True:
+    placeholder.metric("Active users", get_active_user_count())
+    time.sleep(30)
+
+# BAD: Reruns the entire app on a timer
+st.metric("Active users", get_active_user_count())
+time.sleep(30)
+st.rerun()
+
+
+# GOOD: Only the fragment reruns on a timer
 @st.fragment(run_every="30s")
 def live_metrics():
     st.metric("Active users", get_active_user_count())
@@ -225,7 +301,9 @@ if submitted:
 
 For as-you-type search, use `st.text_input(..., type="search", live=True)` inside a `@st.fragment` instead of a form. Keep expensive work out of that fragment, or use a longer delay such as `live="500ms"`.
 
-Do not put expensive work unguarded inside tabs or expanders. Hidden tab content and collapsed expander content still compute unless you opt into dynamic state and guard the work.
+If some inputs must rerun to update others (for example, dependent options), use `on_change="ignore"` on the remaining inputs instead of a form. This is an advanced pattern; see "Skip reruns on individual widgets" in `performance.md` for an example and caveats.
+
+Do not put expensive work unguarded inside tabs, expanders, or popovers. By default, the app script still enters hidden, collapsed, or closed bodies on every rerun. Set `on_change="rerun"` so `.open` reports each container's current state, then run that body only when `.open` is `True`. Alternatively, use `st.segmented_control` or `st.toggle` with an `if`.
 
 ```python
 # BAD: Heavy content runs even when the tab is hidden
@@ -250,13 +328,15 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts over pyplot and Plotly. Use `st.echarts_chart` when you already have an Apache ECharts option or a `pyecharts` chart rather than a third-party component.
+Prefer Vega-based charts and `st.echarts_chart` over Plotly and `st.pyplot`, and prefer one charting library per page. Use `st.echarts_chart` for chart types Vega-Lite lacks, or an existing ECharts option or `pyecharts` chart, rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
 
 ```python
 # GOOD: Native charts for common cases
-st.line_chart(df, x="date", y="revenue")
-st.bar_chart(df, x="category", y="orders")
-st.scatter_chart(df, x="revenue", y="margin", color="segment")
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="orders", alt="Orders by category")
+st.scatter_chart(
+    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+)
 
 # GOOD: Altair for complex charts
 chart = (
@@ -268,7 +348,7 @@ chart = (
         color="region:N",
     )
 )
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.
@@ -322,6 +402,18 @@ query = st.text_input(f"Search {category}")
 query = st.text_input(f"Search {category}", key="search_query")
 ```
 
+Keep keys unique across all elements created in a run. In loops, derive them from a stable item ID.
+
+```python
+# BAD: Repeated key raises StreamlitDuplicateElementKey
+for item in items:
+    st.checkbox(item.name, key="done")
+
+# GOOD: Unique, stable key per item
+for item in items:
+    st.checkbox(item.name, key=f"done_{item.id}")
+```
+
 Sync a widget to the URL with `bind="query-params"` rather than hand-rolling `st.query_params`.
 
 ```python
@@ -357,3 +449,17 @@ df = conn.query(
 # GOOD: Keep local secrets out of source control
 .streamlit/secrets.toml
 ```
+
+## Type checking
+
+Type-check edited Python with `ty` (recommended) or `mypy` so wrong Streamlit API use is reported while editing, before the app runs. See [environment-setup.md](environment-setup.md).
+
+```python
+# BAD: `maximum` is not a parameter
+st.slider("Count", min_value=0, maximum=10)
+
+# GOOD
+st.slider("Count", min_value=0, max_value=10)
+```
+
+When a helper needs a Streamlit-owned type, import it from `streamlit.typing`. The list is in [api-reference.md](api-reference.md#public-annotation-types).

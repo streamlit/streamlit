@@ -32,6 +32,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.dataframe_util import (
+    convert_anything_to_arrow_bytes,
     convert_arrow_bytes_to_pandas_df,
     convert_arrow_table_to_arrow_bytes,
 )
@@ -43,15 +44,18 @@ from streamlit.elements.vega_charts import (
     _parse_selection_mode,
     _reset_counter_pattern,
     _stabilize_vega_json_spec,
+    arrow_buffers,
+    loads_data_from_url,
 )
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitMissingRequiredParameterError,
     StreamlitValueError,
 )
+from streamlit.proto.VegaLiteChart_pb2 import VegaLiteChart as VegaLiteChartProto
 from streamlit.runtime.caching import cached_message_replay
 from streamlit.type_util import is_altair_version_less_than
-from streamlit.util import ReadOnlyAttributeDictionary
+from streamlit.util import ReadOnlyAttributeDictionary, calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 if TYPE_CHECKING:
@@ -223,6 +227,70 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert proto.selection_mode == []
         assert proto.id == ""
         assert proto.form_id == ""
+        assert not proto.HasField("alt")
+
+    def test_altair_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+
+        st.altair_chart(chart, alt="Bar chart of categories")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+        assert "description" not in json.loads(proto.spec)
+
+        st.altair_chart(chart)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.altair_chart(chart, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_altair_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_altair_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b")
+        st.altair_chart(chart, alt="  Bar chart of categories  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Bar chart of categories"
+
+    def test_altair_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        df = pd.DataFrame({"a": ["A", "B"], "b": [1, 2]})
+        chart = (
+            alt.Chart(df)
+            .mark_bar()
+            .encode(x="a", y="b")
+            .properties(description="Altair description")
+        )
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.altair_chart(chart, alt="Streamlit alt")
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Altair description"
 
     def test_altair_chart_uses_convert_anything_to_df(self):
         """Test that st.altair_chart uses convert_anything_to_df to convert input data."""
@@ -677,6 +745,8 @@ class AltairChartTest(DeltaGeneratorTestCase):
         assert "name" in spec["data"]
         assert len(proto.datasets) == 1
         assert proto.datasets[0].name == spec["data"]["name"]
+        # The name is the content hash of the Arrow bytes.
+        assert proto.datasets[0].name == calc_hash(proto.datasets[0].data.data)
         # Decode it to confirm the payload really is Arrow bytes for this df, so
         # this cannot pass on a merge that left raw JSON values in place.
         pd.testing.assert_frame_equal(
@@ -1595,6 +1665,79 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.vega_lite_chart
         assert not proto.HasField("data")
         assert json.loads(proto.spec) == merge_dicts(autosize_spec, {"mark": "rect"})
+        assert not proto.HasField("alt")
+
+    def test_vega_lite_chart_alt(self):
+        """Non-empty alt is marshalled; omitted/None/blank leave the field unset."""
+        st.vega_lite_chart({"mark": "rect"}, alt="A rectangle chart")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+        assert "description" not in json.loads(proto.spec)
+
+        st.vega_lite_chart({"mark": "rect"})
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        st.vega_lite_chart({"mark": "rect"}, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    @parameterized.expand(
+        [
+            ("",),
+            ("   ",),
+        ]
+    )
+    def test_vega_lite_chart_empty_alt_is_treated_as_unset(self, blank_alt: str):
+        """Empty or whitespace-only alt must not set the proto field."""
+        st.vega_lite_chart({"mark": "rect"}, alt=blank_alt)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+    def test_vega_lite_chart_strips_alt_whitespace(self):
+        """Leading and trailing whitespace are stripped before marshalling."""
+        st.vega_lite_chart({"mark": "rect"}, alt="  A rectangle chart  ")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "A rectangle chart"
+
+    def test_vega_lite_chart_alt_does_not_mutate_spec_description(self):
+        """Author description stays in hashed JSON when alt is also set."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": "Spec description"},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+            assert mock_warning.call_args.kwargs.get("stack_info") is True
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+        assert json.loads(proto.spec)["description"] == "Spec description"
+
+    def test_vega_lite_chart_alt_handles_invalid_list_description(self):
+        """An invalid list description does not prevent alt from being applied."""
+        with patch("streamlit.elements.vega_charts._LOGGER.warning") as mock_warning:
+            st.vega_lite_chart(
+                {"mark": "rect", "description": ["not", "a", "string"]},
+                alt="Streamlit alt",
+            )
+            mock_warning.assert_called_once()
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.alt == "Streamlit alt"
+
+    def test_vega_lite_chart_alt_preserves_adversarial_plain_text(self):
+        """Quotes and angle brackets stay literal on the proto (no HTML path)."""
+        adversarial = 'Chart of "A < B" & sales <script>alert(1)</script>'
+        st.vega_lite_chart({"mark": "rect"}, alt=adversarial)
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == adversarial
 
     def test_spec_in_arg1(self):
         """Test that it can be called with spec as the 1st arg."""
@@ -2114,6 +2257,32 @@ ST_CHART_ARGS = [
 
 class BuiltInChartTest(DeltaGeneratorTestCase):
     """Test our built-in chart commands."""
+
+    @parameterized.expand(ST_CHART_ARGS)
+    def test_built_in_chart_alt(self, chart_command: Callable, _altair_type: str):
+        """A non-empty alt is stored on the proto; omitted, None, and whitespace-only values leave the field unset."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"])
+
+        chart_command(df, alt="Accessible chart name")
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        assert proto.HasField("alt")
+        assert proto.alt == "Accessible chart name"
+        assert "description" not in json.loads(proto.spec)
+
+        chart_command(df)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt=None)
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
+
+        chart_command(df, alt="  ")
+        assert not self.get_delta_from_queue().new_element.vega_lite_chart.HasField(
+            "alt"
+        )
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
@@ -2710,7 +2879,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
     def test_line_chart_with_named_index(self):
         """Test st.line_chart with a named index."""
         df = pd.DataFrame([[20, 30, 50]], columns=["a", "b", "c"])
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         EXPECTED_DATAFRAME = pd.DataFrame(
             [[20, "b", 30], [20, "c", 50]],
@@ -2747,7 +2916,7 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 "d": [300, 301, 302],
             }
         )
-        df.set_index("a", inplace=True)
+        df = df.set_index("a")
 
         # There used to be a bug where this line would throw an exception.
         # (Because some color-handling code was dependent on the DF index starting at 0)
@@ -2788,6 +2957,29 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         highlighted_layer = chart_spec["layer"][2]
         assert "transform" in highlighted_layer
         assert any("filter" in t for t in highlighted_layer["transform"])
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_line_chart_spec_only_renames_datasets_when_data_changes(self) -> None:
+        """Test that new data changes only the dataset names in a line chart spec.
+
+        The frontend then swaps the new rows into the existing view instead
+        of rebuilding it.
+        """
+        specs: list[str] = []
+        for values in ([4, 5, 6], [7, 8, 9]):
+            st.line_chart(pd.DataFrame({"a": [1, 2, 3], "b": values}), x="a", y="b")
+            proto = self.get_delta_from_queue().new_element.vega_lite_chart
+            spec = proto.spec
+            for index, dataset in enumerate(proto.datasets):
+                spec = spec.replace(dataset.name, f"dataset_{index}")
+            specs.append(spec)
+
+        assert specs[0] == specs[1]
+        # The hover layers are named, so their names must not depend on the data.
+        assert '"view_1"' in specs[0]
 
     @unittest.skipIf(
         is_altair_version_less_than("5.0.0") is True,
@@ -3883,6 +4075,16 @@ class VegaUtilitiesTest(unittest.TestCase):
                 '{"views": {"list": ["view_d1f2", "view_d1f2", "view_0abc"]}}',
                 '{"views": {"list": ["view_1", "view_1", "view_2"]}}',
             ),  # Hash-based suffixes with duplicates
+            (
+                "view_",
+                '{"layer": ["view_79c4_0", "view_8532_1"], "a": "view_my_chart"}',
+                '{"layer": ["view_1", "view_2"], "a": "view_my_chart"}',
+            ),  # Hashes with a position suffix, but not other underscored names
+            (
+                "param_",
+                '{"params": ["param_x_1", "param_custom", "param_e4f9_2"]}',
+                '{"params": ["param_x_1", "param_custom", "param_1"]}',
+            ),  # User-chosen names that aren't hex hashes stay unchanged
         ]
     )
     def test_reset_counter_pattern(self, prefix: str, vega_spec: str, expected: str):
@@ -4685,6 +4887,60 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
         is_altair_version_less_than("5.0.0") is True,
         "This test only runs if altair is >= 5.0.0",
     )
+    def test_selection_id_changes_with_alt_when_unkeyed(self):
+        """Unkeyed selection charts include alt in the element identity hash."""
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        point = alt.selection_point(name="my_selection")
+        chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+        def chart_id(**kwargs: object) -> str:
+            self.script_run_ctx.shared.widget_ids_this_run.clear()
+            st.altair_chart(chart, on_select="rerun", **kwargs)
+            return self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+        with_alt = chart_id(alt="First description")
+        with_other_alt = chart_id(alt="A totally different description")
+
+        assert with_alt != ""
+        assert with_alt != with_other_alt
+        assert chart_id(alt="First description") == with_alt
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
+    def test_selection_id_stable_when_keyed_alt_changes(self):
+        """Keyed selection charts ignore alt for identity (key_as_main_identity)."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+            point = alt.selection_point(name="my_selection")
+            chart = alt.Chart(df).mark_bar().encode(x="a", y="b").add_params(point)
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="First description",
+            )
+            id1 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+            st.altair_chart(
+                chart,
+                key="keyed_alt_chart",
+                on_select="rerun",
+                alt="A totally different description",
+            )
+            id2 = self.get_delta_from_queue().new_element.vega_lite_chart.id
+
+            assert id1 == id2
+
+    @unittest.skipIf(
+        is_altair_version_less_than("5.0.0") is True,
+        "This test only runs if altair is >= 5.0.0",
+    )
     def test_stable_id_with_key_and_selections_vega_lite(self):
         """Test that the element ID is stable for vega_lite_chart when data changes but key remains the same."""
         with patch(
@@ -4794,3 +5050,71 @@ class VegaChartsSelectionsStableIdTest(DeltaGeneratorTestCase):
 
             # ID should change since no key is provided and data changed
             assert id1 != id2
+
+
+def test_arrow_buffers_lists_inline_and_named_datasets() -> None:
+    """Inline data comes first, then every named dataset; no data is no buffer.
+
+    An empty named dataset, and the one empty row Altair gives a layer without
+    data, are skipped like empty inline data, so they do not turn a
+    single-table chart into `multiple_datasets`. Rows without columns are kept.
+    """
+    placeholder = convert_anything_to_arrow_bytes(pd.DataFrame([{}]))
+    rows_without_columns = convert_anything_to_arrow_bytes(pd.DataFrame(index=range(2)))
+    proto = VegaLiteChartProto()
+    proto.data.data = b"inline"
+    for name, data in (
+        ("first", b"one"),
+        ("empty", b""),
+        ("placeholder", placeholder),
+        ("rows", rows_without_columns),
+        ("second", b"two"),
+    ):
+        dataset = proto.datasets.add()
+        dataset.name = name
+        dataset.data.data = data
+
+    assert arrow_buffers(proto) == [b"inline", b"one", rows_without_columns, b"two"]
+    assert arrow_buffers(VegaLiteChartProto()) == []
+
+
+@pytest.mark.parametrize(
+    ("spec", "expected"),
+    [
+        pytest.param({"data": {"url": "https://example.com/a.csv"}}, True, id="top"),
+        pytest.param(
+            {"layer": [{"mark": "point"}, {"data": {"url": "b.json"}}]},
+            True,
+            id="layer",
+        ),
+        pytest.param(
+            {
+                "transform": [
+                    {
+                        "lookup": "id",
+                        "from": {"data": {"url": "c.csv"}, "key": "id"},
+                    }
+                ]
+            },
+            True,
+            id="lookup",
+        ),
+        pytest.param('{"data": {"url": "d.csv"}}', True, id="json-text"),
+        pytest.param({"data": {"name": "frame"}}, False, id="named-data"),
+        pytest.param({"data": {"values": [{"url": "e"}]}}, False, id="a-url-value"),
+        pytest.param(
+            {"data": {"values": [{"data": {"url": "f.csv"}}]}},
+            False,
+            id="a-row-shaped-like-a-source",
+        ),
+        pytest.param(
+            {"usermeta": {"data": {"url": "g.csv"}}, "mark": "point"},
+            False,
+            id="usermeta",
+        ),
+        pytest.param('{"data": {"url"', False, id="malformed-json"),
+    ],
+)
+def test_loads_data_from_url_at_any_depth(spec: Any, expected: bool) -> None:
+    """A URL anywhere a Vega-Lite spec takes data counts; a value named url does not."""
+    assert loads_data_from_url(spec) is expected

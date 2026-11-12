@@ -31,9 +31,30 @@ from streamlit.path_security import is_windows_unc_path
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.source_util import page_icon_and_name
-from streamlit.string_util import validate_icon_or_emoji
+from streamlit.string_util import to_help_str, validate_icon_or_emoji
 from streamlit.url_util import is_url
 from streamlit.util import calc_hash
+
+
+def _raise_if_unsafe_page_path(page_path: str, *, error_prefix: str = "") -> None:
+    """Reject page paths that are unsafe to pass to filesystem operations."""
+    if "\x00" in page_path:
+        raise StreamlitAPIException(
+            f"{error_prefix}Page paths must not contain null bytes.",
+            error_id="page-path-contains-null-bytes",
+        )
+
+    # Reject UNC, device-namespace, and extended-prefix paths lexically: resolving
+    # them can make Windows open an SMB connection and leak the server process's
+    # NTLM credentials, or access a Windows device directly. Drive-absolute paths
+    # (for example, "C:\app\page.py") remain allowed by the navigation API contract.
+    if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
+        raise StreamlitAPIException(
+            f"{error_prefix}Network paths and device paths are not supported. "
+            "Use a path relative to the app entrypoint, or a local absolute path "
+            r"such as 'C:\app\page.py'.",
+            error_id="page-network-path-not-supported",
+        )
 
 
 def _sanitize_url_path(title: str) -> str:
@@ -65,6 +86,14 @@ def _raise_if_nested_url_path(url_path: str) -> None:
             "see GitHub issue [#8971](https://github.com/streamlit/streamlit/issues/8971).",
             error_id="page-nested-url-path",
         )
+
+
+def _normalize_page_help(help: str | None) -> str:
+    """Return ``help`` dedented, or ``""`` when it is ``None`` or only whitespace."""
+    if help is None:
+        return ""
+    dedented = to_help_str(help)
+    return dedented if dedented.strip() else ""
 
 
 if TYPE_CHECKING:
@@ -125,10 +154,14 @@ class Page:
 
     icon : str or None
         An optional emoji or icon to display next to the page title and label.
-        If ``icon`` is ``None`` (default), no icon is displayed next to the
-        page label in the navigation menu, and a Streamlit icon is displayed
-        next to the title (in the browser tab). If ``icon`` is a string, the
-        following options are valid:
+        If ``icon`` is ``None`` (default) and the page is defined by a file,
+        Streamlit uses a leading emoji in the filename, if present. Otherwise,
+        no icon is displayed next to the page label in the navigation menu,
+        and the default Streamlit icon is displayed next to the title (in the
+        browser tab). Pass ``icon=""`` to show no icon next to the page label
+        and keep the default browser-tab icon, even when the filename contains
+        an emoji. If ``icon`` is a non-empty string, the following options
+        are valid:
 
         - A single-character emoji. For example, you can set ``icon="🚨"``
             or ``icon="🔥"``. Emoji short codes are not supported.
@@ -156,11 +189,16 @@ class Page:
         see `Overview of multipage apps
         <https://docs.streamlit.io/st.page.automatic-page-urls>`_.
 
+        Each page's URL pathname must be unique among all pages passed to
+        ``st.navigation``, including pages in different sections, hidden
+        pages, and external URL pages.
+
         The default page will have a pathname of ``""``, indicating the root
-        URL of the app. If you set ``default=True``, ``url_path`` is ignored.
-        ``url_path`` can't include forward slashes because Streamlit doesn't
-        support nested URL pathnames yet. To upvote support for nested
-        pathnames, see GitHub issue
+        URL of the app. If you set ``default=True``, the page is served at the
+        root URL instead of ``url_path``, but its ``url_path`` or inferred
+        pathname must still be unique. ``url_path`` can't include forward
+        slashes because Streamlit doesn't support nested URL pathnames yet.
+        To upvote support for nested pathnames, see GitHub issue
         `#8971 <https://github.com/streamlit/streamlit/issues/8971>`_.
 
     default : bool
@@ -168,8 +206,10 @@ class Page:
         loaded. If ``default`` is ``False`` (default), the page will have a
         nonempty URL pathname. However, if no default page is passed to
         ``st.navigation`` and this is the first page, this page will become the
-        default page. If ``default`` is ``True``, then the page will have
-        an empty pathname and ``url_path`` will be ignored.
+        default page. If ``default`` is ``True``, Streamlit serves the page at
+        the app's root URL, so its public pathname is ``""``. The ``url_path``
+        you pass, or the inferred pathname if you omit it, must still be
+        unique.
 
     visibility : "visible" or "hidden"
         Whether the page is shown in the navigation menu. If this is
@@ -187,8 +227,36 @@ class Page:
            ``st.navigation`` during the new session's initial script
            run. The page can be visible or hidden.
 
+    help : str or None
+        A short summary of the page, shown as a tooltip on the page's item in
+        the navigation menu. If this is ``None`` (default), no tooltip is
+        displayed.
+
+        Write it to help users and agents find the right page without
+        opening it. In one to three short sentences (about 200 characters),
+        say what the page shows, what users can do there, and what sets it
+        apart from similar pages. Describe the page itself, not its current
+        values or step-by-step instructions.
+
+        Streamlit shows the summary as soon as the page is passed to
+        ``st.navigation``, before the page runs. It's also the default
+        tooltip of ``st.page_link`` for this page. The agent API (see
+        ``server.enableAgentApi``) reports it as the page's ``help`` in its
+        snapshot, except for external-URL pages, which the snapshot doesn't
+        list. It isn't shown on the page and doesn't set the meta
+        description.
+
+        The summary can optionally contain GitHub-flavored Markdown,
+        including the Markdown directives described in the ``body``
+        parameter of ``st.markdown``.
+
     Attributes
     ----------
+    help : str
+        The help text of the page, as Markdown.
+
+        If no help was declared in ``st.Page``, this property returns ``""``.
+
     icon : str
         The icon of the page.
 
@@ -244,7 +312,15 @@ class Page:
             st.title("Second page")
 
         pg = st.navigation([
-            st.Page("page1.py", title="First page", icon="🔥"),
+            st.Page(
+                "page1.py",
+                title="First page",
+                icon="🔥",
+                help=(
+                    "Quarterly sales by region and product line. "
+                    "Filter by region and download the table as CSV."
+                ),
+            ),
             st.Page(page2, title="Second page", icon=":material/favorite:"),
             st.Page(
                 "https://docs.streamlit.io",
@@ -265,6 +341,7 @@ class Page:
         url_path: str | None = None,
         default: bool = False,
         visibility: Literal["visible", "hidden"] = "visible",
+        help: str | None = None,
     ) -> None:
         # Must appear before the return so all pages, even if running in bare Python,
         # have a _default property. This way we can always tell which script needs to run.
@@ -275,6 +352,7 @@ class Page:
         if visibility not in {"visible", "hidden"}:
             raise StreamlitValueError("visibility", ["visible", "hidden"])
         self._visibility: Literal["visible", "hidden"] = visibility
+        self._help: str = _normalize_page_help(help)
 
         ctx = get_script_run_ctx()
         if not ctx:
@@ -299,9 +377,7 @@ class Page:
             self._external_url = page
             self._page: Path | Callable[[], None] | None = None
             self._title: str = title
-            if icon is not None:
-                validate_icon_or_emoji(icon)
-            self._icon: str = icon or ""
+            self._icon: str = validate_icon_or_emoji(icon)
             # For external URLs, use a sanitized version of title as url_path if not provided
             self._url_path: str = (
                 _sanitize_url_path(title) if url_path is None else url_path
@@ -324,21 +400,9 @@ class Page:
 
         if isinstance(page, (str, Path)):
             page_path = str(page)
-            if "\x00" in page_path:
-                raise StreamlitAPIException(
-                    "Unable to create Page. Page paths must not contain null bytes.",
-                    error_id="page-path-contains-null-bytes",
-                )
-
-            # Reject UNC paths before resolve/is_file can initiate an SMB connection
-            # and disclose the server process's Windows credentials. Absolute and
-            # drive-local paths (e.g. "C:\\...") are intentionally still allowed, as
-            # passing an absolute page path is part of the public st.Page contract.
-            if env_util.IS_WINDOWS and is_windows_unc_path(page_path):
-                raise StreamlitAPIException(
-                    "Unable to create Page. Network paths are not supported.",
-                    error_id="page-network-path-not-supported",
-                )
+            _raise_if_unsafe_page_path(
+                page_path, error_prefix="Unable to create Page. "
+            )
 
         main_path = ctx.pages_manager.main_script_parent
         if isinstance(page, str):
@@ -370,9 +434,10 @@ class Page:
         self._title = title or inferred_name.replace("_", " ")
 
         if icon is not None:
-            # validate user provided icon.
-            validate_icon_or_emoji(icon)
-        self._icon = icon or inferred_icon
+            # An explicit icon wins, including icon="", which means no icon.
+            self._icon = validate_icon_or_emoji(icon)
+        else:
+            self._icon = validate_icon_or_emoji(inferred_icon)
 
         if self._title.strip() == "":
             raise StreamlitMissingRequiredParameterError(
@@ -392,9 +457,6 @@ class Page:
 
             self._url_path = stripped_url_path
             _raise_if_nested_url_path(self._url_path)
-
-        if self._icon:
-            validate_icon_or_emoji(self._icon)
 
         # used by st.navigation to ordain a page as runnable
         self._can_be_called = False
@@ -419,6 +481,16 @@ class Page:
         If no icon was declared in ``st.Page``, this property returns ``""``.
         """
         return self._icon
+
+    @property
+    def help(self) -> str:
+        """The page's summary from ``help``, as Markdown.
+
+        This is the tooltip on the page's item in the navigation menu and the
+        default tooltip of ``st.page_link`` for this page. If no help was
+        declared in ``st.Page``, this property returns ``""``.
+        """
+        return self._help
 
     @property
     def url_path(self) -> str:

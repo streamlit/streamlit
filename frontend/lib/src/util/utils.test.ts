@@ -20,7 +20,7 @@ import {
   describe,
   expect,
   it,
-  MockInstance,
+  type MockInstance,
   vi,
 } from "vitest"
 
@@ -70,13 +70,16 @@ import {
   makeAppSkeletonElement,
   makeElementWithErrorText,
   makeElementWithInfoText,
+  normalizeQueryString,
   notUndefined,
   preserveEmbedQueryParams,
   setCookie,
 } from "./utils"
+import type * as Utils from "./utils"
 
 describe("setCookie", () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     /*
       Setting a cookie with document.cookie = "key=value" will append or modify "key"
       with "value". It does not overwrite the existing list of cookies in document.cookie.
@@ -105,6 +108,17 @@ describe("setCookie", () => {
     document.cookie = "flavor=chocolatechip"
     setCookie("flavor")
     expect(document.cookie).toEqual("")
+  })
+
+  it("does not throw when document.cookie cannot be written", () => {
+    vi.spyOn(document, "cookie", "set").mockImplementation(() => {
+      throw new DOMException(
+        "The document is sandboxed and lacks the 'allow-same-origin' flag.",
+        "SecurityError"
+      )
+    })
+
+    expect(() => setCookie("ajs_anonymous_id", "abc")).not.toThrow()
   })
 })
 
@@ -537,7 +551,7 @@ describe("keysToSnakeCase", () => {
 
 // Mock isInChildFrame since getUrl depends on it
 vi.mock("./utils", async importOriginal => {
-  const actual = await importOriginal<typeof import("./utils")>()
+  const actual = await importOriginal<typeof Utils>()
   return {
     ...actual,
     isInChildFrame: vi.fn(),
@@ -945,6 +959,13 @@ describe("getQueryString", () => {
       expected: "embed=true&embed_options=dark&page=1&sort=asc",
       description: "handles complex query strings",
     },
+    {
+      queryStringOverride: "?foo=bar",
+      preservedQueryParams: "embed=true",
+      expected: "embed=true&foo=bar",
+      description:
+        "normalizes queryStringOverride values with a leading question mark",
+    },
   ])(
     "$description",
     ({ queryStringOverride, preservedQueryParams, expected }) => {
@@ -953,6 +974,16 @@ describe("getQueryString", () => {
       )
     }
   )
+})
+
+describe("normalizeQueryString", () => {
+  it("strips a leading question mark", () => {
+    expect(normalizeQueryString("?foo=bar")).toBe("foo=bar")
+  })
+
+  it("returns an unchanged query string when there is no leading question mark", () => {
+    expect(normalizeQueryString("foo=bar")).toBe("foo=bar")
+  })
 })
 
 describe("debounce", () => {

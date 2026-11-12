@@ -16,10 +16,14 @@
 
 from __future__ import annotations
 
+import tempfile
+import uuid
+from pathlib import Path
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import build_app_url, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_button, get_element_by_key
+from e2e_playwright.shared.app_utils import click_button, get_button, get_element_by_key
 
 # =============================================================================
 # Core parallel fragment tests (use `app` fixture - auto-navigates to default mode)
@@ -232,6 +236,58 @@ def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
     # Run 1: run_count starts at 0, incremented to 1, fragment sets to 2 and reruns
     # Run 2: run_count is 2, incremented to 3, fragment shows success
     expect(page.get_by_text("Run count: 3", exact=True)).to_be_visible()
+
+
+def test_cold_shared_cache_waiters_finish_after_full_rerun(
+    page: Page, app_base_url: str
+) -> None:
+    """Live fragments render the shared value after rerunning during a cold miss."""
+    cache_wait_token = uuid.uuid4().hex
+    release_file = (
+        Path(tempfile.gettempdir()) / f"streamlit-cache-wait-{cache_wait_token}.gate"
+    )
+    release_file.unlink(missing_ok=True)
+    completed = False
+
+    try:
+        page.goto(
+            build_app_url(
+                app_base_url,
+                query=f"test=cache_wait_rerun&token={cache_wait_token}",
+            )
+        )
+
+        expect(
+            page.get_by_text("Cold cache compute started", exact=True)
+        ).to_be_visible(timeout=5000)
+        expect(page.get_by_text("Cache wait run: 1", exact=True)).to_be_visible()
+        for label in ("A", "B", "C"):
+            expect(
+                page.get_by_text(f"Cache fragment {label} started", exact=True)
+            ).to_be_visible()
+            expect(
+                page.get_by_text(
+                    f"Cache fragment {label} run 1: shared cached value", exact=True
+                )
+            ).to_have_count(0)
+
+        get_button(page, "Rerun while cache is cold").click()
+        release_file.touch()
+        wait_for_app_run(page)
+
+        expect(page.get_by_text("Cache wait run: 2", exact=True)).to_be_visible()
+        for label in ("A", "B", "C"):
+            expect(
+                page.get_by_text(
+                    f"Cache fragment {label} run 2: shared cached value", exact=True
+                )
+            ).to_be_visible()
+        completed = True
+    finally:
+        # Unblock the app even if an assertion fails before the click.
+        release_file.touch()
+        if completed:
+            release_file.unlink(missing_ok=True)
 
 
 def test_widget_interaction_after_parallel_load(page: Page, app_base_url: str) -> None:

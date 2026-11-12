@@ -15,7 +15,7 @@
  */
 
 import { act, screen } from "@testing-library/react"
-import { Mock, MockInstance } from "vitest"
+import type { Mock, MockInstance } from "vitest"
 
 import {
   ComponentInstance as ComponentInstanceProto,
@@ -261,6 +261,72 @@ describe("ComponentInstance", () => {
     expect(iframe).toHaveAttribute("height", "0")
   })
 
+  it("uses a numeric height kwarg as the initial iframe height", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: 100 })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 100px")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "100")
+  })
+
+  it("uses a numeric string height kwarg as the initial iframe height", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: "100" })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 100px")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "100")
+  })
+
+  it("treats a non-numeric string height kwarg as unspecified", () => {
+    const componentRegistry = getComponentRegistry()
+    renderWithContexts(
+      <ComponentInstance
+        element={createElementProp({ height: "stretch" })}
+        disabled={false}
+        widgetMgr={
+          new WidgetStateManager({
+            sendRerunBackMsg: vi.fn(),
+            formsDataChanged: vi.fn(),
+          })
+        }
+        componentRegistry={componentRegistry}
+      />
+    )
+    const skeleton = screen.getByTestId("stSkeleton")
+    expect(skeleton).toHaveStyle("height: 2.5rem")
+
+    const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
+    expect(iframe).toHaveAttribute("height", "0")
+  })
+
   describe("COMPONENT_READY handler", () => {
     it("posts a RENDER message to the iframe", () => {
       const jsonArgs = { foo: "string", bar: 5 }
@@ -279,7 +345,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      // @ts-expect-error
+      // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
       dispatchMessageEvent(
@@ -289,7 +355,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -322,7 +388,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -347,7 +413,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      // @ts-expect-error
+      // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       expect(postMessage).toHaveBeenCalledTimes(0)
     })
@@ -372,7 +438,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      // @ts-expect-error
+      // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
       dispatchMessageEvent(
@@ -382,7 +448,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -394,7 +460,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -418,7 +484,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      // @ts-expect-error
+      // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
       dispatchMessageEvent(
@@ -428,7 +494,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -473,7 +539,7 @@ describe("ComponentInstance", () => {
         />
       )
       const iframe = screen.getByTitle(MOCK_COMPONENT_NAME)
-      // @ts-expect-error
+      // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
       const postMessage = vi.spyOn(iframe.contentWindow, "postMessage")
       // SET COMPONENT_READY
       dispatchMessageEvent(
@@ -483,7 +549,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -538,7 +604,7 @@ describe("ComponentInstance", () => {
             apiVersion: badAPIVersion,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -684,7 +750,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -698,7 +764,7 @@ describe("ComponentInstance", () => {
             dataType: "json",
             value: jsonValue,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -740,7 +806,7 @@ describe("ComponentInstance", () => {
             apiVersion: 1,
             type: ComponentMessageType.COMPONENT_READY,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -756,7 +822,7 @@ describe("ComponentInstance", () => {
             dataType: "bytes",
             value: bytesValue,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -803,7 +869,7 @@ describe("ComponentInstance", () => {
             dataType: "bytes",
             value: jsonValue,
           },
-          // @ts-expect-error
+          // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
           source: iframe.contentWindow,
         })
       )
@@ -842,7 +908,7 @@ describe("ComponentInstance", () => {
               apiVersion: 1,
               type: ComponentMessageType.COMPONENT_READY,
             },
-            // @ts-expect-error
+            // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
             source: iframe.contentWindow,
           })
         )
@@ -855,7 +921,7 @@ describe("ComponentInstance", () => {
               type: ComponentMessageType.SET_FRAME_HEIGHT,
               height: 100,
             },
-            // @ts-expect-error
+            // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
             source: iframe.contentWindow,
           })
         )
@@ -898,7 +964,7 @@ describe("ComponentInstance", () => {
               type: ComponentMessageType.SET_FRAME_HEIGHT,
               height: 100,
             },
-            // @ts-expect-error
+            // @ts-expect-error - getByTitle returns HTMLElement, which has no contentWindow
             source: iframe.contentWindow,
           })
         )

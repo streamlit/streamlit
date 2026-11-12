@@ -56,6 +56,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         assert c.HasField("default")
         assert c.type == TextInput.DEFAULT
         assert not c.disabled
+        assert not c.required
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -63,6 +64,42 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.text_input
         assert c.disabled
+
+    @parameterized.expand([(True,), (False,)])
+    def test_required_sets_proto_field(self, required: bool) -> None:
+        """Test that required is marshalled to the proto field."""
+        st.text_input("the label", required=required)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.required is required
+
+    def test_required_is_in_unkeyed_widget_id(self) -> None:
+        """Test that toggling required without a key changes the widget ID."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("the label", required=False)
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("the label", required=True)
+            id2 = self.get_delta_from_queue().new_element.text_input.id
+            assert id1 != id2
+
+    def test_required_not_in_keyed_widget_id(self) -> None:
+        """Test that toggling required with a key keeps the widget ID.
+
+        Unlike max_chars / validate, required cannot make a stored value
+        incompatible, so it is not on the keyed-identity allowlist.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.text_input("the label", key="text_input_key", required=False)
+            id1 = self.get_delta_from_queue().new_element.text_input.id
+            st.text_input("the label", key="text_input_key", required=True)
+            id2 = self.get_delta_from_queue().new_element.text_input.id
+            assert id1 == id2
 
     def test_value_types(self):
         """Test that it supports different types of values."""

@@ -20,11 +20,13 @@ from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit import runtime, url_util
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     validate_height,
     validate_width,
 )
+from streamlit.elements.lib.utils import normalize_alt
 from streamlit.errors import (
     StreamlitAPIException,
     StreamlitInvalidParameterTypeError,
@@ -162,7 +164,16 @@ class IframeMixin:
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
         )
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            # A URL the client can fetch itself, so nothing is withheld.
+            agent_props=agent_spec.element(
+                "components.v1.iframe",
+                src=iframe_proto.src or None,
+            ),
+        )
 
     @gather_metrics("_html")
     def _html(
@@ -259,7 +270,16 @@ class IframeMixin:
             width=width if width is not None else "stretch",
             height=height if height is not None else 150,
         )
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            # `components.html` exists to run scripts, which this interface does
+            # not, so the source is reported and the rendered result is not.
+            agent_props=agent_spec.element(
+                "components.v1.html", support="browser_required", html=html
+            ),
+        )
 
     @gather_metrics("iframe")
     def iframe(
@@ -269,6 +289,7 @@ class IframeMixin:
         width: int | Literal["stretch", "content"] = "stretch",
         height: int | Literal["stretch", "content"] = "content",
         tab_index: int | None = None,
+        alt: str | None = None,
     ) -> DeltaGenerator:
         """Embed content in an iframe.
 
@@ -338,12 +359,31 @@ class IframeMixin:
             <https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/tabindex>`_
             documentation on MDN.
 
+        alt : str or None
+            A description of the embed for screen readers and other assistive
+            technologies. Streamlit maps this to the iframe's ``title``
+            attribute, which is the frame's accessible name. If this is
+            ``None`` (default), the title stays ``"st.iframe"``.
+
+            An empty or whitespace-only string is treated the same as ``None``
+            and is logged so authors notice the dual meaning of ``alt=""``
+            across commands (decorative only on ``st.image`` / ``st.pyplot``).
+            An iframe must have a title, so empty ``alt`` keeps the
+            ``"st.iframe"`` fallback rather than becoming decorative.
+
+            Describe the embedded content rather than repeating text that is
+            already visible on the page.
+
         Examples
         --------
         Embed an external website:
 
         >>> import streamlit as st
-        >>> st.iframe("https://docs.streamlit.io", height=600)
+        >>> st.iframe(
+        ...     "https://docs.streamlit.io",
+        ...     height=600,
+        ...     alt="Streamlit documentation",
+        ... )
 
         Embed HTML content directly:
 
@@ -401,6 +441,10 @@ class IframeMixin:
         if tab_index is not None:
             iframe_proto.tab_index = tab_index
 
+        normalized_alt = normalize_alt(alt)
+        if normalized_alt is not None:
+            iframe_proto.alt = normalized_alt
+
         # For URLs (not srcdoc), "content" sizing falls back because cross-origin
         # content cannot be measured. Height falls back to 400px, width to stretch.
         effective_width = width
@@ -413,7 +457,24 @@ class IframeMixin:
 
         layout_config = LayoutConfig(width=effective_width, height=effective_height)
 
-        return self.dg._enqueue("iframe", iframe_proto, layout_config=layout_config)
+        return self.dg._enqueue(
+            "iframe",
+            iframe_proto,
+            layout_config=layout_config,
+            # `src` is a URL the client can fetch itself, or inline HTML whose
+            # scripts run in the browser and not here, which is the only case
+            # where what renders can differ from what is reported.
+            agent_props=agent_spec.element(
+                "iframe",
+                support="browser_required" if uses_srcdoc else None,
+                src=(
+                    (iframe_proto.src or iframe_proto.srcdoc or None)
+                    if agent_spec.is_recording()
+                    else None
+                ),
+                alt=iframe_proto.alt or None,
+            ),
+        )
 
     def _process_local_file(
         self, proto: IFrameProto, file_path: str, coordinates: str

@@ -21,7 +21,7 @@ import { Json as JsonProto } from "@streamlit/protobuf"
 import { render } from "~lib/test_util"
 import * as getColors from "~lib/theme/getColors"
 
-import Json, { JsonProps } from "./Json"
+import Json, { type JsonProps } from "./Json"
 
 const getProps = (elementProps: Partial<JsonProto> = {}): JsonProps => ({
   element: JsonProto.create({

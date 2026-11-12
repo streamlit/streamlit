@@ -15,9 +15,9 @@
  */
 
 import {
-  MouseEvent,
-  ReactElement,
-  ReactNode,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -27,13 +27,13 @@ import {
 
 import { getLogger } from "loglevel"
 
-import { StreamlitEndpoints } from "@streamlit/connection"
+import type { StreamlitEndpoints } from "@streamlit/connection"
 import {
   isMobile,
   NavigationContext,
   SidebarConfigContext,
 } from "@streamlit/lib"
-import { type AppPage } from "@streamlit/protobuf"
+import type { AppPage } from "@streamlit/protobuf"
 import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import NavSection from "./NavSection"
@@ -92,6 +92,7 @@ function NavLink({
         widgetsDisabled={widgetsDisabled}
         isExternal={isExternalPage(page)}
         externalUrl={getExternalPageUrl(page)}
+        help={page.help}
       >
         {pageName}
       </SidebarNavLink>
@@ -196,7 +197,7 @@ const SidebarNav = ({
     // Only count pages in expanded sections
     Object.entries(navigationStructure.sections).forEach(
       ([sectionName, pages]) => {
-        if (expandedSections?.[sectionName]) {
+        if (expandedSections?.[sectionName] === true) {
           count += pages.length
         }
       }
@@ -356,7 +357,10 @@ const SidebarNav = ({
   }
 
   return (
-    <StyledSidebarNavContainer data-testid="stSidebarNav">
+    <StyledSidebarNavContainer
+      aria-label="App pages"
+      data-testid="stSidebarNav"
+    >
       <StyledSidebarNavItems data-testid="stSidebarNavItems">
         {contents}
       </StyledSidebarNavItems>

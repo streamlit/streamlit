@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { CSSProperties } from "react"
+import type { CSSProperties } from "react"
 
-import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
+import type { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 
 /**
  * Defines the minimum width behavior for elements in flex layouts.
@@ -58,6 +58,32 @@ export enum MinStretchWidth {
   NONE = "none",
 }
 
+/**
+ * How an element affects the layout around it in print. Each value is the
+ * class name that print rules select on the element container. Leave it
+ * unset for content that shrinks or wraps to fit a printed column, such as
+ * text, metrics, and images.
+ */
+export enum PrintLayout {
+  /**
+   * An element that keeps a width measured on screen, so it would overflow a
+   * narrower printed column. A column row or horizontal container that holds
+   * it stacks in print. A bordered card that also holds a chart drops the
+   * keep-together rule, even when this element is short or cannot paginate,
+   * so a tall table in the same card can continue onto the next page.
+   * Use for: dataframes, tables
+   */
+  FIXED_WIDTH = "stPrintFixedWidth",
+
+  /**
+   * A fixed-width graphic (an SVG or canvas) that the browser moves to the
+   * next page instead of splitting. It stacks its row like FIXED_WIDTH, and
+   * a bordered card around it avoids page breaks.
+   * Use for: charts
+   */
+  GRAPHIC = "stPrintGraphic",
+}
+
 interface ElementContainerConfigOptions {
   /**
    * Minimum width behavior for stretch elements in horizontal layouts.
@@ -70,6 +96,12 @@ interface ElementContainerConfigOptions {
    * These override the computed layout styles.
    */
   styleOverrides?: CSSProperties
+
+  /**
+   * How the element affects the layout around it in print.
+   * @default undefined (fits the printed column)
+   */
+  printLayout?: PrintLayout
 }
 
 /**
@@ -97,6 +129,7 @@ interface ElementContainerConfigOptions {
 export class ElementContainerConfig {
   readonly minStretchWidth: MinStretchWidth
   readonly styleOverrides?: CSSProperties
+  readonly printLayout?: PrintLayout
 
   // Pre-defined configurations for common patterns.
   // Use these static constants where possible for referential stability.
@@ -126,6 +159,7 @@ export class ElementContainerConfig {
   constructor(options: ElementContainerConfigOptions = {}) {
     this.minStretchWidth = options.minStretchWidth ?? MinStretchWidth.NONE
     this.styleOverrides = options.styleOverrides
+    this.printLayout = options.printLayout
   }
 
   /**
@@ -146,6 +180,7 @@ export class ElementContainerConfig {
         overrides.styleOverrides !== undefined
           ? { ...this.styleOverrides, ...overrides.styleOverrides }
           : this.styleOverrides,
+      printLayout: overrides.printLayout ?? this.printLayout,
     })
   }
 

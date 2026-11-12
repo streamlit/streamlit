@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, NamedTuple, cast
 
 from streamlit import config
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import validate_width
 from streamlit.errors import (
     Error,
@@ -122,7 +123,28 @@ def _exception(
         width,
         apply_show_error_details=apply_show_error_details,
     )
-    return dg._enqueue("exception", exception_proto)
+    # The proto is filled by `marshall`, which already applied the
+    # `client.showErrorDetails` redaction, so the description reads from it
+    # rather than from the exception object.
+    return dg._enqueue(
+        "exception",
+        exception_proto,
+        agent_props=agent_spec.element(
+            "exception",
+            type=exception_proto.type or None,
+            message=exception_proto.message or None,
+            stack_trace=(
+                list(exception_proto.stack_trace) or None
+                if agent_spec.is_recording()
+                else None
+            ),
+            is_warning=exception_proto.is_warning,
+            # Only the runtime's own error display passes this, so it is what
+            # separates a run that failed from an app deliberately showing an
+            # exception it caught. The agent API reports the two differently.
+            uncaught=apply_show_error_details,
+        ),
+    )
 
 
 def marshall(
@@ -349,8 +371,8 @@ def _is_under_dir(filename: str, directory: Path) -> bool:
         return Path(filename).resolve().is_relative_to(directory)
     except (OSError, ValueError, RuntimeError):
         # Keep the frame rather than hide one we cannot classify.
-        # RuntimeError covers 3.10-3.12 pathlib turning symlink-loop ELOOP
-        # into RuntimeError instead of OSError.
+        # Python 3.11 and 3.12 raise RuntimeError, not OSError, when pathlib
+        # hits a symlink loop (ELOOP).
         return False
 
 
@@ -418,10 +440,8 @@ def _traceback_has_frames(tbe: traceback.TracebackException) -> bool:
         and _traceback_has_frames(tbe.__context__)
     ):
         return True
-    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
-    return any(
-        _traceback_has_frames(sub) for sub in getattr(tbe, "exceptions", None) or ()
-    )
+    # ``exceptions`` is None unless this is an ExceptionGroup.
+    return any(_traceback_has_frames(sub) for sub in tbe.exceptions or ())
 
 
 def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
@@ -431,8 +451,8 @@ def _filter_traceback_exception(tbe: traceback.TracebackException) -> None:
         _filter_traceback_exception(tbe.__cause__)
     if tbe.__context__ is not None:
         _filter_traceback_exception(tbe.__context__)
-    # ExceptionGroup children exist on 3.11+ TracebackException as ``exceptions``.
-    for sub in getattr(tbe, "exceptions", None) or ():
+    # ``exceptions`` is None unless this is an ExceptionGroup.
+    for sub in tbe.exceptions or ():
         _filter_traceback_exception(sub)
 
 
@@ -514,7 +534,7 @@ def _format_traceback_rows(
         rows.append(separator)
     rows.extend(own_rows)
 
-    children = getattr(tbe, "exceptions", None) or ()
+    children = tbe.exceptions
     if children:
         # Remaining depth 0 matches CPython: format through
         # ``max_group_depth`` nested groups, then truncate children.

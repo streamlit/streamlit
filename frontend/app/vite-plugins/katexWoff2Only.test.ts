@@ -16,6 +16,7 @@
 
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { katexWoff2Only } from "./katexWoff2Only"
 
@@ -28,7 +29,7 @@ import { katexWoff2Only } from "./katexWoff2Only"
  * copy Node and Vite would resolve.
  */
 const readInstalledKatexCss = (): string => {
-  let dir = import.meta.dirname
+  let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
     const candidate = join(dir, "node_modules/katex/dist/katex.min.css")
     if (existsSync(candidate)) {
@@ -99,7 +100,8 @@ describe("katexWoff2Only", () => {
     for (const pattern of [/@font-face/g, /font-display:block/g, /\{/g]) {
       expect(count(css, pattern)).toBe(count(INSTALLED_KATEX_CSS, pattern))
     }
-    const withoutSrc = (s: string): string => s.replace(/src:[^;}]*/g, "src:X")
+    const withoutSrc = (s: string): string =>
+      s.replaceAll(/src:[^;}]*/g, "src:X")
     expect(withoutSrc(css)).toBe(withoutSrc(INSTALLED_KATEX_CSS))
   })
 

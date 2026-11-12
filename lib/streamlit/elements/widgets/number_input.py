@@ -19,6 +19,7 @@ import numbers
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal, TypeAlias, cast, overload
 
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import (
@@ -124,6 +125,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -150,6 +152,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -176,6 +179,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -202,6 +206,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -228,6 +233,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -254,6 +260,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -280,6 +287,7 @@ class NumberInputMixin:
         kwargs: WidgetKwargs | None = None,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -306,6 +314,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -332,6 +341,7 @@ class NumberInputMixin:
         *,
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -356,6 +366,7 @@ class NumberInputMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -491,6 +502,26 @@ class NumberInputMixin:
             An optional boolean that disables the number input if set to
             ``True``. The default is ``False``.
 
+        required : bool
+            An optional boolean that requires a non-empty value if set to
+            ``True``. The default is ``False``. If this is ``True``, empty
+            values (``None``) cannot be submitted.
+
+            Outside a form, clearing the field does not rerun the app, and
+            the last committed value is kept. Inside a form, submission is
+            blocked until the field has a value. The widget still returns
+            its default value until the user provides input.
+
+            ``required=True`` does not change the widget's default. A
+            number input still starts at ``min_value`` (or ``0``) unless
+            you pass ``value=None``. Use ``value=None`` together with
+            ``required=True`` for an empty required field.
+
+            .. note::
+               This check runs in the user's browser and can be bypassed.
+               If requiredness is security-relevant, you must also check the
+               value on the server (in your app code) after it is submitted.
+
         label_visibility : "visible", "hidden", or "collapsed"
             The visibility of the label. The default is ``"visible"``. If this
             is ``"hidden"``, Streamlit displays an empty spacer instead of the
@@ -616,6 +647,7 @@ class NumberInputMixin:
             kwargs=kwargs,
             placeholder=placeholder,
             disabled=disabled,
+            required=required,
             label_visibility=label_visibility,
             icon=icon,
             width=width,
@@ -640,6 +672,7 @@ class NumberInputMixin:
         *,  # keyword-only arguments:
         placeholder: str | None = None,
         disabled: bool = False,
+        required: bool = False,
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
@@ -649,10 +682,9 @@ class NumberInputMixin:
     ) -> Number | None:
         key = to_key(key)
 
-        validate_on_change_mode(on_change)
-
-        on_change_callback: WidgetCallback | None = (
-            on_change if callable(on_change) else None
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
         )
 
         check_widget_policies(
@@ -666,6 +698,8 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
+            # `required` is hashed only for unkeyed widgets: toggling it cannot make a
+            # stored value incompatible, so it is omitted from keyed identity.
             key_as_main_identity=True,
             dg=self.dg,
             label=label,
@@ -678,6 +712,7 @@ class NumberInputMixin:
             placeholder=None if placeholder is None else str(placeholder),
             icon=icon,
             width=width,
+            required=required,
         )
 
         # Ensure that all arguments are of the same type.
@@ -819,6 +854,7 @@ class NumberInputMixin:
             number_input_proto.placeholder = str(placeholder)
         number_input_proto.form_id = current_form_id(self.dg)
         number_input_proto.disabled = disabled
+        number_input_proto.required = required
         number_input_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -917,6 +953,33 @@ class NumberInputMixin:
             number_input_proto,
             layout_config=layout_config,
             has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+            agent_props=agent_spec.element(
+                "number_input",
+                key=element_id,
+                action="value",
+                # No initial number, and not required: a later value can be
+                # cleared. `value` itself is only the starting value.
+                clearable=value is None and not required,
+                value_schema=agent_spec.INTEGER
+                if data_type == NumberInputProto.INT
+                else agent_spec.NUMBER,
+                label=label,
+                # The authored bounds, absent when the author set none: unset
+                # bounds were backfilled with JavaScript safe-number sentinels
+                # above, which are not limits anyone chose.
+                min_value=min_value if has_user_min else None,
+                max_value=max_value if has_user_max else None,
+                step=step,
+                format=number_input_proto.format,
+                help=number_input_proto.help or None,
+                placeholder=placeholder,
+                icon=icon,
+                disabled=disabled,
+                # Checked by the browser, not by this interface.
+                required=required,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
         return current_value
 

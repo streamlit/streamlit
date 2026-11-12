@@ -257,6 +257,50 @@ class ForwardMsgQueueTest(unittest.TestCase):
         fmq.clear()
         assert fmq._queue == []
 
+    @parameterized.expand(
+        [
+            ("full_run", None),
+            ("fragment_run", ["some_fragment"]),
+        ]
+    )
+    def test_clear_keeps_run_identity_on_rewritten_script_finished(
+        self, _name: str, fragment_ids_this_run: list[str] | None
+    ):
+        """A retained script_finished keeps metadata.run when its status is rewritten."""
+        fmq = ForwardMsgQueue()
+
+        # The finished run's only fragment is dropped, so a fragment clear
+        # downgrades its finish too.
+        fragment_delta = ForwardMsg()
+        fragment_delta.delta.new_element.text.body = "text"
+        fragment_delta.delta.fragment_id = "some_fragment"
+        fragment_delta.metadata.delta_path[:] = make_delta_path(
+            RootContainer.MAIN, (), 0
+        )
+        fmq.enqueue(fragment_delta)
+
+        script_finished_msg = ForwardMsg()
+        script_finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        script_finished_msg.metadata.run.script_run_id = "finished_run_id"
+        script_finished_msg.metadata.run.fragment_ids.append("some_fragment")
+        fmq.enqueue(script_finished_msg)
+
+        fmq.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=fragment_ids_this_run
+        )
+
+        assert len(fmq._queue) == 1
+        retained = fmq._queue[0]
+        assert (
+            retained.script_finished
+            == ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert retained.metadata.run.script_run_id == "finished_run_id"
+        assert list(retained.metadata.run.fragment_ids) == ["some_fragment"]
+        assert not retained.metadata.HasField("delivery")
+
     def test_clear_retains_toast_deltas(self):
         """Toast deltas survive a lifecycle-retaining clear (issue #7740).
 
@@ -387,6 +431,249 @@ class ForwardMsgQueueTest(unittest.TestCase):
 
         fmq.clear()
         assert fmq._queue == []
+
+    @staticmethod
+    def _fragment_delta(fragment_id: str, delta_path: list[int]) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.delta.new_element.text.body = fragment_id
+        msg.delta.fragment_id = fragment_id
+        msg.metadata.delta_path[:] = delta_path
+        return msg
+
+    @staticmethod
+    def _fragment_finish(script_run_id: str, fragment_ids: list[str]) -> ForwardMsg:
+        msg = ForwardMsg()
+        msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        msg.metadata.run.script_run_id = script_run_id
+        msg.metadata.run.fragment_ids.extend(fragment_ids)
+        return msg
+
+    @parameterized.expand(
+        [
+            # The next run reruns an unrelated fragment, so all of A's output
+            # survives and A's cleanup must still run (issue #16708).
+            ("unrelated_fragment", "frag-b", False),
+            # A rendered a nested fragment that the next run reruns, so part of
+            # A's output is dropped and its cleanup would remove live nodes.
+            ("nested_fragment", "frag-a-child", True),
+        ]
+    )
+    def test_fragment_clear_downgrades_fragment_finish_only_if_its_output_dropped(
+        self, _name: str, next_fragment_id: str, expect_downgrade: bool
+    ):
+        """A finished fragment run keeps its success status unless this clear
+        dropped part of that run's output.
+        """
+        fmq = ForwardMsgQueue()
+
+        own_delta = self._fragment_delta(
+            "frag-a", make_delta_path(RootContainer.MAIN, (1,), 1)
+        )
+        child_delta = self._fragment_delta(
+            "frag-a-child", make_delta_path(RootContainer.MAIN, (1, 0), 0)
+        )
+        finished_msg = self._fragment_finish("run-a", ["frag-a"])
+
+        for msg in (NEW_SESSION_MSG, own_delta, child_delta, finished_msg):
+            fmq.enqueue(msg)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=[next_fragment_id])
+
+        retained_finish = next(
+            m for m in fmq._queue if m.WhichOneof("type") == "script_finished"
+        )
+        expected_status = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+            if expect_downgrade
+            else ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        assert retained_finish.script_finished == expected_status
+        assert retained_finish.metadata.run.script_run_id == "run-a"
+        assert list(retained_finish.metadata.run.fragment_ids) == ["frag-a"]
+        assert not retained_finish.metadata.HasField("delivery")
+        assert own_delta in fmq._queue
+
+    def _enqueue_coalesced_fragment_run(self, fmq: ForwardMsgQueue) -> None:
+        """Enqueue a finished run of fragments B and A."""
+        fmq.enqueue(
+            self._fragment_delta("frag-b", make_delta_path(RootContainer.MAIN, (), 0))
+        )
+        fmq.enqueue(
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 1))
+        )
+        fmq.enqueue(self._fragment_finish("run-coalesced", ["frag-b", "frag-a"]))
+
+    def test_fragment_clear_records_dropped_fragments_of_coalesced_finish(self):
+        """A coalesced run keeps its identity, and its delivery names the
+        fragments whose output was dropped.
+        """
+        fmq = ForwardMsgQueue()
+        self._enqueue_coalesced_fragment_run(fmq)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-b"])
+
+        retained_finish = fmq._queue[-1]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        assert retained_finish.metadata.run.script_run_id == "run-coalesced"
+        assert list(retained_finish.metadata.run.fragment_ids) == [
+            "frag-b",
+            "frag-a",
+        ]
+        assert list(retained_finish.metadata.delivery.dropped_fragment_ids) == [
+            "frag-b"
+        ]
+        assert [m.delta.fragment_id for m in fmq._queue[:-1]] == ["frag-a"]
+
+    def test_second_fragment_clear_downgrades_coalesced_finish_and_drops_partial_delivery(
+        self,
+    ):
+        """Fragments dropped by earlier clears count toward a later clear, and
+        the downgrade discards the earlier partial-drop record.
+        """
+        fmq = ForwardMsgQueue()
+        self._enqueue_coalesced_fragment_run(fmq)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-b"])
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a"])
+
+        assert len(fmq._queue) == 1
+        retained_finish = fmq._queue[0]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert list(retained_finish.metadata.run.fragment_ids) == [
+            "frag-b",
+            "frag-a",
+        ]
+        assert not retained_finish.metadata.HasField("delivery")
+
+    def test_single_fragment_clear_of_every_fragment_downgrades_coalesced_finish(
+        self,
+    ):
+        """Dropping every fragment of a coalesced run leaves nothing to clean up."""
+        fmq = ForwardMsgQueue()
+        self._enqueue_coalesced_fragment_run(fmq)
+
+        fmq.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a", "frag-b"]
+        )
+
+        assert len(fmq._queue) == 1
+        retained_finish = fmq._queue[0]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert list(retained_finish.metadata.run.fragment_ids) == [
+            "frag-b",
+            "frag-a",
+        ]
+        assert not retained_finish.metadata.HasField("delivery")
+
+    def test_fragment_clear_downgrades_coalesced_finish_when_nested_fragment_dropped(
+        self,
+    ):
+        """Dropping one of the run's own fragments and a fragment nested in
+        another of them still downgrades: cleanup of the remaining fragment
+        would remove the nested fragment's live output.
+        """
+        fmq = ForwardMsgQueue()
+        for msg in (
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 0)),
+            self._fragment_delta("frag-b", make_delta_path(RootContainer.MAIN, (), 1)),
+            self._fragment_delta(
+                "frag-x", make_delta_path(RootContainer.MAIN, (1, 0), 0)
+            ),
+            self._fragment_finish("run-coalesced", ["frag-a", "frag-b"]),
+        ):
+            fmq.enqueue(msg)
+
+        fmq.clear(
+            retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a", "frag-x"]
+        )
+
+        retained_finish = fmq._queue[-1]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert not retained_finish.metadata.HasField("delivery")
+
+    def test_fragment_clear_ignores_drops_from_a_run_without_a_finish(self):
+        """Deltas of a run that was replaced before it sent a script_finished
+        don't count against the next run's finish.
+        """
+        fmq = ForwardMsgQueue()
+        for msg in (
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 0)),
+            NEW_SESSION_MSG,
+            self._fragment_delta("frag-c", make_delta_path(RootContainer.MAIN, (), 1)),
+            self._fragment_finish("run-c", ["frag-c"]),
+        ):
+            fmq.enqueue(msg)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a"])
+
+        retained_finish = fmq._queue[-1]
+        assert retained_finish.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        assert not retained_finish.metadata.HasField("delivery")
+
+    def test_fragment_clear_downgrades_unattributed_fragment_finish(self):
+        """A finish without run identity can't name a delivered subset."""
+        fmq = ForwardMsgQueue()
+        fmq.enqueue(
+            self._fragment_delta("frag-a", make_delta_path(RootContainer.MAIN, (), 0))
+        )
+        finished_msg = ForwardMsg()
+        finished_msg.script_finished = (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        fmq.enqueue(finished_msg)
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-a"])
+
+        assert fmq._queue == [finished_msg]
+        assert finished_msg.script_finished == (
+            ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+        )
+        assert not finished_msg.metadata.HasField("run")
+        assert not finished_msg.metadata.HasField("delivery")
+
+    def test_fragment_clear_tracks_dropped_output_per_finished_run(self):
+        """Dropped output of an earlier run must not downgrade a later run."""
+        fmq = ForwardMsgQueue()
+
+        for run_id, fragment_id, index in (
+            ("run-b1", "frag-b", 0),
+            ("run-a", "frag-a", 1),
+        ):
+            new_session_msg = ForwardMsg()
+            new_session_msg.new_session.name = "script.py"
+            new_session_msg.metadata.run.script_run_id = run_id
+            new_session_msg.metadata.run.fragment_ids.append(fragment_id)
+            fmq.enqueue(new_session_msg)
+            fmq.enqueue(
+                self._fragment_delta(
+                    fragment_id, make_delta_path(RootContainer.MAIN, (), index)
+                )
+            )
+            fmq.enqueue(self._fragment_finish(run_id, [fragment_id]))
+
+        fmq.clear(retain_lifecycle_msgs=True, fragment_ids_this_run=["frag-b"])
+
+        statuses = {
+            m.metadata.run.script_run_id: m.script_finished
+            for m in fmq._queue
+            if m.WhichOneof("type") == "script_finished"
+        }
+        assert statuses == {
+            "run-b1": ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN,
+            "run-a": ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+        }
 
     def test_on_before_enqueue_msg(self):
         count = 0

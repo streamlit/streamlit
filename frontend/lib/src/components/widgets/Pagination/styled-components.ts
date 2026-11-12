@@ -40,7 +40,7 @@ interface StyledPaginationButtonProps {
 
 export const StyledPaginationButton =
   styled.button<StyledPaginationButtonProps>(
-    ({ theme, isSelected, disabled }) => ({
+    ({ theme, isSelected = false, disabled = false }) => ({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -108,8 +108,8 @@ export const StyledArrowButton = styled.button(({ theme, disabled }) => ({
   border: "none",
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.transparent,
-  color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-  cursor: disabled ? "not-allowed" : "pointer",
+  color: disabled === true ? theme.colors.fadedText40 : theme.colors.bodyText,
+  cursor: disabled === true ? "not-allowed" : "pointer",
   transition: "background-color 0.15s ease",
 
   "&:hover:not(:disabled)": {

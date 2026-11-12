@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { CSSObject, keyframes } from "@emotion/react"
+import { type CSSObject, keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { EmotionTheme, getToastCardStyle } from "@streamlit/lib"
+import { type EmotionTheme, getToastCardStyle } from "@streamlit/lib"
 
 /**
  * Slide-in entrance for the nudge card. Defined at module scope (with a literal
@@ -112,7 +112,7 @@ export const StyledSkillsNudgeHeading = styled.div(({ theme }) => ({
 }))
 
 export const StyledSkillsNudgeBody = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
+  color: theme.colors.fadedText70,
 }))
 
 // Deliberately sets no font size: ``BaseButton`` is ``fontSize: inherit``, so

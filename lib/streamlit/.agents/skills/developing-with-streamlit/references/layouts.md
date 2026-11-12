@@ -8,18 +8,32 @@ How you structure your app affects usability more than you think.
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `st.container`    | You need a general-purpose group of elements, a bordered section, a horizontal row, custom alignment, fixed height, scrolling, or out-of-order insertion of multiple elements.                                                                                                              |
 | `st.columns`      | You need a simple proportional grid, such as two-column comparisons or up to four KPI cards.                                                                                                                                                                                                |
+| `st.grid`         | You need a responsive grid of equal-width tiles that reflow with available width. Use it for metric walls, galleries, and dashboard cards. `st.columns` stays the tool for a known side-by-side split. |
 | `st.sidebar`      | You need app-level navigation, global filters, settings, or small app metadata that should stay separate from the main content.                                                                                                                                                             |
-| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page. All tab content is computed by default; for lazy execution where only the selected tab runs, use `on_change="rerun"` (or a callable) and check each tab's `.open` property. |
+| `st.tabs`         | You need multiple peer views of related content, and users should switch between them without leaving the page.                                                                                                                                                                             |
 | `st.expander`     | You need optional details, advanced settings, explanations, or diagnostic output that should not dominate the main view.                                                                                                                                                                    |
 | `st.status`       | You need to show progress, logs, or multi-step work in a collapsible status block that can update from running to complete or error.                                                                                                                                                        |
-| `st.popover`      | You need compact on-demand controls, filters, or secondary actions without changing page layout.                                                                                                                                                                                            |
-| `@st.dialog`      | You need a focused modal flow, such as confirmation, short editing, or settings that should temporarily interrupt the main page.                                                                                                                                                            |
+| `st.popover`      | You need compact on-demand controls or filters without changing page layout. For a button that opens a short list of one-shot actions, use `st.menu_button` instead.                                                                                                                        |
+| `@st.dialog`      | You need a focused modal flow (dialog or side drawer), such as confirmation, short editing, details, or settings that should temporarily interrupt the main page.                                                                                                                            |
 | `st.form`         | You need to batch multiple widget inputs and rerun only when the user submits.                                                                                                                                                                                                              |
 | `st.empty`        | You need a placeholder that can be filled, replaced, or cleared later, including inserting elements out of order.                                                                                                                                                                           |
-| `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager like `st.spinner` (auto-clears when the block exits).                                                           |
+| `st.skeleton`     | You need an animated loading placeholder that reserves space while content loads. Use it standalone like `st.empty` (replace it with content later) or as a context manager whose content fills the skeleton's slot.                                                                        |
 | `st.chat_message` | You need a message container with chat-specific styling and avatars. See `chat-ui.md` for chat interface patterns.                                                                                                                                                                          |
 | `st.bottom`       | You need content pinned to the bottom of the main app area, commonly persistent chat input or bottom action controls.                                                                                                                                                                       |
 | `st.space`        | You need explicit vertical or horizontal spacing inside the current layout direction.                                                                                                                                                                                                       |
+
+By default, the app script enters every tab, expander, and popover body on every rerun, including hidden, collapsed, and closed bodies. For expensive content, see [Conditional rendering](performance.md#conditional-rendering).
+
+### Side by side: columns vs grid vs horizontal container
+
+|                     | `st.columns`                                          | `st.grid`                                                                   | `st.container(horizontal=True)`               |
+| ------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------- |
+| Item width          | Set by `spec` ratios                                  | Equal-width columns                                                         | Each item's own `width`                       |
+| When space runs out | All columns stack at once on viewports ≤640px         | Drops one column at a time below `min_column_width`, based on its own width | Wraps items that don't fit onto the next line |
+| Item count          | Fixed when you call it                                | Any; each child becomes a cell                                              | Any                                           |
+| Best for            | A known split: main + aside, a comparison, a form row | Repeated tiles: metric walls, galleries, card walls                         | Toolbars, button groups, badges, chips        |
+
+All three take `wrap=False` to scroll horizontally instead of wrapping. Columns and horizontal containers then stay on one row. A grid keeps its column count, so extra cells still start new rows.
 
 ## Sidebar: navigation + global filters only
 
@@ -61,8 +75,8 @@ minimum width, then the column group scrolls horizontally instead of stacking.
 # GOOD
 col1, col2 = st.columns(2)
 
-# OK with alignment
-cols = st.columns(4, vertical_alignment="center")
+# OK: Bottom-align to line up buttons with labeled inputs
+cols = st.columns(4, vertical_alignment="bottom")
 
 # OK: Compact grid that must stay in one row (e.g. thumbnails)
 thumbnail_columns = st.columns(6, gap="xsmall", wrap=False)
@@ -77,6 +91,74 @@ row (`st.button`, `st.pills`, `st.multiselect`, `st.checkbox`, and similar).
 Nested layout containers such as a vertical `st.container`, expander, tab, or
 form reset this, so inner controls wrap as usual. Pass `wrap=True` on a control
 to wrap even in a column.
+
+## Grid: repeated equal-width tiles
+
+Use `st.grid` for metric walls, galleries, and dashboard cards that should
+reflow with the available width. Each direct child is one cell, so a single
+element needs no wrapper. Keep section headings outside the grid — a bare
+`st.header` inside it takes one cell. A fragment called inside the grid is one
+cell. A fragment that writes into a grid captured outside the fragment adds one
+cell per child.
+
+```python
+metrics = [
+    ("Revenue", "$1.2M", "+8%"),
+    ("Pipeline", "$4.8M", "+12%"),
+    ("Conversion", "12.4%", "+1.1%"),
+    ("Retention", "96%", "-0.4%"),
+]
+with st.grid(4):
+    for label, value, delta in metrics:
+        st.metric(label, value, delta, border=True)
+```
+
+Use `grid.cell()` only when a cell holds several elements, or spans tracks
+with `column_span` (an integer, or `"all"` for a full-width row) or `row_span`.
+
+For when to pick a grid over columns or a horizontal container, see "Side by side: columns vs grid vs horizontal container" above.
+
+**Common grid patterns:**
+
+```python
+# Auto-fit gallery
+with st.grid("auto", min_column_width=72, gap="xsmall"):
+    for item in items:
+        st.button(item, key=f"item-{item}", width="stretch", wrap=True)
+
+# Spanning and grouped cells
+grid = st.grid(3)
+with grid.cell(column_span="all"):  # Full-width row
+    st.markdown("**Featured**")
+    st.caption("Spans every column")
+with grid.cell(column_span=2):
+    st.metric("Revenue", "$1.2M", "+8%", border=True)
+grid.metric("Users", "762k", "+12%", border=True)  # One element, no cell() needed
+
+# Keep a column count (scrolls horizontally on a phone)
+from numpy.random import default_rng as rng
+
+df = rng(0).standard_normal((20, 3))
+grid = st.grid(3, wrap=False, border=True)
+grid.line_chart(df, height=220)
+grid.bar_chart(df, height=220)
+grid.dataframe(df, height=220)
+```
+
+**Key parameters:**
+- `columns` — `"auto"` (default, capped at 24) or an integer from 1 to 24 (maximum count when wrapping)
+- `min_column_width` — `"auto"` (default, theme rem token) or a pixel wrapping threshold. With `wrap=True`, the last remaining column may be narrower. With `wrap=False`, columns stop at this width and the grid scrolls.
+- `wrap` — `True` (default) may decrease the column count; `False` keeps it and scrolls
+- `gap` — Scalar like `st.columns`, or `(row_gap, column_gap)`
+- `border` — Show borders around cells
+- `row_height` — `"content"` (default) or fixed pixels. Use a pixel height for uniform cards.
+- `height` — `"content"` (default, page scrolls), `"stretch"`, or pixels
+- `vertical_alignment` — `"top"` (default), `"center"`, `"bottom"`
+
+Controls placed directly in a grid cell use the same auto `wrap=None` as a
+column: labels ellipsize and option groups stay on one row. Nested vertical
+containers reset that to wrap. To fill a definite-height cell, pass
+`height="stretch"` on the chart or dataframe inside it.
 
 ## Horizontal containers for button groups
 
@@ -122,6 +204,105 @@ with st.container(horizontal=True, horizontal_alignment="distribute"):
 ```
 
 Options: `"left"` (default), `"center"`, `"right"`, `"distribute"`
+
+## Aligning elements side by side
+
+Rows look off when neighboring elements have different heights. Know the default sizes, then align the row deliberately.
+
+**Default heights:**
+
+- Buttons (`st.button`, `st.download_button`, `st.link_button`, `st.popover`, `st.menu_button`) and unlabeled input fields share one height.
+- A visible label adds the same extra height to every input field (`st.text_input`, `st.number_input`, `st.selectbox`, `st.multiselect`, date and time inputs, `st.color_picker`, sliders). `label_visibility="hidden"` keeps that space; `"collapsed"` removes it.
+- Shorter: `st.checkbox`, `st.toggle`, and `st.feedback`. `st.pills` and `st.segmented_control` are slightly shorter than input fields.
+- Taller: `st.file_uploader` and `st.audio_input` share one height (the uploader grows in narrow columns). `st.text_area` defaults to three lines; at its minimum `height` with a collapsed label, it matches them.
+- `st.metric` grows with `delta`, and grows more with `chart_data`.
+
+**Widget rows:**
+
+- For labeled inputs next to buttons, checkboxes, or toggles, use `vertical_alignment="bottom"` on `st.columns` or a horizontal container. Checkboxes and toggles are then centered on the input field. `"center"` centers each element or column, label included, so the controls don't line up.
+- For toolbars, collapse the input labels and use `st.container(horizontal=True, vertical_alignment="center")`.
+- If a column has content below its input, such as a caption, top-align instead: put `st.space("small")` above the neighboring button or unlabeled widget. With the default gap, it takes up exactly a label's height. `st.space` only adds vertical space in vertical layouts like columns.
+
+```python
+# Labeled inputs, a toggle, and a button on one line
+with st.container(horizontal=True, vertical_alignment="bottom"):
+    st.text_input("Customer")
+    st.selectbox("Region", regions)
+    st.toggle("Active only")
+    st.button("Search", type="primary")
+
+# Toolbar with collapsed labels
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.text_input("Search", label_visibility="collapsed", placeholder="Search")
+    st.segmented_control("View", ["Table", "Chart"], label_visibility="collapsed")
+    st.toggle("Live")
+    st.button("Export", icon=":material/download:")
+
+# Top-align a button with a labeled input that has a caption below
+key_col, button_col = st.columns(2)
+with key_col:
+    st.text_input("API key", type="password")
+    st.caption("Find your key in the account settings.")
+with button_col:
+    st.space("small")
+    st.button("Connect")
+```
+
+**Equal-height cards:**
+
+Sibling cards with different content (for example, one `st.metric` without `delta` or `chart_data`) end up with uneven heights.
+
+- Prefer consistent cards: give all sibling metrics a `delta` and `chart_data`, or none, and use the same header elements in every card.
+- When content must differ, pass `height="stretch"` to each metric or bordered container so it matches the tallest card in its row. This works in `st.columns` and `st.grid`, including inside `grid.cell()`, for example a card that spans two columns. `st.columns(n, border=True)` also gives equal-height bordered columns.
+- Every container between a stretch card and the row must also be `height="stretch"`. A plain `st.container()` (for example, one added only for a `key`) takes its content height, so the card inside it stops matching.
+- A fragment wraps its output in a plain container where it's called, so a `height="stretch"` card or chart created inside a fragment does not stretch. Create the card outside the fragment and call the fragment inside it. This also works with `parallel=True`.
+- In horizontal containers, a metric's width depends on its content, so metrics with different parts get uneven widths. Use `st.grid` or `st.columns` when cards should share a width.
+- Pin a card's trailing button to the bottom with `st.space("stretch")`.
+- In image card grids, crop the images to one aspect ratio (for example, with `PIL.ImageOps.fit`) and pass `width="stretch"` to each `st.image`, so every image fills its column at the same height.
+
+```python
+# Equal-height KPI cards with mixed content
+revenue_col, users_col, orders_col = st.columns(3)
+revenue_col.metric(
+    "Revenue", "$1.2M", "+8%", chart_data=revenue_trend, border=True, height="stretch"
+)
+users_col.metric(
+    "Users", "762k", "+12%", chart_data=user_trend, border=True, height="stretch"
+)
+orders_col.metric("Orders", "1.4k", border=True, height="stretch")
+
+# Equal-height cards with buttons pinned to the bottom
+for col, (plan, features) in zip(st.columns(3), plans.items()):
+    with col.container(border=True, height="stretch"):
+        st.subheader(plan)
+        for feature in features:
+            st.markdown(f":material/check: {feature}")
+        st.space("stretch")
+        st.button("Choose", key=f"choose_{plan}", width="stretch")
+```
+
+**Charts side by side:**
+
+- Give every chart in a row the same integer `height`, or `height="stretch"` on each chart and its card. Default heights differ by library: `st.plotly_chart` is taller than Vega-Lite charts (`st.line_chart`, `st.altair_chart`, and similar) and `st.echarts_chart`.
+- For Altair facet, repeat, and concat charts (including `chart1 | chart2` and `chart1 & chart2`), keep the default `height` and size the views with `.properties(height=...)`. The card around the chart can still stretch. Streamlit's `height` doesn't resize their views: `"stretch"` renders them empty (or overflowing in a fixed-height parent), and an integer `height` paints over the next element.
+
+## Bento layouts and fixed-height regions
+
+A bento puts a tall card next to stacked smaller cards. Build it with `st.grid` and a pixel `row_height`: span the tall card with `grid.cell(column_span=2, row_span=2)`, and pass `height="stretch"` to the metrics, cards, charts, and dataframes in the cells. Every cell then has an exact height that stretch elements fill. `st.grid(height=N)` does not size the rows; it only makes the grid scroll.
+
+```python
+# Two 232px rows plus the default gap: exactly 480px
+grid = st.grid(3, row_height=232, border=True)
+with grid.cell(column_span=2, row_span=2):
+    st.markdown("**Revenue**")
+    st.line_chart(revenue, height="stretch", alt="Revenue over time")
+grid.bar_chart(by_region, height="stretch", alt="Revenue by region")
+grid.dataframe(orders, height="stretch", alt="Recent orders")
+```
+
+For loading cards, wrap a cell's body in `with st.skeleton(height="stretch")`. The skeleton fills the cell without a measured height, and so does a stretch chart written in the block. A chart inside a fragment can't stretch, so give it a pixel height.
+
+Without a pixel `row_height`, and in `st.columns`, only stacked metrics and text cards stretch to a tall neighbor. Stacked charts keep their default heights, so the stack sets the row's height instead of the tall card, and `st.columns` doesn't pass a fixed height down.
 
 ## Bordered containers
 
@@ -170,17 +351,32 @@ data = load_data()  # Expensive work
 placeholder.dataframe(data)  # Replaces the skeleton with content
 ```
 
-Context manager (like `st.spinner`, **recommended**): the skeleton appears while the `with` block runs (after a short delay) and clears automatically when the block exits. Any `st.*` calls inside the block render in the parent container and remain visible after the skeleton clears.
+Context manager (**recommended**): elements written inside the `with` block fill the skeleton's slot and stack vertically, like in `st.container()`, even in a horizontal container. The skeleton stays until the first visible element is drawn. Draw the slow element first: any visible element, even a caption, ends the skeleton; `st.empty()` and spinners don't.
 
 ```python
 with st.skeleton(height=200):
     data = expensive_operation()
-st.success("Data loaded!")
+    st.dataframe(data, key="results")  # Replaces the skeleton in its slot
 ```
 
-Prefer context manager mode; use standalone mode only when you need to reserve a slot and fill it later (like `st.empty`).
+In both modes, a rerun keeps the previous content mounted in the slot. The skeleton covers that content only if the new content takes longer than half a second, so reruns that hit the cache don't flash it, and stateful elements keep their scroll and selection. A cached function's default spinner is hidden for the whole `with` block; custom `show_spinner` or `st.spinner` text labels the skeleton instead.
+
+A fragment's own rerun skips a `with st.skeleton()` wrapped around the fragment's call, so put a second `with st.skeleton()` inside the fragment body to cover those reruns (see "Layout-first loading" in `dashboards.md`).
 
 By default (`height=None`), the skeleton uses the standard element height. Pass an integer for a fixed pixel height, or `"stretch"` to fill a parent container with a bounded height.
+
+## Fragments with discontiguous layout
+
+Sometimes a fragment's controls or output need to appear at positions the fragment body does not own — a button in the main script that refreshes a chart fragment, or a fragment that renders into a slot between other main-script elements.
+
+**Triggering a fragment from outside.** Give the fragment a key (`@st.fragment(key="charts")`) and call `st.rerun("charts")` from a widget callback in the main script or another fragment. See "Keyed reruns" in `performance.md`.
+
+**Rendering into an outside container.** Keep a fragment's output in its own body unless it must sit somewhere the fragment cannot own, such as between main-script elements or as one slot in a shared container.
+
+- Each fragment that writes outside must do so itself on every full-app run — a main-script write does not reserve its slot.
+- If that run has nothing to show yet, `container.empty()` reserves the slot.
+- Interacting with a widget that a fragment rendered into an outside container reruns that fragment, not the full app.
+- A `@st.fragment(parallel=True)` fragment cannot write outside or reserve a slot.
 
 ## Dialogs for focused interactions
 
@@ -199,11 +395,16 @@ if st.button("Delete item"):
     confirm_delete("My Document")
 ```
 
+`width` may be `"small"`, `"medium"`, or `"large"`, or a positive integer pixel width (minimum about 200 pixels). On a side drawer, an integer `width` sets the initial width.
+
+`position="left"` / `"right"` shows the dialog as a user-resizable full-height modal side drawer. Dismissal and other parameters work the same way.
+
 **When to use dialogs:**
 
 - Confirmation prompts
 - Settings panels
 - Forms that don't need to be always visible
+- Drill-down into details (for example, a `ButtonColumn` click that opens a side drawer to inspect that row)
 
 ## Spacing
 
@@ -231,16 +432,9 @@ st.space(50)  # Custom pixels
 
 ## Width and height
 
-Control element sizing:
+Control element sizing (for equal-height cards, see "Aligning elements side by side" above; for exact regions, see "Bento layouts and fixed-height regions"):
 
 ```python
-# Stretch to fill available space (equal height columns)
-cols = st.columns(2)
-with cols[0].container(border=True, height="stretch"):
-    st.line_chart(data)
-with cols[1].container(border=True, height="stretch"):
-    st.dataframe(df)
-
 # Shrink to content size
 st.container(width="content")
 
@@ -253,6 +447,7 @@ st.container(height=300)
 - [Using layouts and containers](https://docs.streamlit.io/develop/concepts/design/layouts-and-containers)
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)
 - [st.sidebar](https://docs.streamlit.io/develop/api-reference/layout/st.sidebar)
 - [st.tabs](https://docs.streamlit.io/develop/api-reference/layout/st.tabs)
 - [st.expander](https://docs.streamlit.io/develop/api-reference/layout/st.expander)
@@ -261,6 +456,7 @@ st.container(height=300)
 - [st.dialog](https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog)
 - [st.form](https://docs.streamlit.io/develop/api-reference/execution-flow/st.form)
 - [st.empty](https://docs.streamlit.io/develop/api-reference/layout/st.empty)
+- [st.fragment](https://docs.streamlit.io/develop/api-reference/execution-flow/st.fragment)
 - [Insert elements out of order](https://docs.streamlit.io/knowledge-base/using-streamlit/insert-elements-out-of-order)
 - [st.chat_message](https://docs.streamlit.io/develop/api-reference/chat/st.chat_message)
 - [Chat UI reference](chat-ui.md)

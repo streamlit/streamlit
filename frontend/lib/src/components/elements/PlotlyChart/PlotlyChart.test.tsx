@@ -18,6 +18,11 @@ import { act, render, screen } from "@testing-library/react"
 
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
+import {
+  FlexContext,
+  type IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import type { PlotParams } from "~lib/util/reactPlotlyCompat"
@@ -40,10 +45,14 @@ vi.mock("react-plotly.js", () => ({
   default: (props: unknown) => MockPlot(props),
 }))
 
-// Mock dependencies
+// Mock dependencies. Tests override chartDimensions.height to simulate the measured container height.
+const chartDimensions = vi.hoisted(() => ({
+  height: 450,
+}))
+
 vi.mock("~lib/hooks/useCalculatedDimensions", () => ({
   useCalculatedDimensions: () => ({
-    height: 450,
+    height: chartDimensions.height,
     elementRef: { current: null },
   }),
 }))
@@ -90,7 +99,11 @@ const createWidgetManager = (): WidgetStateManager => {
 }
 
 function getLastPlotProps(): PlotParams {
-  return MockPlot.mock.calls[MockPlot.mock.calls.length - 1][0] as PlotParams
+  const lastCall = MockPlot.mock.calls.at(-1)
+  if (!lastCall) {
+    throw new Error("Expected Plot to have been called")
+  }
+  return lastCall[0] as PlotParams
 }
 
 // Static test data - extracted to module level per coding guidelines
@@ -111,7 +124,8 @@ describe("PlotlyChart Component", () => {
 
   const renderComponent = (
     props: Partial<React.ComponentProps<typeof PlotlyChart>> = {},
-    contextValue: Record<string, unknown> = {}
+    contextValue: Record<string, unknown> = {},
+    flexContext: IFlexContext | null = null
   ): ReturnType<typeof render> => {
     const finalContext = {
       expanded: false,
@@ -123,26 +137,29 @@ describe("PlotlyChart Component", () => {
     }
 
     return render(
-      <ElementFullscreenContext.Provider
-        value={
-          finalContext as React.ComponentProps<
-            typeof ElementFullscreenContext.Provider
-          >["value"]
-        }
-      >
-        <PlotlyChart
-          element={DEFAULT_ELEMENT}
-          widgetMgr={widgetMgr}
-          disabled={false}
-          width={600}
-          {...props}
-        />
-      </ElementFullscreenContext.Provider>
+      <FlexContext.Provider value={flexContext}>
+        <ElementFullscreenContext.Provider
+          value={
+            finalContext as React.ComponentProps<
+              typeof ElementFullscreenContext.Provider
+            >["value"]
+          }
+        >
+          <PlotlyChart
+            element={DEFAULT_ELEMENT}
+            widgetMgr={widgetMgr}
+            disabled={false}
+            width={600}
+            {...props}
+          />
+        </ElementFullscreenContext.Provider>
+      </FlexContext.Provider>
     )
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    chartDimensions.height = 450
     widgetMgr = createWidgetManager()
   })
 
@@ -150,6 +167,143 @@ describe("PlotlyChart Component", () => {
     renderComponent()
     expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
     expect(MockPlot).toHaveBeenCalled()
+  })
+
+  describe("stretch height sizing", () => {
+    const stretchConfigs = {
+      widthConfig: { useStretch: true },
+      heightConfig: { useStretch: true },
+    }
+    const definiteHeightContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isDirectlyInColumn: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+      hasDefiniteHeight: true,
+    }
+
+    it("size-contains a stretch chart and falls back to 450px", () => {
+      renderComponent(stretchConfigs)
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
+    it("treats a figure height below 10 as a missing height", () => {
+      chartDimensions.height = 0
+      renderComponent({
+        ...stretchConfigs,
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          spec: JSON.stringify({ data: [], layout: { height: 5 } }),
+        }),
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+      expect(getLastPlotProps().style?.display).toBeUndefined()
+      expect(getLastPlotProps().layout?.height).toBe(450)
+    })
+
+    it("falls back to the figure's own height when it has one", () => {
+      renderComponent({
+        ...stretchConfigs,
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          spec: JSON.stringify({ data: [], layout: { height: 320 } }),
+        }),
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 320px;")
+      expect(chart).not.toHaveStyle("contain-intrinsic-height: 450px;")
+    })
+
+    it("claims no fallback height inside a container with a definite height", () => {
+      renderComponent(stretchConfigs, {}, definiteHeightContext)
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain: size;")
+      expect(chart).toHaveStyle("contain-intrinsic-height: none;")
+    })
+
+    it("hides the plot below 10px in a definite-height container", () => {
+      chartDimensions.height = 0
+      renderComponent(stretchConfigs, {}, definiteHeightContext)
+
+      expect(getLastPlotProps().style?.display).toBe("none")
+    })
+
+    it("shows the plot at 10px in a definite-height container", () => {
+      chartDimensions.height = 10
+      renderComponent(stretchConfigs, {}, definiteHeightContext)
+
+      expect(getLastPlotProps().style?.display).toBeUndefined()
+      expect(getLastPlotProps().layout?.height).toBe(10)
+    })
+
+    it("does not size-contain a fullscreen chart", () => {
+      renderComponent(stretchConfigs, { expanded: true })
+
+      expect(screen.getByTestId("stPlotlyChart")).not.toHaveStyle(
+        "contain: size;"
+      )
+    })
+
+    it("keeps the 450px fallback when a sub-10px box has no definite parent", () => {
+      chartDimensions.height = 5
+      renderComponent({
+        widthConfig: { useStretch: true },
+        heightConfig: { pixelHeight: 5 },
+      })
+
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).toHaveStyle("contain-intrinsic-height: 450px;")
+      expect(getLastPlotProps().style?.display).toBeUndefined()
+      expect(getLastPlotProps().layout?.height).toBe(450)
+    })
+  })
+
+  describe("alt (accessible name)", () => {
+    it("sets role=figure and aria-label when alt is provided", () => {
+      renderComponent({
+        element: new PlotlyChartProto({
+          ...DEFAULT_ELEMENT,
+          alt: "Scatter plot of three sample points",
+        }),
+      })
+      // figure (not img) keeps descendants non-presentational so Plotly's
+      // modebar buttons remain in the accessibility tree.
+      expect(
+        screen.getByRole("figure", {
+          name: "Scatter plot of three sample points",
+        })
+      ).toBeVisible()
+    })
+
+    it("omits role and aria-label entirely when alt is not provided", () => {
+      renderComponent()
+      // An empty aria-label is worse than none, so the attribute must be
+      // absent rather than present-but-empty. Unlabeled charts also omit
+      // role so their accessibility tree stays unchanged.
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
+
+    it.each([
+      ["an empty string", ""],
+      ["whitespace only", "   "],
+    ])("omits role and aria-label when alt is %s", (_label, alt) => {
+      renderComponent({
+        element: new PlotlyChartProto({ ...DEFAULT_ELEMENT, alt }),
+      })
+      const chart = screen.getByTestId("stPlotlyChart")
+      expect(chart).not.toHaveAttribute("role")
+      expect(chart).not.toHaveAttribute("aria-label")
+    })
   })
 
   it("initializes figure state correctly", () => {
@@ -380,6 +534,9 @@ describe("PlotlyChart Component", () => {
       b => typeof b === "object" && b.name === "Fullscreen"
     )
     expect(fullscreenButton).toBeDefined()
+    expect(fullscreenButton).toEqual(
+      expect.objectContaining({ name: "Fullscreen", title: "Fullscreen" })
+    )
   })
 
   it("hides the Plotly Cloud share button by default", () => {
@@ -518,6 +675,12 @@ describe("PlotlyChart Component", () => {
     const config = lastCallProps.config
     const fullscreenButton = config?.modeBarButtonsToAdd?.find(
       b => typeof b === "object" && b.name === "Close fullscreen"
+    )
+    expect(fullscreenButton).toEqual(
+      expect.objectContaining({
+        name: "Close fullscreen",
+        title: "Close fullscreen",
+      })
     )
 
     act(() => {

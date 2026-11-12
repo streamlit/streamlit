@@ -181,6 +181,6 @@ class LinkButtonTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as e:
             st.link_button("the label", url="https://streamlit.io", icon="invalid")
         assert str(e.value) == (
-            'The value "invalid" is not a valid emoji. '
-            "Shortcodes are not allowed, please use a single character instead."
+            'The value "invalid" is not a valid icon. Please use a single emoji '
+            "or a Material icon shortcode like `:material\u200b/thumb_up:`."
         )

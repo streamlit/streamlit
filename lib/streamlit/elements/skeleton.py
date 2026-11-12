@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.deprecation_util import show_deprecation_warning
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
     WidthWithoutContent,
@@ -59,7 +60,9 @@ class SkeletonMixin:
             "Please use `st.skeleton` instead.",
             show_once=True,
         )
-        return self.dg._enqueue("skeleton", SkeletonProto())
+        return self.dg._enqueue(
+            "skeleton", SkeletonProto(), agent_props=agent_spec.element("skeleton")
+        )
 
     @gather_metrics("skeleton")
     def skeleton(
@@ -78,16 +81,28 @@ class SkeletonMixin:
         is shown immediately and can be replaced with content later by calling
         an ``st.*`` method on it (for example, ``placeholder.dataframe(...)``).
 
-        **Context manager mode** (like ``st.spinner()``, recommended): The
-        skeleton is shown while the ``with`` block runs (after a short delay)
-        and automatically clears when the block exits, whether normally or due
-        to an exception. Like ``st.spinner``, any ``st.*`` calls made inside the
-        ``with`` block are written to the parent container and remain visible
-        after the skeleton clears.
+        **Context manager mode** (recommended): Elements written inside the
+        ``with`` block fill the skeleton's slot and stack vertically, like in
+        ``st.container()``, even inside a horizontal container. To lay them
+        out in a row, put an ``st.container(horizontal=True)`` inside the
+        block. The skeleton stays until the first visible element is drawn. If
+        nothing is written inside the block, or the block raises an exception,
+        the skeleton clears when the block exits.
+
+        In both modes, content from the previous run stays in place during a
+        rerun. The skeleton covers that content only if the new content takes
+        longer than half a second, so reruns that hit the cache don't flash it.
+        Spinners inside the ``with`` block don't add a second loading
+        indicator. Streamlit hides a cached function's default spinner. Custom
+        ``show_spinner`` text and ``st.spinner`` text appear on the skeleton
+        while it's displayed.
 
         .. note::
-            Context manager mode is recommended. Use standalone mode only when
-            you need to reserve a slot and fill it later (like ``st.empty()``).
+            Draw the slow element first inside the ``with`` block. A visible
+            element, even a caption, ends the skeleton; ``st.empty()`` and
+            spinners don't. The default spinner stays hidden for the whole
+            block, so use one ``with st.skeleton()`` block per slow loader,
+            or pass custom ``show_spinner`` text.
 
         Parameters
         ----------
@@ -106,13 +121,16 @@ class SkeletonMixin:
 
             - ``"stretch"`` (default): The width of the skeleton matches the
               width of the parent container.
-            - An integer specifying the width in pixels.
+            - An integer specifying the width in pixels. In context manager
+              mode, this also limits the width of the content written inside
+              the block.
 
         Returns
         -------
         SkeletonPlaceholder
             A placeholder object that can be used to replace the skeleton with
-            other content, or as a context manager.
+            other content, or as a context manager whose content fills the
+            skeleton's slot.
 
         Examples
         --------
@@ -132,7 +150,7 @@ class SkeletonMixin:
            https://doc-skeleton-standalone.streamlit.app/
            height: 300px
 
-        **Context manager mode** - skeleton auto-clears when block exits:
+        **Context manager mode** - the content replaces the skeleton:
 
         .. code-block:: python
            :filename: streamlit_app.py
@@ -141,11 +159,8 @@ class SkeletonMixin:
            import time
 
            with st.skeleton(height=100):
-               # Expensive computation runs here
-               time.sleep(2)
-
-           # Skeleton clears, show results below
-           st.success("Data loaded!")
+               time.sleep(2)  # Expensive computation runs here
+               st.success("Data loaded!")  # Replaces the skeleton in its slot
 
         .. output::
            https://doc-skeleton-context.streamlit.app/

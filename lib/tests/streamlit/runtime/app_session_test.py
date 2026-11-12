@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import gc
 import threading
 import unittest
@@ -29,7 +30,7 @@ from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.AppPage_pb2 import AppPage
 from streamlit.proto.BackMsg_pb2 import BackMsg
-from streamlit.proto.ClientState_pb2 import ClientState
+from streamlit.proto.ClientState_pb2 import ClientState, ContextInfo
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.GitInfo_pb2 import GitInfo
@@ -56,16 +57,18 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
     ScriptRunnerEvent,
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SessionState
 from streamlit.runtime.state.query_params import (
-    _CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
-    _CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
+    CLIENT_STATE_QUERY_STRING_MAX_FIELDS,
+    CLIENT_STATE_QUERY_STRING_MAX_LENGTH,
 )
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
@@ -75,7 +78,7 @@ from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 
@@ -89,6 +92,7 @@ def _create_test_session(
     event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
     is_hello: bool = False,
+    message_enqueued_callback: Callable[[], None] | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
     if event_loop is None:
@@ -108,7 +112,7 @@ def _create_test_session(
             script_data=ScriptData("/fake/script_path.py", is_hello=is_hello),
             uploaded_file_manager=MagicMock(spec=UploadedFileManager),
             script_cache=MagicMock(),
-            message_enqueued_callback=None,
+            message_enqueued_callback=message_enqueued_callback,
             user_info={"email": "test@example.com"},
             session_id_override=session_id_override,
         )
@@ -623,25 +627,6 @@ class AppSessionTest(unittest.TestCase):
 
     @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
     @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
-    def test_resets_debug_last_backmsg_id_on_script_finished(self):
-        session = _create_test_session()
-        session._create_scriptrunner(initial_rerun_data=RerunData())
-        session._debug_last_backmsg_id = "some_backmsg_id"
-
-        with patch(
-            "streamlit.runtime.app_session.asyncio.get_running_loop",
-            return_value=session._event_loop,
-        ):
-            session._handle_scriptrunner_event_on_event_loop(
-                sender=session._scriptrunner,
-                event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
-                forward_msg=ForwardMsg(),
-            )
-
-            assert session._debug_last_backmsg_id is None
-
-    @patch("streamlit.runtime.app_session.ScriptRunner", MagicMock(spec=ScriptRunner))
-    @patch("streamlit.runtime.app_session.AppSession._enqueue_forward_msg", MagicMock())
     def test_sets_state_to_not_running_on_rerun_event(self):
         session = _create_test_session()
         session._create_scriptrunner(initial_rerun_data=RerunData())
@@ -668,6 +653,26 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
         session.request_rerun.assert_called_once_with(session._client_state)
 
+    def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
+        """File-change notifications enqueue from the event-loop callback."""
+        session = _create_test_session()
+        session._run_on_save = False
+        session._call_soon_on_event_loop = MagicMock()
+        session._enqueue_forward_msg = MagicMock()
+
+        session._on_source_file_changed()
+
+        session._script_cache.clear.assert_called_once()
+        session._call_soon_on_event_loop.assert_called_once()
+        session._enqueue_forward_msg.assert_not_called()
+
+        scheduled_callback = session._call_soon_on_event_loop.call_args.args[0]
+        scheduled_callback()
+
+        session._enqueue_forward_msg.assert_called_once()
+        msg = session._enqueue_forward_msg.call_args.args[0]
+        assert msg.session_event.script_changed_on_disk is True
+
     @patch(
         "streamlit.runtime.app_session.AppSession._should_rerun_on_file_change",
         MagicMock(return_value=False),
@@ -682,29 +687,6 @@ class AppSessionTest(unittest.TestCase):
         session._script_cache.clear.assert_called_once()
 
         assert not session.request_rerun.called
-
-    @patch.object(
-        PagesManager,
-        "get_pages",
-        MagicMock(
-            return_value={
-                "hash1": {"page_name": "page_1", "icon": "", "script_path": "script1"},
-                "hash2": {
-                    "page_name": "page_2",
-                    "icon": "🎉",
-                    "script_path": "script2",
-                },
-            }
-        ),
-    )
-    def test_tags_fwd_msgs_with_last_backmsg_id_if_set(self):
-        session = _create_test_session()
-        session._debug_last_backmsg_id = "some backmsg id"
-
-        msg = ForwardMsg()
-        session._enqueue_forward_msg(msg)
-
-        assert msg.debug_last_backmsg_id == "some backmsg id"
 
     @patch("streamlit.runtime.app_session.config.on_config_parsed")
     @patch(
@@ -884,14 +866,25 @@ class AppSessionTest(unittest.TestCase):
         assert rerun_data.page_script_hash == "test_hash"
         assert rerun_data.is_auto_rerun is False
 
+    def test_rerun_without_context_info_passes_none(self) -> None:
+        """A client state with no context info reruns without one, not an empty one."""
+        session = _create_test_session()
+        client_state = ClientState(query_string="a=1")
+
+        session._create_scriptrunner = MagicMock()
+        session.request_rerun(client_state)
+
+        rerun_data = session._create_scriptrunner.call_args[0][0]
+        assert rerun_data.context_info is None
+
     @parameterized.expand(
         [
-            ("too_long", "foo=" + ("x" * (_CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
+            ("too_long", "foo=" + ("x" * (CLIENT_STATE_QUERY_STRING_MAX_LENGTH + 1))),
             (
                 "too_many_fields",
                 "&".join(
                     f"key_{idx}=value"
-                    for idx in range(_CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
+                    for idx in range(CLIENT_STATE_QUERY_STRING_MAX_FIELDS + 1)
                 ),
             ),
         ]
@@ -988,6 +981,8 @@ def _mock_get_options_for_section(
         "backgroundColor": "white",
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1rem",
+        "paddingBottom": "2rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -1005,6 +1000,7 @@ def _mock_get_options_for_section(
         "textColor": "black",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "redColor": "red",
         "orangeColor": "orange",
         "yellowColor": "yellow",
@@ -1037,6 +1033,8 @@ def _mock_get_options_for_section(
         "baseFontWeight": 300,
         "baseRadius": "1.2rem",
         "buttonRadius": "medium",
+        "paddingTop": "1.5rem",
+        "paddingBottom": "3rem",
         "borderColor": "#ff0000",
         "dataframeBorderColor": "#280f63",
         "codeFont": "Monaspace Argon",
@@ -1079,6 +1077,7 @@ def _mock_get_options_for_section(
         "codeTextColor": "#09ab3b",
         "codeBackgroundColor": "blue",
         "dataframeHeaderBackgroundColor": "purple",
+        "dataframeHeaderTextColor": "white",
         "chartCategoricalColors": [
             "#7fc97f",
             "#beaed4",
@@ -1206,10 +1205,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             }
         ),
     )
-    @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
-        MagicMock(return_value="mock_scriptrun_id"),
-    )
     async def test_enqueue_new_session_message(self):
         """The SCRIPT_STARTED event should enqueue a 'new_session' message."""
         session = _create_test_session(asyncio.get_running_loop())
@@ -1232,11 +1227,14 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         session._scriptrunner = mock_scriptrunner
         session._clear_queue = MagicMock()
 
+        run_descriptor = RunDescriptor(script_run_id="mock_scriptrun_id")
+
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
+            run_descriptor=run_descriptor,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1246,11 +1244,12 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         assert len(sent_messages) == 2  # NewApp and SessionState messages
         session._clear_queue.assert_called_once()
 
+        assert RunDescriptor.from_metadata(sent_messages[0].metadata) == run_descriptor
+
         # Note that we're purposefully not very thoroughly testing new_session
         # fields below to avoid getting to the point where we're just
         # duplicating code in tests.
         new_session_msg = sent_messages[0].new_session
-        assert new_session_msg.script_run_id == "mock_scriptrun_id"
 
         assert new_session_msg.HasField("config")
         assert (
@@ -1281,10 +1280,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         add_script_run_ctx(ctx=orig_ctx)
 
-    @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
-        MagicMock(return_value="mock_scriptrun_id"),
-    )
     async def test_new_session_message_includes_fragment_ids(self):
         session = _create_test_session(asyncio.get_running_loop())
 
@@ -1306,12 +1301,16 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         session._scriptrunner = mock_scriptrunner
         session._clear_queue = MagicMock()
 
+        fragment_ids = ["first_fragment_id", "second_fragment_id"]
+        run_descriptor = RunDescriptor.create(fragment_ids)
+
         # Send a mock SCRIPT_STARTED event.
         session._on_scriptrunner_event(
             sender=mock_scriptrunner,
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="",
-            fragment_ids_this_run=["my_fragment_id"],
+            fragment_ids_this_run=fragment_ids,
+            run_descriptor=run_descriptor,
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1319,10 +1318,12 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
 
         sent_messages = session._browser_queue._queue
         assert len(sent_messages) == 2  # NewApp and SessionState messages
-        session._clear_queue.assert_called_once()
+        session._clear_queue.assert_called_once_with(fragment_ids)
 
-        new_session_msg = sent_messages[0].new_session
-        assert new_session_msg.fragment_ids_this_run == ["my_fragment_id"]
+        run_identity = sent_messages[0].metadata.run
+        assert run_identity.script_run_id == run_descriptor.script_run_id
+        assert list(run_identity.fragment_ids) == fragment_ids
+        assert RunDescriptor.from_metadata(sent_messages[0].metadata) == run_descriptor
 
         add_script_run_ctx(ctx=orig_ctx)
 
@@ -1340,6 +1341,7 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             event=ScriptRunnerEvent.SCRIPT_STARTED,
             page_script_hash="some_other_page_script_hash",
             fragment_ids_this_run=None,
+            run_descriptor=RunDescriptor.create(),
         )
 
         # Yield to let the AppSession's callbacks run.
@@ -1443,7 +1445,7 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         MagicMock(side_effect=_mock_get_options_for_section()),
     )
     @patch(
-        "streamlit.runtime.app_session._generate_scriptrun_id",
+        "streamlit.runtime.scriptrunner_utils.run_descriptor._generate_scriptrun_id",
         MagicMock(return_value="mock_scriptrun_id"),
     )
     async def test_handle_backmsg_exception(self):
@@ -1492,7 +1494,10 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                         ForwardMsg.FINISHED_SUCCESSFULLY
                     ),
                     CLEAR_QUEUE,
-                    session._create_new_session_message(page_script_hash=""),
+                    session._create_new_session_message(
+                        page_script_hash="",
+                        run_descriptor=RunDescriptor(script_run_id="mock_scriptrun_id"),
+                    ),
                     session._create_session_status_changed_message(),
                 ]
             )
@@ -1501,7 +1506,8 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             expected_events.extend(
                 [
                     session._create_script_finished_message(
-                        ForwardMsg.FINISHED_SUCCESSFULLY
+                        ForwardMsg.FINISHED_SUCCESSFULLY,
+                        RunDescriptor(script_run_id="mock_scriptrun_id"),
                     ),
                     session._create_session_status_changed_message(),
                     session._create_exception_message(FAKE_EXCEPTION),
@@ -1509,6 +1515,108 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             )
 
         assert expected_events == forward_msg_queue_events
+
+    async def test_handle_backmsg_exception_run_identity(self):
+        """The synthetic run's new_session and script_finished share one identity.
+
+        The first script_finished ends whatever run was in progress, which
+        AppSession cannot attribute, so it carries no run identity.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        session._clear_queue = MagicMock()
+
+        session.handle_backmsg_exception(RuntimeError("I am error"))
+        await asyncio.sleep(0)
+
+        msgs = session._browser_queue._queue
+        finished_msgs = [m for m in msgs if m.WhichOneof("type") == "script_finished"]
+        new_session_msgs = [m for m in msgs if m.WhichOneof("type") == "new_session"]
+        assert len(finished_msgs) == 2
+        assert len(new_session_msgs) == 1
+
+        assert not finished_msgs[0].metadata.HasField("run")
+        new_session_run = RunDescriptor.from_metadata(new_session_msgs[0].metadata)
+        assert new_session_run is not None
+        assert RunDescriptor.from_metadata(finished_msgs[1].metadata) == new_session_run
+
+    @parameterized.expand(
+        [
+            (
+                "success",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_SUCCESSFULLY,
+                (),
+            ),
+            (
+                "fragment_success",
+                ScriptRunnerEvent.FRAGMENT_STOPPED_WITH_SUCCESS,
+                ForwardMsg.FINISHED_FRAGMENT_RUN_SUCCESSFULLY,
+                ("outer", "inner"),
+            ),
+            (
+                "compile_error",
+                ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
+                ForwardMsg.FINISHED_WITH_COMPILE_ERROR,
+                (),
+            ),
+            (
+                "stopped_for_rerun",
+                ScriptRunnerEvent.SCRIPT_STOPPED_FOR_RERUN,
+                ForwardMsg.FINISHED_EARLY_FOR_RERUN,
+                (),
+            ),
+        ]
+    )
+    async def test_script_finished_carries_run_identity(
+        self,
+        _name: str,
+        event: ScriptRunnerEvent,
+        expected_status: ForwardMsg.ScriptFinishedStatus.ValueType,
+        fragment_ids: tuple[str, ...],
+    ):
+        """script_finished's metadata.run is the finish event's run descriptor."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        run_descriptor = RunDescriptor.create(fragment_ids)
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=event,
+            exception=RuntimeError("compile error"),
+            run_descriptor=run_descriptor,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == expected_status
+        assert RunDescriptor.from_metadata(finished_msgs[0].metadata) == run_descriptor
+
+    async def test_script_finished_without_run_descriptor_has_no_run_identity(self):
+        """A finish event without a descriptor yields script_finished without run."""
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+
+        session._on_scriptrunner_event(
+            sender=mock_scriptrunner,
+            event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_SUCCESS,
+        )
+        await asyncio.sleep(0)
+
+        finished_msgs = [
+            m
+            for m in session._browser_queue._queue
+            if m.WhichOneof("type") == "script_finished"
+        ]
+        assert len(finished_msgs) == 1
+        assert finished_msgs[0].script_finished == ForwardMsg.FINISHED_SUCCESSFULLY
+        assert not finished_msgs[0].metadata.HasField("run")
 
     async def test_handle_backmsg_handles_exceptions(self):
         """Exceptions raised in handle_backmsg should be sent to
@@ -1596,15 +1704,6 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
         if not expect_stack_trace:
             assert b"app_session.py" not in serialized
 
-    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner", MagicMock())
-    async def test_handle_backmsg_handles_debug_ids(self):
-        session = _create_test_session(asyncio.get_running_loop())
-        msg = BackMsg(
-            rerun_script=session._client_state, debug_last_backmsg_id="some backmsg"
-        )
-        session.handle_backmsg(msg)
-        assert session._debug_last_backmsg_id == "some backmsg"
-
     @patch("streamlit.runtime.app_session._LOGGER")
     async def test_handles_app_heartbeat_backmsg(self, patched_logger):
         session = _create_test_session(asyncio.get_running_loop())
@@ -1657,6 +1756,31 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
                 event=ScriptRunnerEvent.SCRIPT_STARTED,
                 page_script_hash=None,  # This is the condition we're testing
             )
+
+    async def test_event_handler_raises_error_if_run_descriptor_none_on_script_started(
+        self,
+    ):
+        """Test that _handle_scriptrunner_event_on_event_loop raises RuntimeError
+        if run_descriptor is None when event is SCRIPT_STARTED.
+        """
+        session = _create_test_session(asyncio.get_running_loop())
+        mock_scriptrunner = MagicMock(spec=ScriptRunner)
+        session._scriptrunner = mock_scriptrunner
+        session._clear_queue = MagicMock()
+
+        with pytest.raises(
+            RuntimeError,
+            match=r"run_descriptor must be set for the SCRIPT_STARTED event. This should never happen.",
+        ):
+            session._handle_scriptrunner_event_on_event_loop(
+                sender=mock_scriptrunner,
+                event=ScriptRunnerEvent.SCRIPT_STARTED,
+                page_script_hash="",
+                run_descriptor=None,  # This is the condition we're testing
+            )
+
+        session._clear_queue.assert_not_called()
+        assert len(session._browser_queue._queue) == 0
 
     async def test_event_handler_raises_error_if_exception_none_on_compile_error(
         self,
@@ -1732,6 +1856,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1753,6 +1879,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1798,6 +1925,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "baseFontWeight": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "borderColor": None,
                     "dataframeBorderColor": None,
                     "codeFont": None,
@@ -1819,6 +1948,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1864,6 +1994,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "backgroundColor": None,
                     "baseRadius": None,
                     "buttonRadius": None,
+                    "paddingTop": None,
+                    "paddingBottom": None,
                     "baseFontSize": None,
                     "baseFontWeight": None,
                     "borderColor": None,
@@ -1885,6 +2017,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "codeTextColor": None,
                     "codeBackgroundColor": None,
                     "dataframeHeaderBackgroundColor": None,
+                    "dataframeHeaderTextColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
                     "chartDivergingColors": None,
@@ -1914,6 +2047,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "backgroundColor": None,
                         "baseRadius": None,
                         "buttonRadius": None,
+                        "paddingTop": None,
+                        "paddingBottom": None,
                         "borderColor": None,
                         "dataframeBorderColor": None,
                         "codeFont": None,
@@ -1931,6 +2066,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                         "codeTextColor": None,
                         "codeBackgroundColor": None,
                         "dataframeHeaderBackgroundColor": None,
+                        "dataframeHeaderTextColor": None,
                         "redColor": None,
                         "orangeColor": None,
                         "yellowColor": None,
@@ -1976,6 +2112,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.HasField("base_radius")
         assert not new_session_msg.custom_theme.HasField("button_radius")
+        assert not new_session_msg.custom_theme.HasField("padding_top")
+        assert not new_session_msg.custom_theme.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.HasField("border_color")
         assert not new_session_msg.custom_theme.HasField("dataframe_border_color")
         assert not new_session_msg.custom_theme.HasField("show_widget_border")
@@ -1990,6 +2128,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.HasField(
             "dataframe_header_background_color"
         )
+        assert not new_session_msg.custom_theme.HasField("dataframe_header_text_color")
         assert not new_session_msg.custom_theme.HasField("red_color")
         assert not new_session_msg.custom_theme.HasField("orange_color")
         assert not new_session_msg.custom_theme.HasField("yellow_color")
@@ -2020,6 +2159,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         # Fields that are marked as optional in proto:
         assert not new_session_msg.custom_theme.sidebar.HasField("base_radius")
         assert not new_session_msg.custom_theme.sidebar.HasField("button_radius")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_top")
+        assert not new_session_msg.custom_theme.sidebar.HasField("padding_bottom")
         assert not new_session_msg.custom_theme.sidebar.HasField("border_color")
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_border_color"
@@ -2037,6 +2178,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         )
         assert not new_session_msg.custom_theme.sidebar.HasField(
             "dataframe_header_background_color"
+        )
+        assert not new_session_msg.custom_theme.sidebar.HasField(
+            "dataframe_header_text_color"
         )
         assert not new_session_msg.custom_theme.sidebar.HasField("red_color")
         assert not new_session_msg.custom_theme.sidebar.HasField("orange_color")
@@ -2071,6 +2215,8 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert new_session_msg.custom_theme.secondary_background_color == "blue"
         assert new_session_msg.custom_theme.base_radius == "1.2rem"
         assert new_session_msg.custom_theme.button_radius == "medium"
+        assert new_session_msg.custom_theme.padding_top == "1.5rem"
+        assert new_session_msg.custom_theme.padding_bottom == "3rem"
         assert new_session_msg.custom_theme.border_color == "#ff0000"
         assert new_session_msg.custom_theme.dataframe_border_color == "#280f63"
         assert new_session_msg.custom_theme.show_widget_border is True
@@ -2085,6 +2231,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.dataframe_header_background_color == "purple"
         )
+        assert new_session_msg.custom_theme.dataframe_header_text_color == "white"
         assert new_session_msg.custom_theme.red_color == "#7d353b"
         assert new_session_msg.custom_theme.orange_color == "#d95a00"
         assert new_session_msg.custom_theme.yellow_color == "#916e10"
@@ -2220,6 +2367,9 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert (
             new_session_msg.custom_theme.sidebar.dataframe_header_background_color
             == "purple"
+        )
+        assert (
+            new_session_msg.custom_theme.sidebar.dataframe_header_text_color == "white"
         )
         assert new_session_msg.custom_theme.sidebar.red_color == "red"
         assert new_session_msg.custom_theme.sidebar.orange_color == "orange"
@@ -2854,7 +3004,9 @@ def test_create_new_session_message_recommends_skills_install() -> None:
             return_value="loopback",
         ),
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is True
     # No suppression telemetry when the nudge is actually recommended.
@@ -2870,7 +3022,9 @@ def test_create_new_session_message_skips_skills_install_when_not_recommended() 
     with patch(
         "streamlit.web.skills.nudge_suppression_reason", return_value="installed"
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # "installed" is an uninteresting reason, so it is not reported.
@@ -2890,7 +3044,9 @@ def test_create_new_session_message_suppresses_nudge_on_non_loopback() -> None:
             return_value="private",
         ),
     ):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert (
@@ -2910,7 +3066,9 @@ def test_create_new_session_message_reports_informative_suppression(
     session = _create_test_session()
 
     with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert msg.new_session.initialize.skills_nudge_suppressed_reason == reason
@@ -2928,7 +3086,9 @@ def test_create_new_session_message_drops_high_volume_suppression(
     session = _create_test_session()
 
     with patch("streamlit.web.skills.nudge_suppression_reason", return_value=reason):
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     assert msg.new_session.initialize.skills_nudge_suppressed_reason == ""
@@ -2955,8 +3115,12 @@ def test_create_new_session_message_recomputes_skills_recommendation() -> None:
             return_value="loopback",
         ),
     ):
-        first = session._create_new_session_message(page_script_hash="")
-        second = session._create_new_session_message(page_script_hash="")
+        first = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
+        second = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert mock_reason.call_count == 2
     assert first.new_session.initialize.recommend_skills_install is True
@@ -2975,7 +3139,9 @@ def test_create_new_session_message_skips_skills_install_for_hello_app() -> None
     with patch(
         "streamlit.web.skills.nudge_suppression_reason", return_value=""
     ) as mock_reason:
-        msg = session._create_new_session_message(page_script_hash="")
+        msg = session._create_new_session_message(
+            page_script_hash="", run_descriptor=RunDescriptor.create()
+        )
 
     assert msg.new_session.initialize.recommend_skills_install is False
     # Short-circuited on is_hello before the (would-recommend) detection ran.
@@ -3083,6 +3249,36 @@ def test_populate_theme_msg_ignores_invalid_json(
     theme = _populate_theme_with_overrides({config_key: "not-valid-json"})
     assert not getattr(theme, theme_attr)
     patched_logger.warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("config_key", "theme_attr", "invalid_value"),
+    [
+        ("paddingTop", "padding_top", 0),
+        ("paddingBottom", "padding_bottom", 16),
+        ("paddingTop", "padding_top", 1.5),
+        ("paddingBottom", "padding_bottom", True),
+    ],
+    ids=[
+        "padding_top_int",
+        "padding_bottom_int",
+        "padding_top_float",
+        "padding_bottom_bool",
+    ],
+)
+@patch("streamlit.runtime.app_session._LOGGER")
+def test_populate_theme_msg_ignores_non_string_padding(
+    patched_logger: MagicMock,
+    config_key: str,
+    theme_attr: str,
+    invalid_value: object,
+) -> None:
+    """Unquoted TOML numbers for padding options are skipped so session startup survives."""
+    theme = _populate_theme_with_overrides({config_key: invalid_value})
+    assert not theme.HasField(theme_attr)
+    patched_logger.warning.assert_called_once()
+    # Format string, then section, option name, value repr.
+    assert patched_logger.warning.call_args.args[2] == config_key
 
 
 def test_populate_theme_msg_parses_chart_colors_from_json_string() -> None:
@@ -3245,6 +3441,25 @@ def test_handle_set_run_on_save_request_updates_flag(new_value: bool) -> None:
     assert msg.session_status_changed.run_on_save is new_value
 
 
+@pytest.mark.parametrize("enabled", [True, False])
+def test_set_run_on_save_decides_whether_a_file_change_reruns(enabled: bool) -> None:
+    """set_run_on_save changes what a source edit does without notifying anyone."""
+    # Without file watchers, the session does not outlive the test as a config
+    # listener that reruns on every later config parse.
+    with patch_config_options(
+        {"server.runOnSave": not enabled, "server.fileWatcherType": "none"}
+    ):
+        session = _create_test_session()
+
+    with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+        session.set_run_on_save(enabled)
+    enqueue_mock.assert_not_called()
+
+    with patch.object(session, "request_rerun") as request_rerun:
+        session._on_source_file_changed()
+    assert request_rerun.called is enabled
+
+
 @pytest.mark.parametrize(
     ("show_sidebar_navigation", "expected_hide_sidebar_nav"),
     [(False, True), (True, False)],
@@ -3340,14 +3555,50 @@ def test_request_rerun_after_shutdown_is_discarded() -> None:
     create_scriptrunner.assert_not_called()
 
 
-def test_clear_user_info_empties_user_info() -> None:
-    """Test that clear_user_info removes all stored user info."""
+def test_clear_user_info_rejects_all_reconnect_identities() -> None:
+    """Test that clear_user_info empties user info and rejects every reconnect identity."""
     session = _create_test_session()
     assert session._user_info != {}
+    assert session.matches_user_info({"email": "test@example.com"}) is True
 
     session.clear_user_info()
 
     assert session._user_info == {}
+    assert session.matches_user_info({}) is False
+    assert session.matches_user_info({"email": "other@example.com"}) is False
+    assert session.is_resumable() is False
+
+
+def test_matches_user_info_does_not_observe_concurrent_clear_as_anonymous() -> None:
+    """A clear during identity comparison cannot make the anonymous dict match."""
+    session = _create_test_session()
+    clear_threads: list[threading.Thread] = []
+    raced = False
+
+    class _OwnerDict(dict[str, str | bool | dict[str, str] | None]):
+        __hash__ = None  # type: ignore[assignment]
+
+        def __eq__(self, other: object) -> bool:
+            nonlocal raced
+            if other == {} and not raced:
+                raced = True
+                thread = threading.Thread(target=session.clear_user_info)
+                clear_threads.append(thread)
+                thread.start()
+                # clear_user_info needs the lock this comparison holds.
+                thread.join(timeout=0.05)
+                assert thread.is_alive()
+                assert "email" in self
+            return dict.__eq__(self, other)
+
+    session._user_info = _OwnerDict(session._user_info)
+
+    assert session.matches_user_info({}) is False
+    assert len(clear_threads) == 1
+    clear_threads[0].join(timeout=1)
+    assert not clear_threads[0].is_alive()
+    assert session._user_info == {}
+    assert session.matches_user_info({}) is False
 
 
 def test_on_secrets_file_changed_triggers_source_change() -> None:
@@ -3423,3 +3674,349 @@ def test_close_script_event_loop_cancels_pending_tasks() -> None:
     assert script_loop.is_closed()
     assert task.done()
     assert task.cancelled() or isinstance(task.exception(), asyncio.CancelledError)
+
+
+# ---- Tests for the settle signal ----
+
+
+@pytest.fixture
+def distinct_scriptrunners() -> Iterator[MagicMock]:
+    """Patch ScriptRunner so each runner a session creates is a distinct mock."""
+    with patch(
+        "streamlit.runtime.app_session.ScriptRunner",
+        side_effect=lambda **_: MagicMock(),
+    ) as scriptrunner_class:
+        yield scriptrunner_class
+
+
+@pytest.fixture
+def mock_runtime_instance() -> Iterator[MagicMock]:
+    """Install a mocked Runtime singleton, which session teardown reads."""
+    mock_runtime = MagicMock(spec=Runtime)
+    mock_runtime.media_file_mgr = MediaFileManager(
+        MemoryMediaFileStorage("/mock/media")
+    )
+    Runtime._instance = mock_runtime
+    yield mock_runtime
+    Runtime._instance = None
+
+
+def _start_runner(session: AppSession) -> ScriptRunner:
+    """Start a run on ``session`` and return the runner it created."""
+    session.request_rerun(None)
+    assert session._scriptrunner is not None
+    return session._scriptrunner
+
+
+def _handle_shutdown(session: AppSession, runner: ScriptRunner) -> None:
+    """Handle ``runner``'s SHUTDOWN event as the session's event loop would."""
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.SHUTDOWN
+    )
+
+
+def _handle_enqueue(session: AppSession, runner: ScriptRunner) -> ForwardMsg:
+    """Handle a message ``runner`` enqueues and return that message."""
+    msg = ForwardMsg()
+    msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner, event=ScriptRunnerEvent.ENQUEUE_FORWARD_MSG, forward_msg=msg
+    )
+    return msg
+
+
+def _create_tracked_session(*args: Any, **kwargs: Any) -> AppSession:
+    """Create a test session that tracks settling, as agent sessions do."""
+    session = _create_test_session(*args, **kwargs)
+    session.track_settling()
+    return session
+
+
+def _flush_and_send(session: AppSession) -> list[ForwardMsg]:
+    """Flush the session and confirm the batch was sent, as the Runtime loop does."""
+    msgs = session.flush_browser_queue()
+    session.on_flushed_messages_sent()
+    return msgs
+
+
+def test_new_session_is_settled() -> None:
+    """A session that never ran is settled."""
+    assert _create_tracked_session().is_settled
+
+
+@pytest.mark.usefixtures("distinct_scriptrunners")
+def test_creating_a_runner_unsettles_the_session() -> None:
+    """Starting a run unsettles the session."""
+    session = _create_tracked_session()
+
+    _start_runner(session)
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_requests_the_flush_cycle_that_settles() -> None:
+    """With nothing queued, the flush cycle SHUTDOWN requests settles the session."""
+    on_enqueued = MagicMock()
+    session = _create_tracked_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+
+    assert not session.is_settled
+    on_enqueued.assert_called_once()
+    _flush_and_send(session)
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_settles_only_once_trailing_messages_are_sent() -> None:
+    """Neither flushing the trailing messages nor a send confirmed while they
+    are still queued settles the session; their own confirmed send does.
+    """
+    session = _create_tracked_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+    trailing_msg = _handle_enqueue(session, runner)
+    _handle_shutdown(session, runner)
+
+    # The end of a batch flushed before the trailing message was enqueued.
+    session.on_flushed_messages_sent()
+    assert not session.is_settled
+
+    assert session.flush_browser_queue() == [trailing_msg]
+    assert not session.is_settled
+
+    session.on_flushed_messages_sent()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_shutdown_from_replaced_runner_is_ignored() -> None:
+    """Only the current runner's SHUTDOWN settles the session."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    with patch_config_options({"runner.fastReruns": True}):
+        replaced_runner = _start_runner(session)
+        _start_runner(session)
+
+    _handle_shutdown(session, replaced_runner)
+    _flush_and_send(session)
+
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_runner_created_before_the_send_cancels_the_pending_settle() -> None:
+    """A new run cancels a pending settle, and its own SHUTDOWN arms a new one."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    _handle_shutdown(session, first_runner)
+
+    second_runner = _start_runner(session)
+    _flush_and_send(session)
+    assert not session.is_settled
+
+    _handle_shutdown(session, second_runner)
+    _flush_and_send(session)
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+async def test_wait_until_settled_returns_at_once_when_settled() -> None:
+    """Waiting on a settled session returns without a run."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+
+    await asyncio.wait_for(session.wait_until_settled(), timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_wait_until_settled_keeps_waiting_through_a_new_run() -> None:
+    """A settle that a new run undoes before the waiter resumes does not wake it."""
+    session = _create_tracked_session(asyncio.get_running_loop())
+    first_runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    _handle_shutdown(session, first_runner)
+    _flush_and_send(session)
+    second_runner = _start_runner(session)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert not waiter.done()
+
+    _handle_shutdown(session, second_runner)
+    _flush_and_send(session)
+    await asyncio.wait_for(waiter, timeout=1)
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners", "mock_runtime_instance")
+async def test_session_shutdown_releases_waiter_and_arms_nothing() -> None:
+    """Shutting down wakes waiters, and the runner's late SHUTDOWN arms no settle."""
+    on_enqueued = MagicMock()
+    session = _create_tracked_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+    waiter = asyncio.create_task(session.wait_until_settled())
+    await asyncio.sleep(0)
+
+    session.shutdown()
+    await asyncio.wait_for(waiter, timeout=1)
+
+    _handle_shutdown(session, runner)
+    on_enqueued.assert_not_called()
+    assert session.is_settled
+
+
+def test_dropped_fragment_rerun_leaves_session_settled(
+    distinct_scriptrunners: MagicMock,
+) -> None:
+    """A rerun of a fragment the storage no longer holds starts nothing."""
+    session = _create_tracked_session()
+
+    session.request_rerun(ClientState(fragment_id="removed_fragment"))
+
+    distinct_scriptrunners.assert_not_called()
+    assert session.is_settled
+
+
+@pytest.mark.anyio
+async def test_a_runner_that_fails_to_start_leaves_the_session_settled() -> None:
+    """A failure to start the run reaches the caller, and the session stays
+    settled without that runner, so the next rerun starts a new one even with
+    fastReruns off instead of queueing into a runner that never ran.
+    """
+    session = _create_tracked_session(asyncio.get_running_loop())
+    failing_runner = MagicMock()
+    failing_runner.start.side_effect = RuntimeError("no thread")
+    next_runner = MagicMock()
+
+    with (
+        patch_config_options({"runner.fastReruns": False}),
+        patch(
+            "streamlit.runtime.app_session.ScriptRunner",
+            side_effect=[failing_runner, next_runner],
+        ),
+    ):
+        with pytest.raises(RuntimeError, match="no thread"):
+            session.request_rerun(None)
+        assert session.is_settled
+
+        session.request_rerun(None)
+
+    failing_runner.request_rerun.assert_not_called()
+    next_runner.start.assert_called_once()
+    assert not session.is_settled
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_an_untracked_session_skips_the_settle_bookkeeping() -> None:
+    """A session that does not track settling, such as a browser's, requests
+    no extra flush when its runner shuts down and cannot be asked if settled.
+    """
+    on_enqueued = MagicMock()
+    session = _create_test_session(
+        asyncio.get_running_loop(), message_enqueued_callback=on_enqueued
+    )
+    runner = _start_runner(session)
+
+    _handle_shutdown(session, runner)
+    _flush_and_send(session)
+
+    on_enqueued.assert_not_called()
+    assert not session._settle_pending
+    with pytest.raises(RuntimeError, match="track_settling"):
+        _ = session.is_settled
+    with pytest.raises(RuntimeError, match="track_settling"):
+        await session.wait_until_settled()
+
+
+# ---- Tests for the public session hooks ----
+
+
+@pytest.mark.anyio
+@pytest.mark.usefixtures("distinct_scriptrunners")
+async def test_page_script_hash_follows_script_started() -> None:
+    """The page script hash is the one the latest run started on."""
+    session = _create_test_session(asyncio.get_running_loop())
+    runner = _start_runner(session)
+
+    session._handle_scriptrunner_event_on_event_loop(
+        sender=runner,
+        event=ScriptRunnerEvent.SCRIPT_STARTED,
+        page_script_hash="other_page_hash",
+        run_descriptor=RunDescriptor.create(),
+    )
+
+    assert session.page_script_hash == "other_page_hash"
+
+
+def test_get_pages_returns_a_copy_of_the_registry() -> None:
+    """get_pages lists the default page before navigation and copies the registry."""
+    session = _create_test_session()
+    main_script_hash = session._pages_manager.main_script_hash
+    assert list(session.get_pages()) == [main_script_hash]
+
+    session._pages_manager.set_pages_and_resolve(
+        {
+            "page_hash": {
+                "page_script_hash": "page_hash",
+                "page_name": "report",
+                "icon": "",
+                "script_path": "/fake/report.py",
+                "url_pathname": "report",
+            }
+        }
+    )
+    pages = session.get_pages()
+    pages.clear()
+
+    assert list(session.get_pages()) == ["page_hash"]
+
+
+def test_has_fragment_follows_the_fragment_storage() -> None:
+    """has_fragment is true while the storage holds the fragment, false once cleared."""
+    session = _create_test_session()
+    assert session.has_fragment("panel") is False
+
+    session._fragment_storage.register("panel", lambda: None)
+    assert session.has_fragment("panel") is True
+
+    session._fragment_storage.clear()
+    assert session.has_fragment("panel") is False
+
+
+def test_create_detached_script_run_ctx_shares_state_and_drops_messages() -> None:
+    """The detached context reads the session's data and emits nothing."""
+    session = _create_test_session()
+    session.session_state["greeting"] = "hello"
+    context_info = ContextInfo(timezone="Europe/Berlin")
+
+    ctx = session.create_detached_script_run_ctx(
+        query_string="a=1", context_info=context_info
+    )
+
+    assert ctx.session_id == session.id
+    assert ctx.session_state["greeting"] == "hello"
+    assert ctx.user_info == {"email": "test@example.com"}
+    assert ctx.query_string == "a=1"
+    assert ctx.context_info is context_info
+    assert ctx.script_requests is None
+    assert get_script_run_ctx(suppress_warning=True) is not ctx
+
+    def enqueue_with_thread_state() -> None:
+        ThreadState.initialize()
+        msg = ForwardMsg()
+        msg.script_finished = ForwardMsg.FINISHED_SUCCESSFULLY
+        ctx.enqueue(msg)
+
+    contextvars.copy_context().run(enqueue_with_thread_state)
+    assert session.flush_browser_queue() == []

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC } from "react"
+import type { FC } from "react"
 
 import { act, renderHook, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"

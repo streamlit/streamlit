@@ -268,7 +268,7 @@ export async function fetchWithTimeout(
     // check the external signal first so a caller-initiated cancellation is
     // reported as an abort rather than being misclassified as a timeout.
     if (error instanceof DOMException && error.name === "AbortError") {
-      if (externalSignal?.aborted) {
+      if (externalSignal?.aborted === true) {
         throw new FetchError("Request aborted", url, { isAborted: true })
       }
       throw new FetchError("Connection timed out", url, { isTimeout: true })

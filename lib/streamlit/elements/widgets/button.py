@@ -30,8 +30,10 @@ from typing import (
     cast,
     overload,
 )
+from urllib.parse import parse_qs
 
 from streamlit import runtime
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
 from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
@@ -50,7 +52,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.file_util import get_main_script_directory, normalize_path_join
-from streamlit.navigation.page import Page, _validate_registered_page
+from streamlit.navigation.page import (
+    Page,
+    _raise_if_unsafe_page_path,
+    _validate_registered_page,
+)
 from streamlit.proto.Button_pb2 import Button as ButtonProto
 from streamlit.proto.ButtonLikeIconPosition_pb2 import (
     ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
@@ -67,6 +73,7 @@ from streamlit.runtime.state import (
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params import process_query_params
 from streamlit.string_util import to_help_str, to_str, validate_icon_or_emoji
@@ -127,6 +134,31 @@ class ButtonSerde:
 
     def deserialize(self, ui_value: bool | None) -> bool:
         return ui_value or False
+
+
+def _page_link_agent_props(proto: PageLinkProto) -> str | None:
+    """Describe a page link for the agent API.
+
+    Built from the proto because st.page_link resolves `page` through several
+    branches (an st.Page, a script path, an external URL) and only the proto
+    holds the outcome. `page` is reported as the public ``url_path`` a client
+    can navigate to; the internal script hash stays internal. `query_params`
+    has the shape a navigation request takes, so a client can follow the link
+    by sending both.
+    """
+    if not agent_spec.is_recording():
+        return None
+    return agent_spec.element(
+        "page_link",
+        label=proto.label or None,
+        # `""` is the default page, so it is kept.
+        page=proto.page,
+        query_params=parse_qs(proto.query_string, keep_blank_values=True) or None,
+        help=proto.help or None,
+        icon=proto.icon or None,
+        external=proto.external,
+        disabled=proto.disabled,
+    )
 
 
 class ButtonMixin:
@@ -314,9 +346,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -661,9 +693,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1094,9 +1126,9 @@ class ButtonMixin:
             - ``False``: The button keeps its standard, single-row height. A
               label that is too wide is truncated with an ellipsis.
 
-            When the button keeps a single-row label and no ``help`` is set,
-            hovering reveals the full label. Icons and keyboard shortcuts
-            remain visible.
+            When a single-row label is truncated with an ellipsis and no
+            ``help`` is set, hovering reveals the full label. Icons and
+            keyboard shortcuts remain visible.
 
         Returns
         -------
@@ -1219,7 +1251,8 @@ class ButtonMixin:
         icon : str or None
             An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
-            ``Page`` object or no icon is displayed. If ``icon`` is a
+            ``Page`` object or no icon is displayed. Pass ``icon=""`` to show
+            no icon even when the page has one. If ``icon`` is a non-empty
             string, the following options are valid:
 
             - A single-character emoji. For example, you can set ``icon="🚨"``
@@ -1242,7 +1275,11 @@ class ButtonMixin:
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
-            this is ``None`` (default), no tooltip is displayed.
+            this is ``None`` (default), the tooltip is the ``help`` of the
+            linked page when ``page`` is a ``Page`` object or the path of a
+            page passed to ``st.navigation``. Otherwise, no tooltip is
+            displayed. Pass ``help=""`` to show no tooltip even when the page
+            has help.
 
             The tooltip can optionally contain GitHub-flavored Markdown,
             including the Markdown directives described in the ``body``
@@ -1386,10 +1423,10 @@ class ButtonMixin:
         key = to_key(key)
         label = "" if label is None else to_str(label)
 
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click is None or on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
         )
 
         normalized_shortcut: str | None = None
@@ -1432,10 +1469,16 @@ class ButtonMixin:
         download_button_proto.type = type
         if wrap is not None:
             download_button_proto.wrap = wrap
-        marshall_file(
-            self.dg._get_delta_path_str(), data, download_button_proto, mime, file_name
-        )
         download_button_proto.disabled = disabled
+        marshall_file(
+            self.dg._get_delta_path_str(),
+            data,
+            download_button_proto,
+            mime,
+            file_name,
+            disabled=disabled,
+            element_id=element_id,
+        )
 
         if help is not None:
             download_button_proto.help = to_help_str(help)
@@ -1470,8 +1513,30 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
+        # An eager download is fully usable: its file is at `url`, and a click's
+        # effect on the server -- a rerun or the `on_click` callback -- is an
+        # ordinary trigger. A deferred one is a real button in the app, and
+        # this API has no URL to report until the browser generates the file.
+        is_deferred = download_button_proto.HasField("deferred_file_id")
         self.dg._enqueue(
-            "download_button", download_button_proto, layout_config=layout_config
+            "download_button",
+            download_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "download_button",
+                key=element_id,
+                action=None if is_deferred or on_click == "ignore" else "trigger",
+                support="action_unsupported" if is_deferred else None,
+                label=label,
+                help=download_button_proto.help or None,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+                url=download_button_proto.url or None,
+                file_name=file_name,
+                mime=mime,
+                on_click="ignore" if on_click == "ignore" else "rerun",
+            ),
         )
         return button_state.value
 
@@ -1496,13 +1561,13 @@ class ButtonMixin:
     ) -> bool | DeltaGenerator:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click_callback = validate_on_change_mode(
+            on_click,
+            supported_modes=("rerun", "ignore"),
+            param_name="on_click",
+        )
         ignore_rerun = on_click == "ignore"
         is_rerun_mode = not ignore_rerun
-        on_click_callback: WidgetCallback | None = (
-            None
-            if on_click in {"ignore", "rerun"}
-            else cast("WidgetCallback", on_click)  # ty: ignore[redundant-cast]
-        )
 
         link_button_proto = LinkButtonProto()
         normalized_shortcut = (
@@ -1573,7 +1638,24 @@ class ButtonMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
         link_button_dg = self.dg._enqueue(
-            "link_button", link_button_proto, layout_config=layout_config
+            "link_button",
+            link_button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "link_button",
+                # With `on_click`, a click also reaches the server, as a rerun
+                # or the callback, and a client can fire that without opening
+                # the URL.
+                key=link_button_proto.id or key,
+                action="trigger" if is_rerun_mode else None,
+                label=label,
+                url=url,
+                help=link_button_proto.help or None,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+                on_click="rerun" if is_rerun_mode else "ignore",
+            ),
         )
 
         if button_state is not None:
@@ -1604,7 +1686,10 @@ class ButtonMixin:
         ctx = get_script_run_ctx()
         if not ctx:
             return self.dg._enqueue(
-                "page_link", page_link_proto, layout_config=layout_config
+                "page_link",
+                page_link_proto,
+                layout_config=layout_config,
+                agent_props=_page_link_agent_props(page_link_proto),
             )
 
         page_link_proto.disabled = disabled
@@ -1625,12 +1710,18 @@ class ButtonMixin:
                 page_link_proto.icon = page.icon
                 # Here the Page's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+            if help is None:
+                # st.Page already dedented its help.
+                page_link_proto.help = page.help
 
             if page.is_external:
                 page_link_proto.page = page.external_url or ""
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
 
             _validate_registered_page(page)
@@ -1651,8 +1742,13 @@ class ButtonMixin:
                 page_link_proto.page = page
                 page_link_proto.external = True
                 return self.dg._enqueue(
-                    "page_link", page_link_proto, layout_config=layout_config
+                    "page_link",
+                    page_link_proto,
+                    layout_config=layout_config,
+                    agent_props=_page_link_agent_props(page_link_proto),
                 )
+
+            _raise_if_unsafe_page_path(page)
 
             ctx_main_script = ""
             all_app_pages = {}
@@ -1672,8 +1768,12 @@ class ButtonMixin:
                 # registers pages.
                 url_pathname = page_data.get("url_pathname")
                 if requested_page == full_path:
+                    # Label and help come from the same (first registered) page
+                    # when several pages share this script.
                     if label is None:
                         page_link_proto.label = page_name
+                    if help is None:
+                        page_link_proto.help = page_data.get("help", "")
                     page_link_proto.page_script_hash = page_data["page_script_hash"]
                     # Click navigation uses page_script_hash. Do not fall back
                     # to page_name (a display title) as the href.
@@ -1688,7 +1788,10 @@ class ButtonMixin:
                 )
 
         return self.dg._enqueue(
-            "page_link", page_link_proto, layout_config=layout_config
+            "page_link",
+            page_link_proto,
+            layout_config=layout_config,
+            agent_props=_page_link_agent_props(page_link_proto),
         )
 
     def _button(
@@ -1712,6 +1815,11 @@ class ButtonMixin:
     ) -> bool:
         key = to_key(key)
         label = "" if label is None else to_str(label)
+        on_click = validate_on_change_mode(
+            on_click,
+            supported_modes=(),
+            param_name="on_click",
+        )
 
         normalized_shortcut: str | None = None
         if shortcut is not None:
@@ -1799,7 +1907,22 @@ class ButtonMixin:
             save_for_app_testing(ctx, element_id, button_state.value)
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
-        self.dg._enqueue("button", button_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "button",
+            button_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                # st.button and st.form_submit_button share this proto.
+                "form_submit_button" if is_form_submitter else "button",
+                key=element_id,
+                action="trigger",
+                label=label,
+                help=button_proto.help or None,
+                icon=icon,
+                type=type,
+                disabled=disabled,
+            ),
+        )
 
         return button_state.value
 
@@ -1842,9 +1965,24 @@ def marshall_file(
     proto_download_button: DownloadButtonProto,
     mimetype: str | None,
     file_name: str | None = None,
+    *,
+    disabled: bool = False,
+    element_id: str = "",
 ) -> None:
+    # A disabled button must not leave an executable generator behind: clients
+    # can send deferred-file requests directly, regardless of the UI state.
+    # Revoke ids from earlier enabled runs, even if this run passes static data.
+    if disabled and runtime.exists():
+        runtime.get_instance().media_file_mgr.remove_deferred(
+            coordinates, element_id=element_id
+        )
+
     # Check if data is a callable (for deferred downloads)
     if callable(data):
+        if disabled:
+            proto_download_button.url = ""
+            return
+
         if not runtime.exists():
             # When running in "raw mode", we can't access the MediaFileManager.
             proto_download_button.url = ""
@@ -1861,6 +1999,7 @@ def marshall_file(
             mimetype,
             coordinates,
             file_name=file_name,
+            element_id=element_id,
         )
         proto_download_button.deferred_file_id = file_id
         proto_download_button.url = ""  # No URL yet, will be generated on click

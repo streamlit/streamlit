@@ -15,9 +15,10 @@
  */
 
 import {
-  FC,
+  type FC,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -34,31 +35,36 @@ import {
   TableChart,
 } from "@emotion-icons/material-outlined"
 
-import {
-  type ArrowData,
-  type ArrowNamedDataSet,
+import type {
+  ArrowData,
+  ArrowNamedDataSet,
   streamlit,
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
-import { isLocalhost } from "@streamlit/utils"
+import { isLocalhost, isNullOrEmptyString } from "@streamlit/utils"
 
+import {
+  FlexContext,
+  hasStretchHeightFallback,
+} from "~lib/components/core/Layout/FlexContext"
 import {
   shouldHeightStretch,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
+import type { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 import {
   StyledVegaLiteChartContainer,
   StyledVegaLiteChartTooltips,
@@ -72,11 +78,14 @@ export function isFacetChart(spec: string | object): boolean {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
 
     return !!(
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy facet still lets row or column encodings count
       parsedSpec.facet ||
       // TODO (lawilby): do some tests for row/column
       // shorthand facet charts to confirm they work with
       // sizing in the same way.
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy row encoding still lets a column encoding count
       parsedSpec.encoding?.row ||
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- a falsy column encoding still lets a facet encoding count
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet
     )
@@ -99,14 +108,23 @@ export function isFacetChart(spec: string | object): boolean {
 // Exported for testing
 export function hasNestedComposition(spec: string | object): boolean {
   try {
-    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+    const parsedSpec: unknown =
+      typeof spec === "string" ? JSON.parse(spec) : spec
+    if (
+      parsedSpec === null ||
+      typeof parsedSpec !== "object" ||
+      Array.isArray(parsedSpec)
+    ) {
+      return false
+    }
 
-    if (!("vconcat" in parsedSpec) || !Array.isArray(parsedSpec.vconcat)) {
+    const { vconcat } = parsedSpec as { vconcat?: unknown }
+    if (!Array.isArray(vconcat)) {
       return false
     }
 
     // Check if any child in vconcat contains a composition operator
-    return parsedSpec.vconcat.some(
+    return vconcat.some(
       (child: unknown) =>
         child !== null &&
         typeof child === "object" &&
@@ -121,6 +139,65 @@ export function hasNestedComposition(spec: string | object): boolean {
     return false
   }
 }
+
+/**
+ * Top-level Vega-Lite keys that make a spec a multi-view composition. Layer is
+ * intentionally absent: layered charts share one view size, so they stay a
+ * single view.
+ */
+const COMPOSITION_KEYS = ["facet", "repeat", "concat", "hconcat", "vconcat"]
+
+/**
+ * Parses a Vega-Lite spec string (objects pass through) into a plain object,
+ * or returns undefined for invalid JSON, null, and arrays.
+ */
+const parseSpecObject = (
+  spec: string | object
+): Record<string, unknown> | undefined => {
+  try {
+    const parsedSpec: unknown =
+      typeof spec === "string" ? JSON.parse(spec) : spec
+    return parsedSpec !== null &&
+      typeof parsedSpec === "object" &&
+      !Array.isArray(parsedSpec)
+      ? (parsedSpec as Record<string, unknown>)
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Exported for testing
+/**
+ * Whether the spec draws a single view, including layered charts, rather
+ * than a facet, repeat, or concat composition. Only a single view has one
+ * size that Streamlit can predict before Vega renders it.
+ */
+export function isSingleViewChart(spec: string | object): boolean {
+  const parsedSpec = parseSpecObject(spec)
+  return (
+    parsedSpec !== undefined &&
+    !COMPOSITION_KEYS.some(key => key in parsedSpec) &&
+    !isFacetChart(parsedSpec)
+  )
+}
+
+// Exported for testing
+/**
+ * Fixed pixel `width` at the top of a spec, or `undefined` when the chart has
+ * none.
+ *
+ * Fit autosizing renders a single-view chart exactly this wide. A missing
+ * width, a non-numeric width, a width of 0 or less, and a step width such as
+ * `{"step": 20}` (`alt.Step(...)`) all return `undefined`, so the chart uses
+ * the default chart width. Step width depends on the data domain and is not
+ * known yet.
+ */
+export function getSpecWidth(spec: string | object): number | undefined {
+  const width = parseSpecObject(spec)?.width
+  return typeof width === "number" && width > 0 ? width : undefined
+}
+
 export interface Props {
   element: VegaLiteChartProto
   elementHash?: string
@@ -164,6 +241,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       id: elementProto.id,
       selectionMode: elementProto.selectionMode,
       formId: elementProto.formId,
+      alt: elementProto.alt ?? "",
     }),
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,20 +277,78 @@ const ArrowVegaLiteChart: FC<Props> = ({
     shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
 
   const useStretchHeight = shouldHeightStretch(heightConfig)
+  const hasFallbackHeight = hasStretchHeightFallback(useContext(FlexContext))
 
-  // Facet charts need the container element to have a width and also
-  // do not work well with stretch/container width
-  // so they cannot use the width from the StyledVegaLiteChartContainer.
-  const isFacet = isFacetChart(inputElement.spec)
-
-  // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
-  // well with forced stretch width, as it can cause "infinite extent" errors.
-  const hasNestedComp = hasNestedComposition(inputElement.spec)
+  // Parse the spec once per spec change instead of on every resize render.
+  // - Facet charts need the container element to have a width and also do not
+  //   work well with stretch/container width, so they cannot use the width
+  //   from the StyledVegaLiteChartContainer.
+  // - Nested compositions (vconcat containing hconcat/layer/etc.) also don't
+  //   work well with forced stretch width, as it can cause "infinite extent"
+  //   errors.
+  const { isFacet, hasNestedComp, isSingleView, specWidth } = useMemo(() => {
+    const parsedSpec = parseSpecObject(inputElement.spec)
+    if (parsedSpec === undefined) {
+      return {
+        isFacet: false,
+        hasNestedComp: false,
+        isSingleView: false,
+        specWidth: undefined,
+      }
+    }
+    return {
+      isFacet: isFacetChart(parsedSpec),
+      hasNestedComp: hasNestedComposition(parsedSpec),
+      isSingleView: isSingleViewChart(parsedSpec),
+      specWidth: getSpecWidth(parsedSpec),
+    }
+  }, [inputElement.spec])
 
   // Facet charts should only use container width in fullscreen mode.
   // Outside fullscreen, they use their natural size (determined by Vega-Lite).
   // This prevents the infinite loop caused by container-driven facet sizing.
   const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
+
+  // A content-width single-view chart with a stretch or pixel height has
+  // nothing to measure and renders at 0×0. Size-contain it at its spec width
+  // (or the default chart width) and draw it like a stretch-width chart.
+  // Pixel widths count as stretch here (see `shouldWidthStretch`).
+  const isContentWidthContained =
+    useStretchHeight && !useStretchWidth && isSingleView
+  // Size-contain single-view charts with a stretch or pixel height, so the
+  // rendered chart cannot feed its height back into the row. Compositions are
+  // excluded: Vega applies the container height to every child view, so one
+  // fallback box would hold one panel while the rest paint over the following
+  // elements.
+  const isSizeContained = useStretchHeight && isSingleView
+  // Size containment hides a stretch-width chart's drawn width from a
+  // fit-content ancestor. Every other chart has a width a stacked print
+  // column can shrink to.
+  const hasIntrinsicPrintWidth = !(isSizeContained && useStretchWidth)
+  // Whether Vega sizes the chart to its measured container height.
+  // A composition without a definite parent height skips this, because
+  // its rendered height would feed back into a content-height row.
+  // Size-contained, pixel-height, and fullscreen charts always get a
+  // stable height to measure.
+  const passesContainerHeight =
+    useStretchHeight &&
+    (isFullScreen ||
+      isSizeContained ||
+      !hasFallbackHeight ||
+      Boolean(heightConfig?.pixelHeight))
+
+  // Height of Vega's parameter-binding controls, which it renders inside the
+  // chart container below the chart. The measurement is tied to the spec that
+  // produced it, so a chart that no longer has bindings does not keep the
+  // previous height subtracted when its view is created.
+  const [bindingMeasurement, setBindingMeasurement] = useState({
+    spec: inputElement.spec,
+    height: 0,
+  })
+  const bindingsHeight =
+    bindingMeasurement.spec === inputElement.spec
+      ? bindingMeasurement.height
+      : 0
 
   // The dimensions to apply to the chart. Facet charts in fullscreen use
   // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
@@ -223,7 +359,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
       ? (fullScreenWidth ?? 0)
       : 0
     : chartContainerWidth
-  const currentHeight =
+  const availableHeight =
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
   // Whether each dimension is container-driven (stretch / fullscreen) rather than
@@ -232,8 +368,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // not be forced to container width in fullscreen to avoid "infinite extent"
   // layout errors (issues #13410, #14050).
   const forceStretchWidth =
-    isFullScreen && !hasNestedComp ? true : useStretchWidth
-  const forceStretchHeight = isFullScreen ? true : useStretchHeight
+    isFullScreen && !hasNestedComp
+      ? true
+      : useStretchWidth || isContentWidthContained
+  const forceStretchHeight = isFullScreen || passesContainerHeight
+
+  // A container-driven height has to fit the binding controls too, so the
+  // chart gets the height left above them.
+  const currentHeight =
+    forceStretchHeight && bindingsHeight > 0 && availableHeight > 0
+      ? Math.max(availableHeight - bindingsHeight, 1)
+      : availableHeight
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
@@ -267,7 +412,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const handleDownloadPng = useCallback(() => {
     void (async () => {
       const pngUrl = await exportToPng()
-      if (!pngUrl) {
+      if (pngUrl === null) {
         return
       }
 
@@ -308,7 +453,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // the data-to-pixel mapping after the initial view creation.
   // For fixed-dimension charts, dimensions are in the spec, so we don't need
   // to wait for container measurements.
-  const needsContainerWidth = useStretchWidth || isFullScreen
+  const needsContainerWidth =
+    useStretchWidth || isContentWidthContained || isFullScreen
   const needsContainerHeight = useStretchHeight || isFullScreen
   const hasValidWidth = !needsContainerWidth || currentWidth > 0
   const hasValidHeight = !needsContainerHeight || currentHeight > 0
@@ -387,6 +533,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         forceStretchWidth ? currentWidth : 0,
         forceStretchHeight ? currentHeight : 0
       )
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cleanup sets ignore during the await
       if (success && !ignore) {
         lastDimensionsRef.current = {
           width: currentWidth,
@@ -408,6 +555,39 @@ const ArrowVegaLiteChart: FC<Props> = ({
     currentHeight,
   ])
 
+  // Vega creates the binding controls with the view, so look for them again
+  // whenever a view becomes ready. Their height depends only on the chart
+  // width, so shrinking the chart to fit them can't feed back into it.
+  useEffect(() => {
+    if (!isViewReady || !forceStretchHeight) {
+      return
+    }
+
+    const bindingsForm = containerRef.current?.querySelector(
+      "form.vega-bindings"
+    )
+    if (!bindingsForm?.querySelector(".vega-bind")) {
+      setBindingMeasurement({ spec: inputElement.spec, height: 0 })
+      return
+    }
+
+    const observer = new ResizeObserver(entries => {
+      // Browsers without `borderBoxSize` report only the content rect.
+      const entry = entries[0] as Partial<ResizeObserverEntry> | undefined
+      setBindingMeasurement({
+        spec: inputElement.spec,
+        height:
+          entry?.borderBoxSize?.[0]?.blockSize ??
+          entry?.contentRect?.height ??
+          0,
+      })
+    })
+    observer.observe(bindingsForm)
+    return () => {
+      observer.disconnect()
+    }
+  }, [isViewReady, forceStretchHeight, containerRef, inputElement.spec])
+
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
   // this function will run regularly to update the view.
@@ -423,15 +603,17 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   useEffect(() => {
-    // We only show data if its provided via data or if there
-    // is one data set in the datasets array. In this case,
-    // only the first dataset is shown:
-    if (data || datasets?.[0]?.data) {
+    // Show data if it's provided via data or via at least one dataset
+    // (only the first dataset is shown).
+    if (data || datasets.length > 0) {
       setEnableShowData(true)
     } else {
       setEnableShowData(false)
     }
   }, [data, datasets])
+
+  const trimmedAlt = inputElement.alt?.trim()
+  const labelContext = isNullOrEmptyString(trimmedAlt) ? undefined : trimmedAlt
 
   if (showData) {
     const derivedHeight =
@@ -439,10 +621,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
       (chartContainerHeight > 0 ? chartContainerHeight : undefined)
 
     return (
-      <ReadOnlyGrid
+      <LazyReadOnlyGrid
         data={data ?? datasets[0]?.data}
         height={derivedHeight}
         width={widthConfig ?? undefined}
+        alt={labelContext}
         customToolbarActions={[
           <ToolbarAction
             key="show-chart"
@@ -451,6 +634,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(false)
             }}
+            labelContext={labelContext}
           />,
         ]}
       />
@@ -470,6 +654,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
           : fullScreenHeight
       }
       useContainerWidth={isFullScreen ? true : useStretchWidth}
+      useContainerHeight={passesContainerHeight}
     >
       <Toolbar
         target={StyledToolbarElementContainer}
@@ -477,6 +662,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
         onExpand={expand}
         onCollapse={collapse}
         disableFullscreenMode={disableFullscreenMode}
+        labelContext={labelContext}
       >
         {enableShowData && (
           <ToolbarAction
@@ -485,6 +671,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             onClick={() => {
               setShowData(true)
             }}
+            labelContext={labelContext}
           />
         )}
         {isViewReady && (
@@ -492,6 +679,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label="Download as PNG"
             icon={FileDownload}
             onClick={handleDownloadPng}
+            labelContext={labelContext}
           />
         )}
         {showCopySpecAction && (
@@ -502,15 +690,25 @@ const ArrowVegaLiteChart: FC<Props> = ({
             label={isCopied ? "Copied!" : "Copy Vega-Lite spec"}
             icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySpec}
+            // Skip context while on the transient "Copied!" label so the name
+            // stays "Copied!" rather than "Copied!: {context}".
+            labelContext={isCopied ? undefined : labelContext}
           />
         )}
       </Toolbar>
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
-        className="stVegaLiteChart"
+        className={
+          hasIntrinsicPrintWidth
+            ? `stVegaLiteChart ${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}`
+            : "stVegaLiteChart"
+        }
         useContainerWidth={useStretchWidth}
-        useContainerHeight={useStretchHeight}
+        useContainerHeight={passesContainerHeight}
+        isSizeContained={isSizeContained}
+        contentWidth={isContentWidthContained ? specWidth : undefined}
+        hasFallbackHeight={hasFallbackHeight}
         ref={containerRef}
       />
     </StyledToolbarElementContainer>

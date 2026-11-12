@@ -34,6 +34,7 @@ message Block {
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
     Transparent transparent = 17;
+    GridContainer grid_container = 19;
   }
 
   bool allow_empty = 8;
@@ -41,6 +42,14 @@ message Block {
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
   optional bool autoscroll = 16;
+
+  // Grid cell configuration for blocks that are direct children of a GridContainer.
+  // When set, the block spans the specified number of columns and rows.
+  optional GridCell grid_cell = 18;
+
+  // Shows a skeleton in the block until the first visible element of the
+  // current run is drawn inside it. Set by `with st.skeleton()`.
+  optional Loading loading = 20;
 
   message Vertical {
     bool border = 1;
@@ -119,7 +128,7 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
-    // ID for dynamic expanders. Only set when on_change="rerun",
+    // ID for dynamic expanders. Only set when on_change="rerun" or bind="query-params",
     // signaling the frontend to treat this as a stateful widget.
     optional string id = 4;
     // Visual style of the expandable container.
@@ -127,6 +136,12 @@ message Block {
     // Progress state, only set by st.status. The frontend uses it to pick the
     // step icon and to announce the state to screen readers.
     State state = 6;
+    // Query parameter name the expander's open state syncs with. Only set when
+    // bind="query-params".
+    optional string query_param_key = 7;
+    // Original `expanded=` default. The frontend omits the query param when the
+    // expander matches this value. Distinct from `expanded`, which is current state.
+    optional bool default_expanded = 8;
   }
 
   message Dialog {
@@ -134,6 +149,12 @@ message Block {
       SMALL = 0;
       LARGE = 1;
       MEDIUM = 2;
+    }
+
+    enum DialogPosition {
+      CENTER = 0;
+      LEFT = 1;
+      RIGHT = 2;
     }
 
     string title = 1;
@@ -146,6 +167,13 @@ message Block {
 
     // Optional icon shown next to the dialog title.
     string icon = 6;
+
+    // Placement of the dialog. LEFT/RIGHT render it as a full-height side drawer.
+    DialogPosition position = 7;
+
+    // Explicit dialog width in CSS pixels. When set, it overrides the `width`
+    // enum, which the backend keeps at SMALL for clients that ignore this field.
+    optional uint32 pixel_width = 8;
   }
 
   message Form {
@@ -157,11 +185,17 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
-    // Widget ID for dynamic tabs. Only set when on_change="rerun",
-    // signaling the frontend to treat this as a stateful widget.
-    // When absent, tabs may still have a block-level id for CSS key
-    // styling but should not trigger reruns on tab change.
+    // Widget ID for dynamic tabs. Only set when on_change="rerun" or
+    // bind="query-params", signaling the frontend to treat this as a
+    // stateful widget. When absent, tabs may still have a block-level id
+    // for CSS key styling but should not trigger reruns on tab change.
     optional string id = 2;
+    // Query parameter name the active tab syncs with. Only set when
+    // bind="query-params".
+    optional string query_param_key = 3;
+    // Original default tab label (from `default=` or the first tab). Omitted
+    // from the URL when the active tab matches.
+    optional string default_tab_label = 4;
   }
 
   message Tab {
@@ -204,5 +238,68 @@ message Block {
   // render directly in the parent container's flex context.
   message Transparent {}
 
-  // Next ID: 18
+  message Loading {
+    // Height of the skeleton while the block has no content to keep. If
+    // unset, the frontend uses a default height.
+    optional streamlit.HeightConfig skeleton_height = 1;
+  }
+
+  message GridContainer {
+    // Number of columns. Absent means auto (determined by min_column_width_px).
+    optional uint32 columns = 1;
+
+    // Minimum column width in pixels. Absent means "auto": the frontend uses
+    // theme.sizes.gridMinColumnWidth (12.5rem, about 200px) as the wrap
+    // threshold. With wrap=false, tracks do not shrink below it.
+    optional uint32 min_column_width_px = 2;
+
+    // Gap configuration for row and column gaps.
+    streamlit.GapConfig row_gap_config = 3;
+    streamlit.GapConfig column_gap_config = 4;
+
+    // Vertical alignment of content within grid cells.
+    enum VerticalAlignment {
+      TOP = 0;
+      CENTER = 1;
+      BOTTOM = 2;
+    }
+    VerticalAlignment vertical_alignment = 5;
+
+    // Whether to show a border around each cell.
+    bool border = 6;
+
+    // How rows are sized.
+    // CONTENT: each row is as tall as its tallest cell.
+    // FIXED: every row is row_height_config pixels.
+    enum RowHeightMode {
+      CONTENT = 0;
+      FIXED = 1;
+    }
+    RowHeightMode row_height_mode = 7;
+
+    // Optional fixed row height (used when row_height_mode is FIXED).
+    optional streamlit.HeightConfig row_height_config = 8;
+
+    // Whether to use dense packing mode (grid-auto-flow: dense).
+    // When true, the grid fills gaps by reordering items.
+    bool dense = 9;
+
+    // Whether the column count may decrease when the container narrows.
+    // Absent means wrap (the default). False keeps the declared column count
+    // and scrolls horizontally once cells would drop below min_column_width.
+    optional bool wrap = 10;
+  }
+
+  message GridCell {
+    // Number of columns this cell spans. Ignored when column_span_all is true.
+    uint32 column_span = 1;
+
+    // Number of rows this cell spans.
+    uint32 row_span = 2;
+
+    // Occupies every column track on its own row (CSS grid-column: 1 / -1).
+    bool column_span_all = 3;
+  }
+
+  // Next ID: 21
 }

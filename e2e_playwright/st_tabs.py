@@ -329,3 +329,36 @@ with outer_tabs[0]:
         st.write("Inner 2 marker")
 with outer_tabs[1]:
     st.write("Outer B marker")
+
+# ============================================================================
+# bind="query-params" Tests
+# ============================================================================
+
+qp_tab1, qp_tab2, qp_tab3 = st.tabs(
+    ["QP Cat", "QP Dog", "QP Owl"], key="qp_tabs", bind="query-params"
+)
+
+if qp_tab1.open:
+    with qp_tab1:
+        st.write("QP Cat tab content")
+if qp_tab2.open:
+    with qp_tab2:
+        st.write("QP Dog tab content")
+if qp_tab3.open:
+    with qp_tab3:
+        st.write("QP Owl tab content")
+
+st.write(f"Active tab: {st.session_state.get('qp_tabs')}")
+
+qp_default_tab1, qp_default_tab2 = st.tabs(
+    ["QP Alpha", "QP Beta"],
+    default="QP Beta",
+    key="qp_tabs_default",
+    bind="query-params",
+)
+if qp_default_tab1.open:
+    with qp_default_tab1:
+        st.write("QP Alpha tab content")
+if qp_default_tab2.open:
+    with qp_default_tab2:
+        st.write("QP Beta tab content")

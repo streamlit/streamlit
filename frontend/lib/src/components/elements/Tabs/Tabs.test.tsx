@@ -16,6 +16,7 @@
 
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import type * as ReactAriaComponents from "react-aria-components"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -23,7 +24,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
 // Mocking it here prevents the animation machinery from running in unit tests.
 vi.mock("react-aria-components", async importOriginal => {
-  const actual = await importOriginal<typeof import("react-aria-components")>()
+  const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
 })
 
@@ -31,7 +32,7 @@ import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import Tabs, { TabProps } from "./Tabs"
+import Tabs, { type TabProps } from "./Tabs"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -45,7 +46,13 @@ function makeTab(label: string, children: BlockNode[] = []): BlockNode {
 
 function makeTabsNode(
   tabs: number,
-  options?: { blockId?: string; widgetId?: string }
+  options?: {
+    blockId?: string
+    widgetId?: string
+    queryParamKey?: string
+    defaultTabLabel?: string
+    defaultTabIndex?: number
+  }
 ): BlockNode {
   return new BlockNode(
     FAKE_SCRIPT_HASH,
@@ -55,6 +62,9 @@ function makeTabsNode(
       id: options?.blockId ?? "",
       tabContainer: {
         id: options?.widgetId ?? undefined,
+        defaultTabIndex: options?.defaultTabIndex ?? 0,
+        queryParamKey: options?.queryParamKey,
+        defaultTabLabel: options?.defaultTabLabel,
       },
     })
   )
@@ -76,6 +86,15 @@ const getProps = (props?: Partial<TabProps>): TabProps =>
     ...props,
     renderTabContent: vi.fn(),
   })
+
+/** Let WidgetStateManager's batched (macrotask) rerun flush run. */
+async function flushScheduledRerun(): Promise<void> {
+  await act(async () => {
+    await new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+}
 
 function mockTabListScrollMetrics(
   tablist: HTMLElement,
@@ -177,7 +196,9 @@ describe("st.tabs", () => {
 
     panels.slice(1).forEach(panel => {
       expect(panel).not.toBeVisible()
+      expect(panel).toHaveAttribute("data-st-inactive")
     })
+    expect(panels[0]).not.toHaveAttribute("data-st-inactive")
   })
 
   it("does not show scroll arrows when tabs don't overflow", () => {
@@ -339,6 +360,49 @@ describe("st.tabs", () => {
       const updatedTabs = screen.getAllByRole("tab")
       expect(updatedTabs[1]).toHaveAttribute("aria-selected", "true")
     })
+
+    it("restores persisted tab after rendering intermediate tab lists during a delta path shift", async () => {
+      const user = userEvent.setup()
+      const blockId = "$$ID-abc123-my_tabs"
+      const widgetMgr = createWidgetMgr()
+
+      const labels = ["Overview", "Details", "Raw Data"]
+      const makeNode = (tabLabels: string[]): BlockNode =>
+        new BlockNode(
+          FAKE_SCRIPT_HASH,
+          tabLabels.map(label => makeTab(label)),
+          new BlockProto({ allowEmpty: true, id: blockId, tabContainer: {} })
+        )
+
+      const { rerender } = render(
+        <Tabs {...getProps({ node: makeNode(labels), widgetMgr })} />
+      )
+      await user.click(screen.getAllByRole("tab")[1])
+
+      // A shifted block inherits the children at its new path, so the tab
+      // list can render with no tabs or another block's tabs before its own
+      // tab blocks arrive.
+      for (const intermediate of [[], ["Left", "Right"], ["Overview"]]) {
+        rerender(
+          <Tabs {...getProps({ node: makeNode(intermediate), widgetMgr })} />
+        )
+      }
+      rerender(<Tabs {...getProps({ node: makeNode(labels), widgetMgr })} />)
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("tab")[1]).toHaveAttribute(
+          "aria-selected",
+          "true"
+        )
+      })
+      expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
+        "aria-selected",
+        "false"
+      )
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
+        "Details"
+      )
+    })
   })
 
   describe("dynamic tabs (widget state tracking)", () => {
@@ -361,6 +425,71 @@ describe("st.tabs", () => {
         "Tab 2",
         { formId: "", fragmentId: undefined, fromUser: true }
       )
+    })
+
+    it("does not commit or rerun when the active tab is selected again", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(3, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      const tabs = screen.getAllByRole("tab")
+      await user.click(tabs[0])
+      await user.keyboard("{Home}")
+      await flushScheduledRerun()
+
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+      // Moving to another tab still commits and reruns.
+      await user.keyboard("{End}")
+      await flushScheduledRerun()
+
+      expect(tabs[2]).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).toHaveBeenCalledExactlyOnceWith(
+        widgetId,
+        "Tab 2",
+        { formId: "", fragmentId: undefined, fromUser: true }
+      )
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+
+      // End on the last tab is a no-op again.
+      await user.keyboard("{End}")
+      await flushScheduledRerun()
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not commit or rerun on arrow keys with a single tab", async () => {
+      const user = userEvent.setup()
+      const widgetId = "$$ID-abc123-my_tabs"
+      const sendRerunBackMsg = vi.fn()
+      const widgetMgr = new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      })
+      const setStringValueSpy = vi.spyOn(widgetMgr, "setStringValue")
+
+      const node = makeTabsNode(1, { blockId: widgetId, widgetId })
+      render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+      await user.click(screen.getByRole("tab"))
+      await user.keyboard("{ArrowRight}")
+      await user.keyboard("{ArrowLeft}")
+      await flushScheduledRerun()
+
+      expect(screen.getByRole("tab")).toHaveAttribute("aria-selected", "true")
+      expect(setStringValueSpy).not.toHaveBeenCalled()
+      expect(sendRerunBackMsg).not.toHaveBeenCalled()
     })
 
     it("does NOT call widgetMgr.setStringValue on tab click for non-dynamic tabs", async () => {
@@ -539,7 +668,7 @@ describe("st.tabs", () => {
   })
 
   describe("tab list reconciliation when labels or counts change", () => {
-    it("passively keyed tabs persist fallback label when the tab list is replaced and the selection is invalid", async () => {
+    it("passively keyed tabs keep the stored label when the tab list is replaced and the selection is invalid", async () => {
       const user = userEvent.setup()
       const blockId = "$$ID-abc123-my_tabs"
       const widgetMgr = createWidgetMgr()
@@ -566,9 +695,9 @@ describe("st.tabs", () => {
       })
       expect(screen.getAllByRole("tab")[0]).toHaveTextContent("Alpha")
       expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
-        "Alpha"
+        "Tab 2"
       )
-      expect(widgetMgr.setElementState).toHaveBeenCalledWith(
+      expect(widgetMgr.setElementState).not.toHaveBeenCalledWith(
         blockId,
         "activeTabLabel",
         "Alpha"
@@ -666,13 +795,99 @@ describe("st.tabs", () => {
         )
       })
       expect(screen.getAllByRole("tab")[1]).toHaveTextContent("Only2")
-      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe(
-        "Only2"
-      )
+      expect(widgetMgr.getElementState(blockId, "activeTabLabel")).toBe("C")
       expect(screen.getAllByRole("tab")[0]).toHaveAttribute(
         "aria-selected",
         "false"
       )
     })
+  })
+})
+
+describe("Tabs query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("uses defaultTabLabel rather than the current selection as the binding default", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+      defaultTabIndex: 2,
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp",
+      "my_tabs",
+      "string_value",
+      "Tab 0",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      widgetId: "tabs-qp",
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    const unregisterSpy = vi.spyOn(widgetMgr, "unregisterQueryParamBinding")
+
+    const { unmount } = render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      "tabs-qp"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, { widgetId: "tabs-qp" })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("does not register query param binding without widget id", () => {
+    const widgetMgr = createWidgetMgr()
+    const node = makeTabsNode(3, {
+      queryParamKey: "my_tabs",
+      defaultTabLabel: "Tab 0",
+    })
+    vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+    render(<Tabs {...getProps({ node, widgetMgr })} />)
+
+    expect(widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })

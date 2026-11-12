@@ -53,11 +53,11 @@ Run the `reviewing-local-changes` subagent to review the changes. Wait for compl
 Review the recommendations from step 6. For each recommendation:
 
 - If valid and improves code quality: implement the change
-- If not applicable or would over-engineer: skip with brief reasoning
+- If not applicable or would over-engineer: skip with brief reasoning. This includes fixes for rare, low-impact edge cases that would add new state, abstractions, or long special-case branches (see the proportionality check in `/addressing-pr-review-comments`)
 
 ### 8. Run checks (second pass)
 
-Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored (they require manual updates).
+Run the /checking-changes skill in a subagent with `E2E_CHECK=true make check` to also run changed e2e tests. Wait for completion, then fix any issues found before proceeding. Snapshot mismatches can be ignored while iterating. On a pull request, add the `update-snapshots` label and merge the snapshot PR the workflow opens.
 
 ### 9. Create or update PR
 
@@ -156,16 +156,20 @@ Do not start another iteration after an `APPROVED` verdict, even if `fixing-pr` 
 
 ### 12. Final AI review
 
-After the review loop, apply `ai-final-review` once. Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
+After the review loop, apply `ai-final-review` once. When the PR has both `change:feature` and `impact:users`, also apply `ai-qa-test` so AI QA runs on that user-facing feature.
+
+Wait until a `queued` or `in_progress` `ai-pr-review.yml` run shows up for this branch, then start `/fixing-pr` — it returns immediately if nothing is queued yet:
 
 ```bash
 gh pr edit --add-label "ai-final-review"
+# Only when the PR has both change:feature and impact:users:
+gh pr edit --add-label "ai-qa-test"
 
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status queued
 gh run list --branch "$(git branch --show-current)" --workflow ai-pr-review.yml --status in_progress
 ```
 
-Run `/fixing-pr` once so it can wait for CI and address comments. Do this exactly once, whether step 11 was approved or ran out of iterations. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
+Run `/fixing-pr` exactly once, whether step 11 was approved or ran out of iterations, so it can wait for CI and address comments. Tell `/fixing-pr` to skip `ai-qa-testing.yml` when polling CI; that workflow posts its report as a PR comment for a maintainer to review and adds `do-not-merge` on `FAIL`. Do not re-apply `ai-final-review`. After `/fixing-pr`, commit and push remaining changes.
 
 ### 13. Post agent metrics
 

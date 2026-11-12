@@ -95,21 +95,41 @@ const MENU_STYLE_ICONS = new Set([
 ])
 
 /**
- * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
+ * Checks if a trigger shows only a menu-style icon and no text, either as the
+ * label (with no icon prop) or as the icon prop (with an empty label).
  * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns true if label is exactly one of the menu-style icons with no additional text
+ * @returns true if the trigger's only content is one of the menu-style icons
  */
 export function isMenuStyleIconLabel(
   icon: string | undefined,
   label: string | undefined
 ): boolean {
-  if (icon) {
-    return false
+  const trimmedIcon = icon?.trim() ?? ""
+  const trimmedLabel = label?.trim() ?? ""
+  if (trimmedIcon === "") {
+    return MENU_STYLE_ICONS.has(trimmedLabel)
   }
-  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
+  return trimmedLabel === "" && MENU_STYLE_ICONS.has(trimmedIcon)
+}
+
+/**
+ * Accessible name for an icon-only control.
+ * Uses the same `"{name} icon"` wording as the Markdown material-icon plugin.
+ */
+export function getIconAccessibleName(iconValue: string): string {
+  // Name the loading spinner as "Loading"; DynamicIcon renders "spinner" as a glyph, not an icon pack.
+  if (iconValue === "spinner") {
+    return "Loading"
+  }
+  const { pack, icon } = parseIconPackEntry(iconValue)
+  if (pack === "material" && icon) {
+    return `${icon} icon`
+  }
+  // Strip the optional "emoji:" prefix so the name matches what EmojiIcon renders.
+  return (icon || iconValue).replace(/^emoji:/, "")
 }
 
 /**
@@ -140,7 +160,7 @@ const DynamicIconDispatcher = ({
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
           aria-hidden="true"
-          data-testid={props.testid || "stSpinnerIcon"}
+          data-testid={props.testid ?? "stSpinnerIcon"}
           {...props}
         />
       </StyledDynamicIcon>
@@ -156,7 +176,8 @@ const DynamicIconDispatcher = ({
             <StyledDynamicIcon {...props}>
               <StyledImageIcon
                 src={getFilledStarIconSrc()}
-                data-testid={props.testid || "stImageIcon"}
+                alt=""
+                data-testid={props.testid ?? "stImageIcon"}
               />
             </StyledDynamicIcon>
           )

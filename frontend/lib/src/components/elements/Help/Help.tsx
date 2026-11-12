@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, type ReactElement } from "react"
 
-import {
+import type {
   Help as HelpProto,
-  type Member as MemberProto,
+  Member as MemberProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import {
   StyledDocContainer,
@@ -52,12 +53,12 @@ export const Member = memo(function Member({
   return (
     <StyledMembersRow data-testid="stHelpMember">
       <StyledMembersSummaryCell>
-        {name ? (
+        {!isNullOrEmptyString(name) ? (
           <StyledDocName data-testid="stHelpMemberDocName">
             {name}
           </StyledDocName>
         ) : null}
-        {type ? (
+        {!isNullOrEmptyString(type) ? (
           <StyledDocType data-testid="stHelpMemberDocType">
             {type}
           </StyledDocType>
@@ -65,13 +66,13 @@ export const Member = memo(function Member({
       </StyledMembersSummaryCell>
 
       <StyledMembersDetailsCell>
-        {value ? (
+        {!isNullOrEmptyString(value) ? (
           <StyledDocValue data-testid="stHelpMemberDocValue">
             {value}
           </StyledDocValue>
         ) : (
           <StyledDocValue data-testid="stHelpMemberDocString">
-            {docString || "No docs available"}
+            {isNullOrEmptyString(docString) ? "No docs available" : docString}
           </StyledDocValue>
         )}
       </StyledMembersDetailsCell>

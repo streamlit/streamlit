@@ -14,9 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import assert_type
+from typing import TYPE_CHECKING, assert_type
 
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
@@ -109,6 +107,48 @@ if TYPE_CHECKING:
         selectbox("foo", ["a", "b"], index=None, persist_state="session"), str | None
     )
 
+    # Check on_change parameter modes
+    assert_type(selectbox("foo", [1, 2, 3], on_change=None), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change="rerun"), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change="ignore"), int)
+    assert_type(selectbox("foo", [1, 2, 3], on_change=lambda: None), int)
+    assert_type(selectbox("foo", [1, 2, 3], index=None, on_change="ignore"), int | None)
+    assert_type(
+        selectbox("foo", [1, 2, 3], accept_new_options=True, on_change="ignore"),
+        int | str,
+    )
+
+    # Check required parameter; it does not narrow the return type.
+    assert_type(selectbox("foo", [1, 2, 3], required=True), int)
+    assert_type(selectbox("foo", [1, 2, 3], required=False), int)
+    assert_type(selectbox("foo", [1, 2, 3], index=None, required=True), int | None)
+    assert_type(
+        selectbox(
+            "foo", ["a", "b"], index=None, accept_new_options=True, required=True
+        ),
+        str | None,
+    )
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=True, on_change="ignore"),
+        int | None,
+    )
+    assert_type(selectbox("foo", [1, 2, 3], disabled=True, required=True), int)
+    dynamic_required: bool = True
+    assert_type(
+        selectbox("foo", [1, 2, 3], index=None, required=dynamic_required),
+        int | None,
+    )
+
+    # Check icon parameter; it does not narrow the return type.
+    assert_type(selectbox("foo", ["a", "b"], icon=":material/public:"), str)
+    assert_type(selectbox("foo", ["a", "b"], icon=None), str)
+    assert_type(selectbox("foo", ["a", "b"], index=None, icon="👤"), str | None)
+    assert_type(selectbox("foo", [1, 2], accept_new_options=True, icon="👤"), int | str)
+    assert_type(
+        selectbox("foo", [1, 2], index=None, accept_new_options=True, icon="👤"),
+        int | str | None,
+    )
+
     def on_selectbox_change(prefix: str) -> None: ...
 
     # Common parameters combined
@@ -124,7 +164,9 @@ if TYPE_CHECKING:
             kwargs={},
             placeholder="Select a number",
             disabled=False,
+            required=True,
             label_visibility="visible",
+            icon=":material/public:",
             width=320,
         ),
         int,

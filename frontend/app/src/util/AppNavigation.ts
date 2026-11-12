@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { AppRoot, HostCommunicationManager } from "@streamlit/lib"
+import type { AppRoot, HostCommunicationManager } from "@streamlit/lib"
 import {
   type AppPage,
   Navigation,
-  NewSession,
-  PageConfig,
+  type NewSession,
+  type PageConfig,
 } from "@streamlit/protobuf"
 
 interface AppNavigationState {
@@ -101,10 +101,8 @@ export class AppNavigation {
     }
 
     this.mainScriptHash = newSession.mainScriptHash
-    // Initialize to the config value if provided
-    if (this.hideSidebarNav === null) {
-      this.hideSidebarNav = newSession.config?.hideSidebarNav ?? null
-    }
+    // Null means unset. A stored false is an explicit choice and must stick.
+    this.hideSidebarNav ??= newSession.config?.hideSidebarNav ?? null
 
     return [
       {
@@ -126,7 +124,9 @@ export class AppNavigation {
     const currentPage = appPages.find(
       p => p.pageScriptHash === currentPageScriptHash
     ) as AppPage.$Properties
-    const mainPage = appPages.find(p => p.isDefault) as AppPage.$Properties
+    const mainPage = appPages.find(
+      p => p.isDefault === true
+    ) as AppPage.$Properties
     this.mainPage = mainPage
     const currentPageName = currentPage.urlPathname as string
 
@@ -172,7 +172,8 @@ export class AppNavigation {
           // Make sure we don't send the official page name for the main page
           // This command is used to update the URL in the url bar, so the main page
           // should not have a page name in the URL.
-          currentPageName: currentPage.isDefault ? "" : currentPageName,
+          currentPageName:
+            currentPage.isDefault === true ? "" : currentPageName,
           currentPageScriptHash,
         })
       },

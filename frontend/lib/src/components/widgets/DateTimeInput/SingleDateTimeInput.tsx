@@ -15,12 +15,12 @@
  */
 
 import {
-  ClipboardEvent,
-  FocusEvent,
-  KeyboardEvent,
+  type ClipboardEvent,
+  type FocusEvent,
+  type KeyboardEvent,
   memo,
-  MouseEvent,
-  ReactElement,
+  type MouseEvent,
+  type ReactElement,
   useCallback,
   useEffect,
   useId,
@@ -29,7 +29,7 @@ import {
   useState,
 } from "react"
 
-import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarToday, ErrorOutline } from "@emotion-icons/material-outlined"
 import { Cancel } from "@emotion-icons/material-rounded"
 import { FloatingPortal } from "@floating-ui/react"
 import { CalendarDate, CalendarDateTime, Time } from "@internationalized/date"
@@ -50,6 +50,11 @@ import {
   DATE_INPUT_HEADER_PICKER_POPOVER_CLASS,
 } from "~lib/components/widgets/DateInput/CalendarPopoverHeader"
 import { getSafeLocale } from "~lib/components/widgets/DateInput/dateInputUtils"
+import {
+  handlePassivePreviewFieldTab,
+  isConcreteOutsideLeave,
+  usePopoverInteractionFlag,
+} from "~lib/components/widgets/DateInput/focusLeave"
 import { ReorderedSegments } from "~lib/components/widgets/DateInput/ReorderedSegments"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
@@ -61,6 +66,7 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
+  calendarDateTimeToIso,
   computeStepSnap,
   dateTimesEqual,
   getSegmentState,
@@ -71,6 +77,7 @@ import {
   validateDateTime,
 } from "./dateTimeInputUtils"
 import {
+  StyledCalendarButton,
   StyledCalendarCell,
   StyledCalendarGrid,
   StyledCalendarHeaderCell,
@@ -79,6 +86,7 @@ import {
   StyledClearButton,
   StyledDateField,
   StyledDateFieldContainer,
+  StyledDateFieldsScroller,
   StyledDateInputWrapper,
   StyledErrorIconContainer,
   StyledPopoverTimeField,
@@ -90,15 +98,34 @@ import {
   StyledVisuallyHidden,
 } from "./styled-components"
 
+const POPOVER_EXCLUDE_SELECTORS = [
+  `.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`,
+] as const
+
 interface SingleDateTimeInputProps {
   value: CalendarDateTime | null
-  onChange: (value: CalendarDateTime | null) => void
+  /** Commits a value. Returns false when the parent rejects it (e.g. a
+   * required field committed empty). */
+  onChange: (value: CalendarDateTime | null) => boolean
   minDateTime: CalendarDateTime | null
   maxDateTime: CalendarDateTime | null
   format: string
   step: number
   disabled: boolean
+  /** Whether to render the clear X. */
   clearable: boolean
+  /** When true, a full keyboard clear is sent to the parent (which blocks it
+   * when required) instead of reverting. True for empty defaults that are not
+   * disabled. */
+  allowEmptyCommit: boolean
+  /** Exposes aria-required and lets an edited-then-cleared field report the
+   * empty attempt. */
+  required: boolean
+  /** Reports each complete (or fully cleared) value the field shows before it
+   * is committed. Partial entry is not reported, including clearing one
+   * segment of a complete value: React Aria keeps that as display state and
+   * calls `onChange(null)` only once every segment is empty. */
+  onEdit: (iso: string | null) => void
   label: string
   error: string | null
   /** App-wide locale (`LibConfigContext`), used only to localize the
@@ -110,11 +137,13 @@ interface SingleDateTimeInputProps {
   onFocusChange: (value: CalendarDate) => void
   onValidate: (dt: CalendarDateTime | null) => void
   onClose: (shouldClearError: boolean) => void
-  formCommit?: (value: CalendarDateTime | null) => void
   /** When inside a form with enter_to_submit=True, submits the form.
-   * Called after formCommit on Enter key. */
+   * Called after the Enter-key commit. */
   formSubmit?: () => void
-  formResetKey: number
+  /** Incremented when the parent needs the field to drop its local display
+   * state and repaint `value`: a form clear, or a programmatic value that
+   * equals the committed one while the field shows something else. */
+  resetKey: number
 }
 
 function SingleDateTimeInput({
@@ -126,6 +155,9 @@ function SingleDateTimeInput({
   step,
   disabled,
   clearable,
+  allowEmptyCommit,
+  required,
+  onEdit,
   label,
   error,
   locale,
@@ -134,9 +166,8 @@ function SingleDateTimeInput({
   onFocusChange,
   onValidate,
   onClose,
-  formCommit,
   formSubmit,
-  formResetKey,
+  resetKey,
 }: SingleDateTimeInputProps): ReactElement {
   const theme = useEmotionTheme()
   const id = useId()
@@ -145,6 +176,7 @@ function SingleDateTimeInput({
   const popoverDescId = `${id}-calendar-desc`
   const triggerRef = useRef<HTMLDivElement | null>(null)
   const clearButtonRef = useRef<HTMLButtonElement | null>(null)
+  const calendarButtonRef = useRef<HTMLButtonElement | null>(null)
   const safeLocale = useMemo(() => getSafeLocale(locale), [locale])
   // Suppresses `handleFocus` while focus is being moved programmatically, so a
   // restore is not mistaken for the user arriving in the field — see
@@ -196,26 +228,38 @@ function SingleDateTimeInput({
   // segment is filled. What commits is re-read from the rendered segments.
   const [pendingTime, setPendingTime] = useState<Time | null>(null)
 
+  // Whether the user changed the field's value since the last commit or revert,
+  // so a required field that is edited and then fully cleared still notifies the
+  // parent (see `clearedAfterEdit`). A popover time with no date is not a value
+  // and does not count.
+  const hasEditedRef = useRef(false)
+
   const [prevValue, setPrevValue] = useState(value)
   if (prevValue !== value) {
     setPrevValue(value)
     setDisplayValue(value)
     setPendingTime(null)
-    lastCommittedRef.current = undefined
+    hasEditedRef.current = false
+    // Keep lastCommittedRef when `value` is the commit just sent. A Tab or blur
+    // handler that still sees the previous value would otherwise commit again.
+    if (!dateTimesEqual(value, lastCommittedRef.current ?? null)) {
+      lastCommittedRef.current = undefined
+    }
   }
 
-  // Whether focus was inside the field when a form clear remounted it, so the
-  // effect below can put focus back. Captured here rather than in that effect
-  // because the remount has already happened by the time effects run, taking the
-  // focused segment with it.
+  // Whether focus was inside the field when a reset remounted it, so the effect
+  // below can put focus back. Captured here rather than in that effect because
+  // the remount has already happened by the time effects run, taking the focused
+  // segment with it.
   const shouldRestoreFocusRef = useRef(false)
 
-  const [prevResetKey, setPrevResetKey] = useState(formResetKey)
-  if (prevResetKey !== formResetKey) {
-    setPrevResetKey(formResetKey)
+  const [prevResetKey, setPrevResetKey] = useState(resetKey)
+  if (prevResetKey !== resetKey) {
+    setPrevResetKey(resetKey)
     setDisplayValue(value)
     setPendingTime(null)
-    // A clear ends the interaction, so the dedup memory goes with it: re-entering
+    hasEditedRef.current = false
+    // A reset ends the interaction, so the dedup memory goes with it: re-entering
     // the value that was just submitted has to commit again. The block above does
     // not cover this — on Enter-to-submit the clear overwrites the pending value
     // with the default before `value` ever becomes the datetime, so
@@ -228,9 +272,8 @@ function SingleDateTimeInput({
     // true on the retry and the flag is recomputed against live focus rather than
     // surviving as a stale `true`. A double-invoked render computes the same value
     // twice, since focus cannot move between two synchronous passes.
-    shouldRestoreFocusRef.current = !!triggerRef.current?.contains(
-      document.activeElement
-    )
+    shouldRestoreFocusRef.current =
+      triggerRef.current?.contains(document.activeElement) === true
   }
 
   const displayValueRef = useRef(displayValue)
@@ -267,10 +310,14 @@ function SingleDateTimeInput({
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
 
-  const formCommitRef = useRef(formCommit)
-  formCommitRef.current = formCommit
-
   const [isOpen, setIsOpen] = useState(false)
+  const popoverInteractionRef = usePopoverInteractionFlag(
+    isOpen,
+    popoverRef,
+    POPOVER_EXCLUDE_SELECTORS
+  )
+  /** Set when Tab starts leaving so handleBlur does not commit that leave again. */
+  const skipNextBlurCommitRef = useRef(false)
 
   /** The datetime the two controls describe between them when the field itself
    * holds no value: a complete date read from the inline segments, plus a time
@@ -292,9 +339,14 @@ function SingleDateTimeInput({
 
   /** Validate and commit the pending value, or revert to the last committed value.
    * When the field itself has no value, first try to complete one from the visible
-   * date and time halves. Returns true if the field holds a valid (committed or
-   * unchanged) value, false if it was reverted. Calls both onChange (React state)
-   * and formCommit (sync WM write) to prevent the form-submit race.
+   * date and time halves. Commits through `onChange`, which also writes form
+   * widgets synchronously to prevent the form-submit race.
+   *
+   * Returns false when the field reverts (partial entry, out of range, or a full
+   * clear of a non-empty default). Returns true when the value is unchanged or was
+   * handed to `onChange`, including when the parent rejects it (a required field
+   * committed empty). Enter-to-submit treats true as "run the form validators",
+   * which enforce `required`.
    *
    * @param popoverStaysOpen - When true, keeps a popover time that is still on
    * screen (Enter commits without dismissing). */
@@ -333,11 +385,15 @@ function SingleDateTimeInput({
       // browser then fires blur, by which point the popover is unmounted and its
       // half unreadable. This branch touches only local display and error state, so
       // it cannot undo the commit that just happened.
+      //
+      // A full clear reverts when the default is non-empty, even when required:
+      // only empty-default fields can be committed empty.
       if (
         (isPartiallyTyped && !completedFromParts) ||
-        (isFullyCleared && !clearable)
+        (isFullyCleared && !allowEmptyCommit)
       ) {
         setDisplayValue(value)
+        hasEditedRef.current = false
         onCloseRef.current(true)
         return false
       }
@@ -347,11 +403,19 @@ function SingleDateTimeInput({
 
       if (validateDateTime(pending, minDateTime, maxDateTime)) {
         setDisplayValue(value)
+        hasEditedRef.current = false
         onCloseRef.current(true)
         return false
       }
 
-      if (dateTimesEqual(pending, value)) return true
+      // A required field that was edited and then fully cleared must still
+      // notify the parent, even though empty equals the empty committed value,
+      // so the parent can block the commit and paint the required error.
+      // Optional fields skip the notify: nothing changed, and a same-value
+      // write would schedule a rerun.
+      const clearedAfterEdit =
+        required && isFullyCleared && hasEditedRef.current
+      if (dateTimesEqual(pending, value) && !clearedAfterEdit) return true
 
       if (
         lastCommittedRef.current !== undefined &&
@@ -360,18 +424,28 @@ function SingleDateTimeInput({
         return true
       }
 
-      lastCommittedRef.current = pending
       // Keep the latest-value ref in step with what was just committed, rather
       // than waiting for the value round-trip. An outside click commits on
       // pointerdown and the browser then fires blur, so a second pass can run
       // before that round-trip lands; without this it would re-read the DOM with
       // the popover already unmounted and could commit a different draft.
       displayValueRef.current = pending
-      onChangeRef.current(pending)
-      formCommitRef.current?.(pending)
+      hasEditedRef.current = false
+      // Only remember accepted commits. A rejected one (required and empty)
+      // must not dedupe a later retry of the same value after another edit.
+      if (onChangeRef.current(pending)) {
+        lastCommittedRef.current = pending
+      }
       return true
     },
-    [value, clearable, minDateTime, maxDateTime, completeFromVisibleParts]
+    [
+      value,
+      allowEmptyCommit,
+      required,
+      minDateTime,
+      maxDateTime,
+      completeFromVisibleParts,
+    ]
   )
 
   // Reset state when the popover opens: clear the commit-dedup guard and
@@ -388,9 +462,10 @@ function SingleDateTimeInput({
     wasOpenRef.current = isOpen
   }, [isOpen, value, onFocusChange])
 
-  // Put focus back after a form clear: Enter-to-submit leaves focus in the field,
-  // and the remount (see the DateField's `key`) discards the focused segment.
-  // Flagged as a restore so `handleFocus` does not treat it as the user arriving.
+  // Put focus back after a reset (form clear or programmatic resync):
+  // Enter-to-submit leaves focus in the field, and the remount (see the
+  // DateField's `key`) discards the focused segment. Flagged as a restore so
+  // `handleFocus` does not treat it as the user arriving.
   //
   // Cleared synchronously rather than after a frame, unlike `restoreFocusToField`:
   // `.focus()` dispatches `focusin` synchronously, so `handleFocus` has already
@@ -404,7 +479,7 @@ function SingleDateTimeInput({
     isRestoringFocusRef.current = true
     triggerRef.current?.querySelector<HTMLElement>(SEGMENT_SELECTOR)?.focus()
     isRestoringFocusRef.current = false
-  }, [formResetKey])
+  }, [resetKey])
 
   // Focus active calendar cell on active mode entry.
   useEffect(() => {
@@ -435,20 +510,27 @@ function SingleDateTimeInput({
     }
   }, [isOpen, theme.spacing.twoXS, isInSidebar])
 
-  const { refs, floatingStyles } = useFloatingOverlay(overlayOptions)
+  const { floatingStyles, setFloating, setReference } =
+    useFloatingOverlay(overlayOptions)
 
+  // Returns focus to the control that opened the calendar after it closes:
+  // - Calendar button already focused (e.g. Escape after focusing it): leave it.
+  // - Active mode: the element recorded in `activeOriginRef`.
+  // - Passive mode: the last date segment.
   const restoreFocusToField = useCallback((): void => {
     isRestoringFocusRef.current = true
-    if (isCalendarActiveRef.current && activeOriginRef.current) {
-      activeOriginRef.current.focus()
-    } else {
-      const segments =
-        triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const lastSegment = segments?.[segments.length - 1]
-      if (lastSegment) {
-        lastSegment.focus()
+    if (calendarButtonRef.current?.contains(document.activeElement) !== true) {
+      if (isCalendarActiveRef.current && activeOriginRef.current) {
+        activeOriginRef.current.focus()
       } else {
-        triggerRef.current?.focus()
+        const segments =
+          triggerRef.current?.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
+        const lastSegment = segments ? Array.from(segments).at(-1) : undefined
+        if (lastSegment) {
+          lastSegment.focus()
+        } else {
+          triggerRef.current?.focus()
+        }
       }
     }
     requestAnimationFrame(() => {
@@ -464,12 +546,12 @@ function SingleDateTimeInput({
         setIsCalendarActive(false)
         commitOrRevert()
       },
-      floatingSetFn: refs.setFloating,
-      referenceSetFn: refs.setReference,
+      floatingSetFn: setFloating,
+      referenceSetFn: setReference,
       restoreFocusFn: restoreFocusToField,
       // Exclude the month/year picker so clicks and Escape inside it do not
       // dismiss the calendar.
-      excludeSelectors: [`.${DATE_INPUT_HEADER_PICKER_POPOVER_CLASS}`],
+      excludeSelectors: [...POPOVER_EXCLUDE_SELECTORS],
       excludeEscape: true,
     })
 
@@ -490,9 +572,12 @@ function SingleDateTimeInput({
   )
 
   // Segment typing: buffer locally, sync calendar month, show real-time errors.
+  // Also reached with null when every segment is cleared.
   const handleFieldChange = useCallback(
     (date: CalendarDateTime | null): void => {
       setDisplayValue(date)
+      hasEditedRef.current = true
+      onEdit(date ? calendarDateTimeToIso(date) : null)
       onValidate(date)
       if (date) {
         // The field now carries its own time, superseding any pending one.
@@ -500,7 +585,7 @@ function SingleDateTimeInput({
         onFocusChange(new CalendarDate(date.year, date.month, date.day))
       }
     },
-    [onFocusChange, onValidate]
+    [onEdit, onFocusChange, onValidate, setPendingTime]
   )
 
   // Calendar date selection: merge the date with whatever time the user has
@@ -519,39 +604,89 @@ function SingleDateTimeInput({
       )
       setDisplayValue(merged)
       setPendingTime(null)
+      hasEditedRef.current = true
+      onEdit(calendarDateTimeToIso(merged))
       onValidate(merged)
       setIsCalendarActive(true)
       activeOriginRef.current = null
     },
-    [onValidate, resolveGivenTime]
+    [onEdit, onValidate, resolveGivenTime, setPendingTime]
   )
 
-  const handleFocus = useCallback((): void => {
-    lastTimeSourceRef.current = "inline"
-    if (isRestoringFocusRef.current) return
-    if (!disabled) setIsOpen(true)
-  }, [disabled])
+  // Opens the passive preview when focus enters a date/time segment. Focus on
+  // the clear or calendar button is ignored so those controls do not reopen it.
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLDivElement>): void => {
+      // A focus restore means the dialog closed, so the inline field owns the time.
+      // Focusing the calendar or clear button must leave that source unchanged, or
+      // the next commit drops a time that exists only in the popover.
+      if (isRestoringFocusRef.current) {
+        lastTimeSourceRef.current = "inline"
+        return
+      }
+      if (clearButtonRef.current?.contains(e.target) === true) return
+      if (calendarButtonRef.current?.contains(e.target) === true) return
+      lastTimeSourceRef.current = "inline"
+      if (!disabled) setIsOpen(true)
+    },
+    [disabled]
+  )
 
   const handlePopoverTimeFocus = useCallback((): void => {
     lastTimeSourceRef.current = "popover"
   }, [])
 
+  // Ignore clear and calendar clicks so they do not reopen a passive popover.
+  // This capture handler runs before those buttons' own click handlers.
   const handleClickCapture = useCallback(
     (e: MouseEvent<HTMLDivElement>): void => {
-      if (clearButtonRef.current?.contains(e.target as Node)) return
+      const target = e.target as Node
+      if (clearButtonRef.current?.contains(target) === true) return
+      if (calendarButtonRef.current?.contains(target) === true) return
       setIsCalendarActive(false)
-      handleFocus()
+      lastTimeSourceRef.current = "inline"
+      if (!isRestoringFocusRef.current && !disabled) setIsOpen(true)
     },
-    [handleFocus]
+    [disabled]
   )
 
   const handleClear = useCallback((): void => {
     setDisplayValue(null)
     setPendingTime(null)
     lastCommittedRef.current = null
+    hasEditedRef.current = false
     onChange(null)
-    formCommitRef.current?.(null)
   }, [onChange])
+
+  const handleCalendarButtonClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (disabled) return
+      if (isOpen && isCalendarActive) {
+        // Commit while the popover is still mounted — same as Tab-away and
+        // outside-click. Unmounting first drops a time that exists only there.
+        commitOrRevert()
+        setIsOpen(false)
+        setIsCalendarActive(false)
+        restoreFocusToField()
+        return
+      }
+      const focusedInField =
+        document.activeElement instanceof HTMLElement &&
+        triggerRef.current?.contains(document.activeElement) === true
+          ? document.activeElement
+          : undefined
+      // Focus returns here when the dialog closes: the focused field control, or
+      // the calendar button itself (a pointer click doesn't focus it, since
+      // mousedown is prevented).
+      activeOriginRef.current =
+        focusedInField ?? calendarButtonRef.current ?? null
+      if (!isOpen) setIsOpen(true)
+      setIsCalendarActive(true)
+    },
+    [disabled, isOpen, isCalendarActive, commitOrRevert, restoreFocusToField]
+  )
 
   // Custom paste handler: ISO datetime or display-format datetime.
   const handlePaste = useCallback(
@@ -563,15 +698,22 @@ function SingleDateTimeInput({
       if (fullDateTime) {
         e.preventDefault()
         setDisplayValue(fullDateTime)
-        lastCommittedRef.current = fullDateTime
-        onChange(fullDateTime)
-        formCommitRef.current?.(fullDateTime)
+        hasEditedRef.current = false
+        // Report what the field now shows before committing, so a leftover
+        // required error clears even when the commit fails the range check.
+        onEdit(calendarDateTimeToIso(fullDateTime))
+        // Only remember accepted commits, as in `commitOrRevert`: a rejected
+        // out-of-range paste must not dedupe a later blur of the same value
+        // once the range allows it.
+        if (onChange(fullDateTime)) {
+          lastCommittedRef.current = fullDateTime
+        }
         return
       }
 
       // For partial segment paste, let RAC handle it (no custom partial for datetime)
     },
-    [disabled, format, onChange]
+    [disabled, format, onChange, onEdit]
   )
 
   // Shared step-snap handler for ArrowUp/ArrowDown on time segments.
@@ -597,10 +739,12 @@ function SingleDateTimeInput({
         e.stopPropagation()
         e.nativeEvent.stopImmediatePropagation()
         setDisplayValue(snapped)
+        hasEditedRef.current = true
+        onEdit(calendarDateTimeToIso(snapped))
         onValidate(snapped)
       }
     },
-    [step, onValidate]
+    [step, onEdit, onValidate]
   )
 
   // Capture-phase keydown: step-aware time arrows, Alt+ArrowDown, Tab closing, Enter commit.
@@ -615,11 +759,21 @@ function SingleDateTimeInput({
       }
 
       if (e.key === "Enter") {
+        // Let the calendar button's native activation toggle the dialog.
+        // Capturing Enter here would commit / form-submit instead.
+        if (calendarButtonRef.current?.contains(e.target as Node) === true) {
+          return
+        }
         e.preventDefault()
         // Enter commits without dismissing, so a popover time that is still on
         // screen has to survive the commit.
-        const valid = commitOrRevert({ popoverStaysOpen: true })
-        if (valid && !error) formSubmit?.()
+        const kept = commitOrRevert({ popoverStaysOpen: true })
+        // Gate on whether the field kept its entry (not reverted), not on the
+        // `error` prop: that prop is from before this commit, so a required
+        // error the commit just cleared would otherwise swallow the submit.
+        // Range errors make the field revert, and the form's submit
+        // validators enforce `required`.
+        if (kept) formSubmit?.()
         return
       }
 
@@ -630,21 +784,41 @@ function SingleDateTimeInput({
       }
 
       if (e.key !== "Tab" || !isOpen) return
-      const wrapper = triggerRef.current
-      if (!wrapper) return
-      const segments = wrapper.querySelectorAll<HTMLElement>(SEGMENT_SELECTOR)
-      const isLeavingField =
-        (!e.shiftKey && e.target === segments[segments.length - 1]) ||
-        (e.shiftKey && e.target === segments[0])
-      if (isLeavingField) {
-        // Commit before closing, as the popover's own Tab handler does. Leaving
-        // it to the blur that follows would run the commit after the popover has
-        // unmounted, and a time given only there would be unreadable by then.
+
+      // Commit while mounted (popover-only time); skip the following blur commit.
+      const leaveAndCommit = (): void => {
+        skipNextBlurCommitRef.current = true
         commitOrRevert()
         setIsOpen(false)
+        setIsCalendarActive(false)
       }
+      handlePassivePreviewFieldTab(
+        e,
+        {
+          field: triggerRef.current,
+          calendarButton: calendarButtonRef.current,
+          popover: popoverRef.current,
+          excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          segmentSelector: SEGMENT_SELECTOR,
+        },
+        {
+          immediate: leaveAndCommit,
+          beforeFocusSettles: () => {
+            skipNextBlurCommitRef.current = true
+          },
+          focusStayedInside: () => {
+            skipNextBlurCommitRef.current = false
+          },
+          afterFocusSettles: () => {
+            commitOrRevert()
+            setIsOpen(false)
+            setIsCalendarActive(false)
+            skipNextBlurCommitRef.current = false
+          },
+        }
+      )
     },
-    [isOpen, displayValue, error, formSubmit, commitOrRevert, applyStepSnap]
+    [isOpen, displayValue, formSubmit, commitOrRevert, applyStepSnap]
   )
 
   // Active mode: Tab cycles within popover. Passive: Tab closes.
@@ -689,16 +863,36 @@ function SingleDateTimeInput({
 
   const handleBlur = useCallback(
     (e: FocusEvent<HTMLDivElement>): void => {
+      // Safari fires field blur on popover mousedown before click — not a leave.
+      if (popoverInteractionRef.current) {
+        popoverInteractionRef.current = false
+        // Clear a Tab-armed skip so the next real blur is not dropped.
+        skipNextBlurCommitRef.current = false
+        return
+      }
+      if (skipNextBlurCommitRef.current) {
+        skipNextBlurCommitRef.current = false
+        return
+      }
       if (e.currentTarget.contains(e.relatedTarget)) return
       if (isCalendarActiveRef.current) return
-      if (
-        isOpen &&
-        (!e.relatedTarget || popoverRef.current?.contains(e.relatedTarget))
-      )
+      if (isOpen) {
+        if (
+          isConcreteOutsideLeave(e.relatedTarget, {
+            popover: popoverRef.current,
+            excludeSelectors: POPOVER_EXCLUDE_SELECTORS,
+          })
+        ) {
+          commitOrRevert()
+          setIsOpen(false)
+          setIsCalendarActive(false)
+        }
+        // null / inside popover: next-frame Tab or outside click closes.
         return
+      }
       commitOrRevert()
     },
-    [isOpen, commitOrRevert]
+    [isOpen, commitOrRevert, popoverInteractionRef]
   )
 
   // Calendar value for display: extract date portion from displayValue.
@@ -746,9 +940,11 @@ function SingleDateTimeInput({
         time.minute
       )
       setDisplayValue(merged)
+      hasEditedRef.current = true
+      onEdit(calendarDateTimeToIso(merged))
       onValidate(merged)
     },
-    [onValidate]
+    [onEdit, onValidate, setPendingTime]
   )
 
   const handlePopoverTimeKeyDown = useCallback(
@@ -782,46 +978,55 @@ function SingleDateTimeInput({
       <StyledDateInputWrapper
         ref={setTriggerRef}
         aria-keyshortcuts="Alt+ArrowDown"
-        aria-haspopup="dialog"
-        aria-expanded={isCalendarActive}
-        aria-controls={isCalendarActive ? popoverId : undefined}
         data-testid="stDateTimeInputField"
         data-disabled={disabled || undefined}
-        data-has-error={error ? "" : undefined}
+        data-has-error={error !== null ? "" : undefined}
+        aria-required={required ? true : undefined}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClickCapture={handleClickCapture}
         onPaste={handlePaste}
         onKeyDownCapture={handleFieldKeyDown}
       >
-        <I18nProvider locale="en-US">
-          <StyledDateField>
-            <DateField<CalendarDateTime>
-              // Remount on form clear. React Aria keeps its own display state
-              // for segments the user has typed but not completed, and with
-              // `value` already null there is no prop change to re-seed it — so a
-              // time typed before `clear_on_submit` would stay on screen, and
-              // because dismissal completes a value from what is visible, it would
-              // also commit.
-              key={formResetKey}
-              aria-label={label}
-              aria-describedby={error ? errorId : undefined}
-              isInvalid={!!error}
-              value={displayValue}
-              onChange={handleFieldChange}
-              minValue={minDateTime ?? undefined}
-              maxValue={maxDateTime ?? undefined}
-              granularity="minute"
-              hourCycle={24}
-              shouldForceLeadingZeros
-              isDisabled={disabled}
-            >
-              <ReorderedSegments format={format} includeTime />
-            </DateField>
-          </StyledDateField>
-        </I18nProvider>
+        <StyledDateFieldsScroller data-testid="stDateTimeInputFieldsScroller">
+          <I18nProvider locale="en-US">
+            <StyledDateField>
+              <DateField<CalendarDateTime>
+                // Remount on reset. React Aria keeps its own display state for
+                // segments the user has typed but not completed, and with `value`
+                // unchanged there is no prop change to re-seed it — so a time typed
+                // before `clear_on_submit` would stay on screen, and because
+                // dismissal completes a value from what is visible, it would also
+                // commit.
+                key={resetKey}
+                aria-label={label}
+                aria-describedby={error !== null ? errorId : undefined}
+                isInvalid={error !== null}
+                // Keep invalid state tied to Streamlit's error, not native
+                // constraint validation. Required is exposed on the field
+                // group that contains the focused segments, not via RAC
+                // `isRequired` (which would mark empty as invalid).
+                validationBehavior="aria"
+                value={displayValue}
+                onChange={handleFieldChange}
+                minValue={minDateTime ?? undefined}
+                maxValue={maxDateTime ?? undefined}
+                granularity="minute"
+                hourCycle={24}
+                shouldForceLeadingZeros
+                isDisabled={disabled}
+              >
+                <ReorderedSegments
+                  format={format}
+                  includeTime
+                  required={required}
+                />
+              </DateField>
+            </StyledDateField>
+          </I18nProvider>
+        </StyledDateFieldsScroller>
         <StyledTrailingIcons>
-          {error && (
+          {error !== null && (
             <StyledErrorIconContainer data-testid="stDateTimeInputError">
               <Tooltip
                 content={
@@ -847,10 +1052,24 @@ function SingleDateTimeInput({
               <Icon content={Cancel} size="base" />
             </StyledClearButton>
           )}
+          <StyledCalendarButton
+            ref={calendarButtonRef}
+            type="button"
+            onClick={handleCalendarButtonClick}
+            aria-label="Choose date and time"
+            aria-haspopup="dialog"
+            aria-expanded={isCalendarActive}
+            aria-controls={isCalendarActive ? popoverId : undefined}
+            data-testid="stDateTimeInputCalendarButton"
+            disabled={disabled}
+            onMouseDown={e => e.preventDefault()}
+          >
+            <Icon content={CalendarToday} size="base" />
+          </StyledCalendarButton>
         </StyledTrailingIcons>
-        {error && (
+        {error !== null && (
           <StyledVisuallyHidden id={errorId} role="alert">
-            {error.replace(/\*\*/g, "")}
+            {error.replaceAll("**", "")}
           </StyledVisuallyHidden>
         )}
       </StyledDateInputWrapper>
@@ -880,7 +1099,7 @@ function SingleDateTimeInput({
                 onChange={handleCalendarChange}
                 minValue={calendarMinDate}
                 maxValue={calendarMaxDate}
-                focusedValue={focusedValue ?? undefined}
+                focusedValue={focusedValue}
                 onFocusChange={onFocusChange}
               >
                 <CalendarPopoverHeader />
@@ -909,14 +1128,14 @@ function SingleDateTimeInput({
                 </StyledPopoverTimeLabel>
                 <I18nProvider locale="en-US">
                   <StyledPopoverTimeField
-                    // Remount on form clear, like the inline field. React Aria only
+                    // Remount on reset, like the inline field. React Aria only
                     // resets typed-but-incomplete segments when the controlled value
-                    // changes, and `popoverTimeValue` can be unchanged across a clear,
+                    // changes, and `popoverTimeValue` can be unchanged across a reset,
                     // so this does not depend on those two happening to differ.
-                    key={formResetKey}
+                    key={resetKey}
                     aria-labelledby={`${id}-time-label`}
-                    aria-describedby={error ? errorId : undefined}
-                    isInvalid={!!error}
+                    aria-describedby={error !== null ? errorId : undefined}
+                    isInvalid={error !== null}
                     value={popoverTimeValue}
                     onChange={handlePopoverTimeChange}
                     granularity="minute"

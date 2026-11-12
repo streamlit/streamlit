@@ -522,3 +522,82 @@ hello
         widget_func("same label")
         with pytest.raises(StreamlitDuplicateElementId):
             widget_func("same label", wrap=False)
+
+
+class CheckboxOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("checkbox_ignore", st.checkbox, "ignore", True),
+            ("checkbox_rerun", st.checkbox, "rerun", False),
+            ("checkbox_none", st.checkbox, None, False),
+            ("checkbox_callback", st.checkbox, lambda: None, False),
+            ("toggle_ignore", st.toggle, "ignore", True),
+            ("toggle_rerun", st.toggle, "rerun", False),
+            ("toggle_none", st.toggle, None, False),
+            ("toggle_callback", st.toggle, lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self,
+        _name: str,
+        widget_func: object,
+        on_change: object,
+        expected_ignore_rerun: bool,
+    ) -> None:
+        """Test that on_change modes set the ignore_rerun proto field."""
+        widget_func("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_on_change_invalid_mode_raises_exception(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            widget_func("the label", on_change="invalid")
+
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+        assert "a callback function" in str(exc_info.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_on_change_non_string_value_raises_exception(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that a non-string, non-callable on_change raises StreamlitValueError."""
+        with pytest.raises(StreamlitValueError) as exc_info:
+            widget_func("the label", on_change=[])  # type: ignore[arg-type]
+
+        assert "on_change" in str(exc_info.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_ignore_allowed_inside_form(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that on_change='ignore' inside a form does not raise."""
+        with st.form("form"):
+            widget_func("the label", on_change="ignore")
+
+        c = self.get_delta_from_queue(1).new_element.checkbox
+        assert c.ignore_rerun is True

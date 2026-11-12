@@ -47,7 +47,7 @@ interface StyledContainerProps {
 }
 
 const StyledContainer = styled.div<StyledContainerProps>(
-  ({ theme, isEditing }) => ({
+  ({ theme, isEditing = false }) => ({
     position: "relative",
     display: "flex",
     flexDirection: "column",
@@ -69,7 +69,7 @@ interface StyledToolbarWrapperProps {
 }
 
 const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ theme, locked }) => ({
+  ({ theme, locked = false }) => ({
     // Hide visually via opacity (not `visibility`/`display`) so the button
     // stays in the tab order and remains reachable via keyboard.
     opacity: locked ? 1 : 0,
@@ -296,7 +296,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   return (
     <StyledContainer data-testid="stMarkdownColumnViewer">
       <StyledMarkdownViewer tabIndex={0} aria-label="Markdown content">
-        {!cell.readonly && (
+        {cell.readonly !== true && (
           <StyledToolbarWrapper className="stMarkdownCellToolbar">
             <StyledCellToolbar>
               <ToolbarAction

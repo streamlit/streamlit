@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode, useContext } from "react"
+import { type ReactElement, type ReactNode, useContext } from "react"
 
+import { SIDEBAR_ELEMENT_ID } from "@streamlit/app/src/components/Sidebar/utils"
 import {
   BaseButton,
   BaseButtonKind,
@@ -36,7 +37,7 @@ import {
 export interface HeaderProps {
   hasSidebar: boolean
   isSidebarOpen: boolean
-  onToggleSidebar(): void
+  onToggleSidebar: () => void
   navigation?: ReactNode
   rightContent?: ReactNode
   logoComponent?: ReactNode
@@ -54,19 +55,20 @@ const Header = ({
 }: HeaderProps): ReactElement => {
   const { activeTheme } = useContext(ThemeContext)
 
-  const shouldShowLogo = logoComponent && !isSidebarOpen
+  // Falsy ReactNode content (null, undefined, false, "", 0) counts as absent.
+  const shouldShowLogo = Boolean(logoComponent) && !isSidebarOpen
   const shouldShowExpandButton = hasSidebar && !isSidebarOpen
 
   // Determine what content should be shown
   // When showToolbar is false (embed=true without show_toolbar), we still show
   // logo, sidebar icon, and navigation, but hide rightContent
-  const shouldShowRightContent = showToolbar && rightContent
+  const shouldShowRightContent = showToolbar && Boolean(rightContent)
 
   // Check if there's any content to display at all
   const hasAnyContent =
     shouldShowLogo ||
     shouldShowExpandButton ||
-    navigation ||
+    Boolean(navigation) ||
     shouldShowRightContent
 
   return (
@@ -92,6 +94,9 @@ const Header = ({
                     kind={BaseButtonKind.HEADER_NO_PADDING}
                     onClick={onToggleSidebar}
                     data-testid="stExpandSidebarButton"
+                    aria-label="Expand sidebar"
+                    aria-expanded={isSidebarOpen}
+                    aria-controls={SIDEBAR_ELEMENT_ID}
                   >
                     <DynamicIcon
                       size="xl"

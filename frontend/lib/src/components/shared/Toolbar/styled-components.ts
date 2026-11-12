@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import { ComponentSelector } from "@emotion/serialize"
+import type { ComponentSelector } from "@emotion/serialize"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
-export const TOP_DISTANCE = "-2.65rem"
+import { getOverlayToolbarTopDistance } from "./overlayToolbarSpacing"
+
+export { TOP_DISTANCE } from "./overlayToolbarSpacing"
 
 /** A styled component usable as a CSS selector in template literals. */
 type StyledComponentSelector = ComponentSelector & { toString(): string }
@@ -30,28 +32,43 @@ export interface StyledToolbarWrapperProps {
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
-  ({ theme, locked, target }) => ({
-    padding: `${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.sm}`,
-    position: "absolute",
-    top: locked ? TOP_DISTANCE : "-1rem",
-    right: theme.spacing.none,
-    transition: "none",
-    ...(!locked && {
-      opacity: 0,
-      "&:active, &:focus-visible, &:hover": {
-        transition: "opacity 150ms 100ms, top 100ms 100ms",
-        opacity: 1,
-        top: TOP_DISTANCE,
-      },
-      ...(target && {
-        [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]: {
-          transition: "opacity 150ms 100ms, top 100ms 100ms",
-          opacity: 1,
-          top: TOP_DISTANCE,
-        },
+  ({ theme, locked = false, target }) => {
+    const topDistance = getOverlayToolbarTopDistance(theme)
+    // The shown toolbar overlaps the bottom of the preceding element. Use the
+    // same z-index as raised content there (e.g. the selected segmented
+    // control option) so the toolbar, which comes later in the DOM, paints on
+    // top. Stay below app chrome such as the sticky bottom container.
+    const shownZIndex = theme.zIndices.priority
+    const shownStyles = {
+      // Raise z-index only after `top` finishes (100ms delay + 100ms duration).
+      // Until then the toolbar still overlaps its own element, such as the
+      // dataframe header, and must not take those clicks.
+      transition: "opacity 150ms 100ms, top 100ms 100ms, z-index 0ms 200ms",
+      opacity: 1,
+      top: topDistance,
+      zIndex: shownZIndex,
+    }
+    return {
+      // The bottom padding matches the gap in `getOverlayToolbarTopDistance`,
+      // so the shown wrapper ends exactly at the element's top edge: it
+      // bridges the hover gap without covering the element.
+      padding: `${theme.spacing.sm} 0 ${theme.spacing.twoXS} ${theme.spacing.sm}`,
+      position: "absolute",
+      top: locked ? topDistance : "-1rem",
+      right: theme.spacing.none,
+      transition: "none",
+      // Numeric rather than `auto` so the shown state can transition it.
+      zIndex: locked ? shownZIndex : 0,
+      ...(!locked && {
+        opacity: 0,
+        "&:active, &:focus-visible, &:hover": shownStyles,
+        ...(target && {
+          [`${target}:hover &, ${target}:active &, ${target}:focus-visible &`]:
+            shownStyles,
+        }),
       }),
-    }),
-  })
+    }
+  }
 )
 
 export const StyledToolbar = styled.div(({ theme }) => ({
@@ -66,7 +83,6 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",
-  zIndex: theme.zIndices.sidebar + 1,
   padding: theme.spacing.twoXS,
 }))
 
@@ -79,14 +95,15 @@ export const StyledToolbarElementContainer = styled.div<{
 }>(({ height, useContainerWidth, topCentered, useContainerHeight }) => ({
   position: "relative",
   height:
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- `height` is `number | string | undefined`; a 0 or empty height counts as unset and skips the explicit-height branch
     useContainerWidth && height
       ? height
-      : useContainerHeight
-        ? height || "100%"
+      : useContainerHeight === true
+        ? (height ?? "100%")
         : "fit-content",
   maxWidth: "100%",
   width: useContainerWidth ? "100%" : "fit-content",
-  ...(topCentered
+  ...(topCentered === true
     ? {
         display: "flex",
         justifyContent: "center",

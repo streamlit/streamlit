@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { RefObject } from "react"
+import type { RefObject } from "react"
 
-import { Mock } from "vitest"
+import type { Mock } from "vitest"
 
 import {
   ArrowDataframe,
@@ -31,8 +31,8 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import {
   createIframeMessageHandler,
   CUSTOM_COMPONENT_API_VERSION,
-  IframeMessage,
-  IframeMessageHandlerProps,
+  type IframeMessage,
+  type IframeMessageHandlerProps,
   parseArgs,
   sendRenderMessage,
 } from "./componentUtils"

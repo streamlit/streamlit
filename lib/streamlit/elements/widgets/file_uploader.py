@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast, overload
 
 from streamlit import config
+from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.file_uploader_utils import (
     enforce_filename_restriction,
     normalize_upload_file_type,
@@ -45,10 +46,12 @@ from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    OnChangeMode,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
     register_widget,
+    validate_on_change_mode,
 )
 from streamlit.runtime.uploaded_file_manager import DeletedFile, UploadedFile
 from streamlit.string_util import to_help_str
@@ -167,7 +170,7 @@ class FileUploaderMixin:
         accept_multiple_files: Literal[True, "directory"],
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -187,7 +190,7 @@ class FileUploaderMixin:
         accept_multiple_files: Literal[False] = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -213,7 +216,7 @@ class FileUploaderMixin:
         type: str | Sequence[str] | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         max_upload_size: int | None = None,
@@ -233,7 +236,7 @@ class FileUploaderMixin:
         type: str | Sequence[str] | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         max_upload_size: int | None = None,
@@ -251,7 +254,7 @@ class FileUploaderMixin:
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -269,7 +272,7 @@ class FileUploaderMixin:
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -392,9 +395,30 @@ class FileUploaderMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        on_change : callable
-            An optional callback invoked when this file_uploader's value
-            changes.
+        on_change : callable, "rerun", "ignore", or None
+            How the file uploader should respond to value changes. This controls
+            whether or not Streamlit reruns the app when the user interacts
+            with the file uploader. ``on_change`` can be one of the following:
+
+            - ``"rerun"`` (default): Streamlit will rerun the app when the
+              user commits a new value (after an upload completes, a file is
+              deleted, or a file is replaced in single-file mode).
+
+            - ``"ignore"``: Streamlit will not rerun the app when the user
+              commits a new value. The file uploader still updates in the UI.
+              The new value is available on the next rerun triggered by
+              something else, such as another widget interaction. The file
+              itself is still uploaded to the server immediately; only the
+              rerun is deferred. Ignored commits are held in the browser and
+              are lost if the page is refreshed before that rerun. Inside
+              ``st.form``, this has no effect: the form already defers all
+              commits until submit.
+
+            - A ``callable``: Streamlit will rerun the app and execute the
+              ``callable`` as a callback function before the rest of the app.
+
+            - ``None``: This is the same as ``on_change="rerun"``. This value
+              exists for backwards compatibility and shouldn't be used.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -518,7 +542,7 @@ class FileUploaderMixin:
         accept_multiple_files: AcceptMultipleFiles = False,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -529,6 +553,10 @@ class FileUploaderMixin:
         width: WidthWithoutContent = "stretch",
     ) -> UploadedFile | list[UploadedFile] | None:
         key = to_key(key)
+        on_change_callback = validate_on_change_mode(
+            on_change,
+            supported_modes=("rerun", "ignore"),
+        )
 
         if max_upload_size is not None and (
             isinstance(max_upload_size, bool)
@@ -547,7 +575,7 @@ class FileUploaderMixin:
         check_widget_policies(
             self.dg,
             key,
-            on_change,
+            on_change_callback,
             default_value=None,
             writes_allowed=False,
         )
@@ -600,6 +628,9 @@ class FileUploaderMixin:
         if help is not None:
             file_uploader_proto.help = to_help_str(help)
 
+        if isinstance(on_change, str) and on_change == "ignore":
+            file_uploader_proto.ignore_rerun = True
+
         serde = FileUploaderSerde(accept_multiple_files, allowed_types=normalized_type)
 
         # FileUploader's widget value is a list of file IDs
@@ -607,7 +638,7 @@ class FileUploaderMixin:
         # know about.
         widget_state = register_widget(
             file_uploader_proto.id,
-            on_change_handler=on_change,
+            on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
             deserializer=serde.deserialize,
@@ -620,7 +651,25 @@ class FileUploaderMixin:
         layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
-            "file_uploader", file_uploader_proto, layout_config=layout_config
+            "file_uploader",
+            file_uploader_proto,
+            layout_config=layout_config,
+            agent_props=agent_spec.element(
+                "file_uploader",
+                key=element_id,
+                # A browser user can upload. This API cannot deliver the bytes,
+                # so it only reports the widget.
+                support="action_unsupported",
+                label=label,
+                type=list(file_uploader_proto.type) or None,
+                accept_multiple_files=accept_multiple_files,
+                # The cap the browser enforces, including the server default.
+                max_upload_size=file_uploader_proto.max_upload_size_mb,
+                help=file_uploader_proto.help or None,
+                disabled=disabled,
+                label_visibility=label_visibility,
+                on_change="ignore" if on_change == "ignore" else "rerun",
+            ),
         )
 
         if isinstance(widget_state.value, DeletedFile):

@@ -45,7 +45,7 @@ jobs:
         uses: ./.github/actions/build_info
 
       - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "${{ env.PYTHON_MAX_VERSION }}"
 
@@ -95,6 +95,8 @@ jobs:
             Automated fixes for #${{ github.event.pull_request.number }} created via the autofix CI workflow. The autofix workflow is triggered by adding the `autofix` label to a PR. This runs formatting, linting, pre-commit, and other automatically fixable tasks (see `make autofix`).
 
             This PR targets a feature branch and can be merged without review approval.
+
+            This pull request is closed automatically once #${{ github.event.pull_request.number }} is merged or closed, or once its branch is deleted.
         run: |
           gh pr create \
             --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \

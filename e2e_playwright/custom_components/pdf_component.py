@@ -139,6 +139,14 @@ def use_st_pdf_interactive():
     st.pdf(pdf_bytes, height=height)
 
 
+def use_st_pdf_alt_text():
+    """Test authored and omitted alt on the PDF viewer."""
+    st.subheader("Alt text")
+    pdf_bytes = _create_sample_pdf_bytes()
+    st.pdf(pdf_bytes, height=300, alt="Q3 2026 financial report", key="pdf_with_alt")
+    st.pdf(pdf_bytes, height=300, key="pdf_without_alt")
+
+
 options: dict[str, Callable[[], None]] = {
     "basic": use_st_pdf_basic,
     "fileUpload": use_st_pdf_file_upload,
@@ -148,6 +156,7 @@ options: dict[str, Callable[[], None]] = {
     "errorHandling": use_st_pdf_error_handling,
     "columns": use_st_pdf_in_columns,
     "interactive": use_st_pdf_interactive,
+    "altText": use_st_pdf_alt_text,
 }
 
 st.markdown("# st.pdf Component Tests")

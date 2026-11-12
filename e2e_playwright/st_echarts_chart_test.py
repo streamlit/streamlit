@@ -16,28 +16,32 @@
 
 from __future__ import annotations
 
+import itertools
+import re
+
 import pytest
 from playwright.sync_api import Dialog, Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_until
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run, wait_until
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_form_button,
     get_element_by_key,
 )
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
-# (including the one inside the collapsed expander).
-_EXPECTED_CHART_COUNT = 15
+# (including the ones inside the collapsed expander and the form).
+_EXPECTED_CHART_COUNT = 41
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
+_XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
 
 
 def _get_chart(page: Page, key: str) -> Locator:
-    """Return the ECharts canvas/SVG container for the chart in the given container.
+    """Return the ECharts container inside the element identified by ``key``.
 
-    Charts targeted individually are wrapped in ``st.container(key="c_<name>")``
-    in the app script; ``key`` is that container key.
+    ``key`` may belong to a wrapping ``st.container`` or to the chart itself.
     """
     return get_element_by_key(page, key).get_by_test_id("stEChartsChart")
 
@@ -68,6 +72,8 @@ def test_echarts_charts_render_without_errors(app: Page):
 
     check_top_level_class(app, "stEChartsChart")
     expect(get_element_by_key(app, "basic_bar")).to_be_visible()
+    # A key works for selection widgets too, not just display-only charts.
+    expect(get_element_by_key(app, "selection_chart")).to_be_visible()
 
     # The chart's element container must not clip the floating hover toolbar.
     # A pixel `height` gives the element container ``overflow: auto``, which
@@ -162,6 +168,146 @@ def test_expander_chart_renders_on_expand(app: Page):
     expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
 
 
+@pytest.mark.only_browser("chromium")
+def test_point_selection_persists_and_toggles(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A point selection is kept (state + visual) across reruns and toggles off.
+
+    Point selection uses ECharts' native ``selectedMode``, so the clicked point
+    keeps a visible selected state that is re-applied after a rerun. Clicking the
+    same point again deselects it. On a ``dataset.source`` DataFrame, the
+    returned indices address that DataFrame's rows.
+    """
+    # Initially nothing is selected.
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
+
+    chart = _get_chart(app, "selection_chart")
+    expect(chart.locator("canvas")).to_be_visible()
+
+    # The chart is a single chart-filling bar, so a center click lands on it.
+    chart.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+    # Must NOT happen: selecting a point does not error.
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # The selected point keeps a visible highlight (native select state).
+    assert_snapshot(chart, name="st_echarts_chart-point_selected")
+
+    # An unrelated rerun must keep the selection (state and visual) intact.
+    click_button(app, "rerun helper")
+    expect(app.get_by_text("echarts selection groups: 1")).to_be_visible()
+    expect(app.get_by_text("echarts selection indices: [0]")).to_be_visible()
+    assert_snapshot(chart, name="st_echarts_chart-point_selected")
+
+    # Clicking the same point again toggles it off (multi-select behavior).
+    chart.click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts selection groups: 0")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    # Visual counterpart to the count: a leftover highlight would still match
+    # ``point_selected`` if only widget state were cleared.
+    assert_snapshot(chart, name="st_echarts_chart-point_unselected")
+
+    # The second bar's index selects the DataFrame's second row.
+    expect(app.get_by_text("echarts dataset selection: none")).to_be_visible()
+    dataset_chart = _get_chart(app, "dataset_selection_chart")
+    expect(dataset_chart.locator("canvas")).to_be_visible()
+    box = dataset_chart.bounding_box()
+    assert box is not None
+    dataset_chart.click(position={"x": box["width"] * 0.75, "y": box["height"] / 2})
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts dataset selection: Tue")).to_be_visible()
+    # Must NOT happen: the index resolves to the other row.
+    expect(app.get_by_text("echarts dataset selection: Mon")).to_have_count(0)
+
+
+@pytest.mark.only_browser("chromium")
+def test_brush_selection_persists_and_clears(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A rect brush is reported, kept across rerun, and cleared by double-click."""
+    expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
+
+    chart = _get_chart(app, "brush_chart")
+    canvas = chart.locator("canvas")
+    expect(canvas).to_be_visible()
+    chart.scroll_into_view_if_needed()
+
+    # Toolbox icons are zrender paths (no HTML title). Put the rect-brush
+    # control on the left-middle so the Streamlit hover toolbar cannot steal
+    # the click. Retry the click-plus-drag if the toolbox activation misses.
+    toolbox_left_px = 8
+    toolbox_item_size_px = 32
+
+    def _draw_rect_brush() -> bool:
+        box = canvas.bounding_box()
+        if box is None:
+            return False
+        app.mouse.click(
+            box["x"] + toolbox_left_px + toolbox_item_size_px / 2,
+            box["y"] + box["height"] * 0.5,
+        )
+        app.mouse.move(box["x"] + box["width"] * 0.3, box["y"] + box["height"] * 0.25)
+        app.mouse.down()
+        app.mouse.move(box["x"] + box["width"] * 0.9, box["y"] + box["height"] * 0.85)
+        app.mouse.up()
+        wait_for_app_run(app)
+        return app.get_by_text("echarts brush areas: 1").is_visible()
+
+    wait_until(app, _draw_rect_brush, timeout=15000)
+
+    expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-brush_selected")
+
+    click_button(app, "rerun helper")
+    expect(app.get_by_text("echarts brush areas: 1")).to_be_visible()
+    # Same snapshot as before the helper rerun so a restore that keeps
+    # ``areas: 1`` but drops the overlay fails.
+    assert_snapshot(chart, name="st_echarts_chart-brush_selected")
+
+    canvas.dblclick()
+    wait_for_app_run(app)
+    expect(app.get_by_text("echarts brush areas: 0")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-brush_cleared")
+
+
+@pytest.mark.only_browser("chromium")
+def test_form_selection_is_deferred_until_submit_and_clears(
+    app: Page,
+):
+    """In-form selection does not rerun until submit; a second submit sends the form-clear."""
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+    expect(app.get_by_text("echarts script runs: 1", exact=True)).to_be_visible()
+
+    chart = _get_chart(app, "form_selection_chart")
+    expect(chart.locator("canvas")).to_be_visible()
+    chart.scroll_into_view_if_needed()
+    chart.click()
+
+    # Must NOT happen: selecting inside the form does not rerun the app.
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+    expect(app.get_by_text("echarts script runs: 1", exact=True)).to_be_visible()
+
+    click_form_button(app, "Submit selection")
+    expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # Form-clear is pending-only (``fromUser: true``), like other widgets, so
+    # an unrelated rerun still reports the last submitted selection.
+    click_button(app, "rerun helper")
+    expect(app.get_by_text("echarts form groups: 1")).to_be_visible()
+
+    # The next submit copies the pending empty value from ``clear_on_submit``.
+    click_form_button(app, "Submit selection")
+    expect(app.get_by_text("echarts form groups: 0")).to_be_visible()
+
+
 def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     """HTML/script payloads render as literal tooltip and label text."""
     dialogs: list[str] = []
@@ -207,6 +353,62 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
 
     expect(app.locator("img[onerror]")).to_have_count(0)
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
+
+
+def test_tooltip_formatting_without_javascript(app: Page):
+    """Tooltip templates expand ``{@[n]}`` and, on a pie, ``{@column}``;
+    ``valueFormatter`` formats numbers; and a daily time axis heads its tooltip
+    with a plain date.
+    """
+    template_chart = _get_chart(app, "c_tooltip_template")
+    # Heatmaps draw on two canvas layers.
+    expect(template_chart.locator("canvas").first).to_be_visible()
+    template_chart.hover()
+    template_tooltip = template_chart.locator(".echarts-template-tooltip")
+    expect(template_tooltip).to_have_text(
+        f"Mon · 654 sessions · {_XSS_TEMPLATE_PAYLOAD}"
+    )
+    # Must NOT happen: the expanded payload turned into markup.
+    expect(template_tooltip.locator("img")).to_have_count(0)
+
+    pie_chart = _get_chart(app, "c_tooltip_pie_template")
+    expect(pie_chart.locator("canvas")).to_be_visible()
+    pie_chart.hover()
+    expect(pie_chart.locator(".echarts-pie-template-tooltip")).to_have_text(
+        "Media: 40.1 · 40.1"
+    )
+
+    format_chart = _get_chart(app, "c_tooltip_value_format")
+    expect(format_chart.locator("canvas")).to_be_visible()
+    format_chart.hover()
+    format_tooltip = format_chart.locator(".echarts-value-format-tooltip")
+    expect(format_tooltip).to_contain_text("$1,234.57")
+    # Dollar format rounds to cents, so the unrounded grouped value must not remain.
+    expect(format_tooltip).not_to_contain_text("1,234.567")
+
+    daily_chart = _get_chart(app, "c_daily_time_tooltip")
+    expect(daily_chart.locator("canvas")).to_be_visible()
+    daily_chart.hover()
+    daily_tooltip = daily_chart.locator(".echarts-daily-tooltip")
+    expect(daily_tooltip).to_contain_text(re.compile(r"2026-0[78]-\d{2}"))
+    # Must NOT happen: the header keeps ECharts' midnight time.
+    expect(daily_tooltip).not_to_contain_text("00:00")
+
+
+def test_encode_tooltip_labels_dataframe_columns(app: Page):
+    """An item tooltip names each ``encode.tooltip`` column of a dataframe
+    source next to its value, and shows a midnight datetime as a date.
+    """
+    chart = _get_chart(app, "c_encode_tooltip")
+    expect(chart.locator("svg")).to_be_visible()
+    chart.hover()
+    tooltip = chart.locator(".echarts-encode-tooltip")
+    expect(tooltip).to_be_visible()
+    expect(tooltip).to_contain_text(re.compile(r"pct\s*4\.5%"))
+    expect(tooltip).to_contain_text(re.compile(r"date\s*2026-01-02"))
+    expect(tooltip).to_contain_text(re.compile(r"sha\s*aaa1111"))
+    # Must NOT happen: the raw ISO string of the naive datetime.
+    expect(tooltip).not_to_contain_text("T00:00")
 
 
 def test_toolbar_actions(app: Page):
@@ -260,6 +462,55 @@ def test_toolbar_actions(app: Page):
     expect(close_button).not_to_be_visible()
 
 
+# A negative UTC offset: a date converted through local time would land on the
+# previous day. The category axis prints the source string as given, so the
+# label is exactly the string produced for the Arrow date column.
+@pytest.mark.browser_context_args(timezone_id="America/New_York")
+def test_arrow_dataset_chart_and_show_data(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """A DataFrame dataset renders from Arrow and toggles to a data table."""
+    container = get_element_by_key(app, "c_dataset_arrow")
+    chart = container.get_by_test_id("stEChartsChart")
+    expect(chart.locator("svg")).to_be_visible()
+    # Must NOT happen: the Arrow dataset fails to hydrate.
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+    # Dates arrive as wall-clock "YYYY-MM-DD" labels, not epoch numbers and
+    # not shifted by the browser timezone.
+    axis_labels = chart.locator("svg text")
+    expect(axis_labels.filter(has_text=re.compile(r"^2020-01-01$"))).to_be_visible()
+    expect(axis_labels.filter(has_text="2019-12-31")).to_have_count(0)
+    assert_snapshot(chart, name="st_echarts_chart-arrow_dataset")
+
+    chart_handle = chart.element_handle()
+    chart_height = container.evaluate("el => getComputedStyle(el).height")
+
+    # The hover-revealed toolbar overlaps the neighboring chart, so dispatch
+    # the clicks directly on the buttons (see test_toolbar_actions).
+    container.get_by_role("button", name="Show data").dispatch_event("click")
+    dataframe = container.get_by_test_id("stDataFrame")
+    expect(dataframe).to_be_visible()
+    expect(chart).to_be_hidden()
+    # The table takes the chart's place at the chart's height.
+    expect(container).to_have_css("height", chart_height)
+    # The grid draws its cells on a canvas and mirrors the visible ones in an
+    # accessibility table, so check a value of the chart's dataframe there.
+    # Column 0 is the pandas index, so column 1 is "day".
+    expect(dataframe.get_by_test_id("glide-cell-1-0")).to_have_text("2020-01-01")
+
+    dataframe.hover()
+    show_chart_button = dataframe.get_by_role("button", name="Show chart")
+    expect(show_chart_button).to_be_visible()
+    show_chart_button.dispatch_event("click")
+
+    expect(chart.locator("svg")).to_be_visible()
+    expect(container.get_by_test_id("stDataFrame")).to_have_count(0)
+    # The chart was only hidden, so its ECharts instance (and DOM node) survive.
+    assert chart.evaluate("(el, prev) => el === prev", chart_handle)
+    expect(container.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
 @pytest.mark.only_browser("chromium")
 def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Representative charts look correct in both light and dark themes."""
@@ -277,8 +528,137 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         # Radar exercises non-cartesian theming (split areas, spokes, names),
         # which must stay subtle/legible in both light and dark mode.
         "c_radar": "st_echarts_chart-radar",
+        # Funnel stage separators must follow the app background instead of
+        # ECharts' white lines, and outside labels must stay legible on it.
+        "c_funnel": "st_echarts_chart-funnel",
+        # Layout defaults: the top legend sits below the title and subtitle,
+        # the treemap fills the chart above its breadcrumb, and horizontal
+        # reference-line labels stay inside the plot.
+        "c_title_top_legend": "st_echarts_chart-title_top_legend",
+        "c_treemap_layout": "st_echarts_chart-treemap",
+        "c_reference_lines": "st_echarts_chart-reference_lines",
+        # A default vertical piecewise visualMap gets room beside the plot, and
+        # the heatmap uses the sequential palette.
+        "c_piecewise_heatmap": "st_echarts_chart-piecewise_heatmap",
+        # A visualMap that maps only symbol size keeps each series' own color.
+        "c_size_visual_map": "st_echarts_chart-size_visual_map",
+        # Marks on a data series are neutral, an explicit series color carries
+        # over to its marks, and an unstacked area gets a soft fill.
+        "c_marks_and_area": "st_echarts_chart-marks_and_area",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)
-        expect(chart.locator("canvas")).to_be_visible()
+        # ECharts can add a second canvas layer. Playwright strict mode rejects a
+        # locator that matches both, so wait on the first canvas.
+        expect(chart.locator("canvas").first).to_be_visible()
         assert_snapshot(chart, name=name)
+
+
+def test_echarts_chart_alt_sets_accessible_name(app: Page):
+    """`alt` becomes the ECharts chart's accessible name."""
+    labeled = _get_chart(app, "c_echarts_alt")
+    expect(labeled).to_have_accessible_name("Bar chart of categories A, B, and C")
+    labeled_container = get_element_by_key(app, "c_echarts_alt")
+    # Playwright treats opacity:0 as visible, so assert the toolbar is revealed.
+    labeled_container.hover()
+    expect(labeled_container.get_by_test_id("stElementToolbar")).to_have_css(
+        "opacity", "1"
+    )
+    expect(
+        labeled_container.get_by_role(
+            "button",
+            name="Fullscreen: Bar chart of categories A, B, and C",
+            exact=True,
+        )
+    ).to_be_visible()
+
+    unlabeled = _get_chart(app, "c_echarts_no_alt")
+    # ECharts generates a data-derived name when aria.enabled is on.
+    expect(unlabeled).to_have_attribute("role", "img")
+    expect(unlabeled).to_have_accessible_name(re.compile(r"\S"))
+
+    overridden = _get_chart(app, "c_echarts_alt_overrides_description")
+    expect(overridden).to_have_accessible_name("Streamlit alt overrides description")
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def test_large_data_defaults(app: Page):
+    """Dense bar and line series get large-data settings unless the spec sets them.
+
+    The charts use the SVG renderer, so every drawn shape is a ``path``.
+    """
+    shapes = {
+        key: _get_chart(app, key).locator("svg path")
+        for key in (
+            "c_dense_bar",
+            "c_dense_bar_opt_out",
+            "c_dense_line",
+            "c_dense_line_opt_out",
+        )
+    }
+    # An explicit setting wins: one shape per bar and per line point.
+    wait_until(app, lambda: shapes["c_dense_bar_opt_out"].count() >= 2001)
+    wait_until(app, lambda: shapes["c_dense_line_opt_out"].count() >= 2001)
+
+    # Large mode draws the bars as a few paths, and the line draws no symbols,
+    # so only the axes, grid, and series paths remain.
+    for key in ("c_dense_bar", "c_dense_line"):
+        expect(_get_chart(app, key)).to_have_attribute("aria-busy", "false")
+    wait_until(app, lambda: 0 < shapes["c_dense_bar"].count() < 100)
+    wait_until(app, lambda: 0 < shapes["c_dense_line"].count() < 100)
+
+    # The axis tooltip still shows the hovered point and marks it with a symbol.
+    tooltip = app.locator(".echarts-dense-tooltip")
+    expect(tooltip).not_to_be_visible()
+    line_shape_count = shapes["c_dense_line"].count()
+    _get_chart(app, "c_dense_line").hover()
+    expect(tooltip).to_be_visible()
+    wait_until(app, lambda: shapes["c_dense_line"].count() > line_shape_count)
+    expect(app.get_by_test_id("stEChartsChartError")).to_have_count(0)
+
+
+def test_narrow_time_axis_hides_overlapping_labels(app: Page):
+    """A per-minute time axis in a narrow chart drops labels that would overlap.
+
+    ECharts places time ticks by the data range, not the chart width, so at
+    320px each label would otherwise run into its neighbor.
+    """
+    chart = _get_chart(app, "c_narrow_time_axis")
+    expect(chart).to_have_attribute("aria-busy", "false")
+    # Only the x axis prints "HH:mm"; the y axis prints plain numbers.
+    labels = chart.locator("svg text").filter(has_text=re.compile(r"^\d{1,2}:\d{2}$"))
+    # Must NOT happen: hiding overlaps removes every label.
+    wait_until(app, lambda: labels.count() >= 2)
+
+    spans = labels.evaluate_all(
+        "elements => elements.map(element => {"
+        " const box = element.getBoundingClientRect();"
+        " return {text: element.textContent, left: box.left, right: box.right};"
+        " }).sort((a, b) => a.left - b.left)"
+    )
+    overlapping = [
+        (left["text"], right["text"])
+        for left, right in itertools.pairwise(spans)
+        if left["right"] > right["left"]
+    ]
+    assert overlapping == [], f"Overlapping time axis labels: {overlapping}"
+
+
+def test_wheel_over_treemap_scrolls_page(app: Page):
+    """A wheel right after the pointer enters a treemap scrolls the page.
+
+    ECharts turns on wheel roam for treemaps by default and would otherwise
+    zoom the treemap and block the page scroll.
+    """
+    chart = _get_chart(app, "c_treemap")
+    chart.scroll_into_view_if_needed()
+    expect(chart).to_have_attribute("aria-busy", "false")
+    main = app.get_by_test_id("stMain")
+    scroll_before = main.evaluate("el => el.scrollTop")
+    assert scroll_before > 0
+
+    chart.hover()
+    for _ in range(3):
+        app.mouse.wheel(0, -200)
+
+    wait_until(app, lambda: main.evaluate("el => el.scrollTop") < scroll_before)

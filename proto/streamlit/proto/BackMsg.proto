@@ -59,12 +59,7 @@ message BackMsg {
     BackendOperationRequest backend_operation_request = 19;
   }
 
-  // An ID used to associate this BackMsg with the corresponding ForwardMsgs
-  // that are sent to the client due to it. As its name suggests, this field
-  // should only be used for testing.
-  string debug_last_backmsg_id = 13;
-
-  reserved 1, 2, 3, 4, 8, 9, 10, 18;
+  reserved 1, 2, 3, 4, 8, 9, 10, 13, 18;
   // Next: 20
 }
 

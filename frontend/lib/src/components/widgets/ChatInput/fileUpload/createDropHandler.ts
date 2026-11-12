@@ -17,13 +17,15 @@
 import { zip } from "lodash-es"
 import { ErrorCode as FileErrorCode } from "react-dropzone"
 
-import {
+import type {
   ChatInput as ChatInputProto,
   FileURLs as FileURLsProto,
 } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
-import { FileUploadClient } from "~lib/FileUploadClient"
+import type { FileUploadClient } from "~lib/FileUploadClient"
+import { ensureError } from "~lib/util/ErrorHandling"
 import { type FileRejection, getRejectedFileInfo } from "~lib/util/FileHelper"
 
 import { validateFileType } from "./fileUploadUtils"
@@ -77,7 +79,9 @@ const filterFiles = (
         errors: [
           {
             code: FileErrorCode.FileInvalidType,
-            message: validation.errorMessage || "File type not allowed.",
+            message: isNullOrEmptyString(validation.errorMessage)
+              ? "File type not allowed."
+              : validation.errorMessage,
           },
         ],
       })
@@ -127,7 +131,7 @@ export const createDropHandler =
     ) {
       const firstFileIndex = rejectedFiles.findIndex(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- TODO: Fix this
-        file => file.errors?.[0].code === FileErrorCode.TooManyFiles
+        file => file.errors[0].code === FileErrorCode.TooManyFiles
       )
 
       if (firstFileIndex >= 0) {
@@ -171,8 +175,9 @@ export const createDropHandler =
             )
           }
         )
+        return
       })
-      .catch((errorMessage: string) => {
+      .catch((error: unknown) => {
         addFiles(
           acceptedFiles.map(f => {
             return new UploadFileInfo(
@@ -181,7 +186,8 @@ export const createDropHandler =
               getNextLocalFileId(),
               {
                 type: "error",
-                errorMessage,
+                // fetchFileURLs rejects with the backend error string
+                errorMessage: ensureError(error).message,
               },
               f
             )

@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import type { ReactElement } from "react"
+
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import type { MockInstance } from "vitest"
 
@@ -24,7 +32,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import { type FormsData, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateTimeInput, { type Props } from "./DateTimeInput"
 
@@ -62,6 +70,15 @@ const getProps = (
     formsDataChanged: vi.fn(),
   }),
 })
+
+/** Let a scheduled rerun flush before asserting whether one was sent. */
+async function flushScheduledRerun(): Promise<void> {
+  await act(async () => {
+    await new Promise(resolve => {
+      setTimeout(resolve, 0)
+    })
+  })
+}
 
 describe("DateTimeInput widget", () => {
   it("renders without crashing", () => {
@@ -117,12 +134,30 @@ describe("DateTimeInput widget", () => {
     expect(segments.length).toBeGreaterThanOrEqual(5)
   })
 
+  it("keeps trailing controls outside the field scroller", () => {
+    const props = getProps({
+      default: [],
+      value: ["2025-03-15T10:30"],
+      setValue: true,
+    })
+    render(<DateTimeInput {...props} />)
+
+    const field = screen.getByTestId("stDateTimeInputField")
+    const scroller = screen.getByTestId("stDateTimeInputFieldsScroller")
+    const clearButton = screen.getByTestId("stDateTimeInputClearButton")
+
+    expect(scroller.parentElement).toBe(field)
+    expect(field).toContainElement(clearButton)
+    expect(scroller).not.toContainElement(clearButton)
+  })
+
   it("can be disabled", () => {
     const props = getProps({}, true)
     render(<DateTimeInput {...props} />)
 
     const field = screen.getByTestId("stDateTimeInputField")
     expect(field).toHaveAttribute("data-disabled")
+    expect(screen.getByTestId("stDateTimeInputCalendarButton")).toBeDisabled()
   })
 
   it("opens calendar popover on focus", async () => {
@@ -525,6 +560,9 @@ describe("DateTimeInput widget", () => {
       await waitFor(() => {
         expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
       })
+      expect(
+        screen.getByTestId("stDateTimeInputFieldsScroller")
+      ).not.toContainElement(screen.getByTestId("stDateTimeInputError"))
 
       // Blur reverts display to committed value and clears error
       await user.click(document.body)
@@ -590,6 +628,44 @@ describe("DateTimeInput widget", () => {
       await user.paste("not-a-datetime")
 
       expect(spy).not.toHaveBeenCalled()
+    })
+
+    it("commits a rejected out-of-range paste on blur once the range allows it", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-01T00:00",
+        max: "2025-11-30T23:59",
+      })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      const { rerender } = render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await user.paste("2025-12-20T08:30")
+
+      expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      expect(spy).not.toHaveBeenCalled()
+
+      // The app widens the range while the pasted value is still on screen.
+      rerender(
+        <DateTimeInput
+          {...props}
+          element={DateTimeInputProto.create({
+            ...props.element,
+            max: "2025-12-31T23:59",
+          })}
+        />
+      )
+      await user.click(document.body)
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-12-20T08:30"],
+          expect.anything()
+        )
+      })
     })
   })
 
@@ -868,7 +944,8 @@ describe("DateTimeInput widget", () => {
         await clearSegment(user, segment)
       }
 
-      // Tab from last segment to leave the field (closes popover + blur)
+      // Tab past the calendar button to leave the field (closes popover + blur)
+      await user.tab()
       await user.tab()
 
       // Close-commit reverts display locally; no setStringArrayValue fires
@@ -983,7 +1060,49 @@ describe("DateTimeInput widget", () => {
       expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
     })
 
-    it("synchronous formCommit fires on outside-click from active calendar (race guard)", async () => {
+    it("calls submitForm on Enter once an out-of-range value is back in range", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        min: "2025-11-19T00:00",
+        max: "2025-11-19T18:00",
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm").mockImplementation(() => true)
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const hourSegment = screen
+        .getAllByRole("spinbutton")
+        .find(s => s.getAttribute("data-type") === "hour") as HTMLElement
+      await user.click(hourSegment)
+      // 19:45 is past the 18:00 max.
+      await user.keyboard("{ArrowUp}{ArrowUp}{ArrowUp}")
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+      })
+
+      // 17:45 is in range again, so the range error clears and Enter both
+      // commits and submits.
+      await user.keyboard("{ArrowDown}{ArrowDown}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputError")
+        ).not.toBeInTheDocument()
+      })
+      await user.keyboard("{Enter}")
+
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        { formId: "form", fragmentId: undefined, fromUser: true }
+      )
+      expect(props.widgetMgr.submitForm).toHaveBeenCalledTimes(1)
+    })
+
+    it("synchronous form write fires on outside-click from active calendar (race guard)", async () => {
       const user = userEvent.setup()
       const props = getProps({
         default: ["2025-11-19T16:45"],
@@ -1014,7 +1133,7 @@ describe("DateTimeInput widget", () => {
         expect(calendar).toHaveAttribute("role", "dialog")
       })
 
-      // Click outside (simulates clicking Submit button) — formCommit must fire synchronously
+      // Click outside (simulates clicking Submit button) — the form write must fire synchronously
       await user.click(screen.getByTestId("outside"))
 
       await waitFor(() => {
@@ -1030,7 +1149,7 @@ describe("DateTimeInput widget", () => {
       })
     })
 
-    it("formCommit writes new value before click fires on dismiss-target (form race guard)", async () => {
+    it("sync form write lands before click fires on dismiss-target (form race guard)", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -1079,7 +1198,7 @@ describe("DateTimeInput widget", () => {
       // Click Submit button — pointerdown fires dismiss, click fires submit
       await user.click(screen.getByTestId("submit"))
 
-      // The sync formCommit write MUST appear before the click handler
+      // The sync form write MUST appear before the click handler
       const writeIdx = callLog.findIndex(e =>
         e.includes('["2025-11-19T17:45"]')
       )
@@ -1093,7 +1212,7 @@ describe("DateTimeInput widget", () => {
   })
 
   describe("Dedup guard prevents redundant commits on dismissal", () => {
-    it("outside-click triggers one commit (sync formCommit + async effect) in form mode", async () => {
+    it("outside-click triggers one commit (sync form write + async effect) in form mode", async () => {
       const user = userEvent.setup()
       const props = {
         ...getProps({
@@ -1138,7 +1257,7 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // One commit = 2 WM writes (sync formCommit + async effect).
+      // One commit = 2 WM writes (sync form write + async effect).
       // A duplicate commit (onClose + blur both firing) would produce 4.
       const matchingCalls = spy.mock.calls.filter(
         call =>
@@ -1177,7 +1296,8 @@ describe("DateTimeInput widget", () => {
       // Popover should be open
       expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
 
-      // Tab away from the last segment — this closes popover + triggers blur
+      // Tab past the calendar button — this closes popover + triggers blur
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1192,7 +1312,7 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // One commit = 2 WM writes (sync formCommit + async effect)
+      // One commit = 2 WM writes (sync form write + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
@@ -1240,7 +1360,7 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // One commit = 2 WM writes (sync formCommit + async effect)
+      // One commit = 2 WM writes (sync form write + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:45"])
@@ -1293,7 +1413,7 @@ describe("DateTimeInput widget", () => {
         )
       })
 
-      // One commit = 2 WM writes (sync formCommit + async effect)
+      // One commit = 2 WM writes (sync form write + async effect)
       const matchingCalls = spy.mock.calls.filter(
         call =>
           JSON.stringify(call[1]) === JSON.stringify(["2025-11-19T17:00"])
@@ -1397,7 +1517,8 @@ describe("DateTimeInput widget", () => {
       // After Escape, focus is restored to the last segment (minute).
       // Edit again via ArrowUp (step-snap 17:45 → 18:00) without reopening.
       await user.keyboard("{ArrowUp}")
-      // Tab away from last segment — must still commit the new value.
+      // Tab past the calendar button — must still commit the new value.
+      await user.tab()
       await user.tab()
 
       await waitFor(() => {
@@ -1649,6 +1770,200 @@ describe("DateTimeInput widget", () => {
     })
   })
 
+  describe("Calendar button ARIA", () => {
+    it("puts popup ARIA on the calendar button, not the field wrapper", () => {
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+      const field = screen.getByTestId("stDateTimeInputField")
+      expect(field).not.toHaveAttribute("aria-expanded")
+      expect(field).not.toHaveAttribute("aria-haspopup")
+      expect(field).not.toHaveAttribute("aria-controls")
+      expect(field).toHaveAttribute("aria-keyshortcuts", "Alt+ArrowDown")
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      expect(calendarButton).toHaveAttribute(
+        "aria-label",
+        "Choose date and time"
+      )
+      expect(calendarButton).toHaveAttribute("aria-haspopup", "dialog")
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+      expect(calendarButton).not.toHaveAttribute("aria-controls")
+      expect(calendarButton).not.toHaveAttribute("tabIndex", "-1")
+    })
+
+    it("calendar button opens active calendar and toggles aria-expanded", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      expect(calendar).toHaveAttribute("role", "dialog")
+      expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+      expect(calendarButton).toHaveAttribute("aria-controls")
+
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+      expect(calendarButton).not.toHaveAttribute("aria-controls")
+    })
+
+    it("Enter on the calendar button toggles the active dialog", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      act(() => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "true")
+
+      // Active mode moves focus into the grid; return to the button to close.
+      act(() => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveAttribute("aria-expanded", "false")
+    })
+
+    it("Enter on the calendar button does not submit a form", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        default: ["2025-11-19T16:45"],
+        formId: "form",
+      })
+      vi.spyOn(props.widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+      vi.spyOn(props.widgetMgr, "submitForm")
+      render(<DateTimeInput {...props} />)
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      act(() => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Enter}")
+
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      expect(props.widgetMgr.submitForm).not.toHaveBeenCalled()
+    })
+
+    it("Escape on the focused calendar button keeps focus on the toggle", async () => {
+      const user = userEvent.setup()
+      render(
+        <DateTimeInput {...getProps({ default: ["2025-11-19T16:45"] })} />
+      )
+
+      const segments = screen.getAllByRole("spinbutton")
+      await user.click(segments[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      act(() => {
+        calendarButton.focus()
+      })
+      await user.keyboard("{Escape}")
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+      expect(calendarButton).toHaveFocus()
+    })
+
+    it("focus leave closes; body blur commits; Safari pointerdown does not", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(
+        <>
+          <button type="button" data-testid="outside">
+            Outside
+          </button>
+          <DateTimeInput {...props} />
+        </>
+      )
+      const field = screen.getByTestId("stDateTimeInputField")
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      act(() => {
+        screen.getByTestId("outside").focus()
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+      fireEvent.blur(field, { relatedTarget: document.body })
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalled()
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("stDateTimeInputCalendar")
+        ).not.toBeInTheDocument()
+      })
+
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      const calendar = await screen.findByTestId("stDateTimeInputCalendar")
+      await user.keyboard("{ArrowUp}")
+      spy.mockClear()
+      const dayCell = within(calendar).getByRole("button", {
+        name: /November 20/,
+      })
+      for (const relatedTarget of [null, document.body]) {
+        /* eslint-disable testing-library/prefer-user-event */
+        fireEvent.pointerDown(dayCell)
+        fireEvent.blur(field, { relatedTarget })
+        /* eslint-enable testing-library/prefer-user-event */
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+        expect(spy).not.toHaveBeenCalled()
+      }
+    })
+  })
+
   describe("Active calendar (Alt+ArrowDown)", () => {
     it("Alt+ArrowDown opens calendar in active mode with focus on grid cell", async () => {
       const user = userEvent.setup()
@@ -1711,8 +2026,8 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Close by tabbing through all segments and out
-      for (let i = 0; i < segments.length; i++) {
+      // Close by tabbing through all segments, the calendar button, and out
+      for (let i = 0; i < segments.length + 1; i++) {
         await user.tab()
       }
       await waitFor(() => {
@@ -1824,10 +2139,16 @@ describe("DateTimeInput widget", () => {
       await user.click(segments[0])
       await screen.findByTestId("stDateTimeInputCalendar")
 
-      // Select a date — popover stays open
+      // The popover stays open after a date click. Wait until the calendar
+      // cell is focused before editing the time, or the next key changes the
+      // highlighted day instead of the hour.
       const day15 = screen.getByRole("button", { name: /15/ })
       await user.click(day15)
-      expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+      const calendar = screen.getByTestId("stDateTimeInputCalendar")
+      expect(calendar).toBeVisible()
+      await waitFor(() => {
+        expect(calendar.contains(document.activeElement)).toBe(true)
+      })
 
       // Edit time in popover
       const timeRow = screen.getByTestId("stDateTimeInputPopoverTime")
@@ -2468,7 +2789,6 @@ describe("DateTimeInput widget", () => {
       )
     })
 
-    // eslint-disable-next-line vitest/expect-expect -- asserts via expectCommitted
     it("completes the value when Tab leaves the field, not just on dismissal", async () => {
       const { user, props, spy } = renderEmpty()
 
@@ -2486,13 +2806,65 @@ describe("DateTimeInput widget", () => {
       await user.click(inline[0])
       await user.keyboard("20251119")
 
-      // Tab off the last segment closes the popover, so the merge has to happen
-      // while it is still mounted — otherwise its half is unreadable and both
-      // halves are discarded.
-      await user.click(inline[inline.length - 1])
+      // Tab past the calendar button closes the popover, so the merge has to
+      // happen while it is still mounted — otherwise its half is unreadable
+      // and both halves are discarded.
+      const lastInline = inline.at(-1)
+      if (!lastInline) {
+        throw new Error("Expected a date-time segment")
+      }
+      await user.click(lastInline)
+      await user.tab()
       await user.tab()
 
       await expectCommitted(spy, props, "2025-11-19T09:45")
+      // Blur/rAF must not double-commit after the leave Tabs.
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it("commits once when Safari Tab skips the calendar button (rAF leave)", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      // Popover-only time must stay readable when the rAF leave closes.
+      await user.click(screen.getAllByRole("spinbutton")[0])
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+      const inline = within(
+        screen.getByTestId("stDateTimeInputField")
+      ).getAllByRole("spinbutton")
+      await user.click(inline[0])
+      await user.keyboard("20251119")
+      const lastInline = inline.at(-1)
+      if (!lastInline) throw new Error("Expected a date-time segment")
+      await user.click(lastInline)
+
+      // keydown arms skip + rAF; outside focus delivers blur (do not also
+      // fireEvent.blur — that clears skip and lets focus-blur commit early).
+      /* eslint-disable testing-library/prefer-user-event */
+      fireEvent.keyDown(lastInline, { key: "Tab" })
+      /* eslint-enable testing-library/prefer-user-event */
+      act(() => {
+        screen.getByTestId("outside").focus()
+      })
+      await act(
+        async () =>
+          new Promise<void>(resolve => {
+            requestAnimationFrame(() => {
+              resolve()
+            })
+          })
+      )
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
+      expect(spy).toHaveBeenCalledTimes(1)
+      expect(
+        screen.queryByTestId("stDateTimeInputCalendar")
+      ).not.toBeInTheDocument()
     })
 
     it("prefers the popover time over an inline draft when both are on screen at dismissal", async () => {
@@ -2524,6 +2896,78 @@ describe("DateTimeInput widget", () => {
         expect.anything()
       )
       expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it("commits a popover time when the calendar button closes an active dialog", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ default: ["2025-11-19T16:45"] })
+      const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+      render(<DateTimeInput {...props} />)
+      spy.mockClear()
+
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+
+      const popoverHour = screen
+        .getByTestId("stDateTimeInputPopoverTime")
+        .querySelector('[data-type="hour"]') as HTMLElement
+      await user.click(popoverHour)
+      await user.keyboard("{ArrowUp}")
+
+      // Dismiss with the calendar button — commit while popover time is mounted.
+      await user.click(calendarButton)
+
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith(
+          props.element.id,
+          ["2025-11-19T17:45"],
+          {
+            formId: props.element.formId,
+            fragmentId: undefined,
+            fromUser: true,
+          }
+        )
+      })
+    })
+
+    it("commits an inline date plus popover-only time when the calendar button closes", async () => {
+      const { user, props, spy } = renderEmpty()
+
+      const inlineField = screen.getByTestId("stDateTimeInputField")
+      await user.click(within(inlineField).getAllByRole("spinbutton")[0])
+      await user.keyboard("20251119")
+
+      await screen.findByTestId("stDateTimeInputCalendar")
+      await user.click(
+        within(screen.getByTestId("stDateTimeInputPopoverTime")).getAllByRole(
+          "spinbutton"
+        )[0]
+      )
+      await user.keyboard("0945")
+
+      // Passive preview → calendar button enters active dialog; second click
+      // closes and must commit the merged value.
+      const calendarButton = screen.getByTestId(
+        "stDateTimeInputCalendarButton"
+      )
+      await user.click(calendarButton)
+      await waitFor(() => {
+        expect(screen.getByTestId("stDateTimeInputCalendar")).toHaveAttribute(
+          "role",
+          "dialog"
+        )
+      })
+      await user.click(calendarButton)
+
+      await expectCommitted(spy, props, "2025-11-19T09:45")
     })
 
     it("commits the same value again after a form clear", async () => {
@@ -2782,5 +3226,1307 @@ describe("DateTimeInput widget", () => {
         expect.anything()
       )
     })
+  })
+})
+
+describe("on_change='ignore' mode", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function renderWithRerunSpy(
+    elementProps: Partial<DateTimeInputProto> = {},
+    formsDataChanged?: (formsData: FormsData) => void
+  ): {
+    user: ReturnType<typeof userEvent.setup>
+    props: Props
+    setStringArrayValueSpy: ReturnType<typeof vi.spyOn>
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+  } {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: formsData => {
+        formsDataChanged?.(formsData)
+      },
+    })
+    const props = getProps(elementProps)
+    props.widgetMgr = widgetMgr
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(<DateTimeInput {...props} />)
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    return { user, props, setStringArrayValueSpy, sendRerunBackMsg }
+  }
+
+  const hourSegment = (): HTMLElement => {
+    const segment = screen
+      .getAllByRole("spinbutton")
+      .find(s => s.getAttribute("data-type") === "hour")
+    if (!segment) {
+      throw new Error("hour segment not found")
+    }
+    return segment
+  }
+
+  it("passes triggerRerun: false when ignoreRerun is true", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: true })
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not pass triggerRerun when ignoreRerun is false", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: false })
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).toHaveBeenCalled()
+  })
+
+  it("does not change form batching when ignoreRerun is true", async () => {
+    let pendingFormIds = new Set<string>()
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy(
+        {
+          ignoreRerun: true,
+          formId: "testForm",
+        },
+        newData => {
+          pendingFormIds = newData.formsWithPendingChanges
+        }
+      )
+
+    await user.click(hourSegment())
+    await user.keyboard("{ArrowUp}")
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenLastCalledWith(
+        props.element.id,
+        ["2025-11-19T17:45"],
+        {
+          formId: "testForm",
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(pendingFormIds).toEqual(new Set(["testForm"]))
+  })
+
+  it("does not commit on keystroke outside a form when ignoreRerun is true", async () => {
+    const { user, setStringArrayValueSpy } = renderWithRerunSpy({
+      ignoreRerun: true,
+    })
+
+    await user.click(hourSegment())
+    await user.keyboard("17")
+
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a calendar date is selected and the popover closes", async () => {
+    const user = userEvent.setup()
+    const sendRerunBackMsg = vi.fn()
+    const widgetMgr = new WidgetStateManager({
+      sendRerunBackMsg,
+      formsDataChanged: vi.fn(),
+    })
+    const props = getProps({
+      ignoreRerun: true,
+      default: ["2025-11-19T16:45"],
+      min: "2025-11-01T00:00",
+      max: "2025-11-30T23:59",
+    })
+    props.widgetMgr = widgetMgr
+    const setStringArrayValueSpy = vi.spyOn(
+      props.widgetMgr,
+      "setStringArrayValue"
+    )
+
+    render(
+      <div>
+        <DateTimeInput {...props} />
+        <button type="button" data-testid="outside">
+          outside
+        </button>
+      </div>
+    )
+    setStringArrayValueSpy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+
+    await user.click(screen.getByRole("button", { name: /15/ }))
+    expect(screen.getByTestId("stDateTimeInputCalendar")).toBeVisible()
+    expect(setStringArrayValueSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByTestId("outside"))
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-15T16:45"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when clear is clicked", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({
+        ignoreRerun: true,
+        default: [],
+        value: ["2025-06-15T10:00"],
+        setValue: true,
+      })
+
+    const clearButton = screen.getByTestId("stDateTimeInputClearButton")
+    await user.click(clearButton)
+
+    expect(setStringArrayValueSpy).toHaveBeenCalledWith(props.element.id, [], {
+      formId: props.element.formId,
+      fragmentId: undefined,
+      fromUser: true,
+      triggerRerun: false,
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("passes triggerRerun: false when a datetime is pasted", async () => {
+    const { user, props, setStringArrayValueSpy, sendRerunBackMsg } =
+      renderWithRerunSpy({ ignoreRerun: true })
+
+    await user.click(screen.getAllByRole("spinbutton")[0])
+    await user.paste("2025-06-15T09:30")
+
+    await waitFor(() => {
+      expect(setStringArrayValueSpy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-06-15T09:30"],
+        {
+          formId: props.element.formId,
+          fragmentId: undefined,
+          fromUser: true,
+          triggerRerun: false,
+        }
+      )
+    })
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+})
+
+describe("required", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /** An empty required widget whose calendar is pinned to November 2025. */
+  const getRequiredEmptyProps = (
+    elementProps: Partial<DateTimeInputProto> = {}
+  ): Props =>
+    getProps({
+      default: [],
+      required: true,
+      min: "2025-11-01T00:00",
+      max: "2025-11-30T23:59",
+      ...elementProps,
+    })
+
+  const createFormWidgetMgr = (): {
+    sendRerunBackMsg: ReturnType<typeof vi.fn>
+    widgetMgr: WidgetStateManager
+  } => {
+    const sendRerunBackMsg = vi.fn()
+    return {
+      sendRerunBackMsg,
+      widgetMgr: new WidgetStateManager({
+        sendRerunBackMsg,
+        formsDataChanged: vi.fn(),
+      }),
+    }
+  }
+
+  /** The widget next to an outside button that clicks can dismiss into. */
+  const withOutside = (props: Props): ReactElement => (
+    <div>
+      <DateTimeInput {...props} />
+      <button type="button" data-testid="outside">
+        outside
+      </button>
+    </div>
+  )
+
+  /** Renders the widget next to an outside target to dismiss into. */
+  const renderWithOutside = (
+    props: Props
+  ): ReturnType<typeof render> & {
+    user: ReturnType<typeof userEvent.setup>
+  } => {
+    const user = userEvent.setup()
+    const result = render(withOutside(props))
+    return { ...result, user }
+  }
+
+  /** The inline field's segments (never the popover TimeField's). */
+  const inlineSegments = (field?: HTMLElement): HTMLElement[] =>
+    within(field ?? screen.getByTestId("stDateTimeInputField")).getAllByRole(
+      "spinbutton"
+    )
+
+  /** Types digits into the inline segments from the first one on; React Aria
+   * advances focus from one segment to the next. */
+  const typeDateTime = async (
+    user: ReturnType<typeof userEvent.setup>,
+    digits: string
+  ): Promise<void> => {
+    await user.click(inlineSegments()[0])
+    await user.keyboard(digits)
+  }
+
+  /** Backspaces every inline segment back to its placeholder. */
+  const clearAllSegments = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<void> => {
+    for (const segment of inlineSegments()) {
+      await clearSegment(user, segment)
+    }
+  }
+
+  /** Commits a datetime, then clears it and leaves, which blocks the commit. */
+  const commitThenBlockEmpty = async (
+    user: ReturnType<typeof userEvent.setup>
+  ): Promise<void> => {
+    await typeDateTime(user, "202511191015")
+    await user.click(screen.getByTestId("outside"))
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+  }
+
+  /** Opens the popover from the inline field and types into its TimeField,
+   * leaving the inline date empty. */
+  const typePopoverTime = async (
+    user: ReturnType<typeof userEvent.setup>,
+    digits: string
+  ): Promise<void> => {
+    await user.click(inlineSegments()[0])
+    await screen.findByTestId("stDateTimeInputCalendar")
+    const [firstTimeSegment] = within(
+      screen.getByTestId("stDateTimeInputPopoverTime")
+    ).getAllByRole("spinbutton")
+    await user.click(firstTimeSegment)
+    await user.keyboard(digits)
+  }
+
+  const expectRequiredError = (): void => {
+    expect(screen.getByTestId("stDateTimeInputError")).toBeVisible()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(
+      screen
+        .getByTestId("stDateTimeInputField")
+        .querySelector("[aria-invalid]")
+    ).not.toBeNull()
+  }
+
+  const expectNoError = (): void => {
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("stDateTimeInputError")
+    ).not.toBeInTheDocument()
+    expect(
+      screen
+        .getByTestId("stDateTimeInputField")
+        .querySelector("[aria-invalid]")
+    ).toBeNull()
+  }
+
+  const expectSegments = (texts: string[]): void => {
+    const segments = inlineSegments()
+    texts.forEach((text, i) => {
+      expect(segments[i]).toHaveTextContent(text)
+    })
+  }
+
+  const expectPlaceholders = (): void => {
+    inlineSegments().forEach(segment => {
+      expect(segment).toHaveAttribute("data-placeholder", "true")
+    })
+  }
+
+  it("does not show a required error on initial render", () => {
+    render(<DateTimeInput {...getRequiredEmptyProps()} />)
+
+    expect(screen.getByTestId("stDateTimeInputField")).toHaveAttribute(
+      "aria-required",
+      "true"
+    )
+    expectNoError()
+  })
+
+  it("sets aria-required only when required is true", () => {
+    const { unmount } = render(<DateTimeInput {...getRequiredEmptyProps()} />)
+    const requiredField = screen.getByTestId("stDateTimeInputField")
+    expect(requiredField).toHaveAttribute("aria-required", "true")
+    const requiredGroups = [
+      ...requiredField.querySelectorAll('[role="group"]'),
+    ].filter(group => group.querySelector('[role="spinbutton"]'))
+    expect(requiredGroups.length).toBeGreaterThan(0)
+    requiredGroups.forEach(group => {
+      expect(group).toHaveAttribute("aria-required", "true")
+    })
+    unmount()
+
+    render(<DateTimeInput {...getProps({ required: false })} />)
+    const optionalField = screen.getByTestId("stDateTimeInputField")
+    expect(optionalField).not.toHaveAttribute("aria-required")
+    const optionalGroups = [
+      ...optionalField.querySelectorAll('[role="group"]'),
+    ].filter(group => group.querySelector('[role="spinbutton"]'))
+    expect(optionalGroups.length).toBeGreaterThan(0)
+    optionalGroups.forEach(group => {
+      expect(group).not.toHaveAttribute("aria-required")
+    })
+  })
+
+  it("shows the required marker when the label is visible", () => {
+    render(<DateTimeInput {...getRequiredEmptyProps()} />)
+
+    expect(screen.getByTestId("stWidgetLabelRequired")).toHaveTextContent(
+      "(required)"
+    )
+  })
+
+  it("does not show the required marker when required is false", () => {
+    render(<DateTimeInput {...getProps()} />)
+
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["hidden", LabelVisibilityProto.LabelVisibilityOptions.HIDDEN],
+    ["collapsed", LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED],
+  ])(
+    "omits the required marker when the label is %s",
+    (_visibility, value) => {
+      render(
+        <DateTimeInput
+          {...getRequiredEmptyProps({ labelVisibility: { value } })}
+        />
+      )
+
+      expect(
+        screen.queryByTestId("stWidgetLabelRequired")
+      ).not.toBeInTheDocument()
+      expect(screen.getByTestId("stDateTimeInputField")).toHaveAttribute(
+        "aria-required",
+        "true"
+      )
+    }
+  )
+
+  it("blocks empty blur commits outside a form", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = { ...getRequiredEmptyProps(), widgetMgr }
+    const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "202511191015")
+    await user.click(screen.getByTestId("outside"))
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T10:15"],
+        expect.anything()
+      )
+    })
+    await flushScheduledRerun()
+    spy.mockClear()
+    sendRerunBackMsg.mockClear()
+
+    await clearAllSegments(user)
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectRequiredError()
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Error:")
+    expectPlaceholders()
+    expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("shows a required error when a typed-but-uncommitted value is cleared before leaving", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "202511191015")
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectRequiredError()
+  })
+
+  it("does not commit or show an error when an optional field is typed then cleared", async () => {
+    const props = getRequiredEmptyProps({ required: false })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "202511191015")
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectNoError()
+  })
+
+  it("blocks an empty Enter commit outside a form", async () => {
+    const props = getRequiredEmptyProps({
+      value: ["2025-11-19T10:15"],
+      setValue: true,
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await clearAllSegments(user)
+    await user.keyboard("{Enter}")
+
+    expect(spy).not.toHaveBeenCalled()
+    expectRequiredError()
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+  })
+
+  it("blocks a second empty commit after re-editing in the same focus session", async () => {
+    const props = getRequiredEmptyProps({
+      value: ["2025-11-19T10:15"],
+      setValue: true,
+    })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    // Enter keeps the popover open, so the blocked attempt and the retry
+    // share one interaction.
+    await clearAllSegments(user)
+    await user.keyboard("{Enter}")
+    expectRequiredError()
+
+    await typeDateTime(user, "202511201130")
+    expectNoError()
+
+    await clearAllSegments(user)
+    await user.keyboard("{Enter}")
+    expectRequiredError()
+
+    await user.click(screen.getByTestId("outside"))
+    expectRequiredError()
+    expect(spy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+  })
+
+  it("does not show a required error on unedited empty blur", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await user.click(inlineSegments()[0])
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectNoError()
+  })
+
+  it("does not show a required error on Enter in an untouched empty field outside a form", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await user.click(inlineSegments()[0])
+    await user.keyboard("{Enter}")
+
+    expect(spy).not.toHaveBeenCalled()
+    expectNoError()
+  })
+
+  it("reverts to default when clearing a non-empty default, even when required", async () => {
+    const props = getProps({ required: true })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    expectSegments(["2025", "11", "19", "16", "45"])
+    expectNoError()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it("does not render a clear button when required", () => {
+    render(
+      <DateTimeInput
+        {...getRequiredEmptyProps({
+          value: ["2025-11-19T10:15"],
+          setValue: true,
+        })}
+      />
+    )
+
+    expectSegments(["2025", "11", "19", "10", "15"])
+    expect(
+      screen.queryByTestId("stDateTimeInputClearButton")
+    ).not.toBeInTheDocument()
+  })
+
+  it("still shows the clear button when required is false and default is empty", () => {
+    render(
+      <DateTimeInput
+        {...getRequiredEmptyProps({
+          required: false,
+          value: ["2025-11-19T10:15"],
+          setValue: true,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stDateTimeInputClearButton")).toBeVisible()
+  })
+
+  it("does not show a required error on empty blur inside a form", async () => {
+    const props = getRequiredEmptyProps({ formId: "form" })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "202511191015")
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(props.element.id, [], expect.anything())
+    })
+    expectNoError()
+  })
+
+  it("registers a form validator for required", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    render(<DateTimeInput {...props} />)
+
+    let submitted = true
+    act(() => {
+      submitted = widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(submitted).toBe(false)
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectRequiredError()
+  })
+
+  it("does not block form submit when required is false", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = {
+      ...getRequiredEmptyProps({ formId: "form", required: false }),
+      widgetMgr,
+    }
+    render(<DateTimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expectNoError()
+  })
+
+  it("runs all form validators so every required field can show an error", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const firstProps = {
+      ...getRequiredEmptyProps({ id: "first", formId: "form", label: "A" }),
+      widgetMgr,
+    }
+    const secondProps = {
+      ...getRequiredEmptyProps({ id: "second", formId: "form", label: "B" }),
+      widgetMgr,
+    }
+    render(
+      <>
+        <DateTimeInput {...firstProps} />
+        <DateTimeInput {...secondProps} />
+      </>
+    )
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    const alerts = screen.getAllByRole("alert")
+    expect(alerts).toHaveLength(2)
+    alerts.forEach(alert => {
+      expect(alert).toHaveTextContent("This field is required.")
+    })
+    expect(screen.getAllByTestId("stDateTimeInputError")).toHaveLength(2)
+  })
+
+  it("does not clear widget values when a required form submit fails", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+
+    await typeDateTime(user, "202511191015")
+    await clearAllSegments(user)
+    spy.mockClear()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    // clear_on_submit would reset the widget to its default with a write.
+    expect(spy).not.toHaveBeenCalled()
+    expectRequiredError()
+  })
+
+  it("commits an uncommitted typed value when the form is submitted", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+
+    await typeDateTime(user, "202511191015")
+    spy.mockClear()
+
+    // Submit while the field still holds focus, so no blur commit ran.
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      props.element.id,
+      ["2025-11-19T10:15"],
+      expect.anything()
+    )
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expectNoError()
+  })
+
+  it("deregisters the form submit validator on unmount", () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { unmount } = render(<DateTimeInput {...props} />)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+
+    unmount()
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+  })
+
+  it("required takes precedence over min/max copy when empty", async () => {
+    const { user } = renderWithOutside(getRequiredEmptyProps())
+
+    await typeDateTime(user, "202511191015")
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+    expect(screen.getByRole("alert")).not.toHaveTextContent("allowed range")
+  })
+
+  it("shows range copy for an out-of-range datetime when required", async () => {
+    const { user } = renderWithOutside(getRequiredEmptyProps())
+
+    await typeDateTime(user, "202512151015")
+
+    expect(screen.getByRole("alert")).toHaveTextContent("allowed range")
+    expect(screen.getByRole("alert")).not.toHaveTextContent(
+      "This field is required."
+    )
+
+    // Leaving reverts the out-of-range entry, which is not a failed commit.
+    await user.click(screen.getByTestId("outside"))
+    expectNoError()
+  })
+
+  it("clears leftover required chrome when required is turned off and does not resurrect it", async () => {
+    const props = getRequiredEmptyProps()
+    const { user, rerender } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+
+    rerender(
+      withOutside({
+        ...props,
+        element: DateTimeInputProto.create({
+          ...props.element,
+          required: false,
+        }),
+      })
+    )
+
+    expectNoError()
+    expect(screen.getByTestId("stDateTimeInputField")).not.toHaveAttribute(
+      "aria-required"
+    )
+    expect(
+      screen.queryByTestId("stWidgetLabelRequired")
+    ).not.toBeInTheDocument()
+
+    rerender(
+      withOutside({
+        ...props,
+        element: DateTimeInputProto.create({ ...props.element }),
+      })
+    )
+
+    expectNoError()
+    expect(screen.getByTestId("stDateTimeInputField")).toHaveAttribute(
+      "aria-required",
+      "true"
+    )
+  })
+
+  it("clears a leftover required error after a programmatic refill", () => {
+    const props = getRequiredEmptyProps({ formId: "form" })
+    const { rerender } = render(<DateTimeInput {...props} />)
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError()
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2025-11-19T10:15"],
+        })}
+      />
+    )
+
+    expectSegments(["2025", "11", "19", "10", "15"])
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+    expectNoError()
+  })
+
+  it("applies a programmatic setValue after a blocked empty required commit", async () => {
+    const props = getRequiredEmptyProps()
+    const { user, rerender } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+
+    rerender(
+      withOutside({
+        ...props,
+        element: DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2025-11-20T08:30"],
+        }),
+      })
+    )
+
+    expectSegments(["2025", "11", "20", "08", "30"])
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-20T08:30",
+    ])
+    expectNoError()
+  })
+
+  it("applies a same-value programmatic setValue after a blocked empty required commit", async () => {
+    const props = getRequiredEmptyProps()
+    const { user, rerender } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+    expectPlaceholders()
+    const segmentBefore = inlineSegments()[0]
+
+    rerender(
+      withOutside({
+        ...props,
+        element: DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2025-11-19T10:15"],
+        }),
+      })
+    )
+
+    // The unchanged value repaints through a remount of the field.
+    expect(inlineSegments()[0]).not.toBe(segmentBefore)
+    expectSegments(["2025", "11", "19", "10", "15"])
+    expectNoError()
+  })
+
+  it("does not remount on a same-value programmatic setValue that matches the display", () => {
+    const props = getRequiredEmptyProps({
+      value: ["2025-11-19T10:15"],
+      setValue: true,
+    })
+    const { rerender } = render(<DateTimeInput {...props} />)
+    const segmentBefore = inlineSegments()[0]
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2025-11-19T10:15"],
+        })}
+      />
+    )
+
+    expect(inlineSegments()[0]).toBe(segmentBefore)
+    expectSegments(["2025", "11", "19", "10", "15"])
+  })
+
+  it("applies an empty programmatic setValue after an in-progress edit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ required: true, formId: "form" })
+    const { rerender } = render(<DateTimeInput {...props} />)
+
+    const [year, month] = inlineSegments()
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: [],
+        })}
+      />
+    )
+
+    expectPlaceholders()
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([])
+    // A programmatic empty value is allowed; the error waits for a commit.
+    expect(
+      screen.queryByText("This field is required.")
+    ).not.toBeInTheDocument()
+  })
+
+  it("still blocks required submit when session_state emptied a non-empty default", async () => {
+    const user = userEvent.setup()
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = {
+      ...getProps({ required: true, formId: "form" }),
+      widgetMgr,
+    }
+    const { rerender } = render(<DateTimeInput {...props} />)
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: [],
+        })}
+      />
+    )
+
+    const [year, month] = inlineSegments()
+    await clearSegment(user, year)
+    await clearSegment(user, month)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("does not show a leftover required error after a programmatic fill-then-clear", () => {
+    const props = getRequiredEmptyProps({ formId: "form" })
+    const { rerender } = render(<DateTimeInput {...props} />)
+
+    act(() => {
+      props.widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError()
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: ["2025-11-19T10:15"],
+        })}
+      />
+    )
+    expectNoError()
+
+    rerender(
+      <DateTimeInput
+        {...props}
+        element={DateTimeInputProto.create({
+          ...props.element,
+          setValue: true,
+          value: [],
+        })}
+      />
+    )
+
+    expectNoError()
+    expectPlaceholders()
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([])
+  })
+
+  it("keeps the last accepted ignore pending value when a required empty commit is blocked", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = {
+      ...getRequiredEmptyProps({ ignoreRerun: true }),
+      widgetMgr,
+    }
+    const spy = vi.spyOn(widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "202511191015")
+    await user.click(screen.getByTestId("outside"))
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T10:15"],
+        expect.objectContaining({ triggerRerun: false })
+      )
+    })
+
+    await clearAllSegments(user)
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+    expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+    expectRequiredError()
+    await flushScheduledRerun()
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+  })
+
+  it("does not write empty on a blocked empty commit when queryParamKey is set", async () => {
+    const props = getRequiredEmptyProps({ queryParamKey: "meeting" })
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await commitThenBlockEmpty(user)
+
+    expect(spy).toHaveBeenCalledWith(
+      props.element.id,
+      ["2025-11-19T10:15"],
+      expect.anything()
+    )
+    expect(spy).not.toHaveBeenCalledWith(
+      props.element.id,
+      [],
+      expect.anything()
+    )
+    expectRequiredError()
+  })
+
+  it("does not snap an emptied required field back to the last accepted value on rerender", async () => {
+    const props = getRequiredEmptyProps()
+    const { user, rerender } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+
+    // A rerun from another widget sends a new proto without setValue.
+    rerender(
+      withOutside({
+        ...props,
+        element: DateTimeInputProto.create({ ...props.element }),
+      })
+    )
+
+    expectPlaceholders()
+    expectRequiredError()
+    expect(props.widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+  })
+
+  it("blocks Enter-to-submit while a required form field is empty", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const submitSpy = vi.spyOn(widgetMgr, "submitForm")
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { user } = renderWithOutside(props)
+
+    await user.click(inlineSegments()[0])
+    await user.keyboard("{Enter}")
+
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectRequiredError()
+  })
+
+  it("submits once on Enter after typing a valid value into a required form field", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const submitSpy = vi.spyOn(widgetMgr, "submitForm")
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { user } = renderWithOutside(props)
+
+    await typeDateTime(user, "202511191015")
+    await user.keyboard("{Enter}")
+
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T10:15",
+    ])
+    expectNoError()
+  })
+
+  it("submits on the first Enter when an inline date plus popover time clears a required error", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    vi.spyOn(widgetMgr, "allowFormEnterToSubmit").mockReturnValue(true)
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { user } = renderWithOutside(props)
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+    expectRequiredError()
+    const submitSpy = vi.spyOn(widgetMgr, "submitForm")
+
+    await typePopoverTime(user, "0945")
+    await typeDateTime(user, "20251119")
+    await user.keyboard("{Enter}")
+
+    expect(submitSpy).toHaveBeenCalledTimes(1)
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    expect(widgetMgr.getStringArrayValue(props.element)).toEqual([
+      "2025-11-19T09:45",
+    ])
+    expectNoError()
+  })
+
+  it("treats a date without a time as incomplete rather than empty", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typeDateTime(user, "20251119")
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectNoError()
+  })
+
+  it("does not commit or show an error when a popover-only time is dismissed", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typePopoverTime(user, "0945")
+    await user.click(screen.getByTestId("outside"))
+
+    expect(spy).not.toHaveBeenCalled()
+    expectNoError()
+  })
+
+  it("blocks form submit after a popover-only time is dismissed", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { user } = renderWithOutside(props)
+
+    await typePopoverTime(user, "0945")
+    await user.click(screen.getByTestId("outside"))
+    expectNoError()
+
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).not.toHaveBeenCalled()
+    expectRequiredError()
+  })
+
+  it("commits a date typed inline with a popover time when required", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+    spy.mockClear()
+
+    await typePopoverTime(user, "0945")
+    await typeDateTime(user, "20251119")
+    await user.click(screen.getByTestId("outside"))
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-19T09:45"],
+        expect.anything()
+      )
+    })
+    expectNoError()
+  })
+
+  it("clears the required error and commits when a full datetime is pasted", async () => {
+    const props = getRequiredEmptyProps()
+    const spy = vi.spyOn(props.widgetMgr, "setStringArrayValue")
+    const { user } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+    spy.mockClear()
+
+    await user.click(inlineSegments()[0])
+    await user.paste("2025-11-20T08:30")
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith(
+        props.element.id,
+        ["2025-11-20T08:30"],
+        expect.anything()
+      )
+    })
+    expectNoError()
+  })
+
+  it("shows range copy instead of the required error after an out-of-range paste", async () => {
+    const props = getRequiredEmptyProps()
+    const { user } = renderWithOutside(props)
+
+    await commitThenBlockEmpty(user)
+    expectRequiredError()
+
+    await user.click(inlineSegments()[0])
+    await user.paste("2025-12-20T08:30")
+
+    expect(screen.getByRole("alert")).toHaveTextContent("allowed range")
+    expect(screen.getByRole("alert")).not.toHaveTextContent(
+      "This field is required."
+    )
+  })
+
+  it("leaves the field empty without an error after a successful clear_on_submit", async () => {
+    const { sendRerunBackMsg, widgetMgr } = createFormWidgetMgr()
+    widgetMgr.setFormSubmitBehaviors("form", true)
+    const props = { ...getRequiredEmptyProps({ formId: "form" }), widgetMgr }
+    const { user } = renderWithOutside(props)
+
+    await typeDateTime(user, "202511191015")
+    await user.click(screen.getByTestId("outside"))
+    act(() => {
+      widgetMgr.submitForm("form", undefined)
+    })
+
+    expect(sendRerunBackMsg).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expectPlaceholders()
+    })
+    expectNoError()
   })
 })

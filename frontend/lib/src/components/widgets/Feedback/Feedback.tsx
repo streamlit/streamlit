@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo, useRef } from "react"
+import { memo, type ReactElement, useCallback, useMemo, useRef } from "react"
 
-import { Feedback as FeedbackProto, streamlit } from "@streamlit/protobuf"
+import { Feedback as FeedbackProto, type streamlit } from "@streamlit/protobuf"
+import { isNullOrEmptyString } from "@streamlit/utils"
 
 import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import {
   useBasicWidgetState,
-  ValueWithSource,
+  type ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { WidgetStateManager } from "~lib/WidgetStateManager"
+import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledFeedbackButton,
@@ -163,7 +164,7 @@ function getStateFromWidgetMgr(
   if (stringValue === "") {
     return null // User explicitly cleared
   }
-  return parseInt(stringValue, 10) // User selected a value
+  return Number.parseInt(stringValue, 10) // User selected a value
 }
 
 function getDefaultStateFromProto(element: FeedbackProto): FeedbackValue {
@@ -194,12 +195,25 @@ function updateWidgetMgrState(
     formId: element.formId,
     fragmentId,
     fromUser: valueWithSource.fromUser,
+    // on_change="ignore" buffers the value without scheduling a rerun.
+    // WidgetStateManager ignores triggerRerun inside forms (the form owns
+    // commit timing).
+    ...(element.ignoreRerun ? { triggerRerun: false } : {}),
   })
 }
 
 function Feedback(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { type } = element
+
+  const queryParamBinding = !isNullOrEmptyString(element.queryParamKey)
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Clicking the selected option again clears it.
+        clearable: true,
+      }
+    : undefined
 
   const [value, setValueWithSource] = useBasicWidgetState<
     FeedbackValue,
@@ -213,6 +227,7 @@ function Feedback(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
     formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const containerWidth = shouldWidthStretch(widthConfig)

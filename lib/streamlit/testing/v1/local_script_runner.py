@@ -29,10 +29,15 @@ from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.testing.v1.element_tree import ElementTree, parse_tree_from_messages
 
 if TYPE_CHECKING:
+    from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+    from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+        UserInfoType,
+    )
     from streamlit.runtime.state.safe_session_state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
@@ -48,6 +53,7 @@ class LocalScriptRunner(ScriptRunner):
         args: Any = None,
         kwargs: Any = None,
         fragment_storage: MemoryFragmentStorage | None = None,
+        user_info: UserInfoType | None = None,
     ) -> None:
         """Initializes the ScriptRunner for the given script_path."""
 
@@ -69,7 +75,14 @@ class LocalScriptRunner(ScriptRunner):
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 script_cache=ScriptCache(),
                 initial_rerun_data=RerunData(),
-                user_info={"email": "test@example.com"},
+                # Keep an empty dict. st.logout() writes {} back to
+                # AppTest.user, and a truthiness check would replace that
+                # with the default test user.
+                user_info=(
+                    user_info
+                    if user_info is not None
+                    else {"email": "test@example.com"}
+                ),
                 fragment_storage=(
                     fragment_storage
                     if fragment_storage is not None
@@ -160,6 +173,7 @@ class LocalScriptRunner(ScriptRunner):
         query_params: dict[str, Any] | None = None,
         timeout: float = 3,
         page_hash: str = "",
+        context_info: ContextInfo | None = None,
     ) -> ElementTree:
         """Run the script, and parse the output messages for querying
         and interaction.
@@ -175,6 +189,7 @@ class LocalScriptRunner(ScriptRunner):
             widget_states=widget_state,
             query_string=query_string,
             page_script_hash=page_hash,
+            context_info=context_info,
         )
         self.request_rerun(rerun_data)
         try:
@@ -192,7 +207,11 @@ class LocalScriptRunner(ScriptRunner):
         return any(e == ScriptRunnerEvent.SHUTDOWN for e in self.events)
 
     def _on_script_finished(
-        self, ctx: ScriptRunContext, event: ScriptRunnerEvent, premature_stop: bool
+        self,
+        ctx: ScriptRunContext,
+        event: ScriptRunnerEvent,
+        premature_stop: bool,
+        run_descriptor: RunDescriptor,
     ) -> None:
         # Do not drop unseen widgets when the script stopped for a rerun
         # (later widgets never registered). Keep this gate in sync with
@@ -208,12 +227,13 @@ class LocalScriptRunner(ScriptRunner):
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)
-        self.on_event.send(self, event=event)
+        self.on_event.send(self, event=event, run_descriptor=run_descriptor)
 
-        # Remove orphaned files now that the script has run and files in use
-        # are marked as active. Skipped for a run that never reached its body, which
-        # re-registered nothing and would look like everything is orphaned.
-        if ctx.has_script_started:
+        # Skip orphan cleanup when:
+        # - The body never ran (nothing was re-registered, so everything
+        #   would look orphaned)
+        # - No Runtime exists (get_instance() would raise)
+        if ctx.has_script_started and runtime.exists():
             runtime.get_instance().media_file_mgr.remove_orphaned_files()
 
     def _new_module(self, name: str) -> types.ModuleType:

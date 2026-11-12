@@ -65,7 +65,7 @@ from streamlit.web.server.starlette.starlette_websocket import create_websocket_
 
 if TYPE_CHECKING:
     import asyncio
-    from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+    from collections.abc import AsyncGenerator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
     from typing import TypeAlias
 
@@ -186,6 +186,14 @@ def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
     # Add auth routes:
     routes.extend(create_auth_routes(base_url))
 
+    # Add the agent API routes, both of which answer even when the API is off.
+    # Imported here to keep the agent API's modules out of `import streamlit`.
+    from streamlit.web.server.starlette.starlette_agent_routes import (
+        create_agent_routes,
+    )
+
+    routes.extend(create_agent_routes(runtime, base_url))
+
     # Add app static routes if enabled:
     if config.get_option("server.enableStaticServing"):
         # TODO(lukasmasuch): Expose main_script_path as property on runtime class
@@ -277,7 +285,7 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
 
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
-    async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+    async def _lifespan(_app: Starlette) -> AsyncGenerator[None, None]:
         _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
@@ -621,6 +629,11 @@ class App:
             self._resolved_script_path = self._resolve_script_path()
 
         bootstrap.load_config_options(config_overrides)
+        from streamlit.runtime.caching.global_cache_budget import (
+            reconfigure_global_cache_budget_from_config,
+        )
+
+        reconfigure_global_cache_budget_from_config()
         bootstrap._prepare_asgi_app_run_context(
             launcher_path,
             script_args,
@@ -730,7 +743,7 @@ class App:
         )
 
     @asynccontextmanager
-    async def _combined_lifespan(self, _app: Starlette) -> AsyncIterator[None]:
+    async def _combined_lifespan(self, _app: Starlette) -> AsyncGenerator[None, None]:
         """Combine Streamlit runtime lifecycle with user's lifespan.
 
         The runtime must already be created (via _create_runtime) before this

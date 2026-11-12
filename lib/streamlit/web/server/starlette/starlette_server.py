@@ -44,7 +44,11 @@ import errno
 import os
 import socket
 import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _package_version
 from typing import TYPE_CHECKING, Any, Final
+
+from packaging.version import InvalidVersion, Version
 
 from streamlit import config
 from streamlit.config_option import ConfigOption
@@ -211,12 +215,48 @@ def _get_websocket_protocol() -> str:
     return "websockets-sansio"
 
 
+def _websockets_uses_latin1_header_decode(websockets_version: str) -> bool:
+    """Return True for websockets versions that decode headers as ISO-8859-1.
+
+    16.1 switched to latin-1, 16.1.1 reverted it, and 17+ re-landed the change.
+    Combined with uvicorn < 0.52.0, that decode can abort /_stcore/stream when
+    a reverse proxy forwards non-ASCII identity headers (#16030).
+    """
+    version = Version(websockets_version)
+    return version >= Version("17") or Version("16.1") <= version < Version("16.1.1")
+
+
+def _maybe_warn_uvicorn_websockets_mismatch() -> None:
+    """Warn when an affected websockets is paired with uvicorn older than 0.52.0."""
+    try:
+        websockets_version = _package_version("websockets")
+        uvicorn_version = _package_version("uvicorn")
+        is_affected = _websockets_uses_latin1_header_decode(
+            websockets_version
+        ) and is_version_less_than(uvicorn_version, "0.52.0")
+    except (PackageNotFoundError, InvalidVersion):
+        return
+
+    if not is_affected:
+        return
+
+    _LOGGER.warning(
+        "Installed websockets %s with uvicorn %s can abort the /_stcore/stream "
+        "handshake when a reverse proxy forwards non-ASCII headers. "
+        "Upgrade uvicorn to >= 0.52.0, or, on websockets 16.1, upgrade "
+        "websockets to >= 16.1.1 and < 17.",
+        websockets_version,
+        uvicorn_version,
+    )
+
+
 def _get_uvicorn_config_kwargs() -> dict[str, Any]:
     """Get common uvicorn configuration kwargs.
 
     Returns a dict of kwargs that can be passed to uvicorn.Config.
     Does NOT include app, host, or port - those must be provided separately.
     """
+    _maybe_warn_uvicorn_websockets_mismatch()
     cert_file, key_file = _validate_ssl_config()
     ws_ping_interval, ws_ping_timeout = _get_websocket_settings()
     ws_max_size = get_max_message_size_bytes()
