@@ -23,7 +23,7 @@ import os
 import tempfile
 import threading
 import unittest
-from collections.abc import Callable, Iterator, Mapping, MutableMapping
+from collections.abc import Callable, Generator, Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
 from typing import TYPE_CHECKING, Any, Self
@@ -1306,28 +1306,26 @@ def test_iter_on_secrets(mock_loaded_secrets: Secrets) -> None:
     }
 
 
-def test_rotated_secret_file_reloads_through_polling_watcher(tmp_path: Path) -> None:
-    """End to end through the real polling file watcher: a rotated file reloads the
-    value and sends one change signal, an identical rewrite does not, and a removed
-    file keeps being watched so its return is picked up."""
-    secret_root = tmp_path / "secrets"
-    field = secret_root / "rotated_api_key" / "secret_string"
-    field.parent.mkdir(parents=True)
-    field.write_text("v1", encoding="utf-8")
-    # A second secret stays in place, as in a real deployment.
-    (secret_root / "other_secret").mkdir()
-    (secret_root / "other_secret" / "value").write_text("unchanged", encoding="utf-8")
-    mtime = field.stat().st_mtime
+def _rotate_secret_file(field: Path, value: str) -> None:
+    """Replace a secret file the way platforms do: write a temp file next to the
+    secret folder and rename it over the field file, with a newer mtime."""
+    mtime = (field.stat().st_mtime if field.exists() else 0) + 10
+    tmp = field.parent.parent / f".tmp-{field.parent.name}"
+    tmp.write_text(value, encoding="utf-8")
+    os.utime(tmp, (mtime, mtime))
+    os.replace(tmp, field)
 
-    def rotate(value: str) -> None:
-        # Platforms write a temp file and rename it over the field file.
-        nonlocal mtime
-        tmp = secret_root / ".tmp"
-        tmp.write_text(value, encoding="utf-8")
-        mtime += 10
-        os.utime(tmp, (mtime, mtime))
-        os.replace(tmp, field)
 
+@contextlib.contextmanager
+def _polled_secrets(
+    secret_root: Path,
+) -> Generator[tuple[Secrets, list[str], Callable[[], None]]]:
+    """A ``Secrets`` reading ``secret_root`` through real polling file watchers.
+
+    Yields the secrets, the change signals received, and a function that runs
+    one poll of every watcher. Polls run on the calling thread instead of the
+    watcher thread pool, so they are deterministic.
+    """
     tasks: list[Callable[[], None]] = []
 
     def run_poll_tasks() -> None:
@@ -1354,26 +1352,65 @@ def test_rotated_secret_file_reloads_through_polling_watcher(tmp_path: Path) -> 
     ):
         executor.submit = tasks.append
         try:
-            assert secrets["rotated_api_key"] == "v1"
-
-            rotate("v2")
-            run_poll_tasks()
-            assert secrets["rotated_api_key"] == "v2"
-            assert changes == ["changed"]
-
-            rotate("v2")
-            run_poll_tasks()
-            assert changes == ["changed"]
-
-            field.unlink()
-            run_poll_tasks()
-            assert secrets["rotated_api_key"] == {}
-            assert changes == ["changed", "changed"]
-
-            rotate("v3")
-            run_poll_tasks()
-            assert secrets["rotated_api_key"] == "v3"
-            assert secrets["other_secret"] == "unchanged"
-            assert changes == ["changed", "changed", "changed"]
+            yield secrets, changes, run_poll_tasks
         finally:
             secrets._reset()
+
+
+def test_rotated_secret_file_reloads_through_polling_watcher(tmp_path: Path) -> None:
+    """End to end through the real polling file watcher: a rotated file reloads the
+    value and sends one change signal, an identical rewrite does not, and a removed
+    file keeps being watched so its return is picked up."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "rotated_api_key" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+    # A second secret stays in place, as in a real deployment.
+    (secret_root / "other_secret").mkdir()
+    (secret_root / "other_secret" / "value").write_text("unchanged", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["rotated_api_key"] == "v1"
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == "v2"
+        assert changes == ["changed"]
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert changes == ["changed"]
+
+        field.unlink()
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == {}
+        assert changes == ["changed", "changed"]
+
+        _rotate_secret_file(field, "v3")
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == "v3"
+        assert secrets["other_secret"] == "unchanged"
+        assert changes == ["changed", "changed", "changed"]
+
+
+def test_removing_last_secret_file_keeps_watching(tmp_path: Path) -> None:
+    """When the only secret file is removed the reload fails, but the watcher
+    survives: the failure surfaces on access and the restored file reloads."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "only_secret" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["only_secret"] == "v1"
+
+        field.unlink()
+        run_poll_tasks()
+        assert changes == []
+        with pytest.raises(StreamlitSecretNotFoundError):
+            secrets["only_secret"]
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert secrets["only_secret"] == "v2"
+        assert changes == ["changed"]

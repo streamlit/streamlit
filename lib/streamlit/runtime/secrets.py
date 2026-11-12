@@ -527,7 +527,18 @@ class Secrets(Mapping[str, Any]):
         with self._lock:
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
             self._reset()
-            self._parse()
+            try:
+                self._parse()
+            except StreamlitSecretNotFoundError as ex:
+                # Raising here would stop the watcher that called us, so the
+                # secrets could not recover. The next access parses again and
+                # raises this error to the app.
+                _LOGGER.warning(
+                    "Could not reload secrets after %s changed: %s",
+                    changed_file_path,
+                    ex,
+                )
+                return
             # Re-apply programmatic secrets so they survive file-change reloads
             if self._programmatic_secrets:
                 self._apply_programmatic_secrets(self._programmatic_secrets)
