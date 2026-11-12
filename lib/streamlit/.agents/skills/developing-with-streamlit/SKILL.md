@@ -34,7 +34,7 @@ Invoke this skill when the user's request involves:
 - Real labels on input widgets (`help=` / placeholder are not substitutes).
 - Icon-only buttons use `""` plus a descriptive Material `icon=` (spoken name is the icon id plus "icon"); `st.chat_input` is named by its placeholder.
 - Set a descriptive `st.set_page_config(page_title=...)` when needed; on multipage apps prefer per-page `st.Page` titles over one flattening global `page_title`.
-- Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. Theme/markdown color changes need a contrast check (or keep the default theme colors). Do not report the task done until the Step 4 accessibility gate passes.
+- Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. When customizing theme or markdown colors, prefer checking contrast (see `references/accessibility.md`) — brand colors can still win when the user asks for them. Do not report the task done until the Step 4 accessibility gate passes.
 
 Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
@@ -154,9 +154,9 @@ Use this routing table to select reference(s). **Always read the reference file*
 | **General Streamlit best practices, app code review, or examples for recommended patterns and anti-patterns** — styling, layout, navigation, caching, fragments, forms, charts, widgets, accessible `alt=` names, session state, secrets, page organization, native replacements for third-party components, and type checking | read `references/best-practices.md` and `references/accessibility.md` |
 | **App is slow, reruns take too long, data loads repeatedly, work is recomputed unnecessarily, or the page shows stale or shifting content while it loads** — caching strategies (`st.cache_data`, `st.cache_resource`), `st.fragment` for partial reruns, (optionally) `parallel=True` when independent fragments can run concurrently, loading states such as `st.skeleton` that render the layout first, `on_change="ignore"` to update a widget without a rerun, and client-side validation and limits that catch bad input in the browser | read `references/performance.md` |
 | **Building a dashboard with KPIs, metrics, and charts** — composing `st.metric`, charts, and data tables into clean dashboard layouts with columns and containers, BI patterns (filter toolbars bound to the URL, card headers with ⋮ menus, certified metrics, definition drawers), and layout-first loading where `st.skeleton` holds each slow card's size while parallel fragments load it | read `references/dashboards.md` and `references/accessibility.md` |
-| **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md`, `references/design.md`, and `references/accessibility.md` |
+| **Making an app look polished** — brand colors, light/dark, page padding, icons (Material Symbols), spacing, visual hierarchy, and small design touches that elevate quality | read `references/theme.md`, then `references/design.md` |
 | **Choosing the right selection widget** — when to use `st.selectbox` vs `st.radio` vs `st.pills` vs `st.segmented_control` vs `st.multiselect` vs `st.feedback` (ratings), including modern replacements for deprecated patterns, and how to filter high-cardinality values (thousands+) without sending them all to the browser | read `references/selection-widgets.md` |
-| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first) and `references/accessibility.md` |
+| **Custom themes, colors, padding, or styling requests** — configuring `.streamlit/config.toml` (including light/dark, sidebar, and `paddingTop`/`paddingBottom`), reading the active theme at runtime via `st.context.theme`, and the CSS pattern to use only when the user explicitly asks for CSS | read `references/theme.md` (shape + cheat sheet first) |
 | **Page structure and layout** — `st.columns`, `st.grid`, `st.tabs`, `st.sidebar`, `st.container`, `st.expander`, responsive layout patterns, when to use each container type, aligning side-by-side elements (widget heights, `vertical_alignment`, equal-height cards and charts), bento layouts and fixed-height regions, and fragments with discontiguous layout (triggering from outside, rendering into outside containers) | read `references/layouts.md` |
 | **Displaying or editing tabular data** — `st.dataframe` column configuration, `st.data_editor` for editable tables, `st.table` for small static tables and key-value/description lists, row/column/cell selection, metric sparklines, accessible `alt=` names, and best practices for large datasets | read `references/data-display.md` and `references/accessibility.md` |
 | **Charts, maps, and data visualization** — choosing between the simple charts, `st.altair_chart`, `st.echarts_chart` (including an existing ECharts option or `pyecharts` chart), `st.plotly_chart`, `st.pyplot`, `st.map`/`st.pydeck_chart`, and diagrams; keeping charts consistent on a page; chart selections (`on_select`); accessible `alt=` names; and large chart data | read `references/charts.md` and `references/accessibility.md` |
@@ -185,11 +185,10 @@ If the user asks for a UI element or interaction that **has never been part of S
 **Common combinations:**
 
 For **beautifying/improving an app**, read in order:
-1. `references/theme.md` — brand colors, light/dark, sidebar, padding (prefer config over CSS)
-2. `references/accessibility.md`
-3. `references/design.md` — icons, hierarchy, micro-polish
-4. `references/layouts.md`
-5. `references/selection-widgets.md`
+1. `references/theme.md` — brand colors, light/dark, sidebar, padding (prefer config over CSS; links out for contrast tips)
+2. `references/design.md` — icons, hierarchy, micro-polish
+3. `references/layouts.md`
+4. `references/selection-widgets.md`
 
 Configure themes via `.streamlit/config.toml` (not CSS unless the user asks). In `theme.md`, read **Choose a config shape**, **Where to put keys**, and **Cheat sheet** first; open deeper sections only when the ask needs them.
 

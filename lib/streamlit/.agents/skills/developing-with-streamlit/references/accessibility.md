@@ -23,7 +23,7 @@ Do not rebuild headers, sidebars, menus, or toasts in raw HTML to "fix" accessib
 - For video with meaningful speech, provide synchronized captions: use `st.video(..., subtitles=...)` for the native player (local file or non-YouTube URL). YouTube URLs raise if you pass `subtitles=`, so use a video that already has on-platform captions or switch to a captioned non-YouTube source. A nearby transcript is supplementary and does not replace captions. For `st.audio`, place a transcript nearby when the recording is essential content (there is no `transcript=` parameter).
 - Do not encode meaning with color alone in charts, `st.metric` deltas, or status text. Pair color with text, pattern, or direct labels.
 - Put **critical** errors in `st.error` / on-page alerts when the user must notice them — not only in `st.toast`.
-- If you customize `theme.*` or use colored markdown (`:orange[…]`, status fills as plain text), re-check contrast (see [Theme override hazards](#theme-override-hazards)).
+- When you customize `theme.*` or use colored markdown (`:orange[…]`, status fills as plain text), prefer re-checking contrast (see [Theme override hazards](#theme-override-hazards)). Brand or product colors can still take priority when the user asks for them — call out weak contrast rather than blocking the theme.
 
 ```python
 # BAD — missing name, empty label, generic alt
@@ -58,17 +58,17 @@ st.chat_input(placeholder="Ask about this dashboard")
 
 ## Theme override hazards
 
-Default light and dark themes meet WCAG AA contrast for body text, muted text, links, and white labels on primary buttons. Custom themes often break this.
+Default light and dark themes meet WCAG AA contrast for body text, muted text, links, and white labels on primary buttons. Custom themes often weaken this — treat the tips below as guidance, not a ban on brand colors.
 
-When you set colors in `.streamlit/config.toml`:
+When you set colors in `.streamlit/config.toml`, prefer:
 
-- Keep body `textColor` strong on `backgroundColor` and on `secondaryBackgroundColor` (sidebar / cards).
-- If the sidebar should differ, set a **full** contrast set there — not only `backgroundColor`.
-- Ensure `primaryColor` still supports **white** button labels; avoid using primary as plain body text on dark surfaces without checking.
-- Weak `borderColor` fails non-text contrast; do not strip focus styles with CSS.
-- Named markdown colors and translucent status fills can fail as plain text even when badge-style fills look fine.
+- Body `textColor` strong on `backgroundColor` and on `secondaryBackgroundColor` (sidebar / cards).
+- A **full** contrast set on the sidebar when it should differ — not only `backgroundColor`.
+- `primaryColor` that still supports **white** button labels; avoid using primary as plain body text on dark surfaces without checking.
+- Borders and focus styles that stay visible; do not strip focus styles with CSS.
+- Caution with named markdown colors and translucent status fills as plain text (badge-style fills can look fine while text fails).
 
-Start from a shipped theme template and retint carefully; see [theme.md](theme.md). Prefer config over CSS.
+Start from a shipped theme template and retint carefully; see [theme.md](theme.md). Prefer config over CSS. If the user's brand cannot meet every ratio, ship the brand and note the trade-off.
 
 ## Known library gaps (do not CSS-patch)
 
@@ -88,5 +88,5 @@ Scan the app you generated or edited:
 3. Browser tab titles are descriptive: filename-derived defaults are replaced when needed, and multipage apps keep useful per-page `st.Page` titles instead of one flattening global `page_title`.
 4. Video with speech has synchronized captions (`subtitles=` for the native player, or on-platform captions / a captioned non-YouTube alternative for YouTube) — a transcript alone does not pass; essential audio has a nearby transcript (there is no `transcript=` parameter).
 5. Meaning is not color-only (charts, metrics, status).
-6. Custom theme or colored markdown was contrast-checked, or you kept the default theme colors.
+6. If you customized theme or markdown colors, you preferred a contrast check (or kept defaults); brand requests can override — note weak contrast instead of blocking.
 7. You did not add custom HTML/CSS to replace native chrome or to "fix" a known library gap above.
