@@ -1485,7 +1485,7 @@ describe("useDeckGl", () => {
       expect(layer.props.getFillColor).toEqual([r, g, b, 160])
     })
 
-    it("does not flatten HexagonLayer colorRange to theme primary", () => {
+    it("preserves HexagonLayer's multi-stop colorRange gradient", () => {
       const { result } = renderHook(props => useDeckGl(props), {
         initialProps: getUseDeckGlProps(
           {},
@@ -1509,16 +1509,11 @@ describe("useDeckGl", () => {
       // Deck.gl may apply its default YlOrRd colorRange; it must remain a
       // multi-stop gradient, not six copies of theme primary.
       const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
-      const colorRange = layer.props.colorRange
-      expect(colorRange).toBeDefined()
-      if (!colorRange) {
-        return
-      }
+      const colorRange = layer.props.colorRange ?? []
       expect(colorRange.length).toBeGreaterThan(1)
-      const allPrimary = colorRange.every(
-        c => c[0] === r && c[1] === g && c[2] === b
-      )
-      expect(allPrimary).toBe(false)
+      expect(
+        colorRange.every(c => c[0] === r && c[1] === g && c[2] === b)
+      ).toBe(false)
       expect(layer.props.getFillColor).toBeUndefined()
     })
 

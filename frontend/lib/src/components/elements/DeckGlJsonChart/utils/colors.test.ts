@@ -84,6 +84,14 @@ describe("#applyMissingPydeckPrimaryColors", () => {
     expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
   })
 
+  it("leaves ColumnLayer with only getColor unchanged", () => {
+    const layer = {
+      "@@type": "ColumnLayer",
+      getColor: "@@=[value * 2, 0, 0]",
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
   it("leaves concrete ScatterplotLayer colors unchanged", () => {
     const layer = {
       "@@type": "ScatterplotLayer",
