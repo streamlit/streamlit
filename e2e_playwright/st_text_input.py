@@ -33,7 +33,7 @@ st.write("value 5:", v5)
 v6 = st.text_input("text input 6 (disabled)", "default text", disabled=True)
 st.write("value 6:", v6)
 
-# Empty + disabled so the placeholder is visible (disabled filled snaps hide it).
+# Disabled with no value so the snapshot captures the disabled placeholder color.
 st.text_input(
     "text input 6b (disabled empty placeholder)",
     value="",
