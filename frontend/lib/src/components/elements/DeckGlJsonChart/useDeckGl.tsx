@@ -48,6 +48,7 @@ import type {
   ParsedDeckGlConfig,
 } from "./types"
 import {
+  applyMissingPydeckPrimaryColors,
   type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
@@ -488,22 +489,27 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      // Resolve st.map's "primary" fill placeholder before selection styling
-      // or Deck.gl conversion so default markers use the active theme primary.
+      // Theme omitted solid pydeck colors, then resolve st.map's "primary"
+      // placeholder, before selection styling or Deck.gl conversion.
       jsonCopy.layers = jsonCopy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
           return layer
         }
 
-        const resolvedFillColor = resolveMapPrimaryFillColor(
-          layer.getFillColor,
+        const withPydeckDefaults = applyMissingPydeckPrimaryColors(
+          layer,
           theme.colors.primary
         )
-        if (resolvedFillColor === layer.getFillColor) {
-          return layer
+
+        const resolvedFillColor = resolveMapPrimaryFillColor(
+          withPydeckDefaults.getFillColor,
+          theme.colors.primary
+        )
+        if (resolvedFillColor === withPydeckDefaults.getFillColor) {
+          return withPydeckDefaults
         }
 
-        return { ...layer, getFillColor: resolvedFillColor }
+        return { ...withPydeckDefaults, getFillColor: resolvedFillColor }
       })
 
       // Build a map of layer IDs to data lengths for validation

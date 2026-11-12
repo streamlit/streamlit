@@ -1458,4 +1458,132 @@ describe("useDeckGl", () => {
       expect(layer.props.getFillColor).toEqual(concrete)
     })
   })
+
+  describe("pydeck missing solid color defaults", () => {
+    it("injects theme primary for ScatterplotLayer when getFillColor is omitted", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "ScatterplotLayer",
+                id: "omit-fill",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { getFillColor?: unknown }
+      }
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor).toEqual([r, g, b, 160])
+    })
+
+    it("does not flatten HexagonLayer colorRange to theme primary", () => {
+      const { result } = renderHook(props => useDeckGl(props), {
+        initialProps: getUseDeckGlProps(
+          {},
+          {},
+          {
+            layers: [
+              {
+                "@@type": "HexagonLayer",
+                id: "hex",
+                data: [{ lon: 1, lat: 2 }],
+                getPosition: "@@=[lon, lat]",
+              },
+            ],
+          }
+        ),
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: { colorRange?: number[][]; getFillColor?: unknown }
+      }
+      // Deck.gl may apply its default YlOrRd colorRange; it must remain a
+      // multi-stop gradient, not six copies of theme primary.
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      const colorRange = layer.props.colorRange
+      expect(colorRange).toBeDefined()
+      if (!colorRange) {
+        return
+      }
+      expect(colorRange.length).toBeGreaterThan(1)
+      const allPrimary = colorRange.every(
+        c => c[0] === r && c[1] === g && c[2] === b
+      )
+      expect(allPrimary).toBe(false)
+      expect(layer.props.getFillColor).toBeUndefined()
+    })
+
+    it("wraps injected Scatterplot fill colors when a selection is active", () => {
+      const data = [
+        { lon: 1, lat: 2 },
+        { lon: 3, lat: 4 },
+      ]
+      const props = getUseDeckGlProps(
+        {
+          id: "test-element-id",
+          selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+        },
+        {},
+        {
+          layers: [
+            {
+              "@@type": "ScatterplotLayer",
+              id: "omit-fill-select",
+              data,
+              getPosition: "@@=[lon, lat]",
+              pickable: true,
+            },
+          ],
+        }
+      )
+
+      const { result } = renderHook(hookProps => useDeckGl(hookProps), {
+        initialProps: props,
+      })
+
+      act(() => {
+        result.current.setSelection({
+          fromUser: true,
+          value: {
+            selection: {
+              indices: { "omit-fill-select": [0] },
+              objects: { "omit-fill-select": [data[0]] },
+            },
+          },
+        })
+      })
+
+      const layer = result.current.deck.layers?.[0] as {
+        props: {
+          getFillColor?: (
+            object: unknown,
+            objectInfo: { index: number }
+          ) => unknown
+        }
+      }
+      expect(typeof layer.props.getFillColor).toBe("function")
+      const [r, g, b] = parseToRgba(mockTheme.emotion.colors.primary)
+      expect(layer.props.getFillColor?.(data[0], { index: 0 })).toEqual([
+        r,
+        g,
+        b,
+        255,
+      ])
+      expect(layer.props.getFillColor?.(data[1], { index: 1 })).toEqual([
+        r,
+        g,
+        b,
+        Math.floor(255 * 0.4),
+      ])
+    })
+  })
 })

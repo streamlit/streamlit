@@ -39,6 +39,16 @@ export const MAP_PRIMARY_FILL_PLACEHOLDER = "primary"
 export const MAP_DEFAULT_MARKER_ALPHA = 160
 
 /**
+ * Theme primary as an RGBA tuple at MAP_DEFAULT_MARKER_ALPHA.
+ */
+export function themePrimaryRgba(
+  primaryCssColor: string
+): [number, number, number, number] {
+  const [r, g, b] = parseToRgba(primaryCssColor)
+  return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
+}
+
+/**
  * Resolve st.map's primary fill placeholder to an RGBA array, or return the
  * original value unchanged.
  */
@@ -50,8 +60,7 @@ export function resolveMapPrimaryFillColor(
     return fillColor
   }
 
-  const [r, g, b] = parseToRgba(primaryCssColor)
-  return [r, g, b, MAP_DEFAULT_MARKER_ALPHA]
+  return themePrimaryRgba(primaryCssColor)
 }
 
 /**
@@ -87,6 +96,46 @@ export const LAYER_TYPE_TO_FILL_FUNCTION: Partial<
   [layers.TextLayer.layerName]: ["getColor"],
   [meshLayers.ScenegraphLayer.layerName]: ["getColor"],
   [meshLayers.SimpleMeshLayer.layerName]: ["getColor"],
+}
+
+/**
+ * For solid pydeck layers that omit color accessors, inject theme primary at
+ * MAP_DEFAULT_MARKER_ALPHA so defaults match st.map. Leaves present values
+ * (arrays, @@= accessors, etc.) and unknown/aggregation layer types alone.
+ */
+export function applyMissingPydeckPrimaryColors<
+  T extends Record<string, unknown>,
+>(layer: T, primaryCssColor: string): T {
+  const layerType = layer["@@type"]
+  if (typeof layerType !== "string") {
+    return layer
+  }
+
+  const accessors = LAYER_TYPE_TO_FILL_FUNCTION[layerType]
+  if (!accessors || accessors.length === 0) {
+    return layer
+  }
+
+  const primary = themePrimaryRgba(primaryCssColor)
+
+  // Scatterplot: only ever inject getFillColor when it is absent. Never invent
+  // getColor / getLineColor (avoids deprecated dual-fill and stroked outlines).
+  if (layerType === layers.ScatterplotLayer.layerName) {
+    if (layer.getFillColor !== undefined) {
+      return layer
+    }
+    return { ...layer, getFillColor: primary }
+  }
+
+  let changed = false
+  const next: Record<string, unknown> = { ...layer }
+  for (const key of accessors) {
+    if (next[key] === undefined) {
+      next[key] = primary
+      changed = true
+    }
+  }
+  return (changed ? next : layer) as T
 }
 
 type SerializedColorValue = string | number
