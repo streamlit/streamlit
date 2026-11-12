@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 40
+_EXPECTED_CHART_COUNT = 41
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -542,6 +542,9 @@ def test_themed_snapshots(themed_app: Page, assert_snapshot: ImageCompareFunctio
         "c_piecewise_heatmap": "st_echarts_chart-piecewise_heatmap",
         # A visualMap that maps only symbol size keeps each series' own color.
         "c_size_visual_map": "st_echarts_chart-size_visual_map",
+        # Marks on a data series are neutral, an explicit series color carries
+        # over to its marks, and an unstacked area gets a soft fill.
+        "c_marks_and_area": "st_echarts_chart-marks_and_area",
     }
     for key, name in snapshots.items():
         chart = _get_chart(themed_app, key)

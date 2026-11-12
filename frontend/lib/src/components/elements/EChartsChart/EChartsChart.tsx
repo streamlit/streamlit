@@ -81,6 +81,7 @@ import {
   applyTimeLabelFormatters,
   applyTooltipFormatters,
 } from "./tooltipFormatters"
+import { useChartFontsReady } from "./useChartFontsReady"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -507,6 +508,13 @@ export function EChartsChart({
     }
   }, [hasValidDimensions])
 
+  // ECharts caches text widths per font for the whole page, so the first
+  // layout waits for the theme fonts (see `useChartFontsReady`).
+  const areFontsReady = useChartFontsReady(
+    theme,
+    element.theme === STREAMLIT_THEME
+  )
+
   // Create (and dispose) the ECharts instance. Only the renderer is fixed at
   // init time, so only a renderer change recreates the instance; a theme change
   // is applied in place by the effect below. The theme is read through a ref so
@@ -516,7 +524,7 @@ export function EChartsChart({
   // measurement.
   useEffect(() => {
     const dom = containerRef.current
-    if (!dom || !hasValidSpec || !hasBeenSized) {
+    if (!dom || !hasValidSpec || !hasBeenSized || !areFontsReady) {
       return
     }
 
@@ -552,6 +560,7 @@ export function EChartsChart({
     rendererStr,
     hasValidSpec,
     hasBeenSized,
+    areFontsReady,
     setOpError,
     instanceGeneration,
   ])
