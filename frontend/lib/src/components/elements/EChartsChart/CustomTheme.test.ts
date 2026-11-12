@@ -355,6 +355,16 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(buildStreamlitEChartsTheme(lightTheme.emotion).line).toBeUndefined()
   })
 
+  it("shortens the marker line and point entry animations", () => {
+    const echartsTheme = buildStreamlitEChartsTheme(theme)
+
+    // ECharts' default draws a marker line over 1s at a constant speed.
+    const entry = { animationDuration: 300, animationEasing: "cubicOut" }
+    expect(echartsTheme.markLine).toEqual(entry)
+    expect(echartsTheme.markPoint).toEqual(entry)
+    expect(echartsTheme).not.toHaveProperty("markArea")
+  })
+
   it("themes components that ECharts renders with its own fixed tokens", () => {
     const echartsTheme = buildStreamlitEChartsTheme(theme)
 
