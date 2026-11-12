@@ -556,11 +556,11 @@ export function buildStreamlitEChartsTheme(
     // keys, these override a chart-wide `animationDuration`; `animation: false`
     // still turns them off.
     markPoint: MARKER_ENTRY_ANIMATION,
-    // Reference lines and shaded ranges are neutral instead of taking the
-    // series color, so a "Target" line or a forecast band doesn't read as a
-    // second copy of the data. ECharts colors a markLine's line and label
-    // from its `itemStyle.color`, and a markArea label from its fill at full
-    // opacity, which keeps it readable. A series with an explicit color keeps
+    // Reference lines and shaded ranges are neutral rather than series-colored,
+    // so a "Target" line or forecast band doesn't read as a second copy of the
+    // data. ECharts draws a markLine's line and label in its `itemStyle.color`,
+    // and a markArea label in its fill color at full opacity, so the label
+    // stays readable over the faint band. A series with an explicit color keeps
     // it on its marks (see `withSeriesColoredMarkers`).
     markLine: {
       ...MARKER_ENTRY_ANIMATION,
@@ -2019,15 +2019,21 @@ const SERIES_MARK_AREA_ALPHA = 0.4
  *
  * The theme gives marks a neutral color, which would otherwise win over the
  * series color ECharts falls back to. A series that sets ``itemStyle.color``
- * (for example an empty series that only carries marks) chose that color for
- * its marks too, so this copies it onto marks that don't set their own. The
- * markArea fill gets the alpha ECharts applies to a series color.
+ * or its own ``color`` (for example an empty series that only carries marks)
+ * chose that color for its marks too, so this copies it onto marks that don't
+ * set their own. The markArea fill gets the alpha ECharts applies to a series
+ * color.
  */
 function withSeriesColoredMarkers(
   option: EChartsOptionObject
 ): EChartsOptionObject {
   return mapOptionSeries(option, series => {
-    const seriesColor: unknown = get(series, ["itemStyle", "color"])
+    // `itemStyle.color` wins over the series `color`, which may be a palette.
+    const ownColor: unknown = Array.isArray(series.color)
+      ? series.color[0]
+      : series.color
+    const seriesColor: unknown =
+      get(series, ["itemStyle", "color"]) ?? ownColor
     if (isNullOrUndefined(seriesColor)) {
       return series
     }

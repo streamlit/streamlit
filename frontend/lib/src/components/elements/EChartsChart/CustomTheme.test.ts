@@ -2019,7 +2019,33 @@ describe("applyStreamlitOptionDefaults", () => {
       expect(series.markLine).toEqual({ symbol: "none", data: [{ xAxis: 1 }] })
     })
 
-    it("keeps a mark's own color and skips series without a color", () => {
+    it("uses a series-level color when itemStyle sets none", () => {
+      const result = applyDefaults({
+        series: [
+          { type: "line", color: "#e45756", markLine: { data: [] } },
+          { type: "line", color: ["#29b09d", "red"], markArea: { data: [] } },
+          {
+            type: "line",
+            color: "red",
+            itemStyle: { color: "#e45756" },
+            markLine: { data: [] },
+          },
+        ],
+      })
+
+      expect(markOf(result, "markLine").itemStyle).toEqual({
+        color: "#e45756",
+      })
+      // A palette's first entry is the series color.
+      expect(markOf(result, "markArea", 1).itemStyle).toEqual({
+        color: "rgba(41,176,157,0.4)",
+      })
+      expect(markOf(result, "markLine", 2).itemStyle).toEqual({
+        color: "#e45756",
+      })
+    })
+
+    it("leaves own mark colors, uncolored series, and unthemed charts alone, and copies gradients as is", () => {
       const ownColor = {
         type: "line",
         itemStyle: { color: "#e45756" },

@@ -320,6 +320,11 @@ describe("EChartsChart", () => {
 
       expect(mockInit).toHaveBeenCalledTimes(1)
       expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+
+      // An unthemed chart uses ECharts' own fonts, so it doesn't wait.
+      resetChartFontsForTests()
+      render(<Wrapper element={createElement({ theme: "" })} />)
+      expect(mockInit).toHaveBeenCalledTimes(2)
     } finally {
       Object.defineProperty(document, "fonts", {
         configurable: true,

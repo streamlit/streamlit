@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import useTimeout from "~lib/hooks/useTimeout"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -35,8 +35,9 @@ function getFontFaceSet(): FontFaceSetLike | undefined {
 }
 
 /**
- * Font sets that loaded or timed out on this page. ECharts' width cache is
- * page-wide too, so once a set settles, waiting again can't help a later chart.
+ * Font specifications that loaded or timed out on this page. ECharts' width
+ * cache is page-wide too, so once a specification settles, waiting again
+ * can't help a later chart.
  */
 const settledFontSpecs = new Set<string>()
 
@@ -86,10 +87,21 @@ function areFontsLoaded(specs: string[]): boolean {
  * Only declared faces can be waited for: a theme font whose stylesheet hasn't
  * arrived yet is unknown to ``document.fonts`` and doesn't hold the chart
  * back. After a timeout, the fallback widths stay cached for the page.
+ *
+ * A chart without the Streamlit theme (``usesThemeFonts`` false) draws in
+ * ECharts' own fonts, so it never waits.
  */
-export function useChartFontsReady(theme: EmotionTheme): boolean {
-  const specs = chartFontSpecs(theme)
-  const specsKey = specs.join("|")
+export function useChartFontsReady(
+  theme: EmotionTheme,
+  usesThemeFonts: boolean
+): boolean {
+  const specsKey = usesThemeFonts ? chartFontSpecs(theme).join("|") : ""
+  // Derived from the joined key, so a new theme object with the same fonts
+  // doesn't restart the effect below.
+  const specs = useMemo(
+    () => (specsKey === "" ? [] : specsKey.split("|")),
+    [specsKey]
+  )
   const [isReady, setIsReady] = useState(
     () => settledFontSpecs.has(specsKey) || areFontsLoaded(specs)
   )
@@ -111,7 +123,7 @@ export function useChartFontsReady(theme: EmotionTheme): boolean {
     }
     let cancelled = false
     // A font that fails to load renders with the fallback, like a timeout.
-    void Promise.all(specsKey.split("|").map(spec => fonts.load(spec)))
+    void Promise.all(specs.map(spec => fonts.load(spec)))
       .catch(() => undefined)
       .finally(() => {
         if (!cancelled) {
@@ -121,7 +133,7 @@ export function useChartFontsReady(theme: EmotionTheme): boolean {
     return () => {
       cancelled = true
     }
-  }, [isReady, markReady, specsKey])
+  }, [isReady, markReady, specs])
 
   return isReady
 }

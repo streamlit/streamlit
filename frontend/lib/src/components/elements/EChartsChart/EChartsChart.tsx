@@ -510,7 +510,10 @@ export function EChartsChart({
 
   // ECharts caches text widths per font for the whole page, so the first
   // layout waits for the theme fonts (see `useChartFontsReady`).
-  const areFontsReady = useChartFontsReady(theme)
+  const areFontsReady = useChartFontsReady(
+    theme,
+    element.theme === STREAMLIT_THEME
+  )
 
   // Create (and dispose) the ECharts instance. Only the renderer is fixed at
   // init time, so only a renderer change recreates the instance; a theme change

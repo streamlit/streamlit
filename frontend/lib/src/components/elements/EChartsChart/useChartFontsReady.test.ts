@@ -48,16 +48,27 @@ describe("useChartFontsReady", () => {
   it("is ready without a FontFaceSet", () => {
     mockFonts(undefined)
 
-    const { result } = renderHook(() => useChartFontsReady(theme))
+    const { result } = renderHook(() => useChartFontsReady(theme, true))
 
     expect(result.current).toBe(true)
+  })
+
+  it("doesn't wait for a chart without the Streamlit theme", () => {
+    const fonts = { check: vi.fn(() => false), load: vi.fn() }
+    mockFonts(fonts)
+
+    const { result } = renderHook(() => useChartFontsReady(theme, false))
+
+    expect(result.current).toBe(true)
+    expect(fonts.check).not.toHaveBeenCalled()
+    expect(fonts.load).not.toHaveBeenCalled()
   })
 
   it("is ready on the first render when the fonts are loaded", () => {
     const fonts = { check: vi.fn(() => true), load: vi.fn() }
     mockFonts(fonts)
 
-    const { result } = renderHook(() => useChartFontsReady(theme))
+    const { result } = renderHook(() => useChartFontsReady(theme, true))
 
     expect(result.current).toBe(true)
     expect(fonts.check).toHaveBeenCalledWith(
@@ -79,7 +90,7 @@ describe("useChartFontsReady", () => {
     }
     mockFonts(fonts)
 
-    const { result } = renderHook(() => useChartFontsReady(theme))
+    const { result } = renderHook(() => useChartFontsReady(theme, true))
 
     expect(result.current).toBe(false)
     expect(fonts.load).toHaveBeenCalledWith(
@@ -101,7 +112,7 @@ describe("useChartFontsReady", () => {
     }
     mockFonts(fonts)
 
-    const { result } = renderHook(() => useChartFontsReady(theme))
+    const { result } = renderHook(() => useChartFontsReady(theme, true))
 
     await act(async () => {
       await Promise.resolve()
@@ -119,7 +130,9 @@ describe("useChartFontsReady", () => {
     }
     mockFonts(fonts)
 
-    const { result, rerender } = renderHook(() => useChartFontsReady(theme))
+    const { result, rerender } = renderHook(() =>
+      useChartFontsReady(theme, true)
+    )
 
     act(() => {
       vi.advanceTimersByTime(CHART_FONT_TIMEOUT_MS - 1)
@@ -137,7 +150,7 @@ describe("useChartFontsReady", () => {
 
     // A chart mounted later doesn't wait again: the fallback widths are
     // already cached for the page.
-    const later = renderHook(() => useChartFontsReady(theme))
+    const later = renderHook(() => useChartFontsReady(theme, true))
     expect(later.result.current).toBe(true)
     expect(fonts.load).toHaveBeenCalledTimes(1)
   })
@@ -149,7 +162,7 @@ describe("useChartFontsReady", () => {
     }
     mockFonts(fonts)
 
-    const first = renderHook(() => useChartFontsReady(theme))
+    const first = renderHook(() => useChartFontsReady(theme, true))
     await act(async () => {
       await Promise.resolve()
     })
@@ -159,7 +172,7 @@ describe("useChartFontsReady", () => {
       ...theme,
       genericFonts: { ...theme.genericFonts, bodyFont: "Geist, sans-serif" },
     }
-    const second = renderHook(() => useChartFontsReady(otherFonts))
+    const second = renderHook(() => useChartFontsReady(otherFonts, true))
     expect(second.result.current).toBe(false)
     expect(fonts.load).toHaveBeenCalledWith(
       `${theme.fontWeights.normal} 1em Geist, sans-serif`
