@@ -40,7 +40,8 @@ def query_params_page() -> None:
 
     st.markdown(f"Query params: {dict(st.query_params)}")
 
-    # A callback switch while the URL holds a bound widget value.
+    # Calls st.switch_page from a callback while the URL holds the bound
+    # "number" value.
     st.button("Switch to History", on_click=st.switch_page, args=(history,))
 
 

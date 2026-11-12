@@ -1150,6 +1150,9 @@ class DirectManipulationProtectionTest(DeltaGeneratorTestCase):
         """Test that replace_unbound with no params only removes unbound params."""
         self.query_params.replace_unbound()
         assert self.query_params._query_params == {"bound_key": "value"}
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "bound_key=value"
 
     def test_replace_unbound_raises_for_bound_key_and_keeps_params(self) -> None:
         """Test that replace_unbound refuses bound keys and restores the params."""
