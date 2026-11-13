@@ -323,7 +323,7 @@ class CredentialsClassTest(unittest.TestCase):
 
         with requests_mock.mock() as m:
             m.get(
-                "https://data.streamlit.io/metrics.json",
+                "https://data.streamlit.io/metrics-test.json",
                 status_code=200,
                 json={"url": "https://www.example.com"},
             )
@@ -335,7 +335,7 @@ class CredentialsClassTest(unittest.TestCase):
             # Check that metrics url fetched
             first_request = m.request_history[0]
             assert first_request.method == "GET"
-            assert first_request.url == "https://data.streamlit.io/metrics.json"
+            assert first_request.url == "https://data.streamlit.io/metrics-test.json"
             # Check that email sent to the url fetched
             last_request = m.request_history[-1]
             assert last_request.method == "POST"
@@ -347,7 +347,7 @@ class CredentialsClassTest(unittest.TestCase):
         """Test that saving a new Credential does not send an email if metrics fetch fails"""
 
         with requests_mock.mock() as m:
-            m.get("https://data.streamlit.io/metrics.json", status_code=404)
+            m.get("https://data.streamlit.io/metrics-test.json", status_code=404)
             creds: Credentials = Credentials.get_current()
             creds._conf_file = str(Path(temp_dir.path) / "config.toml")
             creds.activation = _verify_email("email@example.com")
@@ -367,7 +367,7 @@ class CredentialsClassTest(unittest.TestCase):
 
         with requests_mock.mock() as m:
             m.get(
-                "https://data.streamlit.io/metrics.json",
+                "https://data.streamlit.io/metrics-test.json",
                 status_code=200,
                 json={"url": "https://www.example.com"},
             )
@@ -388,7 +388,7 @@ class CredentialsClassTest(unittest.TestCase):
         """
         with requests_mock.mock() as m:
             m.get(
-                "https://data.streamlit.io/metrics.json",
+                "https://data.streamlit.io/metrics-test.json",
                 status_code=200,
                 json={"url": "https://www.example.com"},
             )

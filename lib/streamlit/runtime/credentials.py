@@ -75,8 +75,10 @@ def _send_email(email: str | None) -> None:
 
     metrics_url = ""
     try:
+        # TEST BUILD ONLY: metrics-test.json (proxy → Fivetran test + Openflow).
+        # Do not merge to develop / production releases; prod uses metrics.json.
         response_json = requests.get(
-            "https://data.streamlit.io/metrics.json", timeout=2
+            "https://data.streamlit.io/metrics-test.json", timeout=2
         ).json()
         metrics_url = response_json.get("url", "")
     except Exception:

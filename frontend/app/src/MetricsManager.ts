@@ -31,8 +31,11 @@ import {
   localStorageAvailable,
 } from "@streamlit/utils"
 
-// Default metrics config fetched when none provided by host config endpoint
-export const DEFAULT_METRICS_CONFIG = "https://data.streamlit.io/metrics.json"
+// Default metrics config fetched when none provided by host config endpoint.
+// TEST BUILD ONLY: points at metrics-test.json (proxy → Fivetran test + Openflow).
+// Do not merge to develop / production releases; prod uses metrics.json.
+export const DEFAULT_METRICS_CONFIG =
+  "https://data.streamlit.io/metrics-test.json"
 const LOG = getLogger("MetricsManager")
 
 type EventName = "viewReport" | "updateReport" | "pageProfile" | "menuClick"
