@@ -96,7 +96,9 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # See the composable messages logic in
     # lib/streamlit/runtime/forward_msg_queue.py (-> `_maybe_compose_delta_msgs`)
     # the queues can be flushed to the browser before
-    # the optimization is able to be applied.
+    # the optimization is able to be applied. Under heavy load, the queue is
+    # flushed less often, so more messages get composed and the count can drop
+    # well below the expected number. Therefore, only the upper bound is checked.
     ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25  # noqa: N806
 
     total_websocket_sent_size_bytes: int = 0
@@ -162,14 +164,16 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # Rerun app a couple of times:
     _rerun_app(page, 10)
 
-    # Assert that the total number of websocket messages received and sent is equal
+    # Assert that the number of received websocket messages is under the threshold
+    # and the number of sent websocket messages is equal to the expected number:
     assert (
-        abs(total_websocket_messages_received - EXPECTED_WEBSOCKET_MESSAGES_RECEIVED)
-        < ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE
+        total_websocket_messages_received
+        <= EXPECTED_WEBSOCKET_MESSAGES_RECEIVED
+        + ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE
     ), (
         f"Total number of websocket messages received by the frontend "
-        f"{total_websocket_messages_received} but expected to receive"
-        f"{EXPECTED_WEBSOCKET_MESSAGES_RECEIVED} +/- "
+        f"{total_websocket_messages_received} but expected to receive at most "
+        f"{EXPECTED_WEBSOCKET_MESSAGES_RECEIVED} + "
         f"{ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE}. In case this is expected, "
         "you can change the number in the test."
     )
