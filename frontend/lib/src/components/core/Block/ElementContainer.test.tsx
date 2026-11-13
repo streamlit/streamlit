@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { lazy } from "react"
+import { type ComponentType, lazy, type ReactElement, useContext } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import type { ElementNode } from "~lib/AppNode"
@@ -25,7 +25,16 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
+import {
+  ElementTimingContext,
+  RenderTimingContext,
+} from "~lib/components/core/RenderTimingContext"
+import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { render } from "~lib/test_util"
+import {
+  type RenderTimingReport,
+  RenderTimingTracker,
+} from "~lib/util/performance/RenderTimingTracker"
 
 import { ElementContainer } from "./ElementContainer"
 import { ElementContainerConfig, PrintLayout } from "./ElementContainerConfig"
@@ -324,6 +333,188 @@ describe("ElementContainer", () => {
       )
 
       expect(screen.getByTestId("stSkeleton")).toBeVisible()
+    })
+  })
+
+  describe("render timing", () => {
+    /** A tracker with a manual clock and paint queue, counting every element as visible. */
+    const createTimedTracker = (): {
+      tracker: RenderTimingTracker
+      reports: RenderTimingReport[]
+      setTime: (time: number) => void
+      paintUntilIdle: () => void
+    } => {
+      let time = 0
+      let paintQueue: (() => void)[] = []
+      const reports: RenderTimingReport[] = []
+      const tracker = new RenderTimingTracker({
+        onReport: report => reports.push(report),
+        environment: {
+          now: () => time,
+          afterNextPaint: callback => {
+            paintQueue.push(callback)
+          },
+          createIntersectionObserver: () => undefined,
+          isPageHidden: () => false,
+        },
+      })
+      return {
+        tracker,
+        reports,
+        setTime: (newTime: number) => {
+          time = newTime
+        },
+        paintUntilIdle: () => {
+          for (let i = 0; i < 20 && paintQueue.length > 0; i++) {
+            const callbacks = paintQueue
+            paintQueue = []
+            callbacks.forEach(callback => callback())
+          }
+        },
+      }
+    }
+
+    const renderTimed = (
+      tracker: RenderTimingTracker,
+      child: ReactElement
+    ): ReturnType<typeof render> =>
+      render(
+        <RenderTimingContext.Provider value={tracker}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            {child}
+          </ElementContainer>
+        </RenderTimingContext.Provider>
+      )
+
+    const finishScript = async (
+      tracker: RenderTimingTracker
+    ): Promise<void> => {
+      tracker.scriptFinished()
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+
+    function DrawingChart({ isDrawn }: { isDrawn: boolean }): ReactElement {
+      useElementLoadState("draw", isDrawn)
+      return <div>chart</div>
+    }
+
+    it("doesn't provide an element timing handle without a tracker", () => {
+      let handle: unknown
+      function Probe(): null {
+        handle = useContext(ElementTimingContext)
+        return null
+      }
+
+      render(
+        <ElementContainer
+          node={mockNode}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={false}
+        >
+          <Probe />
+        </ElementContainer>
+      )
+
+      expect(handle).toBeNull()
+    })
+
+    it("reports an element as loaded once it's painted", async () => {
+      const { tracker, reports, setTime, paintUntilIdle } =
+        createTimedTracker()
+      tracker.runStarted(mockNode.scriptRunId)
+      setTime(100)
+      renderTimed(tracker, <div>Content</div>)
+      await finishScript(tracker)
+      setTime(150)
+      paintUntilIdle()
+
+      expect(reports).toHaveLength(1)
+      expect(reports[0].renderTiming).toMatchObject({
+        firstContentMs: 150,
+        scriptFinishedMs: 100,
+        fullyLoadedMs: 150,
+        visibleElements: 1,
+        codeLoadingMs: 0,
+      })
+      tracker.dispose()
+    })
+
+    it("measures the time to load the element's code", async () => {
+      const { tracker, reports, setTime, paintUntilIdle } =
+        createTimedTracker()
+      let resolveModule: (module: {
+        default: ComponentType
+      }) => void = () => {}
+      const LazyElement = lazy(
+        () =>
+          new Promise<{ default: ComponentType }>(resolve => {
+            resolveModule = resolve
+          })
+      )
+      tracker.runStarted(mockNode.scriptRunId)
+      setTime(100)
+      renderTimed(tracker, <LazyElement />)
+      await finishScript(tracker)
+      paintUntilIdle()
+
+      expect(screen.getByTestId("stSkeleton")).toBeVisible()
+      expect(reports).toHaveLength(0)
+
+      setTime(400)
+      await act(async () => {
+        resolveModule({ default: () => <div>Loaded</div> })
+        await Promise.resolve()
+      })
+      expect(screen.getByText("Loaded")).toBeVisible()
+      setTime(450)
+      paintUntilIdle()
+
+      expect(reports[0].renderTiming).toMatchObject({
+        codeLoadingMs: 300,
+        fullyLoadedMs: 450,
+      })
+      tracker.dispose()
+    })
+
+    it("waits for work reported with useElementLoadState", async () => {
+      const { tracker, reports, setTime, paintUntilIdle } =
+        createTimedTracker()
+      tracker.runStarted(mockNode.scriptRunId)
+      setTime(100)
+      const { rerender } = renderTimed(
+        tracker,
+        <DrawingChart isDrawn={false} />
+      )
+      await finishScript(tracker)
+      paintUntilIdle()
+
+      expect(reports).toHaveLength(0)
+
+      setTime(300)
+      rerender(
+        <RenderTimingContext.Provider value={tracker}>
+          <ElementContainer
+            node={mockNode}
+            config={ElementContainerConfig.DEFAULT}
+            isStale={false}
+          >
+            <DrawingChart isDrawn />
+          </ElementContainer>
+        </RenderTimingContext.Provider>
+      )
+      paintUntilIdle()
+
+      expect(reports[0].renderTiming).toMatchObject({
+        drawingMs: 200,
+        fullyLoadedMs: 300,
+      })
+      tracker.dispose()
     })
   })
 

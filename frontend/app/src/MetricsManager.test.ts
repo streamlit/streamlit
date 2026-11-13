@@ -334,6 +334,54 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("agentApiUsage")
   })
 
+  it("buildEventProto populates expected fields - renderTiming", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+    mm.setAppHash("mockAppHash")
+
+    const renderTimingProto = mm.buildEventProto("renderTiming", {
+      sessionId: "mockSessionId",
+      runIndex: 2,
+      renderTiming: {
+        scriptFinishedMs: 120,
+        fullyLoadedMs: 300,
+        drawingMs: 180,
+        visibleElements: 4,
+        loadingScreen: "v2",
+        wasSuperseded: false,
+      },
+    })
+
+    expect(renderTimingProto.event).toEqual("renderTiming")
+    checkDefaultEventData(renderTimingProto)
+    expect(renderTimingProto.sessionId).toEqual("mockSessionId")
+    expect(renderTimingProto.toJSON()).toMatchObject({
+      runIndex: "2",
+      renderTiming: {
+        scriptFinishedMs: "120",
+        fullyLoadedMs: "300",
+        drawingMs: "180",
+        visibleElements: 4,
+        loadingScreen: "v2",
+      },
+    })
+  })
+
+  it("buildEventProto adds runIndex to pageProfile events", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const pageProfileProto = mm.buildEventProto("pageProfile", {
+      ...PAGE_PROFILE_DATA,
+      runIndex: 3,
+    })
+
+    expect(pageProfileProto.toJSON().runIndex).toEqual("3")
+    expect(
+      mm.buildEventProto("pageProfile", PAGE_PROFILE_DATA).toJSON()
+    ).not.toHaveProperty("runIndex")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
@@ -452,6 +500,30 @@ it("tracks events immediately after initialized", async () => {
   expect(mm.track.mock.calls.length).toBe(2)
   mm.enqueue("ev3", { data3: 13 })
   expect(mm.track.mock.calls.length).toBe(3)
+})
+
+it("only sends renderTiming events with keepalive", async () => {
+  const mm = getMetricsManager()
+  await mm.initialize({ gatherUsageStats: true })
+
+  mm.enqueue("pageProfile", { runIndex: 0 })
+  mm.enqueue("renderTiming", { runIndex: 0, renderTiming: {} })
+
+  expect(mm.track.mock.calls[0][1]).toBe(false)
+  expect(mm.track.mock.calls[1][1]).toBe(true)
+})
+
+it("passes keepalive to the metrics request", async () => {
+  const mm = getMetricsManager()
+  mm.track = MetricsManager.prototype.track
+  await mm.initialize({ gatherUsageStats: true })
+  fetch.mockClear()
+
+  mm.enqueue("pageProfile", {})
+  mm.enqueue("renderTiming", { renderTiming: {} })
+
+  expect(fetch.mock.calls[0][0].keepalive).toBe(false)
+  expect(fetch.mock.calls[1][0].keepalive).toBe(true)
 })
 
 it("tracks host data when in an iFrame", async () => {

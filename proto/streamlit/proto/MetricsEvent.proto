@@ -86,7 +86,76 @@ message MetricsEvent {
   // Same as PageProfile.agent_api_usage.
   AgentApiUsage agent_api_usage = 49;
 
-  // Next ID: 50
+  // Index of the script run within this page load, starting at 0 for the
+  // first run after the page loads. Set on pageProfile and renderTiming
+  // events; together with session_id it joins the two events of one run.
+  // Unset when render timing isn't measured (local apps, usage stats off).
+  optional int64 run_index = 50;
+
+  // Render Timing Event field:
+  RenderTiming render_timing = 51;
+
+  // Next ID: 52
+}
+
+// Browser-side timing of one script run, sent in a renderTiming event once
+// every visible element of the run has finished loading, or earlier when the
+// run is hidden, superseded or times out. Durations only; no app content.
+//
+// Fields ending in _ms are milliseconds from the start of the run: navigation
+// start for the first run of a page load (run_index 0), otherwise the time
+// the browser sent the rerun request. Milestones that weren't reached are
+// unset.
+message RenderTiming {
+  // First run only: when the frontend app mounted, after the HTML and
+  // JavaScript were downloaded and run.
+  optional int64 app_shell_ready_ms = 1;
+  // First run only: when the first NewSession was handled, after the
+  // WebSocket opened and the session started.
+  optional int64 connected_ms = 2;
+  // When the first new or changed element of the run was painted, counting
+  // only elements that were in the viewport, and not skeletons, spinners,
+  // progress bars, st.empty or st.space.
+  optional int64 first_content_ms = 3;
+  // When the PageProfile message was handled. Same end point as
+  // MetricsEvent.total_load_time.
+  optional int64 script_finished_ms = 4;
+  // When every new or changed element of the run in the viewport had
+  // finished drawing, and never before script_finished_ms. Unset when the
+  // run was hidden, superseded or timed out.
+  optional int64 fully_loaded_ms = 5;
+
+  // How the time between script_finished_ms and fully_loaded_ms (or the
+  // timeout) was spent. Each is the total time during that gap when at least
+  // one visible element was waiting on that kind of work, so the three can
+  // overlap.
+  // Code-split element bundles loading.
+  int64 code_loading_ms = 6;
+  // Charts and the dataframe grid laying out and painting.
+  int64 drawing_ms = 7;
+  // Images, video and iframes (including custom components) loading.
+  int64 media_loading_ms = 8;
+
+  // Number of new or changed elements in the viewport that counted toward
+  // fully_loaded_ms.
+  int32 visible_elements = 9;
+  // Lower bound in CSS pixels of the viewport width and height bucket.
+  int32 viewport_width_bucket = 10;
+  int32 viewport_height_bucket = 11;
+  // The loading screen mode set by embed_options: "none", "v1" or "v2".
+  string loading_screen = 12;
+
+  // The page was hidden (for example a background tab) at some point while
+  // the run was measured. Hidden pages don't paint, so timings are not
+  // representative.
+  bool was_hidden = 13;
+  // Another rerun was requested or started before this run fully loaded.
+  bool was_superseded = 14;
+  // Visible elements didn't finish loading within the timeout after the
+  // script finished.
+  bool timed_out = 15;
+  // Number of visible elements that hadn't finished loading at the timeout.
+  int32 timed_out_elements = 16;
 }
 
 message BrowserInfo {

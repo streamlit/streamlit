@@ -45,3 +45,36 @@ export const isLocalhost = (): boolean => {
     window.location.hostname === "127.0.0.1"
   )
 }
+
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/
+
+/**
+ * Returns true if the hostname is local to the user's machine or network:
+ * `localhost` (and its subdomains), a loopback address (`127.*`, `[::1]`),
+ * `0.0.0.0`, or a private-network IPv4 address (`10.*`, `192.168.*`,
+ * `172.16.*`-`172.31.*`). Hostnames are expected in `URL.hostname` form, so
+ * IPv6 addresses are bracketed.
+ */
+export function isLocalOrPrivateHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "[::1]" ||
+    host === "0.0.0.0"
+  ) {
+    return true
+  }
+
+  const match = IPV4_RE.exec(host)
+  if (!match) return false
+
+  const first = Number(match[1])
+  const second = Number(match[2])
+  return (
+    first === 127 ||
+    first === 10 ||
+    (first === 192 && second === 168) ||
+    (first === 172 && second >= 16 && second <= 31)
+  )
+}
