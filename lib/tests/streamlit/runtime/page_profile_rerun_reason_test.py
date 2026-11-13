@@ -279,3 +279,25 @@ def test_switch_page(page_profiles: PageProfileRecorder) -> None:
         ("widget_interaction", "button"),
         ("navigation", ""),
     ]
+
+
+def test_reason_not_computed_without_usage_stats() -> None:
+    def script() -> None:
+        import streamlit as st
+
+        st.slider("Slider", 0, 10)
+
+    with (
+        testutil.patch_config_options({"browser.gatherUsageStats": False}),
+        patch(
+            "streamlit.runtime.scriptrunner.script_runner.ScriptRunner._rerun_reason_at_run_start"
+        ) as rerun_reason_at_run_start,
+        patch(
+            "streamlit.runtime.scriptrunner.script_runner.create_page_profile_message"
+        ) as create_page_profile_message,
+    ):
+        at = AppTest.from_function(script).run()
+        at.slider[0].set_value(5).run()
+
+    rerun_reason_at_run_start.assert_not_called()
+    create_page_profile_message.assert_not_called()

@@ -648,7 +648,8 @@ class AppSession:
             to use previous client state.
         reason : RerunReason | None
             Why the rerun is requested, recorded in telemetry. When None, it is
-            inferred from ``client_state``.
+            inferred from ``client_state``, or is ``RerunReason.UNKNOWN`` if
+            ``client_state`` is also None.
 
         """
 

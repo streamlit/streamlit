@@ -76,7 +76,9 @@ def register_widget(
         The id of the element. Must be unique.
     element_type : str
         The element type the id was computed with in
-        ``compute_and_register_element_id`` (e.g. "slider").
+        ``compute_and_register_element_id`` (e.g. "slider"). Reported in usage
+        telemetry, so it must be a fixed type name, never app content such as
+        a key, label, or custom component name.
     deserializer : WidgetDeserializer[T]
         Called to convert a widget's protobuf value to the value returned by
         its st.<widget_name> function.

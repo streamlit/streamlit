@@ -2572,6 +2572,22 @@ def test_rerun_reason_at_run_start(
     assert reason is expected
 
 
+def test_rerun_reason_at_run_start_falls_back_on_query_param_error() -> None:
+    runner = TestScriptRunner("good_script.py")
+
+    with patch(
+        "streamlit.runtime.state.query_params.QueryParams.matches_query_string",
+        side_effect=RuntimeError("boom"),
+    ):
+        reason = runner._rerun_reason_at_run_start(
+            RerunData(query_string="a=2", reason=RerunReason.ST_RERUN),
+            previous_page_script_hash="main",
+            page_script_hash="main",
+        )
+
+    assert reason is RerunReason.ST_RERUN
+
+
 def test_scriptrunner_repr_uses_util_repr_format() -> None:
     """ScriptRunner.__repr__ delegates to util.repr_ and exposes its concrete class name."""
     runner = TestScriptRunner("not_a_script.py")

@@ -666,10 +666,14 @@ class ScriptRunner:
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
             previous_page_script_hash = ctx.page_script_hash
-            rerun_reason = self._rerun_reason_at_run_start(
-                rerun_data,
-                previous_page_script_hash=previous_page_script_hash,
-                page_script_hash=page_script_hash,
+            rerun_reason = (
+                self._rerun_reason_at_run_start(
+                    rerun_data,
+                    previous_page_script_hash=previous_page_script_hash,
+                    page_script_hash=page_script_hash,
+                )
+                if ctx.gather_usage_stats
+                else rerun_data.reason
             )
             if previous_page_script_hash != page_script_hash:
                 # Page changed, enforce reset widget state where possible.
@@ -1026,7 +1030,8 @@ class ScriptRunner:
         """Return why this run started, before widget changes are considered.
 
         Must be called before this run's query string is applied to the
-        session's query params.
+        session's query params. Falls back to the requested reason on error,
+        since telemetry must never affect the run.
         """
         if not previous_page_script_hash:
             # Every run sets the session's current page, so it is only empty
@@ -1034,8 +1039,14 @@ class ScriptRunner:
             return RerunReason.INITIAL_LOAD
         if rerun_data.page_name or previous_page_script_hash != page_script_hash:
             return rerun_data.reason.combine(RerunReason.NAVIGATION)
-        with self._session_state.query_params() as qp:
-            query_string_changed = not qp.matches_query_string(rerun_data.query_string)
+        try:
+            with self._session_state.query_params() as qp:
+                query_string_changed = not qp.matches_query_string(
+                    rerun_data.query_string
+                )
+        except Exception:
+            _LOGGER.debug("Failed to compare query params.", exc_info=True)
+            return rerun_data.reason
         if query_string_changed:
             return rerun_data.reason.combine(RerunReason.QUERY_PARAMS_CHANGE)
         return rerun_data.reason

@@ -817,6 +817,9 @@ def create_page_profile_message(
     if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
         rerun_reason = ctx.rerun_reason
+        # A changed widget makes this a widget interaction unless a reason with
+        # higher precedence (initial load, navigation) applies. The element type
+        # is reported only for widget interactions.
         if ctx.rerun_element_type is not None:
             rerun_reason = rerun_reason.combine(RerunReason.WIDGET_INTERACTION)
         page_profile.rerun_reason = rerun_reason.value

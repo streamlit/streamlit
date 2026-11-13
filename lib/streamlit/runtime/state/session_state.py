@@ -608,9 +608,9 @@ def _navigation_is_pending(
 def _rerun_element_type(changed_widgets: list[WidgetMetadata[Any]]) -> str:
     """Return the element type to record for a run caused by these widget changes.
 
-    This is the widgets' type if they all share one. Otherwise it is the type of
-    the changed trigger widgets, which are what sent the rerun (e.g. a form's
-    submit button), if they share one, or else "multiple".
+    Returns the type all changed widgets share, if any. Otherwise returns the type
+    the changed trigger widgets share (e.g. a form's submit button), since a
+    trigger is what sent the rerun. Falls back to "multiple".
     """
     element_types = {metadata.element_type for metadata in changed_widgets}
     if len(element_types) == 1:
@@ -1004,8 +1004,8 @@ class SessionState:
 
         ctx = get_script_run_ctx()
         if ctx and changed_widget_metadata:
-            # Recorded before callbacks run so the run is attributed to this
-            # interaction even if a callback raises.
+            # Record the element type before callbacks run, so a callback that
+            # raises still leaves this run attributed to the interaction.
             ctx.rerun_element_type = _rerun_element_type(changed_widget_metadata)
 
         # Path 1: single callback.
