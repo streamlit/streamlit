@@ -1109,6 +1109,7 @@ class EChartsMixin:
         `Apache ECharts <https://echarts.apache.org/>`_ is a powerful, open-source
         charting library with a large catalog of chart types (including gauges,
         sunbursts, sankey, graph/network, candlestick, radar, and more).
+        Streamlit ships with Apache ECharts 6.1.
 
         To show an ECharts chart in Streamlit, pass an ECharts
         `option object <https://echarts.apache.org/en/option.html>`_ as a Python
