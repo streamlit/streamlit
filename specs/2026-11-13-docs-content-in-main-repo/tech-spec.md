@@ -37,7 +37,7 @@ The agents that do most of the work in this repo can't help. `implementing-featu
 |---|---|---|
 | Pages | 409 Markdown files, 3.2 MB. Pages aren't versioned: one page per command serves every version, and only docstrings vary. | `content/` |
 | Navigation | Lists every page. A page without an entry fails the build. | `content/menu.md` |
-| Readers | The `articleDirectory` constant, the homepage import, the llms.txt generators, and the offline docs builder | `lib/node/api.js:7`, `pages/index.js:29`, `python/generate_llms_txt.py:93`, `python/generate_llms_full_txt.py:337`, `scripts/build-offline-docs.js:14` |
+| Loaders | The `articleDirectory` constant, the homepage import, the llms.txt generators, and the offline docs builder | `lib/node/api.js:7`, `pages/index.js:29`, `python/generate_llms_txt.py:93`, `python/generate_llms_full_txt.py:337`, `scripts/build-offline-docs.js:14` |
 | MDX components | About 25 custom tags, led by `RefCard` (416 uses), `Image` (395), `Autofunction` (308), `GitHubIssuesHint` (139), `TileContainer` (79), and `Cloud` (76) | `components/` |
 | Images | 378 files, 65 MB. Content references 362 of them by `/images/...` URL. Seven files exceed 500 KB and add up to 32 MB; two GIFs alone are 25 MB. | `public/images/` |
 | Redirects | 1,173 Netlify rules, added whenever a page moves | `public/_redirects` |
@@ -89,7 +89,7 @@ release.
 docs/
 ├── AGENTS.md      # rules for writing docs pages (§5)
 ├── _redirects     # from streamlit/docs:public/_redirects
-├── content/       # from streamlit/docs:content/, unchanged
+├── content/       # from streamlit/docs:content/
 │   ├── index.md
 │   ├── menu.md
 │   └── deploy/ develop/ get-started/ kb/
@@ -99,11 +99,13 @@ docs/
 - `docs/` sits at the repo root, outside `lib/`, so it isn't part of the wheel or sdist.
 - `_redirects` moves with the pages, because moving or renaming a page needs a redirect in
   the same PR.
-- The import is one commit that names the source `streamlit/docs` SHA, without history.
-  The history stays in `streamlit/docs`; importing it would add years of docs commits to
-  the log that `generating-changelog` and the release tooling read.
-- The two GIFs over 10 MB are re-encoded as animated WebP, which still works with Markdown
-  image syntax.
+- The import is one commit without history, and its message names the source
+  `streamlit/docs` SHA. The history stays in `streamlit/docs`; importing it would add years
+  of docs commits to the log that `generating-changelog` and the release tooling read.
+- The two GIFs over 10 MB are re-encoded as animated WebP, which the `<Image>` component
+  shows like any other image, and their two references are updated. A trial encode brings
+  `docs/images/` from 65 MB to about 53 MB. That stays in plain git, like the E2E
+  snapshots.
 
 ### 2. How `streamlit/docs` reads it
 
@@ -121,11 +123,13 @@ public/images     -> ../streamlit/docs/images
 public/_redirects -> ../streamlit/docs/_redirects
 ```
 
-With these symlinks, the five readers and every `/images/...` URL work unchanged. Two
+With these symlinks, the five loaders and every `/images/...` URL work unchanged. Three
 things need checking in the first implementation step: that webpack resolves the
-`../content/index.md` import in `pages/index.js` through the symlink, and that the export
-copies the symlinked files into `out/`. If either fails, the readers point at
-`streamlit/docs/content` directly, which is one constant or import each.
+`../content/index.md` import in `pages/index.js` through the symlink, that the export
+copies the symlinked files into `out/`, and that the shallow submodule checkout fetches a
+pinned tag that isn't the tip of `develop`, both locally and on Netlify. If a symlink check
+fails, the loaders point at `streamlit/docs/content` directly, which is one constant or
+import each.
 
 Other changes in the docs repo:
 
@@ -152,20 +156,26 @@ features never go live early.
 
 Urgent fixes are rare: wrong security guidance, broken Community Cloud instructions, or a
 wrong install command. They merge to `develop` first, `cherry-pick-to-release-branch.yml`
-puts them on the latest `release/X.Y.Z` branch, and the pin moves to that commit. Everything
+puts them on the latest `release/X.Y.Z` branch, and the pin moves to that commit. Docs for
+a dated Community Cloud or Streamlit in Snowflake launch take the same path. Everything
 else, typo fixes included, waits for the next release, about two weeks at most.
 
-`patch-release-branch-creation.yml` branches from the previous tag, so a fix that was
-cherry-picked onto `release/1.67.0` after its tag isn't on `release/1.67.1`. The release
-PR (§4) warns when the new pin doesn't contain the current one, so the fix can be
-cherry-picked again before merging.
+Without a check, a patch release drops those cherry-picks.
+`patch-release-branch-creation.yml` branches from the previous tag, so `release/1.67.1`
+lacks whatever was cherry-picked onto `release/1.67.0` after its tag, including the import
+itself (§7). Before tagging, `release-tag-and-pr-creation.yml` gets a new check: it fails
+when a commit that changed `docs/` on the previous release branch after its tag has no
+equivalent on the new release branch. The release manager then cherry-picks the missing
+commit and runs the workflow again. The check matches commits by their changes
+(`git log --cherry-pick`), because release merge PRs are squashed and a fix reaches the
+next minor release as its `develop` commit.
 
-Release notes have to be in the pinned commit. The release manager runs
-`generating-changelog`, which writes into
-`docs/content/develop/quick-references/release-notes/`, and commits the result to the
-release branch before tagging. The release merge PR then brings it back to `develop`.
-`release-tag-and-pr-creation.yml` fails when the release notes have no section for the
-version being tagged.
+Release notes have to be in the pinned commit. `generating-changelog` writes to
+`work-tmp/` today and changes to write into
+`docs/content/develop/quick-references/release-notes/`. The release manager commits the
+result to the release branch before tagging, and the release merge PR brings it back to
+`develop`. A second new check in `release-tag-and-pr-creation.yml` fails when the release
+notes have no section for the version being tagged.
 
 ### 4. Release PR in `streamlit/docs`
 
@@ -178,8 +188,8 @@ schedule and on manual dispatch, and opens a PR when a new release tag exists:
 3. Compare the `<Cloud>` embeds in the previous and new docstrings, and list the example
    apps to deploy. Step 5 of the docs repo's `updating-docs-for-release` skill does this by
    hand today.
-4. Put `git diff --stat` of `docs/` between the two pins in the PR body, plus the warning
-   from §3 when the new pin doesn't contain the current one.
+4. Put `git diff --stat` of `docs/` between the two pins in the PR body, plus the
+   placeholder tile images that the validator (§6) reports for the new pin.
 
 Merging the PR publishes the release docs. The "What's new" tiles in `pages/index.js` stay
 in the docs repo and are updated in this PR. A schedule avoids storing a `streamlit/docs`
@@ -191,7 +201,9 @@ later if the delay matters.
 - `docs/AGENTS.md` holds the page rules that live in the docs README and skill today:
   frontmatter (`title`, `slug`, `description`, `keywords`), the `menu.md` entry, tiles in
   the section `_index.md` and in the API reference `_index.md`, the allowed components,
-  image paths, redirects for moved pages, and the release-notes format.
+  image paths, redirects for moved pages, and the release-notes format. Like
+  `specs/AGENTS.md`, it gets a sibling `CLAUDE.md` and an entry in
+  `scripts/generate_agent_rules.py`.
 - The root `AGENTS.md` and `wiki/new-feature-guide.md` require user-facing changes to update
   `docs/content` in the same PR. A new command adds a page, tile, and menu entry. A new
   parameter or behavior change updates the concept pages and tutorials that describe it.
@@ -224,18 +236,26 @@ It also reports placeholder tile images. The import PR fixes or allowlists whate
 validator flags in today's content.
 
 **Site build.** The validator doesn't parse MDX, so an unbalanced tag or a stray `{` still
-breaks the site. A CI job that runs when `docs/` changes checks out `streamlit/docs`,
-points it at the PR's `docs/`, and runs `make export`. The build time hasn't been measured.
-If it's too slow for every docs PR, the job runs nightly against `develop`, and the
-validator stays the per-PR check.
+breaks the site. A CI job that runs when `docs/` changes checks out `streamlit/docs` at
+`main`, puts the PR checkout at the submodule path, and runs `make export`. The build
+installs that repo's npm dependencies and compiles the PR's pages, so the job has a
+read-only token and no secrets. The build time hasn't been measured. If it's too slow for
+every docs PR, the job runs nightly against `develop`, and the validator stays the per-PR
+check.
 
 **Repo settings.**
 
-- `ruff format` runs with `preview = true`, which formats Python code blocks inside
-  Markdown. `docs/` goes into `extend-exclude`, so imported samples keep their formatting.
-- `check-added-large-files` rejects files over 500 KB, which covers seven of today's
+- `make python-lint` runs `ruff format --check` on the whole repo, and ruff formats Python
+  code blocks inside Markdown. `docs/` goes into `extend-exclude`, so imported samples keep
+  their formatting.
+- `check-added-large-files` rejects files over 500 KB, which would block seven of today's
   images. It gets a higher limit for `docs/images/`.
-- `CODEOWNERS` assigns `docs/` to the docs maintainers.
+- `scripts/check_license_headers.py` ignores `docs/`. Otherwise it rejects `_redirects`,
+  the WebP files, and the two non-image files in `docs/images/`.
+- The whitespace and end-of-file hooks run on `docs/` as well. They change two of today's
+  files, and no page uses trailing spaces for line breaks, which `trailing-whitespace`
+  would strip.
+- `CODEOWNERS` assigns `docs/` to an owner (open question 2).
 - PRs that only touch `docs/` skip the Python, frontend, and E2E suites. The skip happens
   inside the jobs rather than through `paths-ignore`, because required checks that never
   report block the merge.
@@ -246,7 +266,8 @@ validator stays the per-PR check.
 2. Import `content/`, `public/images/`, and `public/_redirects` into `docs/` on `develop`,
    with the validator, repo settings, and `CODEOWNERS`. Cherry-pick the import onto the
    release branch of the release that just shipped, so that the first pin has the content
-   but no unreleased changes.
+   but no unreleased changes. The check in §3 carries the import into the next patch
+   release.
 3. In `streamlit/docs`, add the submodule pinned to that commit, replace the folders with
    symlinks, and add the release workflow. Update the README and trim the
    `updating-docs-for-release` skill to the steps in §4.
@@ -311,9 +332,7 @@ in `streamlit/docs`.
 
 ## Out of scope
 
-- Moving the example-app sources. Docstrings already link them across repos, and moving
-  them means redeploying each Community Cloud app from a new path.
-- Moving the MDX components, or making pages renderable without the docs site.
+- Making pages renderable without the docs site.
 - Rendered previews of docs changes in `streamlit/streamlit` PRs (alternative B enables
   them).
 - Formatting Python samples in docs pages with `ruff`.
@@ -322,6 +341,6 @@ in `streamlit/docs`.
 ## Open questions
 
 1. Should `docs/` accept PRs from outside the maintainer team?
-2. Who owns `docs/` in `CODEOWNERS`?
+2. Who owns `docs/` in `CODEOWNERS`, and is their review required?
 3. Is a delay of up to two weeks acceptable for non-urgent fixes, or should every docs fix
    be cherry-picked onto the release branch?
