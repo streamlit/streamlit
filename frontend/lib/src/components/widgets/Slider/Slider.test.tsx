@@ -280,6 +280,7 @@ describe("Slider widget", () => {
       { format: "%d", min: "0", max: "10", thumb: "5" },
       { format: "%0.2f", min: "0.00", max: "10.00", thumb: "5.00" },
       { format: "$%d", min: "$0", max: "$10", thumb: "$5" },
+      { format: "dollar", min: "$0", max: "$10", thumb: "$5" },
     ])(
       "formats the thumb and min/max labels with format $format",
       ({ format, min, max, thumb }) => {
@@ -297,6 +298,18 @@ describe("Slider widget", () => {
         )
       }
     )
+
+    it("keeps the cents of a non-whole thumb value with the dollar format", () => {
+      render(
+        <Slider
+          {...getProps({ format: "dollar", default: [2.5], step: 0.5 })}
+        />
+      )
+
+      expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent(
+        /^\$2\.50$/
+      )
+    })
   })
 
   describe("Tick bar visibility", () => {

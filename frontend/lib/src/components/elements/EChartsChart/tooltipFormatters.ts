@@ -281,7 +281,9 @@ function buildValueFormatter(format: string): TooltipValueFormatter | null {
     const coercedItem =
       typeof item === "string" && isNumericString(item) ? Number(item) : item
     if (typeof coercedItem === "number" && Number.isFinite(coercedItem)) {
-      return formatNumber(coercedItem, format)
+      return formatNumber(coercedItem, format, undefined, {
+        stripWholeDecimals: true,
+      })
     }
     return formatTooltipItem(coercedItem)
   }

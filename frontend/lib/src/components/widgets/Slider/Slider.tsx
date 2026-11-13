@@ -506,7 +506,7 @@ function formatValue(value: number, element: SliderProto): string {
     return formatMoment(momentDate, format, getMomentKind(element))
   }
 
-  return formatNumber(value, format)
+  return formatNumber(value, format, undefined, { stripWholeDecimals: true })
 }
 
 /**

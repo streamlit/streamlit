@@ -449,6 +449,7 @@ describe("applyTooltipFormatters", () => {
   describe("string valueFormatter", () => {
     it.each([
       ["dollar", 1234.567, "$1,234.57"],
+      ["dollar", 55680, "$55,680"],
       ["compact", 1234567, "1.2M"],
       ["percent", 0.256, "25.6%"],
       ["%,d sessions", 1234, "1,234 sessions"],
@@ -467,7 +468,7 @@ describe("applyTooltipFormatters", () => {
       )
 
       expect(valueFormatter("1234.5")).toBe("$1,234.50")
-      expect(valueFormatter([1, 2.5])).toEqual(["$1.00", "$2.50"])
+      expect(valueFormatter([1, 2.5])).toEqual(["$1", "$2.50"])
       expect(valueFormatter("N/A")).toBe("N/A")
       expect(valueFormatter("2026-01-02T00:00:00.000")).toBe("2026-01-02")
       expect(valueFormatter("")).toBe("-")
@@ -525,13 +526,11 @@ describe("applyTooltipFormatters", () => {
     const rootMedia = result.media as Array<{ option: EChartsOptionObject }>
 
     expect(formatterOf(baseOption)(itemParams({ value: [3] }))).toBe("3")
-    expect(valueFormatterOf(baseSeries as EChartsOptionObject)(5)).toBe(
-      "$5.00"
-    )
+    expect(valueFormatterOf(baseSeries as EChartsOptionObject)(5)).toBe("$5")
     expect(valueFormatterOf(baseMedia[0].option)(1500)).toBe("1.5K")
     expect(tickSeries[0]).toBe(untouchedSeries)
     expect(valueFormatterOf(tickSeries[1] as EChartsOptionObject)(5)).toBe(
-      "$5.00"
+      "$5"
     )
     expect((result.options as unknown[])[1]).toBe(1)
     expect(
@@ -551,7 +550,7 @@ describe("applyTooltipFormatters", () => {
     })
 
     const [converted, second] = result.tooltip as EChartsOptionObject[]
-    expect((converted.valueFormatter as ValueFormatter)(5)).toBe("$5.00")
+    expect((converted.valueFormatter as ValueFormatter)(5)).toBe("$5")
     expect(second).toBe(untouched)
   })
 

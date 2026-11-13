@@ -443,6 +443,20 @@ describe("Metric element", () => {
       }
     )
 
+    it("drops the cents of whole dollar amounts but keeps them otherwise", () => {
+      const props = getProps({
+        body: "55680",
+        delta: "12.5",
+        format: "dollar",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricValue")).toHaveTextContent(
+        /^\$55,680$/
+      )
+      expect(screen.getByTestId("stMetricDelta")).toHaveTextContent("$12.50")
+    })
+
     it("formats numeric delta with compact format", () => {
       const props = getProps({ delta: "1000", format: "compact" })
       render(<Metric {...props} />)
