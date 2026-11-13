@@ -863,11 +863,10 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
-        # In cache_metrics, each call counts as exactly one lookup, decided by this
-        # first read. The re-read under the compute lock belongs to the same call, so
-        # a caller that waits for another caller's computation counts as a miss. The
-        # page profile's call_timer counts that caller as a hit and its wait
-        # separately.
+        # cache_metrics counts each call as exactly one lookup, decided by this first
+        # read, so a caller that waits for another caller's computation is a miss
+        # there. The page profile's call_timer instead counts that caller as a hit and
+        # records its wait separately.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:

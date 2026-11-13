@@ -56,20 +56,21 @@ class CacheTotals:
 class ThreadCacheStats:
     """Cached-call totals recorded by one thread during one script run.
 
-    Besides the per-type totals, this tracks the wall-clock time during which
-    at least one recorded cached call was running on the thread, minus the time
-    of tracked commands in that period. Async cached calls awaited concurrently
-    on one event loop overlap, so their summed times can exceed that span;
-    ``time_scale`` shrinks them to fit so they never exceed the time that is
-    otherwise counted as user code.
+    Async cached calls awaited concurrently on one event loop overlap, so their
+    summed times can exceed the wall-clock time they ran, which is the most
+    they can take from user code. So the calls of each overlapping group (from
+    when the thread's first open call starts until no call is open) are added
+    up separately, and scaled down to that group's wall-clock time, minus the
+    tracked commands in it, before they join the per-type totals. Calls that
+    run one at a time are added as recorded.
     """
 
     __slots__ = (
+        "_calls_in_cache_code",
         "_open_calls",
+        "_overlap",
         "_span_command_start",
-        "_span_command_time",
         "_span_start",
-        "_span_time",
         "cache_data",
         "cache_resource",
         "tracked_command_time",
@@ -82,40 +83,90 @@ class ThreadCacheStats:
         # cached call was running. Only commands listed in the page profile count.
         self.tracked_command_time = 0.0
         self._open_calls = 0
+        # Open calls that aren't waiting for another caller or computing.
+        self._calls_in_cache_code = 0
+        # When the thread's current open calls started.
         self._span_start = 0.0
         self._span_command_start = 0.0
-        self._span_time = 0.0
-        self._span_command_time = 0.0
+        # The (cache_data, cache_resource) totals of the current group of
+        # overlapping calls, or None while calls run one at a time.
+        self._overlap: tuple[CacheTotals, CacheTotals] | None = None
 
     @property
     def is_in_call(self) -> bool:
         return self._open_calls > 0
 
+    @property
+    def is_in_cache_code(self) -> bool:
+        """Whether a recorded call is hashing, reading, or replaying on this thread.
+
+        Those steps never yield the thread, so a cached call started meanwhile
+        is nested inside that call, for example in a ``hash_funcs`` function.
+        """
+        return self._calls_in_cache_code > 0
+
     def open_call(self, now: float) -> None:
         if self._open_calls == 0:
             self._span_start = now
             self._span_command_start = self.tracked_command_time
+        elif self._overlap is None:
+            self._overlap = (CacheTotals(), CacheTotals())
         self._open_calls += 1
+        self._calls_in_cache_code += 1
 
     def close_call(self, now: float) -> None:
+        self._calls_in_cache_code -= 1
         self._open_calls -= 1
-        if self._open_calls == 0:
-            self._span_time += now - self._span_start
-            self._span_command_time += (
-                self.tracked_command_time - self._span_command_start
-            )
+        if self._open_calls == 0 and self._overlap is not None:
+            overlap, self._overlap = self._overlap, None
+            self._add_scaled(overlap, self.cache_data, self.cache_resource, now)
 
-    def time_scale(self, now: float) -> float:
-        """The factor that keeps this thread's cache times within its call span."""
-        recorded = self.cache_data.total_time + self.cache_resource.total_time
-        span = self._span_time - self._span_command_time
-        if self._open_calls > 0:
-            span += (now - self._span_start) - (
-                self.tracked_command_time - self._span_command_start
-            )
-        if recorded <= span:
-            return 1.0
-        return max(span, 0.0) / recorded
+    def leave_cache_code(self) -> None:
+        """Mark that an open call started waiting or computing."""
+        self._calls_in_cache_code -= 1
+
+    def enter_cache_code(self) -> None:
+        """Mark that an open call stopped waiting or computing."""
+        self._calls_in_cache_code += 1
+
+    def totals_for_finished_call(self, totals: CacheTotals) -> CacheTotals:
+        """Where a finishing call adds what it recorded for ``totals``' type."""
+        if self._overlap is None:
+            return totals
+        return self._overlap[0] if totals is self.cache_data else self._overlap[1]
+
+    def add_to(
+        self, cache_data: CacheTotals, cache_resource: CacheTotals, now: float
+    ) -> None:
+        """Add this thread's totals to ``cache_data`` and ``cache_resource``.
+
+        An overlapping group still open is scaled to the time it has run so far.
+        """
+        cache_data.add(self.cache_data)
+        cache_resource.add(self.cache_resource)
+        # Read after the totals above, so a group that closes meanwhile is left
+        # out rather than counted twice.
+        overlap = self._overlap
+        if overlap is not None:
+            self._add_scaled(overlap, cache_data, cache_resource, now)
+
+    def _add_scaled(
+        self,
+        overlap: tuple[CacheTotals, CacheTotals],
+        cache_data: CacheTotals,
+        cache_resource: CacheTotals,
+        now: float,
+    ) -> None:
+        overlap_data, overlap_resource = overlap
+        recorded = overlap_data.total_time + overlap_resource.total_time
+        span = max(
+            (now - self._span_start)
+            - (self.tracked_command_time - self._span_command_start),
+            0.0,
+        )
+        scale = 1.0 if recorded <= span else span / recorded
+        cache_data.add(overlap_data, time_scale=scale)
+        cache_resource.add(overlap_resource, time_scale=scale)
 
 
 class RunCacheStats:
@@ -154,7 +205,5 @@ class RunCacheStats:
         cache_data = CacheTotals()
         cache_resource = CacheTotals()
         for stats in threads:
-            scale = stats.time_scale(now)
-            cache_data.add(stats.cache_data, time_scale=scale)
-            cache_resource.add(stats.cache_resource, time_scale=scale)
+            stats.add_to(cache_data, cache_resource, now)
         return cache_data, cache_resource

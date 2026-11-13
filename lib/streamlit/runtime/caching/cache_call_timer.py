@@ -19,10 +19,12 @@ page profile, so the cache times can be subtracted from user code:
 
 - It runs on a thread attached to a script run that gathers usage stats.
   Background refreshes and other threads without a script run are not recorded.
-- It is not inside another cached function, including on a thread that
-  function attached with ``add_script_run_ctx``. Such a call is part of the
-  outer call's compute time. A thread that attaches itself has no parent
-  state to inherit, so its calls are still recorded.
+- It is not nested inside another cached call. Nested calls belong to the
+  outer call's time: calls made while the outer function computes, including
+  on threads it attaches with ``add_script_run_ctx``, and calls made while the
+  outer call hashes its arguments or reads its result, such as from a
+  ``hash_funcs`` function. A thread that attaches itself has no parent state
+  to inherit, so its calls are still recorded.
 - It is not inside a tracked command, such as the ``st.cache_resource`` call
   inside ``st.connection``, whose time is already counted as command time.
 - It finishes before the run's page profile is built. Counts and times are
@@ -43,12 +45,15 @@ from typing import TYPE_CHECKING, Final
 
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    CacheComputeScope,
     ThreadState,
     get_script_run_ctx,
     in_cached_function,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
         CacheTotals,
         ThreadCacheStats,
@@ -95,13 +100,15 @@ class CacheCallTimer:
         self._is_stale = is_stale
 
     def begin_wait(self) -> None:
-        if self._totals is not None:
+        if self._thread_stats is not None:
             self._wait_start = time.perf_counter()
+            self._thread_stats.leave_cache_code()
 
     def end_wait(self) -> None:
-        if self._wait_start is not None:
+        if self._thread_stats is not None and self._wait_start is not None:
             self._wait_time += time.perf_counter() - self._wait_start
             self._wait_start = None
+            self._thread_stats.enter_cache_code()
 
     def begin_compute(self) -> None:
         """Start timing the cached function, and count the call as a miss."""
@@ -110,6 +117,7 @@ class CacheCallTimer:
         self._is_miss = True
         self._compute_start = time.perf_counter()
         self._compute_command_start = self._thread_stats.tracked_command_time
+        self._thread_stats.leave_cache_code()
 
     def end_compute(self) -> None:
         if self._thread_stats is None or self._compute_start is None:
@@ -119,6 +127,7 @@ class CacheCallTimer:
             self._thread_stats.tracked_command_time - self._compute_command_start
         )
         self._compute_start = None
+        self._thread_stats.enter_cache_code()
 
     def finish(self) -> None:
         """Add the call's counts and times to the run totals.
@@ -129,6 +138,11 @@ class CacheCallTimer:
         thread_stats, totals = self._thread_stats, self._totals
         if thread_stats is None or totals is None:
             return
+        if self._wait_start is not None:
+            self.end_wait()
+        if self._compute_start is not None:
+            self.end_compute()
+        totals = thread_stats.totals_for_finished_call(totals)
         totals.calls += 1
         if self._is_hit:
             totals.hits += 1
@@ -136,16 +150,14 @@ class CacheCallTimer:
                 totals.stale_hits += 1
         if self._is_miss:
             totals.misses += 1
-        if self._wait_start is not None:
-            self.end_wait()
-        if self._compute_start is not None:
-            self.end_compute()
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
         totals.compute_time += max(self._compute_time - self._compute_command_time, 0)
         totals.wait_time += self._wait_time
-        # Wall-clock overlap between concurrent async calls on one event loop can
-        # make the remainder negative.
+        # Command time during the compute is already excluded from compute_time,
+        # so only the rest of command_time comes out of the overhead. Wall-clock
+        # overlap between concurrent async calls on one event loop can make the
+        # remainder negative.
         totals.overhead_time += max(
             (now - self._start)
             - self._wait_time
@@ -176,6 +188,8 @@ def start_call(cache_type: CacheType) -> CacheCallTimer:
     if thread_state.command_tracking_deactivated or thread_state.in_cache_compute:
         return _NOT_RECORDED
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
+    if thread_stats.is_in_cache_code:
+        return _NOT_RECORDED
     totals = (
         thread_stats.cache_resource
         if cache_type is CacheType.RESOURCE
@@ -184,13 +198,25 @@ def start_call(cache_type: CacheType) -> CacheCallTimer:
     return CacheCallTimer(thread_stats, totals)
 
 
-def computing_cached_value() -> contextlib.AbstractContextManager[None]:
-    """Mark this context as running a cached function, for the threads it
-    attaches with ``add_script_run_ctx``.
+@contextlib.contextmanager
+def computing_cached_value() -> Generator[None, None, None]:
+    """Mark this context as computing a cached value.
+
+    Threads attached with ``add_script_run_ctx`` inherit the mark, so their
+    cached calls made before the computation ends stay part of it. A context
+    that is already marked, or has no script-run thread state, is left as is.
     """
     try:
-        if ThreadState.get().in_cache_compute:
-            return contextlib.nullcontext()
+        thread_state = ThreadState.get()
     except RuntimeError:
-        return contextlib.nullcontext()
-    return ThreadState.scoped(in_cache_compute=True)
+        # A thread that isn't attached to a script run.
+        thread_state = None
+    if thread_state is None or thread_state.in_cache_compute:
+        yield
+        return
+    scope = CacheComputeScope()
+    try:
+        with ThreadState.scoped(cache_compute=scope):
+            yield
+    finally:
+        scope.is_active = False

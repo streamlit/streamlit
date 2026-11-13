@@ -68,12 +68,17 @@ message PageProfile {
 //   a parallel fragment worker, or a thread passed to add_script_run_ctx.
 //   Calls without a script run, such as background refreshes
 //   (refresh_mode="background") and st.App lifespan tasks, are not recorded.
-// - It is the outermost cached call. Calls made inside another cached
-//   function, including on threads it passes to add_script_run_ctx, are part
-//   of the outer call's compute time and are not counted. A thread that
-//   attaches itself with add_script_run_ctx is still recorded.
-// - It is not inside a tracked command, such as the st.cache_resource call
-//   inside st.connection, whose time is already in that command's time.
+// - It is the outermost cached call. Nested calls are part of the outer
+//   call's time and are not counted: calls made while the outer function
+//   computes, including on threads it passes to add_script_run_ctx, and calls
+//   made while the outer call hashes its arguments or reads its result (for
+//   example, from a hash_funcs function). Calls on a thread the outer
+//   function attached, made after it returns, and calls on a thread that
+//   attaches itself with add_script_run_ctx, are recorded.
+// - It is not inside a tracked command (an st.* command timed for this
+//   profile, whether or not a limit left it out of commands), such as the
+//   st.cache_resource call inside st.connection, whose time is already in
+//   that command's time.
 // - It finished before this profile was built. A call still running on a
 //   thread the script didn't wait for is left out.
 // The time of tracked commands that run during a recorded call (st.* calls
@@ -84,15 +89,17 @@ message PageProfile {
 // to add_script_run_ctx) are added to the run's totals like their command
 // times, so with concurrent threads both can exceed the run's wall-clock
 // time. Async cached calls awaited concurrently on one thread are scaled
-// down to the time during which any of them ran.
+// down, per group of overlapping calls, to the time during which any of them
+// ran. Calls that don't overlap are not scaled.
 message CacheUsage {
   // Unset when no st.cache_data call was recorded.
   CacheTypeUsage cache_data = 1;
   // Unset when no st.cache_resource call was recorded.
   CacheTypeUsage cache_resource = 2;
   // Whole seconds since the Streamlit server started, taken when this script
-  // run started. A low value with many misses means the caches were cold
-  // because the server is new (a container start, wake-up or restart).
+  // run started. A low value with many misses means the caches were empty
+  // because the server or container recently started (a container start,
+  // wake-up or restart).
   // Set on every page profile, including as 0 in the server's first second.
   optional int64 server_uptime_seconds = 3;
 }
@@ -108,8 +115,8 @@ message CacheTypeUsage {
   int64 hits = 2;
   // Calls that ran the cached function, including ones where it raised.
   int64 misses = 3;
-  // Hits that returned a value past its ttl while a background refresh
-  // replaces it (refresh_mode="background").
+  // Hits that returned a value past its time-to-live (the cache decorator's
+  // ttl) while a background refresh replaces it (refresh_mode="background").
   int64 stale_hits = 4;
   // Time running the cached function on misses.
   int64 compute_time = 5;

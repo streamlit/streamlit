@@ -85,40 +85,103 @@ def test_tracked_command_time_counts_only_inside_calls() -> None:
     assert stats.tracked_command_time == 0.25
 
 
+def _read_totals(stats: ThreadCacheStats, now: float) -> tuple[CacheTotals, ...]:
+    cache_data, cache_resource = CacheTotals(), CacheTotals()
+    stats.add_to(cache_data, cache_resource, now)
+    return cache_data, cache_resource
+
+
 @pytest.mark.parametrize(
-    ("recorded", "expected_scale"),
+    ("recorded", "expected"),
     [
         # The calls span 2s, 0.5s of which is commands. Times up to 1.5s are
         # kept as recorded.
-        (1.5, 1.0),
+        (1.5, 1.5),
         (1.0, 1.0),
         # Overlapping calls recorded 3s in a 1.5s span: halve them.
-        (3.0, 0.5),
+        (3.0, 1.5),
     ],
 )
-def test_time_scale_fits_times_into_the_call_span(
-    recorded: float, expected_scale: float
+def test_overlapping_calls_are_scaled_to_their_span(
+    recorded: float, expected: float
 ) -> None:
     """Times from overlapping calls are scaled to the span they ran in."""
     stats = ThreadCacheStats()
     stats.open_call(10.0)
     stats.open_call(10.5)
     stats.tracked_command_time += 0.5
+    stats.totals_for_finished_call(stats.cache_data).compute_time += recorded
     stats.close_call(11.0)
     stats.close_call(12.0)
-    stats.cache_data.compute_time = recorded
 
-    assert stats.time_scale(12.0) == pytest.approx(expected_scale)
+    cache_data, _ = _read_totals(stats, 12.0)
+    assert cache_data.compute_time == pytest.approx(expected)
 
 
-def test_time_scale_counts_a_call_still_running() -> None:
-    """A call still open when the totals are read counts up to ``now``."""
+def test_calls_that_dont_overlap_are_not_scaled() -> None:
+    """A call after an overlapping group keeps its time, even if the group was
+    scaled down.
+    """
+    stats = ThreadCacheStats()
+    # Two overlapping cache_data calls record 2s in 1s.
+    stats.open_call(0.0)
+    stats.open_call(0.0)
+    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
+    stats.close_call(1.0)
+    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
+    stats.close_call(1.0)
+    # Then one cache_resource call records 2s in 2s.
+    stats.open_call(1.0)
+    stats.totals_for_finished_call(stats.cache_resource).compute_time += 2.0
+    stats.close_call(3.0)
+
+    cache_data, cache_resource = _read_totals(stats, 3.0)
+    assert cache_data.compute_time == pytest.approx(1.0)
+    assert cache_resource.compute_time == pytest.approx(2.0)
+
+
+def test_open_overlapping_group_counts_up_to_now() -> None:
+    """Finished calls of a group that is still open are scaled to the time the
+    group has run so far.
+    """
     stats = ThreadCacheStats()
     stats.open_call(0.0)
-    stats.cache_data.overhead_time = 2.0
+    stats.open_call(0.0)
+    stats.totals_for_finished_call(stats.cache_data).overhead_time += 2.0
+    stats.close_call(2.0)
 
-    assert stats.time_scale(1.0) == pytest.approx(0.5)
-    assert stats.time_scale(4.0) == 1.0
+    assert _read_totals(stats, 1.0)[0].overhead_time == pytest.approx(1.0)
+    assert _read_totals(stats, 4.0)[0].overhead_time == pytest.approx(2.0)
+
+
+def test_group_with_no_recorded_time_is_not_scaled() -> None:
+    """A group whose commands took longer than its span doesn't divide by zero."""
+    stats = ThreadCacheStats()
+    stats.open_call(0.0)
+    stats.open_call(0.0)
+    stats.tracked_command_time += 2.0
+    stats.totals_for_finished_call(stats.cache_data).calls += 1
+    stats.close_call(1.0)
+    stats.close_call(1.0)
+
+    cache_data, _ = _read_totals(stats, 1.0)
+    assert (cache_data.calls, cache_data.total_time) == (1, 0)
+
+
+def test_cache_code_excludes_waiting_and_computing() -> None:
+    """``is_in_cache_code`` is True only while an open call isn't waiting or
+    computing.
+    """
+    stats = ThreadCacheStats()
+    assert not stats.is_in_cache_code
+    stats.open_call(0.0)
+    assert stats.is_in_cache_code
+    stats.leave_cache_code()
+    assert not stats.is_in_cache_code
+    stats.enter_cache_code()
+    assert stats.is_in_cache_code
+    stats.close_call(1.0)
+    assert not stats.is_in_cache_code
 
 
 def test_cache_totals_add_scales_only_times() -> None:

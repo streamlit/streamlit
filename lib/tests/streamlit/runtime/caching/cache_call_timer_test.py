@@ -252,6 +252,38 @@ def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
     assert totals.total_time <= elapsed
 
 
+def test_serial_call_after_overlapping_async_calls_is_not_scaled(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """Only the overlapping async calls are scaled to the time they ran; a later
+    call on the same thread keeps its recorded time.
+    """
+
+    @st.cache_data(show_spinner=False)
+    async def load(x: int) -> int:
+        await asyncio.sleep(0)
+        clock.advance(1.0)
+        return x
+
+    @st.cache_resource(show_spinner=False)
+    def load_resource() -> int:
+        clock.advance(2.0)
+        return 1
+
+    async def main() -> list[int]:
+        return await asyncio.gather(load(1), load(2))
+
+    # Both calls start at once, finish 1s and 2s later, and record 3s in 2s.
+    assert asyncio.run(main()) == [1, 2]
+    assert load_resource() == 1
+
+    data = _totals(ctx, "cache_data")
+    assert (data.calls, data.misses) == (2, 2)
+    assert data.compute_time == pytest.approx(2.0)
+    resource = _totals(ctx, "cache_resource")
+    assert resource.compute_time == pytest.approx(2.0)
+
+
 def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
     ctx: ScriptRunContext,
 ) -> None:
@@ -492,6 +524,65 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     resource = _totals(ctx, "cache_resource")
     assert (resource.calls, resource.misses) == (1, 1)
     assert resource.compute_time == pytest.approx(1.0)
+
+
+def test_calls_on_attached_threads_after_the_cached_function_returns_are_recorded(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A long-lived thread attached inside a cached function records its cached
+    calls once that function has returned.
+    """
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def inner() -> int:
+        clock.advance(1.0)
+        return 1
+
+    def worker() -> None:
+        release.wait(5)
+        inner()
+
+    @st.cache_resource(show_spinner=False)
+    def start_worker() -> threading.Thread:
+        thread = add_script_run_ctx(threading.Thread(target=worker))
+        thread.start()
+        return thread
+
+    thread = start_worker()
+    release.set()
+    thread.join(5)
+
+    data = _totals(ctx, "cache_data")
+    assert (data.calls, data.misses) == (1, 1)
+    assert data.compute_time == pytest.approx(1.0)
+
+
+def test_cached_calls_from_hash_funcs_are_not_recorded(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A cached call made while another call hashes its arguments is part of
+    that call's overhead.
+    """
+
+    class Key:
+        pass
+
+    @st.cache_resource(show_spinner=False)
+    def key_hash() -> int:
+        clock.advance(1.0)
+        return 1
+
+    @st.cache_data(show_spinner=False, hash_funcs={Key: lambda _key: key_hash()})
+    def load(key: Key) -> int:
+        return 1 if isinstance(key, Key) else 0
+
+    assert load(Key()) == 1
+
+    data = _totals(ctx, "cache_data")
+    assert (data.calls, data.misses) == (1, 1)
+    assert data.overhead_time == pytest.approx(1.0)
+    assert _totals(ctx, "cache_resource").calls == 0
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:

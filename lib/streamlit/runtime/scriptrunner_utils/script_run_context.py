@@ -91,6 +91,24 @@ _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
 )
 
 
+class CacheComputeScope:
+    """A cached function's computation, shared with the threads it attaches.
+
+    ``is_active`` turns False when the computation ends, so a thread attached
+    during it stops treating its own cached calls as part of that computation.
+    """
+
+    __slots__ = ("is_active",)
+
+    def __init__(self) -> None:
+        self.is_active = True
+
+    def __deepcopy__(self, memo: dict[int, object]) -> CacheComputeScope:
+        # add_script_run_ctx deep-copies the parent's FragmentThreadState for the
+        # child thread, which must still see this scope end.
+        return self
+
+
 @dataclass(frozen=True)
 class FragmentThreadState:
     """Per-thread state for a fragment execution.
@@ -118,11 +136,19 @@ class FragmentThreadState:
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.
     in_skeleton_slot: bool = False
-    # True while a cached function computes in this context. Unlike the
+    # Set while a cached function computes in this context. Unlike the
     # in_cached_function ContextVar, it is copied to threads attached with
-    # add_script_run_ctx, so their cached calls aren't recorded in the page
-    # profile's cache totals on top of the outer call's compute time.
-    in_cache_compute: bool = False
+    # add_script_run_ctx, so their cached calls made during that computation
+    # aren't recorded in the page profile's cache totals on top of the outer
+    # call's compute time.
+    cache_compute: CacheComputeScope | None = None
+
+    @property
+    def in_cache_compute(self) -> bool:
+        """True while a cached function computes in this context, or in the
+        context that attached this thread.
+        """
+        return self.cache_compute is not None and self.cache_compute.is_active
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -148,7 +174,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     is_parallel_worker: bool
     command_tracking_deactivated: bool
     in_skeleton_slot: bool
-    in_cache_compute: bool
+    cache_compute: CacheComputeScope | None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
