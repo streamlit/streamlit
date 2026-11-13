@@ -17,6 +17,8 @@ from __future__ import annotations
 import datetime as dt
 import decimal
 import json
+import re
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -53,6 +55,11 @@ from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 _ECHARTS_LOGGER = echarts_chart_module._LOGGER.name
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_CHARTS_SKILL_PATH = (
+    _REPO_ROOT
+    / "lib/streamlit/.agents/skills/developing-with-streamlit/references/charts.md"
+)
 
 _BASIC_SPEC: dict[str, Any] = {
     "xAxis": {"type": "category", "data": ["A", "B", "C"]},
@@ -1716,3 +1723,33 @@ def test_echarts_mixin_dg_returns_self() -> None:
 
     echarts_mixin = _OnlyECharts()
     assert echarts_mixin.dg is echarts_mixin
+
+
+def _bundled_echarts_minor_version() -> str:
+    """Return the major.minor ECharts version resolved in ``frontend/yarn.lock``."""
+    yarn_lock = (_REPO_ROOT / "frontend/yarn.lock").read_text(encoding="utf-8")
+    # Matches the `"echarts@npm:<range>":` entry, not packages like echarts-for-react.
+    match = re.search(
+        r'^"echarts@npm:[^"\n]*":\n  version: (\d+)\.(\d+)\.', yarn_lock, re.MULTILINE
+    )
+    assert match, "No resolved echarts entry found in frontend/yarn.lock."
+    return f"{match[1]}.{match[2]}"
+
+
+def test_echarts_version_mentions_match_bundled_version() -> None:
+    """The docstring and agent skill name the bundled ECharts major.minor version."""
+    expected = f"ECharts {_bundled_echarts_minor_version()}"
+    sources = {
+        "lib/streamlit/elements/echarts_chart.py (EChartsMixin.echarts_chart docstring)": (
+            EChartsMixin.echarts_chart.__doc__ or ""
+        ),
+        str(_CHARTS_SKILL_PATH.relative_to(_REPO_ROOT)): _CHARTS_SKILL_PATH.read_text(
+            encoding="utf-8"
+        ),
+    }
+    for source, text in sources.items():
+        assert expected in text, (
+            f"frontend/yarn.lock bundles {expected}, but {source} doesn't mention it. "
+            "Update the version there, and check the ECharts release notes for "
+            "features worth adding to the developing-with-streamlit skill."
+        )
