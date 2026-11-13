@@ -1458,8 +1458,9 @@ _create_option(
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
 
-        Example: { "X-Forwarded-Email" = "email" } maps the X-Forwarded-Email
-        header to st.user.email.
+        Example: trustedUserHeaders = { "X-Forwarded-Email" = "email" } in
+        config.toml (or {"X-Forwarded-Email": "email"} as JSON) maps the
+        X-Forwarded-Email header to st.user.email.
 
         Note: This is an experimental API subject to change.
     """,
