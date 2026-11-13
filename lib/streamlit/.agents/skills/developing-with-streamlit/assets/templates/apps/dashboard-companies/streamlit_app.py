@@ -15,12 +15,13 @@
 """Company analytics dashboard template.
 
 Demonstrates:
-- Interactive dataframe with sparkline columns
-- Segmented control for ranking (top spenders, gainers, shrinkers)
-- Multi-select pills for account type filtering
-- Time window filtering
+- A toolbar of filters (ranking, time window, and account type pills) bound
+  to the URL with ``bind="query-params"``, so every view is shareable
+- Interactive dataframe with sparkline and colored badge columns
 - Growth score calculation
-- Dialog popup for company details
+- A ``ButtonColumn`` that opens a company drawer
+  (``@st.dialog(position="right")``) with badges, metrics, and
+  ``st.echarts_chart`` usage charts
 - ``@st.cache_data(ttl=...)`` loader with a custom spinner message
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
@@ -28,6 +29,7 @@ your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
 from datetime import date, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -35,7 +37,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Company Analytics",
+    page_title="Company analytics",
     page_icon=":material/business:",
     layout="wide",
 )
@@ -72,6 +74,16 @@ ACCOUNT_TYPES = ["Enterprise", "Growth", "Startup", "Trial", "Internal"]
 REGIONS = ["North America", "EMEA", "APAC", "LATAM"]
 SEGMENTS = ["Technology", "Finance", "Healthcare", "Retail", "Manufacturing"]
 
+# Ranking labels by the sort key that ``aggregate_companies`` accepts. A bound
+# widget stores its labels in the URL, so they stay plain text.
+RANKINGS = {
+    "total_credits": "Top spenders",
+    "growth_asc": "Top shrinkers",
+    "growth_desc": "Top gainers",
+}
+TIME_WINDOWS = {"All time": None, "Last 28 days": 28, "Last 7 days": 7}
+VIEW_ACTION = ":material/visibility: View"
+
 
 def generate_company_data(days: int = 90) -> pd.DataFrame:
     """Generate synthetic company usage data.
@@ -102,7 +114,7 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
             trend = base_usage * (1 + growth) ** i
 
             # Weekly seasonality
-            if dt.dayofweek >= 5:
+            if dt.day_of_week >= 5:
                 trend *= 0.3
 
             # Random noise
@@ -138,11 +150,6 @@ def _calc_growth(trend: list[float]) -> float:
     return second_half - first_half
 
 
-def _to_list(val: object) -> list[object]:
-    """Wrap a scalar in a single-element list for MultiselectColumn display."""
-    return [val] if pd.notna(val) else []  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
-
-
 def aggregate_companies(
     df: pd.DataFrame,
     days: int | None = None,
@@ -150,7 +157,7 @@ def aggregate_companies(
     sort_by: str = "total_credits",
 ) -> pd.DataFrame:
     """Filter and aggregate company data."""
-    result = df.copy()
+    result = df
 
     # Filter by time window
     if days:
@@ -207,133 +214,129 @@ def aggregate_companies(
     return agg
 
 
-def render_company_dialog(
-    company_name: str, company_row: pd.Series, df: pd.DataFrame
-) -> None:
-    """Render company details inside a dialog."""
-    company_data = df[df["company_name"] == company_name].sort_values("date")
+def usage_chart_option(
+    credit_usage: pd.DataFrame, column: str, label: str, *, area: bool = False
+) -> dict[str, Any]:
+    """Build an ECharts line (or area) chart of one ``credit_usage`` column over time."""
+    return {
+        "dataset": {"source": credit_usage},
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,.0f credits"},
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "series": [
+            {
+                "type": "line",
+                "name": label,
+                "encode": {"x": "date", "y": column},
+                "showSymbol": False,
+                **({"areaStyle": {"opacity": 0.3}} if area else {}),
+            }
+        ],
+    }
 
-    if company_data.empty:
-        st.warning("No data available for this company.")
-        return
 
-    # Company info badges - extract from list format back to single value
-    account_type = (
-        company_row["account_type"][0] if company_row["account_type"] else "Unknown"
+@st.dialog(
+    "Company details", position="right", width="medium", icon=":material/business:"
+)
+def company_drawer(company: pd.Series) -> None:
+    """Show a company's attributes, its totals for the selected window, and its
+    daily usage over the full period.
+    """
+    all_data = load_company_data()
+    is_company = all_data["company_name"] == company["company_name"]
+    usage = all_data[is_company].sort_values("date")
+
+    st.subheader(company["company_name"], anchor=False)
+    with st.container(horizontal=True, gap="small"):
+        st.badge(
+            company["account_type"], icon=":material/workspace_premium:", color="blue"
+        )
+        st.badge(company["region"], icon=":material/public:", color="violet")
+        st.badge(company["segment"], icon=":material/factory:", color="orange")
+
+    credits_col, days_col, growth_col = st.columns(3)
+    credits_col.metric(
+        "Total credits",
+        company["total_credits"],
+        format="%,.0f",
+        border=True,
+        height="stretch",
     )
-    region = company_row["region"][0] if company_row["region"] else "Unknown"
-    segment = company_row["segment"][0] if company_row["segment"] else "Unknown"
-    total_credits = company_row["total_credits"]
-
-    st.markdown(
-        f":blue-badge[{account_type}] "
-        f":violet-badge[{region}] "
-        f":orange-badge[{segment}] "
-        f":green-badge[{total_credits:,.0f} credits]"
+    days_col.metric(
+        "Active days", company["active_days"], border=True, height="stretch"
+    )
+    growth_col.metric(
+        "Growth score",
+        company["growth_score"],
+        format="%+,.0f",
+        border=True,
+        height="stretch",
     )
 
-    # Summary metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Credits", f"{total_credits:,.0f}")
-    with col2:
-        st.metric("Active Days", f"{company_row['active_days']:,}")
-    with col3:
-        growth = company_row["growth_score"]
-        st.metric("Growth Score", f"{growth:+,.0f}")
-
-    # Charts
-    col1, col2 = st.columns(2)
-
-    with col1:
-        with st.container(border=True):
-            st.markdown("**Daily usage**")
-            st.line_chart(
-                company_data,
-                x="date",
-                y="daily_credits",
-                height=250,
-                alt="Daily credit usage over time",
-            )
-
-    with col2:
-        with st.container(border=True):
-            st.markdown("**Cumulative usage**")
-            chart_data = company_data.copy()
-            chart_data["cumulative"] = chart_data["daily_credits"].cumsum()
-            st.area_chart(
-                chart_data,
-                x="date",
-                y="cumulative",
-                height=250,
-                alt="Cumulative credit usage over time",
-            )
+    credit_usage = usage[["date", "daily_credits"]].assign(
+        cumulative=usage["daily_credits"].cumsum()
+    )
+    with st.container(border=True):
+        st.markdown("**Daily usage**")
+        st.echarts_chart(
+            usage_chart_option(credit_usage, "daily_credits", "Daily credits"),
+            height=250,
+            alt="Daily credit usage over time",
+        )
+    with st.container(border=True):
+        st.markdown("**Cumulative usage**")
+        st.echarts_chart(
+            usage_chart_option(
+                credit_usage, "cumulative", "Cumulative credits", area=True
+            ),
+            height=250,
+            alt="Cumulative credit usage over time",
+        )
 
 
 # =============================================================================
 # Page Layout
 # =============================================================================
 
-st.markdown("# :material/business: Company Analytics")
-st.caption("Track company adoption - usage, growth trends, and account details.")
+st.title("Company analytics", icon=":material/business:")
+st.caption("Track company adoption: usage, growth trends, and account details.")
 
-# Filters
-with st.container(border=True):
-    st.markdown("**Filters**")
-
-    # Company selection mode
-    sort_mode = st.segmented_control(
-        "Sort by",
-        options=[
-            "All companies",
-            ":material/military_tech: Top spenders",
-            ":material/trending_down: Top shrinkers",
-            ":material/trending_up: Top gainers",
-        ],
-        default="All companies",
+with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+    sort_by = st.segmented_control(
+        "Ranking",
+        options=list(RANKINGS),
+        format_func=lambda key: RANKINGS[key],
+        default="total_credits",
+        required=True,
+        key="ranking",
+        bind="query-params",
+        label_visibility="collapsed",
     )
-
-    # Time window
-    timeframe_options = {
-        "All time": None,
-        "Last 28 days": 28,
-        "Last 7 days": 7,
-    }
-    timeframe = st.segmented_control(
+    time_window = st.segmented_control(
         "Time window",
-        options=list(timeframe_options.keys()),
+        options=list(TIME_WINDOWS),
         default="Last 28 days",
+        required=True,
+        key="window",
+        bind="query-params",
+        label_visibility="collapsed",
     )
-    days_filter = timeframe_options.get(timeframe or "Last 28 days")
-
-    # Account types
     account_types = st.pills(
         "Account types",
         options=ACCOUNT_TYPES,
         default=["Enterprise", "Growth", "Startup"],
         selection_mode="multi",
+        key="types",
+        bind="query-params",
+        label_visibility="collapsed",
     )
 
-# Determine sort order
-if "Top shrinkers" in (sort_mode or ""):
-    sort_by = "growth_asc"
-elif "Top gainers" in (sort_mode or ""):
-    sort_by = "growth_desc"
-else:
-    sort_by = "total_credits"
-
-# Companies dataframe
 with st.container(border=True):
-    # Guard against None: segmented_control returns None when deselected.
-    timeframe_text = (
-        timeframe.lower() if timeframe and timeframe != "All time" else "all time"
-    )
-    st.markdown(f"**Companies — {timeframe_text}**")
+    st.markdown(f"**Companies — {time_window.lower()}**")
 
-    all_data = load_company_data()
     leaderboard = aggregate_companies(
-        all_data,
-        days=days_filter,
+        load_company_data(),
+        days=TIME_WINDOWS[time_window],
         account_types=account_types,
         sort_by=sort_by,
     )
@@ -342,45 +345,32 @@ with st.container(border=True):
         st.warning("No company data found for the selected filters.")
         st.stop()
 
-    # Convert columns to lists for MultiselectColumn display (colored chips)
+    # Lists render as colored chips in a MultiselectColumn.
+    table = leaderboard.assign(view=VIEW_ACTION)
     for col in ["account_type", "region", "segment"]:
-        leaderboard[col] = leaderboard[col].apply(_to_list)
+        table[col] = table[col].map(lambda value: [value])
 
-    # Selection dataframe with cell-click support
-    selection = st.dataframe(
-        leaderboard,
+    st.dataframe(
+        table,
         column_config={
-            "company_name": st.column_config.TextColumn(
-                "Company (click to view details)",
-                width="medium",
+            "view": st.column_config.ButtonColumn(
+                "", type="tertiary", key="company_click", help="Open company details"
             ),
+            "company_name": st.column_config.TextColumn("Company", width="medium"),
             "account_type": st.column_config.MultiselectColumn(
                 "Type",
                 options=ACCOUNT_TYPES,
                 color="auto",
                 width="small",
             ),
-            "total_credits": st.column_config.NumberColumn(
-                "Credits",
-                format="%.0f",
-            ),
+            "total_credits": st.column_config.NumberColumn("Credits", format="%,.0f"),
             "growth_score": st.column_config.NumberColumn(
                 "Growth",
                 format="%+.0f",
                 help="Credit change: second half vs first half of period",
             ),
-            "usage_trend": st.column_config.LineChartColumn(
-                "Trend",
-                width="medium",
-            ),
-            "daily_avg": st.column_config.NumberColumn(
-                "Daily Avg",
-                format="%.1f",
-            ),
-            "active_days": st.column_config.NumberColumn(
-                "Active Days",
-                format="%d",
-            ),
+            "usage_trend": st.column_config.LineChartColumn("Trend", width="medium"),
+            "daily_avg": st.column_config.NumberColumn("Daily avg", format="%,.0f"),
             "region": st.column_config.MultiselectColumn(
                 "Region",
                 options=REGIONS,
@@ -393,6 +383,7 @@ with st.container(border=True):
             ),
         },
         column_order=[
+            "view",
             "company_name",
             "account_type",
             "total_credits",
@@ -403,27 +394,10 @@ with st.container(border=True):
             "segment",
         ],
         hide_index=True,
-        on_select="rerun",
-        selection_mode="single-cell",
-        key="company_leaderboard",
         alt="Company usage leaderboard",
     )
 
-# Company drill-down via dialog when Company column cell is clicked
-if selection.selection.cells:
-    cell = selection.selection.cells[0]  # tuple: (row_index, column_name)
-    row_idx, col_name = cell
-    # Check if the clicked cell is in the company_name column
-    if col_name == "company_name":
-        selected_company = leaderboard.iloc[row_idx]["company_name"]
-        company_row = leaderboard.iloc[row_idx]
-
-        @st.dialog(f"{selected_company}", width="large")
-        def show_company_dialog() -> None:
-            render_company_dialog(
-                selected_company,
-                company_row=company_row,
-                df=all_data,
-            )
-
-        show_company_dialog()
+# A button click lasts one rerun, so the drawer doesn't reopen on later reruns.
+click = st.session_state.get("company_click")
+if click is not None:
+    company_drawer(leaderboard.iloc[click.row])

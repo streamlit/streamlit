@@ -825,10 +825,11 @@ def _widget_state_schema() -> dict[str, Any]:
             "- A value the widget cannot read.\n\n"
             "Otherwise a value is applied as the app applies it, so read `value` "
             "in the response: an out-of-range number, a malformed `st.date_input` "
-            "date or color, or a short slider range resets to the default; a "
-            "fraction sent to an integer `st.number_input` or slider is "
-            "truncated; text past `max_chars` is cut; and a reversed slider "
-            "range is kept, so send the lower value first. A value between "
+            "date or color, a reversed `st.date_input` range, or a short slider "
+            "range resets to the default; a fraction sent to an integer "
+            "`st.number_input` or slider is truncated; text past `max_chars` is "
+            "cut; and a reversed slider range is kept, so send the lower value "
+            "first. A value between "
             "`step` increments is not refused. `null` resets a "
             "widget to its default, unless its node has `clearable: true`: a "
             "browser user can empty it, and `null` does. `[]` clears a list. "
@@ -912,9 +913,15 @@ def _request_schema() -> dict[str, Any]:
         },
         "query_params": {
             "type": ["object", "null"],
-            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            "additionalProperties": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "array", "items": {"type": "string"}},
+                ]
+            },
             "description": (
-                "Replaces the URL parameters; omit it to keep them. A parameter "
+                "Replaces the URL parameters; omit it to keep them. Each value is "
+                "a list of strings, or one string for a single value. A parameter "
                 'bound to a widget (`bind="query-params"`) sets that widget, so '
                 "one creating call can open a parameterized report. One equal to "
                 "its widget's default is ignored, so move a widget back with "

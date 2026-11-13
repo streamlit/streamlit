@@ -2818,6 +2818,19 @@ describe("WebsocketConnection state machine", () => {
     ws.disconnect()
   })
 
+  it("refuses to arm a second connection timeout while one is pending", async () => {
+    const { ws } = await createConnectingClient()
+    // @ts-expect-error - private websocket for test
+    ws.websocket = undefined
+
+    // @ts-expect-error - private connectToWebSocket for test
+    await expect(ws.connectToWebSocket()).rejects.toThrow(
+      "WS timeout is already set"
+    )
+
+    ws.disconnect()
+  })
+
   // clearTimeout is a no-op here so the guards in setConnectionTimeout and
   // schedulePingServer still run when a cancelled timer fires.
   describe("when clearTimeout fails to cancel a timer", () => {
@@ -2878,6 +2891,43 @@ describe("WebsocketConnection state machine", () => {
 
       ws.disconnect()
     })
+
+    it("ignores a connection timeout that fires after its handle was cleared", async () => {
+      const { ws, socket, args } = await createConnectingClient()
+      const warnSpy = vi
+        .spyOn(getLogger("WebsocketConnection"), "warn")
+        .mockImplementation(() => {})
+      // @ts-expect-error - private wsConnectionTimeout for test
+      ws.wsConnectionTimeout = undefined
+
+      await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS)
+
+      expect(warnSpy).toHaveBeenCalledWith("Timeout fired after cancellation")
+      expect(socket.readyState).toBe(0)
+      expect(args.sendClientError).not.toHaveBeenCalled()
+      expect(args.onConnectionStateChange).not.toHaveBeenCalled()
+
+      ws.disconnect()
+    })
+  })
+
+  it("disconnects forever when a connection timeout fires without a socket", async () => {
+    const { ws, args } = createClientInState(ConnectionState.CONNECTING)
+    // @ts-expect-error - private setConnectionTimeout for test
+    ws.setConnectionTimeout("ws://localhost:1234/_stcore/stream")
+
+    await vi.advanceTimersByTimeAsync(WEBSOCKET_TIMEOUT_MS)
+
+    expect(args.onConnectionStateChange).toHaveBeenCalledTimes(1)
+    expect(args.onConnectionStateChange).toHaveBeenCalledWith(
+      ConnectionState.DISCONNECTED_FOREVER,
+      { message: "Null Websocket in setConnectionTimeout" }
+    )
+    expect(args.sendClientError).toHaveBeenCalledExactlyOnceWith(
+      "Websocket connection fatal error encountered",
+      "Null Websocket in setConnectionTimeout",
+      "Websocket Connection"
+    )
   })
 
   describe("ping cycle failures", () => {

@@ -19,7 +19,7 @@ import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
 import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
-import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs"
 import type { WidgetStateManager, WidgetUpdate } from "~lib/WidgetStateManager"
 
 const LOG = getLogger("NumberInput")

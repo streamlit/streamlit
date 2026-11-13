@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import builtins
+import json
 import keyword
 import textwrap
 from abc import ABC, abstractmethod
@@ -30,6 +31,7 @@ from typing import (
     ClassVar,
     Final,
     Generic,
+    Literal,
     NoReturn,
     Self,
     TypeAlias,
@@ -54,6 +56,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -523,6 +526,8 @@ class Widget(Element, ABC):
     disabled: bool
     key: str | None
     _value: Any
+    # Id of the fragment that rendered this widget, or "" outside any fragment.
+    _fragment_id: str = field(repr=False, default="", init=False)
 
     def __init__(self, proto: Any, root: ElementTree) -> None:
         self.proto = proto
@@ -1239,6 +1244,65 @@ class DateInput(Widget):
         state = self.root.session_state
         assert state
         return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
+class EChartsChart(Element):
+    """A representation of ``st.echarts_chart``.
+
+    - ``.spec`` and ``.value`` are the chart option as a dict.
+    - A dataframe in ``dataset.source`` appears in the spec as a
+      ``{"name": ...}`` placeholder; ``.datasets`` maps each name to its
+      DataFrame.
+    - Each access returns a fresh copy.
+    - A keyed ``on_select`` chart's selection is ``at.session_state[key]``,
+      not ``.value``.
+    - ``set_value()`` raises ``AppTestError``.
+    """
+
+    proto: EChartsChartProto = field(repr=False)
+
+    def __init__(self, proto: EChartsChartProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.type = "echarts_chart"
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def spec(self) -> dict[str, Any]:
+        """The chart option as a dict."""
+        return cast("dict[str, Any]", json.loads(self.proto.spec))
+
+    @property
+    def value(self) -> dict[str, Any]:
+        """The chart option, also when ``on_select`` is set."""
+        return self.spec
+
+    @property
+    def datasets(self) -> dict[str, PandasDataframe]:
+        """DataFrames for the spec's ``dataset.source`` placeholders, by name."""
+        return {
+            dataset.name: dataframe_util.convert_arrow_bytes_to_pandas_df(
+                dataset.data.data
+            )
+            for dataset in self.proto.datasets
+        }
+
+    @property
+    def theme(self) -> Literal["streamlit"] | None:
+        """``"streamlit"``, or ``None`` for ECharts' default theme."""
+        return cast("Literal['streamlit'] | None", self.proto.theme or None)
+
+    @property
+    def renderer(self) -> Literal["canvas", "svg"]:
+        """``"canvas"`` (the default) or ``"svg"``."""
+        if self.proto.renderer == EChartsChartProto.Renderer.SVG:
+            return "svg"
+        return "canvas"
+
+    @property
+    def alt(self) -> str | None:
+        """The chart's ``alt`` text, or ``None`` when unset."""
+        return self.proto.alt if self.proto.HasField("alt") else None
 
 
 @dataclass(repr=False)
@@ -3303,7 +3367,10 @@ class Block:
 
     def __iter__(self) -> Iterator[Node]:
         yield self
-        for child_idx in self.children:
+        # Yield children in page order (delta index). Insertion order can
+        # differ, for example when a fragment run appends its deltas after the
+        # elements kept from the previous run.
+        for child_idx in sorted(self.children):
             yield from self.children[child_idx]
 
     def __getitem__(self, k: int) -> Node:
@@ -3470,6 +3537,10 @@ class Block:
     @property
     def download_button(self) -> WidgetList[DownloadButton]:
         return WidgetList(self.get("download_button"))  # type: ignore
+
+    @property
+    def echarts_chart(self) -> ElementList[EChartsChart]:
+        return ElementList(self.get("echarts_chart"))  # type: ignore
 
     @property
     def error(self) -> ElementList[Error]:
@@ -4078,13 +4149,36 @@ def _has_pending_value(node: Widget) -> bool:
     """Return True if the test staged a value on this widget since the last run.
 
     ``None`` is a real staged value for widgets whose unset marker is
-    ``InitialValue`` (for example ``selectbox.select_index(None)``).
+    ``InitialValue`` (for example ``selectbox.select_index(None)``). Files
+    staged on a chat input count too, since they submit without text.
     """
+    if isinstance(node, ChatInput) and node._get_files_to_register():
+        return True
     attr, sentinel = _unset_value_marker(node)
     current = getattr(node, attr)
     if isinstance(sentinel, InitialValue):
         return not isinstance(current, InitialValue)
     return current is not sentinel
+
+
+def _interaction_fragment_id(tree: ElementTree, submitted: set[str]) -> str:
+    """Return the fragment to rerun for the staged interactions, or "" for all.
+
+    A browser reruns only the fragment holding the widget the user changed.
+    Interactions in several fragments, or outside any fragment, need a full
+    rerun. Widgets staged in an unsubmitted form, or with
+    ``on_change="ignore"``, don't trigger a rerun, so they don't count.
+    """
+    triggering_form_ids = {"", *submitted}
+    fragment_ids = {
+        node._fragment_id
+        for node in tree
+        if isinstance(node, Widget)
+        and _has_pending_value(node)
+        and _widget_form_id(node) in triggering_form_ids
+        and not getattr(node.proto, "ignore_rerun", False)
+    }
+    return fragment_ids.pop() if len(fragment_ids) == 1 else ""
 
 
 def _use_form_clear_defaults(
@@ -4247,8 +4341,11 @@ class ElementTree(Block):
 
         submitted = _submitted_form_ids(self)
         form_clears = _form_clear_flags(self)
+        fragment_id = _interaction_fragment_id(self, submitted)
         widget_states = self.get_widget_states()
-        result = self._runner._run(widget_states, timeout=timeout)
+        result = self._runner._run(
+            widget_states, timeout=timeout, fragment_id=fragment_id
+        )
         _record_submitted_form_clears(self._runner, submitted, form_clears)
         return result
 
@@ -4317,6 +4414,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "download_button":
                 new_node = DownloadButton(elt.download_button, root=root)
+            elif ty == "echarts_chart":
+                new_node = EChartsChart(elt.echarts_chart, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
@@ -4400,6 +4499,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Toast(elt.toast, root=root)
             else:
                 new_node = UnknownElement(elt, root=root)
+            if isinstance(new_node, Widget):
+                new_node._fragment_id = delta.fragment_id
         elif delta.WhichOneof("type") == "add_block":
             block = delta.add_block
             bty = block.WhichOneof("type")

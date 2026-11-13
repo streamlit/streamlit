@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { sprintf } from "./sprintfjs.js"
+import { sprintf } from "./sprintfjs"
 
 describe("sprintf", () => {
   const pi = 3.141592653589793

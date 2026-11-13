@@ -77,6 +77,12 @@ def create_streamlit_static_handler(
 
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
+            # With follow_symlink=True, StaticFiles compares os.path.abspath, which
+            # keeps a leading "//", with os.path.commonpath, which collapses it, so a
+            # "//"-prefixed directory would reject every file. Python puts such
+            # paths on sys.path when started as `.venv/bin/python` from the working
+            # directory "/". realpath collapses the slashes.
+            directory = os.path.realpath(directory)
             # follow_symlink=True restores Tornado parity for Bazel/Nix-style deployments
             # where the static directory may contain or be a symlink. The static dir is
             # read-only package content, not user-controlled, so this is safe.

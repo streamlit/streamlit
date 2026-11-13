@@ -82,7 +82,9 @@ class ImageMixin:
               `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local image file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
-              working directory (where you execute ``streamlit run``).
+              working directory (where you execute ``streamlit run``). A
+              string that names an existing file is always read from disk,
+              so only pass paths that your app chooses.
             - An SVG string like ``<svg xmlns=...</svg>``.
             - A byte array defining an image. This includes monochrome images of
               shape (w,h) or (w,h,1), color images of shape (w,h,3), or RGBA

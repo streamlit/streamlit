@@ -15,12 +15,25 @@
  */
 
 import {
+  applyMissingPydeckPrimaryColors,
   getContextualFillColor,
   MAP_DEFAULT_MARKER_ALPHA,
   MAP_PRIMARY_FILL_PLACEHOLDER,
   resolveMapPrimaryFillColor,
   type SerializedColorArray,
+  themePrimaryRgba,
 } from "./colors"
+
+describe("#themePrimaryRgba", () => {
+  it("returns theme primary RGB with map default alpha", () => {
+    expect(themePrimaryRgba("#ff4b4b")).toEqual([
+      255,
+      75,
+      75,
+      MAP_DEFAULT_MARKER_ALPHA,
+    ])
+  })
+})
 
 describe("#resolveMapPrimaryFillColor", () => {
   it("resolves the primary placeholder to theme primary RGB with map default alpha", () => {
@@ -36,6 +49,110 @@ describe("#resolveMapPrimaryFillColor", () => {
 
   it("leaves column accessors unchanged", () => {
     expect(resolveMapPrimaryFillColor("@@=color", "#ff4b4b")).toBe("@@=color")
+  })
+})
+
+describe("#applyMissingPydeckPrimaryColors", () => {
+  const primary = "#ff4b4b"
+  const expected = themePrimaryRgba(primary)
+
+  it("injects getFillColor for ScatterplotLayer when all color accessors are absent", () => {
+    const layer = {
+      "@@type": "ScatterplotLayer",
+      data: [],
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toEqual({
+      ...layer,
+      getFillColor: expected,
+    })
+  })
+
+  it("leaves ScatterplotLayer with explicit getFillColor unchanged", () => {
+    const fill = [200, 30, 0, 160]
+    const layer = {
+      "@@type": "ScatterplotLayer",
+      getFillColor: fill,
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("leaves ScatterplotLayer with only getColor unchanged", () => {
+    const layer = {
+      "@@type": "ScatterplotLayer",
+      getColor: [255, 75, 75, 127],
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("leaves ColumnLayer with only getColor unchanged", () => {
+    const layer = {
+      "@@type": "ColumnLayer",
+      getColor: "@@=[value * 2, 0, 0]",
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("leaves concrete ScatterplotLayer colors unchanged", () => {
+    const layer = {
+      "@@type": "ScatterplotLayer",
+      getFillColor: [1, 2, 3, 4],
+      getColor: "@@=color",
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("leaves HexagonLayer without colorRange unchanged", () => {
+    const layer = {
+      "@@type": "HexagonLayer",
+      data: [],
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toBe(layer)
+  })
+
+  it("does not inject defaults for TextLayer or IconLayer", () => {
+    const textLayer = { "@@type": "TextLayer" }
+    const iconLayer = { "@@type": "IconLayer" }
+    expect(applyMissingPydeckPrimaryColors(textLayer, primary)).toBe(textLayer)
+    expect(applyMissingPydeckPrimaryColors(iconLayer, primary)).toBe(iconLayer)
+  })
+
+  it("injects only the missing ArcLayer endpoint color", () => {
+    const source = [10, 20, 30, 40]
+    const layer = {
+      "@@type": "ArcLayer",
+      getSourceColor: source,
+    }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toEqual({
+      ...layer,
+      getTargetColor: expected,
+    })
+  })
+
+  it("injects both ArcLayer colors when both are absent", () => {
+    const layer = { "@@type": "ArcLayer" }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toEqual({
+      ...layer,
+      getSourceColor: expected,
+      getTargetColor: expected,
+    })
+  })
+
+  it("injects getColor for PathLayer when absent", () => {
+    const layer = { "@@type": "PathLayer" }
+    expect(applyMissingPydeckPrimaryColors(layer, primary)).toEqual({
+      ...layer,
+      getColor: expected,
+    })
+  })
+
+  it("injects only getFillColor for GeoJsonLayer", () => {
+    const layer: Record<string, unknown> = { "@@type": "GeoJsonLayer" }
+    const result = applyMissingPydeckPrimaryColors(layer, primary)
+    expect(result).toEqual({
+      ...layer,
+      getFillColor: expected,
+    })
+    expect(result.getLineColor).toBeUndefined()
   })
 })
 

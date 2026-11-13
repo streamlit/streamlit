@@ -398,10 +398,11 @@ function getMediaOptions(option: EChartsOptionObject): EChartsOptionObject[] {
 }
 
 /**
- * Returns every variant Python's `_iter_option_variants` visits, in data
- * viewer order: the option, then `baseOption`, then each `options[i]`
- * timeline tick. `media[*].option` overrides come last, so a media dataset
- * does not replace the default chart's.
+ * Returns the same variants Python's `_iter_option_variants` visits: the
+ * option, then `baseOption`, then each `options[i]` timeline tick, then the
+ * `media[*].option` overrides of all of them. The order differs from Python's
+ * but doesn't matter: Show data depends only on how many distinct frames the
+ * variants use.
  */
 function getOptionVariants(
   option: EChartsOptionObject
@@ -495,9 +496,9 @@ function getRows(
  *
  * @param option The parsed ECharts option.
  * @param datasets The Arrow datasets sent with the option.
- * @returns The parsed dataframe to show in the chart's Show data table: the
- * first one the option uses, preferring the chart that renders by default
- * over timeline ticks and `media` overrides. `null` when the option uses none.
+ * @returns The parsed dataframe to show in the chart's Show data table, or
+ * `null` unless the option uses exactly one. Placeholders with the same name
+ * count as one dataframe, because Python sends identical frames once.
  * @throws When a placeholder points to a dataset whose bytes are missing or
  * cannot be read, so the chart never renders the placeholder as a row, or
  * whose data columns share a name.
@@ -546,7 +547,6 @@ export function hydrateArrowDatasetSources(
     return source
   }
 
-  let dataViewData: Quiver | null = null
   for (const variant of getOptionVariants(option)) {
     const { dataset } = variant
     const entries: unknown[] = Array.isArray(dataset) ? dataset : [dataset]
@@ -568,9 +568,14 @@ export function hydrateArrowDatasetSources(
           datasetOption.dimensions as unknown[]
         )
         datasetOption.sourceHeader ??= false
-        dataViewData ??= source.quiver
       }
     }
   }
-  return dataViewData
+  // Show data needs exactly one dataframe: with several, any single table
+  // would hide the other frames' rows.
+  if (sourcesByName.size !== 1) {
+    return null
+  }
+  const [onlySource] = sourcesByName.values()
+  return onlySource.quiver
 }

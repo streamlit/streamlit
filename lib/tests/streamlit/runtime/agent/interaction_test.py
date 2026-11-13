@@ -536,8 +536,8 @@ def test_validate_refuses_navigation_with_widget_changes(
         ),
         ({"page": 3}, "`page` must be a string"),
         ({"query_params": ["a"]}, "`query_params` must be an object"),
-        ({"query_params": {"a": "1"}}, "must be a list of strings"),
-        ({"query_params": {"a": [1]}}, "must be a list of strings"),
+        ({"query_params": {"a": 1}}, "must be a string or a list of strings"),
+        ({"query_params": {"a": [1]}}, "must be a string or a list of strings"),
         ({"context": "Europe/Berlin"}, "`context` must be an object"),
         ({"context": {"theme": "dark"}}, "Unknown `context` fields: theme"),
         ({"session_id": "s_1", "widget_state": []}, "`widget_state` must be an object"),
@@ -592,7 +592,7 @@ def test_validate_accepts_a_full_request() -> None:
         {
             "session_id": "s_1",
             "page": "report",
-            "query_params": {"q": ["1", ""], "empty": []},
+            "query_params": {"q": ["1", ""], "empty": [], "product": "Boots"},
             "context": {"timezone": "Europe/Berlin", "locale": "de-DE"},
         }
     )
@@ -600,7 +600,8 @@ def test_validate_accepts_a_full_request() -> None:
     assert parsed.context is not None
     assert parsed.context.timezone == "Europe/Berlin"
     assert parsed.context.locale == "de-DE"
-    assert parsed.query_string == "q=1&q="
+    # "product": "Boots" encodes the same as ["Boots"].
+    assert parsed.query_string == "q=1&q=&product=Boots"
     assert interaction._validate_request_shape(
         {"session_id": "s_1"}
     ) == interaction._ParsedRequest(context=None, query_string=None, action=None)

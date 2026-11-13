@@ -1074,6 +1074,22 @@ class WidgetBindingTest(DeltaGeneratorTestCase):
         """Test that get_binding_for_widget returns None for unknown widgets."""
         assert self.query_params.get_binding_for_widget("unknown") is None
 
+    def test_widget_ids_bound_in_filters_by_script_hash(self) -> None:
+        """Test that widget_ids_bound_in only returns widgets from that script."""
+        for widget_id, script_hash in [
+            ("main_widget", "main_hash"),
+            ("page_widget", "page_hash"),
+        ]:
+            self.query_params.bind_widget(
+                param_key=widget_id,
+                widget_id=widget_id,
+                value_type="string_value",
+                script_hash=script_hash,
+            )
+
+        assert self.query_params.widget_ids_bound_in("main_hash") == {"main_widget"}
+        assert self.query_params.widget_ids_bound_in("unknown") == frozenset()
+
 
 class ProtectedParamsBindingTest(DeltaGeneratorTestCase):
     """Tests for protected query parameter binding behavior."""
@@ -1159,6 +1175,40 @@ class DirectManipulationProtectionTest(DeltaGeneratorTestCase):
         self.query_params.unbind_widget("widget_123")
         self.query_params.clear()
         assert len(self.query_params) == 0
+
+    def test_replace_unbound_keeps_bound_and_embed_params(self) -> None:
+        """Test that replace_unbound only replaces unbound, non-embed params."""
+        self.query_params._query_params["embed"] = "true"
+        self.query_params.replace_unbound({"new_key": "value"})
+        assert self.query_params._query_params == {
+            "bound_key": "value",
+            "embed": "true",
+            "new_key": "value",
+        }
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert (
+            message.page_info_changed.query_string
+            == "bound_key=value&embed=true&new_key=value"
+        )
+
+    def test_replace_unbound_without_params_clears_unbound_params(self) -> None:
+        """Test that replace_unbound with no params only removes unbound params."""
+        self.query_params.replace_unbound()
+        assert self.query_params._query_params == {"bound_key": "value"}
+        assert len(self.forward_msg_queue) == 1
+        message = self.get_message_from_queue(0)
+        assert message.page_info_changed.query_string == "bound_key=value"
+
+    def test_replace_unbound_raises_for_bound_key_and_keeps_params(self) -> None:
+        """Test that replace_unbound refuses bound keys and restores the params."""
+        with pytest.raises(StreamlitAPIException, match="bound to a widget"):
+            self.query_params.replace_unbound({"bound_key": "new", "new_key": "x"})
+        assert self.query_params._query_params == {
+            "bound_key": "value",
+            "unbound_key": "other",
+        }
+        assert len(self.forward_msg_queue) == 0
 
 
 class InitialQueryParamsTest(DeltaGeneratorTestCase):

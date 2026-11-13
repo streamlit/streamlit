@@ -103,6 +103,10 @@ class SafeSessionState:
         with self._lock:
             return self._state.is_new_state_value(user_key)
 
+    def was_set_by_callback(self, user_key: str) -> bool:
+        with self._lock:
+            return self._state.was_set_by_callback(user_key)
+
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
         without triggering the "state value cannot be modified" error.

@@ -1429,3 +1429,17 @@ def test_side_drawers_are_resizable(app: Page, browser_name: str):
     _drag_handle_horizontally(app, right_handle, -drag_distance)
 
     wait_until(app, lambda: _drawer_width(right_dialog) > right_initial)
+
+
+def test_dialog_opened_from_main_reopens_from_fragment(app: Page):
+    """A dialog dismissed after a main-script open reopens from a fragment."""
+    click_button(app, "Open shared dialog from main")
+    dialog = app.get_by_role("dialog")
+    expect(dialog.get_by_text("Shared dialog content")).to_be_visible()
+
+    app.keyboard.press("Escape")
+    expect(dialog).not_to_be_attached()
+
+    click_button(app, "Open shared dialog from fragment")
+    expect(dialog.get_by_text("Shared dialog content")).to_be_visible()
+    expect(dialog).to_have_count(1)

@@ -16,7 +16,7 @@
 
 import numbro from "numbro"
 
-import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs"
 
 import { isNullOrUndefined, notNullOrUndefined } from "./utils"
 
@@ -39,6 +39,20 @@ export const NAMED_NUMBER_FORMATS: ReadonlySet<string> = new Set([
   "accounting",
   "bytes",
 ])
+
+/** Options for ``formatNumber``. */
+interface FormatNumberOptions {
+  /**
+   * Drop decimals when a dollar, euro, or accounting amount rounds to a
+   * whole number ("$55,680" instead of "$55,680.00", and "$12" for
+   * 12.001). Amounts with a fractional part keep their decimals ("$12.50").
+   *
+   * Metrics and chart tooltips pass true. Sliders pass true only when
+   * `step` is a whole number, so labels keep a stable width while dragging.
+   * Table columns leave it unset so decimal points line up.
+   */
+  stripWholeDecimals?: boolean
+}
 
 /**
  * Determines the default mantissa to use for the given number.
@@ -94,7 +108,7 @@ function formatIntlNumberWithLocales(
  *   - "dollar": Show the number as a dollar amount (e.g. "$1,234.57").
  *   - "euro": Show the number as a euro amount (e.g. "€1,234.57").
  *   - "yen": Show the number as a yen amount (e.g. "¥1,235").
- *   - "accounting": Show the number in an accounting format (e.g. "1,234.00").
+ *   - "accounting": Show the number in an accounting format (e.g. "1,234.57").
  *   - "bytes": Show the number in a byte format (e.g. "1.2KB").
  *   - "compact": Show the number in a compact format (e.g. "1.2K").
  *   - "scientific": Show the number in scientific notation (e.g. "1.235E3").
@@ -105,13 +119,15 @@ function formatIntlNumberWithLocales(
  *     (e.g., "%_d" yields "1_234"), mirroring Python's format spec.
  * @param maxPrecision - The maximum number of decimals to show. If not provided,
  *                     a reasonable default is used based on the configured format.
+ * @param options - Additional formatting options, see ``FormatNumberOptions``.
  *
  * @returns The formatted number as a string.
  */
 export function formatNumber(
   value: number,
   format?: string,
-  maxPrecision?: number
+  maxPrecision?: number,
+  options: FormatNumberOptions = {}
 ): string {
   if (Number.isNaN(value) || !Number.isFinite(value)) {
     return ""
@@ -140,6 +156,9 @@ export function formatNumber(
       trimMantissa: true,
     })
   }
+
+  const stripWholeDecimals = options.stripWholeDecimals === true
+  const trailingZeroDisplay = stripWholeDecimals ? "stripIfInteger" : "auto"
 
   if (format === "plain") {
     return numbro(value).format({
@@ -173,6 +192,7 @@ export function formatNumber(
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
+      trailingZeroDisplay,
     })
   } else if (format === "euro") {
     return formatIntlNumberWithLocales(value, {
@@ -181,6 +201,7 @@ export function formatNumber(
       currencyDisplay: "narrowSymbol",
       minimumFractionDigits: maxPrecision ?? 2,
       maximumFractionDigits: maxPrecision ?? 2,
+      trailingZeroDisplay,
     })
   } else if (format === "yen") {
     return formatIntlNumberWithLocales(value, {
@@ -195,12 +216,17 @@ export function formatNumber(
       notation: format as "compact" | "scientific" | "engineering",
     })
   } else if (format === "accounting") {
-    return numbro(value).format({
+    const formatted = numbro(value).format({
       thousandSeparated: true,
       negative: "parenthesis",
       mantissa: maxPrecision ?? 2,
       trimMantissa: false,
     })
+    // Mirrors Intl's "stripIfInteger": drop the decimals only if numbro
+    // rounded them all to zeros ("1,000.00" -> "1,000", "(10.00)" -> "(10)").
+    return stripWholeDecimals
+      ? formatted.replace(/\.0+(?=\)?$)/, "")
+      : formatted
   } else if (format === "bytes") {
     return (
       formatIntlNumberWithLocales(value, {

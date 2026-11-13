@@ -962,7 +962,8 @@ class VegaChartsMixin:
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
-        "just plot this" scenarios, while being less customizable.
+        "just plot this" scenarios, while being less customizable. For more
+        control, use ``st.echarts_chart``, Streamlit's recommended chart command.
 
         .. note::
             A chart with more than 2,000 data points (rows times plotted
@@ -1241,7 +1242,8 @@ class VegaChartsMixin:
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
-        "just plot this" scenarios, while being less customizable.
+        "just plot this" scenarios, while being less customizable. For more
+        control, use ``st.echarts_chart``, Streamlit's recommended chart command.
 
         Parameters
         ----------
@@ -1564,7 +1566,8 @@ class VegaChartsMixin:
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
-        "just plot this" scenarios, while being less customizable.
+        "just plot this" scenarios, while being less customizable. For more
+        control, use ``st.echarts_chart``, Streamlit's recommended chart command.
 
         .. note::
             A chart with more than 2,000 data points (rows times plotted
@@ -1935,7 +1938,8 @@ class VegaChartsMixin:
         This is syntax-sugar around ``st.altair_chart``. The main difference
         is this command uses the data's own column and indices to figure out
         the chart's Altair spec. As a result this is easier to use for many
-        "just plot this" scenarios, while being less customizable.
+        "just plot this" scenarios, while being less customizable. For more
+        control, use ``st.echarts_chart``, Streamlit's recommended chart command.
 
         .. note::
             A chart with more than 2,000 data points (rows times plotted

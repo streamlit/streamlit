@@ -887,7 +887,7 @@ describe("hydrateArrowDatasetSources", () => {
     expect(option.dataset.source).toEqual(SECOND_ROWS)
   })
 
-  it("returns the first dataset the option uses, even when it is not the first sent", () => {
+  it("returns the dataset the option uses, even when it is not the first sent", () => {
     const option = { dataset: { source: { name: "h2" } } }
 
     const dataViewData = hydrateArrowDatasetSources(option, DATASETS)
@@ -900,25 +900,53 @@ describe("hydrateArrowDatasetSources", () => {
     expect(option.dataset.source).toEqual(SECOND_ROWS)
   })
 
-  it("returns the default chart's dataset rather than a media override's", () => {
-    // Python lists the top-level media override's frame first.
+  it("returns the dataset when several placeholders name the same frame", () => {
     const option = {
-      media: [
-        {
-          query: { maxWidth: 400 },
-          option: { dataset: { source: { name: "h1" } } },
-        },
-      ],
-      baseOption: { dataset: { source: { name: "h2" } } },
+      dataset: [{ source: { name: "h1" } }, { source: { name: "h1" } }],
+      options: [{ dataset: { source: { name: "h1" } } }],
     }
 
     const dataViewData = hydrateArrowDatasetSources(option, DATASETS)
 
     expect(dataViewData?.columnTypes.map(t => t.arrowField.name)).toEqual([
-      "x",
+      "product",
+      "sales",
     ])
-    expect(option.media[0].option.dataset.source).toEqual(FIRST_ROWS)
   })
+
+  it.each([
+    {
+      name: "a dataset array",
+      option: {
+        dataset: [{ source: { name: "h1" } }, { source: { name: "h2" } }],
+      },
+    },
+    {
+      name: "timeline ticks",
+      option: {
+        baseOption: { dataset: { source: { name: "h1" } } },
+        options: [{ dataset: { source: { name: "h2" } } }],
+      },
+    },
+    {
+      name: "a media override",
+      option: {
+        media: [
+          {
+            query: { maxWidth: 400 },
+            option: { dataset: { source: { name: "h1" } } },
+          },
+        ],
+        baseOption: { dataset: { source: { name: "h2" } } },
+      },
+    },
+  ])(
+    "returns null but hydrates every source when $name uses two datasets",
+    ({ option }) => {
+      expect(hydrateArrowDatasetSources(option, DATASETS)).toBeNull()
+      expect(JSON.stringify(option)).not.toContain('"name":"h')
+    }
+  )
 
   it("returns null when the option uses no sent dataset", () => {
     const option = { dataset: { source: { name: "Matcha" } } }

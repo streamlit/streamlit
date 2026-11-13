@@ -16,7 +16,7 @@
 
 import { type ReactElement, useMemo } from "react"
 
-import { screen } from "@testing-library/react"
+import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import {
   Float64,
@@ -42,6 +42,7 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
 import { resetPageWheelClockForTests } from "./insideDataZoomWheel"
+import { resetChartFontsForTests } from "./useChartFontsReady"
 
 const LOG = getLogger("EChartsChart")
 
@@ -292,6 +293,65 @@ describe("EChartsChart", () => {
     expect(mockChart.resize).toHaveBeenCalledTimes(1)
   })
 
+  it("waits for the theme fonts before the first layout", async () => {
+    let resolveLoad: () => void = () => undefined
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        check: vi.fn(() => false),
+        load: vi.fn(
+          () =>
+            new Promise<void>(resolve => {
+              resolveLoad = resolve
+            })
+        ),
+      },
+    })
+
+    try {
+      render(<Wrapper element={createElement()} />)
+      // Measuring text now would cache the fallback font's widths.
+      expect(mockInit).not.toHaveBeenCalled()
+
+      await act(async () => {
+        resolveLoad()
+        await Promise.resolve()
+      })
+
+      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: undefined,
+      })
+      resetChartFontsForTests()
+    }
+  })
+
+  it("doesn't wait for fonts when theme is None", () => {
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: {
+        check: vi.fn(() => false),
+        // Never settles, so only a chart that skips the wait can init.
+        load: vi.fn(() => new Promise<void>(vi.fn())),
+      },
+    })
+
+    try {
+      // An unthemed chart uses ECharts' own fonts.
+      render(<Wrapper element={createElement({ theme: "" })} />)
+      expect(mockInit).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(document, "fonts", {
+        configurable: true,
+        value: undefined,
+      })
+      resetChartFontsForTests()
+    }
+  })
+
   it("prunes pixel-only brush when a new instance inits at a different size", () => {
     const createIsolatedMockChart = (): typeof mockChart => {
       const chart = {
@@ -422,7 +482,15 @@ describe("EChartsChart", () => {
     )
 
     expect(mockInit).toHaveBeenCalledTimes(1)
-    expect(mockChart.on).not.toHaveBeenCalled()
+    // Only the restore's own hit-test listener is added, and it is removed
+    // right away.
+    const listeners = mockChart.on.mock.calls
+    const eventNames = listeners.map(([eventName]) => eventName)
+    expect(eventNames).not.toContain("selectchanged")
+    expect(eventNames).not.toContain("brushEnd")
+    for (const [eventName, handler] of listeners) {
+      expect(mockChart.off).toHaveBeenCalledWith(eventName, handler)
+    }
     // Disabled bind still restores the overlay so a disconnect / setOption
     // cannot drop the highlight. Handlers stay unbound.
     expect(mockChart.dispatchAction).toHaveBeenCalledWith({
@@ -522,17 +590,22 @@ describe("EChartsChart", () => {
   it.each([
     ["the Streamlit theme", "streamlit"],
     ["theme=None", ""],
-  ])("turns string tooltip formatters into functions with %s", (_, theme) => {
-    const spec = JSON.stringify({
-      ...JSON.parse(DEFAULT_SPEC),
-      tooltip: { formatter: "{b}: {@[1]}", valueFormatter: "%d units" },
-    })
-    render(<Wrapper element={createElement({ spec, theme })} />)
+  ])(
+    "turns string tooltip and label formatters into functions with %s",
+    (_, theme) => {
+      const spec = JSON.stringify({
+        ...JSON.parse(DEFAULT_SPEC),
+        yAxis: { type: "value", axisLabel: { formatter: "%d pts" } },
+        tooltip: { formatter: "{b}: {@[1]}", valueFormatter: "%d units" },
+      })
+      render(<Wrapper element={createElement({ spec, theme })} />)
 
-    const [appliedOption] = mockChart.setOption.mock.calls[0]
-    expect(appliedOption.tooltip.formatter).toBeTypeOf("function")
-    expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
-  })
+      const [appliedOption] = mockChart.setOption.mock.calls[0]
+      expect(appliedOption.tooltip.formatter).toBeTypeOf("function")
+      expect(appliedOption.tooltip.valueFormatter(5)).toBe("5 units")
+      expect(appliedOption.yAxis.axisLabel.formatter(5)).toBe("5 pts")
+    }
+  )
 
   it.each([
     ["sets", "the Streamlit theme", "streamlit", "function"],
@@ -818,6 +891,53 @@ describe("EChartsChart", () => {
 
     expect(mockChart.setOption).toHaveBeenCalledTimes(1)
     expect(mockChart.dispose).not.toHaveBeenCalled()
+  })
+
+  it("plays marker entry animations only for an instance's first option", () => {
+    const createMarkerElement = (
+      data: number[],
+      overrides: Partial<EChartsChartProto> = {}
+    ): EChartsChartProto =>
+      createElement({
+        spec: JSON.stringify({
+          xAxis: { type: "category", data: ["A", "B", "C"] },
+          yAxis: { type: "value" },
+          series: [
+            {
+              type: "line",
+              data,
+              markLine: { data: [{ name: "Launch", xAxis: "B" }] },
+              markPoint: { data: [{ type: "max" }] },
+            },
+          ],
+        }),
+        ...overrides,
+      })
+    const appliedSeries = (
+      callIndex: number
+    ): Record<string, Record<string, unknown>> =>
+      mockChart.setOption.mock.calls[callIndex][0].series[0]
+
+    const { rerender } = render(
+      <Wrapper element={createMarkerElement([1, 2, 3])} />
+    )
+    expect(appliedSeries(0).markLine).not.toHaveProperty("animationDuration")
+    expect(appliedSeries(0).markPoint).not.toHaveProperty("animationDuration")
+
+    // A rerun with new data replaces the option on the same instance.
+    rerender(<Wrapper element={createMarkerElement([3, 2, 1])} />)
+    expect(mockInit).toHaveBeenCalledTimes(1)
+    expect(appliedSeries(1).markLine.animationDuration).toBe(0)
+    expect(appliedSeries(1).markPoint.animationDuration).toBe(0)
+
+    // A recreated instance plays them again.
+    const svgElement = createMarkerElement([1, 2, 3], {
+      renderer: EChartsChartProto.Renderer.SVG,
+    })
+    rerender(<Wrapper element={svgElement} />)
+    expect(mockInit).toHaveBeenCalledTimes(2)
+    expect(mockChart.setOption).toHaveBeenCalledTimes(3)
+    expect(appliedSeries(2).markLine).not.toHaveProperty("animationDuration")
   })
 
   it("renders a styled error instead of throwing when setOption fails", () => {
@@ -1409,9 +1529,34 @@ describe("EChartsChart", () => {
       }
     )
 
-    it("does not offer Show data without Arrow datasets", () => {
-      render(<Wrapper element={createElement()} />)
+    it.each([
+      { name: "without Arrow datasets", createChartElement: createElement },
+      {
+        name: "for several Arrow datasets",
+        createChartElement: () =>
+          createDatasetElement({
+            spec: JSON.stringify({
+              dataset: [
+                { source: { name: "h1" } },
+                { source: { name: "h2" } },
+              ],
+              xAxis: { type: "category" },
+              yAxis: {},
+              series: [
+                { type: "bar", datasetIndex: 0 },
+                { type: "bar", datasetIndex: 1 },
+              ],
+            }),
+            datasets: [
+              namedDataset("h1", SALES_BYTES),
+              namedDataset("h2", NEW_SALES_BYTES),
+            ],
+          }),
+      },
+    ])("does not offer Show data $name", ({ createChartElement }) => {
+      render(<Wrapper element={createChartElement()} />)
 
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
       expect(
         screen.queryByRole("button", { name: "Download as PNG" })
       ).toBeInTheDocument()
