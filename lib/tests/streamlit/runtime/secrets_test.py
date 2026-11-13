@@ -23,7 +23,7 @@ import os
 import tempfile
 import threading
 import unittest
-from collections.abc import Callable, Iterator, Mapping, MutableMapping
+from collections.abc import Callable, Generator, Iterator, Mapping, MutableMapping
 from collections.abc import Mapping as MappingABC
 from collections.abc import MutableMapping as MutableMappingABC
 from typing import TYPE_CHECKING, Any, Self
@@ -34,7 +34,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit import config
-from streamlit.errors import StreamlitSecretNotFoundError
+from streamlit.errors import StreamlitMaxRetriesError, StreamlitSecretNotFoundError
 from streamlit.runtime.secrets import (
     _MISSING_ENTRY_HINT,
     AttrDict,
@@ -44,6 +44,7 @@ from streamlit.runtime.secrets import (
     _missing_key_error_message,
 )
 from streamlit.signal_util import Signal
+from streamlit.watcher import util as watcher_util
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
@@ -495,8 +496,9 @@ class SecretsDirectoryTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
     @patch("streamlit.watcher.path_watcher.watch_dir")
-    def test_access_secrets(self, mock_watch_dir):
+    def test_access_secrets(self, mock_watch_dir, mock_watch_file):
         mock_get_option = testutil.build_mock_config_get_option(
             {"secrets.files": [self.temp_dir_path]}
         )
@@ -512,6 +514,52 @@ class SecretsDirectoryTest(unittest.TestCase):
                 watcher_type="poll",
             )
 
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
+    def test_watches_each_secret_file(self, mock_watch_file):
+        """Each secret file is watched, so a rotated value is reloaded even though
+        the secrets directory itself does not change."""
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [self.temp_dir_path]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            assert self.secrets["example_token"] == "token123"
+
+        watched = {c.args[0] for c in mock_watch_file.call_args_list}
+        assert watched == {
+            os.path.join(self.temp_dir_path, "example_login", "username"),
+            os.path.join(self.temp_dir_path, "example_login", "password"),
+            os.path.join(self.temp_dir_path, "example_token", "token"),
+        }
+        for c in mock_watch_file.call_args_list:
+            assert c.args[1] == self.secrets._on_secrets_changed
+            assert c.kwargs == {"watcher_type": "poll", "allow_nonexistent": True}
+
+    @patch("streamlit.watcher.path_watcher.watch_file")
+    @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
+    def test_reload_watches_files_of_added_secret(self, mock_watch_file):
+        """A secret folder added after startup gets its files watched on reload,
+        and files that are already watched are not watched twice."""
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [self.temp_dir_path]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            assert self.secrets["example_token"] == "token123"
+            assert mock_watch_file.call_count == 3
+
+            os.makedirs(os.path.join(self.temp_dir_path, "new_secret"))
+            new_file = os.path.join(self.temp_dir_path, "new_secret", "value")
+            with open(new_file, "w", encoding="utf-8") as f:
+                f.write("fresh")
+            self.secrets._on_secrets_changed(self.temp_dir_path)
+
+            assert self.secrets["new_secret"] == "fresh"
+        assert mock_watch_file.call_count == 4
+        assert mock_watch_file.call_args.args[0] == new_file
+
+    @patch("streamlit.watcher.path_watcher.watch_file", MagicMock())
     @patch("streamlit.watcher.path_watcher.watch_dir", MagicMock())
     def test_secrets_reload(self):
         with open(
@@ -1065,6 +1113,164 @@ def test_parse_directory_skips_nested_subdirectory(tmp_path: Path) -> None:
     assert mapping == {"my_secret": "abc"}
 
 
+def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
+    """Skip the test where symlinks are unavailable (they need privileges on Windows)."""
+    target = tmp_path / ".symlink_target"
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        (tmp_path / ".symlink_test").symlink_to(target)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks are not supported on this system")
+
+
+def _write_kubelet_secret_volume(
+    volume: Path, files: dict[str, str], stamp: str
+) -> None:
+    """Write files the way kubelet updates a secret volume: into a new
+    ``..<timestamp>`` folder, then swap the ``..data`` link to it. The keys are
+    links into ``..data``."""
+    data_dir = volume / f"..{stamp}"
+    data_dir.mkdir(parents=True)
+    for name, value in files.items():
+        (data_dir / name).write_text(value, encoding="utf-8")
+    tmp_link = volume / "..data_tmp"
+    tmp_link.symlink_to(data_dir.name)
+    os.replace(tmp_link, volume / "..data")
+    for name in files:
+        if not (volume / name).is_symlink():
+            (volume / name).symlink_to(f"..data/{name}")
+
+
+def test_parse_directory_skips_kubelet_entries(tmp_path: Path) -> None:
+    """Kubelet's ``..data`` and ``..<timestamp>`` entries are not secrets, while
+    single-dot keys such as ``.dockerconfigjson`` are user secrets and load."""
+    _skip_if_symlinks_not_supported(tmp_path)
+    secret_root = tmp_path / "secret_root"
+    _write_kubelet_secret_volume(
+        secret_root / "api_key", {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
+    )
+    _write_kubelet_secret_volume(
+        secret_root / "regcred", {".dockerconfigjson": "{}"}, "2026_01_01_00_00_00.2"
+    )
+    (secret_root / ".dotted_secret").mkdir()
+    (secret_root / ".dotted_secret" / "value").write_text("kept", encoding="utf-8")
+
+    mapping, found = Secrets()._parse_directory(str(secret_root))
+
+    assert found is True
+    assert mapping == {"api_key": "v1", "regcred": "{}", ".dotted_secret": "kept"}
+
+
+def test_parse_directory_skips_kubelet_entries_in_projected_volume(
+    tmp_path: Path,
+) -> None:
+    """A single projected volume mapping items to ``<secret>/<field>`` puts the
+    kubelet's ``..`` folders at the top level of the secrets directory."""
+    _skip_if_symlinks_not_supported(tmp_path)
+    volume = tmp_path / "secrets"
+    data_dir = volume / "..2026_01_01_00_00_00.1"
+    (data_dir / "api_key").mkdir(parents=True)
+    (data_dir / "api_key" / "secret_string").write_text("v1", encoding="utf-8")
+    (volume / "..data").symlink_to(data_dir.name)
+    (volume / "api_key").symlink_to("..data/api_key")
+
+    mapping, found = Secrets()._parse_directory(str(volume))
+
+    assert found is True
+    assert mapping == {"api_key": "v1"}
+
+
+def test_projected_volume_watches_only_secret_files(tmp_path: Path) -> None:
+    """Kubelet's ``..`` entries at the top of a projected volume are not watched;
+    the key files reached through the secret folder links are."""
+    _skip_if_symlinks_not_supported(tmp_path)
+    volume = tmp_path / "secrets"
+    data_dir = volume / "..2026_01_01_00_00_00.1"
+    (data_dir / "api_key").mkdir(parents=True)
+    (data_dir / "api_key" / "secret_string").write_text("v1", encoding="utf-8")
+    (volume / "..data").symlink_to(data_dir.name)
+    (volume / "api_key").symlink_to("..data/api_key")
+
+    secrets = Secrets()
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(volume)]}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch("streamlit.watcher.path_watcher.watch_file") as mock_watch_file,
+    ):
+        assert secrets["api_key"] == "v1"
+
+    assert [c.args[0] for c in mock_watch_file.call_args_list] == [
+        str(volume / "api_key" / "secret_string")
+    ]
+
+
+def test_unreadable_secret_file_is_not_watched(tmp_path: Path) -> None:
+    """A file whose watcher cannot be installed is skipped, so the other secret
+    files are still watched, and it is retried on the next reload."""
+    secret_root = tmp_path / "secrets"
+    for name in ("bad", "good"):
+        (secret_root / name).mkdir(parents=True)
+        (secret_root / name / "value").write_text(name, encoding="utf-8")
+    bad_file = str(secret_root / "bad" / "value")
+
+    def watch_file(path: str, *_args: Any, **_kwargs: Any) -> bool:
+        if path == bad_file:
+            raise StreamlitMaxRetriesError("unreadable")
+        return True
+
+    secrets = Secrets()
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(secret_root)]}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch(
+            "streamlit.watcher.path_watcher.watch_file", side_effect=watch_file
+        ) as mock_watch_file,
+    ):
+        assert secrets["good"] == "good"
+        assert secrets._watched_directory_secret_files == {
+            str(secret_root / "good" / "value")
+        }
+
+        secrets._on_secrets_changed(str(secret_root))
+
+    retried = [c.args[0] for c in mock_watch_file.call_args_list].count(bad_file)
+    assert retried == 2
+
+
+def test_kubelet_update_changes_watched_file_identity(tmp_path: Path) -> None:
+    """The polling file watcher on a key link sees a kubelet update: the link
+    resolves to the new file, whose modification time and content differ."""
+    _skip_if_symlinks_not_supported(tmp_path)
+    volume = tmp_path / "secrets" / "api_key"
+    _write_kubelet_secret_volume(
+        volume, {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
+    )
+    key = str(volume / "secret_string")
+    before = (
+        watcher_util.path_modification_time(key),
+        watcher_util.calc_hash_with_blocking_retries(key),
+    )
+
+    _write_kubelet_secret_volume(
+        volume, {"secret_string": "v2"}, "2026_01_01_00_01_00.2"
+    )
+    new_file = volume / "..2026_01_01_00_01_00.2" / "secret_string"
+    os.utime(new_file, (before[0] + 10, before[0] + 10))
+    after = (
+        watcher_util.path_modification_time(key),
+        watcher_util.calc_hash_with_blocking_retries(key),
+    )
+
+    assert after[0] > before[0]
+    assert after[1] != before[1]
+
+
 def test_parse_file_path_rejects_non_toml_non_directory(tmp_path: Path) -> None:
     """A path that is neither ``.toml`` nor a directory is invalid."""
     plain_file = tmp_path / "secrets.dat"
@@ -1161,3 +1367,156 @@ def test_iter_on_secrets(mock_loaded_secrets: Secrets) -> None:
         "db_password",
         "subsection",
     }
+
+
+def _rotate_secret_file(field: Path, value: str) -> None:
+    """Replace a secret file the way platforms do: write a temp file next to the
+    secret folder and rename it over the field file, with a newer mtime."""
+    mtime = (field.stat().st_mtime if field.exists() else 0) + 10
+    tmp = field.parent.parent / f".tmp-{field.parent.name}"
+    tmp.write_text(value, encoding="utf-8")
+    os.utime(tmp, (mtime, mtime))
+    os.replace(tmp, field)
+
+
+@contextlib.contextmanager
+def _polled_secrets(
+    secret_root: Path,
+) -> Generator[tuple[Secrets, list[str], Callable[[], None]]]:
+    """A ``Secrets`` reading ``secret_root`` through real polling file watchers.
+
+    Yields the secrets, the change signals received, and a function that runs
+    one poll of every watcher. Polls run on the calling thread instead of the
+    watcher thread pool, so they are deterministic.
+    """
+    tasks: list[Callable[[], None]] = []
+
+    def run_poll_tasks() -> None:
+        pending = tasks[:]
+        tasks.clear()
+        for task in pending:
+            task()
+
+    secrets = Secrets()
+    changes: list[str] = []
+    secrets.file_change_listener.connect(
+        lambda *_: changes.append("changed"), weak=False
+    )
+    mock_get_option = testutil.build_mock_config_get_option(
+        {"secrets.files": [str(secret_root)], "server.fileWatcherType": "poll"}
+    )
+    with (
+        patch("streamlit.config.get_option", new=mock_get_option),
+        patch("streamlit.watcher.path_watcher.watch_dir", MagicMock()),
+        patch(
+            "streamlit.watcher.polling_path_watcher.PollingPathWatcher._executor"
+        ) as executor,
+        patch("streamlit.watcher.polling_path_watcher.time.sleep"),
+    ):
+        executor.submit = tasks.append
+        try:
+            yield secrets, changes, run_poll_tasks
+        finally:
+            secrets._reset()
+
+
+def test_rotated_secret_file_reloads_through_polling_watcher(tmp_path: Path) -> None:
+    """End to end through the real polling file watcher: a rotated file reloads the
+    value and sends one change signal, an identical rewrite does not, and a removed
+    file keeps being watched so its return is picked up."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "rotated_api_key" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+    # A second secret stays in place, as in a real deployment.
+    (secret_root / "other_secret").mkdir()
+    (secret_root / "other_secret" / "value").write_text("unchanged", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["rotated_api_key"] == "v1"
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == "v2"
+        assert changes == ["changed"]
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert changes == ["changed"]
+
+        field.unlink()
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == {}
+        assert changes == ["changed", "changed"]
+
+        _rotate_secret_file(field, "v3")
+        run_poll_tasks()
+        assert secrets["rotated_api_key"] == "v3"
+        assert secrets["other_secret"] == "unchanged"
+        assert changes == ["changed", "changed", "changed"]
+
+
+def test_removing_last_secret_file_keeps_watching(tmp_path: Path) -> None:
+    """When the only secret file is removed the reload fails, but the watcher
+    survives: the failure surfaces on access and the restored file reloads."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "only_secret" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["only_secret"] == "v1"
+
+        field.unlink()
+        run_poll_tasks()
+        assert changes == []
+        with pytest.raises(StreamlitSecretNotFoundError):
+            secrets["only_secret"]
+
+        _rotate_secret_file(field, "v2")
+        run_poll_tasks()
+        assert secrets["only_secret"] == "v2"
+        assert changes == ["changed"]
+
+
+def test_unreadable_secrets_directory_keeps_watching(tmp_path: Path) -> None:
+    """An ``OSError`` while reloading does not escape the watcher callback, so
+    the watcher keeps polling and a later rotation reloads."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "api_key" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["api_key"] == "v1"
+
+        _rotate_secret_file(field, "v2")
+        with patch.object(
+            Secrets, "_parse_directory", side_effect=PermissionError("denied")
+        ):
+            run_poll_tasks()
+        assert changes == []
+
+        _rotate_secret_file(field, "v3")
+        run_poll_tasks()
+        assert secrets["api_key"] == "v3"
+        assert changes == ["changed"]
+
+
+def test_multi_field_secret_rotation_signals_once(tmp_path: Path) -> None:
+    """Every field of a secret has its own watcher, but rotating them together
+    sends a single change signal."""
+    secret_root = tmp_path / "secrets"
+    fields = {name: secret_root / "db" / name for name in ("username", "password")}
+    fields["username"].parent.mkdir(parents=True)
+    for name, field in fields.items():
+        field.write_text(f"{name}1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["db"] == {"username": "username1", "password": "password1"}
+
+        for name, field in fields.items():
+            _rotate_secret_file(field, f"{name}2")
+        run_poll_tasks()
+        assert secrets["db"] == {"username": "username2", "password": "password2"}
+        assert changes == ["changed"]
