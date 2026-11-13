@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Seattle weather dashboard exploring the classic Vega dataset with ECharts."""
+"""Seattle weather dashboard for the classic Seattle weather dataset, drawn with ECharts."""
 
 import calendar
 from typing import Any

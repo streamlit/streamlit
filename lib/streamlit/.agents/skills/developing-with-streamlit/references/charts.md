@@ -147,7 +147,7 @@ for s in event.selection.selected:
 
 When groups don't share x values (for example, scatter points), keep the one dataset and add a dataset per group with `{"transform": {"type": "filter", "config": {"dimension": "app", "=": app}}}`, pointing each series at it with `datasetIndex` and setting `"name": app`. Map a selection back with the same filter in pandas: `df[df["app"] == s["series_name"]].iloc[s["data_indices"]]`.
 
-Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
+For range bars on a category axis, stack a transparent bar at the low value under a visible bar as tall as the range, with `"stackStrategy": "all"` as in the fan chart below, so the data stays in `dataset.source`. Draw Gantt charts and time-axis lanes as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
 
 ```python
 st.echarts_chart(

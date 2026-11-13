@@ -165,7 +165,7 @@ with st.container(border=True):
 
 ## Choosing charts for a dashboard
 
-Use `st.echarts_chart` for every chart on a dashboard (see [charts.md](charts.md)). Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and dense series stay fast.
+Use `st.echarts_chart` for every chart on a dashboard (see [charts.md](charts.md)). Filter changes animate from the old values to the new ones, a `dataZoom` component adds a zoom slider, gauges and funnels match the line and bar charts, and dense series stay fast.
 
 - Add an `st.altair_chart` only for a chart that needs a Vega-Lite-only feature, such as faceting into small multiples.
 - Metric sparklines (`chart_data`) and dataframe chart columns work next to ECharts.
