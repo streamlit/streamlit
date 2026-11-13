@@ -22,7 +22,8 @@ Demonstrates:
 - A ``ButtonColumn`` that opens a company drawer
   (``@st.dialog(position="right")``) with badges, metrics, and
   ``st.echarts_chart`` usage charts
-- ``@st.cache_data(ttl=...)`` loader with a custom spinner message
+- ``@st.cache_data(ttl=..., refresh_mode="background")`` loader with a
+  custom spinner message
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
 your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
@@ -134,7 +135,9 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl="1h", show_spinner="Loading company data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading company data..."
+)
 def load_company_data() -> pd.DataFrame:
     """Load all company data (cached). Replace with your data source."""
     return generate_company_data(days=90)

@@ -100,12 +100,16 @@ def generate_breakdown_data(
     return df
 
 
-@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading metric data..."
+)
 def load_metric(metric_name: str) -> pd.DataFrame:
     """Load one metric's time series.
 
     Each metric is cached on its own, so the cards load concurrently as
-    parallel fragments. The ``ttl`` keeps the cache fresh; add
+    parallel fragments. The ``ttl`` keeps the cache fresh, and
+    ``refresh_mode="background"`` serves an expired entry at once while it
+    recomputes off-thread. Add
     ``max_entries`` if the set of metric names can grow large. Every call
     runs inside a skeleton, so a slow load shows the spinner text on the
     skeleton.
@@ -113,7 +117,9 @@ def load_metric(metric_name: str) -> pd.DataFrame:
     return generate_metric_data(metric_name, **METRIC_CONFIG[metric_name])
 
 
-@st.cache_data(ttl="1h", show_spinner="Loading breakdown data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading breakdown data..."
+)
 def load_breakdown(dimension: str) -> pd.DataFrame:
     """Load daily values by one of the ``BREAKDOWNS``, cached per dimension."""
     return generate_breakdown_data(dimension, BREAKDOWNS[dimension]["base_values"])

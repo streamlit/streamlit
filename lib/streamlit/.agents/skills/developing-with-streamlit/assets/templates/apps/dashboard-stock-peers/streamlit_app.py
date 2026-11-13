@@ -167,10 +167,11 @@ if len(tickers) <= 1:
     st.warning("Pick 2 or more tickers to compare them")
     st.stop()
 
-NUM_COLS = 4
-chart_cols = st.columns(NUM_COLS)
+# Each bordered container is one grid cell, two per ticker. The grid drops
+# columns on narrow screens instead of squeezing the charts.
+chart_grid = st.grid(4)
 
-for i, ticker in enumerate(tickers):
+for ticker in tickers:
     # Peer average excludes the current stock.
     plot_data = pd.DataFrame(
         {
@@ -182,8 +183,7 @@ for i, ticker in enumerate(tickers):
     plot_data["Delta"] = plot_data[ticker] - plot_data["Peer average"]
     latest = plot_data.iloc[-1]
 
-    cell = chart_cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.echarts_chart(
+    chart_grid.container(border=True).echarts_chart(
         {
             "title": {"text": f"{ticker} vs peer average"},
             "dataset": {"source": plot_data},
@@ -203,8 +203,7 @@ for i, ticker in enumerate(tickers):
         ),
     )
 
-    cell = chart_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.echarts_chart(
+    chart_grid.container(border=True).echarts_chart(
         {
             "title": {"text": f"{ticker} minus peer average"},
             "dataset": {"source": plot_data},

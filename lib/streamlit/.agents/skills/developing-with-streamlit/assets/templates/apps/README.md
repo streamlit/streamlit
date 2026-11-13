@@ -188,7 +188,8 @@ containers created outside it, even from inside the fragment function.
 
 ### Data Loading with Caching
 
-Cache the expensive load. Use a `ttl` to keep data fresh and `max_entries` when
+Cache the expensive load. Use a `ttl` to keep data fresh, `refresh_mode="background"`
+to serve an expired entry at once while it recomputes off-thread, and `max_entries` when
 the workload gives a practical entry-count bound. For `st.cache_data`, use
 `max_size` only when the user provides a byte budget or deployment memory
 constraints and the intended allocation across caches determine a per-cache
@@ -201,7 +202,9 @@ skeleton already provides feedback: it hides the default spinner and shows custo
 spinner text on the skeleton:
 
 ```python
-@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading metric data..."
+)
 def load_metric_data() -> pd.DataFrame:
     """Load metric data. Replace with your actual data source."""
     # Replace this with:

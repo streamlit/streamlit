@@ -23,7 +23,8 @@ Demonstrates:
 - ``st.echarts_chart`` time series with normalization and a zoom slider
 - Metric cards with numeric values formatted by ``format=`` and 28-day deltas
 - Rolling average options
-- ``@st.cache_data(ttl=...)`` loader to keep data fresh and bounded
+- ``@st.cache_data(ttl=..., refresh_mode="background")`` loader that keeps
+  data fresh without blocking on a refresh
 - Conditional rendering: the collapsed "Raw data" expander only computes and
   sends its dataframe to the browser when it is open (``on_change="rerun"``)
 
@@ -134,7 +135,9 @@ def generate_api_data(
     return pd.DataFrame(records)
 
 
-@st.cache_data(ttl="1h", show_spinner="Loading API usage data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading API usage data..."
+)
 def load_api_data() -> pd.DataFrame:
     """Load all API usage data (cached). Replace with your data source."""
     end_date = date.today() - timedelta(days=1)

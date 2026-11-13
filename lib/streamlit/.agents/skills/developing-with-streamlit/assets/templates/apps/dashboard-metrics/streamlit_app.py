@@ -22,8 +22,8 @@ Demonstrates:
   morphs between lines and stacked bars, with an optional share view
 - Chart/table toggle and popover filters on every card
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
-- ``@st.cache_data(ttl=...)`` loaders, cached per metric, to keep data fresh
-  and bounded
+- ``@st.cache_data(ttl=..., refresh_mode="background")`` loaders, cached per
+  metric, that keep data fresh without blocking on a refresh
 - ``@st.fragment(parallel=True)`` cards that load concurrently on full reruns
   and rerun in isolation on widget interactions
 - Layout-first loading with ``st.skeleton``: the main script draws the KPI
@@ -304,16 +304,12 @@ with st.container(horizontal=True):
         with st.skeleton(height=KPI_HEIGHT):
             kpi_card(kpi_label, kpi_metric)
 
-row1 = st.columns(2)
-with row1[0]:
+# Each fragment call is one grid cell. The grid drops to one column on
+# narrow screens.
+with st.grid(2):
     metric_card("Active users", "users", chart_type="line")
-with row1[1]:
     metric_card("Sessions", "sessions", chart_type="area")
-
-row2 = st.columns(2)
-with row2[0]:
     metric_card("Revenue", "revenue", chart_type="bar")
-with row2[1]:
     metric_card("Conversions", "conversions", chart_type="point")
 
 # Full width, so the stacked bars have room for every day.
