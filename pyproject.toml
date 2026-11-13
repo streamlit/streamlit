@@ -489,8 +489,6 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
-  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
-  "yfinance.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
   "sqlalchemy.*",
 ]
