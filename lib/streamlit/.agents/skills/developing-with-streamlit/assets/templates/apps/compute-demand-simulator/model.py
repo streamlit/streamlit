@@ -125,11 +125,14 @@ class Summary(NamedTuple):
 
 @dataclass(frozen=True)
 class Forecast:
+    """Weekly demand bands and season totals for one scenario."""
+
     weekly: pd.DataFrame  # One row per forecast week
     summary: Summary
 
 
 def plan_for(product: str) -> Levers:
+    """The plan for ``product``: list price, no promo, planned marketing and supply."""
     return Levers(product, marketing=PRODUCTS[product].marketing)
 
 
@@ -155,7 +158,10 @@ def marketing_lift(spend: float) -> float:
 
 @st.cache_data(ttl="1h", show_spinner=False)
 def load_history(product_name: str) -> pd.DataFrame:
-    """Weekly units sold over the last 26 weeks. Replace with your own query."""
+    """Weekly units sold over the last 26 weeks, in ``week`` and ``Actual`` columns.
+
+    Replace it with your own query that returns both columns.
+    """
     product = PRODUCTS[product_name]
     weeks = pd.date_range(AS_OF - timedelta(weeks=26), periods=26, freq="7D")
     rng = np.random.default_rng(product.seed + 1)

@@ -67,7 +67,9 @@ def money(value: float) -> str:
     value = abs(value)
     if value >= 1e6:
         return f"{sign}${value / 1e6:.2f}M"
-    return f"{sign}${value / 1e3:.0f}k"
+    if value >= 1e4:
+        return f"{sign}${value / 1e3:.0f}k"
+    return f"{sign}${value:,.0f}"
 
 
 def pct_change(new: float, old: float) -> float:
@@ -251,7 +253,7 @@ def handle_scenario_action() -> None:
 @st.dialog("Save scenario", icon=":material/bookmark_add:")
 def save_dialog(levers: model.Levers) -> None:
     st.caption(levers.describe())
-    # A form submits on Enter or on the button, with the name already applied.
+    # The form saves on Enter or Save and submits the typed name with it.
     with st.form("save_form", border=False):
         name = st.text_input(
             "Name", placeholder="Black Friday push", max_chars=40, key="scenario_name"

@@ -47,7 +47,7 @@ FLAG_COLORS: dict[str, BadgeColor] = {
 
 def reviewer() -> str:
     """The signed-in planner, or a guest name when the app has no sign-in."""
-    name = st.user.get("name")
+    name = st.user.get("name") or st.user.get("email")
     return str(name) if name else "Guest planner"
 
 

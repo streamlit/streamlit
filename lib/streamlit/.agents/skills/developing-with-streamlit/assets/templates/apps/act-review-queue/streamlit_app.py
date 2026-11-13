@@ -74,7 +74,8 @@ def sync_drafts(ids: list[str], key: str) -> None:
 
 
 def open_review(ids: list[str]) -> None:
-    # Map the clicked row with the table as it was shown, not as it reloads.
+    # ids is the order the planner saw, so a queue reload before the click can't
+    # shift the row.
     st.session_state.reviewing = ids[st.session_state.review_click.row]
 
 
@@ -98,7 +99,9 @@ def submit() -> None:
         review.drafts().pop(decision.proposal_id, None)
     review.reset_editor()
     message = f"Submitted {written} decision{'' if written == 1 else 's'}"
-    if skipped:
+    if not written:
+        message = "Someone else already decided these proposals"
+    elif skipped:
         message += f" · {skipped} already decided"
     st.toast(message, icon=":material/send:")
 
@@ -361,8 +364,8 @@ problems = [
     if problem
 ]
 # Bulk accept covers fresh proposals only, never ones a planner put on hold.
-fresh = rows["low_risk"] & (rows["status"] == "pending")
-low_risk = [pid for pid in rows.index[fresh] if pid not in review.drafts()]
+pending_low_risk = rows["low_risk"] & (rows["status"] == "pending")
+low_risk = [pid for pid in rows.index[pending_low_risk] if pid not in review.drafts()]
 
 with st.container(border=True):
     with st.container(horizontal=True, vertical_alignment="center"):

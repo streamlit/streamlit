@@ -33,7 +33,7 @@ working directory; keep it out of version control.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
@@ -190,6 +190,7 @@ def load_proposals() -> pd.DataFrame:
     policy = pd.DataFrame(
         [asdict(POLICIES[category]) for category in frame["category"]],
         index=frame.index,
+        columns=[field.name for field in fields(Policy)],  # Even with no rows
     )
     frame["value"] = frame["proposed_qty"] * frame["unit_cost"]
     frame["days_left"] = (frame["on_hand"] / (frame["weekly_forecast"] / 7)).round()
