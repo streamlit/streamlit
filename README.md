@@ -6,9 +6,8 @@
 
 ### Built in Python. Made for people and agents. Owned by your team.
 
-**Streamlit is the open-source, agent-native data app framework.** Use it for dashboards,
-forecasting tools, review-and-approval workflows, and any other app built around your
-data.
+**Streamlit is the agent-native data app framework.** Use it for dashboards, forecasting
+tools, review-and-approval workflows, and any other app built around your data.
 
 [![PyPI downloads](https://img.shields.io/pypi/dm/streamlit?label=PyPI%20downloads)](https://pypi.org/project/streamlit/)
 [![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
@@ -28,32 +27,32 @@ to global enterprises.
 
 <table>
   <tr>
-    <td width="33%">
+    <td width="33%" align="center">
       <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
     </td>
-    <td width="33%">
+    <td width="33%" align="center">
       <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
-    <td width="33%">
+    <td width="33%" align="center">
       <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
     </td>
   </tr>
   <tr>
-    <td width="33%">
+    <td width="33%" valign="top">
       <sub>APPS THAT COMPUTE</sub><br>
       <b>Forecasts, simulations, and models with what-if levers</b><br>
       Pricing and demand simulators, risk models, and AI analysis over your data. The
       computation and the interface are the same Python.<br>
       <a href="https://apps-that-compute-demo.streamlit.app/">Try the live demo →</a>
     </td>
-    <td width="33%">
+    <td width="33%" valign="top">
       <sub>APPS THAT ACT</sub><br>
       <b>Review queues, approvals, sign-offs, and writeback</b><br>
       Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
       app as the data, including approving what an AI agent proposes.<br>
       <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
     </td>
-    <td width="33%">
+    <td width="33%" valign="top">
       <sub>ADVANCED DASHBOARDS</sub><br>
       <b>KPI dashboards with drill-down and cross-filtering</b><br>
       Fast over large data. Coming from a BI tool? Move your dashboards to Streamlit, and
