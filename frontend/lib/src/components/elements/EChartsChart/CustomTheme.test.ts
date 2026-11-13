@@ -85,8 +85,12 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(title.padding).toEqual([0, 0, convertRemToPx(theme.spacing.lg), 0])
 
     const tooltip = echartsTheme.tooltip as Record<string, unknown>
-    expect(tooltip.backgroundColor).toBe(theme.colors.bgColor)
+    // Matches the Vega-Lite tooltip's translucent background and radius.
+    expect(tooltip.backgroundColor).toBe(
+      transparentize(theme.colors.bgColor, 0.05)
+    )
     expect(tooltip.borderColor).toBe(theme.colors.borderColor)
+    expect(tooltip.borderRadius).toBe(convertRemToPx(theme.radii.default))
     const tooltipText = tooltip.textStyle as Record<string, unknown>
     expect(tooltipText.fontFamily).toBe(theme.genericFonts.bodyFont)
     expect(tooltipText.fontSize).toBe(convertRemToPx(theme.fontSizes.twoSm))
@@ -751,7 +755,7 @@ describe("Streamlit theme resolved by ECharts", () => {
       series: [{ type: "line", data: [1] }],
     })
 
-    const { bgColor } = darkTheme.emotion.colors
+    const bgColor = transparentize(darkTheme.emotion.colors.bgColor, 0.05)
     expect(component("axisPointer").get(["label", "backgroundColor"])).toBe(
       bgColor
     )

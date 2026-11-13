@@ -172,6 +172,16 @@ export function formatEChartsTooltipValue(value: unknown): string | string[] {
 }
 
 /**
+ * A theme radius in pixels, since ECharts takes radii as numbers.
+ * ``baseRadius`` may set the theme radii in px or rem.
+ */
+export function themeRadiusToPx(radius: string): number {
+  return radius.endsWith("px")
+    ? Number.parseFloat(radius)
+    : convertRemToPx(radius)
+}
+
+/**
  * Build the base axis styling (colors, fonts, label margin) that every axis
  * theme key starts from. Value, log, and time axes extend it to hide
  * overlapping labels (see ``continuousAxisDefaults`` in
@@ -376,6 +386,9 @@ export function buildStreamlitEChartsTheme(
     axisLabel: { ...axisDefaults.axisLabel, hideOverlap: true },
   }
   const titleDefaults = buildChartTitleDefaults(theme)
+  // Match the Vega-Lite tooltip (`#vg-tooltip-element`): a slightly
+  // translucent background and the theme's default radius.
+  const tooltipBackgroundColor = transparentize(colors.bgColor, 0.05)
   // Shared text style for component labels/names that would otherwise fall back
   // to ECharts' default (un-themed) gray.
   const bodyTextStyle = {
@@ -436,8 +449,9 @@ export function buildStreamlitEChartsTheme(
       },
     },
     tooltip: {
-      backgroundColor: colors.bgColor,
+      backgroundColor: tooltipBackgroundColor,
       borderColor: colors.borderColor,
+      borderRadius: themeRadiusToPx(theme.radii.default),
       textStyle: {
         color: colors.bodyText,
         fontFamily: genericFonts.bodyFont,
@@ -459,7 +473,7 @@ export function buildStreamlitEChartsTheme(
     axisPointer: {
       label: {
         color: colors.bodyText,
-        backgroundColor: colors.bgColor,
+        backgroundColor: tooltipBackgroundColor,
         borderColor: colors.borderColor,
         // ECharts takes a pixel number, and `borderWidth` is a px token.
         borderWidth: Number.parseFloat(theme.sizes.borderWidth),
