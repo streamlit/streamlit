@@ -45,8 +45,8 @@ The agents that do most of the work in this repo can't help. `implementing-featu
 | Example apps | About 250 app sources deployed to Community Cloud as `doc-*.streamlit.app`. Pages embed them with `<Cloud>`, and 63 files in `lib/streamlit/` link 219 of them from docstrings. | `python/api-examples-source/` and siblings |
 
 Release-docs PRs touch `content/`, `python/streamlit.json`, and example-app sources, and
-sometimes images and the "What's new" tiles in `pages/index.js` (streamlit/docs#1412, #1453,
-#1509, #1560, #1606).
+sometimes images and the "What's new" tiles in `pages/index.js` (streamlit/docs#1412,
+streamlit/docs#1453, streamlit/docs#1509, streamlit/docs#1560, streamlit/docs#1606).
 
 ### Activity in the last 12 months
 
@@ -117,23 +117,25 @@ docs/
 	shallow = true
 ```
 
+In `streamlit/docs`, symlinks replace the moved folders:
+
 ```text
 content           -> streamlit/docs/content
 public/images     -> ../streamlit/docs/images
 public/_redirects -> ../streamlit/docs/_redirects
 ```
 
-With these symlinks, the five loaders and every `/images/...` URL work unchanged. Three
-things need checking in the first implementation step: that webpack resolves the
-`../content/index.md` import in `pages/index.js` through the symlink, that the export
-copies the symlinked files into `out/`, and that the shallow submodule checkout fetches a
-pinned tag that isn't the tip of `develop`, both locally and on Netlify. If a symlink check
-fails, the loaders point at `streamlit/docs/content` directly, which is one constant or
-import each.
+The symlinks keep the five loaders and every `/images/...` URL unchanged. The first
+implementation step confirms three things: that webpack resolves the `../content/index.md`
+import in `pages/index.js` through the symlink, that the export copies the symlinked files
+into `out/`, and that the shallow submodule checkout fetches a pinned tag that isn't the tip
+of `develop`, both locally and on Netlify. If a symlink check fails, the loaders point at
+`streamlit/docs/content` directly, which is one constant or import each.
 
 Other changes in the docs repo:
 
-- The default `make` target also runs `git submodule update --init --depth 1`.
+- The default `make` target, `make up`, and `make export` also run
+  `git submodule update --init --depth 1`.
 - Netlify checks out submodules of public repos on its own. The shallow checkout is all of
   `streamlit/streamlit`: 159 MB in 10,285 files, 126 MB of it E2E snapshots. If that slows
   builds noticeably, switch to alternative B, which keeps the same pin rules.
@@ -155,34 +157,40 @@ Commits on `develop` reach the site only through a release, so pages for unrelea
 features never go live early.
 
 Urgent fixes are rare: wrong security guidance, broken Community Cloud instructions, or a
-wrong install command. They merge to `develop` first, `cherry-pick-to-release-branch.yml`
-puts them on the latest `release/X.Y.Z` branch, and the pin moves to that commit. Docs for
-a dated Community Cloud or Streamlit in Snowflake launch take the same path. Everything
-else, typo fixes included, waits for the next release, about two weeks at most.
+wrong install command. They merge to `develop` first in a PR that only touches `docs/`,
+`cherry-pick-to-release-branch.yml` puts them on the latest `release/X.Y.Z` branch, and the
+release manager dispatches the §4 workflow with that commit. Docs for a dated Community
+Cloud or Streamlit in Snowflake launch take the same path. Everything else, typo fixes
+included, waits for the next release, about two weeks at most.
 
 Without a check, a patch release drops those cherry-picks.
 `patch-release-branch-creation.yml` branches from the previous tag, so `release/1.67.1`
 lacks whatever was cherry-picked onto `release/1.67.0` after its tag, including the import
-itself (§7). Before tagging, `release-tag-and-pr-creation.yml` gets a new check: it fails
-when a commit that changed `docs/` on the previous release branch after its tag has no
-equivalent on the new release branch. The release manager then cherry-picks the missing
-commit and runs the workflow again. The check matches commits by their changes
-(`git log --cherry-pick`), because release merge PRs are squashed and a fix reaches the
-next minor release as its `develop` commit.
+itself (§7). Before tagging a patch release, `release-tag-and-pr-creation.yml` gets a new
+check: it fails when a commit that changed `docs/` on the previous release branch after its
+tag has no equivalent on the new release branch. The release manager then cherry-picks the
+missing commit and runs the workflow again. The check compares changes
+(`git log --cherry-pick`), not SHAs, since the cherry-pick on the new branch gets a new SHA.
+Minor releases don't need the check, because they branch from `develop`, where urgent fixes
+merge first.
 
-Release notes have to be in the pinned commit. `generating-changelog` writes to
-`work-tmp/` today and changes to write into
-`docs/content/develop/quick-references/release-notes/`. The release manager commits the
-result to the release branch before tagging, and the release merge PR brings it back to
-`develop`. A second new check in `release-tag-and-pr-creation.yml` fails when the release
-notes have no section for the version being tagged.
+Release notes for a minor release have to be in the pinned commit. Today
+`generating-changelog` and `scripts/changelog_fetch_prs.py` need the new tag and write to
+`work-tmp/`. They change to take the release-branch tip and the new version, and to write
+the notes into `<year>.md` and `_index.md` in
+`docs/content/develop/quick-references/release-notes/`. The release manager commits them to
+the release branch before tagging, `wiki/release-process.md` moves that step ahead of the
+tag, and the release merge PR brings the notes back to `develop`. A second new check in
+`release-tag-and-pr-creation.yml` fails when a minor release has no release-notes section
+for its version.
 
 ### 4. Release PR in `streamlit/docs`
 
-A workflow in `streamlit/docs` replaces most of the manual release PR. It runs on a
-schedule and on manual dispatch, and opens a PR when a new release tag exists:
+A workflow in `streamlit/docs` replaces most of the manual release PR. It runs hourly and
+opens a PR when PyPI has a final release newer than the pinned version, so nightly tags and
+releases that are still publishing don't trigger it:
 
-1. Move the submodule to the tag (§3).
+1. Move the submodule to the release tag (§3).
 2. Generate docstrings for the new version with `python/generate.py`, as `make docstrings`
    does today.
 3. Compare the `<Cloud>` embeds in the previous and new docstrings, and list the example
@@ -191,10 +199,14 @@ schedule and on manual dispatch, and opens a PR when a new release tag exists:
 4. Put `git diff --stat` of `docs/` between the two pins in the PR body, plus the
    placeholder tile images that the validator (§6) reports for the new pin.
 
-Merging the PR publishes the release docs. The "What's new" tiles in `pages/index.js` stay
-in the docs repo and are updated in this PR. A schedule avoids storing a `streamlit/docs`
-token in `streamlit/streamlit`; a `repository_dispatch` from `release.yml` can replace it
-later if the delay matters.
+For an urgent fix, the release manager dispatches the workflow with the commit to pin. It
+then moves the submodule to that commit and skips steps 2 and 3. A pin on a release branch
+counts as that branch's version, so a later scheduled run doesn't move it back.
+
+Merging the PR publishes the docs. The "What's new" tiles in `pages/index.js` stay in the
+docs repo, and the release manager updates them in this PR. A schedule avoids storing a
+`streamlit/docs` token in `streamlit/streamlit`; a `repository_dispatch` from `release.yml`
+can replace it later if the delay matters.
 
 ### 5. Writing docs in `streamlit/streamlit`
 
@@ -270,7 +282,8 @@ check.
    release.
 3. In `streamlit/docs`, add the submodule pinned to that commit, replace the folders with
    symlinks, and add the release workflow. Update the README and trim the
-   `updating-docs-for-release` skill to the steps in §4.
+   `updating-docs-for-release` skill to the steps in §4. The site-build job (§6) lands in
+   `streamlit/streamlit` after this step, because it needs the symlinks.
 4. Port open `streamlit/docs` PRs that touch content to `streamlit/streamlit`, and close
    them with a pointer.
 5. Lift the freeze.
@@ -281,9 +294,9 @@ check.
   the same files.
 - Docs changes reach the site at the next release instead of on merge, except urgent fixes
   (§3).
-- Content changes need a `streamlit/streamlit` PR. That repo has paused PRs from outside
-  the maintainer team (`fork-pr-welcome.yml`), so the roughly 15 community docs PRs a year
-  stop unless `docs/` is exempt.
+- Content changes need a PR in `streamlit/streamlit`, which has paused PRs from outside the
+  maintainer team (`fork-pr-welcome.yml`). The roughly 15 community docs PRs a year stop
+  unless `docs/` is exempt.
 - PRs in `streamlit/docs` become site changes and release PRs.
 
 ## Alternatives considered
