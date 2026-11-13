@@ -190,7 +190,7 @@ For **building a dashboard**, read:
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
 
-For **modernizing an existing app** (only when the user explicitly asks), update the whole app, not only the file in view. Before editing, show the user a short plan that names the riskiest changes (such as moving to `st.navigation`, rewriting charts, or raising the app's Streamlit requirement) and wait for them to confirm.
+For **modernizing an existing app** (only when the user explicitly asks), update the whole app, not only the file in view. Before editing, show the user a short plan that names the riskiest changes (such as moving to `st.navigation` or rewriting charts) and wait for them to confirm.
 1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML where a native command covers the same behavior ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
 2. **Performance:** caching (e.g., `refresh_mode="background"` on caches with a `ttl`), `st.skeleton`, fragments (e.g., `parallel=True`), and forms ([performance.md](references/performance.md)).
 3. **Newer features where they fit:** for example `st.navigation` ([multipage-apps.md](references/multipage-apps.md)), `st.segmented_control`/`st.pills` ([selection-widgets.md](references/selection-widgets.md)), `st.menu_button` and side-drawer dialogs (`@st.dialog(position=...)`, [layouts.md](references/layouts.md)), `ButtonColumn` and `MultiselectColumn` ([data-display.md](references/data-display.md)), `bind="query-params"` for values that are safe to share ([session-state.md](references/session-state.md)), and streaming and compact thinking or step expanders in chat apps ([chat-ui.md](references/chat-ui.md)). See [api-reference.md](references/api-reference.md) for others.
@@ -199,7 +199,7 @@ For **modernizing an existing app** (only when the user explicitly asks), update
 6. **Theme:** keep an existing brand theme or `theme.base`; otherwise add one that fits the app's domain, starting from `assets/templates/themes/configs/` ([theme.md](references/theme.md)). For dashboards, aim for the `dashboard-revenue` template and the `bi-dashboard` theme ([dashboards.md](references/dashboards.md)).
 7. **Code organization:** split a large single-file app into modules where [code-organization.md](references/code-organization.md) calls for it.
 
-Keep features, widget keys, query parameters, page URLs, and data logic intact. Raise the app's Streamlit requirement if new features need it ([environment-setup.md](references/environment-setup.md)), and verify every page with the agent API ([Step 4](#step-4-verify-the-change-in-the-running-app)).
+Keep features, widget keys, query parameters, page URLs, and data logic intact. Upgrade the app's Streamlit requirement to the latest version ([environment-setup.md](references/environment-setup.md)), and verify every page with the agent API ([Step 4](#step-4-verify-the-change-in-the-running-app)).
 
 **IMPORTANT - Use templates:**
 
