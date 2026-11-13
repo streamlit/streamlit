@@ -124,6 +124,10 @@ class PlotlySelectionState(ReadOnlyAttributeDictionary):
         ``point_indices``. If additional information has been assigned to your
         points, such as size or legend group, this is also included.
 
+        To select Sankey nodes by clicking, set ``arrangement="fixed"`` on the
+        Sankey trace. Otherwise, most browsers treat node clicks as the start
+        of a drag. Clicking a Sankey link works with any arrangement.
+
     point_indices : list[int]
         The numerical indices of all selected data points in the chart. The
         details of each identified point are included in ``points``. Heatmap

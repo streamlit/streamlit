@@ -234,6 +234,8 @@ st.header("Sankey with Selection")
 fig_sankey = go.Figure(
     data=[
         go.Sankey(
+            # Chromium and WebKit don't emit node clicks for draggable nodes.
+            arrangement="fixed",
             node={"label": ["A1", "A2", "B1", "B2"], "pad": 20, "thickness": 20},
             link={"source": [0, 1, 0], "target": [2, 3, 3], "value": [8, 4, 2]},
         )
@@ -247,5 +249,9 @@ if event_sankey and len(event_sankey.selection.get("points", [])) > 0:
     point = event_sankey.selection["points"][0]
     st.write(f"Sankey label: {point.get('label', 'N/A')}")
     st.write(f"Sankey value: {point.get('value', 'N/A')}")
+    if "source" in point:
+        st.write(
+            f"Sankey link: {point['source']['label']} to {point['target']['label']}"
+        )
 else:
     st.write("No sankey selection")
