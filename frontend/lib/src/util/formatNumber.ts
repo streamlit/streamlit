@@ -43,11 +43,13 @@ export const NAMED_NUMBER_FORMATS: ReadonlySet<string> = new Set([
 /** Options for ``formatNumber``. */
 interface FormatNumberOptions {
   /**
-   * Drop the decimals when the formatted amount rounds to an integer in the
-   * dollar, euro, or accounting formats ("$55,680" instead of "$55,680.00",
-   * and "$12" for 12.001); other amounts keep them ("$12.50"). Use it for standalone values such as metrics, slider labels,
-   * and chart tooltips. Table columns leave it off so decimals line up across
-   * rows.
+   * Drop decimals when a dollar, euro, or accounting amount rounds to a
+   * whole number ("$55,680" instead of "$55,680.00", and "$12" for
+   * 12.001). Amounts with a fractional part keep their decimals ("$12.50").
+   *
+   * Metrics and chart tooltips pass true. Sliders pass true only when
+   * `step` is a whole number, so labels keep a stable width while dragging.
+   * Table columns leave it unset so decimal points line up.
    */
   stripWholeDecimals?: boolean
 }
