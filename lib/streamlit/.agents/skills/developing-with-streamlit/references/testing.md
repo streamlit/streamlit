@@ -264,6 +264,15 @@ assert at.link_button[0].value == "Docs"  # the label; .url is the target
 assert at.page_link[0].value == "Example"  # the label, or the inferred page title
 ```
 
+`at.echarts_chart` is read-only too. `.spec` and `.value` are the chart option as a dict. A dataframe in `dataset.source` appears there as a `{"name": ...}` placeholder, and `.datasets` maps that name to the DataFrame:
+
+```python
+chart = at.echarts_chart[0]
+assert chart.spec["series"][0]["type"] == "bar"
+source = chart.spec["dataset"]["source"]
+assert len(chart.datasets[source["name"]]) == 3
+```
+
 `at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`.
 
 ### Assert the app didn't crash
@@ -411,7 +420,7 @@ Elements fall into three groups:
 
 Inspect `st.data_editor` with `at.data_editor`. Those elements also stay on `at.dataframe`. `.value` is the input table. A keyed editor's `at.session_state` value is the edit state (`edited_rows`, `added_rows`, `deleted_rows`). Assigning that state before `.run()` changes the table the script receives; `.value` stays the input table.
 
-Elements without an `at.<command>` list do not break `.run()`. Examples include `st.balloons`, `st.snow`, `st.empty`, `st.skeleton`, `st.audio`, `st.video`, and charts. Inspect them with `at.get("<node type>")`. That name is usually the command (`"audio"`). Charts use the proto field: `"plotly_chart"`, `"vega_lite_chart"` (Altair and the built-in Vega-Lite charts), `"deck_gl_json_chart"` (`st.pydeck_chart` and `st.map`), `"graphviz_chart"`, and `"echarts_chart"`. `.value` reads widget state first, so a keyed chart with `on_select="rerun"` returns its selection. Otherwise `.value` uses `value`, `body`, `text`, or `label`, and is `None` when the proto has none of those (chart specs live on fields such as `.spec`). `st.audio` and `st.video` expose the media URL on `.url`. `.set_value()` and `.click()` raise `AppTestError`. AppTest does not play media. For a keyed widget AppTest does not model, assign through `at.session_state` or use Playwright.
+Elements without an `at.<command>` list do not break `.run()`. Examples include `st.balloons`, `st.snow`, `st.empty`, `st.skeleton`, `st.audio`, `st.video`, and charts other than `st.echarts_chart`. Inspect them with `at.get("<node type>")`. That name is usually the command (`"audio"`). Charts use the proto field: `"plotly_chart"`, `"vega_lite_chart"` (Altair and the built-in Vega-Lite charts), `"deck_gl_json_chart"` (`st.pydeck_chart` and `st.map`), and `"graphviz_chart"`. `.value` reads widget state first, so a keyed chart with `on_select="rerun"` returns its selection. Otherwise `.value` uses `value`, `body`, `text`, or `label`, and is `None` when the proto has none of those (chart specs live on fields such as `.spec`). `st.audio` and `st.video` expose the media URL on `.url`. `.set_value()` and `.click()` raise `AppTestError`. AppTest does not play media. For a keyed widget AppTest does not model, assign through `at.session_state` or use Playwright.
 
 Widgets inside `st.dialog` are on the tree after clicking the opener and calling `.run()`. Interacting with them and calling `.run()` reruns only the dialog, so body code such as `if st.button(...):` executes and the dialog stays open. Changing a widget outside the dialog in the same step reruns the whole app, which closes the dialog unless the script opens it again.
 

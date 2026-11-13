@@ -41,6 +41,7 @@ from streamlit.testing.v1.element_tree import (
     BlockList,
     CameraInput,
     DateTimeInput,
+    EChartsChart,
     ElementList,
     ElementTree,
     FileUploader,
@@ -930,6 +931,101 @@ def test_heading_elements_by_type():
     assert len(sr.title) == 2
     assert len(sr.header) == 2
     assert len(sr.subheader) == 2
+
+
+def test_echarts_chart_spec_and_parameters() -> None:
+    """``st.echarts_chart`` is a typed node with a parsed spec and parameters."""
+
+    def script():
+        import streamlit as st
+
+        st.echarts_chart(
+            {"xAxis": {"type": "category"}, "series": [{"type": "bar", "data": [1]}]},
+            theme=None,
+            renderer="svg",
+            alt="Weekly sales",
+        )
+        st.sidebar.echarts_chart(
+            {"series": [{"type": "line", "data": [2]}]}, key="sales"
+        )
+
+    at = AppTest.from_function(script).run()
+    chart = at.echarts_chart[0]
+    assert isinstance(chart, EChartsChart)
+    assert chart.spec == {
+        "xAxis": {"type": "category"},
+        "series": [{"type": "bar", "data": [1]}],
+    }
+    assert chart.value == chart.spec
+    assert chart.theme is None
+    assert chart.renderer == "svg"
+    assert chart.alt == "Weekly sales"
+    assert chart.key is None
+    assert not chart.selection_activated
+    assert chart.datasets == {}
+
+    # Mutating a returned spec does not change later reads.
+    chart.spec["series"].clear()
+    assert chart.spec["series"] == [{"type": "bar", "data": [1]}]
+
+    # Block queries scope charts; the sidebar chart uses the defaults.
+    assert len(at.main.echarts_chart) == 1
+    sidebar_chart = at.sidebar.echarts_chart[0]
+    assert sidebar_chart.key == "sales"
+    assert at.echarts_chart(key="sales").spec == sidebar_chart.spec
+    assert not sidebar_chart.selection_activated
+    assert sidebar_chart.theme == "streamlit"
+    assert sidebar_chart.renderer == "canvas"
+    assert sidebar_chart.alt is None
+
+    assert repr(chart).startswith("EChartsChart(")
+
+
+def test_echarts_chart_selection() -> None:
+    """A keyed selection chart keeps the spec as ``.value``."""
+
+    def script():
+        import streamlit as st
+
+        st.echarts_chart(
+            {"series": [{"type": "bar", "selectedMode": "single", "data": [1, 2]}]},
+            key="pick",
+            on_select="rerun",
+        )
+
+    at = AppTest.from_function(script).run()
+    chart = at.echarts_chart(key="pick")
+    assert chart.selection_activated
+    assert chart.value == {
+        "series": [{"type": "bar", "selectedMode": "single", "data": [1, 2]}]
+    }
+    with pytest.raises(AppTestError, match=r"set_value\(\) is not supported"):
+        chart.set_value({"selection": {"selected": [], "areas": []}})
+
+
+def test_echarts_chart_datasets() -> None:
+    """A ``dataset.source`` frame is a spec placeholder resolved by ``.datasets``."""
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        st.echarts_chart(
+            {
+                "dataset": {"source": pd.DataFrame({"x": ["a", "b"], "y": [1, 2]})},
+                "series": [{"type": "bar"}],
+            }
+        )
+
+    at = AppTest.from_function(script, default_timeout=30).run()
+    chart = at.echarts_chart[0]
+    source = chart.spec["dataset"]["source"]
+    assert set(source) == {"name"}
+    assert list(chart.datasets) == [source["name"]]
+    pd.testing.assert_frame_equal(
+        chart.datasets[source["name"]], pd.DataFrame({"x": ["a", "b"], "y": [1, 2]})
+    )
 
 
 def test_json():

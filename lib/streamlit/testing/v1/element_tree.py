@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import builtins
+import json
 import keyword
 import textwrap
 from abc import ABC, abstractmethod
@@ -30,6 +31,7 @@ from typing import (
     ClassVar,
     Final,
     Generic,
+    Literal,
     NoReturn,
     Self,
     TypeAlias,
@@ -54,6 +56,7 @@ from streamlit.proto.Alert_pb2 import Alert as AlertProto
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.proto.EChartsChart_pb2 import EChartsChart as EChartsChartProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.proto.Slider_pb2 import Slider as SliderProto
@@ -1241,6 +1244,61 @@ class DateInput(Widget):
         state = self.root.session_state
         assert state
         return state[self.id]  # type: ignore
+
+
+@dataclass(repr=False)
+class EChartsChart(Element):
+    """A representation of ``st.echarts_chart``.
+
+    - ``.spec`` and ``.value`` are the chart option as a dict. Each access
+      returns a fresh copy.
+    - A dataframe in ``dataset.source`` appears in the spec as a
+      ``{"name": ...}`` placeholder; ``.datasets`` maps each name to its
+      DataFrame.
+    - ``set_value()`` raises ``AppTestError``.
+    """
+
+    proto: EChartsChartProto = field(repr=False)
+
+    def __init__(self, proto: EChartsChartProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self.type = "echarts_chart"
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
+
+    @property
+    def spec(self) -> dict[str, Any]:
+        return cast("dict[str, Any]", json.loads(self.proto.spec))
+
+    @property
+    def value(self) -> dict[str, Any]:
+        return self.spec
+
+    @property
+    def datasets(self) -> dict[str, PandasDataframe]:
+        """DataFrames for the spec's ``dataset.source`` placeholders, by name."""
+        return {
+            dataset.name: dataframe_util.convert_arrow_bytes_to_pandas_df(
+                dataset.data.data
+            )
+            for dataset in self.proto.datasets
+        }
+
+    @property
+    def theme(self) -> str | None:
+        """``"streamlit"``, or ``None`` for ECharts' default theme."""
+        return self.proto.theme or None
+
+    @property
+    def renderer(self) -> Literal["canvas", "svg"]:
+        """``"canvas"`` or ``"svg"``."""
+        if self.proto.renderer == EChartsChartProto.Renderer.SVG:
+            return "svg"
+        return "canvas"
+
+    @property
+    def alt(self) -> str | None:
+        """The chart's ``alt`` text, or ``None`` when unset."""
+        return self.proto.alt if self.proto.HasField("alt") else None
 
 
 @dataclass(repr=False)
@@ -3477,6 +3535,10 @@ class Block:
         return WidgetList(self.get("download_button"))  # type: ignore
 
     @property
+    def echarts_chart(self) -> ElementList[EChartsChart]:
+        return ElementList(self.get("echarts_chart"))  # type: ignore
+
+    @property
     def error(self) -> ElementList[Error]:
         return ElementList(self.get("error"))  # type: ignore
 
@@ -4348,6 +4410,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = DateTimeInput(elt.date_time_input, root=root)
             elif ty == "download_button":
                 new_node = DownloadButton(elt.download_button, root=root)
+            elif ty == "echarts_chart":
+                new_node = EChartsChart(elt.echarts_chart, root=root)
             elif ty == "exception":
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
