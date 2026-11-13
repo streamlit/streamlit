@@ -45,6 +45,10 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import {
+  useElementLoadCallback,
+  useElementLoadState,
+} from "~lib/hooks/useElementLoadState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -135,6 +139,8 @@ export function PlotlyChart({
     useCalculatedDimensions([], 0)
 
   const width = elWidth ?? 0
+
+  const markPlotDrawn = useElementLoadCallback("draw", true)
 
   // Load the initial figure spec from the element message
   const initialFigureSpec = useMemo<PlotlyFigureType>(() => {
@@ -602,6 +608,7 @@ export function PlotlyChart({
         }
         onInitialized={figure => {
           widgetMgr.setElementState(element.id, "figure", figure)
+          markPlotDrawn()
         }}
         // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
@@ -616,6 +623,7 @@ export function PlotlyChart({
 
 const PlotlyChartWidthCheck: FC<Omit<PlotlyChartProps, "width">> = props => {
   const { width } = useRequiredContext(ElementFullscreenContext)
+  useElementLoadState("draw", Boolean(width))
 
   // If the width is not defined yet, we don't want to render the chart because
   // it can cause issues with Plotly's rendering where elements will be

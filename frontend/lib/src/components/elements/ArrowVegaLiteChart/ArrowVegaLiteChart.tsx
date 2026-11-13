@@ -60,6 +60,7 @@ import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnly
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
+import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -404,6 +405,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     exportToPng,
     isViewReady,
   } = useVegaEmbed(element, widgetMgr, fragmentId)
+  useElementLoadState("draw", isViewReady)
 
   const { data, datasets, spec, baseSpecKey } = element
   const { isCopied, copyToClipboard } = useCopyToClipboard()

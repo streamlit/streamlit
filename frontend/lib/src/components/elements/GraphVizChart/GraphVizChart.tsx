@@ -33,6 +33,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
+import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { BLOCKED_LINK_URI, isDangerousLinkUri } from "~lib/util/UriUtil"
 
@@ -104,6 +105,8 @@ function GraphVizChart({
 
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
 
+  const markGraphDrawn = useElementLoadCallback("draw", element.spec)
+
   useEffect(() => {
     try {
       // Keep the SVG at its natural size and scale it only through CSS.
@@ -123,11 +126,13 @@ function GraphVizChart({
           if (chartElement) {
             sanitizeGraphVizLinkUris(chartElement)
           }
+          markGraphDrawn()
         })
     } catch (error) {
       LOG.error(error)
+      markGraphDrawn()
     }
-  }, [chartId, element.engine, element.spec])
+  }, [chartId, element.engine, element.spec, markGraphDrawn])
 
   // Name the container only when alt is non-blank. A whitespace aria-label
   // computes to an empty accessible name, which is worse than none.

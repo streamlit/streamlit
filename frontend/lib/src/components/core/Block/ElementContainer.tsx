@@ -20,18 +20,22 @@ import {
   type ReactNode,
   Suspense,
   useContext,
+  useLayoutEffect,
 } from "react"
 
 import type { ElementNode } from "~lib/AppNode"
+import { ElementTimingContext } from "~lib/components/core/RenderTimingContext"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import type { ElementTimingHandle } from "~lib/util/performance/RenderTimingTracker"
 import { getElementId } from "~lib/util/utils"
 
 import type { ElementContainerConfig } from "./ElementContainerConfig"
 import { RetainedElementContext } from "./RetainedElementContext"
 import { PendingSkeletonOverlay } from "./SkeletonPlaceholders"
 import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
+import { useElementRenderTiming } from "./useElementRenderTiming"
 import { convertKeyToClassName, getKeyFromId } from "./utils"
 
 export interface ElementContainerProps {
@@ -43,6 +47,24 @@ export interface ElementContainerProps {
   isStale: boolean
   /** The element to render inside the container */
   children: ReactNode
+}
+
+/**
+ * Commits after the element it follows inside the same Suspense boundary, so
+ * it tells render timing when the element's code has loaded and its content
+ * is in the DOM.
+ */
+function ElementContentCommitted({
+  handle,
+  version,
+}: {
+  handle: ElementTimingHandle
+  version: unknown
+}): null {
+  useLayoutEffect(() => {
+    handle.contentCommitted(version)
+  }, [handle, version])
+  return null
 }
 
 /**
@@ -85,9 +107,11 @@ export const ElementContainer = memo(function ElementContainer({
   // Like the stale fade, the overlay is off while any element is in fullscreen.
   const hasPendingSkeleton =
     node.pendingSkeleton !== undefined && !isFullScreen
+  const { handle: timingHandle, containerRef } = useElementRenderTiming(node)
 
   return (
     <StyledElementContainerLayoutWrapper
+      containerRef={containerRef}
       className={[
         "stElementContainer",
         "element-container",
@@ -113,7 +137,17 @@ export const ElementContainer = memo(function ElementContainer({
             <SquareSkeleton data-testid="stSkeleton" aria-hidden="true" />
           }
         >
-          {children}
+          {timingHandle ? (
+            <ElementTimingContext.Provider value={timingHandle}>
+              {children}
+              <ElementContentCommitted
+                handle={timingHandle}
+                version={node.element}
+              />
+            </ElementTimingContext.Provider>
+          ) : (
+            children
+          )}
         </Suspense>
       </ErrorBoundary>
       {hasPendingSkeleton && <PendingSkeletonOverlay />}

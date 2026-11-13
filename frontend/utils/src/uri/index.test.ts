@@ -16,7 +16,12 @@
 
 import type { MockInstance } from "vitest"
 
-import { buildHttpUri, isLocalhost, makePath } from "."
+import {
+  buildHttpUri,
+  isLocalhost,
+  isLocalOrPrivateHostname,
+  makePath,
+} from "."
 
 describe("uri", () => {
   let originalLocation: Location
@@ -108,6 +113,46 @@ describe("uri", () => {
     it("returns false given undefined", () => {
       windowSpy.mockReturnValue({ ...originalLocation, hostname: undefined })
       expect(isLocalhost()).toBe(false)
+    })
+  })
+
+  describe("isLocalOrPrivateHostname", () => {
+    it.each([
+      "localhost",
+      "LOCALHOST",
+      "app.localhost",
+      "[::1]",
+      "0.0.0.0",
+      "127.0.0.1",
+      "127.1.2.3",
+      "10.0.0.1",
+      "10.255.255.255",
+      "192.168.1.20",
+      "172.16.0.1",
+      "172.31.255.255",
+    ])("returns true for %s", hostname => {
+      expect(isLocalOrPrivateHostname(hostname)).toBe(true)
+    })
+
+    it.each([
+      "",
+      "example.com",
+      "myapp.streamlit.app",
+      "localhost.example.com",
+      "mylocalhost",
+      "8.8.8.8",
+      "172.15.0.1",
+      "172.32.0.1",
+      "192.169.0.1",
+      "11.0.0.1",
+      "100.64.0.1",
+      "169.254.0.1",
+      "[::2]",
+      "[fe80::1]",
+      "10.0.0.1.example.com",
+      "127.0.0.1.nip.io",
+    ])("returns false for %s", hostname => {
+      expect(isLocalOrPrivateHostname(hostname)).toBe(false)
     })
   })
 })

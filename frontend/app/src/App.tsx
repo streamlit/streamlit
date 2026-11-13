@@ -118,6 +118,9 @@ import {
   notUndefined,
   preserveEmbedQueryParams,
   type PresetThemeName,
+  RenderTimingContext,
+  type RenderTimingReport,
+  RenderTimingTracker,
   ScriptRunState,
   SessionInfo,
   sortThemeInputKeys,
@@ -154,6 +157,7 @@ import {
 } from "@streamlit/protobuf"
 import {
   isLocalhost,
+  isLocalOrPrivateHostname,
   isNullOrUndefined,
   localStorageAvailable,
   notNullOrUndefined,
@@ -238,6 +242,9 @@ interface State {
   hostToolbarItems: IToolbarItem[]
   hostHideSidebarNav: boolean
   sidebarChevronDownshift: number
+  // Whether elements report to the render timing tracker. Turned on once the
+  // first NewSession confirms usage stats are gathered.
+  isRenderTimingEnabled: boolean
   pageLinkBaseUrl: string
   queryParams: string
   deployedAppMetadata: DeployedAppMetadata
@@ -323,6 +330,13 @@ export class App extends PureComponent<Props, State> {
   private readonly sessionInfo = new SessionInfo()
 
   private readonly metricsMgr = new MetricsManager(this.sessionInfo)
+
+  /**
+   * Measures browser render timing for renderTiming metrics events while the
+   * app is mounted. Null for apps served from a local address, which are left
+   * out of the analysis, and once the server reports that usage stats are off.
+   */
+  private renderTimingTracker: RenderTimingTracker | null = null
 
   private readonly sessionEventDispatcher = new SessionEventDispatcher()
 
@@ -500,6 +514,7 @@ export class App extends PureComponent<Props, State> {
       hostToolbarItems: [],
       hostHideSidebarNav: false,
       sidebarChevronDownshift: 0,
+      isRenderTimingEnabled: false,
       pageLinkBaseUrl: "",
       // Initialize from URL so bound widget params from shared links are
       // preserved on first page navigation (before handlePageInfoChanged fires).
@@ -810,6 +825,13 @@ export class App extends PureComponent<Props, State> {
   }
 
   override componentDidMount(): void {
+    if (!isLocalOrPrivateHostname(window.location.hostname)) {
+      this.renderTimingTracker = new RenderTimingTracker({
+        onReport: report => this.handleRenderTimingReport(report),
+      })
+      this.renderTimingTracker.appMounted()
+    }
+
     // Initialize connection manager here, to avoid
     // "Can't call setState on a component that is not yet mounted." error.
     this.initializeConnectionManager()
@@ -903,6 +925,8 @@ export class App extends PureComponent<Props, State> {
     // happy since connectionManager's type is `ConnectionManager | null`,
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
+    this.renderTimingTracker?.dispose()
+    this.renderTimingTracker = null
 
     this.hostCommunicationMgr.closeHostCommunication()
 
@@ -1375,6 +1399,7 @@ export class App extends PureComponent<Props, State> {
   handlePageProfileMsg = (pageProfile: PageProfile): void => {
     const pageProfileObj = PageProfile.toObject(pageProfile)
     const browserInfo = getBrowserInfo()
+    const runIndex = this.renderTimingTracker?.scriptFinished()
 
     this.metricsMgr.enqueue("pageProfile", {
       ...pageProfileObj,
@@ -1386,7 +1411,12 @@ export class App extends PureComponent<Props, State> {
         (performance.now() - this.state.latestRunTime) * 1000
       ),
       browserInfo,
+      ...(runIndex !== undefined && { runIndex }),
     })
+  }
+
+  handleRenderTimingReport = (report: RenderTimingReport): void => {
+    this.metricsMgr.enqueue("renderTiming", report)
   }
 
   handleAutoRerun = (autoRerun: AutoRerun): void => {
@@ -1609,6 +1639,7 @@ export class App extends PureComponent<Props, State> {
     } = newSessionProto
     const { scriptRunId, fragmentIds: fragmentIdsThisRun } =
       getNewSessionRunIdentity(metadata)
+    this.renderTimingTracker?.runStarted(scriptRunId)
 
     if (!fragmentIdsThisRun.length) {
       // This is a normal rerun, remove all the auto reruns intervals
@@ -1695,6 +1726,13 @@ export class App extends PureComponent<Props, State> {
       gatherUsageStats: config.gatherUsageStats,
       sendMessageToHost: this.hostCommunicationMgr.sendMessageToHost,
     })
+
+    if (!config.gatherUsageStats) {
+      this.renderTimingTracker?.dispose()
+      this.renderTimingTracker = null
+    } else if (this.renderTimingTracker && !this.state.isRenderTimingEnabled) {
+      this.setState({ isRenderTimingEnabled: true })
+    }
 
     // Protobuf typing cannot handle complex types, so we need to cast to what
     // we know it should be
@@ -2582,6 +2620,7 @@ export class App extends PureComponent<Props, State> {
       this.historyNavigationEpoch = this.rerunEpoch
     }
 
+    this.renderTimingTracker?.rerunRequested()
     this.sendBackMsg(
       new BackMsg({
         rerunScript: {
@@ -3103,89 +3142,98 @@ export class App extends PureComponent<Props, State> {
             }
             data-test-connection-state={connectionState}
           >
-            <AppView
-              endpoints={this.endpoints}
-              sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
-              elements={elements}
-              widgetMgr={this.widgetMgr}
-              uploadClient={this.uploadClient}
-              navigationPosition={effectiveNavigationPosition}
-              wideMode={userSettings.wideMode}
-              embedded={isEmbed()}
-              showPadding={showPadding}
-              disableScrolling={disableScrolling}
-              addScriptFinishedHandler={this.addScriptFinishedHandler}
-              removeScriptFinishedHandler={this.removeScriptFinishedHandler}
-              widgetsDisabled={
-                inputsDisabled || connectionState !== ConnectionState.CONNECTED
+            <RenderTimingContext.Provider
+              value={
+                this.state.isRenderTimingEnabled
+                  ? this.renderTimingTracker
+                  : null
               }
-              showToolbar={showToolbar}
-              disableFullscreenMode={libConfig.disableFullscreenMode}
-              componentRegistry={this.componentRegistry}
-              skillsNudge={
-                this.state.showSkillsNudge ? (
-                  <SkillsNudgeToast
-                    onInstall={this.handleToastInstall}
-                    onSnooze={this.handleSkillsNudgeSnooze}
-                    onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
-                    onClose={this.handleSkillsNudgeClose}
-                  />
-                ) : undefined
-              }
-              topRightContent={
-                <>
-                  {!hideTopBar && (
-                    <StatusWidget
-                      connectionState={connectionState}
-                      scriptRunState={scriptRunState}
-                      rerunScript={this.rerunScript}
-                      stopScript={this.stopScript}
-                      allowRunOnSave={allowRunOnSave}
-                      showScriptChangedActions={scriptChangedOnDisk}
+            >
+              <AppView
+                endpoints={this.endpoints}
+                sendMessageToHost={this.hostCommunicationMgr.sendMessageToHost}
+                elements={elements}
+                widgetMgr={this.widgetMgr}
+                uploadClient={this.uploadClient}
+                navigationPosition={effectiveNavigationPosition}
+                wideMode={userSettings.wideMode}
+                embedded={isEmbed()}
+                showPadding={showPadding}
+                disableScrolling={disableScrolling}
+                addScriptFinishedHandler={this.addScriptFinishedHandler}
+                removeScriptFinishedHandler={this.removeScriptFinishedHandler}
+                widgetsDisabled={
+                  inputsDisabled ||
+                  connectionState !== ConnectionState.CONNECTED
+                }
+                showToolbar={showToolbar}
+                disableFullscreenMode={libConfig.disableFullscreenMode}
+                componentRegistry={this.componentRegistry}
+                skillsNudge={
+                  this.state.showSkillsNudge ? (
+                    <SkillsNudgeToast
+                      onInstall={this.handleToastInstall}
+                      onSnooze={this.handleSkillsNudgeSnooze}
+                      onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
+                      onClose={this.handleSkillsNudgeClose}
                     />
-                  )}
-                  {!hideTopBar && (
-                    <ToolbarActions
-                      hostToolbarItems={hostToolbarItems}
-                      sendMessageToHost={
-                        this.hostCommunicationMgr.sendMessageToHost
-                      }
-                      metricsMgr={this.metricsMgr}
-                    />
-                  )}
-                  {this.showDeployButton() && !scriptChangedOnDisk && (
-                    <DeployButton onClick={this.deployButtonClicked} />
-                  )}
-                  {!hideTopBar && (
-                    <MainMenu
-                      isServerConnected={this.isServerConnected()}
-                      quickRerunCallback={this.rerunScript}
-                      clearCacheCallback={this.openClearCacheDialog}
-                      aboutCallback={this.aboutCallback}
-                      printCallback={this.printCallback}
-                      screencastCallback={this.screencastCallback}
-                      screenCastState={this.props.screenCast.currentState}
-                      hostMenuItems={hostMenuItems}
-                      developmentMode={developmentMode}
-                      sendMessageToHost={
-                        this.hostCommunicationMgr.sendMessageToHost
-                      }
-                      menuItems={menuItems}
-                      metricsMgr={this.metricsMgr}
-                      toolbarMode={this.state.toolbarMode}
-                      runOnSave={this.state.userSettings.runOnSave}
-                      onRunOnSaveChange={this.handleRunOnSaveChange}
-                      allowRunOnSave={allowRunOnSave && developmentMode}
-                      streamlitVersion={
-                        this.sessionInfo.isSet
-                          ? this.sessionInfo.current.streamlitVersion
-                          : undefined
-                      }
-                    />
-                  )}
-                </>
-              }
-            />
+                  ) : undefined
+                }
+                topRightContent={
+                  <>
+                    {!hideTopBar && (
+                      <StatusWidget
+                        connectionState={connectionState}
+                        scriptRunState={scriptRunState}
+                        rerunScript={this.rerunScript}
+                        stopScript={this.stopScript}
+                        allowRunOnSave={allowRunOnSave}
+                        showScriptChangedActions={scriptChangedOnDisk}
+                      />
+                    )}
+                    {!hideTopBar && (
+                      <ToolbarActions
+                        hostToolbarItems={hostToolbarItems}
+                        sendMessageToHost={
+                          this.hostCommunicationMgr.sendMessageToHost
+                        }
+                        metricsMgr={this.metricsMgr}
+                      />
+                    )}
+                    {this.showDeployButton() && !scriptChangedOnDisk && (
+                      <DeployButton onClick={this.deployButtonClicked} />
+                    )}
+                    {!hideTopBar && (
+                      <MainMenu
+                        isServerConnected={this.isServerConnected()}
+                        quickRerunCallback={this.rerunScript}
+                        clearCacheCallback={this.openClearCacheDialog}
+                        aboutCallback={this.aboutCallback}
+                        printCallback={this.printCallback}
+                        screencastCallback={this.screencastCallback}
+                        screenCastState={this.props.screenCast.currentState}
+                        hostMenuItems={hostMenuItems}
+                        developmentMode={developmentMode}
+                        sendMessageToHost={
+                          this.hostCommunicationMgr.sendMessageToHost
+                        }
+                        menuItems={menuItems}
+                        metricsMgr={this.metricsMgr}
+                        toolbarMode={this.state.toolbarMode}
+                        runOnSave={this.state.userSettings.runOnSave}
+                        onRunOnSaveChange={this.handleRunOnSaveChange}
+                        allowRunOnSave={allowRunOnSave && developmentMode}
+                        streamlitVersion={
+                          this.sessionInfo.isSet
+                            ? this.sessionInfo.current.streamlitVersion
+                            : undefined
+                        }
+                      />
+                    )}
+                  </>
+                }
+              />
+            </RenderTimingContext.Provider>
             {renderedDialog}
           </StyledApp>
         </GlobalHotkeys>

@@ -49,6 +49,7 @@ import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnly
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import type { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import { useElementLoadState } from "~lib/hooks/useElementLoadState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { downloadDataUrl } from "~lib/util/downloadDataUrl"
@@ -336,6 +337,7 @@ export function EChartsChart({
     opErrors.theme ??
     opErrors.resize ??
     null
+  useElementLoadState("draw", hasRendered || renderError !== null)
 
   // Parse the spec and replace its Arrow `dataset.source` placeholders with
   // rows. Memoized on the spec string, which embeds each dataset's content

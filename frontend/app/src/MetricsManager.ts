@@ -48,7 +48,12 @@ export const METRICS_CONFIG_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 const LOG = getLogger("MetricsManager")
 
-type EventName = "viewReport" | "updateReport" | "pageProfile" | "menuClick"
+type EventName =
+  | "viewReport"
+  | "updateReport"
+  | "pageProfile"
+  | "renderTiming"
+  | "menuClick"
 type Event = [EventName, Partial<MetricsEvent.$Properties>]
 
 type MetricsConfigCache = {
@@ -353,8 +358,10 @@ export class MetricsManager {
     } else if (this.metricsUrl === "postMessage") {
       this.postMessageEvent(evName, data)
     } else {
+      // renderTiming events are often sent as the page is hidden or closed,
+      // so let them outlive the page.
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      this.track(data)
+      this.track(data, evName === "renderTiming")
     }
   }
 
@@ -365,7 +372,7 @@ export class MetricsManager {
     this.pendingEvents = []
   }
 
-  private async track(data: MetricsEvent): Promise<void> {
+  private async track(data: MetricsEvent, keepalive = false): Promise<void> {
     const body = JSON.stringify(data.toJSON())
     // Snapshot destinations so logging stays correct if the host replaces
     // the list while these requests are in flight.
@@ -381,6 +388,7 @@ export class MetricsManager {
               "Content-Type": "application/json",
             },
             body,
+            keepalive,
           })
         )
       )
@@ -437,7 +445,7 @@ export class MetricsManager {
       if (data.surface) {
         eventProperties.surface = data.surface
       }
-    } else if (evName === "pageProfile") {
+    } else if (evName === "pageProfile" || evName === "renderTiming") {
       // Merge plain property objects; a MetricsEvent instance is not a plain record.
       return new MetricsEvent({ ...eventProperties, ...data })
     }
