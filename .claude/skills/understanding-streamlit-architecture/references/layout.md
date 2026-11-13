@@ -361,7 +361,7 @@ The min-width respects parent container constraints (via `calculateMinWidthWithP
 
 **Element-Specific Overrides:** Some elements modify these defaults by creating custom `ElementContainerConfig` instances in their case blocks (see Layout Wrapper examples above for specific cases like `textArea` stretch mode, `arrowVegaLiteChart` width handling, etc.).
 
-A pixel-height `dataframe` outside horizontal layouts overrides its container to `height: "auto"` so the container follows the grid when it is drag-resized. Because that container no longer reserves the pixel height, `DataFrame/LazyDataFrame.tsx` shows its own pixel-height skeleton while the chunk loads; the `ElementContainer` Suspense skeleton is only `minElementHeight` tall.
+Pixel-height dataframes outside horizontal layouts use `height: auto` on their element container so it follows drag-resizes. `DataFrame/LazyDataFrame.tsx` reserves the configured pixel height while the DataFrame chunk loads; the generic `ElementContainer` fallback is only `minElementHeight` tall.
 
 **Backwards Compatibility:** Supports older proto formats through `subElement` parameter for cached messages.
 

@@ -84,7 +84,8 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
-// A static wrapper that lazy-loads the DataFrame chunk itself.
+// Imported statically: the wrapper lazy-loads the DataFrame chunk itself and
+// renders a pixel-height fallback while it loads.
 import { LazyDataFrame } from "~lib/components/widgets/DataFrame/LazyDataFrame"
 import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
@@ -710,11 +711,10 @@ const RawElementNodeRenderer = (
       // Only needed in root where resize is enabled; disabled in nested containers.
       const needsFullWidth =
         node.element.widthConfig?.useContent === true && isInRoot
-      // Let the container follow a pixel-height grid that users drag taller
-      // or shorter, so elements below move with the grid instead of being
-      // painted over or left below a gap. LazyDataFrame reserves the pixel
-      // height while the chunk loads. Horizontal layouts keep the pixel
-      // height for the row.
+      // Size the container to a pixel-height grid so a drag moves elements
+      // below it instead of painting over them or leaving a gap. LazyDataFrame
+      // holds the pixel height while its chunk loads. Horizontal layouts keep
+      // the pixel height because the drag handle is disabled there.
       const followGridHeightOverrides =
         node.element.heightConfig?.pixelHeight && !isInHorizontalLayout
           ? { height: "auto", flex: "" }

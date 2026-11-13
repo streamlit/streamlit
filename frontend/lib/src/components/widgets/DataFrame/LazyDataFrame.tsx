@@ -21,13 +21,11 @@ import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-compone
 const DataFrame = lazy(() => import("./DataFrame"))
 
 /**
- * `DataFrame` (used by `st.dataframe` and `st.data_editor`) that downloads its
- * code chunk on first render.
+ * Loads the `st.dataframe` / `st.data_editor` UI on first render.
  *
- * Until the chunk arrives, a skeleton with the configured pixel height holds
- * the table's space, so content below doesn't shift once it loads. The
- * element container can't reserve that space: for pixel heights it takes its
- * height from the grid so users can drag-resize the table.
+ * The skeleton uses the configured pixel height so content below stays
+ * put until the UI arrives. The element container cannot reserve that
+ * height: it sizes to the grid so users can drag-resize the table.
  */
 export function LazyDataFrame(
   props: ComponentProps<typeof DataFrame>
