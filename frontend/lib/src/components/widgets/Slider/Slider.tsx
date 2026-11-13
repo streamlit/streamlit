@@ -506,7 +506,11 @@ function formatValue(value: number, element: SliderProto): string {
     return formatMoment(momentDate, format, getMomentKind(element))
   }
 
-  return formatNumber(value, format, undefined, { stripWholeDecimals: true })
+  // Fractional-step sliders keep their decimals so the labels don't change
+  // length while dragging.
+  return formatNumber(value, format, undefined, {
+    stripWholeDecimals: Number.isInteger(element.step),
+  })
 }
 
 /**

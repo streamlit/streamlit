@@ -299,13 +299,17 @@ describe("Slider widget", () => {
       }
     )
 
-    it("keeps the cents of a non-whole thumb value with the dollar format", () => {
+    it("keeps the cents of every label of a fractional-step dollar slider", () => {
       render(
         <Slider
           {...getProps({ format: "dollar", default: [2.5], step: 0.5 })}
         />
       )
 
+      const tickBar = screen.getByTestId("stSliderTickBar")
+      expect(within(tickBar).getByText("$0.00")).toBeVisible()
+      expect(within(tickBar).getByText("$10.00")).toBeVisible()
+      expect(within(tickBar).queryByText("$10")).not.toBeInTheDocument()
       expect(screen.getByTestId("stSliderThumbValue")).toHaveTextContent(
         /^\$2\.50$/
       )

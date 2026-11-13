@@ -310,10 +310,11 @@ class MetricMixin:
               ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
               thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
 
-            The ``"dollar"``, ``"euro"``, and ``"accounting"`` formats omit the
-            decimals of whole amounts (e.g. "$1,234" instead of "$1,234.00").
-            To always show two decimals for dollars, use a printf-style format
-            string like ``"$%,.2f"``.
+            The ``"dollar"``, ``"euro"``, and ``"accounting"`` formats show
+            whole amounts without decimals (e.g. "$1,234" instead of
+            "$1,234.00") and keep cents otherwise (e.g. "$12.50"). To always
+            show two decimals, use a printf-style format string such as
+            ``"$%,.2f"`` or ``"€%,.2f"``.
 
         delta_description : str or None
             A short description displayed next to the delta value, such as

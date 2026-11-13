@@ -43,9 +43,9 @@ export const NAMED_NUMBER_FORMATS: ReadonlySet<string> = new Set([
 /** Options for ``formatNumber``. */
 interface FormatNumberOptions {
   /**
-   * Drop the decimals of whole amounts in the dollar, euro, and accounting
-   * formats ("$55,680" instead of "$55,680.00"); other amounts keep them
-   * ("$12.50"). Use it for standalone values such as metrics, slider labels,
+   * Drop the decimals when the formatted amount rounds to an integer in the
+   * dollar, euro, or accounting formats ("$55,680" instead of "$55,680.00",
+   * and "$12" for 12.001); other amounts keep them ("$12.50"). Use it for standalone values such as metrics, slider labels,
    * and chart tooltips. Table columns leave it off so decimals line up across
    * rows.
    */
@@ -221,7 +221,7 @@ export function formatNumber(
       trimMantissa: false,
     })
     // Mirrors Intl's "stripIfInteger": drop the decimals only if numbro
-    // rounded them all to zeros.
+    // rounded them all to zeros ("1,000.00" -> "1,000", "(10.00)" -> "(10)").
     return stripWholeDecimals
       ? formatted.replace(/\.0+(?=\)?$)/, "")
       : formatted
