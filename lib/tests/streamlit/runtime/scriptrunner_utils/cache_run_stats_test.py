@@ -154,6 +154,30 @@ def test_open_overlapping_group_counts_up_to_now() -> None:
     assert _read_totals(stats, 4.0)[0].overhead_time == pytest.approx(2.0)
 
 
+def test_closed_group_keeps_its_own_span() -> None:
+    """A page profile that read a group before it closed scales it to that
+    group's span, even if the thread has started another call since.
+    """
+    stats = ThreadCacheStats()
+    stats.open_call(0.0)
+    stats.open_call(0.0)
+    group = stats._overlap
+    assert group is not None
+    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
+    stats.close_call(1.0)
+    stats.totals_for_finished_call(stats.cache_data).compute_time += 1.0
+    stats.close_call(1.0)
+    # The next call starts later and runs a tracked command.
+    stats.open_call(5.0)
+    stats.tracked_command_time += 0.5
+
+    cache_data, cache_resource = CacheTotals(), CacheTotals()
+    group.add_scaled_to(
+        cache_data, cache_resource, now=6.0, command_time=stats.tracked_command_time
+    )
+    assert cache_data.compute_time == pytest.approx(1.0)
+
+
 def test_group_with_no_recorded_time_is_not_scaled() -> None:
     """A group whose commands took longer than its span doesn't divide by zero."""
     stats = ThreadCacheStats()
