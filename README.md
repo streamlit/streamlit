@@ -165,6 +165,15 @@ Python, and the plumbing is our job.
   written in React or anything else. Need a webhook or your own API route? Add it with
   [`st.App`](https://docs.streamlit.io/develop/api-reference/server/st.app).
 
+## Community Cloud
+
+Deploy, manage, and share your apps for free on
+[Community Cloud](https://streamlit.io/cloud). Connect a GitHub repository, pick your app
+file, and your app gets its own `streamlit.app` URL.
+[Sign up here](https://share.streamlit.io/signup).
+
+<img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400" alt="Deploying an app from a GitHub repository on Community Cloud">
+
 ## Resources
 
 - [Docs](https://docs.streamlit.io) to learn how Streamlit works
