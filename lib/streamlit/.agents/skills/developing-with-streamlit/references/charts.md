@@ -80,7 +80,7 @@ Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build t
 
 - **Faster for large data.** Streamlit sends the dataframe as Arrow, which is smaller and faster than inline values, and keeps its column order. Map columns with `series[i].encode` when the order isn't enough.
 - **Missing values and whole columns.** Missing values become `null`, and a whole column (an array or Series) can be the source. Inline values (for example in `series.data` or `markLine`) convert NumPy numbers and booleans, datetimes (ISO strings, UTC if timezone-aware), durations (milliseconds), and `Decimal` the same way those scalars convert in `dataset.source`. Arrays, Series, and missing values (`NaN`, `pd.NaT`, `pd.NA`) raise an error.
-- **Show data.** The chart's hover toolbar gets a **Show data** button that displays the dataframe as a table.
+- **Show data.** The chart's hover toolbar gets a **Show data** button that displays the dataframe as a table. With several dataframes, the button is hidden.
 - **Agent API.** The agent API reports the dataframe as a table (schema, preview, and the full data). Inline values only appear inside the raw option. With several dataframes, the agent API reports the option but no table.
 
 ```python
