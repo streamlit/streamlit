@@ -600,7 +600,7 @@ def test_validate_accepts_a_full_request() -> None:
     assert parsed.context is not None
     assert parsed.context.timezone == "Europe/Berlin"
     assert parsed.context.locale == "de-DE"
-    # A single string is a one-value list.
+    # "product": "Boots" encodes the same as ["Boots"].
     assert parsed.query_string == "q=1&q=&product=Boots"
     assert interaction._validate_request_shape(
         {"session_id": "s_1"}

@@ -1350,9 +1350,9 @@ def _resolve_page(
 def _encode_query_params(query_params: Any) -> str:
     """Encode ``query_params`` as the query string a rerun sends.
 
-    A single string is a one-value list, the way ``st.query_params`` takes
-    one. Refuses one longer than the runtime accepts, which it would otherwise
-    replace with an empty query string, so the run would not see any of it.
+    A string value counts as a one-item list, as ``st.query_params`` accepts.
+    Refuses a query string longer than the runtime accepts, which it would
+    otherwise replace with an empty one, so the run would not see any of it.
     """
     if not isinstance(query_params, dict):
         raise AgentRequestError(
@@ -1439,7 +1439,7 @@ def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> s
 
 
 def _widget_states_for_page_change(
-    session_state: SessionState, query_params: dict[str, list[str]] | None
+    session_state: SessionState, query_params: dict[str, str | list[str]] | None
 ) -> list[WidgetStateProto]:
     """Every widget's current value, as a browser sends it with a page change.
 
