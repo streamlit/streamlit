@@ -28,13 +28,13 @@ to global enterprises.
 <table>
   <tr>
     <td width="33%" align="center">
-      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
+      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
     </td>
     <td width="33%" align="center">
-      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
+      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
     <td width="33%" align="center">
-      <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
+      <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png?v=2" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
     </td>
   </tr>
   <tr>
