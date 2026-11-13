@@ -199,8 +199,11 @@ jobs:
 
           Implement all PR-related documentation fixes directly. Do not ask for confirmation.
 
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc. This job cannot push .github/workflows/, and workflows.mdc is generated from .github/workflows/AGENTS.md, so edits to either are dropped.
+          If those files need updates, describe them in a separate section of the work-tmp/changes.md summary below.
+
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
-          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
+          modifications made (create the work-tmp directory if it doesn't exist). If you made no modifications and those files need no updates, write 'No documentation updates needed.' to work-tmp/changes.md
           "
           else
             # Full mode: review all documentation
@@ -224,8 +227,11 @@ jobs:
 
           Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
 
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc. This job cannot push .github/workflows/, and workflows.mdc is generated from .github/workflows/AGENTS.md, so edits to either are dropped.
+          If those files need updates, describe them in a separate section of the work-tmp/changes.md summary below.
+
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
-          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
+          modifications made (create the work-tmp directory if it doesn't exist). If you made no modifications and those files need no updates, write 'No documentation updates needed.' to work-tmp/changes.md
           "
           fi
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
@@ -239,6 +245,27 @@ jobs:
           fi
           if [ ! -f work-tmp/recent-merged-prs.json ]; then
             echo '[]' > work-tmp/recent-merged-prs.json
+          fi
+
+          # GITHUB_TOKEN cannot push any file under .github/workflows/, so drop
+          # those edits (and the Cursor rule generated from the workflows
+          # AGENTS.md) instead of failing the push in create-pr.
+          WORKFLOW_CHANGES=$(git status --porcelain -- .github/workflows .cursor/rules/workflows.mdc)
+          if [ -n "$WORKFLOW_CHANGES" ]; then
+            echo "::warning::Dropped edits under .github/workflows/ and the generated workflows rule. Apply them by hand:"
+            echo "$WORKFLOW_CHANGES"
+            {
+              echo "### Dropped workflow edits"
+              echo "Apply these by hand; the step log has the diff."
+              echo '```'
+              echo "$WORKFLOW_CHANGES"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            # Stage first so the logged diff includes staged and new files.
+            git add -A -- .github/workflows .cursor/rules/workflows.mdc
+            git diff --cached -- .github/workflows .cursor/rules/workflows.mdc
+            git restore --source=HEAD --staged --worktree -- .github/workflows .cursor/rules/workflows.mdc
+            git clean -fd -- .github/workflows
           fi
 
           if [ -n "$(git status --porcelain)" ]; then
@@ -416,6 +443,7 @@ jobs:
           PR_URL: ${{ steps.create_pr.outputs.pr_url }}
           DRY_RUN: ${{ inputs.dry_run }}
           SOURCE_PR_NUMBER: ${{ env.PR_NUMBER }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
         run: |
           {
             echo "## AI Documentation Update Summary";
@@ -429,7 +457,13 @@ jobs:
             elif [ "${CHANGES_FOUND}" = "true" ]; then
               echo "- PR: ${PR_URL:-n/a}";
             else
-              echo "- No updates needed, no PR created";
+              echo "- No file changes, no PR created";
+            fi
+            # Without a PR, this keeps notes about updates to dropped workflow files visible.
+            if [ "${DRY_RUN}" = "true" ] || [ "${CHANGES_FOUND}" != "true" ]; then
+              echo "";
+              echo "### Agent notes";
+              echo "${CHANGES_SUMMARY}";
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

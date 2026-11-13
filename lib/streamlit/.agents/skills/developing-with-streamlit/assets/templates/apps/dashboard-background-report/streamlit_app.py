@@ -174,12 +174,14 @@ def kpis_card(region: str) -> None:
 def throughput_card(region: str) -> None:
     """Quick throughput chart for the selected region."""
     throughput = load_throughput(region)
-    st.line_chart(
-        throughput,
-        x="date",
-        y="rows_processed",
-        x_label="Date",
-        y_label="Rows processed",
+    st.echarts_chart(
+        {
+            "dataset": {"source": throughput},
+            "tooltip": {"trigger": "axis", "valueFormatter": "%,d rows"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "line", "name": "Rows processed", "showSymbol": False}],
+        },
         height=CHART_HEIGHT,
         alt="Rows processed per day",
     )

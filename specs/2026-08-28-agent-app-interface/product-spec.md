@@ -243,7 +243,7 @@ Later calls reference keys from the snapshot they just read:
 | `widget_state` | Optional patch of element keys → JSON values, the same shape as `st.session_state`. Unmentioned widgets keep their current values. This is _not_ arbitrary session state — only currently addressable elements.         |
 | `trigger`      | Optional, at most one `{"key": ...}`. Payload-bearing triggers such as `st.chat_input` also carry `"value"`.                                                                                                            |
 | `page`         | Optional `url_path` of a page listed in the snapshot's `pages`, resolved by normal navigation. Defaults to the app's default page on creation, the current page otherwise. Never a Python path or internal script hash. |
-| `query_params` | Optional replacement mapping of name → list of strings; omission preserves. Parameters bound to a widget follow the rules in [The snapshot](#the-snapshot).                                                            |
+| `query_params` | Optional replacement mapping of name → string or list of strings (a string is a one-item list; responses always use lists); omission preserves. Parameters bound to a widget follow the rules in [The snapshot](#the-snapshot). |
 | `context`      | Optional `timezone` and `locale`, read by the app as `st.context`. What a browser reports about itself without authentication, so accepting it grants nothing. Held for the session; omission preserves, and a new one replaces it. It never changes how values are encoded. |
 
 **The request blocks until the app settles, and returns its end state.** One interaction

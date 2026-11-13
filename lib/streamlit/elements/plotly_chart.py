@@ -598,14 +598,14 @@ class PlotlyMixin:
         ``Data`` object to ``st.plotly_chart``.
 
         .. note::
-            For new 2D charts, prefer a Vega-based chart command
-            (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
-            ``st.scatter_chart``, or ``st.altair_chart``) or
-            ``st.echarts_chart``. Vega-based charts and ECharts follow the
-            app's theme more closely, load much less code in the browser, and
-            don't need an extra package. Use ``st.plotly_chart`` for 3D
-            charts, scientific chart types such as violin or ternary plots, or
-            a Plotly figure you already have.
+            For new 2D charts, use ``st.echarts_chart``, Streamlit's
+            recommended chart command, or a built-in chart command
+            (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``, or
+            ``st.scatter_chart``) for a quick view. They follow the app's theme
+            more closely, load much less code in the browser, and don't need an
+            extra package. Use ``st.plotly_chart`` for 3D charts, scientific
+            chart types such as violin or ternary plots, or a Plotly figure you
+            already have.
 
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
