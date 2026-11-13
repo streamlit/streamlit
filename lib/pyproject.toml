@@ -208,13 +208,9 @@ filterwarnings = [
   "ignore:The converter attribute was deprecated:matplotlib.MatplotlibDeprecationWarning:plotly.*:",
   # Altair selection deduplication warning - informational, not actionable
   "ignore:Automatically deduplicated selection parameter:UserWarning:",
-  # PyArrow <24 converts timezone-aware pandas columns through Series.values,
-  # which pandas 3.1 deprecates (Pandas4Warning). PyArrow 24+ converts them
-  # without it. The dev lock stays on PyArrow 23 while the snowflake extra caps
-  # it (see override-dependencies in the root pyproject.toml); drop this filter
-  # with that cap. The filter omits the category because
-  # pandas.errors.Pandas4Warning doesn't exist before pandas 3.1, and pytest
-  # rejects an unknown category.
+  # PyArrow <24 converts tz-aware pandas columns via Series.values, which pandas
+  # 3.1 deprecates. Drop this with the PyArrow <24 cap in the root pyproject.toml.
+  # No category: pandas.errors.Pandas4Warning doesn't exist before pandas 3.1.
   "ignore:Series.values returning an ndarray that drops timezone:",
 
   # Pytest plugin compatibility

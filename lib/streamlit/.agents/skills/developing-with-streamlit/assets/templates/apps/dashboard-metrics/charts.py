@@ -80,10 +80,11 @@ def describe_trend(
     if values.empty:
         return f"{title}, {series}: no data"
     span = _span(title, series, source, x_col)
-    if not values.iloc[0]:
-        # A zero starting value has no percent change.
+    start = values.iloc[0]
+    if pd.isna(start) or start == 0:
+        # A missing or zero starting value has no percent change.
         return f"{span}: latest {values.iloc[-1]:,.0f}"
-    return f"{span}: {values.iloc[-1] / values.iloc[0] - 1:+.1%}"
+    return f"{span}: {values.iloc[-1] / start - 1:+.1%}"
 
 
 def describe_breakdown(

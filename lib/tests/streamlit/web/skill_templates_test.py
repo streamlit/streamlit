@@ -88,7 +88,7 @@ def _run_template(template: str, state: dict[str, Any] | None = None) -> AppTest
 
 def _assert_renders_cleanly(at: AppTest) -> None:
     assert [exc.value for exc in at.exception] == []
-    # The templates follow the skill's chart ranking: every chart is ECharts.
+    # The skill ranks ECharts first, so no template draws a Vega-Lite or Plotly chart.
     assert at.get("vega_lite_chart") == []
     assert at.get("plotly_chart") == []
     for chart in at.echarts_chart:
@@ -104,7 +104,7 @@ def test_templates_are_discovered() -> None:
 @pytest.mark.usefixtures("isolated_helper_modules")
 @pytest.mark.parametrize("template", _TEMPLATES)
 def test_template_runs(template: str) -> None:
-    """Each template runs without exceptions and draws accessible ECharts charts."""
+    """Each template runs without exceptions, and every ECharts chart has alt text."""
     at = _run_template(template)
     _assert_renders_cleanly(at)
     # Catches a template that stops before its charts. The companies template

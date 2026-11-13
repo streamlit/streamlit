@@ -174,8 +174,8 @@ def metric_card(title: str, metric_name: str, chart_type: str = "line") -> None:
             columns = {"Daily": "daily_value", "7-day MA": "value_7d_ma"}
             y_cols = [columns[label] for label in labels]
             option = charts.METRIC_CHARTS[chart_type](df, "ds", y_cols, labels)
-            # Alt text describes the last entry in labels. The default
-            # selection ends with the 7-day average.
+            # The alt text summarizes the last plotted series (y_cols[-1]),
+            # which is the 7-day MA with the default selection.
             series = "7-day average" if labels[-1] == "7-day MA" else "daily values"
             if chart_type == "bar":
                 series = f"weekly means of the {series}"
