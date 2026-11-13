@@ -44,6 +44,7 @@ from streamlit.runtime.secrets import (
     _missing_key_error_message,
 )
 from streamlit.signal_util import Signal
+from streamlit.watcher import util as watcher_util
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.exception_capturing_thread import call_on_threads
@@ -1246,8 +1247,6 @@ def test_kubelet_update_changes_watched_file_identity(tmp_path: Path) -> None:
     """The polling file watcher on a key link sees a kubelet update: the link
     resolves to the new file, whose modification time and content differ."""
     _skip_if_symlinks_not_supported(tmp_path)
-    from streamlit.watcher import util as watcher_util
-
     volume = tmp_path / "secrets" / "api_key"
     _write_kubelet_secret_volume(
         volume, {"secret_string": "v1"}, "2026_01_01_00_00_00.1"
@@ -1477,4 +1476,47 @@ def test_removing_last_secret_file_keeps_watching(tmp_path: Path) -> None:
         _rotate_secret_file(field, "v2")
         run_poll_tasks()
         assert secrets["only_secret"] == "v2"
+        assert changes == ["changed"]
+
+
+def test_unreadable_secrets_directory_keeps_watching(tmp_path: Path) -> None:
+    """An ``OSError`` while reloading does not escape the watcher callback, so
+    the watcher keeps polling and a later rotation reloads."""
+    secret_root = tmp_path / "secrets"
+    field = secret_root / "api_key" / "secret_string"
+    field.parent.mkdir(parents=True)
+    field.write_text("v1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["api_key"] == "v1"
+
+        _rotate_secret_file(field, "v2")
+        with patch.object(
+            Secrets, "_parse_directory", side_effect=PermissionError("denied")
+        ):
+            run_poll_tasks()
+        assert changes == []
+
+        _rotate_secret_file(field, "v3")
+        run_poll_tasks()
+        assert secrets["api_key"] == "v3"
+        assert changes == ["changed"]
+
+
+def test_multi_field_secret_rotation_signals_once(tmp_path: Path) -> None:
+    """Every field of a secret has its own watcher, but rotating them together
+    sends a single change signal."""
+    secret_root = tmp_path / "secrets"
+    fields = {name: secret_root / "db" / name for name in ("username", "password")}
+    fields["username"].parent.mkdir(parents=True)
+    for name, field in fields.items():
+        field.write_text(f"{name}1", encoding="utf-8")
+
+    with _polled_secrets(secret_root) as (secrets, changes, run_poll_tasks):
+        assert secrets["db"] == {"username": "username1", "password": "password1"}
+
+        for name, field in fields.items():
+            _rotate_secret_file(field, f"{name}2")
+        run_poll_tasks()
+        assert secrets["db"] == {"username": "username2", "password": "password2"}
         assert changes == ["changed"]

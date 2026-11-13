@@ -533,10 +533,11 @@ class Secrets(Mapping[str, Any]):
     def _on_secrets_changed(self, changed_file_path: str) -> None:
         with self._lock:
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
+            previous_secrets = self._secrets
             self._reset()
             try:
                 self._parse()
-            except StreamlitSecretNotFoundError as ex:
+            except (StreamlitSecretNotFoundError, OSError) as ex:
                 # Raising here would stop the watcher that called us, so the
                 # secrets could not recover. The next access parses again and
                 # raises this error to the app.
@@ -551,9 +552,22 @@ class Secrets(Mapping[str, Any]):
                 self._apply_programmatic_secrets(self._programmatic_secrets)
             # Watch the files of any secret folder that was added since.
             if self._file_watchers_installed:
-                for path in config.get_option("secrets.files"):
-                    if not path.endswith(".toml") and os.path.isdir(path):
-                        self._watch_directory_secret_files(path)
+                try:
+                    for path in config.get_option("secrets.files"):
+                        if not path.endswith(".toml") and os.path.isdir(path):
+                            self._watch_directory_secret_files(path)
+                except OSError as ex:
+                    # Same as above: the secrets reloaded, and watchers that
+                    # failed to install are retried on the next reload.
+                    _LOGGER.warning(
+                        "Could not watch new secret files after %s changed: %s",
+                        changed_file_path,
+                        ex,
+                    )
+            # Each file of a multi-field secret has its own watcher, so one
+            # rotation reloads once per file. Only signal an actual change.
+            if self._secrets == previous_secrets:
+                return
 
         # Emit a signal to notify receivers that the `secrets.toml` file
         # has been changed.
