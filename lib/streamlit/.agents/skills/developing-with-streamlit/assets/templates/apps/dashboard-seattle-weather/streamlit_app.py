@@ -40,12 +40,14 @@ SUMMARY_METRICS = [
     ("Min wind", "wind", "min", "m/s"),
 ]
 
+# Weather types from most to least common overall. The weather charts use this
+# fixed order, so each type keeps its color when the year filter changes.
 WEATHER_ICONS = {
     "sun": ":material/sunny:",
-    "snow": ":material/weather_snowy:",
-    "rain": ":material/rainy:",
     "fog": ":material/foggy:",
+    "rain": ":material/rainy:",
     "drizzle": ":material/rainy:",
+    "snow": ":material/weather_snowy:",
 }
 
 # Charts that share a row need the same height.
@@ -60,10 +62,11 @@ DAYS = list(pd.date_range("2000-01-01", "2000-12-31").strftime("%b %d"))
 def year_series_option(
     source: pd.DataFrame, series_type: str, unit: str
 ) -> dict[str, Any]:
-    """Build an ECharts option with one series per year column of ``source``,
-    whose first column holds the category-axis labels (day or month).
+    """Build an ECharts option with one series per year column.
+
+    The first column of ``source`` holds the category-axis labels (day or month).
     """
-    line = {"showSymbol": False} if series_type == "line" else {}
+    line_options = {"showSymbol": False} if series_type == "line" else {}
     return {
         "dataset": {"source": source},
         "legend": {"bottom": 0},
@@ -71,7 +74,8 @@ def year_series_option(
         "xAxis": {"type": "category"},
         "yAxis": {"type": "value", "axisLabel": {"formatter": f"{{value}} {unit}"}},
         "series": [
-            {"type": series_type, "name": year, **line} for year in source.columns[1:]
+            {"type": series_type, "name": year, **line_options}
+            for year in source.columns[1:]
         ],
     }
 
@@ -91,14 +95,16 @@ def temperature_option(df: pd.DataFrame) -> dict[str, Any]:
     years = list(temps["range"].columns)
     # Flatten ("low", "2015") into "2015 low".
     temps.columns = temps.columns.map(lambda column: f"{column[1]} {column[0]}")
-    # A negative low and a positive range must stack, which needs "all".
-    bar = {"type": "bar", "stackStrategy": "all", "barGap": "0%"}
+    # ECharts' default stackStrategy only stacks values of the same sign, so a
+    # below-zero low wouldn't lift its range bar. "all" stacks every value.
+    bar_options = {"type": "bar", "stackStrategy": "all", "barGap": "0%"}
     series: list[dict[str, Any]] = []
     for year in years:
         series += [
             {
-                **bar,
-                "name": year,  # Shares the range bar's color and legend entry
+                **bar_options,
+                # Same name as the range bar: one color and one legend entry.
+                "name": year,
                 "stack": year,
                 "encode": {"x": "day", "y": f"{year} low"},
                 "itemStyle": {"opacity": 0},
@@ -106,7 +112,7 @@ def temperature_option(df: pd.DataFrame) -> dict[str, Any]:
                 "silent": True,
             },
             {
-                **bar,
+                **bar_options,
                 "name": year,
                 "stack": year,
                 "encode": {
@@ -118,7 +124,8 @@ def temperature_option(df: pd.DataFrame) -> dict[str, Any]:
         ]
     return {
         "dataset": {"source": temps.reset_index()},
-        # Legend icons copy the first series of each name: the transparent one.
+        # Restore opacity on the legend icons: each icon copies the style of the
+        # first series with its name, which is the transparent low bar.
         "legend": {
             "bottom": 0,
             "data": [{"name": year, "itemStyle": {"opacity": 1}} for year in years],
@@ -211,10 +218,15 @@ with ratio_cols[0].container(border=True, height="stretch"):
 
 with ratio_cols[1].container(border=True, height="stretch"):
     st.subheader("Weather distribution")
-    weather_days = df["weather"].value_counts().rename("days").reset_index()
+    weather_days = (
+        df["weather"]
+        .value_counts()
+        .reindex(list(WEATHER_ICONS), fill_value=0)
+        .rename("days")
+    )
     st.echarts_chart(
         {
-            "dataset": {"source": weather_days},
+            "dataset": {"source": weather_days.reset_index()},
             "tooltip": {"trigger": "item", "formatter": "{b}: {@days} days ({d}%)"},
             "legend": {"bottom": 0},
             "series": [
@@ -228,7 +240,7 @@ with ratio_cols[1].container(border=True, height="stretch"):
             ],
         },
         height=CHART_HEIGHT,
-        alt=f"Share of days by weather type, mostly {weather_days['weather'][0]}",
+        alt=f"Share of days by weather type, mostly {weather_days.idxmax()}",
     )
 
 
@@ -264,10 +276,12 @@ cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
     st.subheader("Monthly weather breakdown", icon=":material/calendar_month:")
-    # Share of each month's days per weather type, in percent, with the
-    # donut's weather order so each type keeps its color.
+    # Share of each month's days per weather type, in percent, in the donut's
+    # weather order so each type has the same color in both charts.
     weather_mix = pd.crosstab(df["month"], df["weather"], normalize="index") * 100
-    weather_mix = weather_mix[weather_days["weather"]].reset_index()
+    weather_mix = weather_mix.reindex(
+        columns=list(WEATHER_ICONS), fill_value=0
+    ).reset_index()
     st.echarts_chart(
         {
             "dataset": {"source": weather_mix},

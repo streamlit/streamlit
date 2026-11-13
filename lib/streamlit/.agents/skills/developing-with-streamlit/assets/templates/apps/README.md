@@ -1,6 +1,6 @@
 # Streamlit Dashboard App Templates
 
-This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns, and draws every chart with `st.echarts_chart`, the recommended chart command.
+This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns, and draws its dashboard charts with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
 

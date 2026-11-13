@@ -278,8 +278,8 @@ with chart_col:
 
     with st.container(border=True):
         st.markdown("**Time series**")
-        # ECharts draws one series per column, so pivot to one column per
-        # endpoint, in the metric cards' order.
+        # Pivot to one column per endpoint, in the metric cards' order, so each
+        # line series can read its own dataset column.
         wide = filtered_data.pivot_table(
             index="date", columns="endpoint", values="request_count"
         )[selected_endpoints]

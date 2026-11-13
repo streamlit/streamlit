@@ -18,7 +18,7 @@ Choose a chart command, keep charts consistent, and use the chart APIs well.
 
 ## Choose a chart command
 
-Default to `st.echarts_chart` for new charts. It follows the app theme, including light/dark switching, covers the widest range of chart types, animates when the data changes, has a built-in zoom slider, and stays fast with large data. Rank chart commands in this order:
+Default to `st.echarts_chart` for new charts. It follows the app theme, including light/dark switching, covers the widest range of chart types, animates when the data changes, supports a built-in zoom slider (`dataZoom`), and stays fast with large data. Rank chart commands in this order:
 
 1. **`st.echarts_chart`:** the recommended choice for dashboards and most charts.
 2. **Built-in charts** (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`): a quick one-line chart from a dataframe, for example while exploring data.
