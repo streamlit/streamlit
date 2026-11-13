@@ -1725,7 +1725,7 @@ def test_echarts_mixin_dg_returns_self() -> None:
     assert echarts_mixin.dg is echarts_mixin
 
 
-def _bundled_echarts_minor_version() -> str:
+def _bundled_echarts_major_minor_version() -> str:
     """Return the major.minor ECharts version resolved in ``frontend/yarn.lock``."""
     yarn_lock = (_REPO_ROOT / "frontend/yarn.lock").read_text(encoding="utf-8")
     # Matches the `"echarts@npm:<range>":` entry, not packages like echarts-for-react.
@@ -1738,7 +1738,7 @@ def _bundled_echarts_minor_version() -> str:
 
 def test_echarts_version_mentions_match_bundled_version() -> None:
     """The docstring and agent skill name the bundled ECharts major.minor version."""
-    expected = f"ECharts {_bundled_echarts_minor_version()}"
+    expected = f"ECharts {_bundled_echarts_major_minor_version()}"
     sources = {
         "lib/streamlit/elements/echarts_chart.py (EChartsMixin.echarts_chart docstring)": (
             EChartsMixin.echarts_chart.__doc__ or ""

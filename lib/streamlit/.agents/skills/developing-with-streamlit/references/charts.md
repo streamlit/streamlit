@@ -113,7 +113,7 @@ Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately 
 
 ## Apache ECharts
 
-Streamlit ships with Apache ECharts 6.1. Prefer the current ECharts docs and examples over older tutorials written for ECharts 4 or 5.
+Streamlit ships with Apache ECharts 6.1. Prefer docs and examples for this version over older tutorials written for ECharts 4 or 5.
 
 Pass an ECharts option as a dict, a JSON string, or a `pyecharts` chart. Build the chart from one dataframe (pandas, Polars, PyArrow, and others) in `dataset.source` rather than inline Python lists in `series.data` or `xAxis.data`. Always do this for more than about 1,000 rows. Don't call `.tolist()` or `.to_list()` on a column to fill `series.data`. Graph, sankey, chord, tree, treemap, sunburst, themeRiver, and `lines` (coordinate-pair lines, not `line`) series don't read `dataset`, so give them plain Python values in `series.data` (and `series.links`). A dataframe source has these advantages:
 
