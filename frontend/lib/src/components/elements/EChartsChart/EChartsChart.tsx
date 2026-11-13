@@ -78,6 +78,7 @@ import {
   StyledEChartsErrorOverlay,
 } from "./styled-components"
 import {
+  applyLabelNumberFormats,
   applyTimeLabelFormatters,
   applyTooltipFormatters,
 } from "./tooltipFormatters"
@@ -425,7 +426,7 @@ export function EChartsChart({
   // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
   // - Under the Streamlit theme, rounded outer bar corners.
   // - Streamlit theme defaults.
-  // - Tooltip string formatters turned into functions.
+  // - Tooltip and label string formatters turned into functions.
   // - Under the Streamlit theme, time axis labels that show midnight values
   //   as dates.
   // - On display-only charts, a non-pointer series cursor so they don't look
@@ -445,11 +446,13 @@ export function EChartsChart({
     )
     let prepared = configureSelectionOption(
       applyTimeLabelFormatters(
-        applyTooltipFormatters(
-          applyStreamlitOptionDefaults(
-            withSeriesDefaults,
-            element.theme,
-            theme
+        applyLabelNumberFormats(
+          applyTooltipFormatters(
+            applyStreamlitOptionDefaults(
+              withSeriesDefaults,
+              element.theme,
+              theme
+            )
           )
         ),
         element.theme

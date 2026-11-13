@@ -212,7 +212,7 @@ def describe_credits(
         f"{source[x_col].iloc[-1]:%Y-%m-%d}"
     )
     if shares:
-        return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
+        return f"{span}: {latest.idxmax()} largest at {latest.max():.0%}"
     totals = values.sum(axis=1)
     if totals.iloc[0]:
         trend = f"total {totals.iloc[-1] / totals.iloc[0] - 1:+.1%}"
@@ -232,16 +232,15 @@ def _credits_option(
     """
     y_axis: dict[str, Any] = {"type": "value"}
     if show_percent:
-        # ECharts label templates can't multiply values, so create_bar_chart
-        # scales shares to 0-100 before they reach the chart.
-        y_axis |= {"max": 100, "axisLabel": {"formatter": "{value}%"}}
+        # Shares are 0-1, and "percent" shows them as 0% to 100%.
+        y_axis |= {"max": 1, "axisLabel": {"formatter": "percent"}}
     return {
         "dataset": {"source": wide},
         "legend": {},
         "tooltip": {
             "trigger": "axis",
             # Number formats use the same strings as ``st.metric``.
-            "valueFormatter": "%.1f%%" if show_percent else "%,.0f",
+            "valueFormatter": "percent" if show_percent else "%,.0f",
         },
         "xAxis": {"type": "time"},
         "yAxis": y_axis,
@@ -273,7 +272,7 @@ def create_bar_chart(
     if show_percent:
         wide = wide.copy()
         values = wide[categories]
-        wide[categories] = values.div(values.sum(axis=1), axis=0) * 100
+        wide[categories] = values.div(values.sum(axis=1), axis=0)
 
     series = [
         {
