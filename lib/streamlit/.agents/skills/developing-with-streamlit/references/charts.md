@@ -165,7 +165,7 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
 - **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, which squeezes many bars and hides labels. Use about `height=60 + 22 * df["category"].nunique()`.
 
-ECharts has no Vega-style `color=` field, so pivot long-format data (one row per group and x value) to one wide dataframe and draw a series per column. `pivot` sorts the x values, and missing combinations become gaps. In a selection, `series_name` is the column and `data_indices` are rows of the wide dataframe. With a `key`, those positions survive data changes, so reset the selection when the rows change.
+ECharts has no Vega-style `color=` field, so pivot long-format data (one row per group and x value) to one wide dataframe and draw a series per column. In a selection, `series_name` is the column and `data_indices` are rows of the wide dataframe.
 
 ```python
 wide = df.pivot(index="quarter", columns="app", values="sessions").reset_index()
@@ -194,7 +194,7 @@ for s in event.selection.selected:
     st.dataframe(wide.iloc[s["data_indices"]][["quarter", s["series_name"]]])
 ```
 
-When groups don't share x values (for example, scatter points), use one `dataset` entry and series per group, linked by `datasetIndex`; `data_indices` then address that group's rows. ECharts orders categories by first appearance across datasets, so set `xAxis.data` to the sorted categories.
+When groups don't share x values (for example, scatter points), use one `dataset` entry and series per group, linked by `datasetIndex`.
 
 Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
 
@@ -223,59 +223,41 @@ st.echarts_chart(
 )
 ```
 
-ECharts can't fill between two lines, so fan charts are simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On an ECharts page, stack two hidden lines per range: the lower quantile, then the range width with a translucent `areaStyle`. Rows without a forecast, such as past actuals, need missing quantiles. Don't paint the lowest area in the background color to mask what's below: it hides gridlines and shows as a block in dark mode or on another background.
+ECharts can't fill between two lines, so fan charts are simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On an ECharts page, stack a translucent area with the range width on a hidden line at the lower quantile, rather than masking with a background-colored area, which breaks in dark mode. Add another pair with its own `stack` for a nested range.
 
 ```python
-data = forecast.assign(
-    outer=forecast["p90"] - forecast["p10"], inner=forecast["p75"] - forecast["p25"]
-)
-
-
-def band(lower: str, width: str, opacity: float) -> list[dict]:
-    helper = {
-        "type": "line",
-        "name": "Forecast",  # Median's name: shares its color and legend entry
-        "stack": width,  # One stack per band, or the bands add up
-        "stackStrategy": "all",  # Default stacks same-sign values only
-        "smooth": 0.25,  # Match the median
-        "showSymbol": False,
-        "silent": True,
-        "tooltip": {"show": False},  # The median's encode.tooltip lists quantiles
-        "lineStyle": {"width": 0},
-    }
-    return [
-        {**helper, "encode": {"x": "week", "y": lower}},
-        {
-            **helper,
-            "encode": {"x": "week", "y": width},
-            "areaStyle": {"opacity": opacity},
-        },
-    ]
-
-
+data = forecast.assign(width=forecast["p90"] - forecast["p10"])
+band = {
+    "type": "line",
+    "name": "Forecast",  # Median's name: shares its color and legend entry
+    "stack": "band",  # One stack per range
+    "stackStrategy": "all",  # Default stacks same-sign values only
+    "showSymbol": False,
+    "tooltip": {"show": False},  # The median's encode.tooltip lists quantiles
+    "lineStyle": {"width": 0},
+}
 st.echarts_chart(
     {
         "dataset": {"source": data},
-        "tooltip": {"trigger": "axis", "valueFormatter": "%,d units"},
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,d"},
         "xAxis": {"type": "time"},
         "yAxis": {},
         "series": [
-            *band("p10", "outer", 0.14),
-            *band("p25", "inner", 0.18),
+            {**band, "encode": {"x": "week", "y": "p10"}},
+            {
+                **band,
+                "encode": {"x": "week", "y": "width"},
+                "areaStyle": {"opacity": 0.2},
+            },
             {
                 "type": "line",
                 "name": "Forecast",
-                "smooth": 0.25,
                 "showSymbol": False,
-                "encode": {
-                    "x": "week",
-                    "y": "p50",
-                    "tooltip": ["p90", "p75", "p50", "p25", "p10"],
-                },
+                "encode": {"x": "week", "y": "p50", "tooltip": ["p90", "p50", "p10"]},
             },
         ],
     },
-    alt="Weekly forecast with 50% and 80% ranges",
+    alt="Weekly forecast with an 80% range",
 )
 ```
 
