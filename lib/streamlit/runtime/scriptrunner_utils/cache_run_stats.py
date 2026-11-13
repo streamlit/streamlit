@@ -85,7 +85,8 @@ class _OverlapGroup:
     ) -> None:
         """Add the group's totals, scaled to fit its span.
 
-        ``now`` and ``command_time`` end the span of a group that hasn't closed.
+        For a group that is still open, ``now`` and ``command_time`` mark the
+        end of its span so far.
         """
         if self.end is not None:
             now, command_time = self.end, self.command_end
@@ -99,13 +100,12 @@ class _OverlapGroup:
 class ThreadCacheStats:
     """Cached-call totals recorded by one thread during one script run.
 
-    Async cached calls awaited concurrently on one event loop overlap, so their
-    summed times can exceed the wall-clock time they ran, which is the most
-    they can take from user code. So the calls of each overlapping group (from
-    when the thread's first open call starts until no call is open) are added
-    up separately, and scaled down to that group's wall-clock time, minus the
-    tracked commands in it, before they join the per-type totals. Calls that
-    run one at a time are added as recorded.
+    Concurrent async cached calls on one event loop overlap, so their summed
+    times can exceed the wall-clock time they took from user code. Overlapping
+    calls form a group that lasts from the first call opening until no call is
+    open. When the group closes, its totals are scaled down to its wall-clock
+    span minus tracked command time and added to the per-type totals. Calls
+    that run one at a time are added unscaled.
     """
 
     __slots__ = (
@@ -182,7 +182,11 @@ class ThreadCacheStats:
         self._calls_in_cache_code += 1
 
     def totals_for_finished_call(self, totals: CacheTotals) -> CacheTotals:
-        """Where a finishing call adds what it recorded for ``totals``' type."""
+        """Return the totals a finishing call adds to.
+
+        That is the open overlap group's totals of the same type, or ``totals``
+        itself when no calls overlap.
+        """
         group = self._overlap
         if group is None:
             return totals
@@ -239,7 +243,12 @@ class RunCacheStats:
             stats.tracked_command_time += seconds
 
     def totals(self, now: float) -> tuple[CacheTotals, CacheTotals]:
-        """Return the combined ``(cache_data, cache_resource)`` totals."""
+        """Return the combined ``(cache_data, cache_resource)`` totals.
+
+        ``now`` is the current ``time.perf_counter()`` value. It ends the span of
+        any overlap group that is still open, so that group is scaled to the time
+        it has run so far.
+        """
         with self._threads_lock:
             threads = list(self._threads)
         cache_data = CacheTotals()

@@ -95,9 +95,9 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     return fake
 
 
-def _totals(ctx: ScriptRunContext, name: str) -> CacheTotals:
+def _cache_totals_for(ctx: ScriptRunContext, cache_name: str) -> CacheTotals:
     cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
-    return cache_data if name == "cache_data" else cache_resource
+    return cache_data if cache_name == "cache_data" else cache_resource
 
 
 def _command_names(ctx: ScriptRunContext) -> list[str]:
@@ -118,7 +118,7 @@ def test_miss_then_hit(
     assert load(1) == 1
     assert load(1) == 1
 
-    totals = _totals(ctx, name)
+    totals = _cache_totals_for(ctx, name)
     assert (totals.calls, totals.hits, totals.misses, totals.stale_hits) == (
         2,
         1,
@@ -128,7 +128,9 @@ def test_miss_then_hit(
     assert totals.compute_time == pytest.approx(2.0)
     assert totals.wait_time == pytest.approx(0.0)
     assert totals.overhead_time == pytest.approx(0.0)
-    other = _totals(ctx, "cache_resource" if name == "cache_data" else "cache_data")
+    other = _cache_totals_for(
+        ctx, "cache_resource" if name == "cache_data" else "cache_data"
+    )
     assert other.calls == 0
 
 
@@ -147,7 +149,7 @@ def test_hit_overhead_includes_replay(ctx: ScriptRunContext, clock: FakeClock) -
     ):
         load()
 
-    assert _totals(ctx, "cache_data").overhead_time == pytest.approx(0.25)
+    assert _cache_totals_for(ctx, "cache_data").overhead_time == pytest.approx(0.25)
 
 
 @patch(
@@ -176,7 +178,7 @@ def test_stale_value_counts_as_stale_hit(
     load()
 
     refresh_manager_patch.return_value.submit.assert_called_once()
-    totals = _totals(ctx, name)
+    totals = _cache_totals_for(ctx, name)
     assert (totals.calls, totals.hits, totals.misses, totals.stale_hits) == (
         2,
         1,
@@ -212,13 +214,13 @@ def test_waiting_for_another_callers_computation(
     assert load() == 1
     owner.join(5)
 
-    totals = _totals(ctx, name)
+    totals = _cache_totals_for(ctx, name)
     assert (totals.calls, totals.hits, totals.misses) == (1, 1, 0)
     assert totals.wait_time >= 0.05
     assert totals.compute_time == 0
     # The waiting time is not overhead.
     assert totals.overhead_time < totals.wait_time
-    other_totals = _totals(other_ctx, name)
+    other_totals = _cache_totals_for(other_ctx, name)
     assert (other_totals.calls, other_totals.hits, other_totals.misses) == (1, 0, 1)
     # Taking a compute lock no one else holds is not waiting.
     assert other_totals.wait_time == 0
@@ -243,7 +245,7 @@ def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
     assert asyncio.run(main()) == [1, 1]
     elapsed = time.perf_counter() - start
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (2, 1, 1)
     assert totals.wait_time > 0
     assert totals.compute_time > 0
@@ -277,10 +279,10 @@ def test_serial_call_after_overlapping_async_calls_is_not_scaled(
     assert asyncio.run(main()) == [1, 2]
     assert load_resource() == 1
 
-    data = _totals(ctx, "cache_data")
+    data = _cache_totals_for(ctx, "cache_data")
     assert (data.calls, data.misses) == (2, 2)
     assert data.compute_time == pytest.approx(2.0)
-    resource = _totals(ctx, "cache_resource")
+    resource = _cache_totals_for(ctx, "cache_resource")
     assert resource.compute_time == pytest.approx(2.0)
 
 
@@ -308,7 +310,7 @@ def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
     assert isinstance(first, ValueError)
     assert second == 1
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (2, 0, 2)
     assert totals.wait_time > 0
 
@@ -344,7 +346,7 @@ def test_stop_while_waiting_counts_call_and_wait_only(
     release.set()
     owner.join(5)
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (1, 0, 0)
     assert totals.wait_time > 0
 
@@ -366,7 +368,7 @@ def test_cached_call_inside_tracked_command_is_not_recorded(
     make_client()
     make_client()
 
-    assert _totals(ctx, "cache_resource").calls == 0
+    assert _cache_totals_for(ctx, "cache_resource").calls == 0
     assert "external:tests:make_client" in _command_names(ctx)
 
 
@@ -380,7 +382,7 @@ def test_st_connection_cache_resource_is_not_recorded(ctx: ScriptRunContext) -> 
     st.connection("my_connection", type=_FakeConnection)
     st.connection("my_connection", type=_FakeConnection)
 
-    assert _totals(ctx, "cache_resource").calls == 0
+    assert _cache_totals_for(ctx, "cache_resource").calls == 0
     assert "connection" in _command_names(ctx)
 
 
@@ -401,7 +403,7 @@ def test_tracked_commands_inside_cached_function_are_excluded(
 
     load()
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert totals.compute_time == pytest.approx(0.5)
     assert totals.overhead_time == pytest.approx(0.0)
     command = next(
@@ -432,7 +434,7 @@ def test_cache_write_command_time_is_excluded_from_overhead(
     ):
         load()
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert totals.overhead_time == pytest.approx(0.0)
     write = next(
         command
@@ -463,7 +465,7 @@ def test_commands_left_out_of_the_profile_stay_in_compute_time(
     load()
 
     assert _command_names(ctx).count("external:tests:repeated_command") == 1
-    assert _totals(ctx, "cache_data").compute_time == pytest.approx(1.0)
+    assert _cache_totals_for(ctx, "cache_data").compute_time == pytest.approx(1.0)
 
 
 def test_nested_cached_calls_count_only_the_outermost(
@@ -483,10 +485,10 @@ def test_nested_cached_calls_count_only_the_outermost(
 
     assert outer() == 2
 
-    data = _totals(ctx, "cache_data")
+    data = _cache_totals_for(ctx, "cache_data")
     assert (data.calls, data.misses) == (1, 1)
     assert data.compute_time == pytest.approx(1.5)
-    assert _totals(ctx, "cache_resource").calls == 0
+    assert _cache_totals_for(ctx, "cache_resource").calls == 0
 
 
 def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
@@ -518,10 +520,10 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     thread.start()
     thread.join(5)
 
-    data = _totals(ctx, "cache_data")
+    data = _cache_totals_for(ctx, "cache_data")
     assert (data.calls, data.misses) == (1, 1)
     assert data.compute_time == pytest.approx(1.0)
-    resource = _totals(ctx, "cache_resource")
+    resource = _cache_totals_for(ctx, "cache_resource")
     assert (resource.calls, resource.misses) == (1, 1)
     assert resource.compute_time == pytest.approx(1.0)
 
@@ -553,7 +555,7 @@ def test_calls_on_attached_threads_after_the_cached_function_returns_are_recorde
     release.set()
     thread.join(5)
 
-    data = _totals(ctx, "cache_data")
+    data = _cache_totals_for(ctx, "cache_data")
     assert (data.calls, data.misses) == (1, 1)
     assert data.compute_time == pytest.approx(1.0)
 
@@ -579,10 +581,10 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
 
     assert load(Key()) == 1
 
-    data = _totals(ctx, "cache_data")
+    data = _cache_totals_for(ctx, "cache_data")
     assert (data.calls, data.misses) == (1, 1)
     assert data.overhead_time == pytest.approx(1.0)
-    assert _totals(ctx, "cache_resource").calls == 0
+    assert _cache_totals_for(ctx, "cache_resource").calls == 0
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:
@@ -607,7 +609,7 @@ def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> No
         coordinator.submit(worker, ctx)
     coordinator.join()
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (20, 16, 4)
     # The main thread and each of the four workers keep their own totals.
     assert len(ctx.shared.cache_stats._threads) == 5
@@ -630,13 +632,13 @@ def test_call_still_running_is_not_counted(ctx: ScriptRunContext) -> None:
     thread.start()
     assert computing.wait(5)
 
-    running = _totals(ctx, "cache_data")
+    running = _cache_totals_for(ctx, "cache_data")
     assert (running.calls, running.hits, running.misses) == (0, 0, 0)
     assert running.total_time == 0
 
     release.set()
     thread.join(5)
-    finished = _totals(ctx, "cache_data")
+    finished = _cache_totals_for(ctx, "cache_data")
     assert (finished.calls, finished.hits, finished.misses) == (1, 0, 1)
     assert finished.compute_time > 0
 
@@ -654,7 +656,7 @@ def test_calls_without_a_script_run_are_not_recorded(ctx: ScriptRunContext) -> N
     thread.start()
     thread.join(5)
 
-    assert _totals(ctx, "cache_data").calls == 0
+    assert _cache_totals_for(ctx, "cache_data").calls == 0
     assert ctx.shared.cache_stats._threads == []
 
 
@@ -683,7 +685,7 @@ def test_failed_call_counts_as_call_only(ctx: ScriptRunContext) -> None:
     with pytest.raises(st.errors.StreamlitAPIException):
         load(None, threading.Lock())
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (1, 0, 0)
 
 
@@ -698,13 +700,15 @@ def test_failed_compute_counts_as_miss(ctx: ScriptRunContext, clock: FakeClock) 
     with pytest.raises(ValueError, match="boom"):
         load()
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.misses) == (1, 1)
     assert totals.compute_time == pytest.approx(1.0)
 
 
 def test_new_run_starts_from_zero(ctx: ScriptRunContext) -> None:
-    """Totals are per run."""
+    """``SharedRunState.reset()`` starts a new totals object, so the next call
+    does not include the previous run.
+    """
 
     @st.cache_data(show_spinner=False)
     def load() -> int:
@@ -714,5 +718,5 @@ def test_new_run_starts_from_zero(ctx: ScriptRunContext) -> None:
     ctx.shared.reset()
     load()
 
-    totals = _totals(ctx, "cache_data")
+    totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (1, 1, 0)

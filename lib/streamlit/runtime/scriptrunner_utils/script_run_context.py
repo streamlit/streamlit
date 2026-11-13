@@ -145,8 +145,8 @@ class FragmentThreadState:
 
     @property
     def in_cache_compute(self) -> bool:
-        """True while a cached function computes in this context, or in the
-        context that attached this thread.
+        """True while this thread, or the call that attached it, is still
+        computing a cached value.
         """
         return self.cache_compute is not None and self.cache_compute.is_active
 

@@ -623,7 +623,7 @@ def format_uncaught_exception(exc: BaseException) -> str:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _set_command_time(
+def _record_command_time(
     ctx: ScriptRunContext | None,
     command_telemetry: Command,
     seconds: float,
@@ -762,7 +762,7 @@ def gather_metrics(
             # Duplicated from below, because static analysis tools get confused
             # by deferring the rethrow.
             if tracking_activated and command_telemetry:
-                _set_command_time(
+                _record_command_time(
                     ctx,
                     command_telemetry,
                     timer() - exec_start,
@@ -775,7 +775,7 @@ def gather_metrics(
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
-            _set_command_time(
+            _record_command_time(
                 ctx,
                 command_telemetry,
                 timer() - exec_start,

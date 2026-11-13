@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Times cached calls for the page profile's per-run cache totals.
+"""Records cached-call time for the page profile's per-run cache totals.
 
-A call is recorded only if its time would otherwise count as user code in the
-page profile, so the cache times can be subtracted from user code:
+A call is recorded only when its time would otherwise count as user code, so
+those totals can be subtracted from user code:
 
 - It runs on a thread attached to a script run that gathers usage stats.
   Background refreshes and other threads without a script run are not recorded.
@@ -77,8 +77,8 @@ class CacheCallTimer:
     _wait_time: float = 0.0
     _compute_start: float | None = None
     _compute_time: float = 0.0
-    _compute_command_start: float = 0.0
-    _compute_command_time: float = 0.0
+    _command_time_at_compute_start: float = 0.0
+    _command_time_in_compute: float = 0.0
 
     def __init__(
         self, thread_stats: ThreadCacheStats | None, totals: CacheTotals | None
@@ -116,15 +116,16 @@ class CacheCallTimer:
             return
         self._is_miss = True
         self._compute_start = time.perf_counter()
-        self._compute_command_start = self._thread_stats.tracked_command_time
+        self._command_time_at_compute_start = self._thread_stats.tracked_command_time
         self._thread_stats.leave_cache_code()
 
     def end_compute(self) -> None:
         if self._thread_stats is None or self._compute_start is None:
             return
         self._compute_time += time.perf_counter() - self._compute_start
-        self._compute_command_time += (
-            self._thread_stats.tracked_command_time - self._compute_command_start
+        self._command_time_in_compute += (
+            self._thread_stats.tracked_command_time
+            - self._command_time_at_compute_start
         )
         self._compute_start = None
         self._thread_stats.enter_cache_code()
@@ -152,7 +153,9 @@ class CacheCallTimer:
             totals.misses += 1
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
-        totals.compute_time += max(self._compute_time - self._compute_command_time, 0)
+        totals.compute_time += max(
+            self._compute_time - self._command_time_in_compute, 0
+        )
         totals.wait_time += self._wait_time
         # Command time during the compute is already excluded from compute_time,
         # so only the rest of command_time comes out of the overhead. Wall-clock
@@ -162,7 +165,7 @@ class CacheCallTimer:
             (now - self._start)
             - self._wait_time
             - self._compute_time
-            - (command_time - self._compute_command_time),
+            - (command_time - self._command_time_in_compute),
             0,
         )
         thread_stats.close_call(now)

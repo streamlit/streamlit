@@ -80,10 +80,14 @@ message PageProfile {
 //   st.cache_resource call inside st.connection, whose time is already in
 //   that command's time.
 // - It finished before this profile was built. A call still running on a
-//   thread the script didn't wait for is left out.
-// The time of tracked commands that run during a recorded call (st.* calls
-// inside the cached function, and the cache write recorded as
-// _cache_data_object or _cache_resource_object) is excluded from its times.
+//   thread the script didn't wait for is left out. Such a thread can also
+//   finish a call while this profile is being built, so that call may be
+//   partly counted, and a call it starts after the session's next run begins
+//   is counted in that run.
+// Tracked-command time during a recorded call (st.* calls inside the cached
+// function, and the cache write recorded as _cache_data_object or
+// _cache_resource_object) is excluded from that call's compute, wait, and
+// overhead times.
 //
 // Calls on concurrent threads (parallel fragment workers, or threads passed
 // to add_script_run_ctx) are added to the run's totals like their command
