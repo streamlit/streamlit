@@ -213,12 +213,12 @@ breaking changes roll out to users.
   and updates global skill if the versioned tag has changed on GitHub
 - **Automatic global updates:** Starting an app with `streamlit run`,
   `streamlit hello`, or `App.run()` checks the global meta skill copies in
-  home-level agent skills directories (an `st.App` served directly by an ASGI
-  server such as `uvicorn` skips this) and replaces a copy only when each of
-  its files matches a known official release. A newer Streamlit
-  refreshes an unmodified install, an older one never downgrades it, and an
-  edited copy is left alone. The check runs in the background, never fails
-  startup, and prints one line when it updates a copy.
+  home-level agent skills directories and replaces a copy only when each of
+  its files matches a known official release. Headless starts and an `st.App`
+  served directly by an ASGI server such as `uvicorn` skip this. A newer
+  Streamlit refreshes an unmodified install, an older one never downgrades it,
+  and an edited copy is left alone. The check runs in the background, never
+  fails startup, and prints one line when it updates a copy.
 - **Non-interactive:** Pass `--yes` for automation; fails with actionable message
   if prompts unavailable
 - **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files
@@ -248,7 +248,7 @@ breaking changes roll out to users.
 
 | Item                       | ✅ or comment                                                                            |
 |----------------------------|------------------------------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | Yes - CLI-only, plus app startup updates unmodified global skill copies                  |
+| Works on SiS, Cloud, etc?  | Yes - CLI-only; non-headless app starts also update unmodified global skill copies       |
 | No breaking API changes    | Yes - new command only                                                                   |
 | No new dependencies        | Yes - Click already exists, otherwise stdlib                                             |
 | Metrics collected          | Existing runtime metrics already detect installed skills; no new CLI telemetry proposed  |

@@ -381,8 +381,9 @@ def _maybe_print_skills_recommendation() -> None:
 def _update_global_skills_in_background() -> None:
     """Update outdated global Streamlit agent skills without delaying startup.
 
-    Runs the update in a daemon thread. Logs any failure, including failing to
-    start the thread, at debug level instead of letting it reach the app.
+    Skipped for headless starts, such as deployments and CI. Runs the update in
+    a daemon thread. Logs any failure, including failing to start the thread, at
+    debug level instead of letting it reach the app.
     """
 
     def update() -> None:
@@ -396,6 +397,8 @@ def _update_global_skills_in_background() -> None:
             _LOGGER.debug("Could not update global Streamlit skills", exc_info=True)
 
     try:
+        if config.get_option("server.headless"):
+            return
         threading.Thread(target=update, name="GlobalSkillsUpdate", daemon=True).start()
     except Exception:
         # The process can run out of threads; the next start tries again.

@@ -1108,6 +1108,7 @@ def test_asgi_app_run_context_updates_global_skills(mock_update: Mock) -> None:
     mock_update.assert_called_once_with()
 
 
+@patch_config_options({"server.headless": False})
 def test_global_skills_update_runs_in_a_daemon_thread() -> None:
     """The update runs in a daemon thread, so it neither delays startup nor
     blocks the process from exiting.
@@ -1132,6 +1133,16 @@ def test_global_skills_update_runs_in_a_daemon_thread() -> None:
     mock_update.assert_called_once_with()
 
 
+@patch_config_options({"server.headless": True})
+def test_headless_start_skips_global_skills_update() -> None:
+    """Headless starts, such as deployments and CI, never start the update."""
+    with patch.object(bootstrap.threading, "Thread") as mock_thread:
+        bootstrap._update_global_skills_in_background()
+
+    mock_thread.assert_not_called()
+
+
+@patch_config_options({"server.headless": False})
 def test_global_skills_update_errors_never_escape() -> None:
     """Neither a failing update nor a thread that cannot start reaches the caller
     or the thread exception hook.

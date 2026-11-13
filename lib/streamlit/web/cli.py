@@ -553,7 +553,8 @@ def main_skills(global_mode: bool, yes: bool) -> None:
         discovers each project's installed Streamlit at runtime, so a single
         global install works across all projects and Streamlit versions.
         Starting an app with a newer Streamlit release updates an
-        unmodified global install automatically.
+        unmodified global install automatically, unless the app runs
+        headless.
 
     \b
     Examples:

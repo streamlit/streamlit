@@ -169,7 +169,7 @@ streamlit skills --global --yes
 The `streamlit skills` command installs bundled Streamlit skills that help AI coding assistants (Claude Code, Cursor, etc.) build better Streamlit applications.
 
 - **Project mode (default):** Installs skills via symlinks for the current project.
-- **Global mode (`--global`):** Installs a meta skill that gets applied for all projects. Starting an app with a newer Streamlit release updates an unmodified global install automatically. Editing the copy or replacing it with a symlink stops these updates.
+- **Global mode (`--global`):** Installs a meta skill that gets applied for all projects. Starting an app with a newer Streamlit release updates an unmodified global install automatically; headless starts (`--server.headless=true`) skip this. Editing the copy or replacing it with a symlink stops these updates.
 
 ## Configuration precedence
 
