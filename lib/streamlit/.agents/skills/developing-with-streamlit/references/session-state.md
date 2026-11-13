@@ -242,7 +242,7 @@ st.button("Done", key="done_btn", on_click=mark_done)
 
 ### Mixing `value` parameter and session state
 
-Don't set both in the script body—it causes warnings. Resetting the key from a callback is fine, even when the widget has a default:
+Don't set both in the script body—it causes warnings. Setting the key from an `on_change` / `on_click` callback is fine, even when the widget also passes `value=` or `default=`:
 
 ```python
 # BAD: Conflicting sources
