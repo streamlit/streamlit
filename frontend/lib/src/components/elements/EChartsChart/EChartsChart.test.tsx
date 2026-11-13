@@ -482,7 +482,15 @@ describe("EChartsChart", () => {
     )
 
     expect(mockInit).toHaveBeenCalledTimes(1)
-    expect(mockChart.on).not.toHaveBeenCalled()
+    // Only the restore's own hit-test listener is added, and it is removed
+    // right away.
+    const listeners = mockChart.on.mock.calls
+    const eventNames = listeners.map(([eventName]) => eventName)
+    expect(eventNames).not.toContain("selectchanged")
+    expect(eventNames).not.toContain("brushEnd")
+    for (const [eventName, handler] of listeners) {
+      expect(mockChart.off).toHaveBeenCalledWith(eventName, handler)
+    }
     // Disabled bind still restores the overlay so a disconnect / setOption
     // cannot drop the highlight. Handlers stay unbound.
     expect(mockChart.dispatchAction).toHaveBeenCalledWith({
@@ -1516,9 +1524,34 @@ describe("EChartsChart", () => {
       }
     )
 
-    it("does not offer Show data without Arrow datasets", () => {
-      render(<Wrapper element={createElement()} />)
+    it.each([
+      { name: "without Arrow datasets", createChartElement: createElement },
+      {
+        name: "for several Arrow datasets",
+        createChartElement: () =>
+          createDatasetElement({
+            spec: JSON.stringify({
+              dataset: [
+                { source: { name: "h1" } },
+                { source: { name: "h2" } },
+              ],
+              xAxis: { type: "category" },
+              yAxis: {},
+              series: [
+                { type: "bar", datasetIndex: 0 },
+                { type: "bar", datasetIndex: 1 },
+              ],
+            }),
+            datasets: [
+              namedDataset("h1", SALES_BYTES),
+              namedDataset("h2", NEW_SALES_BYTES),
+            ],
+          }),
+      },
+    ])("does not offer Show data $name", ({ createChartElement }) => {
+      render(<Wrapper element={createChartElement()} />)
 
+      expect(mockChart.setOption).toHaveBeenCalledTimes(1)
       expect(
         screen.queryByRole("button", { name: "Download as PNG" })
       ).toBeInTheDocument()

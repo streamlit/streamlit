@@ -787,9 +787,9 @@ export function EChartsChart({
     element.theme,
   ])
 
-  // "Show data" swaps the chart for a read-only table of its first dataframe.
-  // The chart is hidden, not unmounted, so ECharts keeps its zoom, legend, and
-  // timeline state.
+  // "Show data" swaps the chart for a read-only table when the option uses
+  // exactly one dataframe. The chart is hidden, not unmounted, so ECharts keeps
+  // its zoom, legend, and timeline state.
   const [isShowingData, setIsShowingData] = useState(false)
   const [dataViewHeight, setDataViewHeight] = useState<number | undefined>()
   // Close the table when a rerun drops its dataset:

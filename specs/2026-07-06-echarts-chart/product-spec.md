@@ -621,8 +621,13 @@ Without a `key`, the widget identity is derived from the option payload plus `th
 and the dimensions — so, as with `st.plotly_chart`/`st.vega_lite_chart`, **any change to the
 chart's data or spec resets the selection state**. Pass a fixed `key` so identity is the key
 alone: the selection stays stable across data updates **and**
-across `"canvas"` / `"svg"` switches. `renderer` is not in the keyed identity because it does
-not change `EChartsState`; the frontend re-applies the selection after the dispose/re-init a
+across `"canvas"` / `"svg"` switches. On a data update, natively selected points keep their
+indices, while a restored brush hit-tests its redrawn areas against the new data. When the hits
+differ, the frontend commits them and reruns. In the run that this rerun started, every chart's
+restore stores its hits without another rerun, so data that changes on every run cannot rerun
+the app in a loop. When charts filter each other in a chain, a chart two levels down therefore
+reports its new hits one run late. Inside a form, the new hits wait for submit. `renderer` is not in the keyed identity because
+it does not change `EChartsState`; the frontend re-applies the selection after the dispose/re-init a
 renderer switch requires, just as it does after a `setTheme`.
 
 #### Loading & error handling
@@ -653,7 +658,7 @@ Vega-Lite, and Mermaid):
 
 | Action | Description |
 |--------|-------------|
-| Show data | Shown when `dataset.source` is a dataframe. Switches to a read-only table of the first such dataframe (the same data viewer the Vega-based charts use), with a **Show chart** action to switch back. The chart that renders by default is preferred: its dataframe wins over those of timeline ticks and `media` overrides, and a timeline chart shows the first tick's dataframe even while another tick is selected. The chart keeps its zoom, legend, and timeline state. |
+| Show data | Shown when the option uses exactly one `dataset.source` dataframe (placeholders that reuse the same frame count as one), across the base option, timeline ticks, and `media` overrides. Switches to a read-only table of that dataframe (the same data viewer the Vega-based charts use), with a **Show chart** action to switch back. With several dataframes the action is hidden, because no single table shows the chart's data. The chart keeps its zoom, legend, and timeline state. |
 | Fullscreen | Expand the chart to fullscreen. |
 | Download | Export a canvas-rendered chart as PNG or an SVG-rendered chart as SVG (ECharts `getDataURL`), using a timestamped filename. Because the themed chart background is transparent, PNG export composites the app background color so the file isn't transparent (unless the spec sets its own `backgroundColor`). |
 
