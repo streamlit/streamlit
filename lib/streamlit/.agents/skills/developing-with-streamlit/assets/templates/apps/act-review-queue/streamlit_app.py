@@ -260,7 +260,7 @@ if VIEWS[view] is None:
 rows = queue[queue["status"] == VIEWS[view]]
 if categories:
     rows = rows[rows["category"].isin(categories)]
-if search:
+if search and not rows.empty:  # On zero rows, agg doesn't return a Series
     haystack = (
         rows.index + " " + rows[["product", "sku", "supplier"]].agg(" ".join, axis=1)
     )
