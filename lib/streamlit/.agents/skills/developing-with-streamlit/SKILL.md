@@ -194,9 +194,8 @@ For **building a dashboard**, read:
 When creating a **new dashboard app**, prefer starting from a template in `assets/templates/apps/`:
 - If a template closely matches the request, copy it and adapt:
   - `dashboard-revenue` — BI dashboard with a filter toolbar, certified KPIs, card menus, and drill-down drawers (copy the whole folder; it has helper modules)
-  - `dashboard-metrics` — KPI cards with time-series charts
+  - `dashboard-metrics` — KPI cards, time-series charts, and a category breakdown (copy the whole folder; it has helper modules)
   - `dashboard-companies` — company/entity comparison
-  - `dashboard-compute` — resource/credit monitoring
   - `dashboard-feature-usage` — API endpoint usage analytics
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis

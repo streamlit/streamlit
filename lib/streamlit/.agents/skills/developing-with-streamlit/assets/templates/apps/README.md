@@ -11,7 +11,7 @@ These templates are based on official Streamlit demo apps and work out of the bo
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-seattle-weather** | Weather data exploration dashboard | `st.grid` of bordered `st.metric`s built from a spec loop (`format`, `delta_description`, `icon`), year `st.pills` bound to the URL, `st.echarts_chart` year comparison (stacked range bars, donut, lines, and 100% stacked bars) with matching chart heights |
-| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
+| **dashboard-stock-peers** | Stock peer analysis on the Vega stocks dataset (monthly prices, 2000-2010, no network needed) | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
 
 ### Analytics Dashboard Templates
 
@@ -20,10 +20,9 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-revenue** | Revenue BI dashboard with certified metrics | Filter toolbar bound to the URL (`bind="query-params"`), certified KPI metrics and card titles, ⋮ `st.menu_button` card menus with a "What's measured" drawer and a forecast toggle, section SQL popover, ECharts milestone annotations and forecast range, donut-to-table drill-down with a `ButtonColumn` account drawer, layout-first loading with parallel fragments, `bi-dashboard` theme |
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, a category breakdown (pivot to one series per category, line/stacked bar toggle, share view), chart/table toggle, `st.popover` filters, reset callback, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
 | **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
 | **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` cards with `st.skeleton`, one loader cached per breakdown, `st.popover` filters with required segmented controls, reset callback, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
 | **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, `st.echarts_chart` throughput line, formatted report columns |
 
 ## Quick Start
@@ -51,7 +50,7 @@ dashboard-{name}/
 └── pyproject.toml      # Dependencies and metadata
 ```
 
-`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`) and splits its code into `streamlit_app.py` (the page), `charts.py` (time filtering, alt text, and ECharts options), and `data.py` (synthetic data and cached loaders). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
 
 ## Canonical Patterns
 
@@ -178,7 +177,7 @@ slow, add a second `with st.skeleton()` inside the fragment around the slow part
 It needs no height when it's the fragment body's first element. A card with its
 own controls must draw them inside the fragment, so it draws its frame, header,
 and controls there, and gives the inner skeleton the chart's height, as the
-`dashboard-metrics` and `dashboard-compute` chart cards do. On a cached rerun the
+`dashboard-metrics` chart cards do. On a cached rerun the
 chart updates in place without a skeleton; on a cache miss, the skeleton covers
 the old chart at its size after half a second.
 

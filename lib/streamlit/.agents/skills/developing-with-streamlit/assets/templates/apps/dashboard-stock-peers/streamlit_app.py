@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Stock peer analysis dashboard for comparing a set of tickers over time."""
+"""Stock peer analysis dashboard for comparing a set of tickers over time.
 
-from collections.abc import Iterable
+Uses the monthly closing prices of the Vega ``stocks`` dataset (2000-2010),
+which ships inside the ``vega_datasets`` package, so the app runs offline.
+Replace ``load_prices()`` with your own price source (e.g., a market data API).
+"""
+
 from typing import Any
 
 import pandas as pd
-import yfinance as yf
+import vega_datasets
 
 import streamlit as st
 
@@ -28,201 +32,75 @@ st.set_page_config(
     layout="wide",
 )
 
+# Months of history per horizon. None shows every month.
+HORIZONS = {"1 Year": 12, "3 Years": 36, "5 Years": 60, "All": None}
+
+
+@st.cache_data(show_spinner="Loading stock price data...")
+def load_prices() -> pd.DataFrame:
+    """Monthly closing prices, one column per ticker, indexed by date."""
+    stocks: pd.DataFrame = vega_datasets.data.stocks()
+    return stocks.pivot_table(index="date", columns="symbol", values="price")
+
+
+prices = load_prices()
+
 st.title("Stock peer analysis", icon=":material/query_stats:")
-st.markdown("Easily compare stocks against others in their peer group.")
+st.markdown(
+    "Compare stocks against others in their peer group, using monthly closing "
+    "prices from 2000 to 2010."
+)
 
 st.space("small")
 cols = st.columns([1, 3])
-# Will declare right cell later to avoid showing it when no data.
-
-STOCKS = [
-    "AAPL",
-    "ABBV",
-    "ACN",
-    "ADBE",
-    "ADP",
-    "AMD",
-    "AMGN",
-    "AMT",
-    "AMZN",
-    "APD",
-    "AVGO",
-    "AXP",
-    "BA",
-    "BK",
-    "BKNG",
-    "BMY",
-    "BRK.B",
-    "BSX",
-    "C",
-    "CAT",
-    "CI",
-    "CL",
-    "CMCSA",
-    "COST",
-    "CRM",
-    "CSCO",
-    "CVX",
-    "DE",
-    "DHR",
-    "DIS",
-    "DUK",
-    "ELV",
-    "EOG",
-    "EQR",
-    "FDX",
-    "GD",
-    "GE",
-    "GILD",
-    "GOOG",
-    "GOOGL",
-    "HD",
-    "HON",
-    "HUM",
-    "IBM",
-    "ICE",
-    "INTC",
-    "ISRG",
-    "JNJ",
-    "JPM",
-    "KO",
-    "LIN",
-    "LLY",
-    "LMT",
-    "LOW",
-    "MA",
-    "MCD",
-    "MDLZ",
-    "META",
-    "MMC",
-    "MO",
-    "MRK",
-    "MSFT",
-    "NEE",
-    "NFLX",
-    "NKE",
-    "NOW",
-    "NVDA",
-    "ORCL",
-    "PEP",
-    "PFE",
-    "PG",
-    "PLD",
-    "PM",
-    "PSA",
-    "REGN",
-    "RTX",
-    "SBUX",
-    "SCHW",
-    "SLB",
-    "SO",
-    "SPGI",
-    "T",
-    "TJX",
-    "TMO",
-    "TSLA",
-    "TXN",
-    "UNH",
-    "UNP",
-    "UPS",
-    "V",
-    "VZ",
-    "WFC",
-    "WM",
-    "WMT",
-    "XOM",
-]
-
-DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
-
-horizon_map = {
-    "1 Month": "1mo",
-    "3 Months": "3mo",
-    "6 Months": "6mo",
-    "1 Year": "1y",
-    "5 Years": "5y",
-    "10 Years": "10y",
-    "20 Years": "20y",
-}
-
 
 top_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
 
 with top_left_cell:
-    # Multiselect for stock tickers. bind="query-params" keeps the selection in
-    # the URL so the dashboard is shareable — no manual st.query_params plumbing.
+    # bind="query-params" keeps the selection in the URL so the dashboard is
+    # shareable — no manual st.query_params plumbing.
     tickers = st.multiselect(
         "Stock tickers",
-        options=STOCKS,
-        default=DEFAULT_STOCKS,
+        options=list(prices.columns),
+        default=list(prices.columns),
         key="stocks",  # repeated params: ?stocks=AAPL&stocks=MSFT
         bind="query-params",
-        placeholder="Choose stocks to compare. Example: NVDA",
-        accept_new_options=True,
+        placeholder="Choose stocks to compare. Example: AAPL",
     )
     # required=True keeps one horizon selected, so `horizon` is never None.
     horizon = st.pills(
         "Time horizon",
-        options=list(horizon_map.keys()),
-        default="6 Months",
+        options=list(HORIZONS),
+        default="5 Years",
         required=True,
         key="horizon",
         bind="query-params",
     )
 
-tickers = [t.upper() for t in tickers]
-
 if not tickers:
     top_left_cell.info("Pick some stocks to compare", icon=":material/info:")
     st.stop()
 
+months = HORIZONS[horizon]
+# The first month is the baseline, so a horizon of N months needs N + 1 rows.
+data = prices[tickers] if months is None else prices[tickers].tail(months + 1)
 
-right_cell = cols[1].container(
-    border=True, height="stretch", vertical_alignment="center"
-)
-
-
-@st.cache_data(ttl="6h", show_spinner="Loading stock price data...")
-def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
-    tickers_obj = yf.Tickers(list(tickers))
-    data = tickers_obj.history(period=period)
-    if data is None:
-        raise RuntimeError("YFinance returned no data.")
-    close_prices: pd.DataFrame = data["Close"]
-    return close_prices
-
-
-# Load the data
-try:
-    data = load_data(tickers, horizon_map[horizon])
-except yf.exceptions.YFRateLimitError:
-    st.warning("Try again later.", title="YFinance is rate-limiting us")
-    st.stop()
-
-empty_columns = data.columns[data.isna().all()].tolist()
-
-if empty_columns:
-    st.error(f"Error loading data for the tickers: {', '.join(empty_columns)}.")
-    st.stop()
-
-# Normalize prices (start at 1). Use the first non-null value per ticker so
-# tickers whose first row is NaN (e.g. newer listings over a long horizon)
-# don't get normalized to NaN.
+# Normalize prices (start at 1). Use the first non-null value per ticker, so
+# tickers that start trading later in the horizon don't become NaN.
 normalized = data.div(data.bfill().iloc[0])
 
-# ECharts reads dataframe columns from ``dataset.source`` but not the index, so
-# move the dates into a column. Dropping the exchange timezone keeps each point
-# on its trading day instead of converting it to UTC.
-chart_data = normalized.reset_index()
-chart_data["Date"] = chart_data["Date"].dt.tz_localize(None)
+# ECharts reads dataframe columns from ``dataset.source`` but not the index,
+# so move the dates into a column.
+chart_data = normalized.rename_axis("Date").reset_index()
 
 # Build list of (normalized_value, ticker) tuples for safe comparison
 # (using a dict with float keys could silently drop tickers with identical values).
 ticker_values = [(normalized[ticker].iloc[-1], ticker) for ticker in tickers]
 max_norm_value = max(ticker_values)
 min_norm_value = min(ticker_values)
+period = "the full period" if months is None else f"the last {horizon.lower()}"
 
 # Summary for the price chart's alt text. A single stock is both best and worst.
 if len(tickers) > 1:
@@ -245,7 +123,7 @@ with cols[0].container(
             ticker,
             delta=value - 1,
             format="percent",
-            delta_description=f"over {horizon.lower()}",
+            delta_description=f"over {period}",
         )
 
 
@@ -261,7 +139,7 @@ def line_series(column: str, **extra: Any) -> dict[str, Any]:
 
 
 # Plot normalized prices
-with right_cell:
+with cols[1].container(border=True, height="stretch", vertical_alignment="center"):
     st.echarts_chart(
         {
             "dataset": {"source": chart_data},
@@ -273,7 +151,7 @@ with right_cell:
             "series": [line_series(ticker) for ticker in tickers],
         },
         height=400,
-        alt=f"Normalized prices over {horizon.lower()}: {price_summary}",
+        alt=f"Normalized prices over {period}: {price_summary}",
     )
 
 st.space("medium")
@@ -342,4 +220,4 @@ for i, ticker in enumerate(tickers):
 st.space("medium")
 st.header("Raw data")
 
-st.dataframe(data, alt="Selected stock price history")
+st.dataframe(data, alt="Selected monthly closing prices")
