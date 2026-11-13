@@ -178,10 +178,15 @@ def _set_query_params_for_switch(
     query_params_state: QueryParams,
     new_query_params: QueryParamsInput | None,
 ) -> None:
-    """Set query params for a switch page."""
+    """Replace unbound query params ahead of a page switch.
+
+    Keeps embed params and params currently bound to widgets, then applies the
+    caller's params. The script runner removes bindings that do not belong to
+    the target page when that page runs.
+    """
 
     if new_query_params is None:
-        query_params_state.clear()
+        query_params_state.replace_unbound()
         return
 
     if isinstance(new_query_params, Mapping) or (
@@ -191,7 +196,7 @@ def _set_query_params_for_switch(
             (str, bytes),
         )
     ):
-        query_params_state.from_dict(new_query_params)
+        query_params_state.replace_unbound(new_query_params)
         return
 
     raise StreamlitInvalidParameterTypeError(
@@ -398,9 +403,19 @@ def switch_page(  # type: ignore[misc]
     query_params : dict, list of tuples, or None
         Query parameters to apply when navigating to the target page.
         This can be a dictionary or an iterable of key-value tuples. Values can
-        be strings or iterables of strings (for repeated keys). When this is
-        ``None`` (default), all non-embed query parameters are cleared during
-        navigation.
+        be strings or iterables of strings (for repeated keys). These replace
+        the current query parameters, except for embed parameters and
+        parameters bound to widgets. If this is ``None`` (default), all
+        unbound, non-embed query parameters are cleared.
+
+        Parameters bound through ``bind="query-params"`` follow their widgets,
+        like they do when users switch pages through the navigation menu. A
+        widget that the entrypoint file renders on every page, such as a
+        sidebar filter above ``st.navigation``, keeps its parameter. A widget
+        rendered only on the page being left loses it. Passing a key that is
+        bound on the current page raises an exception; change that widget's
+        value instead. A key that only the target page binds isn't bound yet,
+        so you can set it here.
 
     Examples
     --------
@@ -498,7 +513,7 @@ def switch_page(  # type: ignore[misc]
 
         page_script_hash = matched_pages[0]["page_script_hash"]
 
-    # Reset query params (with exception of embed) and optionally apply overrides.
+    # Replace the query params, keeping embed and widget-bound ones.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
 

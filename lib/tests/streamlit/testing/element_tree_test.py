@@ -268,6 +268,22 @@ def test_columns():
     repr(at.columns[0])
 
 
+def test_loading_blocks_parse_as_containers() -> None:
+    """Skeleton slots parse as plain containers."""
+
+    def script() -> None:
+        import streamlit as st
+
+        with st.skeleton(height=100):
+            st.markdown("Loaded")
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception
+    assert at.container.len == 1
+    assert at.container[0].markdown[0].value == "Loaded"
+    assert len(at.get("skeleton")) == 0
+
+
 def test_space() -> None:
     """``st.space`` parses as ``Space``; ``value`` is the reconstructed size."""
 

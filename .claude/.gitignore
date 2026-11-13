@@ -29,9 +29,14 @@ skills/*
 !skills/writing-spec/
 !skills/assessing-external-test-risk/
 !skills/fixing-flaky-e2e-tests/
+!skills/fixing-develop-ci/
+!skills/fixing-nightly/
+!skills/fixing-ci-annotations/
 !skills/implementing-feature/
+!skills/implementing-bug-fix/
 !skills/sharing-pr-agent-artifacts/
 !skills/generating-changelog/
+!skills/releasing-streamlit/
 !skills/improving-frontend-coverage/
 !skills/improving-python-coverage/
 !skills/reviewing-pr-description/

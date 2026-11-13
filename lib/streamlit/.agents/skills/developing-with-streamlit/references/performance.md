@@ -194,7 +194,7 @@ st.button("Refresh all", on_click=lambda: st.rerun(["charts", "table"]))
 
 ### Parallel fragments
 
-Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially.
+Use `parallel=True` to run independent fragments concurrently during full app reruns. Each parallel fragment is dispatched to a thread pool, so multiple slow operations overlap instead of running sequentially. To paint the page's layout and every card's size first, call each fragment inside `with st.skeleton(height=...)` from the main script. That block covers only full-app runs, so if a fragment's own reruns, such as `run_every` refreshes, can be slow, also wrap its body in `with st.skeleton()` (see "Layout-first loading" in `dashboards.md`).
 
 ```python
 # BAD: Three slow queries run sequentially (~9s total)
@@ -247,6 +247,7 @@ orders()
 **When NOT to use:**
 
 - Fragments that depend on each other's Session State writes
+- Pure-Python CPU-bound work on standard (GIL) Python builds: threads share the GIL, so it doesn't overlap, and busy workers can delay the page's first paint
 
 **Thread safety rules:**
 
@@ -470,14 +471,14 @@ chart_slot = st.container()  # Reserve the chart's position up front
 
 st.caption("Data refreshes hourly. Email support@example.com for access.")
 
-with chart_slot.skeleton():  # Skeleton fills the reserved slot while the work runs
+with chart_slot.skeleton(height=300):  # The skeleton holds the reserved slot
     report = load_report(account)  # Slow work runs after the page is painted
-    chart_slot.line_chart(report.history)  # Renders into the reserved slot; keeps state
+    st.line_chart(report.history)  # Fills the skeleton's slot; keeps state
 ```
 
-`st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. The chart then renders into that reserved slot at a stable position, so it goes **stale** (greyed) and updates in place rather than remounting — keeping its scroll, sort, and selection. `chart_slot.skeleton()` (context manager) shows a skeleton while the block runs; write results explicitly to the container (`chart_slot.line_chart(...)`), since the block doesn't redirect bare `st.*` calls into it.
+`st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. Inside `with chart_slot.skeleton():`, bare `st.*` calls fill the skeleton's slot. On reruns the previous chart stays mounted there and updates in place rather than remounting — keeping its scroll, sort, and selection. The skeleton only covers it if the new data takes longer than half a second, so cached reruns don't flash it.
 
-Avoid standalone `st.empty()`/`st.skeleton()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
+Avoid `st.empty()` placeholders you fill later here: they clear the slot at the top of the rerun, so a slow fill commits the cleared state and the old element unmounts and loses its state (a fast fill may skip the visible clear). Reserve them for swapping in a _different_ element or stateless content. Give stateful elements a stable `key` — without one, a dataframe's identity includes its data, so it remounts when the data changes. See `layouts.md` for placeholder details.
 
 For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its output inside its own body; it cannot write to containers created outside it.
 
@@ -486,7 +487,7 @@ For independent slow sections, prefer `@st.fragment(parallel=True)` and keep its
 The techniques above keep the UI fresh and responsive during slow work. When a wait is unavoidable, give immediate loading feedback so the app _feels_ responsive instead of showing greyed, stale content. These don't speed up computation — pair them with caching and fragments to cut the _actual_ work. See `layouts.md` for details:
 
 - `st.spinner` — lightweight indicator wrapped around a block of slow work.
-- `st.skeleton` — animated placeholder that reserves layout space while content loads.
+- `st.skeleton` — animated placeholder that reserves layout space while content loads. Prefer it over a spinner for charts, tables, and metrics: cached reruns update the content in place without flashing the skeleton, and custom spinner text from a cached function inside the block labels the skeleton.
 - `st.progress` — determinate progress bar when you can report percent complete (e.g., looping over a known number of steps).
 - `st.status` — progress and intermediate output for multi-step, long-running tasks.
 

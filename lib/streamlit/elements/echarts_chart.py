@@ -15,9 +15,12 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -787,25 +790,158 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
     return option, arrow_datasets
 
 
+def _to_json_value(value: object) -> object:
+    """Convert a non-JSON scalar using the same rules as ``dataset.source``.
+
+    ``json.dumps`` calls this as its ``default`` hook, so it only sees values
+    that are not already JSON types. The rules match the frontend's Arrow
+    dataset conversion:
+
+    - NumPy scalars become their Python value.
+    - Naive datetimes keep their wall-clock time. Timezone-aware ones become
+      UTC with a trailing ``Z``.
+    - Dates become ``YYYY-MM-DD``.
+    - Times become ``HH:mm:ss[.sss]``. Their tzinfo is dropped because a time
+      has no date to shift to UTC.
+    - Durations become milliseconds.
+    - ``Decimal`` becomes a float.
+
+    Missing values, arrays, and other objects raise.
+    """
+    import numpy as np
+    import pandas as pd
+
+    # pd.NaT subclasses datetime, and its isoformat() returns "NaT".
+    if value is pd.NaT or (
+        isinstance(value, (np.datetime64, np.timedelta64)) and np.isnat(value)
+    ):
+        raise ValueError("NaT is not JSON-serializable.")
+    if isinstance(value, np.datetime64):
+        return np.datetime_as_string(value, unit="ms")
+    if isinstance(value, np.timedelta64):
+        return float(value / np.timedelta64(1, "ms"))
+    if isinstance(value, np.generic):
+        item = value.item()
+        # np.longdouble.item() returns another np.longdouble, which would make
+        # json call this hook forever.
+        if isinstance(item, np.generic):
+            raise TypeError(f"{type(value).__name__} is not JSON-serializable.")
+        return item
+    if isinstance(value, datetime):
+        if value.utcoffset() is None:
+            return value.isoformat(timespec="milliseconds")
+        utc_value = value.astimezone(UTC).replace(tzinfo=None)
+        return f"{utc_value.isoformat(timespec='milliseconds')}Z"
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, time):
+        text = value.replace(tzinfo=None).isoformat(timespec="milliseconds")
+        return text.removesuffix(".000")
+    if isinstance(value, timedelta):
+        return value / timedelta(milliseconds=1)
+    if isinstance(value, Decimal):
+        return float(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON-serializable.")
+
+
+def _find_unserializable_value(value: Any, path: str) -> tuple[str, Any] | None:
+    """Return the option path and value of the first value JSON rejects.
+
+    ``None`` if no single value is to blame, for example a non-string dict key.
+    """
+    if isinstance(value, float):
+        return None if math.isfinite(value) else (path, value)
+    if value is None or isinstance(value, (str, int)):
+        return None
+    if isinstance(value, dict):
+        for key, item in value.items():
+            found = _find_unserializable_value(
+                item, f"{path}.{key}" if path else str(key)
+            )
+            if found is not None:
+                return found
+        return None
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            found = _find_unserializable_value(item, f"{path}[{index}]")
+            if found is not None:
+                return found
+        return None
+    try:
+        converted = _to_json_value(value)
+    except (TypeError, ValueError):
+        return path, value
+    # A converted value can still be NaN, for example ``np.float32("nan")``.
+    return _find_unserializable_value(converted, path)
+
+
+def _describe_unserializable_value(value: Any) -> str:
+    """Name an unserializable value and suggest the fix."""
+    import numpy as np
+    import pandas as pd
+
+    if isinstance(value, float):
+        name = "NaN" if math.isnan(value) else repr(value)
+        return f"`{name}`. Use `None` for missing or non-finite numbers"
+    value_type = type(value)
+    module = value_type.__module__.split(".")[0]
+    type_name = (
+        value_type.__qualname__
+        if module == "builtins"
+        else f"{module}.{value_type.__qualname__}"
+    )
+    description = f"a `{type_name}`"
+    if (
+        value is pd.NaT
+        or value is pd.NA
+        or (isinstance(value, (np.datetime64, np.timedelta64)) and np.isnat(value))
+    ):
+        return f"{description}. Use `None` for missing values"
+    if dataframe_util.is_dataframe_like(value):
+        return (
+            f"{description}. Only `dataset.source` accepts dataframes and "
+            "arrays, so pass the data there"
+        )
+    if callable(value):
+        return (
+            f"{description}. Use an ECharts string template such as "
+            '`"{b}: {c}"` instead of a callback'
+        )
+    return f"{description}. Convert it to a plain Python value"
+
+
 def _serialize_option(option: dict[str, Any]) -> str:
     """Strictly serialize the option dict to JSON for ``proto.spec``.
 
-    ``allow_nan=False`` and the absence of a ``default`` fallback ensure that JS
-    callbacks, arbitrary Python objects, and non-finite numbers surface a helpful
-    error instead of being silently stringified.
+    NumPy and pandas scalars, datetimes, durations, and ``Decimal`` values are
+    converted (see ``_to_json_value``). Everything else the hook rejects (JS
+    callbacks, arbitrary objects, arrays, missing values) and non-finite
+    numbers, including converted ones, raise a helpful error instead of being
+    silently stringified.
     """
     try:
-        return json.dumps(option, allow_nan=False, separators=(",", ":"))
+        return json.dumps(
+            option, allow_nan=False, separators=(",", ":"), default=_to_json_value
+        )
     except (TypeError, ValueError) as ex:
+        try:
+            unserializable = _find_unserializable_value(option, "")
+        except RecursionError:
+            # A circular reference has no single offending value to name.
+            unserializable = None
+        detail = ""
+        if unserializable is not None:
+            path, value = unserializable
+            detail = f" `{path}` is {_describe_unserializable_value(value)}."
         raise StreamlitAPIException(
-            "The provided ECharts spec is not JSON-serializable. "
-            "`st.echarts_chart` only supports JSON-compatible option objects: "
-            "JavaScript callbacks, arbitrary Python objects, and non-finite "
-            "numbers (NaN/Infinity) are not supported. Pass chart data as a "
-            "dataframe in `dataset.source`, which converts datetimes, NumPy "
-            "values, and missing values automatically; values anywhere else "
-            "(for example `series.data`) must already be plain Python values "
-            "such as `int`, `float`, `str`, `None`, lists, and dicts.",
+            f"The provided ECharts spec is not JSON-serializable.{detail} "
+            "`st.echarts_chart` only supports JSON-compatible option objects. "
+            "NumPy and pandas scalars, datetimes, durations, and `Decimal` "
+            "values are converted anywhere in the option. Pass chart data, "
+            "including arrays and Series, as a dataframe in `dataset.source`, "
+            "which turns missing values into `null`. "
+            "Elsewhere (for example `series.data`), use plain Python lists and "
+            "`None` for missing values.",
             error_id="echarts-spec-not-json-serializable",
         ) from ex
 
@@ -1022,9 +1158,11 @@ class EChartsMixin:
               printf-style string (e.g. ``"%,d sessions"``), as in
               |st.metric|_. ``"percent"`` multiplies values by 100. One format
               applies to every value of a series, so use ``encode.tooltip`` to
-              choose which dimensions the tooltip shows. Any other value,
-              including a malformed printf-style string, is ignored, and the
-              tooltip keeps its default formatting.
+              choose which dimensions the tooltip shows. For a dataframe
+              source, the tooltip shows each of those dimensions on its own
+              line, labeled with its column name. Any other value, including
+              a malformed printf-style string, is ignored, and the tooltip
+              keeps its default formatting.
             - String ``formatter`` templates in tooltips expand the
               ``{@dimension}`` and ``{@[index]}`` placeholders, which ECharts
               otherwise supports only in series labels (e.g.
@@ -1088,15 +1226,23 @@ class EChartsMixin:
             - Value types: Datetimes become ISO-8601 strings (in UTC if
               timezone-aware), durations become milliseconds, and missing
               values become ``null``. Other non-numeric values use the text
-              ``st.dataframe`` shows. Values elsewhere in the option, such as
-              ``series.data``, must already be JSON-compatible, so datetimes,
-              NumPy integers, and ``NaN`` in them raise an error.
+              ``st.dataframe`` shows. Elsewhere in the option, such as in
+              ``series.data``, NumPy and pandas scalars, datetimes, durations,
+              and ``Decimal`` values are converted the same way (a ``Decimal``
+              becomes a float). Arrays and missing values such as ``NaN``,
+              ``pd.NaT``, and ``pd.NA`` raise an error instead of becoming
+              ``null``.
             - Show data: The chart's hover toolbar has a **Show data** button
               that displays the dataframe as a table.
 
             Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
             isn't included, so use ``df.reset_index()`` to plot it.
+
+            On a category axis, ECharts reads numbers as 0-based category
+            positions, so a marker at ``{"xAxis": 2023}`` doesn't mark the 2023
+            category. Pass the label as a string, and cast numeric category
+            columns, such as years, with ``.astype(str)``.
 
         width : "stretch", "content", or int
             The width of the chart element. This can be one of the following:
@@ -1148,7 +1294,10 @@ class EChartsMixin:
             ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
             note above). Time, value, and log axes hide tick labels that would
             overlap. To show every label on an axis, add
-            ``"hideOverlap": False`` to its ``axisLabel``.
+            ``"hideOverlap": False`` to its ``axisLabel``. Unstacked bars
+            without negative values get rounded outer corners that scale with
+            the ``theme.baseRadius`` configuration option. To keep square bars,
+            add ``"borderRadius": 0`` to the series' ``itemStyle``.
 
             On a time ``xAxis`` or ``yAxis``, the axis tooltip header and axis
             pointer label show a midnight value as a date (for example
@@ -1157,7 +1306,10 @@ class EChartsMixin:
             ``axisPointer.label.formatter`` replaces this, whether it's set on
             the axis, ``tooltip``, ``grid.tooltip``, the top-level
             ``axisPointer``, a timeline tick, or a ``media`` override.
-            ``"{value}"`` restores ECharts' default label.
+            ``"{value}"`` restores ECharts' default label. Tooltip values
+            show the datetimes of a dataframe source the same way, in the
+            browser's local time even with ``"useUTC": True``, so a tooltip
+            datetime can differ from its axis label.
 
         key : str, int, or None
             An optional key that gives this element a stable identity. If this
@@ -1315,10 +1467,11 @@ class EChartsMixin:
         the top so it doesn't share the footer with a bottom ``dataZoom``
         slider. Each series takes its legend name from its dataframe column.
 
-        With an inside ``dataZoom``, the wheel scrolls the page until the
-        pointer rests on the chart, then zooms or pans. Pinch, or the modifier
-        set in ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first
-        wheel of a new flick, unless that flick started as a page scroll.
+        With an inside ``dataZoom`` or wheel ``roam`` (on by default for
+        treemaps), the wheel scrolls the page until the pointer rests on the
+        chart, then zooms or pans. A pinch, or the ``dataZoom`` modifier set in
+        ``zoomOnMouseWheel`` or ``moveOnMouseWheel``, acts on the first wheel
+        of a new flick, unless that flick started as a page scroll.
 
         .. code-block:: python
            :filename: streamlit_app.py

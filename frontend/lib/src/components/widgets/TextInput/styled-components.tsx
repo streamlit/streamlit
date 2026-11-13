@@ -104,6 +104,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
     WebkitTextFillColor: theme.colors.fadedText40,
     // Prevent browsers from applying a gray background to disabled inputs
     backgroundColor: "transparent",
+    "::placeholder": { color: theme.colors.fadedText40 },
   },
 }))
 

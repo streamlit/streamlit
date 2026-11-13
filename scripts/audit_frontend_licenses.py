@@ -55,6 +55,10 @@ ACCEPTABLE_LICENSES = {
     # and the full notice is included in NOTICES.
     # https://www.eclipse.org/legal/epl-2.0/
     "EPL-2.0",
+    # elkjs 0.12+ is dual-licensed. We use it under EPL-2.0; GPL-3.0-or-later
+    # is the other option and is not selected.
+    # https://github.com/kieler/elkjs/releases/tag/0.12.0
+    "EPL-2.0 OR GPL-3.0-or-later",
     # Multi-licenses are acceptable if at least one of the licenses is acceptable.
     "(MIT OR Apache-2.0)",
     "(MPL-2.0 OR Apache-2.0)",

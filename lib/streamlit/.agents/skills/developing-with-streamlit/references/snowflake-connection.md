@@ -198,7 +198,7 @@ if prompt := st.chat_input("Ask anything"):
     with st.chat_message("assistant"):
         response = st.write_stream(
             complete(
-                "claude-3-5-sonnet",
+                "claude-sonnet-5-5",
                 prompt,
                 session=st.connection("snowflake").session(),
                 stream=True,

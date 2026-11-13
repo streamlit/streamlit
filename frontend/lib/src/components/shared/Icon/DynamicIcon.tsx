@@ -16,8 +16,6 @@
 
 import { Suspense } from "react"
 
-import { isNullOrEmptyString } from "@streamlit/utils"
-
 import type { IconSizeProp } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
@@ -89,29 +87,39 @@ export function extractLeadingMaterialIcon(
   return { icon: null, text: label }
 }
 
-/** Icons that indicate a menu-style trigger where the chevron should be hidden. */
-const MENU_STYLE_ICONS = new Set([
-  ":material/menu:",
-  ":material/more_vert:",
-  ":material/more_horiz:",
+/**
+ * Accessible names for triggers whose only content is a menu-style icon.
+ * These icons already signal a menu, so such triggers hide the expansion
+ * chevron.
+ */
+const MENU_STYLE_ICON_NAMES = new Map([
+  [":material/menu:", "Menu"],
+  [":material/more_vert:", "More options"],
+  [":material/more_horiz:", "More options"],
 ])
 
 /**
- * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
- * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
+ * Returns the accessible name (e.g. "More options") for a trigger whose only
+ * content is a menu-style icon, or undefined otherwise. The icon can be the
+ * label (with no icon prop) or the icon prop (with an empty label). Callers
+ * hide the expansion chevron when a name is returned, since the icon already
+ * signals a menu.
  *
  * @param icon - The icon prop (from element.icon)
  * @param label - The label prop (from element.label)
- * @returns true if label is exactly one of the menu-style icons with no additional text
  */
-export function isMenuStyleIconLabel(
+export function getMenuTriggerAccessibleName(
   icon: string | undefined,
   label: string | undefined
-): boolean {
-  if (!isNullOrEmptyString(icon)) {
-    return false
+): string | undefined {
+  const trimmedIcon = icon?.trim() ?? ""
+  const trimmedLabel = label?.trim() ?? ""
+  if (trimmedIcon === "") {
+    return MENU_STYLE_ICON_NAMES.get(trimmedLabel)
   }
-  return !isNullOrEmptyString(label) && MENU_STYLE_ICONS.has(label.trim())
+  return trimmedLabel === ""
+    ? MENU_STYLE_ICON_NAMES.get(trimmedIcon)
+    : undefined
 }
 
 /**

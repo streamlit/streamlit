@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.66.1",
+  "version": "1.67.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -38,9 +38,9 @@
   "devDependencies": {
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
-    "vite": "^8.3.5",
+    "vite": "^8.3.6",
     "vite-plugin-dts": "^5.1.2",
-    "vitest": "^5.0.5",
+    "vitest": "^5.1.0",
     "vitest-websocket-mock": "^0.8.0"
   },
   "browserslist": [

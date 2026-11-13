@@ -80,8 +80,8 @@ def test_print_stacks_chart_rows_without_overlap(
 
     # At that width, wide sidebar content stays inside the sidebar and the
     # main column starts to its right, so nothing overlaps. Text wraps or
-    # shrinks to fit. A dataframe keeps its own scroller, which clips the
-    # columns that do not fit.
+    # shrinks to fit. A dataframe prints an HTML table of its visible rows,
+    # clipped at the columns that do not fit.
     main_content = app.get_by_test_id("stMainBlockContainer")
     sidebar_text = [
         sidebar.get_by_text("Sidebar_label_without", exact=False),
@@ -110,11 +110,18 @@ def test_print_stacks_chart_rows_without_overlap(
             box = part.bounding_box()
             assert box is not None
             assert box["x"] + box["width"] <= sidebar_right + 1
-        # Charts and the dataframe grid paint into SVG and canvas, so those
-        # surfaces must end inside the sidebar too.
-        graphics = sidebar.locator(
-            "[data-testid='stVegaLiteChart'] svg, [data-testid='stDataFrame'] canvas"
+        # The dataframe prints a table in place of its canvas. The table can
+        # be wider than the sidebar, so the dataframe clips its painting.
+        assert sidebar.get_by_test_id("stDataFramePrintTable").count() == 1
+        assert not sidebar.get_by_test_id("stDataFrameResizable").is_visible()
+        assert (
+            sidebar.get_by_test_id("stDataFrame").evaluate(
+                "element => getComputedStyle(element).clipPath"
+            )
+            == "inset(0px)"
         )
+        # Charts paint into SVG, so that surface must end inside the sidebar.
+        graphics = sidebar.locator("[data-testid='stVegaLiteChart'] svg")
         assert graphics.count() > 0
         for graphic_right in graphics.evaluate_all(
             "elements => elements.map(element => element.getBoundingClientRect().right)"
@@ -304,6 +311,8 @@ def test_print_stacks_chart_rows_without_overlap(
     )
 
     end_browser_print(app)
+    # The print table is removed again, so the interactive grid is unchanged.
+    expect(sidebar.get_by_test_id("stDataFramePrintTable")).to_have_count(0)
 
 
 def _assert_inside(inner: Locator, outer: Locator) -> None:
@@ -350,8 +359,9 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
     assert _metric_text_scale(content_value) == 1
 
     # Plotly, ECharts, and DeckGL charts stack their row like the built-in
-    # charts. Each chart and its rendered graphic stay inside the column, and
-    # the chart stays above the following element.
+    # charts. Their column keeps the full row width instead of collapsing to
+    # the chart, each chart and its rendered graphic stay inside the column,
+    # and the chart stays above the following element.
     for row_key, chart_test_id, graphic_selector, name in [
         ("plotly_row", "stPlotlyChart", ".main-svg", "Plotly"),
         ("echarts_row", "stEChartsChart", "svg, canvas", "ECharts"),
@@ -367,24 +377,59 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         expect(row_graphic).to_be_attached()
 
         def chart_row_stacks(
+            row: Locator = row,
             row_chart: Locator = row_chart,
             row_graphic: Locator = row_graphic,
             row_column: Locator = row_column,
             beside_text: Locator = beside_text,
             after_row: Locator = after_row,
         ) -> None:
+            row_box = row.bounding_box()
+            column_box = row_column.bounding_box()
             chart_box = row_chart.bounding_box()
             beside_box = beside_text.bounding_box()
             after_box = after_row.bounding_box()
+            assert row_box is not None
+            assert column_box is not None
             assert chart_box is not None
             assert beside_box is not None
             assert after_box is not None
+            assert column_box["width"] >= row_box["width"] - 1
             _assert_inside(row_chart, row_column)
             _assert_inside(row_graphic, row_column)
             assert chart_box["y"] + chart_box["height"] <= beside_box["y"] + 1
             assert beside_box["y"] + beside_box["height"] <= after_box["y"] + 1
 
         wait_until(app, chart_row_stacks)
+
+    # A content-height Vega chart keeps its on-screen width, so its stacked
+    # card shrinks to the chart instead of leaving an empty strip. The text
+    # column beside it keeps the full row width.
+    content_row = get_element_by_key(app, "content_height_chart_row")
+    content_columns = content_row.get_by_test_id("stColumn")
+    expect(content_columns).to_have_count(2)
+    content_chart_column = content_columns.nth(0)
+    content_chart_graphic = content_chart_column.locator("svg.marks, canvas.marks")
+    expect(content_chart_graphic.first).to_be_visible()
+
+    def content_height_chart_card_shrinks() -> None:
+        row_box = content_row.bounding_box()
+        chart_column_box = content_chart_column.bounding_box()
+        graphic_box = content_chart_graphic.first.bounding_box()
+        text_column_box = content_columns.nth(1).bounding_box()
+        assert row_box is not None
+        assert chart_column_box is not None
+        assert graphic_box is not None
+        assert text_column_box is not None
+        # The card is wider than the chart only by its padding, so neither a
+        # full-width card nor a collapsed one passes.
+        column_right = chart_column_box["x"] + chart_column_box["width"]
+        graphic_right = graphic_box["x"] + graphic_box["width"]
+        assert 0 <= column_right - graphic_right <= 40
+        assert chart_column_box["width"] < row_box["width"] - 40
+        assert text_column_box["width"] >= row_box["width"] - 1
+
+    wait_until(app, content_height_chart_card_shrinks)
 
     # A horizontal container with a chart stacks like a column row, and the
     # chart spans the container. Its fixed height fits the row but not the
@@ -524,6 +569,33 @@ def test_print_fits_metrics_and_stacks_chart_containers(app: Page) -> None:
         assert table_box["y"] + table_box["height"] <= beside_box["y"] + 1
 
     wait_until(app, hidden_charts_and_tables_lay_out)
+
+    # A grid.cell() in a content-height row keeps flex in print. Its chart
+    # does not cover the text below it, and the cell does not cover the next
+    # element.
+    grid_cell = get_element_by_key(app, "grid_cell_chart").get_by_test_id("stGridCell")
+    grid_cell_block = grid_cell.first.get_by_test_id("stVerticalBlock")
+    grid_cell_chart = grid_cell_block.get_by_test_id("stVegaLiteChart")
+    below_grid_chart = grid_cell_block.get_by_text(
+        "Below the grid cell chart", exact=True
+    )
+    after_grid = app.get_by_text("After the grid cell chart", exact=True)
+    expect(grid_cell_chart).to_be_visible()
+    expect(below_grid_chart).to_be_visible()
+    expect(grid_cell_block).to_have_css("display", "flex")
+
+    def grid_cell_chart_does_not_overlap() -> None:
+        chart_box = grid_cell_chart.bounding_box()
+        below_box = below_grid_chart.bounding_box()
+        after_box = after_grid.bounding_box()
+        assert chart_box is not None
+        assert below_box is not None
+        assert after_box is not None
+        assert chart_box["height"] > 100
+        assert chart_box["y"] + chart_box["height"] <= below_box["y"] + 1
+        assert below_box["y"] + below_box["height"] <= after_box["y"] + 1
+
+    wait_until(app, grid_cell_chart_does_not_overlap)
 
     buttons = get_element_by_key(app, "horizontal_buttons").get_by_test_id("stButton")
     expect(buttons).to_have_count(2)

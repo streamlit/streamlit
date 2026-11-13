@@ -280,6 +280,19 @@ describe("MenuButton widget", () => {
     expect(button).not.toHaveTextContent("expand_more")
   })
 
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when icon is %s and label is empty", icon => {
+    const props = getProps({ label: "", icon })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveTextContent(icon.slice(":material/".length, -1))
+    expect(button).not.toHaveTextContent("expand_more")
+  })
+
   it("shows chevron for regular labels", () => {
     const props = getProps({ label: "Actions" })
     render(<MenuButton {...props} />)
@@ -287,6 +300,40 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
   })
+
+  it("shows chevron when icon is menu-style but label has text", () => {
+    const props = getProps({ label: "Actions", icon: ":material/more_vert:" })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveTextContent("expand_more")
+    expect(button).not.toHaveAttribute("aria-label")
+  })
+
+  it.each([
+    [":material/more_vert:", "", "More options"],
+    [":material/more_horiz:", "", "More options"],
+    [":material/menu:", "", "Menu"],
+    [undefined, ":material/more_vert:", "More options"],
+  ])(
+    "names the trigger and menu by purpose when icon is %s and label is %s",
+    async (icon, label, expectedName) => {
+      const user = userEvent.setup()
+      const props = getProps({ label, icon })
+      render(<MenuButton {...props} />)
+
+      const button = screen.getByRole("button", { name: expectedName })
+      expect(button).toBeVisible()
+      expect(
+        screen.queryByRole("button", {
+          name: /more_vert|more_horiz|menu icon/,
+        })
+      ).not.toBeInTheDocument()
+
+      await user.click(button)
+      expect(screen.getByRole("menu", { name: expectedName })).toBeVisible()
+    }
+  )
 
   describe("wrap=false", () => {
     mockEllipsizedLabels()

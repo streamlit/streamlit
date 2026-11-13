@@ -99,6 +99,16 @@ _MISSING_ENTRY_HINT: Final = (
 )
 
 
+def _is_kubelet_entry(name: str) -> bool:
+    """Whether a name is one kubelet reserves in secret volumes.
+
+    Kubelet keeps a volume's data in ``..data`` and ``..<timestamp>`` entries.
+    Kubernetes rejects keys and paths starting with ``..``, so these never hold
+    user secrets, unlike single-dot names such as ``.dockerconfigjson``.
+    """
+    return name.startswith("..")
+
+
 def _missing_attr_error_message(attr_name: str) -> str:
     return f'st.secrets has no attribute "{attr_name}". {_MISSING_ENTRY_HINT}'
 
@@ -170,6 +180,8 @@ class Secrets(Mapping[str, Any]):
         self._secrets: Mapping[str, Any] | None = None
         self._lock: threading.RLock = threading.RLock()
         self._file_watchers_installed: bool = False
+        # Secret files inside secrets directories that already have a watcher.
+        self._watched_directory_secret_files: set[str] = set()
         # Store programmatic secrets separately so they survive file-change reloads
         self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
@@ -252,11 +264,17 @@ class Secrets(Mapping[str, Any]):
 
         See: https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#create-a-pod-that-has-access-to-the-secret-data-through-a-volume
         And: https://docs.snowflake.com/en/developer-guide/snowpark-container-services/additional-considerations-services-jobs#passing-secrets-in-local-container-files
+
+        Entries whose names start with ``..`` are skipped. Kubernetes keeps the
+        data of a secret volume in ``..data`` and ``..<timestamp>`` entries next
+        to the key links.
         """
         secrets: dict[str, Any] = {}
         found_secrets_file = False
 
         for dirname in os.listdir(path):
+            if _is_kubelet_entry(dirname):
+                continue
             sub_folder_path = os.path.join(path, dirname)
             if not os.path.isdir(sub_folder_path):
                 raise StreamlitSecretNotFoundError(
@@ -268,6 +286,8 @@ class Secrets(Mapping[str, Any]):
             sub_secrets = {}
 
             for filename in os.listdir(sub_folder_path):
+                if _is_kubelet_entry(filename):
+                    continue
                 file_path = os.path.join(sub_folder_path, filename)
 
                 # ignore folders
@@ -453,11 +473,14 @@ class Secrets(Mapping[str, Any]):
                             watcher_type="poll",
                         )
                     else:
+                        # The directory watcher only sees secrets being added or
+                        # removed; value changes are caught by the file watchers.
                         streamlit.watcher.path_watcher.watch_dir(
                             path,
                             self._on_secrets_changed,
                             watcher_type="poll",
                         )
+                        self._watch_directory_secret_files(path)
                 except (StreamlitMaxRetriesError, FileNotFoundError):
                     # A user may only have one secrets.toml file defined, so we'd expect
                     # exceptions to be raised here when attempting to install a
@@ -468,14 +491,83 @@ class Secrets(Mapping[str, Any]):
             # failed to avoid repeatedly trying to install it.
             self._file_watchers_installed = True  # ty: ignore[invalid-assignment]
 
+    def _watch_directory_secret_files(self, path: str) -> None:
+        """Watch every secret file of a secrets directory for value changes.
+
+        Platforms that rotate mounted secrets (Kubernetes, Snowpark Container
+        Services) replace the files inside each secret folder, which changes
+        neither the names nor the modification time of the secrets directory
+        itself. A polling file watcher compares the file's modification time
+        and then its content, so it fires only when a value actually changes.
+
+        Must be called with `self._lock` held.
+        """
+        for dirname in os.listdir(path):
+            sub_folder_path = os.path.join(path, dirname)
+            if _is_kubelet_entry(dirname) or not os.path.isdir(sub_folder_path):
+                continue
+            for filename in os.listdir(sub_folder_path):
+                file_path = os.path.join(sub_folder_path, filename)
+                if (
+                    _is_kubelet_entry(filename)
+                    or not os.path.isfile(file_path)
+                    or file_path in self._watched_directory_secret_files
+                ):
+                    continue
+                try:
+                    # allow_nonexistent: a missing file is a change, not an
+                    # error. The watcher reloads when the file is removed and
+                    # keeps polling, so it also sees the file come back.
+                    streamlit.watcher.path_watcher.watch_file(
+                        file_path,
+                        self._on_secrets_changed,
+                        watcher_type="poll",
+                        allow_nonexistent=True,
+                    )
+                except (StreamlitMaxRetriesError, FileNotFoundError):
+                    # The file exists but cannot be read. Raising would stop the
+                    # watcher whose reload is installing this one.
+                    continue
+                self._watched_directory_secret_files.add(file_path)
+
     def _on_secrets_changed(self, changed_file_path: str) -> None:
         with self._lock:
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
+            previous_secrets = self._secrets
             self._reset()
-            self._parse()
+            try:
+                self._parse()
+            except (StreamlitSecretNotFoundError, OSError) as ex:
+                # Raising here would stop the watcher that called us, so the
+                # secrets could not recover. The next access parses again and
+                # raises this error to the app.
+                _LOGGER.warning(
+                    "Could not reload secrets after %s changed: %s",
+                    changed_file_path,
+                    ex,
+                )
+                return
             # Re-apply programmatic secrets so they survive file-change reloads
             if self._programmatic_secrets:
                 self._apply_programmatic_secrets(self._programmatic_secrets)
+            # Watch the files of any secret folder that was added since.
+            if self._file_watchers_installed:
+                try:
+                    for path in config.get_option("secrets.files"):
+                        if not path.endswith(".toml") and os.path.isdir(path):
+                            self._watch_directory_secret_files(path)
+                except OSError as ex:
+                    # Same as above: the secrets reloaded, and watchers that
+                    # failed to install are retried on the next reload.
+                    _LOGGER.warning(
+                        "Could not watch new secret files after %s changed: %s",
+                        changed_file_path,
+                        ex,
+                    )
+            # Each file of a multi-field secret has its own watcher, so one
+            # rotation reloads once per file. Only signal an actual change.
+            if self._secrets == previous_secrets:
+                return
 
         # Emit a signal to notify receivers that the `secrets.toml` file
         # has been changed.
@@ -524,6 +616,7 @@ class Secrets(Mapping[str, Any]):
             "_secrets",
             "_lock",
             "_file_watchers_installed",
+            "_watched_directory_secret_files",
             "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",

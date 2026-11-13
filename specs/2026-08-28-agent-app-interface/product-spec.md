@@ -1329,7 +1329,10 @@ than ranked, and say where one builds on another.
    idempotency beyond timeouts, including a lost response to a creating call,
    `expected_revision` to reject actions based on a stale observation, for callers that
    batch or parallelize, and letting a new action replace a run still going after
-   `wait_timed_out`, as a browser interaction would.
+   `wait_timed_out`, as a browser interaction would. Replacing a run still going comes
+   first: a page that runs for minutes, such as one whose first load fills a cold cache, answers every
+   other request on its session with `session_busy` until it finishes, so a client that
+   wants to leave it can only start a new session.
 5. **CLI.** `streamlit agent interact <url> --json @request.json` over the same routes, as
    a debugging and verification convenience. An agent with shell access can already curl
    the endpoint, which is why this is not v1.
@@ -1370,7 +1373,7 @@ than ranked, and say where one builds on another.
    `st.chat_input` attachments; `st.data_editor` edits; dataframe button columns;
    deferred downloads; and the
    browser's half of forms and bound parameters — applying `clear_on_submit` and
-   rewriting a bound parameter when its widget is set.
+   rewriting a bound parameter when its widget is set, which #12's link needs.
 9. **Compact responses.** Large content moves to media storage, the pattern tables
    already use, instead of staying inline: an oversized figure specification, option
    list, or text body — a long Markdown document, or its raw copy in a collapsed
@@ -1386,8 +1389,18 @@ than ranked, and say where one builds on another.
    Markdown document shown twice can pass half a megabyte. Through MCP every one of
    those bytes lands in a model's context, and a response over a client's tool-result
    limit is lost to the model, which makes this, with #6, the first follow-up to take
-   after v1. A cheap first step is to leave Plotly's base64 `bdata` arrays unexpanded
-   above a size threshold, which keeps every value, though not in a form a model reads.
+   after v1. Measured across a 21-page dashboard app, table previews are the largest
+   part of most snapshots (35 of 44 KB for one 15-column table), and option lists make
+   up most of the rest, so the preview's byte budget and a lower default row count,
+   around 20, come first. The `pages` list, about 2 KB, would then be sent only when it
+   differs from the session's previous result, since `unknown_page` already returns it.
+   Repeated
+   annotations shrink too: `fragment` only on keyed nodes and on the fragment's own
+   container, and documented defaults such as `label_visibility: "visible"` left out.
+   Leaving Plotly's base64 `bdata` arrays unexpanded saves less, since only numeric
+   arrays shrink, and hides those values from a model. A response with only what
+   changed is not planned: like a fragment's subtree, it would push merging onto every
+   client.
 10. **Agent sign-in for `st.login` apps.** In v1 an app that uses `st.login` shows
     agents its signed-out state: its identity is a signed cookie the browser gets at
     the end of the OAuth/OIDC redirect, which an agent cannot present. Every other
@@ -1401,11 +1414,59 @@ than ranked, and say where one builds on another.
     exactly as `st.login` does, fronting the provider as a thin OAuth proxy where it
     cannot register MCP clients itself. The HTTP API accepts the same token. App-issued
     API keys are what to avoid: they would be a second identity system.
+11. **Say what became of each sent value.** A value can be changed or dropped with a
+    `200`: a widget resets an out-of-range number or a malformed date to its default,
+    truncates a fraction sent to an integer input, and a key the same run removes or
+    re-keys loses its value, as when one value in a batch moves the bounds of a slider
+    whose generated key then changes. Agents evaluating v1 hit this on real pages and
+    noticed only from the page's own text. A result lists each sent key that did not
+    land as sent, with its reason (`reset`, `adjusted`, or `removed`, which also covers
+    a re-keyed key), and stays silent when every value landed.
+    [#16203](https://github.com/streamlit/streamlit/issues/16203) then turns most resets
+    into `invalid_value` refusals, leaving the removed and re-keyed cases for this list.
+12. **A link to the observed view.** The revenue example in [Problem](#problem) ends in
+    an answer that cites the app, page, and applied filters, but a snapshot gives the
+    agent nothing a human can open. The snapshot carries a link: the page and its
+    `query_params` as a URL relative to the request, like every URL the API hands out,
+    and whether opening it reproduces the inputs the snapshot was observed with:
+
+    ```json
+    "link": { "url": "../../revenue?region=Europe", "complete": false, "missing": ["threshold"] }
+    ```
+
+    `complete` works like `data.complete`, so a link never looks like it reproduces
+    inputs it does not. It is `true` when every widget on the page that holds something
+    other than its default is bound to a parameter in the URL that restores its value,
+    and otherwise `missing` names the keys the link leaves out. `complete` cannot see
+    session state that no widget holds, such as a value a callback wrote to
+    `st.session_state`. A widget left at a default the app computes at run time, such as
+    today's date or a value from `st.user`, counts as unchanged and reopens at the
+    opener's default. The link restores the inputs, not the result, so an answer that
+    cites it also gives `observed_at`. It builds on #8: until setting a bound widget
+    rewrites its parameter, the link leaves out the value the agent just changed. On
+    Community Cloud the relative URL resolves under the `/~/+/` prefix, not to the app's
+    public URL, so a link for humans needs the platform to translate it, as discovery
+    needs the platform to carry its hint.
+
+    Bound parameters are the right carrier, and authoring guidance should say to bind
+    the filters a colleague would want to share. A bound widget reads its parameter when
+    it registers, in script order, so a dependent chain such as region → country → city
+    settles in one run. A `widget_state` batch cannot: it is checked against the
+    previous run's options and refuses the dependent values. Encoding every widget's
+    value into one parameter instead is held back for three reasons. `bind` is the
+    author's consent to a URL setting a widget, and a blob would make every widget
+    settable by a link that runs under whoever opens it. Generated keys must not be
+    persisted, so a blob could carry only authored keys, which mostly overlap with
+    `bind`. And an opaque blob shows a reader no filters. If demand appears, it should be
+    an author opt-in that carries authored keys only, is read at registration like a
+    bound parameter, never fires a trigger, and tells the user which keys did not apply.
+    Views behind a trigger, state that callbacks wrote outside widgets, open dialogs, and
+    uploads stay unreachable by any link: none of them is URL state, and replaying the
+    actions that led there would repeat their side effects.
 
 Smaller potential follow-ups and alternatives considered:
 
-- **Values:** a per-key note on how each sent value landed, including a key the batch
-  itself removed; refusing values that do not match `value_schema` — a fraction for a
+- **Values:** refusing values that do not match `value_schema` — a fraction for a
   whole number, a malformed date, a too-short or reversed range — rather than letting
   the widget adjust them; widget constraints checked server-side
   ([#16203](https://github.com/streamlit/streamlit/issues/16203)); the limits a widget
@@ -1416,6 +1477,9 @@ Smaller potential follow-ups and alternatives considered:
   within them, best together with #16203 so the server refuses what the schema rules
   out; and integers beyond
   ±(2^53−1) as decimal strings, which JavaScript clients otherwise round.
+- **Actions:** a short `context` on an action whose `label` repeats on the page, such
+  as its nearest heading, since two "Show top" sliders are otherwise told apart only by
+  their place in `tree`. Author keys remain the better fix.
 - **Data:** running queries over a large table on the server instead of paging it to
   the model; recommending dataframe-backed charts for apps agents read; serving each
   dataset of a layered chart under `data.datasets`, with its own columns, preview, and

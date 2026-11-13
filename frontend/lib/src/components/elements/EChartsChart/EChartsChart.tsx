@@ -57,6 +57,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { hydrateArrowDatasetSources } from "./arrowDataset"
+import { applyBarRounding } from "./barRounding"
 import {
   applyAltToOption,
   applyStreamlitOptionDefaults,
@@ -67,6 +68,7 @@ import {
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
 import { applyLargeDataDefaults } from "./largeDataDefaults"
+import { withoutMarkerEntryAnimations } from "./markerAnimation"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -79,6 +81,7 @@ import {
   applyTimeLabelFormatters,
   applyTooltipFormatters,
 } from "./tooltipFormatters"
+import { useChartFontsReady } from "./useChartFontsReady"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -420,6 +423,7 @@ export function EChartsChart({
 
   // The option handed to setOption:
   // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
+  // - Under the Streamlit theme, rounded outer bar corners.
   // - Streamlit theme defaults.
   // - Tooltip string formatters turned into functions.
   // - Under the Streamlit theme, time axis labels that show midnight values
@@ -429,16 +433,21 @@ export function EChartsChart({
   // Grid insets are rem-derived, so they must rebuild when the spacing tokens
   // or configured base font size change — not on every new theme object (a
   // light/dark switch would re-apply the option and replay entry animations).
-  const { spacing, fontSizes } = theme
+  const { spacing, fontSizes, radii } = theme
   const preparedOption = useMemo(() => {
     if (!option) {
       return null
     }
+    const withSeriesDefaults = applyBarRounding(
+      applyLargeDataDefaults(option, element.selectionActivated),
+      element.theme,
+      theme
+    )
     let prepared = configureSelectionOption(
       applyTimeLabelFormatters(
         applyTooltipFormatters(
           applyStreamlitOptionDefaults(
-            applyLargeDataDefaults(option, element.selectionActivated),
+            withSeriesDefaults,
             element.theme,
             theme
           )
@@ -453,8 +462,9 @@ export function EChartsChart({
     }
     return prepared
     // Rebuild only when layout tokens change. `theme` is read for rem→px insets
-    // (spacing, title size, baseFontSize) and for the inside funnel and pie
-    // label colors, which are the same in light and dark mode.
+    // (spacing, title size, baseFontSize), the bar corner radius, and the
+    // inside funnel and pie label colors, which are the same in light and dark
+    // mode.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- color-only theme copies must not re-apply the option
   }, [
     option,
@@ -468,6 +478,7 @@ export function EChartsChart({
     spacing.twoXL,
     fontSizes.sm,
     fontSizes.baseFontSize,
+    radii.sm,
   ])
 
   const hasValidSpec = option !== null
@@ -497,6 +508,13 @@ export function EChartsChart({
     }
   }, [hasValidDimensions])
 
+  // ECharts caches text widths per font for the whole page, so the first
+  // layout waits for the theme fonts (see `useChartFontsReady`).
+  const areFontsReady = useChartFontsReady(
+    theme,
+    element.theme === STREAMLIT_THEME
+  )
+
   // Create (and dispose) the ECharts instance. Only the renderer is fixed at
   // init time, so only a renderer change recreates the instance; a theme change
   // is applied in place by the effect below. The theme is read through a ref so
@@ -506,7 +524,7 @@ export function EChartsChart({
   // measurement.
   useEffect(() => {
     const dom = containerRef.current
-    if (!dom || !hasValidSpec || !hasBeenSized) {
+    if (!dom || !hasValidSpec || !hasBeenSized || !areFontsReady) {
       return
     }
 
@@ -542,6 +560,7 @@ export function EChartsChart({
     rendererStr,
     hasValidSpec,
     hasBeenSized,
+    areFontsReady,
     setOpError,
     instanceGeneration,
   ])
@@ -596,6 +615,12 @@ export function EChartsChart({
       setInstanceGeneration(generation => generation + 1)
       return
     }
+    // Only a fresh instance plays the marker entry animations. A replacing
+    // option would replay them, because `notMerge` rebuilds the marker views.
+    const isInstanceFirstOption = appliedOptionRef.current === null
+    const optionToApply = isInstanceFirstOption
+      ? preparedOption
+      : withoutMarkerEntryAnimations(preparedOption)
     // Mark this option as attempted up front so a rendering error isn't cleared
     // by a redundant retry against the same option.
     appliedOptionRef.current = preparedOption
@@ -609,7 +634,7 @@ export function EChartsChart({
       if (containerRef.current && isNullOrEmptyString(element.alt)) {
         containerRef.current.removeAttribute("aria-label")
       }
-      chartInstance.setOption(preparedOption as echarts.EChartsOption, {
+      chartInstance.setOption(optionToApply as echarts.EChartsOption, {
         notMerge: true,
       })
       if (containerRef.current) {

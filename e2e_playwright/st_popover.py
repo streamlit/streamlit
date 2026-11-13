@@ -294,3 +294,7 @@ with st.popover(
     key="wrap_false_popover",
 ):
     st.write("wrap popover content")
+
+# Menu-style icon passed via `icon` with an empty label (chevron should be hidden)
+with st.popover("", icon=":material/more_vert:", key="more_vert_icon_param_popover"):
+    st.markdown("Icon param popover content")

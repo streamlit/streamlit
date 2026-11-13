@@ -36,6 +36,9 @@ const tablePortal = popup + 50
 // Must be above tablePortal so tooltips appear over the column menu portal.
 const tablePortalTooltip = tablePortal + 10
 const cacheSpinner = sidebar + 1
+// Skeletons that cover previous content: above the content's own layers, below
+// st.bottom, the sidebar, and cache spinners.
+const skeletonOverlay = bottom - 1
 // Toasts should overlap chatInput container and show above dialog.
 const toast = popup + 2
 
@@ -58,6 +61,7 @@ export const zIndices = {
   tablePortalTooltip,
   bottom,
   cacheSpinner,
+  skeletonOverlay,
   toast,
   headerDecoration,
 }

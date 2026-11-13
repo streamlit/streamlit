@@ -22,26 +22,54 @@ import { render } from "~lib/test_util"
 
 import { StyledResizableContainer } from "./styled-components"
 
-describe("StyledResizableContainer print layout", () => {
-  it("clips a grid wider than its printed container", () => {
-    const { container } = render(
-      createElement(StyledResizableContainer, {
-        isInHorizontalLayout: false,
-        minHeight: 100,
-        disableResize: false,
-      })
+function cssOf(result: ReturnType<typeof render>): string {
+  const classNames = [
+    ...(result.container.firstElementChild?.classList ?? []),
+  ].filter(className => className.startsWith("css-"))
+  return [...document.querySelectorAll("style")]
+    .map(style => style.textContent ?? "")
+    .filter(rule =>
+      classNames.some(className => rule.includes(`.${className}`))
     )
-    const classNames = [
-      ...(container.firstElementChild?.classList ?? []),
-    ].filter(className => className.startsWith("css-"))
-    const css = [...document.querySelectorAll("style")]
-      .map(style => style.textContent ?? "")
-      .filter(rule =>
-        classNames.some(className => rule.includes(`.${className}`))
-      )
-      .join("\n")
+    .join("\n")
+}
 
-    expect(css).toMatch(/@media print\{[^{]+\{max-width:100%;overflow:clip/)
+describe("StyledResizableContainer print layout", () => {
+  it("clips a grid wider than its printed container when no print table is built", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledResizableContainer, {
+          isInHorizontalLayout: false,
+          minHeight: 100,
+          disableResize: false,
+        })
+      )
+    )
+
+    expect(css).toContain(":not(:has(.stDataFramePrintTable)){overflow:clip;}")
+  })
+
+  it("lets a print table fragment across pages and hides the canvas", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledResizableContainer, {
+          isInHorizontalLayout: false,
+          minHeight: 100,
+          disableResize: false,
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\)\{break-inside:auto[^}]*min-width:0[^}]*clip-path:inset\(0\)/
+    )
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\) \.stDataFrameResizable,.*:has\(\.stDataFramePrintTable\) \.stElementToolbar\{display:none/
+    )
+    expect(css).toMatch(/\.stDataFramePrintTable\{[^}]*break-inside:auto/)
+    expect(css).toMatch(
+      /\.stDataFramePrintTable thead\{display:table-header-group;break-inside:avoid/
+    )
   })
 })
 

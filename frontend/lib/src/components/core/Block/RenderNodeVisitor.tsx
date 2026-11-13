@@ -16,7 +16,7 @@
 
 import type { ReactElement } from "react"
 
-import type { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
+import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import type { RetainedElement } from "~lib/render-tree/elementRetention"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
@@ -47,7 +47,20 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
   private readonly props: BlockPropsWithoutWidth
   private readonly elementKeyOverride?: string
   private readonly renderedKeySet: Set<string>
+  /**
+   * Keyed blocks rendered so far, by key, with their index in
+   * `reactElements`.
+   */
+  private readonly renderedBlocks = new Map<
+    string,
+    { node: BlockNode; elementIndex: number }
+  >()
   public readonly reactElements: ReactElement[]
+  /**
+   * IDs of the block's children that the run `scriptRunId` wrote. Built the
+   * first time a node that a skeleton waits to replace needs them.
+   */
+  private idsWrittenByRun?: { scriptRunId: string; ids: Set<string> }
   private index: number
   private transientElementCount: number
 
@@ -93,16 +106,35 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     const blockId = node.deltaBlock.id || undefined
     const key = this.getCurrentKey(blockId)
     this.index += 1
-    // Keep the first sibling with this block id and skip later copies. A rerun
-    // writes the updated block at its new index but only clears stale nodes when
-    // the run finishes, so the old copy can still sit at a later index. Rendering
-    // both would give two siblings the same React key, which makes React warn and
-    // can remount the container. visitElementNode dedupes widgets the same way.
+    // Render one copy per block id: two siblings with the same React key make
+    // React warn and can remount the container. Copies come from writes that
+    // stale-node cleanup has not removed yet: a rerun that moves a block leaves
+    // the old copy until the run finishes, and a fragment rerun writing to the
+    // event container never removes a full run's copy (the same dialog opened
+    // from the main script and then from a fragment). Keep the copy written
+    // last, in the first copy's slot so React keeps its instance.
     if (blockId) {
-      if (this.renderedKeySet.has(key)) {
-        return null
+      const skeleton = this.renderSkeletonOfMovedNode(key, blockId, node)
+      if (skeleton) {
+        return skeleton
       }
-      this.renderedKeySet.add(key)
+      const rendered = this.renderedBlocks.get(key)
+      if (rendered) {
+        if (
+          (node.deltaMsgReceivedAt ?? 0) <=
+          (rendered.node.deltaMsgReceivedAt ?? 0)
+        ) {
+          return null
+        }
+        const renderer = <BlockNodeRenderer key={key} {...childProps} />
+        this.reactElements[rendered.elementIndex] = renderer
+        rendered.node = node
+        return renderer
+      }
+      this.renderedBlocks.set(key, {
+        node,
+        elementIndex: this.reactElements.length,
+      })
     }
 
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
@@ -144,8 +176,13 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
       node,
     }
 
-    const key = this.getCurrentKey(getElementId(node.element))
+    const elementId = getElementId(node.element)
+    const key = this.getCurrentKey(elementId)
     this.index += 1
+    const skeleton = this.renderSkeletonOfMovedNode(key, elementId, node)
+    if (skeleton) {
+      return skeleton
+    }
     // Avoid rendering the same element twice. We assume the first one is the one we want
     // because the page is rendered top to bottom, so a valid widget would be rendered
     // correctly and we assume the second one is therefore stale (or throw an error).
@@ -161,6 +198,54 @@ export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> 
     this.reactElements.push(renderer)
 
     return renderer
+  }
+
+  /**
+   * Render the skeleton that waits to replace `node` if the skeleton's run
+   * also wrote the node's ID at another index of this block (the layout
+   * shifted). The slot then shows the skeleton under its own key, so the
+   * run's copy keeps the React instance, whether it renders before or after
+   * this slot.
+   */
+  private renderSkeletonOfMovedNode(
+    key: string,
+    id: string | undefined,
+    node: BlockNode | ElementNode
+  ): ReactElement | undefined {
+    const skeleton = node.pendingSkeleton
+    if (!skeleton || !id || !this.wasWrittenByRun(id, skeleton.scriptRunId)) {
+      return undefined
+    }
+    const renderer = (
+      <ElementNodeRenderer
+        key={`${key}-skeleton`}
+        {...this.props}
+        node={skeleton}
+      />
+    )
+    this.reactElements.push(renderer)
+    return renderer
+  }
+
+  /** Whether the run `scriptRunId` wrote a child with ID `id` in this block. */
+  private wasWrittenByRun(id: string, scriptRunId: string): boolean {
+    if (this.idsWrittenByRun?.scriptRunId !== scriptRunId) {
+      const ids = new Set<string>()
+      for (const child of this.props.node.children) {
+        const node = child instanceof TransientNode ? child.anchor : child
+        let childId: string | null | undefined
+        if (node instanceof ElementNode) {
+          childId = getElementId(node.element)
+        } else if (node instanceof BlockNode) {
+          childId = node.deltaBlock.id
+        }
+        if (childId && node?.scriptRunId === scriptRunId) {
+          ids.add(childId)
+        }
+      }
+      this.idsWrittenByRun = { scriptRunId, ids }
+    }
+    return this.idsWrittenByRun.ids.has(id)
   }
 
   /**

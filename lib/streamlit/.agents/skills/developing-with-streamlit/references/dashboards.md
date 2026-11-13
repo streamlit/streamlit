@@ -38,6 +38,43 @@ with st.container(border=True):
     st.dataframe(top_products, alt="Top products")
 ```
 
+## Card headers and menus
+
+In BI dashboards, give every card the same header: a bold title, an optional caption, and controls aligned right. Mark certified metrics with a badge, and put secondary actions in a ⋮ menu instead of more buttons:
+
+```python
+def card_header(title: str, caption: str | None = None, *, certified: bool = False):
+    with st.container(horizontal=True, vertical_alignment="center"):
+        with st.container(gap=None):
+            badge = " :green-badge[:material/verified:]" if certified else ""
+            st.markdown(f"**{title}**{badge}")
+            if caption:
+                st.caption(caption)
+        return st.container(
+            horizontal=True, horizontal_alignment="right", width="content"
+        )
+
+
+with st.container(border=True):
+    controls = card_header("MRR by plan", "Monthly recurring revenue", certified=True)
+    view = controls.segmented_control(
+        "View", ["$", "%"], default="$", required=True, label_visibility="collapsed"
+    )
+    action = controls.menu_button(
+        ":material/more_vert:",
+        [":material/menu_book: What's measured"],
+        type="tertiary",
+        help="More options",
+    )
+    if action:
+        definition_drawer("mrr_by_plan")  # An @st.dialog(..., position="right")
+```
+
+- A label that is only `:material/more_vert:` (or `:material/more_horiz:` or `:material/menu:`) makes an icon-only trigger without a chevron.
+- `st.menu_button` returns the picked option only on the rerun it triggers. To toggle a chart option from the menu, flip a Session State flag in its `on_click` callback, so the card already reads the new value when it redraws.
+- Show definitions and record details in a side drawer, `@st.dialog(..., position="right")`, and the query behind a section in `st.popover("SQL", icon=":material/data_object:")` with `st.code(sql, language="sql")`. In a `@st.fragment(parallel=True)`, open the drawer only on the rerun a click triggers, as the menu above does: calling `@st.dialog` during the parallel full-app run raises.
+- For a certified KPI, add `:green[:material/verified:]` to the `st.metric` label and its definition to `help`.
+
 ## KPI rows
 
 Use horizontal containers for responsive metric rows:
@@ -49,7 +86,7 @@ with st.container(horizontal=True):
     st.metric("Orders", "1.4k", "+5%", border=True)
 ```
 
-A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for rows where every metric has the same parts (every metric has a `delta`, or none does; the same for `chart_data`).
+A horizontal container sizes each metric to its content and wraps metrics that don't fit onto the next line. Prefer it for up to about five metrics that all have the same parts (every metric has a `delta`, or none does; the same for `chart_data`). With more, the cards get narrow, and when the row wraps, the cards on the last line are much wider than the rest.
 
 Use `st.grid` when cards need a fixed layout: equal-width columns that line up across rows. The grid drops a column whenever the columns would get narrower than `min_column_width`, and `grid.cell()` lets a card span columns. It fits metrics with different parts and card walls with several rows. Keep each metric's own `border=True` rather than the grid's cell borders, and pass `height="stretch"` so every card in a row is as tall as the tallest one:
 
@@ -100,12 +137,8 @@ Combine cards into a dashboard:
 ```python
 # KPI row
 with st.container(horizontal=True):
-    st.metric(
-        "Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend, chart_type="line"
-    )
-    st.metric(
-        "Users", "762k", "+12%", border=True, chart_data=user_trend, chart_type="line"
-    )
+    st.metric("Revenue", "$1.2M", "-7%", border=True, chart_data=rev_trend)
+    st.metric("Users", "762k", "+12%", border=True, chart_data=user_trend)
     st.metric(
         "Orders", "1.4k", "+5%", border=True, chart_data=order_trend, chart_type="bar"
     )
@@ -152,9 +185,9 @@ st.echarts_chart(
 
 The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
 
-## Smooth loading with parallel fragments + skeletons
+## Layout-first loading with parallel fragments + skeletons
 
-When a dashboard has multiple cards with compute-intensive data loads (queries or API calls), combine `@st.fragment(parallel=True)` with `st.skeleton`. The fragments load concurrently on a full app rerun, and each card shows a skeleton until its data is ready—so the dashboard fills in card-by-card instead of blocking on the slowest query.
+When a dashboard has multiple cards with slow data loads (queries or API calls), load the layout first: the cheap parts (titles, filters, card frames) paint right away, a skeleton holds each slow card body at its final size, and the bodies fill in as their data arrives. Combine `@st.fragment(parallel=True)` with `st.skeleton`: the fragments load concurrently on a full app rerun, so the dashboard fills in card-by-card instead of blocking on the slowest query.
 
 ```python
 @st.cache_data(ttl="15m")
@@ -166,57 +199,128 @@ def load_orders(): ...  # Another slow query / API call
 
 
 @st.fragment(parallel=True)
-def revenue_card():
-    with st.container(border=True):
-        st.subheader("Revenue by Region")
-        with st.skeleton(height=260):
-            data = load_revenue()
-            st.bar_chart(data, x="region", y="revenue", alt="Revenue by region")
+def revenue_body():
+    data = load_revenue()
+    st.bar_chart(data, x="region", y="revenue", height=260, alt="Revenue by region")
 
 
 @st.fragment(parallel=True)
-def orders_card():
-    with st.container(border=True):
-        st.subheader("Recent Orders")
-        with st.skeleton(height=260):
-            data = load_orders()
-            st.dataframe(data, hide_index=True, alt="Recent orders")
+def orders_body():
+    data = load_orders()
+    st.dataframe(data, height=260, hide_index=True, alt="Recent orders")
 
 
 col1, col2 = st.columns(2)
 with col1:
-    revenue_card()
+    with st.container(border=True):
+        st.subheader("Revenue by Region")  # Drawn by the main script
+        with st.skeleton(height=260):  # Holds the slot until the chart arrives
+            revenue_body()
 with col2:
-    orders_card()
+    with st.container(border=True):
+        st.subheader("Recent Orders")
+        with st.skeleton(height=260):
+            orders_body()
 ```
 
-The `st.skeleton` context manager shows the placeholder while its block runs (after a short delay) and clears it once the content is rendered—anything written inside stays visible. Keep the card title outside the `with` block so it stays stable while the body loads.
+Draw each card's frame and title in the main script, and call its parallel fragment inside `with st.skeleton(height=...)`. The main script sends every card's title and skeleton with the layout, so each card has its final size while the queries run. The fragment's first visible element replaces the skeleton, so draw that element first. On reruns that hit the cache, each chart updates in place without a skeleton; on a cache miss, the skeleton covers the old chart at its size after half a second. A cached function's custom `show_spinner` text appears on the skeleton.
+
+A fragment's own rerun, such as a `run_every` refresh or a widget interaction inside the fragment, runs only the fragment body. It never re-enters the block around the call, so Streamlit fades the old content as stale until the rerun finishes. If those reruns can be slow, wrap the body's content in a second `with st.skeleton()`:
+
+```python
+def load_live_orders(): ...  # Slow query that every refresh runs again
+
+
+@st.fragment(parallel=True, run_every="15s")
+def live_orders():
+    with st.skeleton():  # Covers the fragment's own refreshes
+        st.bar_chart(load_live_orders(), height=340, alt="Orders per minute")
+
+
+with st.container(border=True):
+    st.markdown("**Live orders**")
+    with st.skeleton(height=340):  # Sizes the first load
+        live_orders()
+```
+
+Each block covers the runs that enter it, and the inner skeleton doesn't end the outer one. The inner block needs no height when it's the body's first element: on a full-app run, the outer skeleton covers it, and on the fragment's own rerun, the previous content keeps its size under the skeleton.
+
+A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` and `dashboard-compute` chart cards.
+
+To keep the layout stable:
+
+- Give each skeleton the content's height: pass the same `height` to the skeleton and the chart, table, or metric, or use `height="stretch"` in a parent with a bounded height. If the element has no `height` parameter, give the skeleton the height the element renders at. An inner block that is the fragment body's first element needs none.
+- Put the content inside the `with st.skeleton()` block, not after it, and draw the slow element first: any visible element, even a caption, ends the skeleton.
+- Give stateful elements a `key`, so a rerun updates them in place and they keep their scroll and selection.
+- Inside a skeleton, Streamlit hides a cached function's default spinner, so `show_spinner=False` isn't needed. Pass `show_spinner="..."` to label the skeleton during slow loads.
 
 Cache the loaders (`@st.cache_data`) so cards render instantly on later reruns. Cards don't each need their own data source: if several cards call the same cached function with the same arguments, the cache's per-key lock runs it once and they share that one result. When you *can* split the work into independent queries, prefer that—parallel fragments overlap independent loads so the dashboard finishes in about the time of the slowest one. See `performance.md` for more on parallel fragments and caching.
 
-Put a control that must stay responsive during a slow load in the main script, not inside a card. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
-
-## Sidebar filters
-
-Put filters in the sidebar to maximize dashboard space:
+When cards depend on each other, such as a chart selection that filters a table, they can't be independent fragments. Paint the layout first anyway: draw each card's frame, header, and a standalone `st.skeleton()` placeholder, then load the data once and fill each placeholder. On reruns, a placeholder keeps its previous content until the new content arrives, and the skeleton covers it only after half a second. The load runs outside any skeleton block, so a cached loader's spinner would show as its own element: cache it with `show_spinner=False`.
 
 ```python
-with st.sidebar:
-    date_range = st.date_input("Date range", value=(start, end))
-    region = st.multiselect("Region", regions, default=regions)
+with st.container(border=True):
+    st.markdown("**Accounts**")
+    table_slot = st.skeleton(height=400)  # Drawn before any data loads
 
-# Main area is all dashboard content
+accounts = load_accounts()
+table_slot.dataframe(accounts, height=400, alt="Customer accounts")
 ```
+
+Or draw both cards in one `@st.fragment(parallel=True)` inside one `st.skeleton`, as `dashboard-revenue` does for its industry donut and accounts table. A selection then reruns only that fragment.
+
+Put a control that must stay responsive during a slow load in the main script, not inside a card's fragment. When one card is much slower than the rest, a control *inside* a fragment stays queued behind the in-progress run until that slow card finishes, whereas a main-script widget reruns the whole script, preempts the run, and refreshes every card together. When cards load in a similar time this doesn't matter and per-card controls are fine.
+
+## Global filters
+
+Put the page's filters in a toolbar under the title, or in the sidebar (`with st.sidebar:`) when there are many. Bind them to the URL with `bind="query-params"` so every view can be shared, and keep secondary filters in a popover:
+
+```python
+def reset_filters() -> None:
+    # Assigning keys in a callback resets bound widgets and their URL parameters.
+    st.session_state.period = "12M"
+    st.session_state.regions = []
+
+
+with st.container(horizontal=True, vertical_alignment="center"):
+    st.title("Revenue overview", icon=":material/insights:", anchor=False)
+    st.button(
+        "Reset", icon=":material/restart_alt:", type="tertiary", on_click=reset_filters
+    )
+
+with st.container(horizontal=True, vertical_alignment="center"):
+    period = st.segmented_control(
+        "Period",
+        ["3M", "6M", "12M"],
+        default="12M",
+        required=True,
+        key="period",
+        bind="query-params",
+        label_visibility="collapsed",
+    )
+    with st.popover("Filters", icon=":material/tune:"):
+        regions = st.pills(
+            "Regions",
+            REGIONS,
+            selection_mode="multi",
+            key="regions",
+            bind="query-params",
+        )
+```
+
+- Bind only filters that are safe to share: bound values appear in links and browser history. Keep sensitive values, such as account IDs or customer emails, out of the URL, and use `persist_state` to keep them across pages.
+- Treat an empty multi-select filter as "all", and summarize the active filters, for example in a caption under the title, so a closed popover doesn't hide them.
+- In a multipage app, draw the toolbar in the entrypoint before `page.run()`, so every page shares it.
 
 ## Theme and polish
 
 When the user wants a branded or dense KPI look, pair the dashboard with a theme — do not inject CSS for colors or `.block-container` padding.
 
-- Copy `assets/templates/themes/configs/dense-dashboard.toml` into the app’s `.streamlit/config.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle), or point `theme.base` at a shared brand file
+- Copy `assets/templates/themes/configs/dense-dashboard.toml` (compact `paddingTop`/`paddingBottom` + light/dark toggle) or `bi-dashboard.toml` (indigo, Geist fonts, compact bold metric values) into the app’s `.streamlit/config.toml`, or point `theme.base` at a shared brand file
 - Set chart and dataframe brand colors in config (`chartCategoricalColors`, `dataframe*`), not as one-off per-chart hardcodes
 - Start with the cheat sheet and Content padding in `theme.md`
 
-`dashboard-metrics` ships a sample `.streamlit/config.toml` based on `dense-dashboard`.
+`dashboard-metrics` ships a copy of `dense-dashboard`, and `dashboard-revenue` a copy of `bi-dashboard`.
 
 ## Dashboard templates
 
@@ -224,13 +328,14 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
-| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, popover filters, ECharts charts that animate between line and bar |
-| `dashboard-feature-usage` | API endpoint usage analytics, trend analysis, conditional "Raw data" expander (Altair) |
-| `dashboard-seattle-weather` | Exploratory weather data visualization (Altair) |
-| `dashboard-stock-peers` | Stock peer comparison with ECharts time series |
-| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a main-script filter, so the page stays responsive while the report loads |
+| `dashboard-revenue` | Revenue BI dashboard: filter toolbar bound to the URL, certified KPIs, card headers with ⋮ menus and definition drawers, SQL popover, ECharts annotations and forecast, donut-to-table drill-down with a record drawer, parallel fragments with skeletons |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
+| `dashboard-companies` | Company leaderboard with a filter toolbar bound to the URL, sparkline and badge columns, a `ButtonColumn` that opens a company drawer, custom cache spinner |
+| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, one loader cached per breakdown, popover filters, reset callback, ECharts charts that animate between line and bar |
+| `dashboard-feature-usage` | API endpoint usage analytics with a category control bound to the URL, starter kits, bordered cards, conditional "Raw data" expander (Altair) |
+| `dashboard-seattle-weather` | Exploratory weather data visualization: an `st.grid` of metrics from a spec loop, year pills bound to the URL (Altair) |
+| `dashboard-stock-peers` | Stock peer comparison with ECharts time series and URL-bound ticker and horizon filters |
+| `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a URL-bound region filter in the main script, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script and the report's spinner text on its skeleton |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
 

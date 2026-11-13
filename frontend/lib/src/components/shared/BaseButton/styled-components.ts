@@ -17,7 +17,7 @@
 import type { MouseEvent, ReactNode } from "react"
 
 import styled, { type CSSObject } from "@emotion/styled"
-import { darken, transparentize } from "color2k"
+import { darken, getContrast, lighten, transparentize } from "color2k"
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components"
 
 import { getHorizontalOverflowFadeStyles } from "~lib/components/shared/horizontalOverflowFade"
@@ -177,6 +177,20 @@ export const StyledSecondaryButton = styled(
   },
 }))
 
+/**
+ * Text color of a pressed tertiary button, or of one whose popover or menu is
+ * open. Darkens or lightens the primary color, whichever contrasts more with
+ * the background, so the label stays readable.
+ */
+export function getTertiaryActiveColor(theme: EmotionTheme): string {
+  const { primary, bgColor } = theme.colors
+  const darker = darken(primary, 0.25)
+  const lighter = lighten(primary, 0.15)
+  return getContrast(darker, bgColor) >= getContrast(lighter, bgColor)
+    ? darker
+    : lighter
+}
+
 export const StyledTertiaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
@@ -197,7 +211,7 @@ export const StyledTertiaryButton = styled(
       },
     },
     "&:active, &[aria-expanded='true']": {
-      color: darken(theme.colors.primary, 0.25),
+      color: getTertiaryActiveColor(theme),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       backgroundColor: theme.colors.transparent,

@@ -24,7 +24,9 @@ Demonstrates:
 - ``@st.cache_data(ttl=...)`` per-metric loaders to keep data fresh and bounded
 - ``@st.fragment(parallel=True)`` cards that load concurrently on full reruns
   and rerun in isolation on widget interactions
-- ``st.skeleton`` placeholders so each card fills in as soon as its data is ready
+- Layout-first loading with ``st.skeleton``: the main script draws the KPI
+  skeletons, so the row has its final size before any data loads. Cached
+  reruns update each card in place without a skeleton.
 
 This template uses synthetic data. Replace the ``generate_*_data()`` functions
 with your own data sources (e.g., Snowflake queries, APIs, etc.).
@@ -40,7 +42,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Metrics Dashboard",
+    page_title="Metrics dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )
@@ -52,9 +54,10 @@ st.set_page_config(
 
 TIME_RANGES = ["1M", "6M", "1Y", "QTD", "YTD", "All"]
 CHART_HEIGHT = 350  # Leaves room for each chart's legend and zoom slider
-KPI_HEIGHT = 215  # Approximate height of a bordered st.metric with a sparkline
+KPI_HEIGHT = 184  # Height of each KPI's skeleton and metric, so they match
 # Tooltip number format, using the same format strings as ``st.metric``.
 VALUE_FORMAT = "%,.0f"
+VIEWS = {"chart": ":material/show_chart:", "table": ":material/table:"}
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -95,7 +98,7 @@ def generate_metric_data(
     trend = base_value * (1 + growth_rate) ** np.arange(n_days)
 
     # Add weekly seasonality (lower on weekends)
-    day_of_week = dates.dayofweek
+    day_of_week = dates.day_of_week
     seasonality = np.where(day_of_week >= 5, 0.7, 1.0)
     trend *= seasonality
 
@@ -115,7 +118,7 @@ def generate_metric_data(
     return df
 
 
-@st.cache_data(ttl="1h", show_spinner=False)
+@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
 def load_metric(metric_name: str) -> pd.DataFrame:
     """Load a single metric's time series (cached per metric).
 
@@ -123,7 +126,9 @@ def load_metric(metric_name: str) -> pd.DataFrame:
     concurrently as parallel fragments. Replace the body with your data
     source (Snowflake query, API call, etc.). The ``ttl`` keeps the cache
     fresh; add ``max_entries`` if the set of metric names can grow large so
-    the cache stays bounded.
+    the cache stays bounded. Every call runs inside a skeleton, so a slow
+    load shows the spinner text on the skeleton instead of a second
+    indicator.
     """
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=730)  # 2 years of data
@@ -289,23 +294,24 @@ def kpi_card(label: str, metric_name: str) -> None:
     """Display a bordered KPI card: the latest 7-day average and its 4-week change.
 
     Like the metric cards, each KPI is a parallel fragment that loads its own
-    (cached) data inside ``st.skeleton``.
+    (cached) data. The main script calls it inside ``st.skeleton``, and the
+    metric replaces that skeleton.
     """
-    with st.skeleton(height=KPI_HEIGHT):
-        # The last 4 weeks (29 daily points) of the 7-day average: the value is
-        # the latest point, the delta compares it to the first one.
-        trend = load_metric(metric_name)["value_7d_ma"].tail(29)
-        change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
-        st.metric(
-            label,
-            f"{trend.iloc[-1]:,.0f}",
-            # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
-            f"{change:+.1%}" if change else 0,
-            delta_description="vs. 4 weeks ago",
-            help="7-day average",
-            chart_data=trend,
-            border=True,
-        )
+    # The last 4 weeks (29 daily points) of the 7-day average: the value is
+    # the latest point, the delta compares it to the first one.
+    trend = load_metric(metric_name)["value_7d_ma"].tail(29)
+    change = round(trend.iloc[-1] / trend.iloc[0] - 1, 3)
+    st.metric(
+        label,
+        f"{trend.iloc[-1]:,.0f}",
+        # String deltas like "+0.0%" still get an arrow; pass 0 when flat.
+        f"{change:+.1%}" if change else 0,
+        delta_description="vs. 4 weeks ago",
+        help="7-day average",
+        chart_data=trend,
+        border=True,
+        height=KPI_HEIGHT,
+    )
 
 
 # =============================================================================
@@ -314,27 +320,16 @@ def kpi_card(label: str, metric_name: str) -> None:
 
 
 @st.fragment(parallel=True)
-def metric_card(
-    title: str,
-    metric_name: str,
-    chart_type: str = "line",
-) -> None:
+def metric_card(title: str, metric_name: str, chart_type: str = "line") -> None:
     """Display a metric card with chart/table toggle and popover filters.
 
     The card is a parallel fragment: on a full app rerun every card loads its
     own data concurrently, and on widget interactions (view toggle, filters)
-    only this card reruns. The card's data is loaded inside ``st.skeleton`` so
-    the title and controls stay stable while the chart fills in.
-
-    Parameters
-    ----------
-    title : str
-        Card title.
-    metric_name : str
-        Key into ``METRIC_CONFIG`` used to load this card's data and namespace
-        this card's widget state.
-    chart_type : str
-        One of ``"line"``, ``"area"``, ``"bar"``, ``"point"``.
+    only this card reruns. Its controls must live inside the fragment, so the
+    card draws its own frame and header, and loads its data inside
+    ``st.skeleton`` so the header stays stable while the chart fills in.
+    ``metric_name`` is a ``METRIC_CONFIG`` key and prefixes the card's widget
+    keys; ``chart_type`` is ``"line"``, ``"area"``, ``"bar"``, or ``"point"``.
     """
     chart_renderers = {
         "line": render_line_chart,
@@ -356,13 +351,15 @@ def metric_card(
 
             view_mode = st.segmented_control(
                 "View",
-                options=[":material/show_chart:", ":material/table:"],
-                default=":material/show_chart:",
+                options=VIEWS.keys(),
+                format_func=lambda view: VIEWS[view],
+                default="chart",
+                required=True,
                 key=f"{metric_name}_view",
                 label_visibility="collapsed",
             )
 
-            with st.popover("Filters", type="tertiary"):
+            with st.popover("Filters", icon=":material/tune:", type="tertiary"):
                 line_options = st.pills(
                     "Lines",
                     options=["Daily", "7-day MA"],
@@ -374,18 +371,19 @@ def metric_card(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
+                    required=True,
                     key=f"{metric_name}_time",
                 )
 
-        # Load this card's data and render inside a skeleton placeholder. The
-        # skeleton shows while the (cached) loader runs, then clears once the
-        # chart or table is rendered.
+        # The chart or table replaces the skeleton. On any rerun, including a
+        # filter change, a cache hit updates the chart in place; a cache miss
+        # covers the old chart with the skeleton after half a second.
         with st.skeleton(height=CHART_HEIGHT):
             df = load_metric(metric_name)
 
-            # Apply filters
+            # With no line picked, show the 7-day MA, so the chart always has one.
             line_options = line_options or ["7-day MA"]
-            filtered_df = filter_by_time_range(df, "ds", time_range or "All")
+            filtered_df = filter_by_time_range(df, "ds", time_range)
 
             # Determine which columns to show
             y_cols = []
@@ -397,15 +395,14 @@ def metric_card(
                 y_cols.append("value_7d_ma")
                 labels.append("7-day MA")
 
-            # Render view
-            if "table" in (view_mode or ""):
+            if view_mode == "table":
                 st.dataframe(
                     filtered_df,
                     height=CHART_HEIGHT,
                     hide_index=True,
                     alt=f"{title} data",
                 )
-            elif y_cols:
+            else:
                 option = render_chart(filtered_df, "ds", y_cols, labels)
                 # Describe the last series drawn: the smoother 7-day MA when shown.
                 y_col = y_cols[-1]
@@ -419,8 +416,6 @@ def metric_card(
                         title, option["dataset"]["source"], "ds", y_col, series
                     ),
                 )
-            else:
-                st.info("Select at least one line option.")
 
 
 # =============================================================================
@@ -428,33 +423,50 @@ def metric_card(
 # =============================================================================
 
 
-def render_page_header(title: str) -> None:
+def reset_cards() -> None:
+    """Restore every metric card's controls to their defaults."""
+    # Assigning a widget's key in a callback also updates it in the browser.
+    for metric_name in METRIC_CONFIG:
+        st.session_state[f"{metric_name}_view"] = "chart"
+        st.session_state[f"{metric_name}_lines"] = ["Daily", "7-day MA"]
+        st.session_state[f"{metric_name}_time"] = "All"
+
+
+def render_page_header(title: str, icon: str) -> None:
     """Render page header with title and reset button."""
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
     ):
-        st.markdown(title)
-        if st.button(":material/restart_alt: Reset", type="tertiary"):
-            st.session_state.clear()
-            st.rerun()
+        st.title(title, icon=icon, anchor=False)
+        st.button(
+            "Reset",
+            icon=":material/restart_alt:",
+            type="tertiary",
+            on_click=reset_cards,
+        )
 
 
 # =============================================================================
 # Page Layout
 # =============================================================================
 
-# Page header
-render_page_header("# :material/monitoring: Metrics Dashboard")
+render_page_header("Metrics dashboard", ":material/monitoring:")
 
 # Each KPI and card loads its own data; as parallel fragments they load
 # concurrently on the first run instead of blocking on each other.
 
-# KPI row: horizontal containers wrap on narrow screens.
+# KPI row: the main script draws each KPI's skeleton, so the row has its final
+# size from the first paint, and each metric replaces its skeleton when its data
+# arrives. Horizontal containers wrap on narrow screens.
 with st.container(horizontal=True):
-    kpi_card("Active users", "users")
-    kpi_card("Sessions", "sessions")
-    kpi_card("Revenue", "revenue")
-    kpi_card("Conversions", "conversions")
+    for kpi_label, kpi_metric in [
+        ("Active users", "users"),
+        ("Sessions", "sessions"),
+        ("Revenue", "revenue"),
+        ("Conversions", "conversions"),
+    ]:
+        with st.skeleton(height=KPI_HEIGHT):
+            kpi_card(kpi_label, kpi_metric)
 
 # Row 1: Users and Sessions
 row1 = st.columns(2)

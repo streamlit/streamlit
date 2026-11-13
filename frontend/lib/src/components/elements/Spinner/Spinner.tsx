@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement, useEffect, useRef, useState } from "react"
+import { memo, type ReactElement, useContext } from "react"
 
 import type { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
+import { PendingSkeletonContext } from "~lib/components/core/Block/PendingSkeletonContext"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
@@ -27,39 +28,22 @@ import {
   StyledSpinnerText,
   StyledSpinnerTimeText,
 } from "./styled-components"
+import { useElapsedSeconds } from "./useElapsedSeconds"
 import { formatTime } from "./utils"
 
 export interface SpinnerProps {
   element: SpinnerProto
 }
 
-function Spinner({ element }: Readonly<SpinnerProps>): ReactElement {
-  const { cache, showTime } = element
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const initialTimeRef = useRef<number | null>(null)
+function Spinner({ element }: Readonly<SpinnerProps>): ReactElement | null {
+  const { cache, showTime, inSkeletonSlot } = element
+  const isInPendingSkeleton = useContext(PendingSkeletonContext)
+  const elapsedTime = useElapsedSeconds(showTime)
 
-  useEffect(() => {
-    if (!showTime) return
-
-    // Record the start time when the component mounts
-    initialTimeRef.current = Date.now()
-
-    const updateElapsedTime = (): void => {
-      if (initialTimeRef.current !== null) {
-        const currentTime = Date.now()
-        const elapsed = (currentTime - initialTimeRef.current) / 1000 // Convert to seconds
-        setElapsedTime(elapsed)
-      }
-    }
-
-    // Update immediately
-    updateElapsedTime()
-
-    // Set up interval to update every 100ms
-    const timer = setInterval(updateElapsedTime, 100)
-
-    return () => clearInterval(timer)
-  }, [showTime])
+  // While its skeleton shows, the skeleton renders this spinner as its label.
+  if (inSkeletonSlot && isInPendingSkeleton) {
+    return null
+  }
 
   return (
     <StyledSpinner

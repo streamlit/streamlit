@@ -214,3 +214,11 @@ def test_fragment():
 
 
 test_fragment()
+
+# Menu-style icon passed via `icon` with an empty label (chevron should be hidden)
+st.menu_button(
+    "",
+    options=["Option A", "Option B"],
+    icon=":material/more_vert:",
+    key="more_vert_icon_param_button",
+)

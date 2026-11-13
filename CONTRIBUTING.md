@@ -109,9 +109,13 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
 | `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
 | `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
-| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `fixing-streamlit-ci` | When CI checks fail on your branch or PR and you need to diagnose and fix errors |
 | `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
+| `fixing-develop-ci` | When push CI fails on a commit merged into `develop`: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
+| `fixing-nightly` | When a nightly build fails: reruns transient failures, fixes real breakages in a PR, or reports what needs a maintainer |
+| `fixing-ci-annotations` | When passing unit-test jobs on `develop` leave warnings, deprecations, or tool notices as check-run annotations that should be fixed |
 | `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end, or want the next papercut enhancement selected automatically |
+| `implementing-bug-fix` | When you have a GitHub bug issue to reproduce and fix end-to-end, or want the next feasible confirmed P0-P3 bug selected automatically |
 | `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
 | `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
 | `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
@@ -120,6 +124,7 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
 | `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
 | `generating-changelog` | When preparing release notes between two git tags |
+| `releasing-streamlit` | Explicit `/releasing-streamlit <version>` only: drives a core or patch release from `wiki/release-process.md`, checking what is already done and pausing at each human gate |
 | `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
 | `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
 | `reviewing-readability` | When reviewing a PR, branch, or changes for comment, docstring, and naming readability — produces findings with concrete proposed rewrites |

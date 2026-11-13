@@ -829,6 +829,27 @@ describe("Popover chevron visibility", () => {
     expect(button).not.toHaveTextContent("expand_less")
   })
 
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when icon is %s and label is empty", async icon => {
+    const user = userEvent.setup()
+    const props = getProps({ label: "", icon })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent(icon.slice(":material/".length, -1))
+    expect(button).not.toHaveTextContent("expand_more")
+
+    await user.click(button)
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
   it("shows chevron for regular labels", () => {
     const props = getProps({ label: "Actions" })
     render(
@@ -854,7 +875,37 @@ describe("Popover chevron visibility", () => {
 
     const button = screen.getByTestId("stPopoverButton")
     expect(button).toHaveTextContent("expand_more")
+    expect(button).not.toHaveAttribute("aria-label")
   })
+
+  it.each([
+    [":material/more_vert:", "", "More options"],
+    [":material/more_horiz:", "", "More options"],
+    [":material/menu:", "", "Menu"],
+    [undefined, ":material/more_vert:", "More options"],
+  ])(
+    "names the trigger and dialog by purpose when icon is %s and label is %s",
+    async (icon, label, expectedName) => {
+      const user = userEvent.setup()
+      const props = getProps({ label, icon })
+      render(
+        <Popover {...props}>
+          <div>content</div>
+        </Popover>
+      )
+
+      const button = screen.getByRole("button", { name: expectedName })
+      expect(button).toBeVisible()
+      expect(
+        screen.queryByRole("button", {
+          name: /more_vert|more_horiz|menu icon/,
+        })
+      ).not.toBeInTheDocument()
+
+      await user.click(button)
+      expect(screen.getByRole("dialog", { name: expectedName })).toBeVisible()
+    }
+  )
 })
 
 describe("clampPopoverSize", () => {

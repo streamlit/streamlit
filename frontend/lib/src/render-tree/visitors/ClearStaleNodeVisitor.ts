@@ -36,6 +36,15 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *    which means they are stale.
  * 4. We recursively clear our children.
  *
+ * Nodes of a fragment in `preservedFragmentIds` are kept with their whole
+ * subtree. The server lists a fragment there when it dropped that fragment's
+ * output from this run because the fragment is about to rerun, so its existing
+ * content stays until its own rerun cleans it up.
+ *
+ * If a node's `pendingSkeleton` comes from this run, no new content replaced
+ * the node, so the visitor swaps in that skeleton. The agent API needs no
+ * matching rule: its message buffer already holds the skeleton delta.
+ *
  * Keep in sync with `AgentSessionClient._drop_stale_deltas` in
  * `lib/streamlit/runtime/agent/interaction.py`, which applies the same rule to
  * the agent API's message buffer. The agent API checks writes against what
@@ -44,7 +53,7 @@ import type { AppNodeVisitor } from "./AppNodeVisitor.interface"
  *
  * Usage:
  * ```typescript
- * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock)
+ * const visitor = new ClearStaleNodeVisitor(currentScriptRunId, fragmentIdsThisRun, fragmentIdOfBlock, preservedFragmentIds)
  * const newNode = node.accept(visitor)
  * // newNode will be undefined if the node should be filtered out
  * ```
@@ -55,22 +64,41 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
   private readonly currentScriptRunId: string
   private readonly fragmentIdsThisRun: string[]
   private readonly fragmentIdOfBlock?: string
+  private readonly preservedFragmentIds: ReadonlySet<string>
 
   constructor(
     currentScriptRunId: string,
     fragmentIdsThisRun?: string[],
-    fragmentIdOfBlock?: string
+    fragmentIdOfBlock?: string,
+    preservedFragmentIds: ReadonlySet<string> = new Set()
   ) {
     this.currentScriptRunId = currentScriptRunId
     this.fragmentIdsThisRun = fragmentIdsThisRun ?? []
     this.fragmentIdOfBlock = fragmentIdOfBlock
+    this.preservedFragmentIds = preservedFragmentIds
   }
 
   get isFragmentRun(): boolean {
     return this.fragmentIdsThisRun.length > 0
   }
 
+  private isPreserved(node: BlockNode | ElementNode): boolean {
+    return (
+      node.fragmentId !== undefined &&
+      this.preservedFragmentIds.has(node.fragmentId)
+    )
+  }
+
   visitBlockNode(node: BlockNode): AppNode | undefined {
+    if (this.isPreserved(node)) {
+      return node
+    }
+
+    // No new content replaced the skeleton this run, so it takes the slot.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
+    }
+
     let clearStaleNodeVisitor: ClearStaleNodeVisitor | null = null
 
     if (!this.isFragmentRun) {
@@ -101,7 +129,8 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
         clearStaleNodeVisitor = new ClearStaleNodeVisitor(
           this.currentScriptRunId,
           this.fragmentIdsThisRun,
-          node.fragmentId
+          node.fragmentId,
+          this.preservedFragmentIds
         )
       }
     }
@@ -165,6 +194,15 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
     // at the same delta path.
     if (node.element.type === "toast") {
       return node
+    }
+
+    if (this.isPreserved(node)) {
+      return node
+    }
+
+    // No new content replaced the skeleton this run, so it takes the slot.
+    if (node.pendingSkeleton?.scriptRunId === this.currentScriptRunId) {
+      return node.pendingSkeleton
     }
 
     if (this.isFragmentRun) {

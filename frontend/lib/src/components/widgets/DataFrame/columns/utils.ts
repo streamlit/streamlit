@@ -175,6 +175,20 @@ export function hasTooltip(cell: BaseGridCell): cell is CellWithTooltip {
     Object.hasOwn(cell, "tooltip") && (cell as CellWithTooltip).tooltip !== ""
   )
 }
+/** Default token drawn for a missing value (null, NaN, etc.). */
+export const DEFAULT_MISSING_PLACEHOLDER = "None"
+
+/**
+ * Column kinds that draw their own missing-value state (usually an empty
+ * cell) instead of the missing placeholder.
+ */
+export const SELF_DRAWN_MISSING_KINDS: ReadonlySet<string> = new Set([
+  "checkbox",
+  "line_chart",
+  "bar_chart",
+  "progress",
+])
+
 /**
  * Interface used for indicating if a cell contains no value.
  */
