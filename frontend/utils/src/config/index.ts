@@ -85,10 +85,11 @@ export type AppConfig = {
  */
 export type MetricsConfig = {
   /**
-   * URL to send metrics data to via POST request.
+   * URL to send metrics data to via POST request. Override URLs must use
+   * `https://`; other schemes turn HTTP metrics off.
    * Setting to "postMessage" sends metrics events via postMessage to host.
    * Setting to "off" disables metrics collection.
-   * If undefined, metricsUrl requested from centralized config file.
+   * If undefined or "", metricsUrl is requested from the centralized config file.
    */
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   metricsUrl?: string | "postMessage" | "off"
