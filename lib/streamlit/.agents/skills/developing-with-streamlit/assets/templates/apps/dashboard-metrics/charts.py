@@ -100,7 +100,7 @@ def describe_breakdown(
     latest = values.iloc[-1]
     span = _span(title, series, source, x_col)
     if shares:
-        return f"{span}: {latest.idxmax()} largest at {latest.max():.0f}%"
+        return f"{span}: {latest.idxmax()} largest at {latest.max():.0%}"
     totals = values.sum(axis=1)
     if not totals.iloc[0]:
         return f"{span}: latest total {totals.iloc[-1]:,.0f}"
@@ -121,13 +121,14 @@ def _time_series_option(
     # Without ``scale``, the axis always starts at zero.
     y_axis: dict[str, Any] = {"type": "value", "scale": not y_from_zero}
     if show_percent:
-        y_axis |= {"max": 100, "axisLabel": {"formatter": "{value}%"}}
+        # Shares are 0-1, and "percent" shows them as 0% to 100%.
+        y_axis |= {"max": 1, "axisLabel": {"formatter": "percent"}}
     return {
         "dataset": {"source": source},
         "legend": {},
         "tooltip": {
             "trigger": "axis",
-            "valueFormatter": "%.1f%%" if show_percent else VALUE_FORMAT,
+            "valueFormatter": "percent" if show_percent else VALUE_FORMAT,
         },
         "xAxis": {"type": "time"},
         "yAxis": y_axis,
@@ -256,10 +257,9 @@ def breakdown_chart(
     """
     show_percent = show_percent and chart_type == "bar"
     if show_percent:
-        # ECharts label templates can't multiply values, so scale shares to 0-100.
         wide = wide.copy()
         values = wide[categories]
-        wide[categories] = values.div(values.sum(axis=1), axis=0) * 100
+        wide[categories] = values.div(values.sum(axis=1), axis=0)
 
     # ``chart_type`` is also the ECharts series type ("line" or "bar").
     extra: dict[str, Any] = (

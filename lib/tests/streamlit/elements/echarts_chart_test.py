@@ -1065,6 +1065,89 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    @parameterized.expand(
+        [
+            ("axis_label", {"yAxis": {"axisLabel": {"formatter": "%q"}}}, "%q"),
+            (
+                "axis_list",
+                {"xAxis": [{}, {"axisLabel": {"formatter": "100%"}}]},
+                "100%",
+            ),
+            (
+                "axis_pointer_label",
+                {"xAxis": {"axisPointer": {"label": {"formatter": "%q"}}}},
+                "%q",
+            ),
+            (
+                "series_label",
+                {"series": [{"type": "bar", "label": {"formatter": "%.2q"}}]},
+                "%.2q",
+            ),
+            (
+                "series_end_label",
+                {"series": {"type": "line", "endLabel": {"formatter": "%q"}}},
+                "%q",
+            ),
+            (
+                "timeline",
+                {"baseOption": {"radiusAxis": {"axisLabel": {"formatter": "%q"}}}},
+                "%q",
+            ),
+            (
+                "media",
+                {"media": [{"option": {"yAxis": {"axisLabel": {"formatter": "%q"}}}}]},
+                "%q",
+            ),
+        ]
+    )
+    def test_warns_on_malformed_label_number_format(
+        self, _name: str, spec: dict[str, Any], formatter: str
+    ) -> None:
+        """A label formatter that looks like a broken printf format is logged."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 1
+        assert f"label `formatter` of {formatter!r}" in logs.output[0]
+        assert "neither a number format nor an ECharts template" in logs.output[0]
+        # The chart still renders, and the spec reaches the frontend unchanged.
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec == spec
+
+    @parameterized.expand(
+        [
+            ("named_format", "percent"),
+            ("printf_format", "%,.0f"),
+            ("printf_with_escaped_percent", "%.1f%%"),
+            ("template", "{value}%"),
+            ("template_with_space", "{value} %"),
+            ("empty_string", ""),
+            ("null", None),
+            ("non_string", 42),
+            ("literal_text", "km"),
+        ]
+    )
+    def test_no_warning_for_label_formatters(self, _name: str, formatter: Any) -> None:
+        """Number formats, templates, and other literal text don't log."""
+        spec = {
+            "xAxis": {"type": "category", "axisLabel": {"formatter": formatter}},
+            "yAxis": {"type": "value", "axisLabel": {"formatter": formatter}},
+            "series": [
+                {
+                    "type": "bar",
+                    "label": {"formatter": formatter},
+                    # Per-data-item labels are not walked, matching the frontend.
+                    "data": [{"value": 1, "label": {"formatter": "%q"}}],
+                }
+            ],
+        }
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec)
+
+        mock_warning.assert_not_called()
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""

@@ -244,20 +244,17 @@ def time_series(endpoints: list[str], rolling_label: str, normalize: bool) -> No
     wide = data.pivot_table(
         index="date", columns="endpoint", values="request_count", aggfunc="sum"
     )[endpoints]
-    if normalize:
-        # Plot percentage points so the axis labels can show a "%" suffix.
-        wide *= 100
     option = {
         "dataset": {"source": wide.reset_index()},
         "legend": {"type": "scroll"},
         "tooltip": {
             "trigger": "axis",
-            "valueFormatter": "%.1f%%" if normalize else "%,.0f",
+            "valueFormatter": "percent" if normalize else "%,.0f",
         },
         "xAxis": {"type": "time"},
         "yAxis": {
             "type": "value",
-            "axisLabel": {"formatter": "{value}%"} if normalize else {},
+            "axisLabel": {"formatter": "percent"} if normalize else {},
         },
         "dataZoom": [{"type": "inside"}, {"type": "slider"}],
         "series": [
