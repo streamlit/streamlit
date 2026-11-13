@@ -281,7 +281,7 @@ with chart_col:
         # Pivot to one column per endpoint, in the metric cards' order, so each
         # line series can read its own dataset column.
         wide = filtered_data.pivot_table(
-            index="date", columns="endpoint", values="request_count"
+            index="date", columns="endpoint", values="request_count", aggfunc="sum"
         )[selected_endpoints]
         if normalize:
             # Plot percentage points so the axis labels can show a "%" suffix.

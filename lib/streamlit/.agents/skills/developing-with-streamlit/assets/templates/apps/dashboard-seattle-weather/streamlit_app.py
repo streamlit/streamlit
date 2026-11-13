@@ -83,9 +83,10 @@ def year_series_option(
 def temperature_option(df: pd.DataFrame) -> dict[str, Any]:
     """Build floating bars from each day's low to its high, one series per year.
 
-    Bar series have no low value, so each year stacks a transparent bar at the
-    low temperature under a visible bar as tall as the day's range. Unlike a
-    ``lines`` series, this keeps the data in ``dataset.source``.
+    ECharts bars always start at the axis baseline, so each year stacks a
+    transparent bar at the low temperature under a visible bar as tall as the
+    day's range. Unlike a ``lines`` series, this keeps the data in
+    ``dataset.source``.
     """
     temps = df.assign(
         low=df["temp_min"], high=df["temp_max"], range=df["temp_max"] - df["temp_min"]

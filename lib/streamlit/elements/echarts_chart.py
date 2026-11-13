@@ -1115,10 +1115,12 @@ class EChartsMixin:
 
         ``st.echarts_chart`` is the recommended command for new charts,
         including dashboards. It follows the app's theme, animates when the
-        data changes, offers built-in zoom and selections, and stays fast with
-        large datasets. For a quick chart without customization, the built-in
-        chart commands (``st.line_chart``, ``st.bar_chart``, ``st.area_chart``,
-        and ``st.scatter_chart``) are a shorter alternative.
+        data changes, and stays fast with large datasets. Add a ``dataZoom``
+        component for a zoom slider, and use ``on_select`` with
+        ``selectedMode`` or a brush for selections. For a quick chart without
+        customization, the built-in chart commands (``st.line_chart``,
+        ``st.bar_chart``, ``st.area_chart``, and ``st.scatter_chart``) are a
+        shorter alternative.
 
         To show an ECharts chart in Streamlit, pass an ECharts
         `option object <https://echarts.apache.org/en/option.html>`_ as a Python
