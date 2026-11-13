@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act } from "react"
+import { act, StrictMode } from "react"
 
 import {
   render,
@@ -86,6 +86,7 @@ import {
   type PageConfig,
   type PageInfo,
   type PageNotFound,
+  type PageProfile,
   type ParentMessage,
   type RunIdentity,
   SessionEvent,
@@ -93,6 +94,7 @@ import {
   type StopAutoRerun,
   TextInput,
 } from "@streamlit/protobuf"
+import { isLocalOrPrivateHostname } from "@streamlit/utils"
 
 import { App, LOG, type Props } from "./App"
 import { SKILLS_NUDGE_SNOOZED_AT_KEY } from "./components/SkillsNudgeToast/skillsNudge"
@@ -104,7 +106,14 @@ vi.mock("@streamlit/utils", async () => {
 
   // Create a new object with the getter defined properly
   // We must use Object.defineProperty to ensure the getter works correctly
-  const mocked = { ...actual }
+  const mocked = {
+    ...actual,
+    // jsdom serves tests from localhost, so render timing tests override this.
+    isLocalOrPrivateHostname: vi.fn(
+      (actual as { isLocalOrPrivateHostname: (hostname: string) => boolean })
+        .isLocalOrPrivateHostname
+    ),
+  }
   Object.defineProperty(mocked, "StreamlitConfig", {
     get() {
       return globalThis.__mockStreamlitConfig
@@ -450,6 +459,7 @@ type ForwardMsgType =
   | NewSession.$Properties
   | PageConfig.$Properties
   | PageInfo.$Properties
+  | PageProfile.$Properties
   | ParentMessage.$Properties
   | PageNotFound.$Properties
   | StopAutoRerun.$Properties
@@ -752,6 +762,104 @@ describe("App", () => {
     sendNewSession(NEW_SESSION_JSON)
 
     expect(metricsManager.enqueue).toHaveBeenCalledWith("updateReport")
+  })
+
+  describe("render timing", () => {
+    const sendMeasuredNewSession = (gatherUsageStats = true): void => {
+      sendNewSession({
+        ...NEW_SESSION_JSON,
+        config: { ...NEW_SESSION_JSON.config, gatherUsageStats },
+      })
+    }
+
+    const getEnqueueCalls = (eventName: string): unknown[][] =>
+      vi
+        .mocked(getStoredValue<MetricsManager>(MetricsManager).enqueue)
+        .mock.calls.filter(([name]) => name === eventName)
+
+    it("joins the renderTiming event to the run's pageProfile event", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+
+      sendMeasuredNewSession()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+      ])
+      await waitFor(() => {
+        expect(getEnqueueCalls("renderTiming")).toEqual([
+          [
+            "renderTiming",
+            {
+              runIndex: 0,
+              renderTiming: expect.objectContaining({
+                connectedMs: expect.any(Number),
+                scriptFinishedMs: expect.any(Number),
+                fullyLoadedMs: expect.any(Number),
+                wasSuperseded: false,
+              }),
+            },
+          ],
+        ])
+      })
+    })
+
+    it("keeps measuring after a StrictMode remount", () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValue(false)
+      try {
+        render(
+          <StrictMode>
+            <RootStyleProvider theme={getDefaultTheme()}>
+              <WindowDimensionsProvider>
+                <App {...getProps()} />
+              </WindowDimensionsProvider>
+            </RootStyleProvider>
+          </StrictMode>
+        )
+
+        sendMeasuredNewSession()
+        sendForwardMessage("pageProfile", { execTime: 5 })
+
+        expect(getEnqueueCalls("pageProfile")).toEqual([
+          ["pageProfile", expect.objectContaining({ runIndex: 0 })],
+        ])
+      } finally {
+        vi.mocked(isLocalOrPrivateHostname).mockReset()
+      }
+    })
+
+    it("doesn't measure apps served from a local address", () => {
+      renderApp(getProps())
+
+      sendMeasuredNewSession()
+      sendForwardMessage("pageProfile", { execTime: 5 })
+
+      expect(isLocalOrPrivateHostname).toHaveBeenLastCalledWith(
+        window.location.hostname
+      )
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+    })
+
+    it("doesn't measure when usage stats are off", async () => {
+      vi.mocked(isLocalOrPrivateHostname).mockReturnValueOnce(false)
+      renderApp(getProps())
+
+      sendMeasuredNewSession(false)
+      sendForwardMessage("pageProfile", { execTime: 5 })
+      await act(async () => {
+        await new Promise(resolve => {
+          setTimeout(resolve, 50)
+        })
+      })
+
+      expect(getEnqueueCalls("pageProfile")).toEqual([
+        ["pageProfile", expect.not.objectContaining({ runIndex: 0 })],
+      ])
+      expect(getEnqueueCalls("renderTiming")).toEqual([])
+    })
   })
 
   it("reruns when the user presses 'r'", async () => {
@@ -5031,7 +5139,10 @@ describe("App", () => {
     it("does not show skeleton when embedded with hide_loading_screen option", () => {
       // This tests the embedding use case where the host wants to hide loading screens
       Object.defineProperty(window, "location", {
-        value: { search: "?embed_options=hide_loading_screen" },
+        value: {
+          hostname: "localhost",
+          search: "?embed_options=hide_loading_screen",
+        },
         writable: true,
         configurable: true,
       })
@@ -5049,7 +5160,10 @@ describe("App", () => {
     it("shows 'Please wait...' text when embedded with V1 loading screen", async () => {
       // This tests backwards compatibility for older embedding integrations
       Object.defineProperty(window, "location", {
-        value: { search: "?embed_options=show_loading_screen_v1" },
+        value: {
+          hostname: "localhost",
+          search: "?embed_options=show_loading_screen_v1",
+        },
         writable: true,
         configurable: true,
       })

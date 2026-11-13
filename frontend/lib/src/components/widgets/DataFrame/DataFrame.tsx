@@ -67,6 +67,7 @@ import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
+import { useElementLoadCallback } from "~lib/hooks/useElementLoadState"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -214,6 +215,9 @@ function DataFrame({
   // table of this range so the page can split instead of leaving a blank
   // strip behind a non-fragmenting canvas.
   const visibleRegionRef = useRef<Rectangle | null>(null)
+  // The grid reports its first visible region once it has laid out and drawn
+  // its canvas, which is when the dataframe counts as drawn.
+  const markGridDrawn = useElementLoadCallback("draw", true)
   // Stores original data row indices that need remapping after a sort operation.
   // Used to preserve row selections (single-row, multi-row, and
   // single-row-required modes) when columns are sorted on the frontend.
@@ -1016,12 +1020,15 @@ function DataFrame({
 
   const handleVisibleRegionChanged = useCallback(
     (range: Rectangle): void => {
+      if (visibleRegionRef.current === null) {
+        markGridDrawn()
+      }
       visibleRegionRef.current = range
       if (isLazy) {
         onVisibleRegionChanged(range)
       }
     },
-    [isLazy, onVisibleRegionChanged]
+    [isLazy, onVisibleRegionChanged, markGridDrawn]
   )
 
   return (
