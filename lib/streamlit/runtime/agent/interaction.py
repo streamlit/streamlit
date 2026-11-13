@@ -1350,24 +1350,29 @@ def _resolve_page(
 def _encode_query_params(query_params: Any) -> str:
     """Encode ``query_params`` as the query string a rerun sends.
 
-    Refuses one longer than the runtime accepts, which it would otherwise
+    A single string is a one-value list, the way ``st.query_params`` takes
+    one. Refuses one longer than the runtime accepts, which it would otherwise
     replace with an empty query string, so the run would not see any of it.
     """
     if not isinstance(query_params, dict):
         raise AgentRequestError(
             "invalid_request",
-            "`query_params` must be an object mapping names to lists of strings.",
+            "`query_params` must be an object mapping names to strings or lists "
+            "of strings.",
         )
 
     pairs: list[tuple[str, str]] = []
     for name, values in query_params.items():
+        if isinstance(values, str):
+            pairs.append((name, values))
+            continue
         if not isinstance(values, list) or not all(
             isinstance(value, str) for value in values
         ):
             raise AgentRequestError(
                 "invalid_request",
-                f"Query parameter {name!r} must be a list of strings, such as "
-                '["2001"].',
+                f"Query parameter {name!r} must be a string or a list of strings, "
+                'such as "2001" or ["2001", "2002"].',
             )
         pairs.extend((name, value) for value in values)
     query_string = urlencode(pairs)
