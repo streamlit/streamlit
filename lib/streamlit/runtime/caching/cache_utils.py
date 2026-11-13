@@ -125,10 +125,19 @@ _COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
 
 
 @contextlib.contextmanager
-def _hold_compute_lock(lock: threading.Lock) -> Generator[None, None, None]:
-    """Acquire a compute lock while allowing a waiting run to stop or rerun."""
+def _hold_compute_lock(
+    lock: threading.Lock,
+    call_timer: cache_call_timer.CacheCallTimer | None = None,
+) -> Generator[None, None, None]:
+    """Acquire a compute lock while allowing a waiting run to stop or rerun.
+
+    Only time spent blocked on a lock held by another caller is recorded as
+    ``call_timer``'s wait.
+    """
     yield_check = None
     if not lock.acquire(blocking=False):
+        if call_timer is not None:
+            call_timer.begin_wait()
         # Stopping inside a cached function would discard its outer computation.
         # A thread without a script run has no stop/rerun callback.
         yield_check = None if in_cached_function.get() else get_run_yield_check()
@@ -137,6 +146,8 @@ def _hold_compute_lock(lock: threading.Lock) -> Generator[None, None, None]:
         else:
             while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
                 yield_check()
+        if call_timer is not None:
+            call_timer.end_wait()
 
     try:
         # A stop or rerun may arrive during the timed acquire just before the
@@ -939,9 +950,7 @@ class CachedFunc(Generic[P, R]):
         #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
         #   a wee bit slower, because we do two lookups for the entry.
 
-        call_timer.begin_wait()
-        with _hold_compute_lock(cache.compute_value_lock(value_key)):
-            call_timer.end_wait()
+        with _hold_compute_lock(cache.compute_value_lock(value_key), call_timer):
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.

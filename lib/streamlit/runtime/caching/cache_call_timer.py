@@ -23,6 +23,8 @@ page profile, so the cache times can be subtracted from user code:
   outer call's compute time.
 - It is not inside a tracked command, such as the ``st.cache_resource`` call
   inside ``st.connection``, whose time is already counted as command time.
+- It finishes before the run's page profile is built. Counts and times are
+  added together when the call finishes.
 
 Each recorded call's time is split into waiting for another caller's
 computation, computing the value, and the remaining cache overhead (hashing
@@ -57,8 +59,11 @@ class CacheCallTimer:
     order; ``finish()`` closes a phase left open by an exception.
     """
 
-    # Class-level defaults for the miss-only state, so a hit only pays for the
-    # attributes set in __init__.
+    # Class-level defaults for the per-call state, so a hit only pays for the
+    # attributes it sets.
+    _is_hit: bool = False
+    _is_stale: bool = False
+    _is_miss: bool = False
     _wait_start: float | None = None
     _wait_time: float = 0.0
     _compute_start: float | None = None
@@ -78,14 +83,12 @@ class CacheCallTimer:
         self._start = time.perf_counter()
         self._command_time_at_start = thread_stats.tracked_command_time
         thread_stats.open_call(self._start)
-        totals.calls += 1
 
     def record_hit(self, *, is_stale: bool = False) -> None:
         if self._totals is None:
             return
-        self._totals.hits += 1
-        if is_stale:
-            self._totals.stale_hits += 1
+        self._is_hit = True
+        self._is_stale = is_stale
 
     def begin_wait(self) -> None:
         if self._totals is not None:
@@ -98,9 +101,9 @@ class CacheCallTimer:
 
     def begin_compute(self) -> None:
         """Start timing the cached function, and count the call as a miss."""
-        if self._thread_stats is None or self._totals is None:
+        if self._thread_stats is None:
             return
-        self._totals.misses += 1
+        self._is_miss = True
         self._compute_start = time.perf_counter()
         self._compute_command_start = self._thread_stats.tracked_command_time
 
@@ -114,10 +117,21 @@ class CacheCallTimer:
         self._compute_start = None
 
     def finish(self) -> None:
-        """Add the call's times to the run totals."""
+        """Add the call's counts and times to the run totals.
+
+        Nothing is added before this, so a call still running when the run's
+        page profile is built is left out of it entirely.
+        """
         thread_stats, totals = self._thread_stats, self._totals
         if thread_stats is None or totals is None:
             return
+        totals.calls += 1
+        if self._is_hit:
+            totals.hits += 1
+            if self._is_stale:
+                totals.stale_hits += 1
+        if self._is_miss:
+            totals.misses += 1
         if self._wait_start is not None:
             self.end_wait()
         if self._compute_start is not None:

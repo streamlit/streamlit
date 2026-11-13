@@ -72,6 +72,8 @@ message PageProfile {
 //   function are part of the outer call's compute time and are not counted.
 // - It is not inside a tracked command, such as the st.cache_resource call
 //   inside st.connection, whose time is already in that command's time.
+// - It finished before this profile was built. A call still running on a
+//   thread the script didn't wait for is left out entirely.
 // The time of tracked commands that run during a recorded call (st.* calls
 // inside the cached function, and the cache write recorded as
 // _cache_data_object or _cache_resource_object) is excluded from its times.

@@ -219,6 +219,8 @@ def test_waiting_for_another_callers_computation(
     assert totals.overhead_time < totals.wait_time
     other_totals = _totals(other_ctx, name)
     assert (other_totals.calls, other_totals.hits, other_totals.misses) == (1, 0, 1)
+    # Taking a compute lock no one else holds is not waiting.
+    assert other_totals.wait_time == 0
 
 
 def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
@@ -415,6 +417,34 @@ def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> No
     assert (totals.calls, totals.hits, totals.misses) == (20, 16, 4)
     # The main thread and each of the four workers keep their own totals.
     assert len(ctx.shared.cache_stats._threads) == 5
+
+
+def test_call_still_running_is_not_counted(ctx: ScriptRunContext) -> None:
+    """A call on a thread that is still running when the totals are read, such
+    as one the script started and didn't join, adds nothing until it finishes.
+    """
+    computing = threading.Event()
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        computing.set()
+        release.wait(5)
+        return 1
+
+    thread = add_script_run_ctx(threading.Thread(target=load), ctx)
+    thread.start()
+    assert computing.wait(5)
+
+    running = _totals(ctx, "cache_data")
+    assert (running.calls, running.hits, running.misses) == (0, 0, 0)
+    assert running.total_time == 0
+
+    release.set()
+    thread.join(5)
+    finished = _totals(ctx, "cache_data")
+    assert (finished.calls, finished.hits, finished.misses) == (1, 0, 1)
+    assert finished.compute_time > 0
 
 
 def test_calls_without_a_script_run_are_not_recorded(ctx: ScriptRunContext) -> None:
