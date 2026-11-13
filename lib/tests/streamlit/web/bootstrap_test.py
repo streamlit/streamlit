@@ -378,6 +378,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch.object(Secrets, "_parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -501,6 +502,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch.object(Secrets, "_parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -510,6 +512,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch.object(Secrets, "_parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
@@ -804,6 +807,7 @@ class BootstrapUvloopTest(TestCase):
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
     """Test bootstrap functions for ASGI app mode."""
 
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap.report_watchdog_availability")
     @patch("streamlit.web.bootstrap._install_config_watchers")
     @patch("streamlit.web.bootstrap._fix_sys_argv")
@@ -959,6 +963,7 @@ class BootstrapPydeckMapboxTest(TestCase):
 @patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
 @patch("streamlit.web.bootstrap._print_url", Mock())
 @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
 @patch("streamlit.web.bootstrap.cli_util.open_browser")
 class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
     """Tests for the maybe_open_browser path inside _on_server_start."""
@@ -1161,7 +1166,14 @@ def test_global_skills_update_errors_never_escape() -> None:
 
     mock_excepthook.assert_not_called()
 
-    with patch.object(
-        bootstrap.threading, "Thread", side_effect=RuntimeError("can't start")
+    with (
+        patch.object(
+            bootstrap.threading, "Thread", side_effect=RuntimeError("can't start")
+        ),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
     ):
         bootstrap._update_global_skills_in_background()
+
+    mock_logger.debug.assert_called_once_with(
+        "Could not start the global skills update", exc_info=True
+    )

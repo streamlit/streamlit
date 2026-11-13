@@ -378,17 +378,17 @@ _SHIPPED_SKILL = skills._get_source_skills_dir() / "developing-with-streamlit"
 
 
 @pytest.mark.parametrize(
-    "name",
+    "relative_path",
     [relative.as_posix() for relative in skills._skill_files(_SHIPPED_META_SKILL)],
 )
-def test_shipped_meta_skill_files_are_listed_as_official(name: str) -> None:
+def test_shipped_meta_skill_files_are_listed_as_official(relative_path: str) -> None:
     """Every shipped meta-skill file is in the official digest list, so the next
     release can update copies installed from this one.
     """
-    digest = skills._meta_skill_digest(_SHIPPED_META_SKILL / name)
+    digest = skills._meta_skill_digest(_SHIPPED_META_SKILL / relative_path)
 
-    assert digest in skills._META_SKILL_DIGESTS.get(name, frozenset()), (
-        f"Add {digest!r} for {name!r} to _META_SKILL_DIGESTS in "
+    assert digest in skills._META_SKILL_DIGESTS.get(relative_path, frozenset()), (
+        f"Add {digest!r} for {relative_path!r} to _META_SKILL_DIGESTS in "
         "lib/streamlit/web/skills.py, and keep the digests already there."
     )
 

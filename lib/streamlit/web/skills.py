@@ -1751,18 +1751,21 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         return "check_failed"
 
 
-# SHA-256 digests (with LF line endings) of every file in every official release
-# of the global meta-skill, keyed by path inside the skill folder. The update
-# replaces a global copy only when all its files are listed here, so it leaves
-# alone:
+# SHA-256 digests of every file in every official release of the global
+# meta-skill, hashed after normalizing line endings to LF, keyed by path inside
+# the skill folder. The update replaces a global copy only when all its files are
+# listed here, so it leaves alone:
 # - a copy the user edited
 # - another author's skill with the same name
 # - a copy of the full bundled skill
 # - a copy from a newer release, so an older Streamlit never downgrades it
 # When you change a meta-skill file, add its new digest and keep the old ones;
 # test_shipped_meta_skill_files_are_listed_as_official fails and prints the
-# digest to add. Never revert a file to an earlier release's exact content, or
-# an older Streamlit could take the newer copy for an outdated one and replace it.
+# digest to add. When you remove a file, keep its path and digests here: the
+# update never deletes files, so existing copies keep it and would otherwise stop
+# counting as official. Never revert a file to an earlier release's exact
+# content, or an older Streamlit could take the newer copy for an outdated one
+# and replace it.
 _META_SKILL_DIGESTS: Final[dict[str, frozenset[str]]] = {
     "SKILL.md": frozenset(
         {
@@ -1794,12 +1797,13 @@ _MAX_META_SKILL_FILE_BYTES: Final = 256 * 1024
 
 
 def _skill_files(folder: Path) -> Iterator[Path]:
-    """Yield the paths of a skill folder's files, relative to it, in sorted order.
+    """Yield the paths of a skill folder's files, relative to it.
 
-    Skips hidden files and folders and ``__pycache__``, which are not part of a
-    skill, and does not descend into symlinked folders. Raises ``OSError`` when
-    a folder cannot be listed, so a partial listing never passes for the whole
-    skill.
+    Names are sorted within each folder, and a folder's files come before its
+    subfolders' files. Skips hidden files and folders and ``__pycache__``, which
+    are not part of a skill, and does not descend into symlinked folders. Raises
+    ``OSError`` when a folder cannot be listed, so a partial listing never
+    passes for the whole skill.
     """
 
     def raise_error(error: OSError) -> None:
@@ -1837,6 +1841,8 @@ def _digests_if_official(folder: Path) -> dict[str, str] | None:
 
     Returns ``None`` at the first file that is not a regular file, is too large,
     or is in no official release, so an unrelated folder is never read in full.
+    Raises ``OSError`` when a file or folder cannot be read, so a copy that is
+    only partly visible is never taken for official.
     """
     digests: dict[str, str] = {}
     for relative in _skill_files(folder):
@@ -1858,9 +1864,9 @@ def _digests_if_official(folder: Path) -> dict[str, str] | None:
 def _writes_follow_no_symlinks(target: Path, files: list[Path]) -> bool:
     """Whether writing ``files`` into ``target`` follows no symlink.
 
-    Each destination must be missing or a regular file, and each folder on the
-    way missing or a real directory, so an update never writes outside the
-    skill folder.
+    Each destination must be missing or a regular file, and each parent folder
+    missing or a real directory, so an update never writes outside the skill
+    folder.
     """
     for relative in files:
         parts = relative.parts
@@ -1909,7 +1915,8 @@ def _update_meta_skill_copy(
 
     Returns whether it updated the copy. ``bundled`` maps each bundled file to
     its digest, in write order. Skips a copy that is, or contains, a symlink,
-    since something else manages the files it points at. A symlinked folder
+    because whoever created the link, such as another skill manager, owns its
+    target. A symlinked folder
     above the copy, such as a ``~/.claude/skills`` kept in a dotfiles
     repository, is followed like a real one.
     """
@@ -1954,8 +1961,8 @@ def update_global_skills() -> None:
             for name in names
             if name != "SKILL.md"
         }
-        # Copies get the files in this order. SKILL.md goes last, so agents only
-        # see the new instructions once the scripts they call are in place.
+        # The update writes files in this order, with SKILL.md last, so agents
+        # only see the new instructions once the scripts they call are in place.
         bundled["SKILL.md"] = _meta_skill_digest(source / "SKILL.md")
         home = Path.home()
     except Exception as ex:
