@@ -199,6 +199,9 @@ jobs:
 
           Implement all PR-related documentation fixes directly. Do not ask for confirmation.
 
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc: this workflow cannot push them, so they are dropped.
+          List any needed updates to those files in work-tmp/changes.md instead.
+
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
           modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
           "
@@ -224,6 +227,9 @@ jobs:
 
           Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
 
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc: this workflow cannot push them, so they are dropped.
+          List any needed updates to those files in work-tmp/changes.md instead.
+
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
           modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
           "
@@ -239,6 +245,18 @@ jobs:
           fi
           if [ ! -f work-tmp/recent-merged-prs.json ]; then
             echo '[]' > work-tmp/recent-merged-prs.json
+          fi
+
+          # GITHUB_TOKEN cannot push any file under .github/workflows/, so drop
+          # those edits (and the Cursor rule generated from the workflows
+          # AGENTS.md) instead of failing the push in create-pr.
+          WORKFLOW_CHANGES=$(git status --porcelain -- .github/workflows .cursor/rules/workflows.mdc)
+          if [ -n "$WORKFLOW_CHANGES" ]; then
+            echo "::warning::Dropped edits the workflow token cannot push. Apply them by hand:"
+            echo "$WORKFLOW_CHANGES"
+            git diff -- .github/workflows .cursor/rules/workflows.mdc
+            git restore --source=HEAD --staged --worktree -- .github/workflows .cursor/rules/workflows.mdc
+            git clean -fd -- .github/workflows
           fi
 
           if [ -n "$(git status --porcelain)" ]; then
