@@ -122,6 +122,7 @@ def test_time_scale_counts_a_call_still_running() -> None:
 
 
 def test_cache_totals_add_scales_only_times() -> None:
+    """``add()`` scales the times by ``time_scale`` but never the counts."""
     totals = CacheTotals()
     totals.add(
         CacheTotals(

@@ -30,12 +30,7 @@ from streamlit import config, file_util, type_util, util
 from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.PageProfile_pb2 import (
-    Argument,
-    CacheTypeUsage,
-    Command,
-    PageProfile,
-)
+from streamlit.proto.PageProfile_pb2 import Argument, Command, PageProfile
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -251,7 +246,7 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "mediapipe",
 ]
 
-# The time.monotonic() value when the server process started, set by
+# The time.monotonic() value when the Streamlit runtime started, set by
 # mark_server_started().
 _server_started_at: float | None = None
 
@@ -632,6 +627,7 @@ def _set_command_time(
     ctx: ScriptRunContext | None,
     command_telemetry: Command,
     seconds: float,
+    *,
     is_command_listed: bool,
 ) -> None:
     """Set a tracked command's time, and report it to the run's cache totals.
@@ -767,7 +763,10 @@ def gather_metrics(
             # by deferring the rethrow.
             if tracking_activated and command_telemetry:
                 _set_command_time(
-                    ctx, command_telemetry, timer() - exec_start, is_command_listed
+                    ctx,
+                    command_telemetry,
+                    timer() - exec_start,
+                    is_command_listed=is_command_listed,
                 )
             raise
         finally:
@@ -777,7 +776,10 @@ def gather_metrics(
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
             _set_command_time(
-                ctx, command_telemetry, timer() - exec_start, is_command_listed
+                ctx,
+                command_telemetry,
+                timer() - exec_start,
+                is_command_listed=is_command_listed,
             )
 
         return result
@@ -793,7 +795,7 @@ def gather_metrics(
 
 
 def mark_server_started() -> None:
-    """Record when the server process started, for ``get_server_uptime_seconds``."""
+    """Record when the Streamlit runtime started, for ``get_server_uptime_seconds``."""
     global _server_started_at  # noqa: PLW0603
     _server_started_at = time.monotonic()
 
@@ -811,18 +813,18 @@ def _fill_cache_usage(
     server_uptime_seconds: int | None,
 ) -> None:
     """Copy the run's cached-call totals and the server uptime onto the profile."""
+    cache_usage = page_profile.cache_usage
     if server_uptime_seconds is not None:
-        page_profile.cache_usage.server_uptime_seconds = server_uptime_seconds
+        cache_usage.server_uptime_seconds = server_uptime_seconds
     if ctx is None:
         return
     cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
-    for totals, usage_field in (
-        (cache_data, "cache_data"),
-        (cache_resource, "cache_resource"),
+    for totals, usage in (
+        (cache_data, cache_usage.cache_data),
+        (cache_resource, cache_usage.cache_resource),
     ):
         if totals.calls == 0:
             continue
-        usage: CacheTypeUsage = getattr(page_profile.cache_usage, usage_field)
         usage.calls = totals.calls
         usage.hits = totals.hits
         usage.misses = totals.misses
@@ -837,6 +839,7 @@ def create_page_profile_message(
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
+    *,
     server_uptime_seconds: int | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
@@ -885,8 +888,7 @@ def create_page_profile_message(
         page_profile.uncaught_exception = uncaught_exception
 
     app_dir: str | None = None
-    ctx = get_script_run_ctx()
-    if ctx:
+    if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)

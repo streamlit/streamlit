@@ -1431,6 +1431,14 @@ def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
     assert not msg.page_profile.HasField("cache_usage")
 
 
+def test_create_page_profile_message_sends_zero_uptime() -> None:
+    """An uptime of 0, the server's first second, is still sent."""
+    msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=0)
+
+    assert msg.page_profile.cache_usage.HasField("server_uptime_seconds")
+    assert msg.page_profile.cache_usage.server_uptime_seconds == 0
+
+
 def test_server_uptime_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
     """Uptime is unknown until the server starts, then counts whole seconds."""
     monkeypatch.setattr(metrics_util, "_server_started_at", None)

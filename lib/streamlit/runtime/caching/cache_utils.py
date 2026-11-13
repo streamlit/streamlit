@@ -127,6 +127,7 @@ _COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
 @contextlib.contextmanager
 def _hold_compute_lock(
     lock: threading.Lock,
+    *,
     call_timer: cache_call_timer.CacheCallTimer | None = None,
 ) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun.
@@ -862,10 +863,11 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
-        # Each call counts as exactly one lookup, decided by this first read. The
-        # re-read under the compute lock belongs to the same call, so a caller that
-        # waits for another caller's computation still counts as a miss. The page
-        # profile's call_timer counts that caller as a hit and its wait separately.
+        # In cache_metrics, each call counts as exactly one lookup, decided by this
+        # first read. The re-read under the compute lock belongs to the same call, so
+        # a caller that waits for another caller's computation counts as a miss. The
+        # page profile's call_timer counts that caller as a hit and its wait
+        # separately.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:
@@ -950,7 +952,9 @@ class CachedFunc(Generic[P, R]):
         #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
         #   a wee bit slower, because we do two lookups for the entry.
 
-        with _hold_compute_lock(cache.compute_value_lock(value_key), call_timer):
+        with _hold_compute_lock(
+            cache.compute_value_lock(value_key), call_timer=call_timer
+        ):
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
@@ -968,8 +972,11 @@ class CachedFunc(Generic[P, R]):
             call_timer.begin_compute()
             compute_start = time.perf_counter()
             try:
-                with self._info.cached_message_replay_ctx.calling_cached_function(
-                    self._info.func
+                with (
+                    cache_call_timer.computing_cached_value(),
+                    self._info.cached_message_replay_ctx.calling_cached_function(
+                        self._info.func
+                    ),
                 ):
                     computed_value = self._info.func(*func_args, **func_kwargs)
             finally:
@@ -1166,8 +1173,11 @@ class CachedFunc(Generic[P, R]):
                 call_timer.begin_compute()
                 compute_start = time.perf_counter()
                 try:
-                    with self._info.cached_message_replay_ctx.calling_cached_function(
-                        self._info.func
+                    with (
+                        cache_call_timer.computing_cached_value(),
+                        self._info.cached_message_replay_ctx.calling_cached_function(
+                            self._info.func
+                        ),
                     ):
                         # `is_async` guarantees the call returns a coroutine; cast so
                         # the type checker allows awaiting it (the wrapper's `R` is the

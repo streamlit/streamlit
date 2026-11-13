@@ -54,7 +54,7 @@ message PageProfile {
   // Agent API activity in this server process. Unset while every count is zero.
   AgentApiUsage agent_api_usage = 15;
   // st.cache_data and st.cache_resource calls during this script run, and how
-  // long the server process had been running when the run started.
+  // long the Streamlit server had been running when the run started.
   CacheUsage cache_usage = 16;
 }
 
@@ -69,34 +69,38 @@ message PageProfile {
 //   Calls without a script run, such as background refreshes
 //   (refresh_mode="background") and st.App lifespan tasks, are not recorded.
 // - It is the outermost cached call. Calls made inside another cached
-//   function are part of the outer call's compute time and are not counted.
+//   function, including on threads it passes to add_script_run_ctx, are part
+//   of the outer call's compute time and are not counted. A thread that
+//   attaches itself with add_script_run_ctx is still recorded.
 // - It is not inside a tracked command, such as the st.cache_resource call
 //   inside st.connection, whose time is already in that command's time.
 // - It finished before this profile was built. A call still running on a
-//   thread the script didn't wait for is left out entirely.
+//   thread the script didn't wait for is left out.
 // The time of tracked commands that run during a recorded call (st.* calls
 // inside the cached function, and the cache write recorded as
 // _cache_data_object or _cache_resource_object) is excluded from its times.
 //
-// Parallel fragment workers' times are added to the run's totals like their
-// command times, so with concurrent workers both can exceed the run's
-// wall-clock time. Async cached calls awaited concurrently on one thread
-// are scaled down to the time during which any of them ran.
+// Calls on concurrent threads (parallel fragment workers, or threads passed
+// to add_script_run_ctx) are added to the run's totals like their command
+// times, so with concurrent threads both can exceed the run's wall-clock
+// time. Async cached calls awaited concurrently on one thread are scaled
+// down to the time during which any of them ran.
 message CacheUsage {
   // Unset when no st.cache_data call was recorded.
   CacheTypeUsage cache_data = 1;
   // Unset when no st.cache_resource call was recorded.
   CacheTypeUsage cache_resource = 2;
-  // Whole seconds since the Streamlit server process started, taken when
-  // this script run started. A low value with many misses means the caches
-  // were cold because the process is new (a container start, wake-up or
-  // restart).
-  int64 server_uptime_seconds = 3;
+  // Whole seconds since the Streamlit server started, taken when this script
+  // run started. A low value with many misses means the caches were cold
+  // because the server is new (a container start, wake-up or restart).
+  // Set on every page profile, including as 0 in the server's first second.
+  optional int64 server_uptime_seconds = 3;
 }
 
 // Recorded calls for one cache type. hits + misses can be lower than calls
-// when a call fails before a value is read or computed, for example because
-// an argument can't be hashed.
+// when a call fails or is interrupted before a value is read or computed:
+// for example, an argument can't be hashed, or the run is stopped or rerun
+// while waiting for another caller.
 message CacheTypeUsage {
   int64 calls = 1;
   // Calls that returned a cached value, including callers that waited for
@@ -114,6 +118,8 @@ message CacheTypeUsage {
   int64 wait_time = 6;
   // All other time in the cache: hashing the arguments, reading (for
   // st.cache_data, unpickling) the result, and replaying cached elements.
+  // Also includes writing the result when the cache write command isn't
+  // listed because a command tracking limit was reached.
   int64 overhead_time = 7;
 }
 

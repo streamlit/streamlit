@@ -118,6 +118,11 @@ class FragmentThreadState:
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.
     in_skeleton_slot: bool = False
+    # True while a cached function computes in this context. Unlike the
+    # in_cached_function ContextVar, it is copied to threads attached with
+    # add_script_run_ctx, so their cached calls aren't recorded in the page
+    # profile's cache totals on top of the outer call's compute time.
+    in_cache_compute: bool = False
 
     @property
     def in_fragment_callback(self) -> bool:
@@ -143,6 +148,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     is_parallel_worker: bool
     command_tracking_deactivated: bool
     in_skeleton_slot: bool
+    in_cache_compute: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(

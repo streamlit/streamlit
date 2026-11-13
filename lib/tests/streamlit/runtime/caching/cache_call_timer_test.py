@@ -35,6 +35,7 @@ from streamlit.runtime.caching.storage.dummy_cache_storage import (
 )
 from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.exceptions import StopException
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
@@ -251,6 +252,71 @@ def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
     assert totals.total_time <= elapsed
 
 
+def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
+    ctx: ScriptRunContext,
+) -> None:
+    """A waiter whose owner raised computes the value itself: a miss that also
+    records its wait.
+    """
+    attempts = 0
+
+    @st.cache_data(show_spinner=False)
+    async def load() -> int:
+        nonlocal attempts
+        attempts += 1
+        await asyncio.sleep(0.05)
+        if attempts == 1:
+            raise ValueError("boom")
+        return 1
+
+    async def main() -> list[Any]:
+        return await asyncio.gather(load(), load(), return_exceptions=True)
+
+    first, second = asyncio.run(main())
+    assert isinstance(first, ValueError)
+    assert second == 1
+
+    totals = _totals(ctx, "cache_data")
+    assert (totals.calls, totals.hits, totals.misses) == (2, 0, 2)
+    assert totals.wait_time > 0
+
+
+def test_stop_while_waiting_counts_call_and_wait_only(
+    ctx: ScriptRunContext,
+) -> None:
+    """A run stopped while waiting on another caller's compute records the call
+    and its wait, but neither a hit nor a miss.
+    """
+    computing = threading.Event()
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        computing.set()
+        release.wait(5)
+        return 1
+
+    other_ctx = create_mock_script_run_ctx()
+    owner = add_script_run_ctx(threading.Thread(target=load), other_ctx)
+    owner.start()
+    assert computing.wait(5)
+
+    with (
+        patch(
+            "streamlit.runtime.caching.cache_utils.get_run_yield_check",
+            return_value=MagicMock(side_effect=StopException),
+        ),
+        pytest.raises(StopException),
+    ):
+        load()
+    release.set()
+    owner.join(5)
+
+    totals = _totals(ctx, "cache_data")
+    assert (totals.calls, totals.hits, totals.misses) == (1, 0, 0)
+    assert totals.wait_time > 0
+
+
 def test_cached_call_inside_tracked_command_is_not_recorded(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
@@ -389,6 +455,43 @@ def test_nested_cached_calls_count_only_the_outermost(
     assert (data.calls, data.misses) == (1, 1)
     assert data.compute_time == pytest.approx(1.5)
     assert _totals(ctx, "cache_resource").calls == 0
+
+
+def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A thread a cached function attaches with add_script_run_ctx inherits that
+    it runs inside the cached function, so its cached calls stay part of the
+    outer call's compute time.
+    """
+
+    @st.cache_resource(show_spinner=False)
+    def inner(x: int) -> int:
+        clock.advance(1.0)
+        return x
+
+    @st.cache_data(show_spinner=False)
+    def outer() -> int:
+        results: list[int] = []
+        thread = add_script_run_ctx(
+            threading.Thread(target=lambda: results.append(inner(1)))
+        )
+        thread.start()
+        thread.join(5)
+        return results[0]
+
+    assert outer() == 1
+    # Outside a cached function, the same kind of thread is recorded.
+    thread = add_script_run_ctx(threading.Thread(target=lambda: inner(2)))
+    thread.start()
+    thread.join(5)
+
+    data = _totals(ctx, "cache_data")
+    assert (data.calls, data.misses) == (1, 1)
+    assert data.compute_time == pytest.approx(1.0)
+    resource = _totals(ctx, "cache_resource")
+    assert (resource.calls, resource.misses) == (1, 1)
+    assert resource.compute_time == pytest.approx(1.0)
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:
