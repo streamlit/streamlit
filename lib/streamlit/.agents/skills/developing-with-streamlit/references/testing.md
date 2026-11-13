@@ -264,7 +264,7 @@ assert at.link_button[0].value == "Docs"  # the label; .url is the target
 assert at.page_link[0].value == "Example"  # the label, or the inferred page title
 ```
 
-`at.echarts_chart` is read-only too. `.spec` and `.value` are the chart option as a dict. A dataframe in `dataset.source` appears there as a `{"name": ...}` placeholder, and `.datasets` maps that name to the DataFrame:
+`at.echarts_chart` is read-only too. `.spec` and `.value` are the chart option as a dict. A dataframe in `dataset.source` appears there as a `{"name": ...}` placeholder, and `.datasets` maps that name to the DataFrame. A keyed chart's selection is `at.session_state[key]`, not `.value`, and `set_value()` raises `AppTestError`:
 
 ```python
 chart = at.echarts_chart[0]

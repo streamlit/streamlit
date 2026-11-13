@@ -999,6 +999,9 @@ def test_echarts_chart_selection() -> None:
     assert chart.value == {
         "series": [{"type": "bar", "selectedMode": "single", "data": [1, 2]}]
     }
+    # The selection stays reachable through session state.
+    assert at.session_state["pick"].selection.selected == []
+    assert at.session_state["pick"].selection.areas == []
     with pytest.raises(AppTestError, match=r"set_value\(\) is not supported"):
         chart.set_value({"selection": {"selected": [], "areas": []}})
 

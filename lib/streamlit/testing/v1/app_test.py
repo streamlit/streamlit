@@ -1279,6 +1279,7 @@ class AppTest:
         - ``.spec`` and ``.value`` are the chart option as a dict.
         - ``.datasets`` maps each ``dataset.source`` placeholder name to its
           DataFrame.
+        - A keyed ``on_select`` chart's selection is ``at.session_state[key]``.
         - ``set_value()`` raises ``AppTestError``.
 
         Returns

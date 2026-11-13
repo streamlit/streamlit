@@ -1250,11 +1250,13 @@ class DateInput(Widget):
 class EChartsChart(Element):
     """A representation of ``st.echarts_chart``.
 
-    - ``.spec`` and ``.value`` are the chart option as a dict. Each access
-      returns a fresh copy.
+    - ``.spec`` and ``.value`` are the chart option as a dict.
     - A dataframe in ``dataset.source`` appears in the spec as a
       ``{"name": ...}`` placeholder; ``.datasets`` maps each name to its
       DataFrame.
+    - Each access returns a fresh copy.
+    - A keyed ``on_select`` chart's selection is ``at.session_state[key]``,
+      not ``.value``.
     - ``set_value()`` raises ``AppTestError``.
     """
 
@@ -1267,10 +1269,12 @@ class EChartsChart(Element):
 
     @property
     def spec(self) -> dict[str, Any]:
+        """The chart option as a dict."""
         return cast("dict[str, Any]", json.loads(self.proto.spec))
 
     @property
     def value(self) -> dict[str, Any]:
+        """The chart option, also when ``on_select`` is set."""
         return self.spec
 
     @property
@@ -1284,13 +1288,13 @@ class EChartsChart(Element):
         }
 
     @property
-    def theme(self) -> str | None:
+    def theme(self) -> Literal["streamlit"] | None:
         """``"streamlit"``, or ``None`` for ECharts' default theme."""
-        return self.proto.theme or None
+        return cast("Literal['streamlit'] | None", self.proto.theme or None)
 
     @property
     def renderer(self) -> Literal["canvas", "svg"]:
-        """``"canvas"`` or ``"svg"``."""
+        """``"canvas"`` (the default) or ``"svg"``."""
         if self.proto.renderer == EChartsChartProto.Renderer.SVG:
             return "svg"
         return "canvas"
