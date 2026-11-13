@@ -15,6 +15,7 @@ Invoke this skill when the user's request involves:
 - Debugging Streamlit issues (errors, session state bugs, performance problems)
 - Verifying that an app works after a change, or writing tests for it
 - Beautifying or improving the visual design of a Streamlit app
+- Modernizing an existing Streamlit app
 - Optimizing Streamlit performance (caching, fragments, reruns)
 - Building and running Streamlit apps
 - Building chat, conversational, or agentic UIs (AI assistants, thinking expanders, chain-of-thought, tool-call timelines)
@@ -22,7 +23,7 @@ Invoke this skill when the user's request involves:
 - Advanced server configuration with `st.App`, ASGI, Starlette, FastAPI integration, custom routes, middleware, or lifespan hooks
 - Any question about Streamlit widgets, layouts, or components
 
-**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache", "chat", "agentic", "chain of thought"
+**Trigger phrases:** "streamlit", "st.", "st.App", "dashboard", "app.py", "beautify app", "make it look better", "modernize", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache", "chat", "agentic", "chain of thought"
 
 ## Best practices quick reference
 
@@ -188,6 +189,17 @@ For **building a dashboard**, read:
 2. `references/charts.md`
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
+
+For **modernizing an existing app** (only when the user explicitly asks), update the whole app, not only the file in view. First show a short plan that names the riskiest changes (such as moving to `st.navigation` or rewriting charts) and wait for confirmation.
+1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML with native commands ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
+2. **Performance:** caching (e.g., `refresh_mode="background"`), `st.skeleton`, fragments (e.g., `parallel=True`), and forms ([performance.md](references/performance.md)).
+3. **Newer features where they fit:** for example `st.navigation` ([multipage-apps.md](references/multipage-apps.md)), `st.segmented_control`/`st.pills` ([selection-widgets.md](references/selection-widgets.md)), `st.menu_button` and side-drawer dialogs ([layouts.md](references/layouts.md)), `ButtonColumn` and `MultiselectColumn` ([data-display.md](references/data-display.md)), `bind="query-params"` ([session-state.md](references/session-state.md)), streaming and compact thinking or step expanders in chat apps ([chat-ui.md](references/chat-ui.md)), alert `title=`, and `alt=`. See [api-reference.md](references/api-reference.md) for others.
+4. **Layouts:** bordered containers, horizontal containers and `st.grid`, aligned rows, and secondary details in popovers or dialogs ([layouts.md](references/layouts.md), [design.md](references/design.md)).
+5. **Charts:** move to `st.echarts_chart` where feasible, one engine per page ([charts.md](references/charts.md#choose-a-chart-command)).
+6. **Theme:** add one that fits the app's domain, starting from `assets/templates/themes/configs/` ([theme.md](references/theme.md)). For dashboards, aim for the `dashboard-revenue` template and the `bi-dashboard` theme ([dashboards.md](references/dashboards.md)).
+7. **Code organization:** split a large single-file app into modules ([code-organization.md](references/code-organization.md)).
+
+Keep features, widget keys, query parameters, and data logic intact, raise the app's Streamlit requirement if new features need it ([environment-setup.md](references/environment-setup.md)), and verify every page with the agent API ([Step 4](#step-4-verify-the-change-in-the-running-app)).
 
 **IMPORTANT - Use templates:**
 
