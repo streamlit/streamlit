@@ -183,6 +183,30 @@ def test_the_schema_accepts_null_exactly_where_the_validator_does(
     assert accepted is ("session_id" not in request_body)
 
 
+@pytest.mark.parametrize(
+    ("value", "accepted"),
+    [("1", True), (["1", "2"], True), (1, False), ([1], False)],
+    ids=json.dumps,
+)
+def test_the_schema_accepts_query_param_values_exactly_where_the_validator_does(
+    value: Any, accepted: bool
+) -> None:
+    """A query parameter value is valid in the schema exactly when the
+    validator accepts it: a string or a list of strings.
+    """
+    request_body = {"query_params": {"a": value}}
+    validator = openapi_validation.schema_validator(_document(), "InteractRequest")
+    try:
+        interaction._validate_request_shape(request_body)
+    except errors.AgentRequestError:
+        validator_accepts = False
+    else:
+        validator_accepts = True
+
+    assert validator.is_valid(request_body) is accepted
+    assert validator_accepts is accepted
+
+
 def test_documented_enumerations_match_their_sources() -> None:
     """Each enumeration lists its `Literal`'s values in order, and its
     description says something about every one of them.

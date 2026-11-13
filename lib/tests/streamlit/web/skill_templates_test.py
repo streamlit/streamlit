@@ -88,8 +88,8 @@ def _assert_renders_cleanly(at: AppTest) -> None:
     # The templates follow the skill's chart ranking: every chart is ECharts.
     assert at.get("vega_lite_chart") == []
     assert at.get("plotly_chart") == []
-    for chart in at.get("echarts_chart"):
-        assert chart.proto.alt.strip(), "every template chart needs an alt"
+    for chart in at.echarts_chart:
+        assert (chart.alt or "").strip(), "every template chart needs an alt"
 
 
 def test_templates_are_discovered() -> None:
