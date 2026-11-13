@@ -1,8 +1,17 @@
-# Streamlit Dashboard App Templates
+# Streamlit App Templates
 
-This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns, and draws its dashboard charts with `st.echarts_chart`, the recommended chart command.
+This directory contains ready-to-use data app templates for Streamlit: apps that compute, apps that act, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
+
+### Apps That Compute and Act
+
+Simplified versions of the official [apps that compute](https://apps-that-compute-demo.streamlit.app/) and [apps that act](https://apps-that-act-demo.streamlit.app/) demos, with synthetic data:
+
+| Template | Description | Key Features |
+|----------|-------------|--------------|
+| **compute-demand-simulator** | What-if demand and pricing simulator: every lever change reruns a Monte Carlo forecast | Sidebar levers bound to the URL with a reset callback, a cached simulation keyed by a frozen dataclass, `st.metric` cards vs. the plan with sparklines, ECharts fan chart (50% / 80% ranges) and tornado chart in parallel fragments with `st.skeleton`, scenarios saved from an `@st.dialog` form and loaded back with a `ButtonColumn`. `model.py` holds the simulation |
+| **act-review-queue** | Review queue for purchase orders an AI agent proposes | `st.data_editor` with editable quantity, decision, and note columns, drafts in Session State that survive filters, server-side validation before writeback through `st.connection` (SQLite via SQLAlchemy) with an audit log, bulk "accept low-risk", a review drawer (`@st.dialog(position="right")`) with the agent's reasoning as `st.status(type="step")` steps, URL-bound filters and live search. `store.py` holds the data access, `review.py` the drafts and drawer |
 
 ### Public Demo Templates
 
@@ -45,10 +54,12 @@ uv run streamlit run streamlit_app.py
 Each template follows this structure:
 
 ```
-dashboard-{name}/
+{template-name}/
 ├── streamlit_app.py    # Main application code
 └── pyproject.toml      # Dependencies and metadata
 ```
+
+`compute-demand-simulator` adds `model.py` and ships a copy of `warm-editorial`, and `act-review-queue` adds `store.py` and `review.py`; copy the whole folder. `act-review-queue` creates `review_queue.db` in the working directory on first run.
 
 `dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`) and splits its code into `streamlit_app.py` (the page), `charts.py` (time filtering, alt text, and ECharts options), and `data.py` (synthetic data and cached loaders). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
 
@@ -83,7 +94,10 @@ All dashboard templates that support time filtering use the same `filter_by_time
 
 ```python
 def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.DataFrame:
-    """Filter dataframe by time range."""
+    """Keep rows inside ``time_range`` (``1M``, ``6M``, ``1Y``, ``QTD``, ``YTD``, or ``All``).
+
+    Any other label returns ``df`` unchanged.
+    """
     if time_range == "All" or df.empty:
         return df
 
@@ -223,3 +237,4 @@ All templates require Python >=3.11 and use:
 - `streamlit`
 - `pandas>=2.2.3`
 - `numpy>=1.26.0` (most templates)
+- `sqlalchemy>=2.0.0` (`act-review-queue`, for `st.connection(type="sql")`)
