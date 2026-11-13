@@ -1,6 +1,10 @@
 ---
 name: developing-with-streamlit
 description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, testing, beautifying, modernizing, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
+license: Apache-2.0
+metadata:
+  author: streamlit
+  version: "1.68"
 ---
 
 # Developing with Streamlit

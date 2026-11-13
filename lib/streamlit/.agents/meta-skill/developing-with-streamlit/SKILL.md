@@ -1,6 +1,9 @@
 ---
 name: developing-with-streamlit
 description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, beautifying, styling, theming, optimizing, or deploying Streamlit apps. Also custom components, st.components.v2, HTML/JS/CSS work. Use it before writing or changing Streamlit code: it finds the reference docs bundled with the user's installed Streamlit (>=1.57), matched to that version. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, CCv2, session state, performance, cache, fragment, slow rerun, deploy."
+license: Apache-2.0
+metadata:
+  author: streamlit
 allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" *) Bash(python "${CLAUDE_SKILL_DIR}/scripts/discover.py" *) Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/discover.py" *)
 ---
 
