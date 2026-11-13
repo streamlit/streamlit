@@ -111,7 +111,7 @@ def update_files(data: dict[str, str], version: str) -> None:
         file_path = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(file_path, inplace=True):
+        for line in fileinput.input(file_path, inplace=True, encoding="utf-8"):
             if pattern.match(line.rstrip()):
                 matched = True
             updated_line = re.sub(regex, rf"\g<pre>{version}\g<post>", line.rstrip())

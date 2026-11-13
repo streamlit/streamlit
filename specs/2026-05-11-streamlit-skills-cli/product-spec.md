@@ -211,9 +211,11 @@ breaking changes roll out to users.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
   installs, repairs broken links, skips user-managed files with conflict warning,
   and updates global skill if the versioned tag has changed on GitHub
-- **Automatic global updates:** Every server start checks the global meta skill
-  copies in home-level agent skills directories and replaces a copy only when
-  each of its files matches a known official release. A newer Streamlit
+- **Automatic global updates:** Starting an app with `streamlit run`,
+  `streamlit hello`, or `App.run()` checks the global meta skill copies in
+  home-level agent skills directories (an `st.App` served directly by an ASGI
+  server such as `uvicorn` skips this) and replaces a copy only when each of
+  its files matches a known official release. A newer Streamlit
   refreshes an unmodified install, an older one never downgrades it, and an
   edited copy is left alone. The check runs in the background, never fails
   startup, and prints one line when it updates a copy.
@@ -246,7 +248,7 @@ breaking changes roll out to users.
 
 | Item                       | ✅ or comment                                                                            |
 |----------------------------|------------------------------------------------------------------------------------------|
-| Works on SiS, Cloud, etc?  | Yes - CLI-only, no runtime impact                                                        |
+| Works on SiS, Cloud, etc?  | Yes - CLI-only, plus app startup updates unmodified global skill copies                  |
 | No breaking API changes    | Yes - new command only                                                                   |
 | No new dependencies        | Yes - Click already exists, otherwise stdlib                                             |
 | Metrics collected          | Existing runtime metrics already detect installed skills; no new CLI telemetry proposed  |

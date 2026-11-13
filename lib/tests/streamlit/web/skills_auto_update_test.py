@@ -30,6 +30,7 @@ from packaging.version import Version
 
 from streamlit.version import STREAMLIT_VERSION_STRING
 from streamlit.web import skills
+from tests import testutil
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -117,6 +118,20 @@ def test_updates_official_copies_in_home_skills_dirs(
     assert capsys.readouterr().out == (
         f"  Updated the global Streamlit agent skills ({locations}).\n\n"
     )
+
+
+@pytest.mark.usefixtures("bundled")
+def test_hide_welcome_message_updates_copies_without_printing(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """``logger.hideWelcomeMessage`` silences the update line, not the update."""
+    copy = _write_skill_folder(home, ".claude/skills", _OLD_FILES)
+
+    with testutil.patch_config_options({"logger.hideWelcomeMessage": True}):
+        skills.update_global_skills()
+
+    assert _files(copy) == _NEW_FILES
+    assert capsys.readouterr().out == ""
 
 
 @pytest.mark.usefixtures("bundled")

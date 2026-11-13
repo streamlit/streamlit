@@ -1938,7 +1938,8 @@ def update_global_skills() -> None:
     home-level skills directory (``~/.agents/skills``, ``~/.claude/skills``,
     and so on) and replaces it with the bundled meta-skill when every file in
     it is from an official release listed in :data:`_META_SKILL_DIGESTS`.
-    Prints one line when it updated a copy.
+    Prints one line when it updated a copy, unless ``logger.hideWelcomeMessage``
+    is set.
 
     Never raises. Logs a failure at debug level and leaves that copy as it was,
     so the next start tries again.
@@ -1982,9 +1983,17 @@ def update_global_skills() -> None:
                 "Could not update the Streamlit skill in %s", skills_dir, exc_info=ex
             )
 
-    if updated:
+    if not updated:
+        return
+    try:
+        from streamlit import config
+
+        if config.get_option("logger.hideWelcomeMessage"):
+            return
         locations = ", ".join(
             str(_get_display_path(path, home, use_tilde=True)) for path in updated
         )
         _safe_echo(f"  Updated the global Streamlit agent skills ({locations}).")
         _safe_echo()
+    except Exception as ex:
+        _LOGGER.debug("Could not report the updated Streamlit skills", exc_info=ex)
