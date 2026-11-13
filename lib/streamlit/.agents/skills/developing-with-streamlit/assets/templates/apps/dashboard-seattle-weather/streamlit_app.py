@@ -277,9 +277,9 @@ cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
     st.subheader("Monthly weather breakdown", icon=":material/calendar_month:")
-    # Share of each month's days per weather type, in percent, in the donut's
+    # Share (0-1) of each month's days per weather type, in the donut's
     # weather order so each type has the same color in both charts.
-    weather_mix = pd.crosstab(df["month"], df["weather"], normalize="index") * 100
+    weather_mix = pd.crosstab(df["month"], df["weather"], normalize="index")
     weather_mix = weather_mix.reindex(
         columns=list(WEATHER_ICONS), fill_value=0
     ).reset_index()
@@ -287,12 +287,12 @@ with cols[0].container(border=True, height="stretch"):
         {
             "dataset": {"source": weather_mix},
             "legend": {"bottom": 0},
-            "tooltip": {"trigger": "axis", "valueFormatter": "%.0f%%"},
+            "tooltip": {"trigger": "axis", "valueFormatter": "percent"},
             "xAxis": {"type": "category"},
             "yAxis": {
                 "type": "value",
-                "max": 100,
-                "axisLabel": {"formatter": "{value}%"},
+                "max": 1,
+                "axisLabel": {"formatter": "percent"},
             },
             "series": [
                 {"type": "bar", "name": weather, "stack": "days"}

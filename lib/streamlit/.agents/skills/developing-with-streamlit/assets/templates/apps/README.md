@@ -1,8 +1,17 @@
-# Streamlit Dashboard App Templates
+# Streamlit App Templates
 
-This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns, and draws its dashboard charts with `st.echarts_chart`, the recommended chart command.
+This directory contains ready-to-use data app templates for Streamlit: apps that compute, apps that act, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
+
+### Apps That Compute and Act
+
+Simplified versions of the official [apps that compute](https://apps-that-compute-demo.streamlit.app/) and [apps that act](https://apps-that-act-demo.streamlit.app/) demos, with synthetic data:
+
+| Template | Description | Key Features |
+|----------|-------------|--------------|
+| **compute-demand-simulator** | What-if demand and pricing simulator: every lever change reruns a Monte Carlo forecast | Sidebar levers bound to the URL with a reset callback, a cached simulation keyed by a frozen dataclass, `st.metric` cards vs. the plan with sparklines, ECharts fan chart (50% / 80% ranges) and tornado chart in parallel fragments with `st.skeleton`, scenarios saved from an `@st.dialog` form and loaded back with a `ButtonColumn`. `model.py` holds the simulation |
+| **act-review-queue** | Review queue for purchase orders an AI agent proposes | `st.data_editor` with editable quantity, decision, and note columns, drafts in Session State that survive filters, server-side validation before writeback through `st.connection` (SQLite via SQLAlchemy) with an audit log, bulk "accept low-risk", a review drawer (`@st.dialog(position="right")`) with the agent's reasoning as `st.status(type="step")` steps, URL-bound filters and live search. `store.py` holds the data access, `review.py` the drafts and drawer |
 
 ### Public Demo Templates
 
@@ -11,19 +20,18 @@ These templates are based on official Streamlit demo apps and work out of the bo
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-seattle-weather** | Weather data exploration dashboard | `st.grid` of bordered `st.metric`s built from a spec loop (`format`, `delta_description`, `icon`), year `st.pills` bound to the URL, `st.echarts_chart` year comparison (stacked range bars, donut, lines, and 100% stacked bars) with matching chart heights |
-| **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
+| **dashboard-stock-peers** | Stock peer analysis on the Vega stocks dataset (monthly prices, 2000-2010, no network needed) | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
 
 ### Analytics Dashboard Templates
 
-These templates demonstrate common dashboard patterns with synthetic data. Replace the data generation functions with your actual data sources:
+These templates demonstrate common dashboard patterns with synthetic data. Their loaders sleep for `SIMULATED_LATENCY_S` (or a template-specific delay) so the loading patterns show; set it to 0, or drop the sleep, when you replace the data generation functions with your actual data sources:
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-revenue** | Revenue BI dashboard with certified metrics | Filter toolbar bound to the URL (`bind="query-params"`), certified KPI metrics and card titles, ⋮ `st.menu_button` card menus with a "What's measured" drawer and a forecast toggle, section SQL popover, ECharts milestone annotations and forecast range, donut-to-table drill-down with a `ButtonColumn` account drawer, layout-first loading with parallel fragments, `bi-dashboard` theme |
-| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
-| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
-| **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` cards with `st.skeleton`, one loader cached per breakdown, `st.popover` filters with required segmented controls, reset callback, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
+| **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, a category breakdown (pivot to one series per category, line/stacked bar toggle, share view), chart/table toggle, `st.popover` filters, reset callback, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
+| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards loaded as `@st.fragment(parallel=True)` inside `st.skeleton`, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) in its own fragment |
+| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns that loads inside `st.skeleton` at its final height, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
 | **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, `st.echarts_chart` throughput line, formatted report columns |
 
 ## Quick Start
@@ -46,12 +54,14 @@ uv run streamlit run streamlit_app.py
 Each template follows this structure:
 
 ```
-dashboard-{name}/
+{template-name}/
 ├── streamlit_app.py    # Main application code
 └── pyproject.toml      # Dependencies and metadata
 ```
 
-`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
+`compute-demand-simulator` adds `model.py` and ships a copy of `warm-editorial`, and `act-review-queue` adds `store.py` and `review.py`; copy the whole folder. `act-review-queue` creates `review_queue.db` in the working directory on first run.
+
+`dashboard-metrics` also ships `.streamlit/config.toml` (a copy of `dense-dashboard`) and splits its code into `streamlit_app.py` (the page), `charts.py` (time filtering, alt text, and ECharts options), and `data.py` (synthetic data and cached loaders). `dashboard-revenue` ships a copy of `bi-dashboard` and splits its code into `streamlit_app.py` (the page), `components.py` (card headers, menus, and drawers), `charts.py`, and `data.py`.
 
 ## Canonical Patterns
 
@@ -63,7 +73,7 @@ Set page config near the top of the script, with `layout="wide"` and a Material 
 
 ```python
 st.set_page_config(
-    page_title="My Dashboard",
+    page_title="My dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )
@@ -84,7 +94,10 @@ All dashboard templates that support time filtering use the same `filter_by_time
 
 ```python
 def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.DataFrame:
-    """Filter dataframe by time range."""
+    """Keep rows inside ``time_range`` (``1M``, ``6M``, ``1Y``, ``QTD``, ``YTD``, or ``All``).
+
+    Any other label returns ``df`` unchanged.
+    """
     if time_range == "All" or df.empty:
         return df
 
@@ -178,7 +191,7 @@ slow, add a second `with st.skeleton()` inside the fragment around the slow part
 It needs no height when it's the fragment body's first element. A card with its
 own controls must draw them inside the fragment, so it draws its frame, header,
 and controls there, and gives the inner skeleton the chart's height, as the
-`dashboard-metrics` and `dashboard-compute` chart cards do. On a cached rerun the
+`dashboard-metrics` chart cards do. On a cached rerun the
 chart updates in place without a skeleton; on a cache miss, the skeleton covers
 the old chart at its size after half a second.
 
@@ -189,7 +202,8 @@ containers created outside it, even from inside the fragment function.
 
 ### Data Loading with Caching
 
-Cache the expensive load. Use a `ttl` to keep data fresh and `max_entries` when
+Cache the expensive load. Use a `ttl` to keep data fresh, `refresh_mode="background"`
+to serve an expired entry at once while it recomputes off-thread, and `max_entries` when
 the workload gives a practical entry-count bound. For `st.cache_data`, use
 `max_size` only when the user provides a byte budget or deployment memory
 constraints and the intended allocation across caches determine a per-cache
@@ -202,7 +216,9 @@ skeleton already provides feedback: it hides the default spinner and shows custo
 spinner text on the skeleton:
 
 ```python
-@st.cache_data(ttl="1h", show_spinner="Loading metric data...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading metric data..."
+)
 def load_metric_data() -> pd.DataFrame:
     """Load metric data. Replace with your actual data source."""
     # Replace this with:
@@ -221,3 +237,4 @@ All templates require Python >=3.11 and use:
 - `streamlit`
 - `pandas>=2.2.3`
 - `numpy>=1.26.0` (most templates)
+- `sqlalchemy>=2.0.0` (`act-review-queue`, for `st.connection(type="sql")`)

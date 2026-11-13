@@ -58,7 +58,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Operations Dashboard",
+    page_title="Operations dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )
@@ -94,7 +94,7 @@ def _rng(*parts: str) -> np.random.Generator:
     return np.random.default_rng(seed)
 
 
-@st.cache_data(ttl="5m")
+@st.cache_data(ttl="5m", refresh_mode="background")
 def load_kpis(region: str) -> dict[str, float]:
     """Summary metrics for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
@@ -106,7 +106,7 @@ def load_kpis(region: str) -> dict[str, float]:
     }
 
 
-@st.cache_data(ttl="5m")
+@st.cache_data(ttl="5m", refresh_mode="background")
 def load_throughput(region: str) -> pd.DataFrame:
     """30-day throughput trend for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
