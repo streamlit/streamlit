@@ -1759,8 +1759,10 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
 # - another author's skill with the same name
 # - a copy of the full bundled skill
 # - a copy from a newer release, so an older Streamlit never downgrades it
-# When you change a meta-skill file, add its new digest and keep the old ones; a
-# unit test names the digest to add.
+# When you change a meta-skill file, add its new digest and keep the old ones;
+# test_shipped_meta_skill_files_are_listed_as_official fails and prints the
+# digest to add. Never revert a file to an earlier release's exact content, or
+# an older Streamlit could take the newer copy for an outdated one and replace it.
 _META_SKILL_DIGESTS: Final[dict[str, frozenset[str]]] = {
     "SKILL.md": frozenset(
         {
@@ -1795,9 +1797,15 @@ def _skill_files(folder: Path) -> Iterator[Path]:
     """Yield the paths of a skill folder's files, relative to it, in sorted order.
 
     Skips hidden files and folders and ``__pycache__``, which are not part of a
-    skill, and does not descend into symlinked folders.
+    skill, and does not descend into symlinked folders. Raises ``OSError`` when
+    a folder cannot be listed, so a partial listing never passes for the whole
+    skill.
     """
-    for root, dirs, names in os.walk(folder):
+
+    def raise_error(error: OSError) -> None:
+        raise error
+
+    for root, dirs, names in os.walk(folder, onerror=raise_error):
         dirs[:] = sorted(
             name for name in dirs if not name.startswith(".") and name != "__pycache__"
         )
@@ -1847,7 +1855,7 @@ def _digests_if_official(folder: Path) -> dict[str, str] | None:
     return digests
 
 
-def _writes_stay_inside(target: Path, files: list[Path]) -> bool:
+def _writes_follow_no_symlinks(target: Path, files: list[Path]) -> bool:
     """Whether writing ``files`` into ``target`` follows no symlink.
 
     Each destination must be missing or a regular file, and each folder on the
@@ -1907,16 +1915,16 @@ def _update_meta_skill_copy(
     """
     if not _is_real_directory(target):
         return False
-    # Each file's official digests are listed on their own, so a copy that an
-    # interrupted update left half-replaced still counts as official, and the
-    # next start finishes it.
+    # A copy that an interrupted update left half-replaced still counts as
+    # official, because each file's digests are listed separately, so the next
+    # start finishes the update.
     installed = _digests_if_official(target)
     if installed is None or "SKILL.md" not in installed:
         return False
     if all(installed.get(name) == digest for name, digest in bundled.items()):
         return False
     files = [Path(name) for name in bundled]
-    if not _writes_stay_inside(target, files):
+    if not _writes_follow_no_symlinks(target, files):
         return False
     for relative in files:
         _replace_file(source / relative, target / relative)

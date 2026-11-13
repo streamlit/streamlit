@@ -223,6 +223,44 @@ def test_symlinked_copies_are_not_written_through(
     assert skill_file.read_text(encoding="utf-8") == _OLD_SKILL_MD
 
 
+@pytest.mark.skipif(
+    os.name == "nt" or os.geteuid() == 0,
+    reason="Needs folder permissions that apply to the current user",
+)
+@pytest.mark.usefixtures("bundled")
+def test_copy_with_an_unlistable_folder_is_left_untouched(home: Path) -> None:
+    """A folder the update cannot list stops it, so an edited file inside is
+    never overwritten unchecked.
+    """
+    files = {**_OLD_FILES, "scripts/discover.py": "print('edited')\n"}
+    copy = _write_skill_folder(home, ".claude/skills", files)
+    scripts = copy / "scripts"
+    # Write and search permission, but no read permission to list the folder.
+    scripts.chmod(0o300)
+    try:
+        skills.update_global_skills()
+    finally:
+        scripts.chmod(0o755)
+
+    assert _files(copy) == files
+
+
+@pytest.mark.usefixtures("bundled")
+def test_copy_with_an_oversized_file_is_left_untouched(home: Path) -> None:
+    """A file over the size limit makes a copy unofficial, even when its digest
+    is listed.
+    """
+    oversized = "#" * (skills._MAX_META_SKILL_FILE_BYTES + 1) + "\n"
+    files = {**_OLD_FILES, "scripts/discover.py": oversized}
+    copy = _write_skill_folder(home, ".claude/skills", files)
+    official = skills._META_SKILL_DIGESTS["scripts/discover.py"] | {_digest(oversized)}
+
+    with patch.dict(skills._META_SKILL_DIGESTS, {"scripts/discover.py": official}):
+        skills.update_global_skills()
+
+    assert _files(copy) == files
+
+
 @pytest.mark.usefixtures("bundled")
 def test_failed_write_keeps_old_skill_md_until_the_next_start(
     home: Path, capsys: pytest.CaptureFixture[str]

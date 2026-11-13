@@ -552,8 +552,8 @@ def main_skills(global_mode: bool, yes: bool) -> None:
         Installs a version-agnostic meta skill into your user directory. It
         discovers each project's installed Streamlit at runtime, so a single
         global install works across all projects and Streamlit versions.
-        Running a newer Streamlit release updates an unmodified install
-        automatically.
+        Starting an app with a newer Streamlit release updates an
+        unmodified global install automatically.
 
     \b
     Examples:

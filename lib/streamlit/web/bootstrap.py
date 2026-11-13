@@ -387,7 +387,8 @@ def _update_global_skills_in_background() -> None:
 
     def update() -> None:
         try:
-            # Imported in the thread so startup never waits for the module.
+            # Import and run the update here so hashing and writing stay off
+            # the server thread.
             from streamlit.web import skills
 
             skills.update_global_skills()
