@@ -16,7 +16,7 @@ Most community components are not maintained by Streamlit. They can break on Str
 | `streamlit-searchbox` | `st.selectbox` to pick from a known list of moderate size (see [High-cardinality options](selection-widgets.md#high-cardinality-options)); `st.text_input(..., type="search", live=True)` to filter results rendered below it. Put the text input in a `@st.fragment` when the rest of the page should stay put. |
 | `streamlit-echarts` | `st.echarts_chart` for a JSON-compatible option, JSON string, or `pyecharts` chart. See [charts.md](charts.md#apache-echarts). |
 | `streamlit-keyup` (`st_keyup`) | `st.text_input(..., live=True)`, inside a `@st.fragment` when the rest of the page should stay put. |
-| `streamlit-bokeh` | A Vega-based chart or `st.echarts_chart` for a new chart. Keep `streamlit-bokeh` for an existing Bokeh figure. |
+| `streamlit-bokeh` | `st.echarts_chart` for a new chart. Keep `streamlit-bokeh` for an existing Bokeh figure. |
 
 Use the package only when the native command does not cover the behavior:
 

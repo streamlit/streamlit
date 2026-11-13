@@ -17,12 +17,12 @@
 import { isPlainObject } from "lodash-es"
 
 import type { EmotionTheme } from "~lib/theme/types"
-import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   type EChartsOptionObject,
   isYBaseAxis,
   STREAMLIT_THEME,
+  themeRadiusToPx,
   toComponentList,
 } from "./CustomTheme"
 import { getSeriesRows } from "./largeDataDefaults"
@@ -34,8 +34,7 @@ type SeriesOption = Record<string, unknown>
  * ``baseRadius`` and may be set in px or rem.
  */
 export function getBarRadiusPx(theme: EmotionTheme): number {
-  const { sm } = theme.radii
-  return sm.endsWith("px") ? Number.parseFloat(sm) : convertRemToPx(sm)
+  return themeRadiusToPx(theme.radii.sm)
 }
 
 /**

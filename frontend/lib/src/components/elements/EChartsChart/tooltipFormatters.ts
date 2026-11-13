@@ -253,16 +253,20 @@ function buildTemplateFormatter(
   }
 }
 
+/** Formats a number with a Streamlit number format. */
+type NumberFormatter = (value: number) => string
+
 /**
- * Build a ``valueFormatter`` from a Streamlit number format: a named format
- * such as ``"dollar"`` or a printf-style string such as ``"%,d sessions"``.
+ * Build a formatter for a Streamlit number format: a named format such as
+ * ``"dollar"`` or a printf-style string such as ``"%,d sessions"``. Whole
+ * amounts drop their ``.00``.
  *
  * Returns ``null`` for a string that is not a number format: a template
  * without a ``%`` placeholder (printf would print the same text for every
  * value, and an escaped ``%%`` is not a placeholder) or a malformed printf
  * string.
  */
-function buildValueFormatter(format: string): TooltipValueFormatter | null {
+function buildNumberFormatter(format: string): NumberFormatter | null {
   if (
     !NAMED_NUMBER_FORMATS.has(format) &&
     !format.replaceAll("%%", "").includes("%")
@@ -271,19 +275,43 @@ function buildValueFormatter(format: string): TooltipValueFormatter | null {
   }
   try {
     // sprintf throws on a malformed placeholder. Check once here instead of
-    // breaking the tooltip on every hover.
+    // breaking the chart on every hover or render.
     formatNumber(1, format)
   } catch {
     return null
   }
+  return (value: number): string =>
+    formatNumber(value, format, undefined, { stripWholeDecimals: true })
+}
 
+/** Whether ``value`` is a number other than ``NaN`` or an infinity. */
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value)
+}
+
+/** Read a finite number or numeric string as a number, else ``undefined``. */
+function toFiniteNumber(value: unknown): number | undefined {
+  if (isFiniteNumber(value)) {
+    return value
+  }
+  return typeof value === "string" && isNumericString(value)
+    ? Number(value)
+    : undefined
+}
+
+/**
+ * Build a ``valueFormatter`` from a Streamlit number format. Numbers and
+ * numeric strings are formatted, and other values get the default tooltip
+ * formatting. Returns ``null`` when ``format`` is not a number format.
+ */
+function buildValueFormatter(format: string): TooltipValueFormatter | null {
+  const formatValue = buildNumberFormatter(format)
+  if (!formatValue) {
+    return null
+  }
   const formatItem = (item: unknown): string => {
-    const coercedItem =
-      typeof item === "string" && isNumericString(item) ? Number(item) : item
-    if (typeof coercedItem === "number" && Number.isFinite(coercedItem)) {
-      return formatNumber(coercedItem, format)
-    }
-    return formatTooltipItem(coercedItem)
+    const number = toFiniteNumber(item)
+    return number === undefined ? formatTooltipItem(item) : formatValue(number)
   }
   return (value: unknown): string | string[] =>
     Array.isArray(value) ? value.map(formatItem) : formatItem(value)
@@ -412,17 +440,38 @@ function convertOptionTooltips(
   )
 }
 
-/** Convert an option variant plus its responsive ``media[*].option`` overrides. */
-function convertOptionAndMediaTooltips(
-  target: EChartsOptionObject,
-  useUTC: boolean,
+/**
+ * A function that converts one option variant.
+ *
+ * @param variant The option variant to convert.
+ * @param chartOption The option that holds the chart: the timeline
+ * ``baseOption`` when declared, else the option itself. The converter reads
+ * series and datasets that a timeline tick or ``media`` override does not
+ * declare from ``chartOption``.
+ */
+type OptionVariantConverter = (
+  variant: EChartsOptionObject,
   chartOption: EChartsOptionObject
+) => EChartsOptionObject
+
+/**
+ * Apply ``convert`` to every option variant: the option, its timeline
+ * ``baseOption`` and ``options[*]``, and the ``media[*].option`` overrides of
+ * each. These are the locations Python's ``_iter_option_variants`` walks, so
+ * both sides agree. That includes the root and ``baseOption.media``, which
+ * ECharts ignores when ``baseOption`` is set; converting them is harmless.
+ *
+ * Returns the input when no variant changed.
+ */
+function mapOptionVariants(
+  option: EChartsOptionObject,
+  convert: OptionVariantConverter
 ): EChartsOptionObject {
-  const result = convertOptionTooltips(target, useUTC, chartOption)
-  const { media } = result
-  if (!Array.isArray(media)) {
-    return result
-  }
+  const baseOption = isPlainObject(option.baseOption)
+    ? (option.baseOption as EChartsOptionObject)
+    : undefined
+  const chartOption = baseOption ?? option
+
   const convertMediaEntry = (entry: unknown): unknown => {
     if (!isPlainObject(entry)) {
       return entry
@@ -432,19 +481,41 @@ function convertOptionAndMediaTooltips(
       ? withProperty(
           mediaEntry,
           "option",
-          convertOptionTooltips(
-            mediaEntry.option as EChartsOptionObject,
-            useUTC,
-            chartOption
-          )
+          convert(mediaEntry.option as EChartsOptionObject, chartOption)
         )
       : mediaEntry
   }
-  return withProperty(
-    result,
-    "media",
-    mapPreservingIdentity(media, convertMediaEntry)
-  )
+  const convertWithMedia = (
+    target: EChartsOptionObject
+  ): EChartsOptionObject => {
+    const result = convert(target, chartOption)
+    const { media } = result
+    return Array.isArray(media)
+      ? withProperty(
+          result,
+          "media",
+          mapPreservingIdentity(media, convertMediaEntry)
+        )
+      : result
+  }
+
+  let result = convertWithMedia(option)
+  if (baseOption) {
+    result = withProperty(result, "baseOption", convertWithMedia(baseOption))
+  }
+  const { options } = result
+  if (Array.isArray(options)) {
+    const convertTimelineOption = (tick: unknown): unknown =>
+      isPlainObject(tick)
+        ? convertWithMedia(tick as EChartsOptionObject)
+        : tick
+    result = withProperty(
+      result,
+      "options",
+      mapPreservingIdentity(options, convertTimelineOption)
+    )
+  }
+  return result
 }
 
 /**
@@ -471,39 +542,337 @@ function convertOptionAndMediaTooltips(
 export function applyTooltipFormatters(
   option: EChartsOptionObject
 ): EChartsOptionObject {
-  const baseOption = isPlainObject(option.baseOption)
-    ? (option.baseOption as EChartsOptionObject)
-    : undefined
-  // A declared ``baseOption`` holds the chart, so ECharts reads ``useUTC``
-  // only from there and ignores the root.
-  const chartOption = baseOption ?? option
-  const useUTC = chartOption.useUTC === true
-  const convertVariant = (variant: EChartsOptionObject): EChartsOptionObject =>
-    convertOptionAndMediaTooltips(variant, useUTC, chartOption)
-
-  // Convert every location Python's ``_iter_option_variants`` warns about, so
-  // both sides agree. That includes the root tooltips and ``baseOption.media``,
-  // which ECharts ignores when ``baseOption`` is set; converting them is
-  // harmless.
-  let result = convertVariant(option)
-  if (baseOption) {
-    result = withProperty(result, "baseOption", convertVariant(baseOption))
-  }
-  const { options } = result
-  if (Array.isArray(options)) {
-    const convertTimelineOption = (tick: unknown): unknown =>
-      isPlainObject(tick) ? convertVariant(tick as EChartsOptionObject) : tick
-    result = withProperty(
-      result,
-      "options",
-      mapPreservingIdentity(options, convertTimelineOption)
-    )
-  }
-  return result
+  return mapOptionVariants(option, (variant, chartOption) =>
+    // ECharts reads ``useUTC`` only from the option that holds the chart.
+    convertOptionTooltips(variant, chartOption.useUTC === true, chartOption)
+  )
 }
 
-/** The cartesian axis keys whose ``type: "time"`` axes get date labels. */
-const CARTESIAN_AXIS_KEYS = ["xAxis", "yAxis"] as const
+/** The axis components whose labels can take a number format. */
+const NUMBER_FORMAT_AXIS_KEYS = [
+  "xAxis",
+  "yAxis",
+  "radiusAxis",
+  "angleAxis",
+  "singleAxis",
+  "parallelAxis",
+] as const
+
+/** Apply ``transform`` to one config object or to each one in a list. */
+function mapConfigs(
+  value: unknown,
+  transform: (config: Record<string, unknown>) => Record<string, unknown>
+): unknown {
+  const transformEntry = (entry: unknown): unknown =>
+    isPlainObject(entry) ? transform(entry as Record<string, unknown>) : entry
+  return Array.isArray(value)
+    ? mapPreservingIdentity(value, transformEntry)
+    : transformEntry(value)
+}
+
+/**
+ * Format the value of a label with a number format.
+ *
+ * - Numbers and numeric strings are formatted.
+ * - Other strings (such as category names), booleans, and non-finite numbers
+ *   show as they are.
+ * - Anything else, such as a missing (``null``) value, shows as an empty
+ *   string.
+ */
+function formatLabelValue(
+  formatValue: NumberFormatter,
+  value: unknown
+): string {
+  const number = toFiniteNumber(value)
+  if (number !== undefined) {
+    return formatValue(number)
+  }
+  return typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+    ? String(value)
+    : ""
+}
+
+/**
+ * Per cartesian dimension: its ``encode`` key, axis component, and the series
+ * keys that pick the axis by index or ID.
+ */
+const CARTESIAN_AXES = [
+  {
+    encodeKey: "x",
+    axisKey: "xAxis",
+    indexKey: "xAxisIndex",
+    idKey: "xAxisId",
+  },
+  {
+    encodeKey: "y",
+    axisKey: "yAxis",
+    indexKey: "yAxisIndex",
+    idKey: "yAxisId",
+  },
+] as const
+
+/**
+ * Read the type ECharts gives the axis of ``axisKey`` with ID ``id``, else
+ * the one at ``index``: its ``type``, else ``"category"`` when it declares
+ * ``data``, else ``"value"``. Each source is checked in order, so a timeline
+ * tick or ``media`` override that doesn't set the type inherits it from the
+ * option that holds the chart. Like ECharts, IDs ``7`` and ``"7"`` match.
+ */
+function readAxisType(
+  sources: readonly EChartsOptionObject[],
+  axisKey: string,
+  { index, id }: { index: number; id: unknown }
+): unknown {
+  const axisLists = sources.map((source): unknown[] => {
+    const axes = source[axisKey]
+    return Array.isArray(axes) ? (axes as unknown[]) : [axes]
+  })
+  const axesWithId =
+    typeof id === "string" || typeof id === "number"
+      ? axisLists.flat().filter(axis => {
+          const axisId: unknown = get(axis, "id")
+          return (
+            (typeof axisId === "string" || typeof axisId === "number") &&
+            String(axisId) === String(id)
+          )
+        })
+      : []
+  const candidates =
+    axesWithId.length > 0 ? axesWithId : axisLists.map(list => list[index])
+  for (const axis of candidates) {
+    if (isPlainObject(axis)) {
+      const { type, data } = axis as Record<string, unknown>
+      if (type !== undefined) {
+        return type
+      }
+      if (data !== undefined) {
+        return "category"
+      }
+    }
+  }
+  return "value"
+}
+
+/**
+ * Return the ``encode`` keys whose dimensions ECharts' default label skips:
+ * ``"x"`` or ``"y"`` when a cartesian series sits on a category or time axis
+ * there. ECharts skips ordinal and time dimensions, which include numeric
+ * category values such as years and numeric timestamps.
+ */
+function readCategoryOrTimeEncodeKeys(
+  series: Record<string, unknown>,
+  sources: readonly EChartsOptionObject[]
+): ReadonlySet<string> {
+  // Series without axes (pie, funnel) also default to "cartesian2d". That's
+  // harmless, because their ``encode`` has no ``x`` or ``y`` entries.
+  const { coordinateSystem = "cartesian2d" } = series
+  const keys = new Set<string>()
+  // Polar, single, and parallel series keep every dimension, so the
+  // last-number rule of ``readSeriesLabelValue`` alone picks their value.
+  if (coordinateSystem !== "cartesian2d") {
+    return keys
+  }
+  for (const { encodeKey, axisKey, indexKey, idKey } of CARTESIAN_AXES) {
+    const index = series[indexKey]
+    const axisType = readAxisType(sources, axisKey, {
+      index: isFiniteNumber(index) ? index : 0,
+      id: series[idKey],
+    })
+    if (axisType === "category" || axisType === "time") {
+      keys.add(encodeKey)
+    }
+  }
+  return keys
+}
+
+/**
+ * Collect the dimension indices of ``encode`` entries (e.g. the entries of
+ * ``{x: [0], y: [1]}``), sorted ascending.
+ */
+function readEncodeIndices(entries: [string, unknown][]): number[] {
+  return entries
+    .flatMap(([, indices]) => indices)
+    .filter(isFiniteNumber)
+    .toSorted((first, second) => first - second)
+}
+
+/**
+ * Return the value ECharts' default label shows for the ``params`` of a series
+ * label.
+ *
+ * - A single ``value`` is that value.
+ * - For a row (an array or object ``value``), use the ``encode`` coordinate
+ *   dimensions except those of ``categoryOrTimeEncodeKeys`` (see
+ *   ``readCategoryOrTimeEncodeKeys``); when every dimension was skipped, use
+ *   all of them. Prefer the last number or numeric string in data order, such
+ *   as the y value of a vertical bar or the x value of a horizontal one, then
+ *   the last value. Category names and datetimes arrive as strings, so this
+ *   also skips them on series without cartesian axes. On those series, a
+ *   numeric category that comes after the value is formatted too, because
+ *   their axes are not skipped.
+ */
+function readSeriesLabelValue(
+  params: unknown,
+  categoryOrTimeEncodeKeys: ReadonlySet<string>
+): unknown {
+  const value: unknown = get(params, "value")
+  if (!Array.isArray(value) && !isPlainObject(value)) {
+    return value
+  }
+  const dimensionNames: unknown = get(params, "dimensionNames")
+  const names = Array.isArray(dimensionNames) ? dimensionNames : []
+  // ECharts passes the coordinate dimensions as indices, e.g. {x: [0], y: [1]},
+  // whether or not the series sets ``encode``.
+  const encode: unknown = get(params, "encode")
+  const encodeEntries = isPlainObject(encode)
+    ? Object.entries(encode as Record<string, unknown>)
+    : []
+  const labelIndices = readEncodeIndices(
+    encodeEntries.filter(([key]) => !categoryOrTimeEncodeKeys.has(key))
+  )
+  // A series on two category or time axes (e.g. a scatter of category pairs)
+  // has no value dimension, so consider every coordinate.
+  const indices =
+    labelIndices.length > 0 ? labelIndices : readEncodeIndices(encodeEntries)
+  const candidates =
+    indices.length > 0
+      ? indices.map(index => readDimensionValue(value, names, `[${index}]`))
+      : Object.values(value as Record<string, unknown>)
+  return (
+    candidates.findLast(
+      candidate => toFiniteNumber(candidate) !== undefined
+    ) ?? candidates.at(-1)
+  )
+}
+
+/**
+ * Copy ``container`` with the string ``formatter`` of ``container[key]``
+ * turned into a function, when that string is a Streamlit number format. The
+ * function formats the value ``readValue`` reads from ECharts' formatter
+ * argument. Returns ``container`` itself when nothing is converted.
+ *
+ * Strings with a ``{`` are ECharts templates (``"{value}%"``, ``"{b}: {c}"``,
+ * time tokens, rich text), so they stay strings. So do other strings that
+ * aren't number formats, which ECharts prints as literal text.
+ */
+function withLabelNumberFormat(
+  container: Record<string, unknown>,
+  key: string,
+  readValue: (formatterArgument: unknown) => unknown
+): Record<string, unknown> {
+  const label = container[key]
+  const formatter: unknown = get(label, "formatter")
+  const formatValue =
+    typeof formatter === "string" && !formatter.includes("{")
+      ? buildNumberFormatter(formatter)
+      : null
+  if (!formatValue) {
+    return container
+  }
+  return {
+    ...container,
+    [key]: {
+      ...(label as Record<string, unknown>),
+      formatter: (formatterArgument: unknown): string =>
+        formatLabelValue(formatValue, readValue(formatterArgument)),
+    },
+  }
+}
+
+/** Convert the ``axisLabel`` and ``axisPointer.label`` formatters of an axis. */
+function withAxisNumberFormats(
+  axis: Record<string, unknown>
+): Record<string, unknown> {
+  // ECharts passes the tick value as the first argument.
+  const result = withLabelNumberFormat(axis, "axisLabel", value => value)
+  const { axisPointer } = result
+  return isPlainObject(axisPointer)
+    ? withProperty(
+        result,
+        "axisPointer",
+        withLabelNumberFormat(
+          axisPointer as Record<string, unknown>,
+          "label",
+          params => get(params, "value")
+        )
+      )
+    : result
+}
+
+/**
+ * Convert the ``label`` and ``endLabel`` formatters of a series.
+ *
+ * @param series The series to convert.
+ * @param sources The options to read the series' axes from, in order.
+ */
+function withSeriesNumberFormats(
+  series: Record<string, unknown>,
+  sources: readonly EChartsOptionObject[]
+): Record<string, unknown> {
+  const categoryOrTimeEncodeKeys = readCategoryOrTimeEncodeKeys(
+    series,
+    sources
+  )
+  const readValue = (params: unknown): unknown =>
+    readSeriesLabelValue(params, categoryOrTimeEncodeKeys)
+  return withLabelNumberFormat(
+    withLabelNumberFormat(series, "label", readValue),
+    "endLabel",
+    readValue
+  )
+}
+
+/** Convert the axis and series label formatters of one option variant. */
+function convertOptionLabels(
+  variant: EChartsOptionObject,
+  chartOption: EChartsOptionObject
+): EChartsOptionObject {
+  let result = variant
+  for (const key of NUMBER_FORMAT_AXIS_KEYS) {
+    result = withProperty(
+      result,
+      key,
+      mapConfigs(result[key], withAxisNumberFormats)
+    )
+  }
+  const axisSources = [variant, chartOption]
+  return withProperty(
+    result,
+    "series",
+    mapConfigs(result.series, series =>
+      withSeriesNumberFormats(series, axisSources)
+    )
+  )
+}
+
+/**
+ * Turn label formatters that are Streamlit number formats (the formats a
+ * tooltip ``valueFormatter`` accepts, such as ``"percent"`` or ``"%,.0f"``)
+ * into the functions ECharts expects. ECharts would print such a string
+ * literally on every tick or label, so converting it breaks no working spec.
+ *
+ * - ``axisLabel.formatter`` and ``axisPointer.label.formatter`` of each axis
+ *   format the tick or pointer value. Non-numeric category names show as they
+ *   are.
+ * - ``label.formatter`` and ``endLabel.formatter`` of each series format the
+ *   value ECharts' default label shows (see ``readSeriesLabelValue``).
+ *
+ * Applies to the option, its timeline ``baseOption`` and ``options[*]``, and
+ * their ``media[*].option`` overrides. Per-data-item and mark labels are left
+ * alone. The formatters return plain text. This runs for both themes because
+ * it reads the spec rather than styling it.
+ *
+ * @param option The option object to convert.
+ * @returns The option with converted formatters, or the input when nothing
+ * needed converting.
+ */
+export function applyLabelNumberFormats(
+  option: EChartsOptionObject
+): EChartsOptionObject {
+  return mapOptionVariants(option, convertOptionLabels)
+}
 
 /** Whether ``target`` has a non-null ``label.formatter``. */
 function hasLabelFormatter(target: unknown): boolean {
@@ -601,7 +970,7 @@ export function applyTimeLabelFormatters(
   }
 
   let result = chartOption
-  for (const key of CARTESIAN_AXIS_KEYS) {
+  for (const { axisKey: key } of CARTESIAN_AXES) {
     const axes = result[key]
     result = withProperty(
       result,

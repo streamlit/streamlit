@@ -138,10 +138,22 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 # ``dump_options_with_quotes`` emits that encoding as a JSON string value.
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
-# The named formats a tooltip ``valueFormatter`` string accepts (the same set as
-# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
-# ``util/formatNumber.ts``.
+# The named formats a tooltip ``valueFormatter`` or label ``formatter`` string
+# accepts (the same set as ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the
+# frontend's ``util/formatNumber.ts``.
 _NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# The axis components whose ``axisLabel`` and ``axisPointer.label`` formatters
+# accept number formats. Mirrors ``NUMBER_FORMAT_AXIS_KEYS`` in the frontend's
+# ``EChartsChart/tooltipFormatters.ts``.
+_NUMBER_FORMAT_AXIS_KEYS: Final = (
+    "xAxis",
+    "yAxis",
+    "radiusAxis",
+    "angleAxis",
+    "singleAxis",
+    "parallelAxis",
+)
 
 # One token of a printf-style format string: literal text, an escaped ``%%``, or
 # a placeholder. The alternatives and their order mirror the parser of the
@@ -199,9 +211,11 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         ``"node"``, or ``"edge"``.
 
         ``data_indices`` is sorted and series-local. For a dataset without
-        transforms, it addresses ``dataset.source`` rows. For inline series,
-        it addresses ``series.data``. For graph series, ``data_type="node"``
-        addresses ``data`` and ``data_type="edge"`` addresses ``links``.
+        transforms, it addresses ``dataset.source`` rows. With a ``filter``
+        transform, it gives positions among the filtered rows, which keep their
+        source order. For inline series, it addresses ``series.data``. For
+        graph series, ``data_type="node"`` addresses ``data`` and
+        ``data_type="edge"`` addresses ``links``.
 
     areas : list[dict[str, Any]]
         The active brush regions. Each entry contains ``brush_index``,
@@ -697,6 +711,53 @@ def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
         _LOGGER.warning("%s", message, stack_info=True)
 
 
+def _iter_label_formatters(option: dict[str, Any]) -> Iterator[Any]:
+    """Yield the formatters of the labels that take number formats.
+
+    Covers ``axisLabel`` and ``axisPointer.label`` of each axis and ``label``
+    and ``endLabel`` of each series across option variants, the same locations
+    the frontend converts.
+    """
+    for variant in _iter_option_variants(option):
+        labels: list[Any] = []
+        for axis_key in _NUMBER_FORMAT_AXIS_KEYS:
+            for axis in _iter_config_entries(variant.get(axis_key)):
+                labels.append(axis.get("axisLabel"))
+                axis_pointer = axis.get("axisPointer")
+                if isinstance(axis_pointer, dict):
+                    labels.append(axis_pointer.get("label"))
+        for series in _iter_config_entries(variant.get("series")):
+            labels.extend((series.get("label"), series.get("endLabel")))
+        for label in labels:
+            if isinstance(label, dict):
+                yield label.get("formatter")
+
+
+def _warn_on_malformed_label_number_formats(option: dict[str, Any]) -> None:
+    """Log label formatters with an unescaped ``%`` that aren't number formats.
+
+    This covers formatters that are neither a number format nor an ECharts
+    template. ECharts prints such a string literally on every tick or label,
+    so it is likely a mistyped number format.
+    """
+    for formatter in _iter_label_formatters(option):
+        if (
+            not isinstance(formatter, str)
+            or "{" in formatter
+            or "%" not in formatter.replace("%%", "")
+            or _is_number_format(formatter)
+        ):
+            continue
+        message = (
+            "The provided ECharts spec sets an axis or series label `formatter` "
+            f"of {formatter!r}, which is neither a number format nor an ECharts "
+            "template, so ECharts shows it as literal text. Use a named format "
+            'such as "percent", a printf-style string such as "%.1f%%", or a '
+            'template such as "{value}%".'
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
 def _convert_datasets_in_variant(
     option: dict[str, Any], arrow_datasets: dict[str, bytes]
 ) -> None:
@@ -786,6 +847,7 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
 
     _validate_supported_features(option)
     _warn_on_unsupported_value_formatters(option)
+    _warn_on_malformed_label_number_formats(option)
     arrow_datasets = _convert_dataset_sources(option)
     return option, arrow_datasets
 
@@ -1109,6 +1171,16 @@ class EChartsMixin:
         `Apache ECharts <https://echarts.apache.org/>`_ is a powerful, open-source
         charting library with a large catalog of chart types (including gauges,
         sunbursts, sankey, graph/network, candlestick, radar, and more).
+        Streamlit ships with Apache ECharts 6.1.
+
+        ``st.echarts_chart`` is the recommended command for new charts,
+        including dashboards. It follows the app's theme, animates when the
+        data changes, and stays fast with large datasets. Add a ``dataZoom``
+        component for a zoom slider, and use ``on_select`` with
+        ``selectedMode`` or a brush for selections. For a quick chart without
+        customization, the built-in chart commands (``st.line_chart``,
+        ``st.bar_chart``, ``st.area_chart``, and ``st.scatter_chart``) are a
+        shorter alternative.
 
         To show an ECharts chart in Streamlit, pass an ECharts
         `option object <https://echarts.apache.org/en/option.html>`_ as a Python
@@ -1123,14 +1195,17 @@ class EChartsMixin:
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
             ``renderItem``) is not supported. Use ECharts' string templates
-            instead (e.g. ``"formatter": "{b}: {c}"``). To format tooltip
-            values, see the tooltip note below.
+            instead (e.g. ``"formatter": "{b}: {c}"``). To format numbers in
+            tooltips and labels, see the formatting note below.
 
             Consequently, three families of ECharts charts are unavailable and
             raise an error: ``custom`` series (which require a ``renderItem``
             callback), map and geo charts (which require registering GeoJSON map
             data), and 3D or WebGL charts from the ECharts GL extension
-            (``bar3D``, ``scatter3D``, ``globe``, and similar).
+            (``bar3D``, ``scatter3D``, ``globe``, and similar). For range bars
+            such as Gantt charts, use a ``lines`` series with
+            ``"coordinateSystem": "cartesian2d"`` and set ``xAxis.min`` and
+            ``xAxis.max`` instead of a ``custom`` series.
 
         .. note::
             Strings in the option object (``title.text``, legend names, labels)
@@ -1142,13 +1217,13 @@ class EChartsMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         .. note::
-            Streamlit extends two tooltip options so you can format tooltips
-            without JavaScript. Both work in ``tooltip`` and
-            ``series[i].tooltip``, but not in per-item tooltips inside
-            ``series[i].data``:
+            Streamlit extends some ECharts formatter options so you can
+            format tooltips and labels without JavaScript. None of them apply
+            to per-item tooltips or labels inside ``series[i].data``:
 
-            - ``valueFormatter`` accepts a number format, which formats each
-              value in the default tooltip: a named format (``"plain"``,
+            - ``valueFormatter`` in ``tooltip`` or ``series[i].tooltip``
+              accepts a number format, which formats each value in the
+              default tooltip: a named format (``"plain"``,
               ``"localized"``, ``"dollar"``, ``"euro"``, ``"yen"``,
               ``"percent"``, ``"compact"``, ``"scientific"``,
               ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
@@ -1167,6 +1242,18 @@ class EChartsMixin:
               first series. Values are inserted as escaped text without a
               number format, while the template itself is HTML, as in any
               other ECharts tooltip string.
+            - A string ``axisLabel.formatter`` or ``axisPointer.label.formatter``
+              on an axis, and ``label.formatter`` or ``endLabel.formatter`` on
+              a series, also accept these number formats (e.g.
+              ``{"axisLabel": {"formatter": "percent"}}`` shows ``0.05`` as
+              ``5%``). Axis labels format numeric ticks and keep non-numeric
+              category names. Series labels format the series value, such as
+              the y value of a vertical bar. On pie and funnel series, that's
+              the item's value, not its share; use the ``"{d}%"`` template to
+              show shares. A string that contains ``{`` stays an ECharts
+              template, and ``markPoint`` or ``markLine`` labels aren't
+              converted. Any other string that isn't a number format is drawn
+              as literal text, and one with an unescaped ``%`` logs a warning.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
@@ -1229,8 +1316,9 @@ class EChartsMixin:
               becomes a float). Arrays and missing values such as ``NaN``,
               ``pd.NaT``, and ``pd.NA`` raise an error instead of becoming
               ``null``.
-            - Show data: The chart's hover toolbar has a **Show data** button
-              that displays the dataframe as a table.
+            - Show data: When the option uses one dataframe, the chart's hover
+              toolbar has a **Show data** button that displays it as a table.
+              With several dataframes, the button is hidden.
 
             Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
@@ -1288,9 +1376,9 @@ class EChartsMixin:
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened unless you set
-            ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
-            note above). Time, value, and log axes hide tick labels that would
-            overlap. To show every label on an axis, add
+            ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the
+            formatting note above). Time, value, and log axes hide tick labels
+            that would overlap. To show every label on an axis, add
             ``"hideOverlap": False`` to its ``axisLabel``. Unstacked bars
             without negative values get rounded outer corners that scale with
             the ``theme.baseRadius`` configuration option. To keep square bars,
@@ -1320,9 +1408,18 @@ class EChartsMixin:
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
             state, and the selection survives changes to your ``spec``,
-            ``theme``, and ``renderer``. Indices are not revalidated against
-            the new data, so check them before indexing. The selection state
-            is read-only. For more details, see `Widget behavior
+            ``theme``, and ``renderer``. When the data changes, a brush
+            selection updates to the points now inside its region. Streamlit
+            then reruns the app (or the chart's fragment) once to report them
+            and calls ``on_select`` if it's a callable. The run this starts
+            does not rerun again. Data that changes on every run still adds
+            one extra rerun each time something else triggers a run, such as
+            each ``run_every`` tick of the chart's fragment. Inside a form,
+            the update waits for submit.
+            Clicked points (``selectedMode``) keep their indices even if
+            different rows now sit at those positions, so check them before
+            indexing. The selection state is read-only. For more details, see
+            `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             If ``key`` is provided, it will be used as a CSS class name

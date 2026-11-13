@@ -956,6 +956,54 @@ describe("ElementNodeRenderer Block Component", () => {
       expect(config.printLayout).toBe(PrintLayout.FIXED_WIDTH)
     })
 
+    it("lets pixel-height dataframe containers follow the grid height", async () => {
+      const config = await renderAndGetContainerConfig(
+        "dataframe",
+        { id: "df-1" },
+        { heightConfig: { pixelHeight: 300 } }
+      )
+      expect(config.minStretchWidth).toBe(MinStretchWidth.LARGE)
+      expect(config.styleOverrides).toEqual({
+        overflow: "visible",
+        height: "auto",
+        flex: "",
+      })
+      expect(config.printLayout).toBe(PrintLayout.FIXED_WIDTH)
+    })
+
+    it("lets pixel-height content-width dataframes follow the grid height in the root layout", async () => {
+      const config = await renderAndGetContainerConfig(
+        "dataframe",
+        { id: "df-1" },
+        {
+          widthConfig: { useContent: true },
+          heightConfig: { pixelHeight: 300 },
+        },
+        rootFlexContext
+      )
+      expect(config.minStretchWidth).toBe(MinStretchWidth.LARGE)
+      expect(config.styleOverrides).toEqual({
+        overflow: "visible",
+        width: "100%",
+        height: "auto",
+        flex: "",
+      })
+      expect(config.printLayout).toBe(PrintLayout.FIXED_WIDTH)
+    })
+
+    it("keeps the pixel height of dataframes in horizontal layouts", async () => {
+      const config = await renderAndGetContainerConfig(
+        "dataframe",
+        { id: "df-1" },
+        { heightConfig: { pixelHeight: 300 } },
+        horizontalFlexContext
+      )
+      expect(config.minStretchWidth).toBe(MinStretchWidth.LARGE)
+      // The drag handle is disabled here, so the container keeps the
+      // default pixel-height layout styles (no height or flex override).
+      expect(config.styleOverrides).toEqual({ overflow: "visible" })
+    })
+
     it("gives vegaLiteChart flex basis in a horizontal layout without widthConfig", async () => {
       const config = await renderAndGetContainerConfig(
         "vegaLiteChart",

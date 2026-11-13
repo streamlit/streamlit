@@ -68,6 +68,7 @@ import {
 } from "./CustomTheme"
 import { useInsideDataZoomWheelGuard } from "./insideDataZoomWheel"
 import { applyLargeDataDefaults } from "./largeDataDefaults"
+import { withoutMarkerEntryAnimations } from "./markerAnimation"
 import {
   StyledEChartsChartContainer,
   StyledEChartsChartFill,
@@ -77,9 +78,11 @@ import {
   StyledEChartsErrorOverlay,
 } from "./styled-components"
 import {
+  applyLabelNumberFormats,
   applyTimeLabelFormatters,
   applyTooltipFormatters,
 } from "./tooltipFormatters"
+import { useChartFontsReady } from "./useChartFontsReady"
 import { useEChartsSelections } from "./useEChartsSelections"
 
 const LOG = getLogger("EChartsChart")
@@ -423,7 +426,7 @@ export function EChartsChart({
   // - Large-data rendering defaults (`large`, `showSymbol`) for dense series.
   // - Under the Streamlit theme, rounded outer bar corners.
   // - Streamlit theme defaults.
-  // - Tooltip string formatters turned into functions.
+  // - Tooltip and label string formatters turned into functions.
   // - Under the Streamlit theme, time axis labels that show midnight values
   //   as dates.
   // - On display-only charts, a non-pointer series cursor so they don't look
@@ -443,11 +446,13 @@ export function EChartsChart({
     )
     let prepared = configureSelectionOption(
       applyTimeLabelFormatters(
-        applyTooltipFormatters(
-          applyStreamlitOptionDefaults(
-            withSeriesDefaults,
-            element.theme,
-            theme
+        applyLabelNumberFormats(
+          applyTooltipFormatters(
+            applyStreamlitOptionDefaults(
+              withSeriesDefaults,
+              element.theme,
+              theme
+            )
           )
         ),
         element.theme
@@ -506,6 +511,13 @@ export function EChartsChart({
     }
   }, [hasValidDimensions])
 
+  // ECharts caches text widths per font for the whole page, so the first
+  // layout waits for the theme fonts (see `useChartFontsReady`).
+  const areFontsReady = useChartFontsReady(
+    theme,
+    element.theme === STREAMLIT_THEME
+  )
+
   // Create (and dispose) the ECharts instance. Only the renderer is fixed at
   // init time, so only a renderer change recreates the instance; a theme change
   // is applied in place by the effect below. The theme is read through a ref so
@@ -515,7 +527,7 @@ export function EChartsChart({
   // measurement.
   useEffect(() => {
     const dom = containerRef.current
-    if (!dom || !hasValidSpec || !hasBeenSized) {
+    if (!dom || !hasValidSpec || !hasBeenSized || !areFontsReady) {
       return
     }
 
@@ -551,6 +563,7 @@ export function EChartsChart({
     rendererStr,
     hasValidSpec,
     hasBeenSized,
+    areFontsReady,
     setOpError,
     instanceGeneration,
   ])
@@ -605,6 +618,12 @@ export function EChartsChart({
       setInstanceGeneration(generation => generation + 1)
       return
     }
+    // Only a fresh instance plays the marker entry animations. A replacing
+    // option would replay them, because `notMerge` rebuilds the marker views.
+    const isInstanceFirstOption = appliedOptionRef.current === null
+    const optionToApply = isInstanceFirstOption
+      ? preparedOption
+      : withoutMarkerEntryAnimations(preparedOption)
     // Mark this option as attempted up front so a rendering error isn't cleared
     // by a redundant retry against the same option.
     appliedOptionRef.current = preparedOption
@@ -618,7 +637,7 @@ export function EChartsChart({
       if (containerRef.current && isNullOrEmptyString(element.alt)) {
         containerRef.current.removeAttribute("aria-label")
       }
-      chartInstance.setOption(preparedOption as echarts.EChartsOption, {
+      chartInstance.setOption(optionToApply as echarts.EChartsOption, {
         notMerge: true,
       })
       if (containerRef.current) {
@@ -771,9 +790,9 @@ export function EChartsChart({
     element.theme,
   ])
 
-  // "Show data" swaps the chart for a read-only table of its first dataframe.
-  // The chart is hidden, not unmounted, so ECharts keeps its zoom, legend, and
-  // timeline state.
+  // "Show data" swaps the chart for a read-only table when the option uses
+  // exactly one dataframe. The chart is hidden, not unmounted, so ECharts keeps
+  // its zoom, legend, and timeline state.
   const [isShowingData, setIsShowingData] = useState(false)
   const [dataViewHeight, setDataViewHeight] = useState<number | undefined>()
   // Close the table when a rerun drops its dataset:

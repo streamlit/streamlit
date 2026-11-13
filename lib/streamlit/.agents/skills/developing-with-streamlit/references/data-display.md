@@ -38,11 +38,11 @@ A whitespace-only `alt` is ignored (same as not passing `alt`) and logged on eve
 ```python
 # BAD: deprecated parameter
 st.dataframe(df, use_container_width=True)
-st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart, use_container_width=True, alt="Revenue trend")
 
 # GOOD: just omit it — stretch is the default
 st.dataframe(df)
-st.altair_chart(chart)
+st.altair_chart(chart, alt="Revenue trend")
 
 # GOOD: explicitly set width when you need content-sized (non-stretching)
 st.dataframe(df, width="content")

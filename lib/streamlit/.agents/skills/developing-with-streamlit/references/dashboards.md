@@ -3,6 +3,8 @@
 
 Compose metrics, charts, and data into clean dashboard layouts.
 
+The layout examples on this page use built-in charts for brevity. Draw a real dashboard's charts with `st.echarts_chart` (see [Choosing charts for a dashboard](#choosing-charts-for-a-dashboard)); the same layouts work unchanged.
+
 ## Cards with borders
 
 Use `border=True` to create visual cards. Supported on `st.container`, `st.metric`, `st.columns`, `st.grid`, and `st.form`:
@@ -163,11 +165,10 @@ with st.container(border=True):
 
 ## Choosing charts for a dashboard
 
-Prefer one chart engine per page (see [charts.md](charts.md)), and combine engines when a chart needs a type or feature the main one lacks:
+Use `st.echarts_chart` for every chart on a dashboard (see [charts.md](charts.md)). Filter changes animate from the old values to the new ones, a `dataZoom` component adds a zoom slider, gauges and funnels match the line and bar charts, and dense series stay fast.
 
-- **Operational dashboards** (KPIs, monitoring, several charts driven by the same filters): prefer `st.echarts_chart` for every chart. Filter changes animate from the old values to the new ones, time series get a built-in zoom slider (`dataZoom`), gauges and funnels match the line and bar charts, and dense series stay fast with `sampling` and `large`.
-- **Analytical dashboards** (aggregation, binning, faceting, brushing one chart to filter others): prefer `st.altair_chart`, with the simple charts for quick views.
-- Metric sparklines (`chart_data`) work next to either engine.
+- Add an `st.altair_chart` only for a chart that needs a Vega-Lite-only feature, such as faceting into small multiples.
+- Metric sparklines (`chart_data`) and dataframe chart columns work next to ECharts.
 
 ```python
 st.echarts_chart(
@@ -182,8 +183,6 @@ st.echarts_chart(
     alt="Daily revenue, rising since March",
 )
 ```
-
-The layout examples on this page use simple charts for brevity; the same layouts work with `st.echarts_chart`.
 
 ## Layout-first loading with parallel fragments + skeletons
 
@@ -245,7 +244,7 @@ with st.container(border=True):
 
 Each block covers the runs that enter it, and the inner skeleton doesn't end the outer one. The inner block needs no height when it's the body's first element: on a full-app run, the outer skeleton covers it, and on the fragment's own rerun, the previous content keeps its size under the skeleton.
 
-A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` and `dashboard-compute` chart cards.
+A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` chart cards.
 
 To keep the layout stable:
 
@@ -329,12 +328,11 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | Template | Features |
 |----------|----------|
 | `dashboard-revenue` | Revenue BI dashboard: filter toolbar bound to the URL, certified KPIs, card headers with ⋮ menus and definition drawers, SQL popover, ECharts annotations and forecast, donut-to-table drill-down with a record drawer, parallel fragments with skeletons |
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, a category breakdown that morphs between lines and stacked bars, date filtering, reset callback |
 | `dashboard-companies` | Company leaderboard with a filter toolbar bound to the URL, sparkline and badge columns, a `ButtonColumn` that opens a company drawer, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, one loader cached per breakdown, popover filters, reset callback, ECharts charts that animate between line and bar |
-| `dashboard-feature-usage` | API endpoint usage analytics with a category control bound to the URL, starter kits, bordered cards, conditional "Raw data" expander (Altair) |
-| `dashboard-seattle-weather` | Exploratory weather data visualization: an `st.grid` of metrics from a spec loop, year pills bound to the URL (Altair) |
-| `dashboard-stock-peers` | Stock peer comparison with ECharts time series and URL-bound ticker and horizon filters |
+| `dashboard-feature-usage` | API endpoint usage analytics with a category control bound to the URL, starter kits, bordered cards, ECharts time series with a normalization toggle, conditional "Raw data" expander |
+| `dashboard-seattle-weather` | Exploratory weather data visualization: an `st.grid` of metrics from a spec loop, year pills bound to the URL, ECharts range bars, donut, lines, and stacked bars |
+| `dashboard-stock-peers` | Stock peer comparison on the bundled Vega stocks dataset, with ECharts time series and URL-bound ticker and horizon filters |
 | `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a URL-bound region filter in the main script, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script and the report's spinner text on its skeleton |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.

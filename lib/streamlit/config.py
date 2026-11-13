@@ -399,9 +399,9 @@ _create_section("global", "Global options that apply across all of Streamlit.")
 _create_option(
     "global.disableWidgetStateDuplicationWarning",
     description="""
-        By default, Streamlit logs a warning when a user sets both a widget
-        default value in the function defining the widget and a widget value via
-        the widget's key in `st.session_state`.
+        By default, Streamlit logs a warning when a widget has a default value
+        and the script body also sets its value through `st.session_state`.
+        Values set in widget callbacks don't trigger this warning.
 
         If you'd like to turn off this warning, set this to True.
     """,
@@ -1445,16 +1445,28 @@ _create_option(
         the same user key, and an error will be thrown on initialization if this is
         done.
 
+        Streamlit also maps these headers into st.user for agent API sessions,
+        on both `/_stcore/agent/interact` (HTTP) and `/_stcore/agent/mcp`
+        (MCP). See `server.enableAgentApi`.
+
+        Warning: Streamlit trusts these header values as they arrive. Run
+        Streamlit behind a proxy that sets the configured headers and strips
+        copies the client sent, on WebSocket connections and on requests to
+        `/_stcore/agent/`. A client that can send the headers itself, for
+        example by reaching Streamlit directly, can claim any identity.
+
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
+
+        Example: trustedUserHeaders = { "X-Forwarded-Email" = "email" } in
+        config.toml (or {"X-Forwarded-Email": "email"} as JSON) maps the
+        X-Forwarded-Email header to st.user.email.
 
         Note: This is an experimental API subject to change.
     """,
     default_val={},
     # This is used by click. We accept a JSON string, so this is a str.
     type_=str,
-    # Hide until API is finalized.
-    visibility="hidden",
 )
 
 _create_option(

@@ -214,6 +214,14 @@ at.get_by_key("filters")  # unique key, any type
 
 Do not `set_value`, `click`, or otherwise update a disabled widget — that raises `AppTestError` (from `streamlit.testing.v1`), matching a browser user who cannot interact with it.
 
+If every widget changed since the last run is inside the same `@st.fragment` or `st.dialog`, `.run()` reruns only that fragment, as the browser does. Elements outside it keep what the previous run rendered. `.run()` reruns the whole app when:
+
+- widgets changed in more than one fragment,
+- any widget changed outside a fragment, or
+- a `switch_page()` is pending.
+
+Widgets staged in an unsubmitted form or with `on_change="ignore"` don't count. Assigning `at.session_state`, `at.query_params`, or `at.context` does not select a fragment; to have main-script code read it, call `.run()` without a staged fragment interaction.
+
 The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
 ### Forms
@@ -254,6 +262,15 @@ assert at.help[0].value == "'Hello'"
 assert at.space[0].value == "small"  # st.space() with no size; .size is the same value
 assert at.link_button[0].value == "Docs"  # the label; .url is the target
 assert at.page_link[0].value == "Example"  # the label, or the inferred page title
+```
+
+`at.echarts_chart` is read-only too. `.spec` and `.value` are the chart option as a dict. A dataframe in `dataset.source` appears there as a `{"name": ...}` placeholder, and `.datasets` maps that name to the DataFrame. A keyed chart's selection is `at.session_state[key]`, not `.value`, and `set_value()` raises `AppTestError`:
+
+```python
+chart = at.echarts_chart[0]
+assert chart.spec["series"][0]["type"] == "bar"
+source = chart.spec["dataset"]["source"]
+assert len(chart.datasets[source["name"]]) == 3
 ```
 
 `at.help[i].value` keeps a readable repr (`"'Hello'"`, `Point(1, 2)`). When `st.help` stored a parameter-list signature, `.value` is the expression passed to `st.help` (`st.help(len)` is `"len"`, not `"builtins.len(obj, /)"`). The raw stored text is `.proto.value`, and the docstring is `.doc_string`.
@@ -399,13 +416,13 @@ Elements fall into three groups:
 
 - **Interactive.** Widget collections such as `at.button`, `at.text_input`, and `at.selectbox`, plus the other widgets that expose `set_value`, `select`, or `click`. Set the value, then `.run()`.
 - **Inspectable.** The read-only lists under *Asserting on results*, plus `at.data_editor` (edit it through `at.session_state`). `.set_value()` and `.click()` raise `AppTestError`.
-- **Browser-only.** Use Playwright. This covers rendered DOM and CSS, custom-component JavaScript, scroll and resize, media playback, selections on `st.dataframe` and charts (there is no setter for click-to-select rows or Altair/Plotly selection events), and dialog-body code such as `if st.button(...):` when the script does not call the dialog again on that rerun.
+- **Browser-only.** Use Playwright. This covers rendered DOM and CSS, custom-component JavaScript, scroll and resize, media playback, and selections on `st.dataframe` and charts (there is no setter for click-to-select rows or Altair/Plotly selection events).
 
 Inspect `st.data_editor` with `at.data_editor`. Those elements also stay on `at.dataframe`. `.value` is the input table. A keyed editor's `at.session_state` value is the edit state (`edited_rows`, `added_rows`, `deleted_rows`). Assigning that state before `.run()` changes the table the script receives; `.value` stays the input table.
 
-Elements without an `at.<command>` list do not break `.run()`. Examples include `st.balloons`, `st.snow`, `st.empty`, `st.skeleton`, `st.audio`, `st.video`, and charts. Inspect them with `at.get("<node type>")`. That name is usually the command (`"audio"`). Charts use the proto field: `"plotly_chart"`, `"vega_lite_chart"` (Altair and the built-in Vega-Lite charts), `"deck_gl_json_chart"` (`st.pydeck_chart` and `st.map`), `"graphviz_chart"`, and `"echarts_chart"`. `.value` reads widget state first, so a keyed chart with `on_select="rerun"` returns its selection. Otherwise `.value` uses `value`, `body`, `text`, or `label`, and is `None` when the proto has none of those (chart specs live on fields such as `.spec`). `st.audio` and `st.video` expose the media URL on `.url`. `.set_value()` and `.click()` raise `AppTestError`. AppTest does not play media. For a keyed widget AppTest does not model, assign through `at.session_state` or use Playwright.
+Elements without an `at.<command>` list do not break `.run()`. Examples include `st.balloons`, `st.snow`, `st.empty`, `st.skeleton`, `st.audio`, `st.video`, and charts other than `st.echarts_chart`. Inspect them with `at.get("<node type>")`. That name is usually the command (`"audio"`). Charts use the proto field: `"plotly_chart"`, `"vega_lite_chart"` (Altair and the built-in Vega-Lite charts), `"deck_gl_json_chart"` (`st.pydeck_chart` and `st.map`), and `"graphviz_chart"`. `.value` reads widget state first, so a keyed chart with `on_select="rerun"` returns its selection. Otherwise `.value` uses `value`, `body`, `text`, or `label`, and is `None` when the proto has none of those (chart specs live on fields such as `.spec`). `st.audio` and `st.video` expose the media URL on `.url`. `.set_value()` and `.click()` raise `AppTestError`. AppTest does not play media. For a keyed widget AppTest does not model, assign through `at.session_state` or use Playwright.
 
-A button inside `st.dialog` is on the tree after the opener is clicked and `.run()`. `.click().run()` reruns the whole script, not the dialog fragment. AppTest does not click the opener on that rerun. If the script does not call the dialog function again, body code such as `if st.button(...):` does not execute. An `on_click` callback still runs before the rerun, and its session-state updates remain. Use Playwright for that workflow. To test the body with AppTest, open the dialog from session state.
+Widgets inside `st.dialog` are on the tree after clicking the opener and calling `.run()`. Interacting with them and calling `.run()` reruns only the dialog, so body code such as `if st.button(...):` executes and the dialog stays open. Changing a widget outside the dialog in the same step reruns the whole app, which closes the dialog unless the script opens it again.
 
 With the default `on_change="ignore"`, popover contents are already on the tree. Interact with inner widgets as if they were in the main script. Content guarded by `.open` is absent while closed, and that guard exists only when the popover tracks state (`on_change="rerun"` or a callback). If that popover also has a key, set `at.session_state[key] = True` before `.run()`. Otherwise use Playwright.
 

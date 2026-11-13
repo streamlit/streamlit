@@ -213,6 +213,14 @@ def test_dumps_tuple_array_round_trips() -> None:
     assert parsed["weights"] == [800, 700]
 
 
+def test_dumps_assignment_writes_dict_as_inline_table() -> None:
+    """A dict value stays on its assignment line instead of opening a table."""
+    rendered = toml_writer.dumps_assignment("headers", {"X-Email": "email"})
+
+    assert rendered == 'headers = { X-Email = "email" }\n'
+    assert tomllib.loads(rendered) == {"headers": {"X-Email": "email"}}
+
+
 def test_dumps_dict_value_becomes_table_section() -> None:
     """A dict value is a table section that can hold a scalar and an array."""
     rendered = toml_writer.dumps({"server": {"port": 8501, "folderWatchList": ["."]}})

@@ -17,6 +17,8 @@ from __future__ import annotations
 import datetime as dt
 import decimal
 import json
+import re
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -53,6 +55,11 @@ from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 _ECHARTS_LOGGER = echarts_chart_module._LOGGER.name
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_CHARTS_SKILL_PATH = (
+    _REPO_ROOT
+    / "lib/streamlit/.agents/skills/developing-with-streamlit/references/charts.md"
+)
 
 _BASIC_SPEC: dict[str, Any] = {
     "xAxis": {"type": "category", "data": ["A", "B", "C"]},
@@ -1058,6 +1065,89 @@ class EChartsChartTest(DeltaGeneratorTestCase):
 
         mock_warning.assert_not_called()
 
+    @parameterized.expand(
+        [
+            ("axis_label", {"yAxis": {"axisLabel": {"formatter": "%q"}}}, "%q"),
+            (
+                "axis_list",
+                {"xAxis": [{}, {"axisLabel": {"formatter": "100%"}}]},
+                "100%",
+            ),
+            (
+                "axis_pointer_label",
+                {"xAxis": {"axisPointer": {"label": {"formatter": "%q"}}}},
+                "%q",
+            ),
+            (
+                "series_label",
+                {"series": [{"type": "bar", "label": {"formatter": "%.2q"}}]},
+                "%.2q",
+            ),
+            (
+                "series_end_label",
+                {"series": {"type": "line", "endLabel": {"formatter": "%q"}}},
+                "%q",
+            ),
+            (
+                "timeline",
+                {"baseOption": {"radiusAxis": {"axisLabel": {"formatter": "%q"}}}},
+                "%q",
+            ),
+            (
+                "media",
+                {"media": [{"option": {"yAxis": {"axisLabel": {"formatter": "%q"}}}}]},
+                "%q",
+            ),
+        ]
+    )
+    def test_warns_on_malformed_label_number_format(
+        self, _name: str, spec: dict[str, Any], formatter: str
+    ) -> None:
+        """A label formatter that looks like a broken printf format is logged."""
+        with self.assertLogs(_ECHARTS_LOGGER, level="WARNING") as logs:
+            st.echarts_chart(spec)
+
+        assert len(logs.output) == 1
+        assert f"label `formatter` of {formatter!r}" in logs.output[0]
+        assert "neither a number format nor an ECharts template" in logs.output[0]
+        # The chart still renders, and the spec reaches the frontend unchanged.
+        sent_spec = json.loads(
+            self.get_delta_from_queue().new_element.echarts_chart.spec
+        )
+        assert sent_spec == spec
+
+    @parameterized.expand(
+        [
+            ("named_format", "percent"),
+            ("printf_format", "%,.0f"),
+            ("printf_with_escaped_percent", "%.1f%%"),
+            ("template", "{value}%"),
+            ("template_with_space", "{value} %"),
+            ("empty_string", ""),
+            ("null", None),
+            ("non_string", 42),
+            ("literal_text", "km"),
+        ]
+    )
+    def test_no_warning_for_label_formatters(self, _name: str, formatter: Any) -> None:
+        """Number formats, templates, and other literal text don't log."""
+        spec = {
+            "xAxis": {"type": "category", "axisLabel": {"formatter": formatter}},
+            "yAxis": {"type": "value", "axisLabel": {"formatter": formatter}},
+            "series": [
+                {
+                    "type": "bar",
+                    "label": {"formatter": formatter},
+                    # Per-data-item labels are not walked, matching the frontend.
+                    "data": [{"value": 1, "label": {"formatter": "%q"}}],
+                }
+            ],
+        }
+        with patch.object(echarts_chart_module._LOGGER, "warning") as mock_warning:
+            st.echarts_chart(spec)
+
+        mock_warning.assert_not_called()
+
     @parameterized.expand([("invalid",), (0,), (-100,)])
     def test_width_validation_errors(self, invalid_value):
         """Invalid width values raise StreamlitInvalidWidthError."""
@@ -1180,10 +1270,18 @@ def test_dataset_source_exact_duplicate_pandas_columns_raise() -> None:
 @pytest.mark.parametrize(
     "source",
     [
-        pd.DataFrame([[1, 2]], columns=[1, "1"]),
-        pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
+        pytest.param(
+            pd.DataFrame([[1, 2]], columns=[1, "1"]),
+            id="stringified_collision",
+            marks=pytest.mark.filterwarnings(
+                "ignore:The DataFrame has column names of mixed type:UserWarning"
+            ),
+        ),
+        pytest.param(
+            pa.Table.from_arrays([pa.array([1]), pa.array([2])], names=["a", "a"]),
+            id="pyarrow_table",
+        ),
     ],
-    ids=["stringified_collision", "pyarrow_table"],
 )
 def test_dataset_source_duplicate_field_names_are_sent(source: Any) -> None:
     """Labels that only collide as Arrow field names are left to the browser.
@@ -1708,3 +1806,33 @@ def test_echarts_mixin_dg_returns_self() -> None:
 
     echarts_mixin = _OnlyECharts()
     assert echarts_mixin.dg is echarts_mixin
+
+
+def _bundled_echarts_major_minor_version() -> str:
+    """Return the major.minor ECharts version resolved in ``frontend/yarn.lock``."""
+    yarn_lock = (_REPO_ROOT / "frontend/yarn.lock").read_text(encoding="utf-8")
+    # Matches the `"echarts@npm:<range>":` entry, not packages like echarts-for-react.
+    match = re.search(
+        r'^"echarts@npm:[^"\n]*":\n  version: (\d+)\.(\d+)\.', yarn_lock, re.MULTILINE
+    )
+    assert match, "No resolved echarts entry found in frontend/yarn.lock."
+    return f"{match[1]}.{match[2]}"
+
+
+def test_echarts_version_mentions_match_bundled_version() -> None:
+    """The docstring and agent skill both mention the bundled ECharts version."""
+    expected = f"ECharts {_bundled_echarts_major_minor_version()}"
+    sources = {
+        "lib/streamlit/elements/echarts_chart.py (EChartsMixin.echarts_chart docstring)": (
+            EChartsMixin.echarts_chart.__doc__ or ""
+        ),
+        str(_CHARTS_SKILL_PATH.relative_to(_REPO_ROOT)): _CHARTS_SKILL_PATH.read_text(
+            encoding="utf-8"
+        ),
+    }
+    for source, text in sources.items():
+        assert expected in text, (
+            f"frontend/yarn.lock bundles {expected}, but {source} doesn't mention it. "
+            "Update the version there, and check the ECharts release notes for "
+            "features worth adding to the developing-with-streamlit skill."
+        )

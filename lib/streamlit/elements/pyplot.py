@@ -98,15 +98,15 @@ class PyplotMixin:
         by default.
 
         .. note::
-            For new charts, prefer a Vega-based chart command (``st.line_chart``,
-            ``st.bar_chart``, ``st.area_chart``, ``st.scatter_chart``, or
-            ``st.altair_chart``) or ``st.echarts_chart``. A ``st.pyplot`` chart
-            is a static image with no zoom, tooltips, or selections. It doesn't
-            follow the app's theme, so a default figure stays white on a dark
-            theme, and it's rendered on the server on every rerun. Use
-            ``st.pyplot`` to display a Matplotlib figure you already have, or
-            output from libraries that only produce Matplotlib figures, such as
-            seaborn.
+            For new charts, use ``st.echarts_chart``, Streamlit's recommended
+            chart command, or a built-in chart command (``st.line_chart``,
+            ``st.bar_chart``, ``st.area_chart``, or ``st.scatter_chart``) for a
+            quick view. A ``st.pyplot`` chart is a static image with no zoom,
+            tooltips, or selections. It doesn't follow the app's theme, so a
+            default figure stays white on a dark theme, and it's rendered on
+            the server on every rerun. Use ``st.pyplot`` to display a
+            Matplotlib figure you already have, or output from libraries that
+            only produce Matplotlib figures, such as seaborn.
 
         .. Important::
             You must install ``matplotlib>=3.0.0`` to use this command. You can
