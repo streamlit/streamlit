@@ -76,3 +76,7 @@ st.dataframe(
 
 content_height_dataframe = pd.DataFrame(np.random.randn(300, 3))
 st.dataframe(content_height_dataframe, height="content", key="content_height_dataframe")
+
+with st.container(key="fixed_height_resizable_dataframe"):
+    st.dataframe(pd.DataFrame({"job_id": range(60)}), height=300)
+    st.write("Text below the fixed-height dataframe")
