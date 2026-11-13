@@ -39,6 +39,7 @@ import {
   insideDataZoomWheelSkipsSettle,
   optionHasWheelRoam,
   STREAMLIT_THEME,
+  themeRadiusToPx,
   wheelRoamSkipsSettle,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
@@ -85,8 +86,13 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(title.padding).toEqual([0, 0, convertRemToPx(theme.spacing.lg), 0])
 
     const tooltip = echartsTheme.tooltip as Record<string, unknown>
-    expect(tooltip.backgroundColor).toBe(theme.colors.bgColor)
+    // Same 95% opaque background and corner radius as Vega-Lite's
+    // `#vg-tooltip-element`.
+    expect(tooltip.backgroundColor).toBe(
+      transparentize(theme.colors.bgColor, 0.05)
+    )
     expect(tooltip.borderColor).toBe(theme.colors.borderColor)
+    expect(tooltip.borderRadius).toBe(convertRemToPx(theme.radii.default))
     const tooltipText = tooltip.textStyle as Record<string, unknown>
     expect(tooltipText.fontFamily).toBe(theme.genericFonts.bodyFont)
     expect(tooltipText.fontSize).toBe(convertRemToPx(theme.fontSizes.twoSm))
@@ -457,6 +463,21 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(hovered.borderColor).not.toBe(toolbox.iconStyle.borderColor)
   })
 
+  it("converts px theme radii to pixel numbers", () => {
+    const pxTheme = {
+      ...theme,
+      radii: { ...theme.radii, default: "10px", sm: "5px" },
+    }
+    const echartsTheme = buildStreamlitEChartsTheme(pxTheme)
+
+    const tooltip = echartsTheme.tooltip as { borderRadius: number }
+    expect(tooltip.borderRadius).toBe(10)
+    const toolbox = echartsTheme.toolbox as {
+      emphasis: { iconStyle: { textBorderRadius: number } }
+    }
+    expect(toolbox.emphasis.iconStyle.textBorderRadius).toBe(5)
+  })
+
   it("themes the toolbox data view panel", () => {
     const { colors } = darkTheme.emotion
     const toolbox = buildStreamlitEChartsTheme(darkTheme.emotion).toolbox as {
@@ -751,9 +772,13 @@ describe("Streamlit theme resolved by ECharts", () => {
       series: [{ type: "line", data: [1] }],
     })
 
-    const { bgColor } = darkTheme.emotion.colors
+    const bgColor = transparentize(darkTheme.emotion.colors.bgColor, 0.05)
+    const radius = themeRadiusToPx(darkTheme.emotion.radii.sm)
     expect(component("axisPointer").get(["label", "backgroundColor"])).toBe(
       bgColor
+    )
+    expect(component("axisPointer").get(["label", "borderRadius"])).toBe(
+      radius
     )
     // Each axis resolves its chip through its own axisPointer option and the
     // tooltip's before the global one, so an axis-level default would shadow
@@ -768,6 +793,11 @@ describe("Streamlit theme resolved by ECharts", () => {
         axisPointerModel.get(["label", "backgroundColor"])
       )
     ).toEqual([bgColor, bgColor])
+    expect(
+      Object.values(coordSysAxesInfo.axesInfo).map(({ axisPointerModel }) =>
+        axisPointerModel.get(["label", "borderRadius"])
+      )
+    ).toEqual([radius, radius])
   })
 
   it("hides overlapping time axis labels unless the spec turns it off", () => {

@@ -172,6 +172,16 @@ export function formatEChartsTooltipValue(value: unknown): string | string[] {
 }
 
 /**
+ * Convert a theme radius to a pixel number, since ECharts only accepts numeric
+ * radii. ``baseRadius`` can set theme radii in px or rem.
+ */
+export function themeRadiusToPx(radius: string): number {
+  return radius.endsWith("px")
+    ? Number.parseFloat(radius)
+    : convertRemToPx(radius)
+}
+
+/**
  * Build the base axis styling (colors, fonts, label margin) that every axis
  * theme key starts from. Value, log, and time axes extend it to hide
  * overlapping labels (see ``continuousAxisDefaults`` in
@@ -376,6 +386,9 @@ export function buildStreamlitEChartsTheme(
     axisLabel: { ...axisDefaults.axisLabel, hideOverlap: true },
   }
   const titleDefaults = buildChartTitleDefaults(theme)
+  // Matches the Vega-Lite tooltip's (`#vg-tooltip-element`) 95% opaque
+  // background.
+  const tooltipBackgroundColor = transparentize(colors.bgColor, 0.05)
   // Shared text style for component labels/names that would otherwise fall back
   // to ECharts' default (un-themed) gray.
   const bodyTextStyle = {
@@ -436,8 +449,10 @@ export function buildStreamlitEChartsTheme(
       },
     },
     tooltip: {
-      backgroundColor: colors.bgColor,
+      backgroundColor: tooltipBackgroundColor,
       borderColor: colors.borderColor,
+      // Matches the Vega-Lite tooltip's radius.
+      borderRadius: themeRadiusToPx(theme.radii.default),
       textStyle: {
         color: colors.bodyText,
         fontFamily: genericFonts.bodyFont,
@@ -459,10 +474,11 @@ export function buildStreamlitEChartsTheme(
     axisPointer: {
       label: {
         color: colors.bodyText,
-        backgroundColor: colors.bgColor,
+        backgroundColor: tooltipBackgroundColor,
         borderColor: colors.borderColor,
         // ECharts takes a pixel number, and `borderWidth` is a px token.
         borderWidth: Number.parseFloat(theme.sizes.borderWidth),
+        borderRadius: themeRadiusToPx(theme.radii.sm),
       },
     },
     categoryAxis: axisDefaults,
@@ -789,7 +805,7 @@ export function buildStreamlitEChartsTheme(
           textFill: colors.bodyText,
           textBackgroundColor: colors.secondaryBg,
           textPadding: convertRemToPx(theme.spacing.twoXS),
-          textBorderRadius: convertRemToPx(theme.radii.sm),
+          textBorderRadius: themeRadiusToPx(theme.radii.sm),
         },
       },
       // The data view panel is a light surface with blue buttons by default.
