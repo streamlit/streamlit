@@ -211,6 +211,12 @@ breaking changes roll out to users.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
   installs, repairs broken links, skips user-managed files with conflict warning,
   and updates global skill if the versioned tag has changed on GitHub
+- **Automatic global updates:** Every server start checks the global meta skill
+  copies in home-level agent skills directories and replaces a copy only when
+  each of its files matches a known official release. A newer Streamlit
+  refreshes an unmodified install, an older one never downgrades it, and an
+  edited copy is left alone. The check runs in the background, never fails
+  startup, and prints one line when it updates a copy.
 - **Non-interactive:** Pass `--yes` for automation; fails with actionable message
   if prompts unavailable
 - **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files

@@ -96,6 +96,8 @@ User-facing skills ship under `lib/streamlit/.agents/skills/` (for example, `dev
 
 The global meta-skill in `lib/streamlit/.agents/meta-skill/` routes agents to these skills through `scripts/discover.py`, which runs on users' machines under whatever Python the agent finds. That script stays Python 3.8 compatible, uses only the standard library, and prints instead of logging; its module docstring lists the constraints.
 
+Every server start updates outdated global copies of the meta-skill (`update_global_skills` in `web/skills.py`). It replaces a copy only when each of its files matches a digest in `_META_SKILL_DIGESTS`, the list of every official meta-skill file. When you change a meta-skill file, add its new digest there and keep the old ones; a unit test names the digest. The content skill's (`.agents/skills/developing-with-streamlit`) `metadata.version` holds the release's major.minor version, which `scripts/update_version.py` stamps on each release, so do not edit it by hand.
+
 ## Unit Tests
 
 We use the unit tests to cover internal behavior that can work without the web / backend

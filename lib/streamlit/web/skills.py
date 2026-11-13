@@ -16,21 +16,27 @@
 
 from __future__ import annotations
 
+import contextlib
 import errno
+import hashlib
 import os
 import shutil
+import stat
 import sys
 import tempfile
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Final, Literal
+from typing import TYPE_CHECKING, Final, Literal
 
 import click
 
 import streamlit
 from streamlit import env_util
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -1743,3 +1749,234 @@ def nudge_suppression_reason(app_dir: str | None = None) -> _NudgeSuppressionRea
         return ""
     except Exception:  # pragma: no cover - defensive
         return "check_failed"
+
+
+# SHA-256 digests (with LF line endings) of every file in every official release
+# of the global meta-skill, keyed by path inside the skill folder. The update
+# replaces a global copy only when all its files are listed here, so it leaves
+# alone:
+# - a copy the user edited
+# - another author's skill with the same name
+# - a copy of the full bundled skill
+# - a copy from a newer release, so an older Streamlit never downgrades it
+# When you change a meta-skill file, add its new digest and keep the old ones; a
+# unit test names the digest to add.
+_META_SKILL_DIGESTS: Final[dict[str, frozenset[str]]] = {
+    "SKILL.md": frozenset(
+        {
+            # streamlit/agent-skills v1, and Streamlit 1.60-1.66.
+            "e4db5baf3eab471482e0f76f20b78f1e7994e405df6181c90f8c3efb1537bdc8",
+            # Streamlit 1.67.
+            "af871722576bc982344b9515dfddb337ce272fad0b84ad8f5919c6dae64b8e84",
+            # Streamlit 1.68.
+            "e6a7880da2778ac4f86cea79c333fd5b0798fa8a03cf6a9939cd1945c6d7b5e2",
+        }
+    ),
+    "scripts/discover.py": frozenset(
+        {
+            # streamlit/agent-skills v1.
+            "6a037302c69e678f50b075ebec1ea3845c59737c20135acdcb1907153f1d5bf3",
+            # Streamlit 1.60-1.65.
+            "e2a5a018b50616ab857958b00465136263e3ac83ba08e1aa7d5fa69c6c9ec0b8",
+            # Streamlit 1.66.
+            "63f5c1079f3540dd636536244058726d76f6528bbc6e3dfd3cdb18fd1fe56d3d",
+            # Streamlit 1.67-1.68.
+            "a6959d8d38e30ab5cbf7f3582a2b56e46504abe9505f685db77f2cc3d73d252f",
+        }
+    ),
+}
+
+# No official meta-skill file is this large, so the update treats a copy with a
+# larger file as unofficial without reading it.
+_MAX_META_SKILL_FILE_BYTES: Final = 256 * 1024
+
+
+def _skill_files(folder: Path) -> Iterator[Path]:
+    """Yield the paths of a skill folder's files, relative to it, in sorted order.
+
+    Skips hidden files and folders and ``__pycache__``, which are not part of a
+    skill, and does not descend into symlinked folders.
+    """
+    for root, dirs, names in os.walk(folder):
+        dirs[:] = sorted(
+            name for name in dirs if not name.startswith(".") and name != "__pycache__"
+        )
+        for name in sorted(names):
+            if not name.startswith("."):
+                yield Path(root, name).relative_to(folder)
+
+
+def _meta_skill_digest(path: Path) -> str:
+    """Return the SHA-256 digest of a file with its line endings normalized to LF."""
+    # SHA-256 rather than util.calc_hash, whose algorithm differs on FIPS
+    # builds: the digests in _META_SKILL_DIGESTS must match on every machine.
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
+def _is_real_directory(path: Path) -> bool:
+    """Whether ``path`` is a directory and not a symlink to one.
+
+    Reports ``False`` when the path is missing or cannot be read.
+    """
+    try:
+        return stat.S_ISDIR(path.lstat().st_mode)
+    except OSError:
+        return False
+
+
+def _digests_if_official(folder: Path) -> dict[str, str] | None:
+    """Map each file of an installed copy to its digest, if all are official.
+
+    Returns ``None`` at the first file that is not a regular file, is too large,
+    or is in no official release, so an unrelated folder is never read in full.
+    """
+    digests: dict[str, str] = {}
+    for relative in _skill_files(folder):
+        name = relative.as_posix()
+        official = _META_SKILL_DIGESTS.get(name)
+        if official is None:
+            return None
+        path = folder / relative
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size > _MAX_META_SKILL_FILE_BYTES:
+            return None
+        digest = _meta_skill_digest(path)
+        if digest not in official:
+            return None
+        digests[name] = digest
+    return digests
+
+
+def _writes_stay_inside(target: Path, files: list[Path]) -> bool:
+    """Whether writing ``files`` into ``target`` follows no symlink.
+
+    Each destination must be missing or a regular file, and each folder on the
+    way missing or a real directory, so an update never writes outside the
+    skill folder.
+    """
+    for relative in files:
+        parts = relative.parts
+        for depth in range(1, len(parts) + 1):
+            try:
+                mode = target.joinpath(*parts[:depth]).lstat().st_mode
+            except FileNotFoundError:
+                # Nothing below exists either; the update creates it.
+                break
+            is_type = stat.S_ISREG if depth == len(parts) else stat.S_ISDIR
+            if not is_type(mode):
+                return False
+    return True
+
+
+def _replace_file(source: Path, destination: Path) -> None:
+    """Replace ``destination`` with a copy of ``source`` in a single rename.
+
+    A reader sees either the old or the new file, never a partial one. An
+    existing file keeps its permissions; a new one gets the source's, plus
+    owner write.
+    """
+    try:
+        mode = stat.S_IMODE(destination.lstat().st_mode)
+    except FileNotFoundError:
+        mode = stat.S_IMODE(source.stat().st_mode) | stat.S_IWUSR
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fd, temp_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
+    )
+    try:
+        with os.fdopen(fd, "wb") as temp_file:
+            temp_file.write(source.read_bytes())
+        os.chmod(temp_name, mode)
+        os.replace(temp_name, destination)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(temp_name)
+        raise
+
+
+def _update_meta_skill_copy(
+    source: Path, target: Path, bundled: dict[str, str]
+) -> bool:
+    """Update the meta-skill copy at ``target`` if it is an older official release.
+
+    Returns whether it updated the copy. ``bundled`` maps each bundled file to
+    its digest, in write order. Skips a copy that is, or contains, a symlink,
+    since something else manages the files it points at. A symlinked folder
+    above the copy, such as a ``~/.claude/skills`` kept in a dotfiles
+    repository, is followed like a real one.
+    """
+    if not _is_real_directory(target):
+        return False
+    # Each file's official digests are listed on their own, so a copy that an
+    # interrupted update left half-replaced still counts as official, and the
+    # next start finishes it.
+    installed = _digests_if_official(target)
+    if installed is None or "SKILL.md" not in installed:
+        return False
+    if all(installed.get(name) == digest for name, digest in bundled.items()):
+        return False
+    files = [Path(name) for name in bundled]
+    if not _writes_stay_inside(target, files):
+        return False
+    for relative in files:
+        _replace_file(source / relative, target / relative)
+    return True
+
+
+def update_global_skills() -> None:
+    """Update outdated official copies of the meta-skill in the home directory.
+
+    Checks the ``developing-with-streamlit`` folder in every agent harness's
+    home-level skills directory (``~/.agents/skills``, ``~/.claude/skills``,
+    and so on) and replaces it with the bundled meta-skill when every file in
+    it is from an official release listed in :data:`_META_SKILL_DIGESTS`.
+    Prints one line when it updated a copy.
+
+    Never raises. Logs a failure at debug level and leaves that copy as it was,
+    so the next start tries again.
+    """
+    try:
+        source = _get_meta_skill_dir() / _GLOBAL_SKILL_NAME
+        names = [relative.as_posix() for relative in _skill_files(source)]
+        if "SKILL.md" not in names:
+            return
+        bundled = {
+            name: _meta_skill_digest(source / name)
+            for name in names
+            if name != "SKILL.md"
+        }
+        # Copies get the files in this order. SKILL.md goes last, so agents only
+        # see the new instructions once the scripts they call are in place.
+        bundled["SKILL.md"] = _meta_skill_digest(source / "SKILL.md")
+        home = Path.home()
+    except Exception as ex:
+        _LOGGER.debug("Could not read the bundled Streamlit meta-skill", exc_info=ex)
+        return
+    if any(
+        digest not in _META_SKILL_DIGESTS.get(name, frozenset())
+        for name, digest in bundled.items()
+    ):
+        # Writing unlisted files, such as a meta-skill edited in a development
+        # checkout, would leave copies that no later release can update.
+        _LOGGER.debug("Not updating global Streamlit skills: unlisted bundled files")
+        return
+
+    updated: list[Path] = []
+    for _harness, _project_dir, home_skills_dir, _agent_home_dir in _HARNESSES:
+        skills_dir = home / home_skills_dir
+        try:
+            if _update_meta_skill_copy(
+                source, skills_dir / _GLOBAL_SKILL_NAME, bundled
+            ):
+                updated.append(skills_dir)
+        except Exception as ex:
+            _LOGGER.debug(
+                "Could not update the Streamlit skill in %s", skills_dir, exc_info=ex
+            )
+
+    if updated:
+        locations = ", ".join(
+            str(_get_display_path(path, home, use_tilde=True)) for path in updated
+        )
+        _safe_echo(f"  Updated the global Streamlit agent skills ({locations}).")
+        _safe_echo()
