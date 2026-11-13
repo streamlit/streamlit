@@ -458,7 +458,9 @@ jobs:
               echo "- PR: ${PR_URL:-n/a}";
             else
               echo "- No file changes, no PR created";
-              # Keep notes about updates to dropped workflow files visible.
+            fi
+            # Without a PR, this keeps notes about updates to dropped workflow files visible.
+            if [ "${DRY_RUN}" = "true" ] || [ "${CHANGES_FOUND}" != "true" ]; then
               echo "";
               echo "### Agent notes";
               echo "${CHANGES_SUMMARY}";
