@@ -143,9 +143,10 @@ class LocalScriptRunner(ScriptRunner):
                     fragment_ids_this_run=fragment_ids_this_run,
                 )
                 if fragment_ids_this_run:
-                    # Nested fragments tag deltas with their own id, so the
-                    # clear keeps them. The rerunning ancestor redraws them,
-                    # and the browser drops the ones it no longer renders.
+                    # Also drop deltas from fragments nested in a rerunning
+                    # fragment. The clear above keeps them because they carry
+                    # the nested fragment's id, but the ancestor redraws
+                    # whatever it still renders, as the browser does.
                     self.forward_msg_queue._queue = [
                         msg
                         for msg in self.forward_msg_queue._queue

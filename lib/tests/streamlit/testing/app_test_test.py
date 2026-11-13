@@ -1352,15 +1352,16 @@ def test_dialog_form_submit_reruns_dialog_as_fragment() -> None:
 def test_dialog_rerun_keeps_dialog_and_page() -> None:
     """A dialog run redraws the dialog and keeps elements outside it."""
     at = AppTest.from_function(_review_dialog_script).run()
+    at.text_input(key="outside").input("kept").run()
     at.button(key="open").click().run()
 
     at.button(key="ping").click().run()
 
-    assert at.session_state.main_runs == 2
+    assert at.session_state.main_runs == 3
     assert [b.label for b in at.button] == ["Open", "Approve", "Reject", "Ping"]
     assert at.text.values == ["decision=None", "pong"]
     assert at.title[0].value == "Main"
-    assert len(at.text_input) == 2
+    assert at.text_input(key="outside").value == "kept"
 
 
 def test_change_inside_and_outside_dialog_reruns_whole_app() -> None:
@@ -1498,6 +1499,42 @@ def test_switch_page_by_path_from_fragment(tmp_path: Path) -> None:
 
     assert not at.exception
     assert at.text.values == ["other page"]
+
+
+def test_fragment_run_after_redirecting_page_switch(tmp_path: Path) -> None:
+    """A page reached through an in-script switch_page() still gets fragment runs."""
+    (tmp_path / "home.py").write_text(
+        'import streamlit as st\nst.text("home page")\n', encoding="utf-8"
+    )
+    (tmp_path / "redirect.py").write_text(
+        "import streamlit as st\nst.switch_page('target.py')\n", encoding="utf-8"
+    )
+    (tmp_path / "target.py").write_text(
+        "import streamlit as st\n"
+        "st.session_state.setdefault('target_runs', 0)\n"
+        "st.session_state.target_runs += 1\n"
+        "@st.fragment\n"
+        "def frag():\n"
+        "    st.button('Inside', key='inside')\n"
+        "frag()\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "st.navigation(\n"
+        "    [st.Page('home.py'), st.Page('redirect.py'), st.Page('target.py')]\n"
+        ").run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    at.switch_page("redirect.py").run()
+    assert at.session_state.target_runs == 1
+
+    at.button(key="inside").click().run()
+
+    assert at.session_state.target_runs == 1
+    assert len(at.button) == 1
 
 
 def test_outer_fragment_run_drops_stale_nested_fragment_output() -> None:

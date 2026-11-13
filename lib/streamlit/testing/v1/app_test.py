@@ -727,6 +727,9 @@ class AppTest:
                 context_info=context_info,
             )
             self._finished_page_script_hash = pages_manager.current_page_script_hash
+            # The run consumed the switch. Later runs stay on the page it
+            # finished on, which differs when that page called st.switch_page().
+            self._page_hash = ""
             self._last_run_msgs = script_runner.forward_msgs()
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
@@ -811,14 +814,17 @@ class AppTest:
         after updating a widget value or switching pages as script reruns do
         not occur automatically as they do for live-running Streamlit apps.
 
-        If every widget updated since the last run is inside the same fragment
+        If every widget changed since the last run is inside the same fragment
         or dialog, only that fragment reruns, as it would in the browser.
-        Elements outside the fragment keep what the previous run rendered.
-        Widgets staged inside an unsubmitted form do not count, and neither do
-        changes made through ``session_state``, ``query_params``, or
-        ``context``: call ``run()`` without a staged fragment interaction to
-        have the main script read them. Otherwise, or after ``switch_page()``,
-        the whole app reruns.
+        Elements outside the fragment keep what the previous run rendered. The
+        whole app reruns when widgets changed in more than one fragment or
+        outside any fragment, or when a ``switch_page()`` is pending.
+
+        Changes that don't trigger a rerun in the browser don't count: widgets
+        staged in an unsubmitted form, widgets with ``on_change="ignore"``,
+        and assignments to ``session_state``, ``query_params``, or
+        ``context``. To have the main script read them, call ``run()``
+        without a staged fragment interaction.
 
         Parameters
         ----------

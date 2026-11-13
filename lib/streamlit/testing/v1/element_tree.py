@@ -3305,9 +3305,9 @@ class Block:
 
     def __iter__(self) -> Iterator[Node]:
         yield self
-        # Sort by delta index: a fragment run enqueues its deltas after the
-        # elements kept from the previous run, so insertion order can differ
-        # from page order.
+        # Yield children in page order (delta index). Insertion order can
+        # differ, for example when a fragment run appends its deltas after the
+        # elements kept from the previous run.
         for child_idx in sorted(self.children):
             yield from self.children[child_idx]
 

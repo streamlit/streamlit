@@ -220,7 +220,7 @@ If every widget changed since the last run is inside the same `@st.fragment` or 
 - any widget changed outside a fragment, or
 - a `switch_page()` is pending.
 
-Widgets staged in an unsubmitted form or with `on_change="ignore"` don't count. Assigning `at.session_state` does not select a fragment; to have main-script code read it, call `.run()` without a staged fragment interaction.
+Widgets staged in an unsubmitted form or with `on_change="ignore"` don't count. Assigning `at.session_state`, `at.query_params`, or `at.context` does not select a fragment; to have main-script code read it, call `.run()` without a staged fragment interaction.
 
 The same `AppTest` instance keeps fragment registrations across `.run()` calls, so a callback can target `@st.fragment(key=...)` registered on an earlier run.
 
