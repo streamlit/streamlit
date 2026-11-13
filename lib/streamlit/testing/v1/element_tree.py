@@ -4083,8 +4083,11 @@ def _has_pending_value(node: Widget) -> bool:
     """Return True if the test staged a value on this widget since the last run.
 
     ``None`` is a real staged value for widgets whose unset marker is
-    ``InitialValue`` (for example ``selectbox.select_index(None)``).
+    ``InitialValue`` (for example ``selectbox.select_index(None)``). Files
+    staged on a chat input count too, since they submit without text.
     """
+    if isinstance(node, ChatInput) and node._get_files_to_register():
+        return True
     attr, sentinel = _unset_value_marker(node)
     current = getattr(node, attr)
     if isinstance(sentinel, InitialValue):
@@ -4097,8 +4100,8 @@ def _interaction_fragment_id(tree: ElementTree, submitted: set[str]) -> str:
 
     A browser reruns only the fragment holding the widget the user changed.
     Interactions in several fragments, or outside any fragment, need a full
-    rerun. Widgets staged in an unsubmitted form don't trigger a rerun, so
-    they don't count.
+    rerun. Widgets staged in an unsubmitted form, or with
+    ``on_change="ignore"``, don't trigger a rerun, so they don't count.
     """
     triggering_form_ids = {"", *submitted}
     fragment_ids = {
@@ -4107,6 +4110,7 @@ def _interaction_fragment_id(tree: ElementTree, submitted: set[str]) -> str:
         if isinstance(node, Widget)
         and _has_pending_value(node)
         and _widget_form_id(node) in triggering_form_ids
+        and not getattr(node.proto, "ignore_rerun", False)
     }
     return fragment_ids.pop() if len(fragment_ids) == 1 else ""
 

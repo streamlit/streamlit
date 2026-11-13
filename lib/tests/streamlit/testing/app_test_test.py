@@ -556,9 +556,9 @@ def test_out_of_order_blocks() -> None:
 
     assert at.markdown.len == 2
     assert at.info[0].value == "Hi!"
-    # The callback writes to the container from the previous run, whose
-    # cursor is already past "BarFoo", so its elements land after the ones
-    # the script body writes.
+    # The callback writes to the container from the previous run, past the
+    # position of "BarFoo", so its output follows what the script body
+    # writes.
     assert at.markdown.values == ["BarFoo", "FooBar"]
 
 
@@ -1345,6 +1345,8 @@ def test_dialog_form_submit_reruns_dialog_as_fragment() -> None:
     # itself doesn't rerun the main script.
     assert at.session_state.main_runs == 3
     assert at.text[0].value == "decision=('approve', 'lgtm')"
+    # The full rerun dropped the dialog the previous run rendered.
+    assert [b.label for b in at.button] == ["Open"]
 
 
 def test_dialog_rerun_keeps_dialog_and_page() -> None:
@@ -1361,7 +1363,7 @@ def test_dialog_rerun_keeps_dialog_and_page() -> None:
     assert len(at.text_input) == 2
 
 
-def test_interactions_in_several_regions_rerun_whole_app() -> None:
+def test_change_inside_and_outside_dialog_reruns_whole_app() -> None:
     """Changes inside and outside a dialog take a full rerun, which closes it."""
     at = AppTest.from_function(_review_dialog_script).run()
     at.button(key="open").click().run()
@@ -1466,6 +1468,64 @@ def test_switch_page_after_fragment_run(tmp_path: Path) -> None:
     assert at.text.values == ["other page"]
 
 
+def test_switch_page_by_path_from_fragment(tmp_path: Path) -> None:
+    """Page paths used inside a fragment resolve during a fragment run."""
+    (tmp_path / "home.py").write_text(
+        "import streamlit as st\n"
+        "@st.fragment\n"
+        "def frag():\n"
+        "    st.page_link('other.py')\n"
+        "    st.checkbox('Refresh', key='refresh')\n"
+        "    if st.button('Go', key='go'):\n"
+        "        st.switch_page('other.py')\n"
+        "frag()\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "other.py").write_text(
+        'import streamlit as st\nst.text("other page")\n', encoding="utf-8"
+    )
+    (tmp_path / "app.py").write_text(
+        "import streamlit as st\n"
+        "st.navigation([st.Page('home.py'), st.Page('other.py')]).run()\n",
+        encoding="utf-8",
+    )
+
+    at = AppTest.from_file(tmp_path / "app.py").run()
+    at.checkbox(key="refresh").check().run()
+    assert not at.exception
+
+    at.button(key="go").click().run()
+
+    assert not at.exception
+    assert at.text.values == ["other page"]
+
+
+def test_outer_fragment_run_drops_stale_nested_fragment_output() -> None:
+    """An outer fragment run removes what its nested fragment no longer renders."""
+
+    def script() -> None:
+        import streamlit as st
+
+        @st.fragment
+        def inner(count: int) -> None:
+            for i in range(count):
+                st.text(f"inner {i}")
+            st.button("Inner", key="inner")
+
+        @st.fragment
+        def outer() -> None:
+            many = st.checkbox("Many", value=True, key="many")
+            inner(3 if many else 1)
+
+        outer()
+
+    at = AppTest.from_function(script).run()
+    at.checkbox(key="many").uncheck().run()
+
+    assert at.text.values == ["inner 0"]
+    assert len(at.button) == 1
+
+
 def test_fragment_run_drops_previous_toasts() -> None:
     """A toast from an earlier run is not shown again after a fragment run."""
 
@@ -1516,6 +1576,56 @@ def test_unsubmitted_form_outside_fragment_keeps_fragment_run() -> None:
     at.button(key="inside").click().run()
 
     assert at.session_state.main_runs == 1
+
+
+def test_ignored_widget_outside_fragment_keeps_fragment_run() -> None:
+    """A widget with on_change="ignore" doesn't widen a fragment run."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state.setdefault("main_runs", 0)
+        st.session_state.main_runs += 1
+        st.text_input("Note", key="note", on_change="ignore")
+
+        @st.fragment
+        def frag() -> None:
+            st.button("Inside", key="inside")
+
+        frag()
+
+    at = AppTest.from_function(script).run()
+    at.text_input(key="note").input("later")
+    at.button(key="inside").click().run()
+
+    assert at.session_state.main_runs == 1
+    assert at.session_state.note == "later"
+
+
+def test_file_only_chat_submit_reruns_dialog() -> None:
+    """Files staged on a chat input inside a dialog rerun only the dialog."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state.setdefault("main_runs", 0)
+        st.session_state.main_runs += 1
+
+        @st.dialog("Chat")
+        def chat() -> None:
+            submitted = st.chat_input("Ask", accept_file=True, key="ask")
+            if submitted:
+                st.text(f"files={[f.name for f in submitted.files]}")
+
+        if st.button("Open", key="open"):
+            chat()
+
+    at = AppTest.from_function(script).run()
+    at.button(key="open").click().run()
+    at.chat_input(key="ask").upload("notes.txt", b"hi", "text/plain").run()
+
+    assert at.session_state.main_runs == 2
+    assert at.text.values == ["files=['notes.txt']"]
 
 
 def test_interactions_in_two_fragments_rerun_whole_app() -> None:

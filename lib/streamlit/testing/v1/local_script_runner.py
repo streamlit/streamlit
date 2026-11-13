@@ -69,9 +69,10 @@ class LocalScriptRunner(ScriptRunner):
 
         self.forward_msg_queue = ForwardMsgQueue()
         self.fragment_id = fragment_id
-        # The SCRIPT_STARTED handler below drops the deltas of the fragments
-        # that rerun, or all of them on a full run. Toasts are left out: the
-        # clear always keeps them, and the browser shows a toast only once.
+        # Start from the previous run's deltas so a fragment run keeps the
+        # elements outside the fragment. The SCRIPT_STARTED handler below
+        # drops the rerunning fragments' deltas, or all of them on a full run.
+        # Toasts are skipped because the browser shows each toast only once.
         self.forward_msg_queue._queue = [
             msg
             for msg in previous_msgs or []
@@ -91,8 +92,9 @@ class LocalScriptRunner(ScriptRunner):
                 session_state=self.session_state._state,
                 uploaded_file_mgr=MemoryUploadedFileManager("/mock/upload"),
                 script_cache=ScriptCache(),
-                # run()'s request coalesces with this one. Without the
-                # fragment id here, the merged request reruns the whole app.
+                # run() requests a rerun that merges with this initial
+                # request. Without the fragment id here, the merged request
+                # reruns the whole app.
                 initial_rerun_data=RerunData(fragment_id=fragment_id or None),
                 # Keep an empty dict. st.logout() writes {} back to
                 # AppTest.user, and a truthiness check would replace that
@@ -135,10 +137,25 @@ class LocalScriptRunner(ScriptRunner):
                 # mirrors AppSession._clear_queue: fragment_ids_this_run is
                 # forwarded so that a fragment-scoped rerun preserves deltas
                 # belonging to elements outside the running fragment(s).
+                fragment_ids_this_run = kwargs.get("fragment_ids_this_run")
                 self.forward_msg_queue.clear(
                     retain_lifecycle_msgs=True,
-                    fragment_ids_this_run=kwargs.get("fragment_ids_this_run"),
+                    fragment_ids_this_run=fragment_ids_this_run,
                 )
+                if fragment_ids_this_run:
+                    # Nested fragments tag deltas with their own id, so the
+                    # clear keeps them. The rerunning ancestor redraws them,
+                    # and the browser drops the ones it no longer renders.
+                    self.forward_msg_queue._queue = [
+                        msg
+                        for msg in self.forward_msg_queue._queue
+                        if not (
+                            msg.delta.fragment_id
+                            and self._fragment_storage.has_ancestor_in(
+                                msg.delta.fragment_id, fragment_ids_this_run
+                            )
+                        )
+                    ]
 
             # Send ENQUEUE_FORWARD_MSGs to our queue
             if event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
@@ -224,7 +241,9 @@ class LocalScriptRunner(ScriptRunner):
         return parse_tree_from_messages(self.forward_msgs())
 
     def ran_only_fragments(self) -> bool:
-        """Whether the last run that started skipped the main script."""
+        """Return True if the final script run, after any st.rerun(), ran only
+        fragments and skipped the main script.
+        """
         started = [
             data
             for event, data in zip(self.events, self.event_data, strict=True)
