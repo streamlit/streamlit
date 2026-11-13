@@ -126,6 +126,7 @@ if TYPE_CHECKING:
         ValuesView,
     )
 
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.WidgetStates_pb2 import WidgetStates
     from streamlit.source_util import PageHash, PageInfo
 
@@ -458,6 +459,9 @@ class AppTest:
         # still resolvable by callbacks that fire before the script body
         # re-registers them in the next run.
         self._fragment_storage = MemoryFragmentStorage()
+        # The previous run's messages. The next run starts from them so a
+        # fragment run keeps the elements outside the fragment.
+        self._last_run_msgs: list[ForwardMsg] = []
         # Form ids whose last submit used clear_on_submit. The next submit of
         # those forms serializes proto defaults for widgets the test has not
         # set, matching frontend pending-clear without an extra rerun.
@@ -627,11 +631,15 @@ class AppTest:
         self,
         widget_state: WidgetStates | None = None,
         timeout: float | None = None,
+        fragment_id: str = "",
     ) -> AppTest:
         """Run the script, and parse the output messages for querying
         and interaction.
 
         Timeout is in seconds, or None to use the default timeout of the runner.
+        A ``fragment_id`` reruns only that fragment, like a widget interaction
+        inside it does in the browser. If the fragment storage no longer holds
+        that fragment, or a switch_page() is pending, the whole app reruns.
         """
         # Have to import the streamlit module itself so replacing st.secrets
         # is visible to other modules.
@@ -676,6 +684,20 @@ class AppTest:
             new_secrets._secrets = self.secrets  # ty: ignore[invalid-assignment]
             st.secrets = new_secrets
 
+        # Fall back to a full rerun when the fragment is no longer registered
+        # (ScriptRunner would skip it) or a switch_page() is pending (the
+        # destination page needs the main script).
+        switch_pending = self._page_hash not in {"", self._finished_page_script_hash}
+        if switch_pending or not self._fragment_storage.contains(fragment_id):
+            fragment_id = ""
+        if fragment_id and any(
+            "url_pathname" in info for info in self._registered_pages.values()
+        ):
+            # A fragment run skips st.navigation. Give it the last full run's
+            # pages so st.switch_page() and st.page_link() inside the
+            # fragment resolve them, as in a browser session.
+            pages_manager.set_pages_and_resolve(dict(self._registered_pages))
+
         script_runner = LocalScriptRunner(
             self._script_path,
             self._session_state,
@@ -684,6 +706,8 @@ class AppTest:
             kwargs=self.kwargs,
             fragment_storage=self._fragment_storage,
             user_info=user_info,
+            fragment_id=fragment_id,
+            previous_msgs=self._last_run_msgs,
         )
 
         # Register recordings and uploads before the script reads them.
@@ -703,16 +727,21 @@ class AppTest:
                 context_info=context_info,
             )
             self._finished_page_script_hash = pages_manager.current_page_script_hash
+            # The run consumed the switch. Later runs stay on the page it
+            # finished on, which differs when that page called st.switch_page().
+            self._page_hash = ""
+            self._last_run_msgs = script_runner.forward_msgs()
             self._tree._runner = self
             # A failed run that never reaches st.navigation leaves a
-            # main-page-only fallback. Keep the last navigation registry in
-            # that case so switch_page() does not silently hash the filename.
-            # A successful run that no longer calls st.navigation must drop
-            # the stale map.
+            # main-page-only fallback, and so does a fragment run, which
+            # skips st.navigation. Keep the last navigation registry in those
+            # cases so switch_page() does not silently hash the filename. A
+            # successful full run that no longer calls st.navigation must
+            # drop the stale map.
             new_pages = pages_manager.get_pages()
-            if (
-                any("url_pathname" in info for info in new_pages.values())
-                or self.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+            if any("url_pathname" in info for info in new_pages.values()) or (
+                self.session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY]
+                and not script_runner.ran_only_fragments()
             ):
                 self._registered_pages = new_pages
         # Last event is SHUTDOWN, so the corresponding data includes query string
@@ -784,6 +813,18 @@ class AppTest:
         occurs upon user interaction. ``AppTest.run()`` must be manually called
         after updating a widget value or switching pages as script reruns do
         not occur automatically as they do for live-running Streamlit apps.
+
+        If every widget changed since the last run is inside the same fragment
+        or dialog, only that fragment reruns, as it would in the browser.
+        Elements outside the fragment keep what the previous run rendered. The
+        whole app reruns when widgets changed in more than one fragment or
+        outside any fragment, or when a ``switch_page()`` is pending.
+
+        Changes that don't trigger a rerun in the browser don't count: widgets
+        staged in an unsubmitted form, widgets with ``on_change="ignore"``,
+        and assignments to ``session_state``, ``query_params``, or
+        ``context``. To have the main script read them, call ``run()``
+        without a staged fragment interaction.
 
         Parameters
         ----------

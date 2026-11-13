@@ -523,6 +523,8 @@ class Widget(Element, ABC):
     disabled: bool
     key: str | None
     _value: Any
+    # Id of the fragment that rendered this widget, or "" outside any fragment.
+    _fragment_id: str = field(repr=False, default="", init=False)
 
     def __init__(self, proto: Any, root: ElementTree) -> None:
         self.proto = proto
@@ -3303,7 +3305,10 @@ class Block:
 
     def __iter__(self) -> Iterator[Node]:
         yield self
-        for child_idx in self.children:
+        # Yield children in page order (delta index). Insertion order can
+        # differ, for example when a fragment run appends its deltas after the
+        # elements kept from the previous run.
+        for child_idx in sorted(self.children):
             yield from self.children[child_idx]
 
     def __getitem__(self, k: int) -> Node:
@@ -4078,13 +4083,36 @@ def _has_pending_value(node: Widget) -> bool:
     """Return True if the test staged a value on this widget since the last run.
 
     ``None`` is a real staged value for widgets whose unset marker is
-    ``InitialValue`` (for example ``selectbox.select_index(None)``).
+    ``InitialValue`` (for example ``selectbox.select_index(None)``). Files
+    staged on a chat input count too, since they submit without text.
     """
+    if isinstance(node, ChatInput) and node._get_files_to_register():
+        return True
     attr, sentinel = _unset_value_marker(node)
     current = getattr(node, attr)
     if isinstance(sentinel, InitialValue):
         return not isinstance(current, InitialValue)
     return current is not sentinel
+
+
+def _interaction_fragment_id(tree: ElementTree, submitted: set[str]) -> str:
+    """Return the fragment to rerun for the staged interactions, or "" for all.
+
+    A browser reruns only the fragment holding the widget the user changed.
+    Interactions in several fragments, or outside any fragment, need a full
+    rerun. Widgets staged in an unsubmitted form, or with
+    ``on_change="ignore"``, don't trigger a rerun, so they don't count.
+    """
+    triggering_form_ids = {"", *submitted}
+    fragment_ids = {
+        node._fragment_id
+        for node in tree
+        if isinstance(node, Widget)
+        and _has_pending_value(node)
+        and _widget_form_id(node) in triggering_form_ids
+        and not getattr(node.proto, "ignore_rerun", False)
+    }
+    return fragment_ids.pop() if len(fragment_ids) == 1 else ""
 
 
 def _use_form_clear_defaults(
@@ -4247,8 +4275,11 @@ class ElementTree(Block):
 
         submitted = _submitted_form_ids(self)
         form_clears = _form_clear_flags(self)
+        fragment_id = _interaction_fragment_id(self, submitted)
         widget_states = self.get_widget_states()
-        result = self._runner._run(widget_states, timeout=timeout)
+        result = self._runner._run(
+            widget_states, timeout=timeout, fragment_id=fragment_id
+        )
         _record_submitted_form_clears(self._runner, submitted, form_clears)
         return result
 
@@ -4400,6 +4431,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Toast(elt.toast, root=root)
             else:
                 new_node = UnknownElement(elt, root=root)
+            if isinstance(new_node, Widget):
+                new_node._fragment_id = delta.fragment_id
         elif delta.WhichOneof("type") == "add_block":
             block = delta.add_block
             bty = block.WhichOneof("type")
