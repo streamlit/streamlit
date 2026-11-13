@@ -647,9 +647,12 @@ class AppSession:
             The ClientState protobuf to run the script with, or None
             to use previous client state.
         reason : RerunReason | None
-            Why the rerun is requested, recorded in telemetry. When None, it is
-            inferred from ``client_state``, or is ``RerunReason.UNKNOWN`` if
-            ``client_state`` is also None.
+            Why the rerun is requested, recorded in telemetry. If this is None
+            (default), ``request_rerun`` infers it from ``client_state``:
+            browser history navigation maps to ``NAVIGATION``, a ``run_every``
+            tick maps to ``FRAGMENT_AUTO_RERUN``, and any other ``ClientState``
+            maps to ``MANUAL_RERUN``. If ``client_state`` is also None, the
+            reason is ``UNKNOWN``.
 
         """
 

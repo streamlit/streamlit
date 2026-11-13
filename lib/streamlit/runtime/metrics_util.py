@@ -823,7 +823,10 @@ def create_page_profile_message(
         if ctx.rerun_element_type is not None:
             rerun_reason = rerun_reason.combine(RerunReason.WIDGET_INTERACTION)
         page_profile.rerun_reason = rerun_reason.value
-        if rerun_reason is RerunReason.WIDGET_INTERACTION and ctx.rerun_element_type:
+        if (
+            rerun_reason is RerunReason.WIDGET_INTERACTION
+            and ctx.rerun_element_type is not None
+        ):
             page_profile.rerun_element_type = ctx.rerun_element_type
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)

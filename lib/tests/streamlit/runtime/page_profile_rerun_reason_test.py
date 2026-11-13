@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""End-to-end tests for the rerun reason and element type in PageProfile.
+"""AppTest coverage for the rerun reason and element type on PageProfile.
 
 These run real scripts through AppTest and inspect the PageProfile message each
 script run produces.
@@ -78,6 +78,8 @@ def _run_with_widget_state(at: AppTest, widget_state: WidgetState) -> None:
 def test_initial_load_and_slider_interaction(
     page_profiles: PageProfileRecorder,
 ) -> None:
+    """The first run is an initial load, and a slider change records its type."""
+
     def script() -> None:
         import streamlit as st
 
@@ -98,6 +100,8 @@ def test_initial_load_and_slider_interaction(
 def test_form_submit_records_submit_button(
     page_profiles: PageProfileRecorder,
 ) -> None:
+    """A form submit with several changed fields records the submit button."""
+
     def script() -> None:
         import streamlit as st
 
@@ -116,6 +120,8 @@ def test_form_submit_records_submit_button(
 
 
 def test_dataframe_selection(page_profiles: PageProfileRecorder) -> None:
+    """A dataframe selection records the dataframe element type."""
+
     def script() -> None:
         import pandas as pd
 
@@ -139,6 +145,8 @@ def test_dataframe_selection(page_profiles: PageProfileRecorder) -> None:
 
 
 def test_chart_selection(page_profiles: PageProfileRecorder) -> None:
+    """A chart selection records the chart element type."""
+
     def script() -> None:
         import pandas as pd
 
@@ -175,6 +183,8 @@ def test_chart_selection(page_profiles: PageProfileRecorder) -> None:
 def test_custom_component_records_generic_type(
     page_profiles: PageProfileRecorder,
 ) -> None:
+    """A custom component records its generic type, never its name."""
+
     def script() -> None:
         import streamlit.components.v1 as components
 
@@ -192,6 +202,8 @@ def test_custom_component_records_generic_type(
 
 
 def test_st_rerun(page_profiles: PageProfileRecorder) -> None:
+    """A run started by st.rerun() records st_rerun."""
+
     def script() -> None:
         import streamlit as st
 
@@ -207,6 +219,8 @@ def test_st_rerun(page_profiles: PageProfileRecorder) -> None:
 
 
 def test_st_rerun_from_widget_callback(page_profiles: PageProfileRecorder) -> None:
+    """st.rerun() in a callback records the interaction, then st_rerun."""
+
     def script() -> None:
         import streamlit as st
 
@@ -226,6 +240,8 @@ def test_st_rerun_from_widget_callback(page_profiles: PageProfileRecorder) -> No
 
 
 def test_query_params_change(page_profiles: PageProfileRecorder) -> None:
+    """A changed query string records query_params_change once."""
+
     def script() -> None:
         import streamlit as st
 
@@ -245,6 +261,8 @@ def test_query_params_change(page_profiles: PageProfileRecorder) -> None:
 def test_query_params_set_by_script_are_not_a_change(
     page_profiles: PageProfileRecorder,
 ) -> None:
+    """Query params written by the script do not count as a change."""
+
     def script() -> None:
         import streamlit as st
 
@@ -258,6 +276,8 @@ def test_query_params_set_by_script_are_not_a_change(
 
 
 def test_switch_page(page_profiles: PageProfileRecorder) -> None:
+    """st.switch_page() records the interaction, then navigation."""
+
     def script() -> None:
         import streamlit as st
 
@@ -282,6 +302,8 @@ def test_switch_page(page_profiles: PageProfileRecorder) -> None:
 
 
 def test_reason_not_computed_without_usage_stats() -> None:
+    """Without usage stats, neither the reason nor the page profile is computed."""
+
     def script() -> None:
         import streamlit as st
 

@@ -110,8 +110,8 @@ class RerunData:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
     context_info: ContextInfo | None = None
-    # Why this rerun was requested. The script runner can raise it to a reason
-    # with higher precedence once the run starts (see RerunReason).
+    # Why this rerun was requested. Once the run starts, ScriptRunner may replace
+    # this with a higher-precedence reason (see RerunReason).
     reason: RerunReason = RerunReason.UNKNOWN
 
     def __repr__(self) -> str:

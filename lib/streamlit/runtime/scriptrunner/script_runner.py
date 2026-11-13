@@ -666,6 +666,8 @@ class ScriptRunner:
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
             previous_page_script_hash = ctx.page_script_hash
+            # Compare against the previous run's query params, before this run's
+            # query string replaces them below and in ctx.reset().
             rerun_reason = (
                 self._rerun_reason_at_run_start(
                     rerun_data,

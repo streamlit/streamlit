@@ -608,9 +608,12 @@ def _navigation_is_pending(
 def _rerun_element_type(changed_widgets: list[WidgetMetadata[Any]]) -> str:
     """Return the element type to record for a run caused by these widget changes.
 
-    Returns the type all changed widgets share, if any. Otherwise returns the type
-    the changed trigger widgets share (e.g. a form's submit button), since a
-    trigger is what sent the rerun. Falls back to "multiple".
+    Returns the first that applies:
+
+    - The type all changed widgets share.
+    - The type the changed trigger widgets share (e.g. a form's submit button),
+      since a trigger is what sent the rerun.
+    - ``"multiple"``.
     """
     element_types = {metadata.element_type for metadata in changed_widgets}
     if len(element_types) == 1:

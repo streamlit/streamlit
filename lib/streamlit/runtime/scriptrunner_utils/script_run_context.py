@@ -285,7 +285,8 @@ class ScriptRunContext:
     # PageProfile telemetry.
     rerun_reason: RerunReason = RerunReason.UNKNOWN
     # Element type of the widget(s) whose value changed for this run, or None
-    # when no widget changed. Set before widget callbacks run.
+    # when no widget changed. SessionState._call_callbacks sets it before
+    # running widget callbacks.
     rerun_element_type: str | None = None
 
     def __post_init__(self) -> None:
