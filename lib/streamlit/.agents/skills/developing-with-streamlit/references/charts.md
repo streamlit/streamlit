@@ -109,7 +109,7 @@ chart = (
 st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
-For a forecast with uncertainty ranges (a fan chart), layer `mark_area` with `y` and `y2` under the median line. Layers without a `color` encoding all take the theme's first chart color, so set no color in code.
+For a fan chart (forecast ranges), layer `mark_area` with `y` and `y2` under the median line. Set no colors: layers without a `color` encoding use the theme's first chart color.
 
 ```python
 base = alt.Chart(forecast).encode(x=alt.X("week:T", title=None))
@@ -163,9 +163,9 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Leave bar corners to the theme.** Unstacked bars without negative values get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. For square bars, set `"borderRadius": 0`.
 - **Annotate with mark components.** `markLine` draws a milestone at an x-axis value (on a category axis, the category label), and `markArea` shades a range such as forecast months. Add them to a data series: the theme draws a dashed gray line and a faint neutral band in both light and dark mode. For a colored mark, set `itemStyle.color` on the `markLine` or `markArea` (a series' own `color` or `itemStyle.color` also carries over to its marks), for example for per-series averages in a multi-series chart. Leave the mark labels' `color` unset so their text contrasts with the light and dark theme, and place a `markArea` label at `"position": "top"`, because ECharts draws light text inside a translucent area. `itemStyle.decal` hatches projected or estimated bars.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
-- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, so many categories squeeze the bars and ECharts hides most labels. Compute the height from the category count, for example `height=60 + 22 * df["category"].nunique()` (about 60 pixels of chrome plus 22 per bar).
+- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, which squeezes many bars and hides labels. Use about `height=60 + 22 * df["category"].nunique()`.
 
-ECharts has no Vega-style `color=` field for long-format data (one row per group and x value). Pivot it to one wide dataframe with a column per group, and draw one series per column. `pivot` sorts the x values, and a missing group and x combination becomes a gap. In a selection, `series_name` names the column and `data_indices` are rows of the wide dataframe. With a `key`, the selection keeps its positions when the data changes, so reset it when the rows change.
+ECharts has no Vega-style `color=` field, so pivot long-format data (one row per group and x value) to one wide dataframe and draw a series per column. `pivot` sorts the x values, and missing combinations become gaps. In a selection, `series_name` is the column and `data_indices` are rows of the wide dataframe. With a `key`, those positions survive data changes, so reset the selection when the rows change.
 
 ```python
 wide = df.pivot(index="quarter", columns="app", values="sessions").reset_index()
@@ -194,9 +194,9 @@ for s in event.selection.selected:
     st.dataframe(wide.iloc[s["data_indices"]][["quarter", s["series_name"]]])
 ```
 
-When groups don't share x values, as with scatter points, give each group its own `dataset` entry and series, linked by `datasetIndex`. `data_indices` are then rows of that group's dataframe. ECharts collects categories in first-seen order across datasets, so set `xAxis.data` to the sorted categories.
+When groups don't share x values (for example, scatter points), use one `dataset` entry and series per group, linked by `datasetIndex`; `data_indices` then address that group's rows. ECharts orders categories by first appearance across datasets, so set `xAxis.data` to the sorted categories.
 
-Range bars and Gantt charts don't need a `custom` series. Draw each bar as a `lines` series item on `cartesian2d` with a wide, opaque line, and list the lanes (for example, shards or resources) in a category `yAxis.data`. Use string lane names, because ECharts reads a number on a category axis as a position. A `lines` series doesn't extend the axes, so set `xAxis.min` and `xAxis.max`, or the chart stays empty.
+Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
 
 ```python
 st.echarts_chart(
@@ -223,7 +223,7 @@ st.echarts_chart(
 )
 ```
 
-ECharts can't fill between two lines, so a forecast with uncertainty ranges (a fan chart) is simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On a page that uses ECharts throughout, draw each range as a stacked pair of hidden lines: one at the lower quantile, and one with the range width and a translucent `areaStyle`. Don't stack opaque areas and paint the lowest one in the background color to erase what's below: the mask covers gridlines and turns into a visible block in dark mode, with another background color, or inside a container with its own background.
+ECharts can't fill between two lines, so fan charts are simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On an ECharts page, stack two hidden lines per range: the lower quantile, then the range width with a translucent `areaStyle`. Rows without a forecast, such as past actuals, need missing quantiles. Don't paint the lowest area in the background color to mask what's below: it hides gridlines and shows as a block in dark mode or on another background.
 
 ```python
 data = forecast.assign(
@@ -234,13 +234,13 @@ data = forecast.assign(
 def band(lower: str, width: str, opacity: float) -> list[dict]:
     helper = {
         "type": "line",
-        "name": "Forecast",
-        "stack": width,
-        "stackStrategy": "all",
-        "smooth": 0.25,
+        "name": "Forecast",  # Median's name: shares its color and legend entry
+        "stack": width,  # One stack per band, or the bands add up
+        "stackStrategy": "all",  # Default stacks same-sign values only
+        "smooth": 0.25,  # Match the median
         "showSymbol": False,
         "silent": True,
-        "tooltip": {"show": False},
+        "tooltip": {"show": False},  # The median's encode.tooltip lists quantiles
         "lineStyle": {"width": 0},
     }
     return [
@@ -278,12 +278,6 @@ st.echarts_chart(
     alt="Weekly forecast with 50% and 80% ranges",
 )
 ```
-
-- **One stack per band.** A shared stack adds the bands' values together.
-- **Share the median's series name.** Series with the same name share a palette color in light and dark mode, and one legend entry toggles the line with its bands. Don't hard-code a hex color.
-- **Set `"stackStrategy": "all"`.** By default ECharts stacks only values of the same sign, so a band with a negative lower quantile detaches from it.
-- **Hide the helpers from the tooltip** with `tooltip.show: false`, and list the quantiles in the median's `encode.tooltip`. Give the helpers the median's `smooth` value so the band edges follow the line.
-- Rows without a forecast, such as past actuals, need missing quantiles. The bands skip them.
 
 ## Chart selections
 
