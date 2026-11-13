@@ -52,7 +52,7 @@ with st.sidebar:
 with st.sidebar:
     st.title("Dashboard")
     st.dataframe(df)  # Don't put main content here
-    st.bar_chart(data)
+    st.bar_chart(data, alt="Sales by region")
 ```
 
 **What goes in sidebar:**
@@ -140,8 +140,8 @@ from numpy.random import default_rng as rng
 
 df = rng(0).standard_normal((20, 3))
 grid = st.grid(3, wrap=False, border=True)
-grid.line_chart(df, height=220)
-grid.bar_chart(df, height=220)
+grid.line_chart(df, height=220, alt="Three random series as lines")
+grid.bar_chart(df, height=220, alt="Three random series as bars")
 grid.dataframe(df, height=220)
 ```
 

@@ -1,6 +1,6 @@
 # Streamlit Dashboard App Templates
 
-This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns.
+This directory contains ready-to-use dashboard templates for Streamlit. Each template demonstrates best practices for building data-driven dashboards with modern UI patterns, and draws every chart with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
 
@@ -10,7 +10,7 @@ These templates are based on official Streamlit demo apps and work out of the bo
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
-| **dashboard-seattle-weather** | Weather data exploration dashboard | `st.grid` of bordered `st.metric`s built from a spec loop (`format`, `delta_description`, `icon`), year `st.pills` bound to the URL, `st.altair_chart` year comparison with matching chart heights |
+| **dashboard-seattle-weather** | Weather data exploration dashboard | `st.grid` of bordered `st.metric`s built from a spec loop (`format`, `delta_description`, `icon`), year `st.pills` bound to the URL, `st.echarts_chart` year comparison (stacked range bars, donut, lines, and 100% stacked bars) with matching chart heights |
 | **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect` and required horizon `st.pills` bound to the URL, normalized `st.echarts_chart` lines with a zoom slider, percent-formatted best and worst metrics, peer average calculation |
 
 ### Analytics Dashboard Templates
@@ -21,10 +21,10 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 |----------|-------------|--------------|
 | **dashboard-revenue** | Revenue BI dashboard with certified metrics | Filter toolbar bound to the URL (`bind="query-params"`), certified KPI metrics and card titles, ⋮ `st.menu_button` card menus with a "What's measured" drawer and a forecast toggle, section SQL popover, ECharts milestone annotations and forecast range, donut-to-table drill-down with a `ButtonColumn` account drawer, layout-first loading with parallel fragments, `bi-dashboard` theme |
 | **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
-| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`), custom cache spinner |
+| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
+| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment(parallel=True)` cards with `st.skeleton`, one loader cached per breakdown, `st.popover` filters with required segmented controls, reset callback, TIME_RANGES, `st.echarts_chart` line/stacked bar toggle |
-| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, formatted report columns |
+| **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, `st.echarts_chart` throughput line, formatted report columns |
 
 ## Quick Start
 
@@ -153,7 +153,17 @@ first paint, and the fragment's first element replaces its skeleton:
 @st.fragment(parallel=True)
 def metric_body(metric_name: str):
     data = load_metric(metric_name)  # Cached; runs on a worker alongside other cards
-    st.line_chart(data, height=300, alt=f"{metric_name} over time")
+    st.echarts_chart(
+        {
+            "dataset": {"source": data},  # Columns: date, value
+            "tooltip": {"trigger": "axis"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "line", "showSymbol": False}],
+        },
+        height=300,
+        alt=f"{metric_name} over time",
+    )
 
 
 with st.container(border=True):
@@ -210,5 +220,4 @@ reference data → `ttl="1h"` or more; static data → no TTL.
 All templates require Python >=3.11 and use:
 - `streamlit`
 - `pandas>=2.2.3`
-- `altair>=5.5.0` (templates that chart with `st.altair_chart`)
 - `numpy>=1.26.0` (most templates)

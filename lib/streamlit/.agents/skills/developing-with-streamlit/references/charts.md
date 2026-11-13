@@ -7,9 +7,9 @@ Choose a chart command, keep charts consistent, and use the chart APIs well.
 - [Choose a chart command](#choose-a-chart-command)
 - [Keep charts consistent](#keep-charts-consistent)
 - [Accessible names (alt)](#accessible-names-alt)
-- [Simple charts](#simple-charts)
-- [Altair for complex charts](#altair-for-complex-charts)
 - [Apache ECharts](#apache-echarts)
+- [Built-in charts](#built-in-charts)
+- [Altair and Vega-Lite](#altair-and-vega-lite)
 - [Chart selections](#chart-selections)
 - [Large datasets](#large-datasets)
 - [Plotly and Matplotlib](#plotly-and-matplotlib)
@@ -18,20 +18,27 @@ Choose a chart command, keep charts consistent, and use the chart APIs well.
 
 ## Choose a chart command
 
-Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, including light/dark switching, are interactive, and send dataframes to the browser as Arrow (for ECharts, in `dataset.source`).
+Default to `st.echarts_chart` for new charts. It follows the app theme, including light/dark switching, covers the widest range of chart types, animates when the data changes, has a built-in zoom slider, and stays fast with large data. Rank chart commands in this order:
+
+1. **`st.echarts_chart`:** the recommended choice for dashboards and most charts.
+2. **Built-in charts** (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`): a quick one-line chart from a dataframe, for example while exploring data.
+3. **`st.altair_chart` / `st.vega_lite_chart`:** Vega-Lite features that ECharts lacks, or an existing Altair chart or Vega-Lite spec.
+4. **`st.plotly_chart`:** 3D and scientific charts, or an existing Plotly figure.
+5. **Others** (`st.pyplot`, third-party chart components): only for a figure the user already has or a library that only produces that output.
 
 | Need | Use |
 | --- | --- |
-| A quick line, bar, area, or scatter chart from a dataframe | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` |
-| More control: titles, custom tooltips, layers, dual axes, log scales, faceting, aggregation, binning, regression | `st.altair_chart` (Altair ships with Streamlit) |
-| Brushing in one chart to filter linked views | `st.altair_chart` |
-| An existing Vega-Lite JSON spec | `st.vega_lite_chart` |
+| Line, bar, area, scatter, pie, heatmap, or combined charts, including every chart on a dashboard | `st.echarts_chart` |
 | Network graphs, trees, sankey, chord, sunburst, treemap, gauges, radar, funnel, calendar heatmaps, candlesticks | `st.echarts_chart` |
-| Clicking a network node or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
+| Titles, custom tooltips, dual axes, log scales, annotations (`markLine`, `markArea`) | `st.echarts_chart` |
+| Clicking a point, bar, network node, or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
 | A built-in zoom slider (`dataZoom`), in-chart toolbox, or color-range filter (`visualMap`) | `st.echarts_chart` |
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
 | Line, bar, or scatter charts with more than about 100,000 points, or with tens of thousands of points whose data changes often | `st.echarts_chart` (see [Large datasets](#large-datasets)) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
+| A quick line, bar, area, or scatter chart from a dataframe, without customization | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` |
+| Faceting into small multiples, statistical transforms (regression, density, LOESS), or brushing one chart to filter linked charts without a rerun | `st.altair_chart` (Altair ships with Streamlit) |
+| An existing Altair chart or Vega-Lite JSON spec | `st.altair_chart` / `st.vega_lite_chart` |
 | 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
 | An existing Matplotlib or seaborn figure | `st.pyplot` (static image; not for new charts) |
 | Points on a map / layered or 3D geospatial data | `st.map` / `st.pydeck_chart` |
@@ -39,16 +46,16 @@ Prefer Vega-based charts and `st.echarts_chart`. Both follow the app theme, incl
 | A diagram that needs Graphviz layout engines or clusters | `st.graphviz_chart` |
 | A tiny trend inside a metric or table cell | `st.metric(chart_data=...)` or `LineChartColumn` / `BarChartColumn` / `AreaChartColumn` (see [data-display.md](data-display.md)) |
 
-Start with a simple chart and move to `st.altair_chart` when it runs out of options. Move to `st.echarts_chart` for the chart types and in-chart features in the table that Vega-Lite doesn't have, not to redraw a plain line, bar, or scatter chart that Altair already handles.
+When a built-in chart runs out of options, move it to `st.echarts_chart`. Use `st.altair_chart` only for the Vega-Lite-only needs above.
 
 ## Keep charts consistent
 
 Prefer one charting library per page, and ideally across the app. Libraries differ in tooltips, legends, toolbars, zoom behavior, and selection gestures, so mixing them costs some consistency. Combine them when a chart needs a type or feature the main library lacks.
 
-- Default to Vega-based charts. The simple charts and `st.altair_chart` share one look, so mixing those two is fine.
-- When a page needs ECharts-only chart types (for example, a sankey next to a gauge), consider drawing that page's other charts with `st.echarts_chart` too.
-- A single ECharts-only chart on an otherwise Vega-based page is fine. Don't rewrite the page for it.
-- For operational dashboards (KPIs, monitoring, several charts driven by the same filters), prefer `st.echarts_chart` for every chart on the page: filter changes animate and time series get a zoom slider. For analytical dashboards (aggregation, faceting, linked brushing), prefer `st.altair_chart`. See [dashboards.md](dashboards.md#choosing-charts-for-a-dashboard).
+- Default to `st.echarts_chart` for every chart on the page. A built-in chart is fine as a lone quick view, but on a page with ECharts charts, draw the quick ones with `st.echarts_chart` too.
+- A single Altair chart for a Vega-Lite-only feature, such as faceting, on an otherwise ECharts page is fine.
+- The built-in charts and `st.altair_chart` are both Vega-based and share one look, so mixing those two is fine.
+- In an existing app with Vega-based charts, a small change can stay in that engine. Move the page to `st.echarts_chart` when you rework its charts.
 - Sparklines in `st.metric` and dataframe chart columns are fine next to either engine.
 - Keep the default `theme="streamlit"` so every chart uses the app's fonts and chart colors. Set the palette with `theme.chartCategoricalColors` and `theme.chartSequentialColors` in `config.toml` (see [theme.md](theme.md)), not per chart.
 
@@ -64,64 +71,6 @@ st.bar_chart(
 
 - **`st.echarts_chart`:** `alt` replaces the description ECharts generates from the data, so a vague name is worse than none.
 - Streamlit ignores a whitespace-only `alt` (same as omitting it) and logs a warning. Empty `alt=""` is decorative only on `st.image` / `st.pyplot` (see [media-display.md](media-display.md)).
-
-## Simple charts
-
-```python
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-st.bar_chart(df, x="category", y="count", alt="Order count by category")
-st.scatter_chart(df, x="age", y="salary", alt="Salary versus age")
-st.area_chart(df, x="date", y="value", alt="Value over time")
-```
-
-Use `color` for series grouping, `stack` for bar and area stacking, `horizontal` and `sort` for bars, and `size` for scatter points.
-
-Use clear labels, not column names or abbreviations. Skip `x_label`/`y_label` when the column names are already readable.
-
-```python
-# BAD: cryptic column names without labels
-st.line_chart(df, x="dt", y="rev")
-
-# GOOD: cryptic columns, add labels
-st.line_chart(
-    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
-)
-```
-
-Move to `st.altair_chart` for a chart title, custom tooltips, layered or dual-axis charts, log scales, faceting, transforms, selections, or a `color` column combined with several `y` columns. The simple charts have none of these.
-
-## Altair for complex charts
-
-```python
-import altair as alt
-
-chart = (
-    alt.Chart(df)
-    .mark_line()
-    .encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y("revenue:Q", title="Revenue ($)"),
-        color="region:N",
-        tooltip=["date:T", "region:N", alt.Tooltip("revenue:Q", format="$,.0f")],
-    )
-    .properties(title="Revenue by region")
-)
-st.altair_chart(chart, alt="Revenue by region over time")
-```
-
-For a fan chart (forecast ranges), layer `mark_area` with `y` and `y2` under the median line. Set no colors: layers without a `color` encoding use the theme's first chart color.
-
-```python
-base = alt.Chart(forecast).encode(x=alt.X("week:T", title=None))
-outer = base.mark_area(opacity=0.15).encode(y=alt.Y("p10:Q", title="Units"), y2="p90:Q")
-inner = base.mark_area(opacity=0.25).encode(y="p25:Q", y2="p75:Q")
-median = base.mark_line().encode(
-    y="p50:Q", tooltip=["week:T", "p90:Q", "p50:Q", "p10:Q"]
-)
-st.altair_chart(outer + inner + median, alt="Weekly forecast with 50% and 80% ranges")
-```
-
-Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately as Arrow, so don't add `alt.data_transformers.disable_max_rows()`. Calling `chart.to_dict()` or `chart.to_json()` yourself still applies Altair's own limit.
 
 ## Apache ECharts
 
@@ -225,7 +174,7 @@ st.echarts_chart(
 )
 ```
 
-ECharts can't fill between two lines, so fan charts are simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On an ECharts page, stack a translucent area with the range width on a hidden line at the lower quantile, rather than masking with a background-colored area, which breaks in dark mode. Add another pair with its own `stack` for a nested range.
+ECharts can't fill between two lines. For a fan chart (forecast ranges), stack a translucent area with the range width on a hidden line at the lower quantile, rather than masking with a background-colored area, which breaks in dark mode. Add another pair with its own `stack` for a nested range.
 
 ```python
 data = forecast.assign(width=forecast["p90"] - forecast["p10"])
@@ -263,23 +212,64 @@ st.echarts_chart(
 )
 ```
 
+## Built-in charts
+
+```python
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+st.bar_chart(df, x="category", y="count", alt="Order count by category")
+st.scatter_chart(df, x="age", y="salary", alt="Salary versus age")
+st.area_chart(df, x="date", y="value", alt="Value over time")
+```
+
+Use `color` for series grouping, `stack` for bar and area stacking, `horizontal` and `sort` for bars, and `size` for scatter points.
+
+Use clear labels, not column names or abbreviations. Skip `x_label`/`y_label` when the column names are already readable.
+
+```python
+# BAD: cryptic column names without labels
+st.line_chart(df, x="dt", y="rev", alt="Monthly revenue trend")
+
+# GOOD: cryptic columns, add labels
+st.line_chart(
+    df, x="dt", y="rev", x_label="Date", y_label="Revenue", alt="Monthly revenue trend"
+)
+```
+
+Move to `st.echarts_chart` for a chart title, custom tooltips, dual axes, log scales, annotations, a zoom slider, or a `color` column combined with several `y` columns. The built-in charts have none of these.
+
+## Altair and Vega-Lite
+
+Use `st.altair_chart` for what Vega-Lite does better than ECharts: faceting into small multiples, statistical transforms (regression, density, LOESS), and brushing that filters linked charts in the browser without a rerun.
+
+```python
+import altair as alt
+
+chart = (
+    alt.Chart(df)
+    .mark_line()
+    .encode(
+        x=alt.X("date:T", title=None),
+        y=alt.Y("revenue:Q", title="Revenue ($)"),
+        tooltip=["date:T", alt.Tooltip("revenue:Q", format="$,.0f")],
+    )
+    .properties(height=150)
+    .facet("region:N", columns=3)
+)
+st.altair_chart(chart, alt="Revenue over time, one panel per region")
+```
+
+Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately as Arrow, so don't add `alt.data_transformers.disable_max_rows()`. Calling `chart.to_dict()` or `chart.to_json()` yourself still applies Altair's own limit.
+
 ## Chart selections
 
-`st.altair_chart`, `st.vega_lite_chart`, `st.echarts_chart`, `st.plotly_chart`, and `st.pydeck_chart` return selection state with `on_select="rerun"` or a callback. Each enables selection differently:
+`st.echarts_chart`, `st.altair_chart`, `st.vega_lite_chart`, `st.plotly_chart`, and `st.pydeck_chart` return selection state with `on_select="rerun"` or a callback. Each enables selection differently:
 
 | Command | Enable selection with | Read |
 | --- | --- | --- |
-| `st.altair_chart` / `st.vega_lite_chart` | A named selection param in the chart (`alt.selection_point("name")`, `alt.selection_interval("name")`) | `event.selection.<name>` |
 | `st.echarts_chart` | `selectedMode` on a series for points, or a `brush` component / `toolbox.feature.brush` for regions | `event.selection.selected`, `event.selection.areas` |
+| `st.altair_chart` / `st.vega_lite_chart` | A named selection param in the chart (`alt.selection_point("name")`, `alt.selection_interval("name")`) | `event.selection.<name>` |
 | `st.plotly_chart` | Nothing extra; `selection_mode` narrows it to `"points"`, `"box"`, or `"lasso"` | `event.selection.points` |
 | `st.pydeck_chart` | An `id` on every layer; `selection_mode="multi-object"` for several objects | `event.selection.objects` |
-
-```python
-brush = alt.selection_interval(name="brush", encodings=["x"])
-chart = alt.Chart(df).mark_bar().encode(x="month:T", y="sales:Q").add_params(brush)
-event = st.altair_chart(chart, on_select="rerun", key="sales_chart")
-date_range = event.selection.brush  # {"month": [start, end]} once the user brushes
-```
 
 ```python
 visits = pd.DataFrame({"day": ["Mon", "Tue", "Wed"], "visits": [120, 200, 150]})
@@ -298,9 +288,19 @@ event = st.echarts_chart(
     },
     on_select="rerun",
     key="weekday_chart",
+    alt="Visits by weekday",
 )
 rows = [i for group in event.selection.selected for i in group["data_indices"]]
 st.dataframe(visits.iloc[rows])
+```
+
+```python
+brush = alt.selection_interval(name="brush", encodings=["x"])
+chart = alt.Chart(df).mark_bar().encode(x="month:T", y="sales:Q").add_params(brush)
+event = st.altair_chart(
+    chart, on_select="rerun", key="sales_chart", alt="Monthly sales"
+)
+date_range = event.selection.brush  # {"month": [start, end]} once the user brushes
 ```
 
 - **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
@@ -315,8 +315,8 @@ Every row reaches the browser and is processed there. From about 10,000 points p
 
 | Points per chart | Line | Scatter | Bar |
 | --- | --- | --- | --- |
-| Up to about 10,000 | Any command; choose by features | Any command | Any command |
-| About 10,000 to 100,000 | Vega-based or `st.echarts_chart` | Vega-based or `st.echarts_chart` | Vega-based or `st.echarts_chart` |
+| Up to about 10,000 | Any command | Any command | Any command |
+| About 10,000 to 100,000 | `st.echarts_chart` or Vega-based | `st.echarts_chart` or Vega-based | `st.echarts_chart` or Vega-based |
 | About 100,000 to 1,000,000 | `st.echarts_chart`; add `"sampling": "lttb"` to the densest lines | `st.echarts_chart` | `st.echarts_chart` |
 | More than 1,000,000 | Aggregate first; `st.echarts_chart` draws up to about 2,000,000 | Aggregate first | Aggregate first |
 
@@ -334,9 +334,9 @@ Streamlit fills rendering defaults that you haven't set yourself, so don't add t
 
 ## Plotly and Matplotlib
 
-Don't reach for Plotly or Matplotlib for ordinary 2D charts. Vega-based charts and ECharts cover them and match the app better.
+Don't reach for Plotly or Matplotlib for ordinary 2D charts. `st.echarts_chart` covers them and matches the app better.
 
-- **`st.plotly_chart`** fits when you need what neither Vega-Lite nor ECharts draws: 3D charts (`scatter3d`, `surface`, `mesh3d`, `volume`), scientific traces (violin, ternary, carpet, Smith charts), a tile basemap under a chart, or a Plotly figure the user already has. It needs the `plotly` package. Browsers allow only a handful of WebGL contexts per page, so keep WebGL-heavy Plotly charts to a few per page.
+- **`st.plotly_chart`** fits when you need what neither ECharts nor Vega-Lite draws: 3D charts (`scatter3d`, `surface`, `mesh3d`, `volume`), scientific traces (violin, ternary, carpet, Smith charts), a tile basemap under a chart, or a Plotly figure the user already has. It needs the `plotly` package. Browsers allow only a handful of WebGL contexts per page, so keep WebGL-heavy Plotly charts to a few per page.
 - **`st.pyplot`** displays a Matplotlib figure as a static image: no zoom, hover, or selection. It doesn't follow the app theme, so a default figure is a white box on a dark theme. It also renders on the server on every rerun. Use it only for a figure you already have, or for libraries that only produce Matplotlib output (seaborn, statsmodels, scikit-learn displays). Pass the `Figure`, not an `Axes`: pandas `.plot()` returns an `Axes`, so pass its `.get_figure()` result.
 
 ## Maps and diagrams
@@ -348,9 +348,9 @@ Don't reach for Plotly or Matplotlib for ordinary 2D charts. Vega-based charts a
 ## References
 
 - [Chart elements](https://docs.streamlit.io/develop/api-reference/charts)
-- [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)
 - [st.echarts_chart](https://docs.streamlit.io/develop/api-reference/charts/st.echarts_chart)
 - [st.line_chart](https://docs.streamlit.io/develop/api-reference/charts/st.line_chart)
 - [st.bar_chart](https://docs.streamlit.io/develop/api-reference/charts/st.bar_chart)
+- [st.altair_chart](https://docs.streamlit.io/develop/api-reference/charts/st.altair_chart)
 - [st.plotly_chart](https://docs.streamlit.io/develop/api-reference/charts/st.plotly_chart)
 - [st.pyplot](https://docs.streamlit.io/develop/api-reference/charts/st.pyplot)

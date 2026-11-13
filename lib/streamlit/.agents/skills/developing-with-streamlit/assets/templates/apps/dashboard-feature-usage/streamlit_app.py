@@ -20,7 +20,7 @@ Demonstrates:
 - Multiselect for endpoint filtering
 - Starter kits / presets for quick selection
 - Bordered container cards with bold labels
-- Time series visualization with normalization
+- ``st.echarts_chart`` time series with normalization and a zoom slider
 - Metric cards with numeric values formatted by ``format=`` and 28-day deltas
 - Rolling average options
 - ``@st.cache_data(ttl=...)`` loader to keep data fresh and bounded
@@ -33,7 +33,6 @@ actual data source (e.g., Snowflake queries, APIs, etc.).
 
 from datetime import date, timedelta
 
-import altair as alt
 import numpy as np
 import pandas as pd
 
@@ -279,31 +278,40 @@ with chart_col:
 
     with st.container(border=True):
         st.markdown("**Time series**")
-        y_format = ".1%" if normalize else ",.0f"
-        y_title = "Share of requests" if normalize else "Request count"
+        # ECharts draws one series per column, so pivot to one column per
+        # endpoint, in the metric cards' order.
+        wide = filtered_data.pivot_table(
+            index="date", columns="endpoint", values="request_count"
+        )[selected_endpoints]
+        if normalize:
+            # Plot percentage points so the axis labels can show a "%" suffix.
+            wide *= 100
+        option = {
+            "dataset": {"source": wide.reset_index()},
+            "legend": {"type": "scroll"},
+            "tooltip": {
+                "trigger": "axis",
+                "valueFormatter": "%.1f%%" if normalize else "%,.0f",
+            },
+            "xAxis": {"type": "time"},
+            "yAxis": {
+                "type": "value",
+                "axisLabel": {"formatter": "{value}%"} if normalize else {},
+            },
+            "dataZoom": [{"type": "inside"}, {"type": "slider"}],
+            "series": [
+                {
+                    "type": "line",
+                    "name": endpoint,
+                    "encode": {"x": "date", "y": endpoint},
+                    "showSymbol": False,
+                }
+                for endpoint in wide.columns
+            ],
+        }
 
-        chart = (
-            alt.Chart(filtered_data)
-            .mark_line()
-            .encode(
-                x=alt.X("date:T", title="Date"),
-                y=alt.Y(
-                    "request_count:Q", title=y_title, axis=alt.Axis(format=y_format)
-                ),
-                color=alt.Color(
-                    "endpoint:N", title="Endpoint", legend=alt.Legend(orient="bottom")
-                ),
-                tooltip=[
-                    alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"),
-                    alt.Tooltip("endpoint:N", title="Endpoint"),
-                    alt.Tooltip("request_count:Q", title="Requests", format=y_format),
-                ],
-            )
-            .interactive()
-        )
-
-        st.altair_chart(
-            chart,
+        st.echarts_chart(
+            option,
             height=450,
             alt=(
                 f"{rolling_label} share of requests by endpoint over time"

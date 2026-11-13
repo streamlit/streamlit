@@ -4,7 +4,6 @@ version = "1.0.0"
 description = "An example dashboard exploring the Seattle Weather dataset"
 requires-python = ">=3.11"
 dependencies = [
-    "altair>=5.5.0",
     "pandas>=2.2.3",
     "streamlit",
     "vega-datasets>=0.9.0",

@@ -162,7 +162,7 @@ user = st.session_state.user
 
 # Page-specific content (title is handled in streamlit_app.py)
 data = fetch_analytics(user.id, project)
-st.line_chart(data)
+st.line_chart(data, alt="Project analytics over time")
 ```
 
 ## Global state

@@ -184,7 +184,7 @@ Keep page files as direct scripts. Do not wrap the page body in a render functio
 # BAD: app_pages/sales.py
 def render_page():
     st.title("Sales")
-    st.line_chart(load_sales())
+    st.line_chart(load_sales(), alt="Sales over time")
 
 
 render_page()
@@ -328,27 +328,28 @@ if details.open:
 
 ## Data and charts
 
-Prefer Vega-based charts and `st.echarts_chart` over Plotly and `st.pyplot`, and prefer one charting library per page. Use `st.echarts_chart` for chart types Vega-Lite lacks, or an existing ECharts option or `pyecharts` chart, rather than a third-party component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
+Use `st.echarts_chart` for new charts, with the data as a dataframe in `dataset.source`. Fall back to the built-in charts for a quick one-line view, then `st.altair_chart` for Vega-Lite-only features such as faceting, then `st.plotly_chart` for 3D and scientific charts. Prefer one charting library per page. Use `st.echarts_chart` rather than a third-party ECharts component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
 
 ```python
-# GOOD: Native charts for common cases
-st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
-st.bar_chart(df, x="category", y="orders", alt="Orders by category")
-st.scatter_chart(
-    df, x="revenue", y="margin", color="segment", alt="Margin versus revenue by segment"
+# GOOD: ECharts for new charts
+st.echarts_chart(
+    {
+        "dataset": {"source": df[["date", "revenue"]]},
+        "tooltip": {"trigger": "axis", "valueFormatter": "dollar"},
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "series": [{"type": "line", "showSymbol": False}],
+    },
+    alt="Monthly revenue, up 12% since January",
 )
 
-# GOOD: Altair for complex charts
-chart = (
-    alt.Chart(df)
-    .mark_line()
-    .encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y("revenue:Q", title="Revenue"),
-        color="region:N",
-    )
-)
-st.altair_chart(chart, alt="Revenue by region over time")
+# OK: A built-in chart for a quick look while exploring data
+st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
+
+# BAD: Matplotlib for a new chart (a static image that ignores the app theme)
+fig, ax = plt.subplots()
+ax.plot(df["date"], df["revenue"])
+st.pyplot(fig, alt="Monthly revenue trend")
 ```
 
 Keep sensitive data out of frontend payloads. Hiding a dataframe column only hides it visually; pre-filter sensitive columns before display.
