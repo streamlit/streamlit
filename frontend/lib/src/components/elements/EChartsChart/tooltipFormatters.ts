@@ -576,7 +576,8 @@ function mapConfigs(
  * - Numbers and numeric strings are formatted.
  * - Other strings (such as category names), booleans, and non-finite numbers
  *   show as they are.
- * - Anything else shows as an empty string.
+ * - Anything else, such as a missing (``null``) value, shows as an empty
+ *   string.
  */
 function formatLabelValue(
   formatValue: NumberFormatter,
@@ -617,25 +618,30 @@ const CARTESIAN_AXES = [
  * the one at ``index``: its ``type``, else ``"category"`` when it declares
  * ``data``, else ``"value"``. Each source is checked in order, so a timeline
  * tick or ``media`` override that doesn't set the type inherits it from the
- * option that holds the chart.
+ * option that holds the chart. Like ECharts, IDs ``7`` and ``"7"`` match.
  */
 function readAxisType(
   sources: readonly EChartsOptionObject[],
   axisKey: string,
   { index, id }: { index: number; id: unknown }
 ): unknown {
-  for (const source of sources) {
+  const axisLists = sources.map((source): unknown[] => {
     const axes = source[axisKey]
-    const axisList: unknown[] = Array.isArray(axes) ? axes : [axes]
-    const idIndex =
-      id === undefined
-        ? -1
-        : axisList.findIndex(
-            axis =>
-              isPlainObject(axis) &&
-              (axis as Record<string, unknown>).id === id
+    return Array.isArray(axes) ? (axes as unknown[]) : [axes]
+  })
+  const axesWithId =
+    typeof id === "string" || typeof id === "number"
+      ? axisLists.flat().filter(axis => {
+          const axisId: unknown = get(axis, "id")
+          return (
+            (typeof axisId === "string" || typeof axisId === "number") &&
+            String(axisId) === String(id)
           )
-    const axis = axisList[idIndex >= 0 ? idIndex : index]
+        })
+      : []
+  const candidates =
+    axesWithId.length > 0 ? axesWithId : axisLists.map(list => list[index])
+  for (const axis of candidates) {
     if (isPlainObject(axis)) {
       const { type, data } = axis as Record<string, unknown>
       if (type !== undefined) {
@@ -681,7 +687,10 @@ function readCategoryOrTimeEncodeKeys(
   return keys
 }
 
-/** Collect the dimension indices of ``encode`` entries (e.g. the entries of ``{x: [0], y: [1]}``), sorted ascending. */
+/**
+ * Collect the dimension indices of ``encode`` entries (e.g. the entries of
+ * ``{x: [0], y: [1]}``), sorted ascending.
+ */
 function readEncodeIndices(entries: [string, unknown][]): number[] {
   return entries
     .flatMap(([, indices]) => indices)
@@ -700,7 +709,9 @@ function readEncodeIndices(entries: [string, unknown][]): number[] {
  *   all of them. Prefer the last number or numeric string in data order, such
  *   as the y value of a vertical bar or the x value of a horizontal one, then
  *   the last value. Category names and datetimes arrive as strings, so this
- *   also skips them on series without cartesian axes.
+ *   also skips them on series without cartesian axes. On those series, a
+ *   numeric category that comes after the value is formatted too, because
+ *   their axes are not skipped.
  */
 function readSeriesLabelValue(
   params: unknown,

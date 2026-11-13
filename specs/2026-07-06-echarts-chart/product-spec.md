@@ -377,7 +377,9 @@ st.echarts_chart({
     cell's value). Like ECharts, it skips the dimensions on a cartesian category or time axis
     (picked by index or ID), so numeric years and timestamps aren't formatted, and categories
     and dataframe datetimes arrive as strings. Polar, single-axis, and parallel series skip no
-    axis, so a numeric category that comes after the value in a row is formatted instead.
+    axis, so a numeric category that comes after the value in a row is formatted instead. On
+    pie and funnel series, whose default label is the item name, the format applies to the
+    item's value, not its share; the `"{d}%"` template shows shares.
     `encode.label` isn't read. State labels (`emphasis.label`, ...) fall back to the converted
     `label.formatter` in ECharts.
   - *Warnings:* Python logs a warning for unconverted label strings that contain an unescaped

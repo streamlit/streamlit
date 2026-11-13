@@ -1073,6 +1073,34 @@ describe("applyLabelNumberFormats", () => {
     }
   )
 
+  it("finds an axis ID in the chart option when a timeline tick restates the axes", () => {
+    const result = applyLabelNumberFormats({
+      baseOption: {
+        xAxis: [{ type: "value" }, { type: "category", id: 7 }],
+        yAxis: {},
+      },
+      options: [
+        {
+          xAxis: [{ type: "value" }],
+          series: [
+            {
+              type: "bar",
+              xAxisId: "7",
+              label: { show: true, formatter: "dollar" },
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      labelFormatterAt(
+        result,
+        "options[0].series[0].label.formatter"
+      )({ value: [1500, 2024], encode: { x: [1], y: [0] } })
+    ).toBe("$1,500")
+  })
+
   it("converts end labels but not per-data-item labels", () => {
     const dataItem = { value: 5, label: { formatter: "dollar" } }
     const result = applyLabelNumberFormats({

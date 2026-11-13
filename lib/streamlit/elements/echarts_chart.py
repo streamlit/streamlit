@@ -1219,11 +1219,11 @@ class EChartsMixin:
         .. note::
             Streamlit extends some ECharts formatter options so you can
             format tooltips and labels without JavaScript. None of them apply
-            to per-item tooltips or labels inside ``series[i].data``. The
-            tooltip options work in ``tooltip`` and ``series[i].tooltip``:
+            to per-item tooltips or labels inside ``series[i].data``:
 
-            - ``valueFormatter`` accepts a number format, which formats each
-              value in the default tooltip: a named format (``"plain"``,
+            - ``valueFormatter`` in ``tooltip`` or ``series[i].tooltip``
+              accepts a number format, which formats each value in the
+              default tooltip: a named format (``"plain"``,
               ``"localized"``, ``"dollar"``, ``"euro"``, ``"yen"``,
               ``"percent"``, ``"compact"``, ``"scientific"``,
               ``"engineering"``, ``"accounting"``, or ``"bytes"``) or a
@@ -1247,10 +1247,13 @@ class EChartsMixin:
               a series, also accept these number formats (e.g.
               ``{"axisLabel": {"formatter": "percent"}}`` shows ``0.05`` as
               ``5%``). Axis labels format numeric ticks and keep non-numeric
-              category names. Series labels format the value ECharts shows
-              by default, such as the y value of a vertical bar. A string that
-              contains ``{`` stays an ECharts template, and ``markPoint`` or
-              ``markLine`` labels aren't converted.
+              category names. Series labels format the series value, such as
+              the y value of a vertical bar. On pie and funnel series, that's
+              the item's value, not its share; use the ``"{d}%"`` template to
+              show shares. A string that contains ``{`` stays an ECharts
+              template, and ``markPoint`` or ``markLine`` labels aren't
+              converted. Any other string that isn't a number format is drawn
+              as literal text, and one with an unescaped ``%`` logs a warning.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
