@@ -34,7 +34,10 @@ VALUE_FORMAT = "%,.0f"
 
 
 def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.DataFrame:
-    """Filter dataframe by time range."""
+    """Keep rows inside ``time_range`` (``1M``, ``6M``, ``1Y``, ``QTD``, ``YTD``, or ``All``).
+
+    Any other label returns ``df`` unchanged.
+    """
     if time_range == "All" or df.empty:
         return df
 
@@ -259,7 +262,8 @@ def breakdown_chart(
     if show_percent:
         wide = wide.copy()
         values = wide[categories]
-        wide[categories] = values.div(values.sum(axis=1), axis=0)
+        # A day with no sessions divides by 1, so its shares stay 0, not NaN.
+        wide[categories] = values.div(values.sum(axis=1).replace(0, 1), axis=0)
 
     # ``chart_type`` is also the ECharts series type ("line" or "bar").
     extra: dict[str, Any] = (

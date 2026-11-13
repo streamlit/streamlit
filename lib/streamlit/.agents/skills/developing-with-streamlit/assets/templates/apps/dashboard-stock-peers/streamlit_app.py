@@ -38,7 +38,11 @@ HORIZONS = {"1 Year": 12, "3 Years": 36, "5 Years": 60, "All": None}
 
 @st.cache_data(show_spinner="Loading stock price data...")
 def load_prices() -> pd.DataFrame:
-    """Monthly closing prices, one column per ticker, indexed by date."""
+    """Monthly closing prices, one column per ticker, indexed by tz-naive date.
+
+    Market-data APIs often return an exchange timezone; drop it with
+    ``tz_localize(None)`` so each point stays on its trading day.
+    """
     stocks: pd.DataFrame = vega_datasets.data.stocks()
     return stocks.pivot_table(index="date", columns="symbol", values="price")
 
@@ -87,7 +91,7 @@ months = HORIZONS[horizon]
 data = prices[tickers]
 if months is not None:
     # Slice by date, not row count, so the horizon also holds for daily prices.
-    # The first row is the baseline the other prices are compared against.
+    # >= keeps the row exactly one horizon back as the normalization baseline.
     data = data[data.index >= data.index[-1] - pd.DateOffset(months=months)]
 
 # Normalize prices (start at 1). Use the first non-null value per ticker, so

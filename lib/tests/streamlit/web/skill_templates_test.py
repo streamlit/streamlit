@@ -17,11 +17,13 @@
 from __future__ import annotations
 
 import sys
+from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import streamlit as st
 from streamlit.testing.v1 import AppTest
 
 if TYPE_CHECKING:
@@ -38,10 +40,33 @@ _APPS_DIR = (
     / "apps"
 )
 _TEMPLATES = sorted(path.name for path in _APPS_DIR.iterdir() if path.is_dir())
+# These templates import packages from the integration dependency group.
+_INTEGRATION_TEMPLATES = {"act-review-queue"}  # sqlalchemy, for st.connection
+# These templates draw charts only in a drawer that a table click opens.
+_NO_DEFAULT_CHART = {"act-review-queue", "dashboard-companies"}
+
+
+def _param(template: str, *values: Any) -> Any:
+    marks = (
+        [pytest.mark.require_integration] if template in _INTEGRATION_TEMPLATES else []
+    )
+    return pytest.param(template, *values, marks=marks)
+
 
 # Widget states that reach branches the default run skips, by template. Keys
 # are widget keys, so each state runs as if the user had set those widgets.
 _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
+    # The audit log of decided proposals.
+    ("act-review-queue", {"view": "Decided"}),
+    # The review drawer, and a rejection that is missing its required note.
+    (
+        "act-review-queue",
+        {"reviewing": "PO-1001", "drafts": {"PO-1001": {"decision": "Reject"}}},
+    ),
+    (
+        "compute-demand-simulator",
+        {"product": "Tents", "price": 10, "promo": 20, "marketing": 0.0, "supply": 70},
+    ),
     (
         "dashboard-metrics",
         {"users_view": "table", "channel_chart": "bar", "channel_pct": True},
@@ -59,21 +84,33 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
     ("dashboard-revenue", {"growth_view": "%", "mrr_forecast": True}),
     ("dashboard-seattle-weather", {"years": [2015]}),
     ("dashboard-stock-peers", {"stocks": ["AAPL"], "horizon": "1 Year"}),
-    ("dashboard-stock-peers", {"stocks": ["AAPL", "IBM"], "horizon": "All"}),
+    # GOOG has no prices before 2004, so its normalization needs bfill().
+    ("dashboard-stock-peers", {"stocks": ["AAPL", "GOOG"], "horizon": "All"}),
 ]
 
 
 @pytest.fixture
-def isolated_helper_modules(request: pytest.FixtureRequest) -> Iterator[None]:
-    """Unload a template's helper modules before and after its run.
+def isolated_template(
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[None]:
+    """Run a template in a temporary directory, with fresh modules and caches.
 
     Several templates import helpers with the same names (``data``,
     ``charts``), so a module cached by one template would shadow another's.
+    ``act-review-queue`` creates its SQLite database in the working directory,
+    and its cached resources point at that file.
     """
     template_dir = _APPS_DIR / request.node.callspec.params["template"]
     names = [path.stem for path in template_dir.glob("*.py")]
     saved = {name: sys.modules.pop(name) for name in names if name in sys.modules}
+    monkeypatch.chdir(tmp_path)
+    st.cache_data.clear()
+    st.cache_resource.clear()
     yield
+    st.cache_data.clear()
+    st.cache_resource.clear()
     for name in names:
         sys.modules.pop(name, None)
     sys.modules.update(saved)
@@ -103,20 +140,22 @@ def test_templates_are_discovered() -> None:
     assert {template for template, _ in _ALTERNATE_STATES} <= set(_TEMPLATES)
 
 
-@pytest.mark.usefixtures("isolated_helper_modules")
-@pytest.mark.parametrize("template", _TEMPLATES)
+@pytest.mark.usefixtures("isolated_template")
+@pytest.mark.parametrize("template", [_param(template) for template in _TEMPLATES])
 def test_template_runs(template: str) -> None:
     """Each template runs without exceptions, and every ECharts chart has alt text."""
     at = _run_template(template)
     _assert_renders_cleanly(at)
-    # Catches a template that stops before its charts. The companies template
-    # draws charts only in the drawer that a table click opens.
-    if template != "dashboard-companies":
+    # Catches a template that stops before its charts.
+    if template not in _NO_DEFAULT_CHART:
         assert at.echarts_chart, "the default run should draw a chart"
 
 
-@pytest.mark.usefixtures("isolated_helper_modules")
-@pytest.mark.parametrize(("template", "state"), _ALTERNATE_STATES)
+@pytest.mark.usefixtures("isolated_template")
+@pytest.mark.parametrize(
+    ("template", "state"),
+    list(starmap(_param, _ALTERNATE_STATES)),
+)
 def test_template_runs_with_alternate_state(
     template: str, state: dict[str, Any]
 ) -> None:
