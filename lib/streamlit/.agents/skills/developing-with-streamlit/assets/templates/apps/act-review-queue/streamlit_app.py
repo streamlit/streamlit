@@ -262,7 +262,9 @@ if categories:
     rows = rows[rows["category"].isin(categories)]
 if search and not rows.empty:  # On zero rows, agg doesn't return a Series
     haystack = (
-        rows.index + " " + rows[["product", "sku", "supplier"]].agg(" ".join, axis=1)
+        rows.index
+        + " "
+        + rows[["product", "sku", "supplier"]].fillna("").agg(" ".join, axis=1)
     )
     rows = rows[haystack.str.contains(search, case=False, regex=False)]
 rank = {priority: position for position, priority in enumerate(store.PRIORITIES)}
@@ -358,7 +360,9 @@ problems = [
     for d, problem in checked
     if problem
 ]
-low_risk = [pid for pid in rows.index[rows["low_risk"]] if pid not in review.drafts()]
+# Bulk accept covers fresh proposals only, never ones a planner put on hold.
+fresh = rows["low_risk"] & (rows["status"] == "pending")
+low_risk = [pid for pid in rows.index[fresh] if pid not in review.drafts()]
 
 with st.container(border=True):
     with st.container(horizontal=True, vertical_alignment="center"):

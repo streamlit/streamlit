@@ -267,6 +267,8 @@ def record(decisions: list[Decision], reviewer: str) -> tuple[int, int]:
     written = 0
     with connection().session as session:
         for decision in decisions:
+            # The proposal keeps the agent's quantity, so a held proposal shows
+            # it again; the planner's quantity and note are in the audit log.
             result = session.execute(
                 text(
                     "UPDATE proposals SET status = :status "
