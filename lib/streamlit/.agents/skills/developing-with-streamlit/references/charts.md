@@ -109,6 +109,18 @@ chart = (
 st.altair_chart(chart, alt="Revenue by region over time")
 ```
 
+For a fan chart (forecast ranges), layer `mark_area` with `y` and `y2` under the median line. Set no colors: layers without a `color` encoding use the theme's first chart color.
+
+```python
+base = alt.Chart(forecast).encode(x=alt.X("week:T", title=None))
+outer = base.mark_area(opacity=0.15).encode(y=alt.Y("p10:Q", title="Units"), y2="p90:Q")
+inner = base.mark_area(opacity=0.25).encode(y="p25:Q", y2="p75:Q")
+median = base.mark_line().encode(
+    y="p50:Q", tooltip=["week:T", "p90:Q", "p50:Q", "p10:Q"]
+)
+st.altair_chart(outer + inner + median, alt="Weekly forecast with 50% and 80% ranges")
+```
+
 Altair has no 5,000-row limit in Streamlit. Streamlit sends the data separately as Arrow, so don't add `alt.data_transformers.disable_max_rows()`. Calling `chart.to_dict()` or `chart.to_json()` yourself still applies Altair's own limit.
 
 ## Apache ECharts
@@ -153,6 +165,103 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Leave bar corners to the theme.** Unstacked bars without negative values get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. For square bars, set `"borderRadius": 0`.
 - **Annotate with mark components.** `markLine` draws a milestone at an x-axis value (on a category axis, the category label), and `markArea` shades a range such as forecast months. Add them to a data series: the theme draws a dashed gray line and a faint neutral band in both light and dark mode. For a colored mark, set `itemStyle.color` on the `markLine` or `markArea` (a series' own `color` or `itemStyle.color` also carries over to its marks), for example for per-series averages in a multi-series chart. Leave the mark labels' `color` unset so their text contrasts with the light and dark theme, and place a `markArea` label at `"position": "top"`, because ECharts draws light text inside a translucent area. `itemStyle.decal` hatches projected or estimated bars.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
+- **Size horizontal bars by category count.** `height="content"` is a fixed 350 pixels, which squeezes many bars and hides labels. Use about `height=60 + 22 * df["category"].nunique()`.
+
+ECharts has no Vega-style `color=` field, so pivot long-format data (one row per group and x value) to one wide dataframe and draw a series per column. In a selection, `series_name` is the column and `data_indices` are rows of the wide dataframe.
+
+```python
+wide = df.pivot(index="quarter", columns="app", values="sessions").reset_index()
+event = st.echarts_chart(
+    {
+        "legend": {},
+        "tooltip": {},
+        "dataset": {"source": wide},
+        "xAxis": {"type": "category"},
+        "yAxis": {},
+        "series": [
+            {
+                "type": "bar",
+                "name": app,
+                "encode": {"x": "quarter", "y": app},
+                "selectedMode": "multiple",
+            }
+            for app in wide.columns[1:]
+        ],
+    },
+    on_select="rerun",
+    key="sessions_chart",
+    alt="Quarterly sessions by app, web peaks in Q2",
+)
+for s in event.selection.selected:
+    st.dataframe(wide.iloc[s["data_indices"]][["quarter", s["series_name"]]])
+```
+
+When groups don't share x values (for example, scatter points), keep the one dataset and add a dataset per group with `{"transform": {"type": "filter", "config": {"dimension": "app", "=": app}}}`, pointing each series at it with `datasetIndex` and setting `"name": app`. Map a selection back with the same filter in pandas: `df[df["app"] == s["series_name"]].iloc[s["data_indices"]]`.
+
+Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
+
+```python
+st.echarts_chart(
+    {
+        "tooltip": {"formatter": "{b}"},
+        "xAxis": {"type": "time", "min": runs["start"].min(), "max": runs["end"].max()},
+        "yAxis": {"type": "category", "data": sorted(runs["shard"].unique())},
+        "series": [
+            {
+                "type": "lines",
+                "coordinateSystem": "cartesian2d",
+                "lineStyle": {"width": 14, "opacity": 1},
+                "data": [
+                    {
+                        "name": r.test,
+                        "coords": [[r.start, r.shard], [r.end, r.shard]],
+                    }
+                    for r in runs.itertuples()
+                ],
+            }
+        ],
+    },
+    alt="Test runs per shard over time",
+)
+```
+
+ECharts can't fill between two lines, so fan charts are simpler in Altair (see [Altair for complex charts](#altair-for-complex-charts)). On an ECharts page, stack a translucent area with the range width on a hidden line at the lower quantile, rather than masking with a background-colored area, which breaks in dark mode. Add another pair with its own `stack` for a nested range.
+
+```python
+data = forecast.assign(width=forecast["p90"] - forecast["p10"])
+band = {
+    "type": "line",
+    "name": "Forecast",  # Median's name: shares its color and legend entry
+    "stack": "band",  # One stack per range
+    "stackStrategy": "all",  # Default stacks same-sign values only
+    "showSymbol": False,
+    "tooltip": {"show": False},  # The median's encode.tooltip lists quantiles
+    "lineStyle": {"width": 0},
+}
+st.echarts_chart(
+    {
+        "dataset": {"source": data},
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,d"},
+        "xAxis": {"type": "time"},
+        "yAxis": {},
+        "series": [
+            {**band, "encode": {"x": "week", "y": "p10"}},
+            {
+                **band,
+                "encode": {"x": "week", "y": "width"},
+                "areaStyle": {"opacity": 0.2},
+            },
+            {
+                "type": "line",
+                "name": "Forecast",
+                "showSymbol": False,
+                "encode": {"x": "week", "y": "p50", "tooltip": ["p90", "p50", "p10"]},
+            },
+        ],
+    },
+    alt="Weekly forecast with an 80% range",
+)
+```
 
 ## Chart selections
 
@@ -195,7 +304,7 @@ st.dataframe(visits.iloc[rows])
 ```
 
 - **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
-- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
+- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. With a dataset `filter` transform, they are positions among the filtered rows, so apply the same filter in pandas before indexing (see [Apache ECharts](#apache-echarts)). Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
 - Target an axis on an ECharts brush (`"brush": {"xAxisIndex": "all"}`) so its regions appear in `areas`.
 - Set `key` on Altair, Vega-Lite, ECharts, and pydeck charts to keep a selection when the data changes. Without a key, any change to the chart resets it. Plotly selections reset whenever the figure changes, even with a key.
 - Import `VegaLiteState`, `EChartsState`, `PlotlyState`, and `PydeckState` from `streamlit.typing` to annotate the returned event.

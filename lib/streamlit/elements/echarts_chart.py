@@ -199,9 +199,11 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         ``"node"``, or ``"edge"``.
 
         ``data_indices`` is sorted and series-local. For a dataset without
-        transforms, it addresses ``dataset.source`` rows. For inline series,
-        it addresses ``series.data``. For graph series, ``data_type="node"``
-        addresses ``data`` and ``data_type="edge"`` addresses ``links``.
+        transforms, it addresses ``dataset.source`` rows. With a ``filter``
+        transform, it gives positions among the filtered rows, which keep their
+        source order. For inline series, it addresses ``series.data``. For
+        graph series, ``data_type="node"`` addresses ``data`` and
+        ``data_type="edge"`` addresses ``links``.
 
     areas : list[dict[str, Any]]
         The active brush regions. Each entry contains ``brush_index``,
@@ -1131,7 +1133,10 @@ class EChartsMixin:
             raise an error: ``custom`` series (which require a ``renderItem``
             callback), map and geo charts (which require registering GeoJSON map
             data), and 3D or WebGL charts from the ECharts GL extension
-            (``bar3D``, ``scatter3D``, ``globe``, and similar).
+            (``bar3D``, ``scatter3D``, ``globe``, and similar). For range bars
+            such as Gantt charts, use a ``lines`` series with
+            ``"coordinateSystem": "cartesian2d"`` and set ``xAxis.min`` and
+            ``xAxis.max`` instead of a ``custom`` series.
 
         .. note::
             Strings in the option object (``title.text``, legend names, labels)
