@@ -611,7 +611,7 @@ def NumberColumn(
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
-        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.57").
         - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
           On timedelta / duration columns, show an elapsed-time clock instead
@@ -2950,7 +2950,7 @@ def ProgressColumn(
         - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
         - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
         - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
-        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+        - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.57").
         - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
         - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
         - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").

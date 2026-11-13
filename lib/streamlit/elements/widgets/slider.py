@@ -653,6 +653,12 @@ class SliderMixin:
             - ``"accounting"``: Show in accounting format with parentheses for negatives.
             - ``"bytes"``: Show in byte units (e.g. ``1.2KB``).
 
+            If ``step`` is a whole number, the ``"dollar"``, ``"euro"``, and
+            ``"accounting"`` formats show whole amounts without decimals (e.g.
+            ``$1,234`` instead of ``$1,234.00``). Sliders with a fractional
+            ``step`` keep the decimals. To always show two decimals, use a
+            printf-style format string such as ``"$%,.2f"`` or ``"€%,.2f"``.
+
             For information about printf-style format strings, see
             `sprintf.js
             <https://github.com/alexei/sprintf.js?tab=readme-ov-file#format-specification>`_.
