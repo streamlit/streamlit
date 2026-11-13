@@ -39,6 +39,7 @@ import {
   insideDataZoomWheelSkipsSettle,
   optionHasWheelRoam,
   STREAMLIT_THEME,
+  themeRadiusToPx,
   wheelRoamSkipsSettle,
   withDefaultSeriesCursor,
 } from "./CustomTheme"
@@ -85,7 +86,8 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(title.padding).toEqual([0, 0, convertRemToPx(theme.spacing.lg), 0])
 
     const tooltip = echartsTheme.tooltip as Record<string, unknown>
-    // Matches the Vega-Lite tooltip's translucent background and radius.
+    // Same 95% opaque background and corner radius as Vega-Lite's
+    // `#vg-tooltip-element`.
     expect(tooltip.backgroundColor).toBe(
       transparentize(theme.colors.bgColor, 0.05)
     )
@@ -771,8 +773,12 @@ describe("Streamlit theme resolved by ECharts", () => {
     })
 
     const bgColor = transparentize(darkTheme.emotion.colors.bgColor, 0.05)
+    const radius = themeRadiusToPx(darkTheme.emotion.radii.sm)
     expect(component("axisPointer").get(["label", "backgroundColor"])).toBe(
       bgColor
+    )
+    expect(component("axisPointer").get(["label", "borderRadius"])).toBe(
+      radius
     )
     // Each axis resolves its chip through its own axisPointer option and the
     // tooltip's before the global one, so an axis-level default would shadow
@@ -787,6 +793,11 @@ describe("Streamlit theme resolved by ECharts", () => {
         axisPointerModel.get(["label", "backgroundColor"])
       )
     ).toEqual([bgColor, bgColor])
+    expect(
+      Object.values(coordSysAxesInfo.axesInfo).map(({ axisPointerModel }) =>
+        axisPointerModel.get(["label", "borderRadius"])
+      )
+    ).toEqual([radius, radius])
   })
 
   it("hides overlapping time axis labels unless the spec turns it off", () => {

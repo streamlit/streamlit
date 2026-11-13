@@ -478,6 +478,7 @@ export function buildStreamlitEChartsTheme(
         borderColor: colors.borderColor,
         // ECharts takes a pixel number, and `borderWidth` is a px token.
         borderWidth: Number.parseFloat(theme.sizes.borderWidth),
+        borderRadius: themeRadiusToPx(theme.radii.sm),
       },
     },
     categoryAxis: axisDefaults,
