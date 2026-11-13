@@ -126,11 +126,15 @@ public/_redirects -> ../streamlit/docs/_redirects
 ```
 
 The symlinks keep the five loaders and every `/images/...` URL unchanged. The first
-implementation step confirms three things: that webpack resolves the `../content/index.md`
-import in `pages/index.js` through the symlink, that the export copies the symlinked files
-into `out/`, and that the shallow submodule checkout fetches a pinned tag that isn't the tip
-of `develop`, both locally and on Netlify. If a symlink check fails, the loaders point at
-`streamlit/docs/content` directly, which is one constant or import each.
+implementation step confirms that:
+
+- webpack resolves the `../content/index.md` import in `pages/index.js` through the symlink
+- the export copies the symlinked files into `out/`
+- the shallow submodule checkout fetches a pinned tag that isn't the tip of `develop`, both
+  locally and on Netlify
+
+If either symlink check fails, the loaders point at `streamlit/docs/content` directly, which
+changes one constant or import each.
 
 Other changes in the docs repo:
 
@@ -150,45 +154,51 @@ A submodule pins a commit. The pin follows releases:
 | Event | The pin moves to |
 |---|---|
 | A minor release `X.Y.0` is tagged | The `X.Y.0` tag |
-| A patch release `X.Y.Z` is tagged | The `X.Y.Z` tag, if `docs/` changed since the current pin |
-| An urgent docs fix is needed between releases | The fix's cherry-pick on the latest release branch |
+| A patch release `X.Y.Z` is tagged | The `X.Y.Z` tag |
+| An urgent docs fix is needed between releases | The fix's cherry-pick on the branch of the latest release |
 
 Commits on `develop` reach the site only through a release, so pages for unreleased
 features never go live early.
 
 Urgent fixes are rare: wrong security guidance, broken Community Cloud instructions, or a
 wrong install command. They merge to `develop` first in a PR that only touches `docs/`,
-`cherry-pick-to-release-branch.yml` puts them on the latest `release/X.Y.Z` branch, and the
+`cherry-pick-to-release-branch.yml` puts them on the branch of the latest release, and the
 release manager dispatches the §4 workflow with that commit. Docs for a dated Community
 Cloud or Streamlit in Snowflake launch take the same path. Everything else, typo fixes
 included, waits for the next release, about two weeks at most.
 
-Without a check, a patch release drops those cherry-picks.
+Without a check, the next release can drop those cherry-picks.
 `patch-release-branch-creation.yml` branches from the previous tag, so `release/1.67.1`
 lacks whatever was cherry-picked onto `release/1.67.0` after its tag, including the import
-itself (§7). Before tagging a patch release, `release-tag-and-pr-creation.yml` gets a new
-check: it fails when a commit that changed `docs/` on the previous release branch after its
-tag has no equivalent on the new release branch. The release manager then cherry-picks the
-missing commit and runs the workflow again. The check compares changes
-(`git log --cherry-pick`), not SHAs, since the cherry-pick on the new branch gets a new SHA.
-Minor releases don't need the check, because they branch from `develop`, where urgent fixes
-merge first.
+itself (§7). `release-branch-creation.yml` branches from a cutoff nightly, so a minor
+release lacks a fix that merged to `develop` after the cutoff. Before tagging any release,
+`release-tag-and-pr-creation.yml` gets a new check: it fails when a commit that changed
+`docs/` on the latest release's branch after its tag has no equivalent on the new release
+branch. The release manager then cherry-picks the missing commit and runs the workflow
+again. The check compares changes (`git log --cherry-pick`), not SHAs, because cherry-picks
+get new SHAs. A workflow input lists commits to skip, for a cherry-pick whose conflict
+resolution changed its patch.
 
-Release notes for a minor release have to be in the pinned commit. Today
-`generating-changelog` and `scripts/changelog_fetch_prs.py` need the new tag and write to
-`work-tmp/`. They change to take the release-branch tip and the new version, and to write
-the notes into `<year>.md` and `_index.md` in
-`docs/content/develop/quick-references/release-notes/`. The release manager commits them to
-the release branch before tagging, `wiki/release-process.md` moves that step ahead of the
-tag, and the release merge PR brings the notes back to `develop`. A second new check in
-`release-tag-and-pr-creation.yml` fails when a minor release has no release-notes section
-for its version.
+Release notes for a minor release have to be in the pinned commit, so they're written
+before the tag:
+
+- `generating-changelog` and `scripts/changelog_fetch_prs.py` take the release-branch tip,
+  the new version, and the release date instead of the new tag. They write the notes into
+  `<year>.md` and `_index.md` in `docs/content/develop/quick-references/release-notes/`
+  instead of `work-tmp/`.
+- The release manager commits the notes to the release branch before tagging.
+  `wiki/release-process.md` and the `releasing-streamlit` skill move that step ahead of the
+  tag.
+- The release merge PR brings the notes back to `develop`.
+- A second new check in `release-tag-and-pr-creation.yml` fails when a minor release has no
+  release-notes section for its version.
 
 ### 4. Release PR in `streamlit/docs`
 
-A workflow in `streamlit/docs` replaces most of the manual release PR. It runs hourly and
-opens a PR when PyPI has a final release newer than the pinned version, so nightly tags and
-releases that are still publishing don't trigger it:
+A workflow in `streamlit/docs` replaces most of the manual release PR. It runs hourly. When
+PyPI has a final release newer than the pinned version, it opens a release PR, or updates
+the one that's already open. Nightly tags and releases that are still publishing don't
+trigger it:
 
 1. Move the submodule to the release tag (§3).
 2. Generate docstrings for the new version with `python/generate.py`, as `make docstrings`
@@ -200,8 +210,9 @@ releases that are still publishing don't trigger it:
    placeholder tile images that the validator (§6) reports for the new pin.
 
 For an urgent fix, the release manager dispatches the workflow with the commit to pin. It
-then moves the submodule to that commit and skips steps 2 and 3. A pin on a release branch
-counts as that branch's version, so a later scheduled run doesn't move it back.
+then moves the submodule to that commit and skips steps 2 and 3. The workflow reads the
+pinned version from `lib/pyproject.toml` in the pinned commit, so a later scheduled run
+leaves an urgent-fix pin in place until the next release.
 
 Merging the PR publishes the docs. The "What's new" tiles in `pages/index.js` stay in the
 docs repo, and the release manager updates them in this PR. A schedule avoids storing a
@@ -249,7 +260,8 @@ validator flags in today's content.
 
 **Site build.** The validator doesn't parse MDX, so an unbalanced tag or a stray `{` still
 breaks the site. A CI job that runs when `docs/` changes checks out `streamlit/docs` at
-`main`, puts the PR checkout at the submodule path, and runs `make export`. The build
+`main`, puts the PR checkout at the submodule path, and runs `make export` without its
+submodule update, which would replace the PR's pages with the pinned ones. The build
 installs that repo's npm dependencies and compiles the PR's pages, so the job has a
 read-only token and no secrets. The build time hasn't been measured. If it's too slow for
 every docs PR, the job runs nightly against `develop`, and the validator stays the per-PR
