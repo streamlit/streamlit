@@ -199,9 +199,11 @@ class EChartsSelectionState(ReadOnlyAttributeDictionary):
         ``"node"``, or ``"edge"``.
 
         ``data_indices`` is sorted and series-local. For a dataset without
-        transforms, it addresses ``dataset.source`` rows. For inline series,
-        it addresses ``series.data``. For graph series, ``data_type="node"``
-        addresses ``data`` and ``data_type="edge"`` addresses ``links``.
+        transforms, it addresses ``dataset.source`` rows. With a ``filter``
+        transform, it addresses the filtered rows in source order. For inline
+        series, it addresses ``series.data``. For graph series,
+        ``data_type="node"`` addresses ``data`` and ``data_type="edge"``
+        addresses ``links``.
 
     areas : list[dict[str, Any]]
         The active brush regions. Each entry contains ``brush_index``,

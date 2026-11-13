@@ -194,7 +194,7 @@ for s in event.selection.selected:
     st.dataframe(wide.iloc[s["data_indices"]][["quarter", s["series_name"]]])
 ```
 
-When groups don't share x values (for example, scatter points), use one `dataset` entry and series per group, linked by `datasetIndex`.
+When groups don't share x values (for example, scatter points), keep the one dataset and add a dataset per group with `{"transform": {"type": "filter", "config": {"dimension": "app", "=": app}}}`, pointing each series at it with `datasetIndex`. Map a selection back with the same filter in pandas: `df[df["app"] == s["series_name"]].iloc[s["data_indices"]]`.
 
 Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
 
@@ -302,7 +302,7 @@ st.dataframe(visits.iloc[rows])
 ```
 
 - **ECharts needs the selection keys in the spec.** `st.echarts_chart` has no `selection_mode` parameter. With `on_select` alone, the chart never returns a selection, and Streamlit logs a warning.
-- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. With a dataset `transform` such as `filter`, they address the transformed rows, so pivot grouped data to one wide dataframe or split it into one dataset per group instead (see [Apache ECharts](#apache-echarts)). Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
+- ECharts `data_indices` are series-local and address `dataset.source` rows (without transforms) or `series.data`. With a dataset `filter` transform, they are positions among the filtered rows, so apply the same filter in pandas before indexing (see [Apache ECharts](#apache-echarts)). Graph and sankey series report nodes and edges as separate groups (`data_type` `"node"` / `"edge"`), which makes ECharts the choice for click-through on network and flow charts.
 - Target an axis on an ECharts brush (`"brush": {"xAxisIndex": "all"}`) so its regions appear in `areas`.
 - Set `key` on Altair, Vega-Lite, ECharts, and pydeck charts to keep a selection when the data changes. Without a key, any change to the chart resets it. Plotly selections reset whenever the figure changes, even with a key.
 - Import `VegaLiteState`, `EChartsState`, `PlotlyState`, and `PydeckState` from `streamlit.typing` to annotate the returned event.
