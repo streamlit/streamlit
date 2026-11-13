@@ -27,6 +27,7 @@ themes are aesthetic variants.
 | **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Neutral brand look with per-mode sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Compact `paddingTop`/`paddingBottom` for KPI dashboards |
 | **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist fonts, compact bold metric values, and color-blind-checked chart palettes for BI cards |
+| **warm-editorial** | Light + dark | `#C2410C` / `#C8501E` | Fraunces serif headings, paper tones, pill buttons, and color-blind-checked chart palettes |
 
 ## Single-mode (locked appearance)
 

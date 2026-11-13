@@ -189,9 +189,11 @@ For **building a dashboard**, read:
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
 
+For **an app that computes** (forecasts, what-if levers, simulations, pricing or risk models), start from the `compute-demand-simulator` template and read `references/performance.md` and `references/charts.md`. For **an app that acts** (review and approval queues, sign-offs, triage, approving what an AI agent proposes, writeback), start from the `act-review-queue` template and read `references/data-display.md` (editable tables) and `references/layouts.md` (dialogs and forms).
+
 **IMPORTANT - Use templates:**
 
-When creating a **new dashboard app**, prefer starting from a template in `assets/templates/apps/`:
+When creating a **new dashboard or data app**, prefer starting from a template in `assets/templates/apps/`:
 - If a template closely matches the request, copy it and adapt:
   - `dashboard-revenue` — BI dashboard with a filter toolbar, certified KPIs, card menus, and drill-down drawers (copy the whole folder; it has helper modules)
   - `dashboard-metrics` — KPI cards with time-series charts
@@ -201,6 +203,8 @@ When creating a **new dashboard app**, prefer starting from a template in `asset
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
   - `dashboard-background-report` — responsive page while a slow query loads in the background
+  - `compute-demand-simulator` — app that computes: what-if levers rerun a cached Monte Carlo forecast (copy the whole folder; it has a helper module)
+  - `act-review-queue` — app that acts: review queue with editable decisions, validation, and writeback (copy the whole folder; it has helper modules)
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - When the user wants a branded or polished look, pair the dashboard with a theme from `assets/templates/themes/configs/` (`dense-dashboard`, or `bi-dashboard` for BI cards and KPIs, if the app should keep the appearance toggle and use compact padding), or point `theme.base` at an existing shared brand file or URL
 - See `assets/templates/apps/README.md` for template descriptions
