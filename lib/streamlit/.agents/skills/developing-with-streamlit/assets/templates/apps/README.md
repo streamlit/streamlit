@@ -62,7 +62,7 @@ Set page config near the top of the script, with `layout="wide"` and a Material 
 
 ```python
 st.set_page_config(
-    page_title="My Dashboard",
+    page_title="My dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )

@@ -200,18 +200,14 @@ def aggregate_companies(
     # Calculate daily average
     agg["daily_avg"] = agg["total_credits"] / agg["active_days"]
 
-    # Build sparkline data (list of daily values).
-    # `include_groups=False` silences a pandas 2.2+ FutureWarning about
-    # groupby keys being included in the applied function's input frame.
+    # Build sparkline data (list of daily values, oldest first).
     sparklines = (
-        result.groupby("company_name")  # ty: ignore[no-matching-overload]
-        .apply(
-            lambda x: x.sort_values("date")["daily_credits"].tolist(),
-            include_groups=False,  # type: ignore[call-overload]
-        )
+        result.sort_values("date")
+        .groupby("company_name")["daily_credits"]
+        .agg(list)
+        .rename("usage_trend")
         .reset_index()
     )
-    sparklines.columns = ["company_name", "usage_trend"]
     agg = agg.merge(sparklines, on="company_name")
 
     agg["growth_score"] = agg["usage_trend"].apply(_calc_growth)

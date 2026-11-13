@@ -32,7 +32,7 @@ Set browser tab title, icon, and layout. Place this at the top of your script to
 
 ```python
 st.set_page_config(
-    page_title="My Dashboard",
+    page_title="My dashboard",
     page_icon=":material/analytics:",
     layout="wide",  # Use "wide" for dashboards with lots of data
 )

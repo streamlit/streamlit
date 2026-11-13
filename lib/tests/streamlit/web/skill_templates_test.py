@@ -50,8 +50,11 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
         "dashboard-metrics",
         {"channel_chart": "line", "channel_select": [], "revenue_lines": []},
     ),
-    # No account type selected: the leaderboard warns and stops in its skeleton.
-    ("dashboard-companies", {"types": []}),
+    # No account type selected shows every company, ranked by growth over all time.
+    (
+        "dashboard-companies",
+        {"types": [], "ranking": "growth_asc", "window": "All time"},
+    ),
     ("dashboard-seattle-weather", {"years": [2015]}),
     ("dashboard-stock-peers", {"stocks": ["AAPL"], "horizon": "1 Year"}),
     ("dashboard-stock-peers", {"stocks": ["AAPL", "IBM"], "horizon": "All"}),
@@ -93,7 +96,7 @@ def _assert_renders_cleanly(at: AppTest) -> None:
 
 
 def test_templates_are_discovered() -> None:
-    """The smoke tests cover every template directory."""
+    """Discovery finds the templates, and each alternate state names one of them."""
     assert "dashboard-metrics" in _TEMPLATES
     assert {template for template, _ in _ALTERNATE_STATES} <= set(_TEMPLATES)
 
@@ -104,6 +107,10 @@ def test_template_runs(template: str) -> None:
     """Each template runs without exceptions and draws accessible ECharts charts."""
     at = _run_template(template)
     _assert_renders_cleanly(at)
+    # Catches a template that stops before its charts. The companies template
+    # draws charts only in the drawer that a table click opens.
+    if template != "dashboard-companies":
+        assert at.echarts_chart, "the default run should draw a chart"
 
 
 @pytest.mark.usefixtures("isolated_helper_modules")

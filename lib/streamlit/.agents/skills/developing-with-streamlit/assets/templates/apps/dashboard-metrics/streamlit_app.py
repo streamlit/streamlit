@@ -174,7 +174,8 @@ def metric_card(title: str, metric_name: str, chart_type: str = "line") -> None:
             columns = {"Daily": "daily_value", "7-day MA": "value_7d_ma"}
             y_cols = [columns[label] for label in labels]
             option = charts.METRIC_CHARTS[chart_type](df, "ds", y_cols, labels)
-            # Describe the last series drawn: the smoother 7-day MA when shown.
+            # Alt text describes the last entry in labels. The default
+            # selection ends with the 7-day average.
             series = "7-day average" if labels[-1] == "7-day MA" else "daily values"
             if chart_type == "bar":
                 series = f"weekly means of the {series}"
@@ -196,12 +197,12 @@ def breakdown_card(title: str, dimension: str) -> None:
     category's daily share.
     """
     config = data.BREAKDOWNS[dimension]
-    options = list(config["base_values"])
+    all_categories = list(config["base_values"])
 
     def breakdown_filters() -> dict[str, Any]:
         selected = st.pills(
             config["label"],
-            options=options,
+            options=all_categories,
             default=config["default_selection"],
             selection_mode="multi",
             key=f"{dimension}_select",
@@ -238,7 +239,7 @@ def breakdown_card(title: str, dimension: str) -> None:
                 )
                 return
 
-            categories = [option for option in options if option in selected]
+            categories = [c for c in all_categories if c in selected]
             wide = charts.pivot_by_dimension(
                 df, "ds", "value_7d_ma", dimension, categories
             )

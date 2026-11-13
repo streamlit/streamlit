@@ -85,9 +85,7 @@ def generate_metric_data(
 def generate_breakdown_data(
     dimension: str, base_values: dict[str, float]
 ) -> pd.DataFrame:
-    """Generate daily values per category, in long format (one row per day and
-    category).
-    """
+    """Generate long-format daily values, one row per day and category."""
     rng = _rng(dimension)
     dates = _date_range()
     frames = []

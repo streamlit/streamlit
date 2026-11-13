@@ -84,8 +84,11 @@ if not tickers:
     st.stop()
 
 months = HORIZONS[horizon]
-# The first month is the baseline, so a horizon of N months needs N + 1 rows.
-data = prices[tickers] if months is None else prices[tickers].tail(months + 1)
+data = prices[tickers]
+if months is not None:
+    # Slice by date, not row count, so the horizon also holds for daily prices.
+    # The first row is the baseline the other prices are compared against.
+    data = data[data.index >= data.index[-1] - pd.DateOffset(months=months)]
 
 # Normalize prices (start at 1). Use the first non-null value per ticker, so
 # tickers that start trading later in the horizon don't become NaN.
@@ -100,7 +103,7 @@ chart_data = normalized.rename_axis("Date").reset_index()
 ticker_values = [(normalized[ticker].iloc[-1], ticker) for ticker in tickers]
 max_norm_value = max(ticker_values)
 min_norm_value = min(ticker_values)
-period = "the full period" if months is None else f"the last {horizon.lower()}"
+period = "the full period" if months is None else f"the last {months} months"
 
 # Summary for the price chart's alt text. A single stock is both best and worst.
 if len(tickers) > 1:

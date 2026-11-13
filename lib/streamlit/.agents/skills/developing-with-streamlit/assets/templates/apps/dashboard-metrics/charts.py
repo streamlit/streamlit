@@ -61,6 +61,7 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
 
 
 def _span(title: str, series: str, source: pd.DataFrame, x_col: str) -> str:
+    """Shared alt-text prefix: title, series, and the plotted date range."""
     return (
         f"{title}, {series} from {source[x_col].iloc[0]:%Y-%m-%d} to "
         f"{source[x_col].iloc[-1]:%Y-%m-%d}"

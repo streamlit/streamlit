@@ -212,7 +212,9 @@ filterwarnings = [
   # which pandas 3.1 deprecates (Pandas4Warning). PyArrow 24+ converts them
   # without it. The dev lock stays on PyArrow 23 while the snowflake extra caps
   # it (see override-dependencies in the root pyproject.toml); drop this filter
-  # with that cap. No category, so the filter also loads on pandas <3.1.
+  # with that cap. The filter omits the category because
+  # pandas.errors.Pandas4Warning doesn't exist before pandas 3.1, and pytest
+  # rejects an unknown category.
   "ignore:Series.values returning an ndarray that drops timezone:",
 
   # Pytest plugin compatibility
