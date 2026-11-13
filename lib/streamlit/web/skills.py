@@ -1801,9 +1801,10 @@ def _skill_files(folder: Path) -> Iterator[Path]:
 
     Names are sorted within each folder, and a folder's files come before its
     subfolders' files. Skips hidden files and folders and ``__pycache__``, which
-    are not part of a skill, and does not descend into symlinked folders. Raises
-    ``OSError`` when a folder cannot be listed, so a partial listing never
-    passes for the whole skill.
+    are not part of a skill. Does not descend into symlinked folders, but does
+    descend into Windows junctions, which ``_writes_follow_no_symlinks`` then
+    rejects. Raises ``OSError`` when a folder cannot be listed, so a partial
+    listing never passes for the whole skill.
     """
 
     def raise_error(error: OSError) -> None:
@@ -1825,13 +1826,23 @@ def _meta_skill_digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
+def _is_real_directory_stat(info: os.stat_result) -> bool:
+    """Whether an ``lstat`` result is a directory rather than a link to one.
+
+    A symlink reports a link mode, but a Windows junction reports a directory
+    mode, so a reparse tag also counts as a link. Skill managers such as
+    ``npx skills`` link agent folders with junctions on Windows.
+    """
+    return stat.S_ISDIR(info.st_mode) and not getattr(info, "st_reparse_tag", 0)
+
+
 def _is_real_directory(path: Path) -> bool:
-    """Whether ``path`` is a directory and not a symlink to one.
+    """Whether ``path`` is a directory and not a symlink or junction to one.
 
     Reports ``False`` when the path is missing or cannot be read.
     """
     try:
-        return stat.S_ISDIR(path.lstat().st_mode)
+        return _is_real_directory_stat(path.lstat())
     except OSError:
         return False
 
@@ -1862,7 +1873,7 @@ def _digests_if_official(folder: Path) -> dict[str, str] | None:
 
 
 def _writes_follow_no_symlinks(target: Path, files: list[Path]) -> bool:
-    """Whether writing ``files`` into ``target`` follows no symlink.
+    """Whether writing ``files`` into ``target`` follows no symlink or junction.
 
     Each destination must be missing or a regular file, and each parent folder
     missing or a real directory, so an update never writes outside the skill
@@ -1872,12 +1883,14 @@ def _writes_follow_no_symlinks(target: Path, files: list[Path]) -> bool:
         parts = relative.parts
         for depth in range(1, len(parts) + 1):
             try:
-                mode = target.joinpath(*parts[:depth]).lstat().st_mode
+                info = target.joinpath(*parts[:depth]).lstat()
             except FileNotFoundError:
                 # Nothing below exists either; the update creates it.
                 break
-            is_type = stat.S_ISREG if depth == len(parts) else stat.S_ISDIR
-            if not is_type(mode):
+            if depth == len(parts):
+                if not stat.S_ISREG(info.st_mode):
+                    return False
+            elif not _is_real_directory_stat(info):
                 return False
     return True
 
@@ -1914,11 +1927,11 @@ def _update_meta_skill_copy(
     """Update the meta-skill copy at ``target`` if it is an older official release.
 
     Returns whether it updated the copy. ``bundled`` maps each bundled file to
-    its digest, in write order. Skips a copy that is, or contains, a symlink,
-    because whoever created the link, such as another skill manager, owns its
-    target. A symlinked folder
-    above the copy, such as a ``~/.claude/skills`` kept in a dotfiles
-    repository, is followed like a real one.
+    its digest, in write order. Skips a copy that is, or contains, a symlink or
+    Windows junction, because whoever created the link, such as another skill
+    manager, owns its target. A linked folder above the copy, such as a
+    ``~/.claude/skills`` kept in a dotfiles repository, is followed like a real
+    one.
     """
     if not _is_real_directory(target):
         return False

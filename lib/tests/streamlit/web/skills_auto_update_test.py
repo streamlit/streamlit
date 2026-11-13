@@ -22,6 +22,7 @@ import os
 import re
 import stat
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -236,6 +237,30 @@ def test_symlinked_copies_are_not_written_through(
     assert _files(elsewhere) == _OLD_FILES
     skill_file = home / ".claude" / "skills" / "developing-with-streamlit" / "SKILL.md"
     assert skill_file.read_text(encoding="utf-8") == _OLD_SKILL_MD
+
+
+@pytest.mark.parametrize("junction", ["skill-folder", "scripts-folder"])
+@pytest.mark.usefixtures("bundled")
+def test_junctioned_copies_are_not_written_through(home: Path, junction: str) -> None:
+    """A Windows junction counts as a link, so a copy that is, or contains, one
+    is left alone, as ``npx skills`` links agent folders with junctions.
+    """
+    copy = _write_skill_folder(home, ".claude/skills", _OLD_FILES)
+    linked = copy if junction == "skill-folder" else copy / "scripts"
+    real_lstat = Path.lstat
+
+    def lstat(path: Path) -> os.stat_result | SimpleNamespace:
+        info = real_lstat(path)
+        if path != linked:
+            return info
+        # Windows reports a junction with a folder mode and its reparse tag,
+        # IO_REPARSE_TAG_MOUNT_POINT, which the stat module only defines there.
+        return SimpleNamespace(st_mode=info.st_mode, st_reparse_tag=0xA0000003)
+
+    with patch.object(Path, "lstat", autospec=True, side_effect=lstat):
+        skills.update_global_skills()
+
+    assert _files(copy) == _OLD_FILES
 
 
 @pytest.mark.skipif(
