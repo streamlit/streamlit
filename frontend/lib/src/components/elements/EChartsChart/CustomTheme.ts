@@ -172,8 +172,8 @@ export function formatEChartsTooltipValue(value: unknown): string | string[] {
 }
 
 /**
- * A theme radius in pixels, since ECharts takes radii as numbers.
- * ``baseRadius`` may set the theme radii in px or rem.
+ * Convert a theme radius to a pixel number, since ECharts only accepts numeric
+ * radii. ``baseRadius`` can set theme radii in px or rem.
  */
 export function themeRadiusToPx(radius: string): number {
   return radius.endsWith("px")
@@ -386,8 +386,8 @@ export function buildStreamlitEChartsTheme(
     axisLabel: { ...axisDefaults.axisLabel, hideOverlap: true },
   }
   const titleDefaults = buildChartTitleDefaults(theme)
-  // Match the Vega-Lite tooltip (`#vg-tooltip-element`): a slightly
-  // translucent background and the theme's default radius.
+  // Matches the Vega-Lite tooltip's (`#vg-tooltip-element`) 95% opaque
+  // background.
   const tooltipBackgroundColor = transparentize(colors.bgColor, 0.05)
   // Shared text style for component labels/names that would otherwise fall back
   // to ECharts' default (un-themed) gray.
@@ -451,6 +451,7 @@ export function buildStreamlitEChartsTheme(
     tooltip: {
       backgroundColor: tooltipBackgroundColor,
       borderColor: colors.borderColor,
+      // Matches the Vega-Lite tooltip's radius.
       borderRadius: themeRadiusToPx(theme.radii.default),
       textStyle: {
         color: colors.bodyText,
@@ -803,7 +804,7 @@ export function buildStreamlitEChartsTheme(
           textFill: colors.bodyText,
           textBackgroundColor: colors.secondaryBg,
           textPadding: convertRemToPx(theme.spacing.twoXS),
-          textBorderRadius: convertRemToPx(theme.radii.sm),
+          textBorderRadius: themeRadiusToPx(theme.radii.sm),
         },
       },
       // The data view panel is a light surface with blue buttons by default.

@@ -461,6 +461,21 @@ describe("buildStreamlitEChartsTheme", () => {
     expect(hovered.borderColor).not.toBe(toolbox.iconStyle.borderColor)
   })
 
+  it("converts px theme radii to pixel numbers", () => {
+    const pxTheme = {
+      ...theme,
+      radii: { ...theme.radii, default: "10px", sm: "5px" },
+    }
+    const echartsTheme = buildStreamlitEChartsTheme(pxTheme)
+
+    const tooltip = echartsTheme.tooltip as { borderRadius: number }
+    expect(tooltip.borderRadius).toBe(10)
+    const toolbox = echartsTheme.toolbox as {
+      emphasis: { iconStyle: { textBorderRadius: number } }
+    }
+    expect(toolbox.emphasis.iconStyle.textBorderRadius).toBe(5)
+  })
+
   it("themes the toolbox data view panel", () => {
     const { colors } = darkTheme.emotion
     const toolbox = buildStreamlitEChartsTheme(darkTheme.emotion).toolbox as {
