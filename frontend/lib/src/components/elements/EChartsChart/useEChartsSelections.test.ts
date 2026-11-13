@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
+import { createElement as createReactElement } from "react"
+
 import { act, renderHook } from "@testing-library/react"
 import * as echarts from "echarts"
 import type { Mock, Mocked } from "vitest"
 
 import { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 
+import {
+  ScriptRunContext,
+  type ScriptRunContextProps,
+} from "~lib/components/core/ScriptRunContext"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -2068,6 +2074,198 @@ describe("useEChartsSelections", () => {
       chart.dispose()
     }
   })
+
+  it("commits the points a restored brush hits in new data, without a rerun in the run that rerun started", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      const optionWithData = (data: number[][]): Record<string, unknown> => ({
+        animation: false,
+        xAxis: { type: "value", min: 0, max: 10 },
+        yAxis: { type: "value", min: 0, max: 10 },
+        brush: { xAxisIndex: "all", yAxisIndex: "all" },
+        series: { type: "scatter", data },
+      })
+      const areas = [
+        {
+          brushType: "rect",
+          coordRange: [
+            [0, 3],
+            [0, 3],
+          ],
+          xAxisIndex: 0,
+          yAxisIndex: 0,
+        },
+      ]
+      const elementState = new Map<string, unknown>([
+        [
+          "brushSelection",
+          [
+            createBrushSelection({
+              areas,
+              selected: [{ seriesIndex: 0, dataIndex: [0, 1] }],
+            }),
+          ],
+        ],
+      ])
+      widgetMgr.getElementState.mockImplementation(
+        (_id: string, key: string) => elementState.get(key)
+      )
+      widgetMgr.setElementState.mockImplementation(
+        (_id: string, key: string, value: unknown) => {
+          elementState.set(key, value)
+        }
+      )
+      let scriptRunId = "run-0"
+      const { result, rerender } = renderHook(
+        () => useEChartsSelections(createElement(), widgetMgr),
+        {
+          wrapper: ({ children }) =>
+            createReactElement(
+              ScriptRunContext.Provider,
+              { value: { scriptRunId } as ScriptRunContextProps },
+              children
+            ),
+        }
+      )
+      const startRun = (runId: string): void => {
+        scriptRunId = runId
+        rerender()
+      }
+      const applyData = (data: number[][]): void => {
+        act(() => {
+          chart.setOption(optionWithData(data), { notMerge: true })
+          result.current.restoreSelection(chart)
+        })
+      }
+      const lastWrite = (): [string, string, unknown] =>
+        widgetMgr.setStringValue.mock.lastCall as [string, string, unknown]
+
+      act(() => {
+        result.current.bindSelections(chart)
+      })
+      // The same hits as the stored brush: nothing to commit.
+      applyData([
+        [1, 1],
+        [2, 2],
+        [8, 8],
+      ])
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+
+      // The brush now covers the second and third points.
+      startRun("run-1")
+      applyData([
+        [8, 8],
+        [1, 1],
+        [2, 2],
+      ])
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(JSON.parse(lastWrite()[1]).selection.selected).toEqual([
+        expect.objectContaining({ series_index: 0, data_indices: [1, 2] }),
+      ])
+      expect(lastWrite()[2]).toEqual(WRITE_OPTIONS)
+
+      // Data that moves again in the run that rerun started stores the hits
+      // without another rerun, however long the script took.
+      startRun("run-2")
+      applyData([
+        [1, 1],
+        [8, 8],
+        [9, 9],
+      ])
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(2)
+      expect(JSON.parse(lastWrite()[1]).selection.selected).toEqual([
+        expect.objectContaining({ data_indices: [0] }),
+      ])
+      expect(lastWrite()[2]).toEqual({ ...WRITE_OPTIONS, fromUser: false })
+
+      // A later run, for example from another widget, reruns again.
+      startRun("run-3")
+      applyData([
+        [8, 8],
+        [9, 9],
+        [2, 2],
+      ])
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(3)
+      expect(lastWrite()[2]).toEqual(WRITE_OPTIONS)
+
+      // With stable data, the rerun leaves the chart alone, and the next
+      // data change still reruns.
+      startRun("run-4")
+      startRun("run-5")
+      applyData([
+        [1, 1],
+        [8, 8],
+        [9, 9],
+      ])
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(4)
+      expect(lastWrite()[2]).toEqual(WRITE_OPTIONS)
+    } finally {
+      chart.dispose()
+    }
+  })
+
+  it.each([
+    {
+      name: "inside a form",
+      formId: "form-id",
+      disabled: false,
+      fromUser: true,
+    },
+    { name: "while disabled", formId: "", disabled: true, fromUser: false },
+  ])(
+    "stores the new hits of a restored brush without a rerun $name",
+    ({ formId, disabled, fromUser }) => {
+      const brush = createBrushSelection({
+        areas: [{ brushType: "lineX", coordRange: [0, 2] }],
+        selected: [{ seriesIndex: 0, dataIndex: [0] }],
+      })
+      widgetMgr.getElementState.mockImplementation(
+        (_id: string, key: string) =>
+          key === "brushSelection" ? [brush] : undefined
+      )
+      const { result } = renderHook(() =>
+        useEChartsSelections(
+          createElement("chart-id", formId),
+          widgetMgr,
+          undefined,
+          disabled
+        )
+      )
+      const chart = createFakeChart()
+      chart.dispatchAction.mockImplementation(
+        (payload: Record<string, unknown>) => {
+          if (payload.type === "brush") {
+            chart.trigger("brushSelected", {
+              batch: [
+                { ...brush, selected: [{ seriesIndex: 0, dataIndex: [1] }] },
+              ],
+            })
+          }
+        }
+      )
+
+      act(() => {
+        result.current.restoreSelection(chart)
+      })
+
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+      expect(widgetMgr.setStringValue).toHaveBeenCalledWith(
+        "chart-id",
+        expect.stringContaining('"data_indices":[1]'),
+        { formId, fragmentId: undefined, fromUser }
+      )
+      expect(widgetMgr.setElementState).not.toHaveBeenCalledWith(
+        "chart-id",
+        "restoreRerun",
+        expect.anything()
+      )
+    }
+  )
 
   it("reruns a user brushEnd that matches a programmatic prune write", () => {
     const mixed = createBrushSelection({

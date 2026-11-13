@@ -1229,8 +1229,9 @@ class EChartsMixin:
               becomes a float). Arrays and missing values such as ``NaN``,
               ``pd.NaT``, and ``pd.NA`` raise an error instead of becoming
               ``null``.
-            - Show data: The chart's hover toolbar has a **Show data** button
-              that displays the dataframe as a table.
+            - Show data: When the option uses one dataframe, the chart's hover
+              toolbar has a **Show data** button that displays it as a table.
+              With several dataframes, the button is hidden.
 
             Streamlit keeps the dataframe's column order through
             ``dataset.dimensions`` when you haven't set it. The dataframe index
@@ -1320,9 +1321,12 @@ class EChartsMixin:
             If selections are activated and ``key`` is provided, Streamlit
             will register the key in Session State to store the selection
             state, and the selection survives changes to your ``spec``,
-            ``theme``, and ``renderer``. Indices are not revalidated against
-            the new data, so check them before indexing. The selection state
-            is read-only. For more details, see `Widget behavior
+            ``theme``, and ``renderer``. When the data changes, a brush
+            selection updates to the points now inside its region, which
+            reruns the app once more. Clicked points (``selectedMode``) keep
+            their indices even if different rows now sit at those positions,
+            so check them before indexing. The selection state is read-only. For more
+            details, see `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             If ``key`` is provided, it will be used as a CSS class name

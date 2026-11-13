@@ -16,6 +16,7 @@
 
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -28,6 +29,7 @@ import { getLogger } from "loglevel"
 import type { EChartsChart as EChartsChartProto } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import type { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -68,6 +70,22 @@ const BRUSH_SELECTION_STATE_KEY = "brushSelection"
  * re-applied visually after an option-replacing ``setOption`` or a remount.
  */
 const SELECTED_POINTS_STATE_KEY = "selectedPoints"
+/**
+ * Frontend-only element-state key for the last rerun that ``restoreSelection``
+ * requested. See ``RestoreRerun``.
+ */
+const RESTORE_RERUN_STATE_KEY = "restoreRerun"
+
+/**
+ * The script run in which ``restoreSelection`` last requested a rerun, and the
+ * run that followed it (most likely that rerun). A restore in that following
+ * run doesn't rerun again: data that changes on every run (unseeded random
+ * values, the current time) would otherwise rerun the app forever.
+ */
+interface RestoreRerun {
+  requestedInRunId: string
+  nextRunId?: string
+}
 
 /** A minimal view of the ECharts instance used for selection wiring. */
 export interface EChartsSelectionInstance {
@@ -191,7 +209,8 @@ export interface UseEChartsSelectionsOutput {
   /**
    * Re-apply the persisted selection (natively selected points and brush areas)
    * after an option-replacing ``setOption`` or a remount, keeping the visible
-   * selection in sync with the widget state.
+   * selection in sync with the widget state. When new data moves which points
+   * a restored brush hits, it commits the new hits.
    */
   restoreSelection: (chart: EChartsSelectionInstance) => void
   /** Clear the selection (widget state + persisted selection element state). */
@@ -279,6 +298,33 @@ export function useEChartsSelections(
     parsedOptionRef.current = parsedOption
   }, [parsedOption])
 
+  // A ref keeps ``restoreSelection`` (and the bound handlers that depend on
+  // it) stable across runs. The layout effect runs before the option effect
+  // that restores, and also records the run that follows a restore rerun
+  // request in element state, which outlives a remount.
+  const { scriptRunId } = useContext(ScriptRunContext)
+  const scriptRunIdRef = useRef(scriptRunId)
+  useLayoutEffect(() => {
+    scriptRunIdRef.current = scriptRunId
+    if (!chartId || !element.selectionActivated) {
+      return
+    }
+    const rerun = widgetMgr.getElementState<RestoreRerun>(
+      chartId,
+      RESTORE_RERUN_STATE_KEY
+    )
+    if (
+      rerun !== undefined &&
+      rerun.nextRunId === undefined &&
+      rerun.requestedInRunId !== scriptRunId
+    ) {
+      widgetMgr.setElementState(chartId, RESTORE_RERUN_STATE_KEY, {
+        ...rerun,
+        nextRunId: scriptRunId,
+      })
+    }
+  }, [chartId, element.selectionActivated, scriptRunId, widgetMgr])
+
   const clearBoundSelectionRef = useRef<(() => void) | null>(null)
   // Suppress widget emits from programmatic restore dispatches so a data-only
   // rerun cannot loop: ``restoreSelection`` runs while handlers are already
@@ -349,44 +395,118 @@ export function useEChartsSelections(
       if (!chartId || !element.selectionActivated) {
         return
       }
+      const selectedPoints = widgetMgr.getElementState<SelectedEntry[]>(
+        chartId,
+        SELECTED_POINTS_STATE_KEY
+      )
+      const nativeSelection = Array.isArray(selectedPoints)
+        ? selectedPoints
+        : []
+      const brushSelection = widgetMgr.getElementState<BrushSelection[]>(
+        chartId,
+        BRUSH_SELECTION_STATE_KEY
+      )
+      const brushesToRestore = Array.isArray(brushSelection)
+        ? brushSelection.filter(brush => (brush.areas ?? []).length > 0)
+        : []
+      const hasBrushesToRestore = brushesToRestore.length > 0
+      // A brush is a region, so with new data it selects whichever points now
+      // fall inside it. Capture the hit-test of the redrawn areas.
+      let restoredBrush: BrushSelection[] | undefined
+      const captureHitTest = (raw: unknown): void => {
+        restoredBrush = (raw as BrushSelectedParams).batch ?? []
+      }
+      // Capture the pending throttled hit-test before the restore replaces it,
+      // so it can be cancelled: it holds a pre-restore snapshot.
+      const scheduledHitTest = hasBrushesToRestore
+        ? brushSelectDispatcher(chart)
+        : undefined
+      if (hasBrushesToRestore) {
+        chart.on("brushSelected", captureHitTest)
+      }
       isRestoringRef.current = true
       try {
         // Re-apply natively selected points (an option-replacing setOption clears
         // the select state), then re-draw persisted brush areas.
-        const selectedPoints = widgetMgr.getElementState<SelectedEntry[]>(
-          chartId,
-          SELECTED_POINTS_STATE_KEY
-        )
-        if (Array.isArray(selectedPoints)) {
-          dispatchPointSelection(chart, selectedPoints, "select")
-        }
-
-        const brushSelection = widgetMgr.getElementState<BrushSelection[]>(
-          chartId,
-          BRUSH_SELECTION_STATE_KEY
-        )
-        if (Array.isArray(brushSelection)) {
-          for (const brush of brushSelection) {
-            const areas = brush.areas ?? []
-            if (areas.length === 0) {
-              continue
-            }
+        dispatchPointSelection(chart, nativeSelection, "select")
+        runWithSynchronousBrushHitTest(chart, () => {
+          for (const brush of brushesToRestore) {
             try {
               chart.dispatchAction({
                 type: "brush",
                 brushIndex: brush.brushIndex,
-                areas,
+                areas: brush.areas,
               })
             } catch (error) {
               LOG.warn("Failed to restore persisted brush areas", error)
             }
           }
-        }
+        })
       } finally {
         isRestoringRef.current = false
+        if (hasBrushesToRestore) {
+          chart.off("brushSelected", captureHitTest)
+        }
       }
+
+      // Keep the persisted brush when no area was redrawn or the chart fired
+      // no hit-test (a test fake).
+      if (restoredBrush === undefined || !Array.isArray(brushSelection)) {
+        return
+      }
+      scheduledHitTest?.clear?.()
+      const resolvedOption = resolveSelectionOption(
+        parsedOptionRef.current,
+        chart
+      )
+      const nextSelection = buildSelectionState(
+        resolvedOption,
+        nativeSelection,
+        restoredBrush
+      )
+      const persistedSelection = buildSelectionState(
+        resolvedOption,
+        nativeSelection,
+        brushSelection
+      )
+      if (isEqual(nextSelection, persistedSelection)) {
+        return
+      }
+      latestBrushSelectionRef.current = restoredBrush
+      committedBrushSelectionRef.current = restoredBrush
+      widgetMgr.setElementState(
+        chartId,
+        BRUSH_SELECTION_STATE_KEY,
+        restoredBrush
+      )
+      // Rerun so the app reads the rows the chart now highlights, except:
+      // - In the run that followed the previous restore rerun request, the
+      //   write stores the value without a rerun (see ``RestoreRerun``).
+      // - A disabled widget stores the value without a rerun.
+      // - Inside a form, the write waits in the pending dict for submit.
+      const runId = scriptRunIdRef.current
+      const previousRerun = widgetMgr.getElementState<RestoreRerun>(
+        chartId,
+        RESTORE_RERUN_STATE_KEY
+      )
+      const shouldRerun =
+        isSelectionActivated && !formId && previousRerun?.nextRunId !== runId
+      if (shouldRerun) {
+        widgetMgr.setElementState(chartId, RESTORE_RERUN_STATE_KEY, {
+          requestedInRunId: runId,
+        } satisfies RestoreRerun)
+      }
+      const fromUser = shouldRerun || Boolean(formId)
+      writeSelection(nextSelection, fromUser)
     },
-    [chartId, element.selectionActivated, widgetMgr]
+    [
+      chartId,
+      formId,
+      element.selectionActivated,
+      isSelectionActivated,
+      widgetMgr,
+      writeSelection,
+    ]
   )
 
   const clearSelection = useCallback(
