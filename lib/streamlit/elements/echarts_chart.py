@@ -1322,11 +1322,13 @@ class EChartsMixin:
             will register the key in Session State to store the selection
             state, and the selection survives changes to your ``spec``,
             ``theme``, and ``renderer``. When the data changes, a brush
-            selection updates to the points now inside its region, which
-            reruns the app once more. Clicked points (``selectedMode``) keep
-            their indices even if different rows now sit at those positions,
-            so check them before indexing. The selection state is read-only. For more
-            details, see `Widget behavior
+            selection updates to the points now inside its region, and
+            Streamlit reruns the app once (calling an ``on_select`` callback)
+            to report them. Inside a form, the update waits for submit.
+            Clicked points (``selectedMode``) keep their indices even if
+            different rows now sit at those positions, so check them before
+            indexing. The selection state is read-only. For more details, see
+            `Widget behavior
             <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
 
             If ``key`` is provided, it will be used as a CSS class name

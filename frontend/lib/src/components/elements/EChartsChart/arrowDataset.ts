@@ -398,9 +398,11 @@ function getMediaOptions(option: EChartsOptionObject): EChartsOptionObject[] {
 }
 
 /**
- * Returns every variant Python's `_iter_option_variants` visits: the option,
- * then `baseOption`, then each `options[i]` timeline tick, then the
- * `media[*].option` overrides of all of them.
+ * Returns the same variants Python's `_iter_option_variants` visits: the
+ * option, then `baseOption`, then each `options[i]` timeline tick, then the
+ * `media[*].option` overrides of all of them. The order differs from Python's
+ * but doesn't matter: Show data depends only on how many distinct frames the
+ * variants use.
  */
 function getOptionVariants(
   option: EChartsOptionObject

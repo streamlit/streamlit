@@ -71,21 +71,22 @@ const BRUSH_SELECTION_STATE_KEY = "brushSelection"
  */
 const SELECTED_POINTS_STATE_KEY = "selectedPoints"
 /**
- * Frontend-only element-state key for the last rerun that ``restoreSelection``
- * requested. See ``RestoreRerun``.
- */
-const RESTORE_RERUN_STATE_KEY = "restoreRerun"
-
-/**
- * The script run in which ``restoreSelection`` last requested a rerun, and the
- * run that followed it (most likely that rerun). A restore in that following
- * run doesn't rerun again: data that changes on every run (unseeded random
- * values, the current time) would otherwise rerun the app forever.
+ * Keeps ``restoreSelection`` from rerunning the app in a loop when data changes
+ * on every run (unseeded random values, the current time). Records the run in
+ * which any chart's restore last requested a rerun, and the run that followed
+ * it (most likely that rerun). No restore in that following run reruns again.
  */
 interface RestoreRerun {
   requestedInRunId: string
   nextRunId?: string
 }
+
+/**
+ * One ``RestoreRerun`` per app, shared by all charts. Per-chart records would
+ * let two charts take turns requesting reruns forever. Keyed by the widget
+ * manager so the record outlives a chart's remount.
+ */
+const restoreReruns = new WeakMap<WidgetStateManager, RestoreRerun>()
 
 /** A minimal view of the ECharts instance used for selection wiring. */
 export interface EChartsSelectionInstance {
@@ -298,10 +299,12 @@ export function useEChartsSelections(
     parsedOptionRef.current = parsedOption
   }, [parsedOption])
 
-  // A ref keeps ``restoreSelection`` (and the bound handlers that depend on
-  // it) stable across runs. The layout effect runs before the option effect
-  // that restores, and also records the run that follows a restore rerun
-  // request in element state, which outlives a remount.
+  // Tracks the current script run for the restore rerun guard:
+  // - A ref keeps ``restoreSelection`` (and the bound handlers) stable across
+  //   runs.
+  // - Layout effects run before the option effects that restore, so the first
+  //   selection chart of a new run records it as the run that follows a
+  //   restore rerun request.
   const { scriptRunId } = useContext(ScriptRunContext)
   const scriptRunIdRef = useRef(scriptRunId)
   useLayoutEffect(() => {
@@ -309,19 +312,13 @@ export function useEChartsSelections(
     if (!chartId || !element.selectionActivated) {
       return
     }
-    const rerun = widgetMgr.getElementState<RestoreRerun>(
-      chartId,
-      RESTORE_RERUN_STATE_KEY
-    )
+    const rerun = restoreReruns.get(widgetMgr)
     if (
       rerun !== undefined &&
       rerun.nextRunId === undefined &&
       rerun.requestedInRunId !== scriptRunId
     ) {
-      widgetMgr.setElementState(chartId, RESTORE_RERUN_STATE_KEY, {
-        ...rerun,
-        nextRunId: scriptRunId,
-      })
+      restoreReruns.set(widgetMgr, { ...rerun, nextRunId: scriptRunId })
     }
   }, [chartId, element.selectionActivated, scriptRunId, widgetMgr])
 
@@ -412,9 +409,9 @@ export function useEChartsSelections(
       const hasBrushesToRestore = brushesToRestore.length > 0
       // A brush is a region, so with new data it selects whichever points now
       // fall inside it. Capture the hit-test of the redrawn areas.
-      let restoredBrush: BrushSelection[] | undefined
+      let redrawnBrushHits: BrushSelection[] | undefined
       const captureHitTest = (raw: unknown): void => {
-        restoredBrush = (raw as BrushSelectedParams).batch ?? []
+        redrawnBrushHits = (raw as BrushSelectedParams).batch ?? []
       }
       // Capture the pending throttled hit-test before the restore replaces it,
       // so it can be cancelled: it holds a pre-restore snapshot.
@@ -449,9 +446,9 @@ export function useEChartsSelections(
         }
       }
 
-      // Keep the persisted brush when no area was redrawn or the chart fired
-      // no hit-test (a test fake).
-      if (restoredBrush === undefined || !Array.isArray(brushSelection)) {
+      // Keep the persisted brush when no area was redrawn or ECharts delivered
+      // no hit-test.
+      if (redrawnBrushHits === undefined || !Array.isArray(brushSelection)) {
         return
       }
       scheduledHitTest?.clear?.()
@@ -459,42 +456,49 @@ export function useEChartsSelections(
         parsedOptionRef.current,
         chart
       )
-      const nextSelection = buildSelectionState(
-        resolvedOption,
-        nativeSelection,
-        restoredBrush
-      )
-      const persistedSelection = buildSelectionState(
-        resolvedOption,
-        nativeSelection,
-        brushSelection
-      )
-      if (isEqual(nextSelection, persistedSelection)) {
+      if (
+        isEqual(
+          buildSelectionState(resolvedOption, [], redrawnBrushHits),
+          buildSelectionState(resolvedOption, [], brushSelection)
+        )
+      ) {
         return
       }
-      latestBrushSelectionRef.current = restoredBrush
-      committedBrushSelectionRef.current = restoredBrush
+      // Store the new brush hits even when the union with clicked points is
+      // unchanged, so a later click doesn't emit the previous hits.
+      latestBrushSelectionRef.current = redrawnBrushHits
+      committedBrushSelectionRef.current = redrawnBrushHits
       widgetMgr.setElementState(
         chartId,
         BRUSH_SELECTION_STATE_KEY,
-        restoredBrush
+        redrawnBrushHits
       )
+      const nextSelection = buildSelectionState(
+        resolvedOption,
+        nativeSelection,
+        redrawnBrushHits
+      )
+      if (
+        isEqual(
+          nextSelection,
+          buildSelectionState(resolvedOption, nativeSelection, brushSelection)
+        )
+      ) {
+        return
+      }
       // Rerun so the app reads the rows the chart now highlights, except:
-      // - In the run that followed the previous restore rerun request, the
-      //   write stores the value without a rerun (see ``RestoreRerun``).
+      // - In the run that followed the previous restore rerun request of any
+      //   chart, the write stores the value without a rerun (see
+      //   ``RestoreRerun``).
       // - A disabled widget stores the value without a rerun.
       // - Inside a form, the write waits in the pending dict for submit.
       const runId = scriptRunIdRef.current
-      const previousRerun = widgetMgr.getElementState<RestoreRerun>(
-        chartId,
-        RESTORE_RERUN_STATE_KEY
-      )
       const shouldRerun =
-        isSelectionActivated && !formId && previousRerun?.nextRunId !== runId
+        isSelectionActivated &&
+        !formId &&
+        restoreReruns.get(widgetMgr)?.nextRunId !== runId
       if (shouldRerun) {
-        widgetMgr.setElementState(chartId, RESTORE_RERUN_STATE_KEY, {
-          requestedInRunId: runId,
-        } satisfies RestoreRerun)
+        restoreReruns.set(widgetMgr, { requestedInRunId: runId })
       }
       const fromUser = shouldRerun || Boolean(formId)
       writeSelection(nextSelection, fromUser)

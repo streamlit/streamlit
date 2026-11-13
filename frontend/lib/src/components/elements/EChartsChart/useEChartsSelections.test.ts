@@ -2075,7 +2075,7 @@ describe("useEChartsSelections", () => {
     }
   })
 
-  it("commits the points a restored brush hits in new data, without a rerun in the run that rerun started", () => {
+  it("commits new brush hits after a data change and reruns at most once per triggering run", () => {
     const chart = echarts.init(null, null, {
       renderer: "svg",
       ssr: true,
@@ -2209,6 +2209,210 @@ describe("useEChartsSelections", () => {
     }
   })
 
+  it("shares the restore rerun guard across charts so they can't take turns rerunning", () => {
+    const charts = ["chart-a", "chart-b"].map(() =>
+      echarts.init(null, null, {
+        renderer: "svg",
+        ssr: true,
+        width: 600,
+        height: 400,
+      })
+    )
+    try {
+      const optionWithData = (data: number[][]): Record<string, unknown> => ({
+        animation: false,
+        xAxis: { type: "value", min: 0, max: 10 },
+        yAxis: { type: "value", min: 0, max: 10 },
+        brush: { xAxisIndex: "all", yAxisIndex: "all" },
+        series: { type: "scatter", data },
+      })
+      const brush = createBrushSelection({
+        areas: [
+          {
+            brushType: "rect",
+            coordRange: [
+              [0, 3],
+              [0, 3],
+            ],
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+          },
+        ],
+        selected: [{ seriesIndex: 0, dataIndex: [0, 1] }],
+      })
+      const elementState = new Map<string, unknown>([
+        ["chart-a:brushSelection", [brush]],
+        ["chart-b:brushSelection", [brush]],
+      ])
+      widgetMgr.getElementState.mockImplementation((id: string, key: string) =>
+        elementState.get(`${id}:${key}`)
+      )
+      widgetMgr.setElementState.mockImplementation(
+        (id: string, key: string, value: unknown) => {
+          elementState.set(`${id}:${key}`, value)
+        }
+      )
+      let scriptRunId = "run-0"
+      const { result, rerender } = renderHook(
+        () => [
+          useEChartsSelections(createElement("chart-a"), widgetMgr),
+          useEChartsSelections(createElement("chart-b"), widgetMgr),
+        ],
+        {
+          wrapper: ({ children }) =>
+            createReactElement(
+              ScriptRunContext.Provider,
+              { value: { scriptRunId } as ScriptRunContextProps },
+              children
+            ),
+        }
+      )
+      const startRun = (runId: string): void => {
+        scriptRunId = runId
+        rerender()
+      }
+      const applyData = (chartIndex: number, data: number[][]): void => {
+        act(() => {
+          charts[chartIndex].setOption(optionWithData(data), {
+            notMerge: true,
+          })
+          result.current[chartIndex].restoreSelection(charts[chartIndex])
+        })
+      }
+      const lastWriteFromUser = (chartId: string): unknown =>
+        (
+          widgetMgr.setStringValue.mock.calls.findLast(
+            call => call[0] === chartId
+          ) as [string, string, { fromUser: boolean }] | undefined
+        )?.[2].fromUser
+
+      act(() => {
+        result.current[0].bindSelections(charts[0])
+        result.current[1].bindSelections(charts[1])
+      })
+
+      // Chart A's rerun request stops the run before chart B gets new data.
+      startRun("run-1")
+      applyData(0, [
+        [8, 8],
+        [1, 1],
+        [2, 2],
+      ])
+      expect(lastWriteFromUser("chart-a")).toBe(true)
+      expect(lastWriteFromUser("chart-b")).toBeUndefined()
+
+      // In the rerun, neither chart reruns again.
+      startRun("run-2")
+      applyData(0, [
+        [1, 1],
+        [8, 8],
+        [9, 9],
+      ])
+      applyData(1, [
+        [8, 8],
+        [1, 1],
+        [2, 2],
+      ])
+      expect(lastWriteFromUser("chart-a")).toBe(false)
+      expect(lastWriteFromUser("chart-b")).toBe(false)
+      expect(widgetMgr.setStringValue).toHaveBeenCalledTimes(3)
+
+      // A later run reruns again.
+      startRun("run-3")
+      applyData(1, [
+        [8, 8],
+        [9, 9],
+        [2, 2],
+      ])
+      expect(lastWriteFromUser("chart-b")).toBe(true)
+    } finally {
+      for (const chart of charts) {
+        chart.dispose()
+      }
+    }
+  })
+
+  it("stores new brush hits when the union with clicked points is unchanged", () => {
+    const chart = echarts.init(null, null, {
+      renderer: "svg",
+      ssr: true,
+      width: 600,
+      height: 400,
+    })
+    try {
+      const optionWithData = (data: number[][]): Record<string, unknown> => ({
+        animation: false,
+        xAxis: { type: "value", min: 0, max: 10 },
+        yAxis: { type: "value", min: 0, max: 10 },
+        brush: { xAxisIndex: "all", yAxisIndex: "all" },
+        series: { type: "scatter", selectedMode: "multiple", data },
+      })
+      const elementState = new Map<string, unknown>([
+        [
+          "brushSelection",
+          [
+            createBrushSelection({
+              areas: [
+                {
+                  brushType: "rect",
+                  coordRange: [
+                    [0, 3],
+                    [0, 3],
+                  ],
+                  xAxisIndex: 0,
+                  yAxisIndex: 0,
+                },
+              ],
+              selected: [{ seriesIndex: 0, dataIndex: [0] }],
+            }),
+          ],
+        ],
+        ["selectedPoints", [{ seriesIndex: 0, dataIndex: [0, 1] }]],
+      ])
+      widgetMgr.getElementState.mockImplementation(
+        (_id: string, key: string) => elementState.get(key)
+      )
+      widgetMgr.setElementState.mockImplementation(
+        (_id: string, key: string, value: unknown) => {
+          elementState.set(key, value)
+        }
+      )
+      chart.setOption(
+        optionWithData([
+          [1, 1],
+          [8, 8],
+        ])
+      )
+      const { result } = renderHook(() =>
+        useEChartsSelections(createElement(), widgetMgr)
+      )
+
+      act(() => {
+        result.current.bindSelections(chart)
+        // The brush now covers the second point instead of the first. Both
+        // points stay clicked, so the reported union doesn't change.
+        chart.setOption(
+          optionWithData([
+            [8, 8],
+            [1, 1],
+          ]),
+          { notMerge: true }
+        )
+        result.current.restoreSelection(chart)
+      })
+      flush()
+
+      expect(widgetMgr.setStringValue).not.toHaveBeenCalled()
+      expect(elementState.get("brushSelection")).toEqual([
+        expect.objectContaining({
+          selected: [expect.objectContaining({ dataIndex: [1] })],
+        }),
+      ])
+    } finally {
+      chart.dispose()
+    }
+  })
+
   it.each([
     {
       name: "inside a form",
@@ -2259,9 +2463,10 @@ describe("useEChartsSelections", () => {
         expect.stringContaining('"data_indices":[1]'),
         { formId, fragmentId: undefined, fromUser }
       )
-      expect(widgetMgr.setElementState).not.toHaveBeenCalledWith(
+      expect(widgetMgr.setElementState).toHaveBeenCalledTimes(1)
+      expect(widgetMgr.setElementState).toHaveBeenCalledWith(
         "chart-id",
-        "restoreRerun",
+        "brushSelection",
         expect.anything()
       )
     }
