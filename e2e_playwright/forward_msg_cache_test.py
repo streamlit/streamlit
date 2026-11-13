@@ -21,6 +21,7 @@ from e2e_playwright.conftest import build_app_url
 from e2e_playwright.shared.app_utils import (
     click_button,
     click_toggle,
+    expect_markdown,
     fill_number_input,
     goto_app,
 )
@@ -90,14 +91,14 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # Note: Pandas 3.x uses large_string (64-bit offsets) by default, which produces
     # ~18% larger Arrow IPC serialization compared to pandas 2.x's string (32-bit).
     TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 70  # noqa: N806
-    # Max number of websocket messages received.
+    # Nominal number of websocket messages received.
     EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540  # noqa: N806
-    # There can be a bit of fluctuation because of optimization logic:
-    # See the composable messages logic in
-    # lib/streamlit/runtime/forward_msg_queue.py (-> `_maybe_compose_delta_msgs`)
-    # the queues can be flushed to the browser before
-    # the optimization is able to be applied.
-    ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE: Final = 25  # noqa: N806
+    # Headroom above EXPECTED_WEBSOCKET_MESSAGES_RECEIVED. Only the upper bound is
+    # checked: ForwardMsgQueue composes queued deltas that target the same element
+    # (see `_maybe_compose_delta_msgs` in lib/streamlit/runtime/forward_msg_queue.py).
+    # How many get composed depends on how often the queue is flushed, so under load
+    # the count can drop well below the expected number without indicating a bug.
+    ALLOWED_EXTRA_WEBSOCKET_MESSAGES_RECEIVED: Final = 25  # noqa: N806
 
     total_websocket_sent_size_bytes: int = 0
     total_websocket_received_size_bytes: int = 0
@@ -162,15 +163,18 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     # Rerun app a couple of times:
     _rerun_app(page, 10)
 
-    # Assert that the total number of websocket messages received and sent is equal
-    assert (
-        abs(total_websocket_messages_received - EXPECTED_WEBSOCKET_MESSAGES_RECEIVED)
-        < ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE
-    ), (
-        f"Total number of websocket messages received by the frontend "
-        f"{total_websocket_messages_received} but expected to receive"
-        f"{EXPECTED_WEBSOCKET_MESSAGES_RECEIVED} +/- "
-        f"{ALLOWED_WEBSOCKET_MESSAGES_RECEIVED_DIFFERENCE}. In case this is expected, "
+    # The received-message count has no lower bound, so confirm that the
+    # final full app run reached the browser:
+    expect_markdown(page, "Rerun count: 29")
+
+    # Assert that the number of received websocket messages is under the threshold
+    # and the number of sent websocket messages is equal to the expected number:
+    max_received_messages = (
+        EXPECTED_WEBSOCKET_MESSAGES_RECEIVED + ALLOWED_EXTRA_WEBSOCKET_MESSAGES_RECEIVED
+    )
+    assert total_websocket_messages_received <= max_received_messages, (
+        f"Frontend received {total_websocket_messages_received} websocket messages; "
+        f"the upper bound is {max_received_messages}. In case this is expected, "
         "you can change the number in the test."
     )
     assert total_websocket_messages_sent == EXPECTED_WEBSOCKET_MESSAGES_SENT, (
