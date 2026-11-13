@@ -1737,7 +1737,7 @@ def _bundled_echarts_major_minor_version() -> str:
 
 
 def test_echarts_version_mentions_match_bundled_version() -> None:
-    """The docstring and agent skill name the bundled ECharts major.minor version."""
+    """The docstring and agent skill both mention the bundled ECharts version."""
     expected = f"ECharts {_bundled_echarts_major_minor_version()}"
     sources = {
         "lib/streamlit/elements/echarts_chart.py (EChartsMixin.echarts_chart docstring)": (
