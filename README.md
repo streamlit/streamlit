@@ -6,17 +6,18 @@
 
 ### Built in Python. Made for people and agents. Owned by your team.
 
-**Streamlit is the agent-native data app framework:** the open-source Python framework
-for data apps and dashboards that coding agents build and data teams own.
+**Streamlit is the open-source, agent-native data app framework.** Use it for dashboards,
+forecasting tools, review-and-approval workflows, and any other app built around your
+data.
 
 [![PyPI downloads](https://img.shields.io/pypi/dm/streamlit?label=PyPI%20downloads)](https://pypi.org/project/streamlit/)
 [![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/streamlit/streamlit/blob/develop/LICENSE)
 
-Apps are plain, readable Python, with no separate frontend or API layer. Streamlit is
-batteries-included: it owns the hard parts, from a well-designed, consistent interface to
-state, caching, sign-in, theming, and upgrades. Your team maintains only its logic, and
-can review every number in the language it already knows.
+A Streamlit app is just Python, with no separate frontend or API layer. Streamlit is
+batteries-included and takes care of the hard parts: a consistent, well-designed
+interface, state, caching, sign-in, theming, and upgrades. Your team keeps only its own
+logic, written in a language it already reads every day.
 
 **The No. 1 Python framework for data apps and dashboards.**
 [More than a million repositories](https://github.com/streamlit/streamlit/network/dependents)
@@ -30,18 +31,19 @@ pip install streamlit
 streamlit skills  # Set up your coding agent
 ```
 
-[`streamlit skills`](https://docs.streamlit.io/develop/api-reference/cli/skills) installs
-expert skills, written by the Streamlit team, for Claude Code and for agents that read the
-shared `.agents` skills folder. The skills ship with every release and match your
-installed version, so agents follow current best practices for layouts, theming,
-dashboards, performance, testing, and Snowflake.
+Run [`streamlit skills`](https://docs.streamlit.io/develop/api-reference/cli/skills) in
+your project folder to install our expert skills, for Claude Code and for any agent that
+reads the shared `.agents` skills folder. We write them ourselves, ship them with every
+release, and match them to the version you have installed. So your agent follows current
+best practices for layouts, theming, dashboards, performance, testing, and Snowflake,
+instead of whatever it memorized two versions ago.
 
-Then name Streamlit in your request, for example: "Build a Streamlit app that forecasts
-demand from `sales.csv`, with what-if levers for price and growth." Agents load the skills
-reliably when the request mentions Streamlit, or when it invokes the skill directly, such
-as `/developing-with-streamlit` in Claude Code.
+Then just ask, and mention Streamlit so the agent picks up the skills: "Build a Streamlit
+app that forecasts demand from `sales.csv`, with what-if levers for price and growth." In
+Claude Code, you can also invoke the skill directly with `/developing-with-streamlit`.
 
-Or write an app yourself. Save this as `streamlit_app.py` and run
+Prefer to write it yourself? Here's a complete app: a demand forecast that planners can
+adjust and send for sign-off. Save it as `streamlit_app.py` and run
 `streamlit run streamlit_app.py`:
 
 ```python
@@ -88,46 +90,56 @@ if st.button("Submit for sign-off", type="primary"):
   operating dashboards with drill-down and cross-filtering over large data. Coming from a
   BI tool? Move your dashboards to Streamlit, and modernize them on the way.
 
-Each links to a live reference app. Their source is in
-[streamlit/demos](https://github.com/streamlit/demos).
+Each one is a live demo you can click through, and the source is in
+[streamlit/demos](https://github.com/streamlit/demos). Streamlit is also great for AI and
+chat apps over your data (`st.chat_input`, `st.write_stream`), ML and model tools, and
+internal data tools.
 
 ## Why Streamlit
 
-Generating an app is cheap. Owning it isn't.
+**Generating an app is cheap. Owning it isn't.** An agent can write a React frontend, a
+Python backend, and the API between them in an afternoon. Then someone has to review all
+three, keep them in sync, and patch them for years. With Streamlit, it's one layer of
+Python, and the rest is our job.
 
-- **Less code to own.** One layer of Python replaces a frontend, a backend, and the API
-  between them, so there's less to generate, review, and keep in sync.
-- **Great design by default.** Free on the logic, opinionated on the design: native charts,
-  tables, and filters, and one brand theme shared across apps, so every app looks great and
-  consistent, however many teams and agents build them.
-- **Agents check their own work.** They drive the running app without a browser, and leave
-  headless tests behind ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)).
-- **Apps are tools for agents.** Turn on the experimental agent API
+- **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
+  table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
+  charts cover nearly every visualization, from KPI sparklines to maps and diagrams, and
+  Vega-Lite and ECharts charts switch to faster rendering on their own as the data grows.
+- **Fast dashboards.** Only the part of the page that changed reruns (`@st.fragment`), and
+  cached data refreshes in the background (`@st.cache_data`). Click a point on a chart or
+  a row in a table to cross-filter the page (`on_select`). Filters live in the URL
+  (`bind="query-params"`), so every view is shareable.
+- **Free on the logic. Opinionated on the design.** Write any logic you like, with any
+  Python library. The look comes from Streamlit: native charts, tables, and filters,
+  styled by one [brand theme](https://docs.streamlit.io/develop/concepts/configuration/theming)
+  that all your apps share. App number 200 looks like it belongs with app number one, no
+  matter who, or what, built it.
+- **Stable for years.** Breaking changes are extremely rare. Most apps written years ago
+  still run on the latest release, and every upgrade brings them new features, speed, and
+  security fixes.
+- **Agents check their own work.** They drive the running app without a browser, read the
+  numbers back as data, and leave tests behind for CI
+  ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)).
+- **Your apps are tools for agents, too.** Turn on the experimental agent API
   (`server.enableAgentApi`), and Claude, ChatGPT, Cursor, or any other MCP client can use
-  the app as a tool, with the same logic and access rules as the browser.
-- **Dashboard performance built in.** Tables that load rows as you scroll, partial and
-  parallel reruns (`@st.fragment`), background cache refresh (`@st.cache_data`),
-  cross-filtering selections (`on_select`), and views shared by URL
-  (`bind="query-params"`).
-- **Stable for years.** Breaking changes are extremely rare, so apps keep running on new
-  releases, and every upgrade brings new features, performance improvements, and security
-  fixes.
-- **Enterprise guardrails.** Built-in sign-in (`st.login`), continuous security scanning
-  with fixes in regular releases, and accessibility built to WCAG 2.2 A and AA, with a
-  [published audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
-- **No ceiling.** Add [custom components](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
-  in React or any frontend framework, and your own API routes and middleware with
+  your app with the same logic and access rules as a person in the browser. There's no
+  second API to build.
+- **Enterprise guardrails.** Built-in sign-in (`st.login`), security scanning on every
+  change with fixes in regular releases, and accessibility built to WCAG 2.2 A and AA,
+  with a [published audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
+- **No ceiling.** Need a bespoke screen? Drop in a
+  [custom component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
+  written in React or anything else. Need a webhook or your own API route? Add it with
   [`st.App`](https://docs.streamlit.io/develop/api-reference/server/st.app).
-- **Runs anywhere Python runs,** in your own cloud, on
-  [Community Cloud](https://streamlit.io/cloud), and natively
-  [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
+- **Runs anywhere Python runs:** your own cloud, [Community Cloud](https://streamlit.io/cloud),
+  or natively [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
 
 ## Resources
 
 - [Docs](https://docs.streamlit.io) to learn how Streamlit works
 - [Community forum](https://discuss.streamlit.io) for questions and help
 - [Blog](https://blog.streamlit.io) for tips from developers and creators
-- [Gallery](https://streamlit.io/gallery) for apps the community has built
 - [Components](https://streamlit.io/components) to extend Streamlit
 
 ## Contribute
