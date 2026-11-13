@@ -130,11 +130,12 @@ implementation step confirms that:
 
 - webpack resolves the `../content/index.md` import in `pages/index.js` through the symlink
 - the export copies the symlinked files into `out/`
-- the shallow submodule checkout fetches a pinned tag that isn't the tip of `develop`, both
-  locally and on Netlify
+- the shallow submodule checkout fetches a pinned tag that isn't the tip of `develop`, and a
+  pinned cherry-pick commit on a release branch, both locally and on Netlify
 
-If either symlink check fails, the loaders point at `streamlit/docs/content` directly, which
-changes one constant or import each.
+If webpack or the export can't read `content/` through the symlink, the loaders point at
+`streamlit/docs/content` directly, one constant or import each. If the shallow fetch fails,
+the docs repo switches to alternative B.
 
 Other changes in the docs repo:
 
@@ -173,11 +174,13 @@ lacks whatever was cherry-picked onto `release/1.67.0` after its tag, including 
 itself (§7). `release-branch-creation.yml` branches from a cutoff nightly, so a minor
 release lacks a fix that merged to `develop` after the cutoff. Before tagging any release,
 `release-tag-and-pr-creation.yml` gets a new check: it fails when a commit that changed
-`docs/` on the latest release's branch after its tag has no equivalent on the new release
-branch. The release manager then cherry-picks the missing commit and runs the workflow
-again. The check compares changes (`git log --cherry-pick`), not SHAs, because cherry-picks
-get new SHAs. A workflow input lists commits to skip, for a cherry-pick whose conflict
-resolution changed its patch.
+`docs/` on any `release/X.Y.*` branch after the `X.Y.0` tag, where `X.Y` is the latest
+minor release, has no equivalent on the new release branch. The release manager then
+cherry-picks the missing commit and runs the workflow again. The check compares changes
+(`git log --cherry-pick`), not SHAs, because cherry-picks get new SHAs. A workflow input
+lists commits to skip, for a cherry-pick whose conflict resolution changed its patch. Each
+entry must be a full 40-character SHA, validated and passed through `env:` like the
+workflow's existing inputs.
 
 Release notes for a minor release have to be in the pinned commit, so they're written
 before the tag:
@@ -198,7 +201,7 @@ before the tag:
 A workflow in `streamlit/docs` replaces most of the manual release PR. It runs hourly. When
 PyPI has a final release newer than the pinned version, it opens a release PR, or updates
 the one that's already open. Nightly tags and releases that are still publishing don't
-trigger it:
+trigger it, because neither is a final release on PyPI yet. The workflow then:
 
 1. Move the submodule to the release tag (§3).
 2. Generate docstrings for the new version with `python/generate.py`, as `make docstrings`
@@ -260,10 +263,10 @@ validator flags in today's content.
 
 **Site build.** The validator doesn't parse MDX, so an unbalanced tag or a stray `{` still
 breaks the site. A CI job that runs when `docs/` changes checks out `streamlit/docs` at
-`main`, puts the PR checkout at the submodule path, and runs `make export` without its
-submodule update, which would replace the PR's pages with the pinned ones. The build
-installs that repo's npm dependencies and compiles the PR's pages, so the job has a
-read-only token and no secrets. The build time hasn't been measured. If it's too slow for
+`main`, puts the PR checkout at the submodule path, and runs `make export` but skips its
+submodule update, because that update would replace the PR's pages with the pinned ones.
+The build installs that repo's npm dependencies and compiles the PR's pages, so the job has
+a read-only token and no secrets. The build time hasn't been measured. If it's too slow for
 every docs PR, the job runs nightly against `develop`, and the validator stays the per-PR
 check.
 
@@ -302,8 +305,8 @@ check.
 
 ### What changes for readers and contributors
 
-- Readers see no change. URLs, redirects, search, llms.txt, and offline docs are built from
-  the same files.
+- URLs, redirects, search, llms.txt, and offline docs stay the same, because they're built
+  from the same files.
 - Docs changes reach the site at the next release instead of on merge, except urgent fixes
   (§3).
 - Content changes need a PR in `streamlit/streamlit`, which has paused PRs from outside the
