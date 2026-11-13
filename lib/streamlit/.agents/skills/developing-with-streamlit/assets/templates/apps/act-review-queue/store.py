@@ -21,13 +21,14 @@ own data, replace ``connection()`` with your warehouse connection (for example
 
 - Remove ``reset``, ``seed_proposals``, ``ensure_ready``, and the Reset menu
   item. Reset replaces the ``proposals`` table and drops the audit log.
-  Create the ``decisions`` table once with ``_DECISIONS_SCHEMA``.
+  Create the ``decisions`` table once. ``_DECISIONS_SCHEMA`` is SQLite DDL,
+  so a warehouse needs its own statement with the same columns.
 - Gate decisions on ``st.user.is_logged_in`` (see the skill's
   ``references/authentication.md``), so the audit log names real reviewers.
 
-Reads are cached and cleared after every write, so every session sees each
-decision. The sample database is ``review_queue.db`` in the working directory;
-keep it out of version control.
+The page caches reads and clears that cache after every write, so every
+session sees each decision. The sample database is ``review_queue.db`` in the
+working directory; keep it out of version control.
 """
 
 from __future__ import annotations
@@ -111,6 +112,7 @@ def money(value: float) -> str:
 
 
 def connection() -> SQLConnection:
+    """The queue's database. Replace it with yours, such as Snowflake."""
     return st.connection("review_queue", type="sql", url=DATABASE_URL)
 
 

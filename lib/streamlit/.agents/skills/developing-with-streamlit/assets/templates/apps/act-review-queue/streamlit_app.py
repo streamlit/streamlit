@@ -187,6 +187,7 @@ with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
         store.CATEGORIES,
         selection_mode="multi",
         key="category",
+        disabled=VIEWS[view] is None,  # The audit log isn't filtered
         bind="query-params",
         on_change=review.reset_editor,
         label_visibility="collapsed",
@@ -198,6 +199,7 @@ with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
         live=True,
         icon=":material/search:",
         key="search",
+        disabled=VIEWS[view] is None,
         on_change=review.reset_editor,
         label_visibility="collapsed",
         width=320,
@@ -408,7 +410,7 @@ with st.container(border=True):
                 icon=":material/send:",
                 type="primary",
                 on_click=submit,
-                disabled=not ready or bool(problems),
+                disabled=not ready,
                 key="submit",
             )
     for problem in problems:

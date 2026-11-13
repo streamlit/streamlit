@@ -138,7 +138,10 @@ def stock_chart(proposal: pd.Series, quantity: int) -> dict[str, Any]:
                 "markLine": {
                     "symbol": "none",
                     "label": {"formatter": "Arrives", "position": "end"},
-                    "data": [{"xAxis": days[arrival].isoformat()}],
+                    # An order arriving after the window has no line.
+                    "data": [{"xAxis": days[arrival].isoformat()}]
+                    if arrival < PROJECTION_DAYS
+                    else [],
                 },
             },
             {
@@ -210,7 +213,7 @@ def review_drawer(proposal_id: str) -> None:
         with st.status(title, type="step", state="complete", expanded=True):
             st.markdown(detail)
 
-    # Enter would press the first button, Reject, so it doesn't submit.
+    # Enter would press the first submit button (Reject), so this form ignores Enter.
     with st.form(f"decide_{proposal_id}", border=False, enter_to_submit=False):
         final_qty = st.number_input(
             "Order quantity",
