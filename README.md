@@ -4,7 +4,7 @@
 
 # Streamlit
 
-### Agents build it. Agents use it. Your team owns it.
+### Built in Python. Made for people and agents. Owned by your team.
 
 **Streamlit is the agent-native data app framework:** the open-source Python framework
 for data apps and dashboards that coding agents build and data teams own.
