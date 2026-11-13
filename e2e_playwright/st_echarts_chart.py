@@ -934,3 +934,62 @@ with st.container(key="c_size_visual_map"):
         },
         height=_HEIGHT,
     )
+
+# Theme defaults for marks and areas: the data series marks are neutral, the
+# empty series keeps its explicit color on its marks, and the unstacked area
+# fill is softened.
+with st.container(key="c_marks_and_area"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["Q1", "Q2", "Q3", "Q4", "Q5"]},
+            "yAxis": {"type": "value"},
+            "legend": {"data": ["Revenue"]},
+            "series": [
+                {
+                    "type": "line",
+                    "name": "Revenue",
+                    "areaStyle": {},
+                    "data": [820, 932, 901, 934, 1010],
+                    "markLine": {
+                        "symbol": "none",
+                        "data": [{"xAxis": "Q2", "name": "launch"}],
+                    },
+                    "markArea": {
+                        "data": [[{"name": "forecast", "xAxis": "Q4"}, {"xAxis": "Q5"}]]
+                    },
+                },
+                {
+                    "type": "line",
+                    "name": "marks",
+                    "data": [],
+                    "itemStyle": {"color": "#e45756"},
+                    "markLine": {
+                        "symbol": "none",
+                        "data": [{"yAxis": 750, "name": "target"}],
+                    },
+                },
+            ],
+            **_NO_ANIM,
+        },
+        height=_HEIGHT,
+    )
+
+# Number formats in axis and series labels. The SVG renderer puts the tick and
+# label text in the DOM.
+with st.container(key="c_label_number_formats"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B"]},
+            "yAxis": {"type": "value", "max": 1, "axisLabel": {"formatter": "percent"}},
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [0.25, 0.5],
+                    "label": {"show": True, "position": "top", "formatter": "%.2f pts"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )

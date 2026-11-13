@@ -68,7 +68,9 @@ export enum PrintLayout {
   /**
    * An element that keeps a width measured on screen, so it would overflow a
    * narrower printed column. A column row or horizontal container that holds
-   * it stacks in print.
+   * it stacks in print. A bordered card that also holds a chart drops the
+   * keep-together rule, even when this element is short or cannot paginate,
+   * so a tall table in the same card can continue onto the next page.
    * Use for: dataframes, tables
    */
   FIXED_WIDTH = "stPrintFixedWidth",

@@ -300,7 +300,7 @@ class MetricMixin:
             - ``"dollar"``: Show the number as a dollar amount (e.g. "$1,234.57").
             - ``"euro"``: Show the number as a euro amount (e.g. "€1,234.57").
             - ``"yen"``: Show the number as a yen amount (e.g. "¥1,235").
-            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.00").
+            - ``"accounting"``: Show the number in an accounting format (e.g. "1,234.57").
             - ``"bytes"``: Show the number in a byte format (e.g. "1.2KB").
             - ``"compact"``: Show the number in a compact format (e.g. "1.2K").
             - ``"scientific"``: Show the number in scientific notation (e.g. "1.235E3").
@@ -309,6 +309,12 @@ class MetricMixin:
               specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
               ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
               thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
+
+            The ``"dollar"``, ``"euro"``, and ``"accounting"`` formats show
+            whole amounts without decimals (e.g. "$1,234" instead of
+            "$1,234.00") and keep cents otherwise (e.g. "$12.50"). To always
+            show two decimals, use a printf-style format string such as
+            ``"$%,.2f"`` or ``"€%,.2f"``.
 
         delta_description : str or None
             A short description displayed next to the delta value, such as

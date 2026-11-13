@@ -34,6 +34,8 @@ from streamlit.errors import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
 )
+from streamlit.testing.v1 import AppTest
+from tests import testutil
 
 _KEY: Final = "the key"
 
@@ -107,6 +109,7 @@ class CheckSessionStateRules(ElementPoliciesTest):
 
         mock_session_state = MagicMock()
         mock_session_state.is_new_state_value.return_value = True
+        mock_session_state.was_set_by_callback.return_value = False
         patched_get_session_state.return_value = mock_session_state
 
         check_session_state_rules(5, key=_KEY)
@@ -170,6 +173,7 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
 
         mock_session_state = MagicMock()
         mock_session_state.is_new_state_value.return_value = True
+        mock_session_state.was_set_by_callback.return_value = False
         patched_get_session_state.return_value = mock_session_state
         # Reset global flag:
         policies_module._shown_default_value_warning = False
@@ -181,7 +185,28 @@ class SpecialSessionStatesTest(ElementPoliciesTest):
         warning_msg = args[0]
         assert 'The widget with key "%s"' in warning_msg
         assert args[1] == _KEY
-        assert kwargs.get("stack_info") is True
+        # A stack trace makes the warning read like an error in hosted logs.
+        assert "stack_info" not in kwargs
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    @patch("streamlit.elements.lib.policies.get_session_state")
+    @patch("streamlit.elements.lib.policies._LOGGER")
+    def test_check_session_state_rules_no_warning_for_callback_value(
+        self, patched_logger, patched_get_session_state
+    ):
+        """A value a callback set before the run doesn't trigger the warning."""
+        import streamlit.elements.lib.policies as policies_module
+
+        mock_session_state = MagicMock()
+        mock_session_state.is_new_state_value.return_value = True
+        mock_session_state.was_set_by_callback.return_value = True
+        patched_get_session_state.return_value = mock_session_state
+        policies_module._shown_default_value_warning = False
+
+        check_session_state_rules(5, key=_KEY)
+
+        patched_logger.warning.assert_not_called()
+        mock_session_state.was_set_by_callback.assert_called_once_with(_KEY)
 
 
 class CheckCacheReplayTest(ElementPoliciesTest):
@@ -253,3 +278,50 @@ class CheckWidget(ElementPoliciesTest):
         patched_check_session_state_rules.assert_called_once_with(
             default_value=None, key=key, writes_allowed=False
         )
+
+
+def _reset_from_callback_script(bind: str | None) -> None:
+    import streamlit as st
+
+    def reset() -> None:
+        st.session_state.product = "A"
+
+    st.segmented_control("Product", ["A", "B"], default="A", key="product", bind=bind)
+    st.button("Reset", on_click=reset)
+
+
+@pytest.mark.parametrize("bind", [None, "query-params"])
+@patch("streamlit.elements.lib.policies._shown_default_value_warning", new=False)
+@patch("streamlit.elements.lib.policies._LOGGER")
+@testutil.patch_config_options({"global.disableWidgetStateDuplicationWarning": False})
+def test_no_duplication_warning_when_callback_resets_widget(
+    patched_logger: MagicMock, bind: str | None
+) -> None:
+    """Resetting a widget with a default from a callback logs no warning."""
+    at = AppTest.from_function(_reset_from_callback_script, args=(bind,)).run()
+    at.segmented_control(key="product").set_value("B").run()
+    at.button[0].click().run()
+
+    assert at.segmented_control(key="product").value == "A"
+    patched_logger.warning.assert_not_called()
+
+
+@patch("streamlit.elements.lib.policies._shown_default_value_warning", new=False)
+@patch("streamlit.elements.lib.policies._LOGGER")
+@testutil.patch_config_options({"global.disableWidgetStateDuplicationWarning": False})
+def test_duplication_warning_when_script_body_sets_widget(
+    patched_logger: MagicMock,
+) -> None:
+    """Setting a widget with a default from the script body still warns."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.session_state.product = "B"
+        st.segmented_control("Product", ["A", "B"], default="A", key="product")
+
+    at = AppTest.from_function(script).run()
+
+    assert at.segmented_control(key="product").value == "B"
+    patched_logger.warning.assert_called_once()
+    assert patched_logger.warning.call_args.args[1] == "product"

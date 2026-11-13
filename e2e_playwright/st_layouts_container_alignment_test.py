@@ -20,6 +20,9 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_text_area,
 )
+from e2e_playwright.shared.dataframe_utils import (
+    start_dragging_dataframe_resize_handle,
+)
 
 # Match theme.sizes.defaultChartHeight (21.875rem) and defaultChartWidth (25rem).
 DEFAULT_CHART_HEIGHT_PX = 350
@@ -270,24 +273,6 @@ def test_stretch_dataframe_default_height(app: Page):
     wait_until(app, _dataframe_fits)
 
 
-def _start_dragging_dataframe(app: Page, dataframe: Locator, delta_px: int) -> None:
-    """Drag the dataframe's bottom-right resize handle, without releasing it.
-
-    A positive ``delta_px`` drags the table taller, a negative one shorter.
-    """
-    # Center the dataframe so the handle stays in the viewport while dragging.
-    dataframe.evaluate("el => el.scrollIntoView({block: 'center'})")
-    box = dataframe.get_by_test_id("stDataFrameResizable").bounding_box()
-    assert box is not None
-    # The resize handle straddles the bottom-right corner.
-    x = box["x"] + box["width"] - 2
-    y = box["y"] + box["height"] - 2
-    app.mouse.move(x, y)
-    app.mouse.down()
-    app.mouse.move(x, y + delta_px / 2)
-    app.mouse.move(x, y + delta_px)
-
-
 def _bottom(locator: Locator) -> float:
     box = locator.bounding_box()
     assert box is not None
@@ -310,7 +295,7 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
     )
     initial_card_height = _height(dataframe_card) or 0
 
-    _start_dragging_dataframe(app, card_dataframe, 140)
+    start_dragging_dataframe_resize_handle(app, card_dataframe, 140)
 
     def _card_grew_with_dataframe() -> bool:
         resizable = card_dataframe.get_by_test_id("stDataFrameResizable")
@@ -333,11 +318,11 @@ def test_stretch_dataframe_resize_stays_in_parent(app: Page):
     resizable = fixed_dataframe.get_by_test_id("stDataFrameResizable")
 
     # Dragging shorter first proves that the handle engages in this card.
-    _start_dragging_dataframe(app, fixed_dataframe, -70)
+    start_dragging_dataframe_resize_handle(app, fixed_dataframe, -70)
     app.mouse.up()
     wait_until(app, lambda: (_height(resizable) or 0) < fixed_dataframe_height - 30)
 
-    _start_dragging_dataframe(app, fixed_dataframe, 140)
+    start_dragging_dataframe_resize_handle(app, fixed_dataframe, 140)
     app.mouse.up()
 
     def _dataframe_stays_in_fixed_card() -> bool:

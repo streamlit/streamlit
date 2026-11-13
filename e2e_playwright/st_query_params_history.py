@@ -40,10 +40,18 @@ def query_params_page() -> None:
 
     st.markdown(f"Query params: {dict(st.query_params)}")
 
+    # Calls st.switch_page from a callback while the URL holds the bound
+    # "number" value.
+    st.button("Switch to History", on_click=st.switch_page, args=(history,))
 
+
+# Bound in the main script, so the param is shared by all pages.
+st.sidebar.radio("Region", options=["All", "EU"], key="region", bind="query-params")
+
+history = st.Page(history_page, title="History", default=True)
 st.navigation(
     [
-        st.Page(history_page, title="History", default=True),
+        history,
         st.Page(query_params_page, title="Query Params", url_path="query-params"),
     ]
 ).run()

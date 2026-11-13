@@ -586,6 +586,37 @@ def tooltip_position_subtest():
     )
 
 
+def omit_fill_color_subtest():
+    st.write("""
+    ## Omit fill color (theme primary default)
+
+    A ScatterplotLayer without get_fill_color uses the theme primary color at
+    alpha 160.
+    """)
+
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style=None,
+            initial_view_state=pdk.ViewState(
+                latitude=37.76,
+                longitude=-122.4,
+                zoom=11,
+            ),
+            layers=[
+                pdk.Layer(
+                    "ScatterplotLayer",
+                    data=random_scatter_sf.head(80),
+                    get_position="[lon, lat]",
+                    get_radius=200,
+                    radius_min_pixels=6,
+                ),
+            ],
+        ),
+        height=400,
+        width="stretch",
+    )
+
+
 def alt_chart_subtest():
     st.write("## Accessible name (`alt`)")
 

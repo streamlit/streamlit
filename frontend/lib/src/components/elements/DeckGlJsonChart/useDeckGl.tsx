@@ -48,6 +48,7 @@ import type {
   ParsedDeckGlConfig,
 } from "./types"
 import {
+  applyMissingPydeckPrimaryColors,
   type FillFunction,
   getContextualFillColor,
   LAYER_TYPE_TO_FILL_FUNCTION,
@@ -488,22 +489,28 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      // Resolve st.map's "primary" fill placeholder before selection styling
-      // or Deck.gl conversion so default markers use the active theme primary.
+      // Fill omitted pydeck layer colors with the theme primary, then resolve
+      // st.map's "primary" placeholder, before selection styling or Deck.gl
+      // conversion.
       jsonCopy.layers = jsonCopy.layers.map(layer => {
         if (!layer || Array.isArray(layer)) {
           return layer
         }
 
-        const resolvedFillColor = resolveMapPrimaryFillColor(
-          layer.getFillColor,
+        const withPydeckDefaults = applyMissingPydeckPrimaryColors(
+          layer,
           theme.colors.primary
         )
-        if (resolvedFillColor === layer.getFillColor) {
-          return layer
+
+        const resolvedFillColor = resolveMapPrimaryFillColor(
+          withPydeckDefaults.getFillColor,
+          theme.colors.primary
+        )
+        if (resolvedFillColor === withPydeckDefaults.getFillColor) {
+          return withPydeckDefaults
         }
 
-        return { ...layer, getFillColor: resolvedFillColor }
+        return { ...withPydeckDefaults, getFillColor: resolvedFillColor }
       })
 
       // Build a map of layer IDs to data lengths for validation
@@ -560,14 +567,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
         const clonedLayer = { ...layer }
         fillFunctions.forEach(fillFunction => {
+          // Merge per accessor so earlier fill triggers (and unrelated keys)
+          // aren't dropped when a layer has multiple fill functions.
           clonedLayer.updateTriggers = {
-            // Tell Deck.gl to recompute the fill color when the selection changes.
-            // Without this, objects in layers will have stale colors when selection changes.
+            ...clonedLayer.updateTriggers,
+            // Deck.gl reruns this accessor only when its trigger changes, so
+            // include the selection and the theme primary to avoid stale fill
+            // colors.
             // @see https://deck.gl/docs/api-reference/core/layer#updatetriggers
             [fillFunction]: [
               ...toUpdateTriggerList(layer.updateTriggers?.[fillFunction]),
               selectedIndices,
               anyLayersHaveSelection,
+              theme.colors.primary,
             ],
           }
 

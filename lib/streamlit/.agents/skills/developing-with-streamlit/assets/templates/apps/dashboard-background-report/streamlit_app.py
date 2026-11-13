@@ -58,7 +58,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Operations Dashboard",
+    page_title="Operations dashboard",
     page_icon=":material/monitoring:",
     layout="wide",
 )
@@ -94,7 +94,7 @@ def _rng(*parts: str) -> np.random.Generator:
     return np.random.default_rng(seed)
 
 
-@st.cache_data(ttl="5m")
+@st.cache_data(ttl="5m", refresh_mode="background")
 def load_kpis(region: str) -> dict[str, float]:
     """Summary metrics for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
@@ -106,7 +106,7 @@ def load_kpis(region: str) -> dict[str, float]:
     }
 
 
-@st.cache_data(ttl="5m")
+@st.cache_data(ttl="5m", refresh_mode="background")
 def load_throughput(region: str) -> pd.DataFrame:
     """30-day throughput trend for the selected region (relatively fast)."""
     time.sleep(QUICK_SECONDS)
@@ -174,12 +174,14 @@ def kpis_card(region: str) -> None:
 def throughput_card(region: str) -> None:
     """Quick throughput chart for the selected region."""
     throughput = load_throughput(region)
-    st.line_chart(
-        throughput,
-        x="date",
-        y="rows_processed",
-        x_label="Date",
-        y_label="Rows processed",
+    st.echarts_chart(
+        {
+            "dataset": {"source": throughput},
+            "tooltip": {"trigger": "axis", "valueFormatter": "%,d rows"},
+            "xAxis": {"type": "time"},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "line", "name": "Rows processed", "showSymbol": False}],
+        },
         height=CHART_HEIGHT,
         alt="Rows processed per day",
     )

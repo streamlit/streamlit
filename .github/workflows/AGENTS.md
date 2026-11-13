@@ -51,6 +51,7 @@ GitHub issue and pull request titles, bodies, and comments can be written by any
 - Handle fork PRs carefully (limited `GITHUB_TOKEN` permissions)
 - Use composite actions in `.github/actions/` for shared setup steps
 - `workflow_run` triggers match workflows by their `name:`. When you rename a workflow, or add one that runs on pushes to `develop`, update the workflow lists in `ai-fix-develop-ci.yml`. `snapshot-autofix.yml` also listens for `Playwright E2E Tests`, and `ai-fix-nightly.yml` for `Nightly Build`.
+- `ai-fix-ci-annotations.yml` looks up the `py-unit-tests (max)` and `js-unit-tests` jobs by name. Update it when you rename them.
 
 ## Shared Composite Actions
 
@@ -140,6 +141,7 @@ runner's system Python.
 | `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, and comments the download links on the PR |
 | `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label, or a failed Playwright run on a PR that already has it | Opens a snapshot PR only when Playwright E2E tests fail with snapshot mismatches |
+| `cleanup-orphaned-fix-prs.yml` | Daily (8:00 UTC), PR closed, or manual with a dry run | Closes autofix and snapshot PRs whose target PR is merged or closed, or whose target branch was deleted |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
 | `autoapprove-dependabot-prs.yml` | Weekdays 11:30 UTC, or manual with a dry run | Approves open Dependabot PRs whose CI passed, whose commits all come from Dependabot or `github-actions[bot]`, and that change no E2E snapshots; merging stays manual |
 
@@ -154,6 +156,7 @@ runner's system Python.
 | `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
 | `ai-fix-nightly.yml` | Failed `nightly.yml` run or manual | AI-powered nightly failure triage: reruns transient failures, opens a fix PR for real breakages |
 | `ai-fix-develop-ci.yml` | All watched push runs for a `develop` commit finished and at least one failed, or manual | AI-powered triage of failed CI for commits merged into `develop`: reruns transient failures, opens a fix PR for real breakages |
+| `ai-fix-ci-annotations.yml` | Weekly (Thursdays) or manual | AI-powered cleanup of annotations (warnings, deprecations, tool notices) from the latest successful `py-unit-tests (max)` and `js-unit-tests` jobs on `develop`; opens a fix PR |
 | `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates

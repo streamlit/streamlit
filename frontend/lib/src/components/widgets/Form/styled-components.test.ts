@@ -44,7 +44,7 @@ const formCss = (border: boolean): string => {
 describe("StyledForm print layout", () => {
   it("keeps a bordered form with a chart on one page", () => {
     expect(formCss(true)).toMatch(
-      /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*\{break-inside:avoid/
+      /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
     )
   })
 

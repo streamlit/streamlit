@@ -50,7 +50,7 @@ def _dump_toml_value(key: str, value: Any) -> str:
         return ""
 
     try:
-        return toml_writer.dumps({key: value})
+        return toml_writer.dumps_assignment(key, value)
     except TypeError as ex:
         raise TypeError(f"Cannot show config option {key!r}: {ex}") from ex
 
@@ -200,8 +200,7 @@ def show_config(
                 )
 
             toml_default = _dump_toml_value("default", option.default_val).strip()
-            # Drop an assignment prefix so the comment shows the value. A table
-            # dump (``[default]``) has no prefix, so removeprefix leaves it.
+            # Drop the assignment prefix so the comment shows the value.
             toml_default = toml_default.removeprefix("default = ").strip()
 
             if len(toml_default) > 0:

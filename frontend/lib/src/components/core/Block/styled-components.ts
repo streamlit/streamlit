@@ -32,7 +32,9 @@ import {
   PRINT_VISIBLE_FILTER,
   printKeepTogetherRules,
 } from "~lib/components/shared/printPageBreak"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
@@ -217,6 +219,15 @@ export const StyledElementContainer = styled.div<StyledElementContainerProps>(
             display: "none",
           }
         : {}),
+      // A dataframe print table can be taller than the on-screen canvas
+      // box. Drop the reserved height, flex basis, and size containment so
+      // the next element is not covered.
+      [`&:has(.${DATAFRAME_PRINT_TABLE_CLASS})`]: {
+        height: "auto",
+        maxHeight: "none",
+        flex: "0 0 auto",
+        contain: "none",
+      },
     },
 
     ":has(> .stCacheSpinner)": {
@@ -503,9 +514,11 @@ export const StyledFlexContainerBlock =
       //   alone does not keep flex: a content-height column has no free
       //   space to distribute.
       // - A column row or horizontal container that holds a visible chart,
-      //   dataframe, or table stacks its children. Stacked columns print full
-      //   width; other children keep their width, capped to the container. A
-      //   chart keeps the width it rendered at on screen, capped to its column.
+      //   dataframe, or table stacks its children. A stacked column with an
+      //   intrinsic-width chart and no dataframe or table shrinks to fit its
+      //   content; other stacked columns print full width. Other children
+      //   keep their width, capped to the container. A chart keeps the width
+      //   it rendered at on screen, capped to its column.
       // - A bordered card with a chart, and a side-by-side row of bordered
       //   columns, avoid page breaks.
       const keepsPrintFlexForAlignment =
@@ -573,6 +586,16 @@ export const StyledFlexContainerBlock =
                     ),
                   },
                 },
+                // A stacked column with a chart that carries
+                // `PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS` and no dataframe or
+                // table shrinks to fit its content, so the card has no empty
+                // strip. Other charts may have no in-flow width
+                // to size the column, so their columns stay full width.
+                [`> .stColumn:has(.${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}${PRINT_VISIBLE_FILTER}):not(:has(.${PrintLayout.FIXED_WIDTH}${PRINT_VISIBLE_FILTER}))`]:
+                  {
+                    width: "fit-content",
+                    maxWidth: "100%",
+                  },
               },
               // A horizontal container with a chart stacks the same way.
               // Its children print as block boxes, because a content-height

@@ -111,8 +111,13 @@ export function Table(props: Readonly<TableProps>): ReactElement {
     ? numColumns - numIndexColumns
     : numColumns
 
-  // Scrolling is enabled when a fixed pixel height or width is specified
+  // Pixel height makes an on-screen scroll box. Stretch and pixel both
+  // reserve a box in print so the table does not paint over later
+  // elements. Content height can split.
   const hasScrollableHeight = Boolean(props.heightConfig?.pixelHeight)
+  const hasReservedHeight = Boolean(
+    hasScrollableHeight || props.heightConfig?.useStretch
+  )
   const hasScrollableWidth = Boolean(props.widthConfig?.pixelWidth)
 
   // Table sizes to content (width="content") instead of filling space
@@ -148,13 +153,18 @@ export function Table(props: Readonly<TableProps>): ReactElement {
     : trimmedAlt
 
   return (
-    <StyledTableContainer className="stTable" data-testid="stTable">
+    <StyledTableContainer
+      className="stTable"
+      data-testid="stTable"
+      hasReservedHeight={hasReservedHeight}
+    >
       {!isNullOrEmptyString(cssStyles) && <style>{cssStyles}</style>}
       {/* Add an extra wrapper with the border. This makes sure the border shows around
       the entire table when scrolling horizontally. See also `styled-components.ts`. */}
       <StyledTableBorder
         borderMode={borderMode}
         hasScrollableHeight={hasScrollableHeight}
+        hasReservedHeight={hasReservedHeight}
         // A11y: When scrolling is enabled, make the wrapper focusable so keyboard users
         // can discover and scroll the table content
         tabIndex={hasScrollableHeight || hasScrollableWidth ? 0 : undefined}

@@ -677,6 +677,11 @@ class SessionState:
         default=None, repr=False
     )
 
+    # User keys that widget callbacks set before the script body of this run.
+    # check_session_state_rules skips its duplicate-value warning for these keys,
+    # because setting a key from a callback is the supported way to reset a widget.
+    _keys_set_by_callbacks: frozenset[str] = field(default_factory=frozenset)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -700,6 +705,7 @@ class SessionState:
         """Reset self completely, clearing all current and old values."""
         self._old_state.clear()
         self._new_session_state.clear()
+        self._keys_set_by_callbacks = frozenset()
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
         self._query_param_bound_widget_ids.clear()
@@ -748,6 +754,10 @@ class SessionState:
     def is_new_state_value(self, user_key: str) -> bool:
         """True if a value with the given key is in the current session state."""
         return user_key in self._new_session_state
+
+    def was_set_by_callback(self, user_key: str) -> bool:
+        """True if a widget callback set the key before the script body of this run."""
+        return user_key in self._keys_set_by_callbacks
 
     def reset_state_value(self, user_key: str, value: Any | None) -> None:
         """Reset a new session state value to a given value
@@ -909,6 +919,7 @@ class SessionState:
         """
         self._reset_triggers()
         self._compact_state()
+        self._keys_set_by_callbacks = frozenset()
         if fresh_widget_states is not None:
             if is_history_navigation:
                 fresh_widget_states = self._omit_query_bound_widget_states(
@@ -923,6 +934,9 @@ class SessionState:
                 )
             finally:
                 self._current_interaction_widget_states = None
+            # Only callbacks have written to _new_session_state since _compact_state
+            # emptied it above, so every key it holds now came from a callback.
+            self._keys_set_by_callbacks = frozenset(self._new_session_state)
         if replay_trigger_states is not None:
             self._overlay_replay_trigger_states(
                 replay_trigger_states,

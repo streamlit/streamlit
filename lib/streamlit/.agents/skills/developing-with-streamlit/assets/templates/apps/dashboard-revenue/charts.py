@@ -102,7 +102,7 @@ def mrr_growth(
     forecast: pd.DataFrame | None,
     milestones: list[tuple[pd.Timestamp, str]],
 ) -> dict[str, Any]:
-    """Stacked area of MRR (in $K, or % share) per plan over time.
+    """Stacked area of MRR (in $K, or as each plan's share) per plan over time.
 
     ``forecast`` appends projected months under a shaded range, and
     ``milestones`` draws a labeled line at each milestone's month.
@@ -110,12 +110,17 @@ def mrr_growth(
     combined = monthly if forecast is None else pd.concat([monthly, forecast])
     values = combined[list(active_plans)]
     if share:
-        values = values.div(values.sum(axis=1).replace(0, 1), axis=0) * 100
+        # Shares stay 0-1; the "percent" format shows them as 0% to 100%.
+        values = values.div(values.sum(axis=1).replace(0, 1), axis=0)
     else:
         values /= 1_000
     # A plan removed by the filter keeps its column (and color slot) but has no
     # values, so it draws nothing.
-    source = values.reindex(columns=data.PLANS).round(1).reset_index(drop=True)
+    source = (
+        values.reindex(columns=data.PLANS)
+        .round(3 if share else 1)
+        .reset_index(drop=True)
+    )
     labels = _month_labels(combined.index)
     source.insert(0, "month", labels)
     series: list[dict[str, Any]] = [
@@ -140,7 +145,7 @@ def mrr_growth(
         "dataset": {"source": source},
         "tooltip": {
             "trigger": "axis",
-            "valueFormatter": "%.1f%%" if share else "$%,.1fK",
+            "valueFormatter": "percent" if share else "$%,.1fK",
         },
         # The markers series stays out of the legend.
         "legend": {**_LEGEND, "data": data.PLANS},
@@ -152,8 +157,9 @@ def mrr_growth(
         },
         "yAxis": {
             "type": "value",
-            "max": 100 if share else None,
-            "axisLabel": {"formatter": "{value}%" if share else "${value}K"},
+            "max": 1 if share else None,
+            # Streamlit number formats, the same strings as ``st.metric``.
+            "axisLabel": {"formatter": "percent" if share else "$%,.0fK"},
             "splitLine": {"lineStyle": {"opacity": 0.6}},
         },
         "series": series,
@@ -189,7 +195,8 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
                 "MRR": height if kind == "total" else None,
                 "Gain": height if kind == "increase" else None,
                 "Loss": height if kind == "decrease" else None,
-                # Precomputed because labels can't apply a number format.
+                # Precomputed because the bar value is the unsigned height, and
+                # the label shows the signed change.
                 "change": money(amount),
             }
         )
@@ -204,7 +211,7 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
             "axisTick": {"show": False},
             "axisLabel": {"interval": 0},
         },
-        "yAxis": {"type": "value", "axisLabel": {"formatter": "${value}K"}},
+        "yAxis": {"type": "value", "axisLabel": {"formatter": "$%,.0fK"}},
         "series": [
             {
                 # Transparent spacer that lifts the floating bars. A series with
@@ -284,7 +291,7 @@ def account_mrr(history: pd.Series) -> dict[str, Any]:
         },
         "yAxis": {
             "type": "value",
-            "axisLabel": {"formatter": "${value}"},
+            "axisLabel": {"formatter": "$%,d"},
             "scale": True,
         },
         "series": [

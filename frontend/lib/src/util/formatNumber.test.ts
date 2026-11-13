@@ -284,6 +284,50 @@ describe("formatNumber", () => {
       expect(formatNumber(value, format, maxPrecision)).toEqual(expected)
     }
   )
+
+  it.each([
+    // Whole amounts drop the decimals:
+    [55680, "dollar", "$55,680"],
+    [-3, "dollar", "-$3"],
+    [10, "euro", "€10"],
+    [1000, "accounting", "1,000"],
+    [-10, "accounting", "(10)"],
+    // Decimals that round to zero count as whole:
+    [12.001, "dollar", "$12"],
+    [12.001, "accounting", "12"],
+    // Half cents round the way numbro rounds them:
+    [1.005, "accounting", "1.01"],
+    // Other amounts keep the full number of decimals:
+    [12.5, "dollar", "$12.50"],
+    [12.5, "euro", "€12.50"],
+    [-12.5, "accounting", "(12.50)"],
+    // Formats without fixed decimals and printf formats are unchanged:
+    [10, "yen", "¥10"],
+    [0.5, "percent", "50%"],
+    [10, "%.2f", "10.00"],
+    [10, undefined, "10"],
+  ])(
+    "formats %s with format %s and stripWholeDecimals to '%s'",
+    (value, format, expected) => {
+      expect(
+        formatNumber(value, format, undefined, { stripWholeDecimals: true })
+      ).toEqual(expected)
+    }
+  )
+
+  it("keeps the decimals of whole amounts without stripWholeDecimals", () => {
+    expect(formatNumber(55680, "dollar")).toEqual("$55,680.00")
+    expect(formatNumber(1000, "accounting")).toEqual("1,000.00")
+  })
+
+  it("applies maxPrecision before stripping whole amounts", () => {
+    expect(
+      formatNumber(10.004, "dollar", 3, { stripWholeDecimals: true })
+    ).toEqual("$10.004")
+    expect(
+      formatNumber(10.0004, "accounting", 3, { stripWholeDecimals: true })
+    ).toEqual("10")
+  })
 })
 
 describe("formatNumber Intl.NumberFormat RangeError fallback", () => {

@@ -108,7 +108,9 @@ function getAreaChartBaseline(chartData: number[]): number {
  */
 function safeFormatNumber(value: string, format: string): string {
   try {
-    return formatNumber(Number(value), format)
+    return formatNumber(Number(value), format, undefined, {
+      stripWholeDecimals: true,
+    })
   } catch {
     // Fall back to original value if format is invalid
     return value

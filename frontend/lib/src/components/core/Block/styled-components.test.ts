@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { Direction } from "~lib/components/core/Layout/utils"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { render } from "~lib/test_util"
 
 import { PrintLayout } from "./ElementContainerConfig"
@@ -92,6 +93,30 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
   })
 
+  it("emits a fit-content rule for stacked columns with an intrinsic-width chart", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledFlexContainerBlock, {
+          direction: Direction.HORIZONTAL,
+          border: false,
+        })
+      )
+    )
+
+    // Only a visible marked chart opts the column in. A column with a
+    // dataframe or table keeps full width.
+    expect(css).toMatch(
+      new RegExp(
+        `>\\.stColumn:has\\(\\.${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}:not[^{]*\\):not\\(:has\\(\\.${PrintLayout.FIXED_WIDTH}[^{]*\\{[^}]*fit-content;max-width:100%`
+      )
+    )
+    expect(css).not.toMatch(
+      new RegExp(
+        `>\\.stColumn:has\\(\\.${PrintLayout.GRAPHIC}[^{]*\\{[^}]*fit-content`
+      )
+    )
+  })
+
   it("stacks a horizontal container that holds a chart", () => {
     const css = cssOf(
       render(
@@ -129,9 +154,12 @@ describe("StyledFlexContainerBlock print layout", () => {
     )
 
     // A chart prints as one piece and moves to the next page, so a split
-    // card would leave an empty bordered strip behind. This applies to both
-    // orientations.
-    expect(css).toMatch(/:has\(\.stPrintGraphic[^{]*\{break-inside:avoid/)
+    // card would leave an empty bordered strip behind. A visible dataframe
+    // or table has to paginate, so its card may still break. This applies
+    // to both orientations.
+    expect(css).toMatch(
+      /:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
+    )
     expect(css).not.toContain("orientation")
 
     const plain = cssOf(
@@ -358,6 +386,24 @@ describe("StyledElementContainer print layout", () => {
     )
     expect(css).not.toMatch(/@media print\{[^}]*stPageLink/)
   })
+
+  it("releases reserved height around a dataframe print table", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          isStale: false,
+          width: "100%",
+          height: "300px",
+          elementType: "arrowDataFrame",
+          overflow: "visible",
+        })
+      )
+    )
+
+    expect(css).toMatch(
+      /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none;[^}]*flex:0 0 auto;contain:none/
+    )
+  })
 })
 
 describe("StyledColumn print layout", () => {
@@ -388,10 +434,11 @@ describe("StyledColumn print layout", () => {
       )
     )
 
+    // A visible dataframe or table must be allowed to paginate, so the
+    // keep-together rule skips cards that hold one.
     expect(css).toMatch(
-      /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*\{break-inside:avoid/
+      /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
     )
-    expect(css).not.toContain("stPrintFixedWidth")
   })
 })
 

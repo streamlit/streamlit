@@ -53,6 +53,7 @@ import {
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { LazyReadOnlyGrid } from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
@@ -320,6 +321,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // fallback box would hold one panel while the rest paint over the following
   // elements.
   const isSizeContained = useStretchHeight && isSingleView
+  // Size containment hides a stretch-width chart's drawn width from a
+  // fit-content ancestor. Every other chart has a width a stacked print
+  // column can shrink to.
+  const hasIntrinsicPrintWidth = !(isSizeContained && useStretchWidth)
   // Whether Vega sizes the chart to its measured container height.
   // A composition without a definite parent height skips this, because
   // its rendered height would feed back into a content-height row.
@@ -694,7 +699,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
       <Global styles={StyledVegaLiteChartTooltips} />
       <StyledVegaLiteChartContainer
         data-testid="stVegaLiteChart"
-        className="stVegaLiteChart"
+        className={
+          hasIntrinsicPrintWidth
+            ? `stVegaLiteChart ${PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS}`
+            : "stVegaLiteChart"
+        }
         useContainerWidth={useStretchWidth}
         useContainerHeight={passesContainerHeight}
         isSizeContained={isSizeContained}
