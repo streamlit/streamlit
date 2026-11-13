@@ -163,7 +163,7 @@ Streamlit does not send the dataframe index, so call `df.reset_index()` to plot 
 - **Leave bar corners to the theme.** Unstacked bars without negative values get rounded outer corners that follow `theme.baseRadius`, so don't copy a fixed `itemStyle.borderRadius` from ECharts examples. For square bars, set `"borderRadius": 0`.
 - **Annotate with mark components.** `markLine` draws a milestone at an x-axis value (on a category axis, the category label), and `markArea` shades a range such as forecast months. Add them to a data series: the theme draws a dashed gray line and a faint neutral band in both light and dark mode. For a colored mark, set `itemStyle.color` on the `markLine` or `markArea` (a series' own `color` or `itemStyle.color` also carries over to its marks), for example for per-series averages in a multi-series chart. Leave the mark labels' `color` unset so their text contrasts with the light and dark theme, and place a `markArea` label at `"position": "top"`, because ECharts draws light text inside a translucent area. `itemStyle.decal` hatches projected or estimated bars.
 - **Updates animate.** When a rerun changes the data, values move from the old to the new state, and `universalTransition` on a series morphs between chart types. Give an `on_select` chart a `key`; without one, each data change remounts it and replays the entry animation.
-- **Size horizontal bars by row count.** `height="content"` is a fixed 350 pixels, which squeezes many bars and hides labels. Use about `height=60 + 22 * df["category"].nunique()`.
+- **Size horizontal bars by category count.** `height="content"` is a fixed 350 pixels, which squeezes many bars and hides labels. Use about `height=60 + 22 * df["category"].nunique()`.
 
 ECharts has no Vega-style `color=` field, so pivot long-format data (one row per group and x value) to one wide dataframe and draw a series per column. In a selection, `series_name` is the column and `data_indices` are rows of the wide dataframe.
 
@@ -194,7 +194,7 @@ for s in event.selection.selected:
     st.dataframe(wide.iloc[s["data_indices"]][["quarter", s["series_name"]]])
 ```
 
-When groups don't share x values (for example, scatter points), keep the one dataset and add a dataset per group with `{"transform": {"type": "filter", "config": {"dimension": "app", "=": app}}}`, pointing each series at it with `datasetIndex`. Map a selection back with the same filter in pandas: `df[df["app"] == s["series_name"]].iloc[s["data_indices"]]`.
+When groups don't share x values (for example, scatter points), keep the one dataset and add a dataset per group with `{"transform": {"type": "filter", "config": {"dimension": "app", "=": app}}}`, pointing each series at it with `datasetIndex` and setting `"name": app`. Map a selection back with the same filter in pandas: `df[df["app"] == s["series_name"]].iloc[s["data_indices"]]`.
 
 Draw range bars and Gantt charts as `lines` series items on `cartesian2d` with a wide, opaque line, not a `custom` series. Put string lane names in a category `yAxis.data` (numbers are positions), and set `xAxis.min` and `xAxis.max`, because `lines` doesn't extend the axes and the chart stays empty otherwise.
 
