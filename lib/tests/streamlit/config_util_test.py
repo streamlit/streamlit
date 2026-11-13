@@ -1642,6 +1642,42 @@ def test_show_config_font_faces_stay_under_theme_header(
     assert parsed["theme"]["fontFaces"] == [face]
 
 
+@pytest.mark.parametrize("value", [None, {"X-Forwarded-Email": "email"}])
+@patch("click.secho")
+def test_show_config_dict_option_stays_under_section_header(
+    patched_echo: MagicMock, value: dict[str, str] | None
+) -> None:
+    """A dict option prints as an inline table under its ``[server]`` header.
+
+    A ``[trustedUserHeaders]`` table would land at the top level when the
+    printed text is copied into ``config.toml``.
+    """
+    option = ConfigOption(
+        key="server.trustedUserHeaders",
+        description="HTTP headers to embed in st.user.",
+        default_val={},
+    )
+    if value is not None:
+        option.set_value(value, "test")
+
+    config_util.show_config(
+        {"server": "Server settings."}, {"server.trustedUserHeaders": option}
+    )
+
+    [(args, _)] = patched_echo.call_args_list
+    output = re.sub(r"\x1b[^m]*m", "", args[0])
+    assert "[trustedUserHeaders]" not in output
+    assert "# Default: {}" in output
+
+    server_output = "[server]" + output.split("[server]", 1)[1]
+    if value is None:
+        server_output = server_output.replace(
+            "# trustedUserHeaders", "trustedUserHeaders"
+        )
+    parsed = tomllib.loads(server_output)
+    assert parsed == {"server": {"trustedUserHeaders": value or {}}}
+
+
 def test_dump_toml_value_names_option_for_unsupported_value() -> None:
     """An unsupported value names the option ``config show`` cannot print."""
     with pytest.raises(TypeError, match="Cannot show config option 'fontFaces'"):
