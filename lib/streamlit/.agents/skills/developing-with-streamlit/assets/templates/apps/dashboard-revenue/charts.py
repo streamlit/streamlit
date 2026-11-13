@@ -195,7 +195,8 @@ def mrr_bridge(movements: dict[str, float]) -> dict[str, Any]:
                 "MRR": height if kind == "total" else None,
                 "Gain": height if kind == "increase" else None,
                 "Loss": height if kind == "decrease" else None,
-                # Precomputed because labels can't apply a number format.
+                # Precomputed because the bar value is the unsigned height, and
+                # the label shows the signed change.
                 "change": money(amount),
             }
         )
