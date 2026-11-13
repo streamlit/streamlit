@@ -1218,9 +1218,9 @@ class EChartsMixin:
 
         .. note::
             Streamlit extends some ECharts formatter options so you can
-            format tooltips and labels without JavaScript. The tooltip options
-            work in ``tooltip`` and ``series[i].tooltip``. None of them work in
-            per-item tooltips or labels inside ``series[i].data``:
+            format tooltips and labels without JavaScript. None of them apply
+            to per-item tooltips or labels inside ``series[i].data``. The
+            tooltip options work in ``tooltip`` and ``series[i].tooltip``:
 
             - ``valueFormatter`` accepts a number format, which formats each
               value in the default tooltip: a named format (``"plain"``,
@@ -1248,9 +1248,9 @@ class EChartsMixin:
               ``{"axisLabel": {"formatter": "percent"}}`` shows ``0.05`` as
               ``5%``). Axis labels format numeric ticks and keep non-numeric
               category names. Series labels format the value ECharts shows
-              by default, such as the y value of a vertical bar. A string with
-              a ``{...}`` placeholder stays an ECharts template, and
-              ``markPoint`` or ``markLine`` labels aren't converted.
+              by default, such as the y value of a vertical bar. A string that
+              contains ``{`` stays an ECharts template, and ``markPoint`` or
+              ``markLine`` labels aren't converted.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric

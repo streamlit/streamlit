@@ -1268,6 +1268,37 @@ describe("applyLabelNumberFormats", () => {
         },
       ],
       [
+        "a category axis picked by xAxisId",
+        {
+          dataset: salesByYear,
+          xAxis: [{ type: "value" }, { type: "category", id: "years" }],
+          yAxis: [{ type: "value" }],
+          series: [
+            {
+              type: "bar",
+              xAxisId: "years",
+              encode: { x: "year", y: "sales" },
+            },
+          ],
+        },
+      ],
+      [
+        "a numeric string after a number on two value axes",
+        {
+          xAxis: { type: "value" },
+          yAxis: { type: "value" },
+          series: [
+            {
+              type: "scatter",
+              data: [
+                [1, "1500"],
+                [2, "2500"],
+              ],
+            },
+          ],
+        },
+      ],
+      [
         "a horizontal line on a time axis",
         {
           xAxis: { type: "value" },

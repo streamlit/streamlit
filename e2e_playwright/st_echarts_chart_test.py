@@ -355,7 +355,7 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
 
 
-def test_tooltip_formatting_without_javascript(app: Page):
+def test_tooltip_and_label_formatting_without_javascript(app: Page):
     """Tooltip templates expand ``{@[n]}`` and, on a pie, ``{@column}``;
     ``valueFormatter`` formats numbers; a daily time axis heads its tooltip
     with a plain date; and number formats work in axis and series labels.

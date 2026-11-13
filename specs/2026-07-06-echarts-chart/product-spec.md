@@ -372,10 +372,12 @@ st.echarts_chart({
   - *Axis labels:* axis labels and axis pointer labels format numeric values and numeric
     strings, and keep other values such as category names.
   - *Series labels:* a series label formats the value ECharts' default label shows: a scalar
-    `value`, or for a row the last finite number among the `encode` coordinate dimensions (the
-    y value of a vertical bar, the x value of a horizontal one, a heatmap cell's value). Like
-    ECharts, it skips the dimensions on a category or time axis, so numeric years and
-    timestamps aren't formatted, and categories and dataframe datetimes arrive as strings.
+    `value`, or for a row the last number or numeric string among the `encode` coordinate
+    dimensions (the y value of a vertical bar, the x value of a horizontal one, a heatmap
+    cell's value). Like ECharts, it skips the dimensions on a cartesian category or time axis
+    (picked by index or ID), so numeric years and timestamps aren't formatted, and categories
+    and dataframe datetimes arrive as strings. Polar, single-axis, and parallel series skip no
+    axis, so a numeric category that comes after the value in a row is formatted instead.
     `encode.label` isn't read. State labels (`emphasis.label`, ...) fall back to the converted
     `label.formatter` in ECharts.
   - *Warnings:* Python logs a warning for unconverted label strings that contain an unescaped

@@ -445,9 +445,9 @@ function convertOptionTooltips(
  *
  * @param variant The option variant to convert.
  * @param chartOption The option that holds the chart: the timeline
- * ``baseOption`` when declared, else the option itself. A timeline tick or
- * ``media`` override that doesn't declare series or datasets reads them from
- * there.
+ * ``baseOption`` when declared, else the option itself. The converter reads
+ * series and datasets that a timeline tick or ``media`` override does not
+ * declare from ``chartOption``.
  */
 type OptionVariantConverter = (
   variant: EChartsOptionObject,
@@ -594,29 +594,48 @@ function formatLabelValue(
 }
 
 /**
- * Per cartesian dimension: its ``encode`` key, axis component, and axis index
- * key.
+ * Per cartesian dimension: its ``encode`` key, axis component, and the series
+ * keys that pick the axis by index or ID.
  */
 const CARTESIAN_AXES = [
-  { encodeKey: "x", axisKey: "xAxis", indexKey: "xAxisIndex" },
-  { encodeKey: "y", axisKey: "yAxis", indexKey: "yAxisIndex" },
+  {
+    encodeKey: "x",
+    axisKey: "xAxis",
+    indexKey: "xAxisIndex",
+    idKey: "xAxisId",
+  },
+  {
+    encodeKey: "y",
+    axisKey: "yAxis",
+    indexKey: "yAxisIndex",
+    idKey: "yAxisId",
+  },
 ] as const
 
 /**
- * Read the type ECharts gives the axis at ``index`` of ``axisKey``: its
- * ``type``, else ``"category"`` when it declares ``data``, else ``"value"``.
- * Each source is checked in order, so a timeline tick or ``media`` override
- * that doesn't set the type inherits it from the option that holds the chart.
+ * Read the type ECharts gives the axis of ``axisKey`` with ID ``id``, else
+ * the one at ``index``: its ``type``, else ``"category"`` when it declares
+ * ``data``, else ``"value"``. Each source is checked in order, so a timeline
+ * tick or ``media`` override that doesn't set the type inherits it from the
+ * option that holds the chart.
  */
 function readAxisType(
   sources: readonly EChartsOptionObject[],
   axisKey: string,
-  index: number
+  { index, id }: { index: number; id: unknown }
 ): unknown {
   for (const source of sources) {
     const axes = source[axisKey]
     const axisList: unknown[] = Array.isArray(axes) ? axes : [axes]
-    const axis = axisList[index]
+    const idIndex =
+      id === undefined
+        ? -1
+        : axisList.findIndex(
+            axis =>
+              isPlainObject(axis) &&
+              (axis as Record<string, unknown>).id === id
+          )
+    const axis = axisList[idIndex >= 0 ? idIndex : index]
     if (isPlainObject(axis)) {
       const { type, data } = axis as Record<string, unknown>
       if (type !== undefined) {
@@ -640,18 +659,21 @@ function readCategoryOrTimeEncodeKeys(
   series: Record<string, unknown>,
   sources: readonly EChartsOptionObject[]
 ): ReadonlySet<string> {
+  // Series without axes (pie, funnel) also default to "cartesian2d". That's
+  // harmless, because their ``encode`` has no ``x`` or ``y`` entries.
   const { coordinateSystem = "cartesian2d" } = series
   const keys = new Set<string>()
+  // Polar, single, and parallel series keep every dimension, so the
+  // last-number rule of ``readSeriesLabelValue`` alone picks their value.
   if (coordinateSystem !== "cartesian2d") {
     return keys
   }
-  for (const { encodeKey, axisKey, indexKey } of CARTESIAN_AXES) {
+  for (const { encodeKey, axisKey, indexKey, idKey } of CARTESIAN_AXES) {
     const index = series[indexKey]
-    const axisType = readAxisType(
-      sources,
-      axisKey,
-      isFiniteNumber(index) ? index : 0
-    )
+    const axisType = readAxisType(sources, axisKey, {
+      index: isFiniteNumber(index) ? index : 0,
+      id: series[idKey],
+    })
     if (axisType === "category" || axisType === "time") {
       keys.add(encodeKey)
     }
@@ -659,7 +681,7 @@ function readCategoryOrTimeEncodeKeys(
   return keys
 }
 
-/** Read the sorted dimension indices of ``encode`` entries, e.g. ``{x: [0], y: [1]}``. */
+/** Collect the dimension indices of ``encode`` entries (e.g. the entries of ``{x: [0], y: [1]}``), sorted ascending. */
 function readEncodeIndices(entries: [string, unknown][]): number[] {
   return entries
     .flatMap(([, indices]) => indices)
@@ -672,14 +694,13 @@ function readEncodeIndices(entries: [string, unknown][]): number[] {
  * label.
  *
  * - A single ``value`` is that value.
- * - For a row (an array or object ``value``), it is the last coordinate
- *   dimension in data order, such as the y value of a vertical bar or the x
- *   value of a horizontal one. The dimensions of ``categoryOrTimeEncodeKeys``
- *   (see ``readCategoryOrTimeEncodeKeys``) are left out.
- * - Among those, the last finite number wins. Category names and datetimes
- *   arrive as strings, so this also skips them on series without cartesian
- *   axes. If none is a finite number, the last numeric string wins, then the
- *   last value.
+ * - For a row (an array or object ``value``), use the ``encode`` coordinate
+ *   dimensions except those of ``categoryOrTimeEncodeKeys`` (see
+ *   ``readCategoryOrTimeEncodeKeys``); when every dimension was skipped, use
+ *   all of them. Prefer the last number or numeric string in data order, such
+ *   as the y value of a vertical bar or the x value of a horizontal one, then
+ *   the last value. Category names and datetimes arrive as strings, so this
+ *   also skips them on series without cartesian axes.
  */
 function readSeriesLabelValue(
   params: unknown,
@@ -700,7 +721,8 @@ function readSeriesLabelValue(
   const labelIndices = readEncodeIndices(
     encodeEntries.filter(([key]) => !categoryOrTimeEncodeKeys.has(key))
   )
-  // When every dimension is skipped, fall back to all of them.
+  // A series on two category or time axes (e.g. a scatter of category pairs)
+  // has no value dimension, so consider every coordinate.
   const indices =
     labelIndices.length > 0 ? labelIndices : readEncodeIndices(encodeEntries)
   const candidates =
@@ -708,11 +730,9 @@ function readSeriesLabelValue(
       ? indices.map(index => readDimensionValue(value, names, `[${index}]`))
       : Object.values(value as Record<string, unknown>)
   return (
-    candidates.findLast(isFiniteNumber) ??
     candidates.findLast(
-      candidate => typeof candidate === "string" && isNumericString(candidate)
-    ) ??
-    candidates.at(-1)
+      candidate => toFiniteNumber(candidate) !== undefined
+    ) ?? candidates.at(-1)
   )
 }
 
