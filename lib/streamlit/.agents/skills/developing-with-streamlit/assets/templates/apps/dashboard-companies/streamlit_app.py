@@ -18,6 +18,8 @@ Demonstrates:
 - A toolbar of filters (ranking, time window, and account type pills) bound
   to the URL with ``bind="query-params"``, so every view is shareable
 - Interactive dataframe with sparkline and colored badge columns
+- Layout-first loading: the title, toolbar, and card frame paint first, and
+  the leaderboard loads inside ``st.skeleton`` at its final height
 - Growth score calculation
 - A ``ButtonColumn`` that opens a company drawer
   (``@st.dialog(position="right")``) with badges, metrics, and
@@ -29,6 +31,7 @@ This template uses synthetic data. Replace ``generate_company_data()`` with
 your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -47,6 +50,10 @@ st.set_page_config(
 # =============================================================================
 # Synthetic Data Generation (Replace with your data source)
 # =============================================================================
+
+# Simulates warehouse latency on the first (uncached) load so the skeletons
+# are visible. Set to 0 when you connect a real data source.
+SIMULATED_LATENCY_S = 0.8
 
 COMPANY_NAMES = [
     "Acme Corp",
@@ -84,6 +91,8 @@ RANKINGS = {
 }
 TIME_WINDOWS = {"All time": None, "Last 28 days": 28, "Last 7 days": 7}
 VIEW_ACTION = ":material/visibility: View"
+# Height of the leaderboard and of the skeleton that holds its slot, so they match.
+TABLE_HEIGHT = 420
 
 
 def generate_company_data(days: int = 90) -> pd.DataFrame:
@@ -140,6 +149,7 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
 )
 def load_company_data() -> pd.DataFrame:
     """Load all company data (cached). Replace with your data source."""
+    time.sleep(SIMULATED_LATENCY_S)
     return generate_company_data(days=90)
 
 
@@ -337,68 +347,79 @@ with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
 with st.container(border=True):
     st.markdown(f"**Companies — {time_window.lower()}**")
 
-    leaderboard = aggregate_companies(
-        load_company_data(),
-        days=TIME_WINDOWS[time_window],
-        account_types=account_types,
-        sort_by=sort_by,
-    )
+    # The title paints with the toolbar, and the skeleton holds the table's
+    # slot while the data loads. On a cache hit, the table updates in place.
+    with st.skeleton(height=TABLE_HEIGHT):
+        leaderboard = aggregate_companies(
+            load_company_data(),
+            days=TIME_WINDOWS[time_window],
+            account_types=account_types,
+            sort_by=sort_by,
+        )
 
-    if leaderboard.empty:
-        st.warning("No company data found for the selected filters.")
-        st.stop()
+        if leaderboard.empty:
+            st.warning("No company data found for the selected filters.")
+            st.stop()
 
-    # Lists render as colored chips in a MultiselectColumn.
-    table = leaderboard.assign(view=VIEW_ACTION)
-    for col in ["account_type", "region", "segment"]:
-        table[col] = table[col].map(lambda value: [value])
+        # Lists render as colored chips in a MultiselectColumn.
+        table = leaderboard.assign(view=VIEW_ACTION)
+        for col in ["account_type", "region", "segment"]:
+            table[col] = table[col].map(lambda value: [value])
 
-    st.dataframe(
-        table,
-        column_config={
-            "view": st.column_config.ButtonColumn(
-                "", type="tertiary", key="company_click", help="Open company details"
-            ),
-            "company_name": st.column_config.TextColumn("Company", width="medium"),
-            "account_type": st.column_config.MultiselectColumn(
-                "Type",
-                options=ACCOUNT_TYPES,
-                color="auto",
-                width="small",
-            ),
-            "total_credits": st.column_config.NumberColumn("Credits", format="%,.0f"),
-            "growth_score": st.column_config.NumberColumn(
-                "Growth",
-                format="%+.0f",
-                help="Credit change: second half vs first half of period",
-            ),
-            "usage_trend": st.column_config.LineChartColumn("Trend", width="medium"),
-            "daily_avg": st.column_config.NumberColumn("Daily avg", format="%,.0f"),
-            "region": st.column_config.MultiselectColumn(
-                "Region",
-                options=REGIONS,
-                color="auto",
-            ),
-            "segment": st.column_config.MultiselectColumn(
-                "Segment",
-                options=SEGMENTS,
-                color="auto",
-            ),
-        },
-        column_order=[
-            "view",
-            "company_name",
-            "account_type",
-            "total_credits",
-            "growth_score",
-            "usage_trend",
-            "daily_avg",
-            "region",
-            "segment",
-        ],
-        hide_index=True,
-        alt="Company usage leaderboard",
-    )
+        st.dataframe(
+            table,
+            column_config={
+                "view": st.column_config.ButtonColumn(
+                    "",
+                    type="tertiary",
+                    key="company_click",
+                    help="Open company details",
+                ),
+                "company_name": st.column_config.TextColumn("Company", width="medium"),
+                "account_type": st.column_config.MultiselectColumn(
+                    "Type",
+                    options=ACCOUNT_TYPES,
+                    color="auto",
+                    width="small",
+                ),
+                "total_credits": st.column_config.NumberColumn(
+                    "Credits", format="%,.0f"
+                ),
+                "growth_score": st.column_config.NumberColumn(
+                    "Growth",
+                    format="%+.0f",
+                    help="Credit change: second half vs first half of period",
+                ),
+                "usage_trend": st.column_config.LineChartColumn(
+                    "Trend", width="medium"
+                ),
+                "daily_avg": st.column_config.NumberColumn("Daily avg", format="%,.0f"),
+                "region": st.column_config.MultiselectColumn(
+                    "Region",
+                    options=REGIONS,
+                    color="auto",
+                ),
+                "segment": st.column_config.MultiselectColumn(
+                    "Segment",
+                    options=SEGMENTS,
+                    color="auto",
+                ),
+            },
+            column_order=[
+                "view",
+                "company_name",
+                "account_type",
+                "total_credits",
+                "growth_score",
+                "usage_trend",
+                "daily_avg",
+                "region",
+                "segment",
+            ],
+            height=TABLE_HEIGHT,
+            hide_index=True,
+            alt="Company usage leaderboard",
+        )
 
 # A button click lasts one rerun, so the drawer doesn't reopen on later reruns.
 click = st.session_state.get("company_click")

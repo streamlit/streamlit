@@ -21,6 +21,7 @@ Replace ``load_metric()`` and ``load_breakdown()`` with your own data sources
 from __future__ import annotations
 
 import hashlib
+import time
 from datetime import date, timedelta
 from typing import Any
 
@@ -28,6 +29,10 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
+
+# Simulates warehouse latency on the first (uncached) load so the skeletons
+# are visible. Set to 0 when you connect a real data source.
+SIMULATED_LATENCY_S = 0.8
 
 # Per-metric generation settings. Replace with the metrics you actually track.
 METRIC_CONFIG: dict[str, dict[str, float]] = {
@@ -109,11 +114,11 @@ def load_metric(metric_name: str) -> pd.DataFrame:
     Each metric is cached on its own, so the cards load concurrently as
     parallel fragments. The ``ttl`` keeps the cache fresh, and
     ``refresh_mode="background"`` serves an expired entry at once while it
-    recomputes off-thread. Add
-    ``max_entries`` if the set of metric names can grow large. Every call
-    runs inside a skeleton, so a slow load shows the spinner text on the
-    skeleton.
+    recomputes off-thread. Add ``max_entries`` if the set of metric names
+    can grow large. Every call runs inside a skeleton, so a slow load shows
+    the spinner text on the skeleton.
     """
+    time.sleep(SIMULATED_LATENCY_S)
     return generate_metric_data(metric_name, **METRIC_CONFIG[metric_name])
 
 
@@ -122,4 +127,5 @@ def load_metric(metric_name: str) -> pd.DataFrame:
 )
 def load_breakdown(dimension: str) -> pd.DataFrame:
     """Load daily values by one of the ``BREAKDOWNS``, cached per dimension."""
+    time.sleep(SIMULATED_LATENCY_S)
     return generate_breakdown_data(dimension, BREAKDOWNS[dimension]["base_values"])

@@ -15,14 +15,14 @@ These templates are based on official Streamlit demo apps and work out of the bo
 
 ### Analytics Dashboard Templates
 
-These templates demonstrate common dashboard patterns with synthetic data. Replace the data generation functions with your actual data sources:
+These templates demonstrate common dashboard patterns with synthetic data. Their loaders sleep for `SIMULATED_LATENCY_S` (or a template-specific delay) so the loading patterns show; set it to 0, or drop the sleep, when you replace the data generation functions with your actual data sources:
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-revenue** | Revenue BI dashboard with certified metrics | Filter toolbar bound to the URL (`bind="query-params"`), certified KPI metrics and card titles, ⋮ `st.menu_button` card menus with a "What's measured" drawer and a forecast toggle, section SQL popover, ECharts milestone annotations and forecast range, donut-to-table drill-down with a `ButtonColumn` account drawer, layout-first loading with parallel fragments, `bi-dashboard` theme |
 | **dashboard-metrics** | Core metrics dashboard with KPIs | `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, `st.echarts_chart` line/area/bar/point charts with `dataZoom`, a category breakdown (pivot to one series per category, line/stacked bar toggle, share view), chart/table toggle, `st.popover` filters, reset callback, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) |
-| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
+| **dashboard-feature-usage** | API endpoint usage analytics | Category `st.segmented_control` bound to the URL, starter kits, bordered cards loaded as `@st.fragment(parallel=True)` inside `st.skeleton`, `st.metric` with `format=`, `st.echarts_chart` lines from a pivoted dataframe with a normalization toggle, rolling averages, conditional "Raw data" expander (`on_change="rerun"`) in its own fragment |
+| **dashboard-companies** | Company leaderboard with drill-down | Filter toolbar bound to the URL, leaderboard with sparkline and colored badge columns that loads inside `st.skeleton` at its final height, `ButtonColumn` that opens a company drawer (`@st.dialog(position="right")`) with `st.echarts_chart` usage charts, custom cache spinner |
 | **dashboard-background-report** | Responsive page with a slow background report | Slow query in `@st.fragment(parallel=True)`, URL-bound region filter in the main script that stays responsive, `@st.cache_data(refresh_mode="background")`, layout-first loading with `st.skeleton` drawn by the main script, the report's `show_spinner` text on its skeleton, `st.echarts_chart` throughput line, formatted report columns |
 
 ## Quick Start

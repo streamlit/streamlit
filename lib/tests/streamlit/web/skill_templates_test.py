@@ -50,6 +50,8 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
         "dashboard-metrics",
         {"channel_chart": "line", "channel_select": [], "revenue_lines": []},
     ),
+    # No account type selected: the leaderboard warns and stops in its skeleton.
+    ("dashboard-companies", {"types": []}),
     ("dashboard-seattle-weather", {"years": [2015]}),
     ("dashboard-stock-peers", {"stocks": ["AAPL"], "horizon": "1 Year"}),
     ("dashboard-stock-peers", {"stocks": ["AAPL", "IBM"], "horizon": "All"}),
