@@ -72,9 +72,11 @@ const BRUSH_SELECTION_STATE_KEY = "brushSelection"
 const SELECTED_POINTS_STATE_KEY = "selectedPoints"
 /**
  * Keeps ``restoreSelection`` from rerunning the app in a loop when data changes
- * on every run (unseeded random values, the current time). Records the run in
- * which any chart's restore last requested a rerun, and the run that followed
- * it (most likely that rerun). No restore in that following run reruns again.
+ * on every run (unseeded random values, the current time).
+ * - ``requestedInRunId``: the run in which a chart's restore last requested a
+ *   rerun.
+ * - ``nextRunId``: the next run the frontend saw start. The guard assumes this
+ *   is the requested rerun, and no restore in it requests another one.
  */
 interface RestoreRerun {
   requestedInRunId: string

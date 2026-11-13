@@ -571,8 +571,8 @@ export function hydrateArrowDatasetSources(
       }
     }
   }
-  // With several dataframes, no single table shows the chart's data, and
-  // showing one of them would hide the others' rows.
+  // Show data needs exactly one dataframe: with several, any single table
+  // would hide the other frames' rows.
   if (sourcesByName.size !== 1) {
     return null
   }

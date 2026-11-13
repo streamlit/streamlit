@@ -1322,9 +1322,13 @@ class EChartsMixin:
             will register the key in Session State to store the selection
             state, and the selection survives changes to your ``spec``,
             ``theme``, and ``renderer``. When the data changes, a brush
-            selection updates to the points now inside its region, and
-            Streamlit reruns the app once (calling an ``on_select`` callback)
-            to report them. Inside a form, the update waits for submit.
+            selection updates to the points now inside its region. Streamlit
+            then reruns the app (or the chart's fragment) once to report them
+            and calls ``on_select`` if it's a callable. The run this starts
+            does not rerun again. Data that changes on every run still adds
+            one extra rerun each time something else triggers a run, such as
+            each ``run_every`` tick of the chart's fragment. Inside a form,
+            the update waits for submit.
             Clicked points (``selectedMode``) keep their indices even if
             different rows now sit at those positions, so check them before
             indexing. The selection state is read-only. For more details, see

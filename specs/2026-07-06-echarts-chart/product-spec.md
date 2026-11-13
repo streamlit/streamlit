@@ -623,9 +623,10 @@ chart's data or spec resets the selection state**. Pass a fixed `key` so identit
 alone: the selection stays stable across data updates **and**
 across `"canvas"` / `"svg"` switches. On a data update, natively selected points keep their
 indices, while a restored brush hit-tests its redrawn areas against the new data. When the hits
-differ, the frontend commits them and reruns. A restore in the run that this rerun started stores
-its hits without another rerun, so data that changes on every run cannot rerun the app in a
-loop. Inside a form, the new hits wait for submit. `renderer` is not in the keyed identity because
+differ, the frontend commits them and reruns. In the run that this rerun started, every chart's
+restore stores its hits without another rerun, so data that changes on every run cannot rerun
+the app in a loop. When charts filter each other in a chain, a chart two levels down therefore
+reports its new hits one run late. Inside a form, the new hits wait for submit. `renderer` is not in the keyed identity because
 it does not change `EChartsState`; the frontend re-applies the selection after the dispose/re-init a
 renderer switch requires, just as it does after a `setTheme`.
 
