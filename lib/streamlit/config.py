@@ -1449,12 +1449,11 @@ _create_option(
         on both `/_stcore/agent/interact` (HTTP) and `/_stcore/agent/mcp`
         (MCP). See `server.enableAgentApi`.
 
-        Warning: Streamlit trusts these header values as they arrive. Only
-        use this behind a proxy that sets the configured headers itself and
-        removes any copies a client sent, on WebSocket connections and on
-        requests to `/_stcore/agent/`. Otherwise, any client that can send
-        these headers, for example by reaching Streamlit directly, can claim
-        any identity.
+        Warning: Streamlit trusts these header values as they arrive. Run
+        Streamlit behind a proxy that sets the configured headers and strips
+        copies the client sent, on WebSocket connections and on requests to
+        `/_stcore/agent/`. A client that can send the headers itself, for
+        example by reaching Streamlit directly, can claim any identity.
 
         If configured using an environment variable or CLI option, it should be a
         single JSON-formatted dict of string-to-string.
