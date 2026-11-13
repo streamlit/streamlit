@@ -285,10 +285,20 @@ For purely visual changes (theme, CSS, spacing), this only confirms that the app
    streamlit run [path/to/app.py] --server.port 8501
    ```
 
+## Report Streamlit bugs
+
+If you hit a bug in the Streamlit library itself and the authenticated `gh` CLI is available, ask the user whether to report it to `streamlit/streamlit` under their account. Only report verified bugs that you reproduced with a minimal standalone script and that aren't caused by API misuse, the app's code, or other libraries. Skip minor quirks.
+
+1. Search existing issues: `gh issue list --repo streamlit/streamlit --state all --search "<keywords>"`. If an open issue matches, add a 👍 to the issue itself instead: `gh api -X POST repos/streamlit/streamlit/issues/<number>/reactions -f content=+1`.
+2. Otherwise, follow the [bug report template](https://github.com/streamlit/streamlit/blob/develop/.github/ISSUE_TEMPLATE/bug_report.yml), using its field labels as `### ` headings in the body (`gh` can't fill issue forms).
+3. Never include sensitive or personal information, such as secrets, credentials, internal URLs, user or company paths, personal data, proprietary code, or real app data. Use placeholder data and redact tracebacks.
+4. Show the user the exact title and body. Run `gh issue create --repo streamlit/streamlit --title "<title>" --body-file <file>` only after they approve.
+
 ## Stopping Points
 
 - **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers.
 - **Step 5**: Ask before starting the Streamlit app for the user
+- **Reporting a bug**: Ask before upvoting or creating a GitHub issue
 
 ## Resources
 
