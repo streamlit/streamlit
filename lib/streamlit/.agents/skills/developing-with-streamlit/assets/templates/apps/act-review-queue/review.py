@@ -52,7 +52,11 @@ def reviewer() -> str:
 
 
 def drafts() -> dict[str, dict[str, Any]]:
-    """Unsubmitted edits by proposal ID, with the queue table's column names."""
+    """Unsubmitted edits by proposal ID.
+
+    Each edit maps an editable column (``order_qty``, ``decision``, ``note``) to
+    its value.
+    """
     by_id: dict[str, dict[str, Any]] = st.session_state.setdefault("drafts", {})
     return by_id
 
@@ -77,17 +81,18 @@ def draft_decision(proposal: pd.Series) -> store.Decision | None:
 
 
 def checked_drafts(proposals: pd.DataFrame) -> list[tuple[store.Decision, str | None]]:
-    """Each drafted decision with why it can't be written, or ``None`` when it can.
+    """Each drafted decision with its validation error, or ``None`` when it's valid.
 
-    Drafts on proposals that are no longer open, for example ones another
-    planner decided, are dropped.
+    Drops drafts for proposals that are no longer open, such as ones another
+    planner decided or the agent removed.
     """
+    open_ids = proposals.index[proposals["status"].isin(store.OPEN)]
     checked = []
     for proposal_id in list(drafts()):
-        proposal = store.row(proposals, proposal_id)
-        if proposal["status"] not in store.OPEN:
+        if proposal_id not in open_ids:
             drafts().pop(proposal_id)
             continue
+        proposal = store.row(proposals, proposal_id)
         decision = draft_decision(proposal)
         if decision is not None:
             checked.append((decision, store.validate(decision, proposal)))
@@ -95,8 +100,8 @@ def checked_drafts(proposals: pd.DataFrame) -> list[tuple[store.Decision, str | 
 
 
 def reset_editor() -> None:
-    # Give the queue table a new key so it drops its row-position edits; the
-    # drafts keep them by proposal ID.
+    # Changing the editor key discards row-position edits; drafts keep them by
+    # proposal ID.
     st.session_state.editor_version = st.session_state.get("editor_version", 0) + 1
 
 
@@ -205,8 +210,8 @@ def review_drawer(proposal_id: str) -> None:
         with st.status(title, type="step", state="complete", expanded=True):
             st.markdown(detail)
 
-    draft = draft_decision(proposal)
-    with st.form(f"decide_{proposal_id}", border=False):
+    # Enter would press the first button, Reject, so it doesn't submit.
+    with st.form(f"decide_{proposal_id}", border=False, enter_to_submit=False):
         final_qty = st.number_input(
             "Order quantity",
             min_value=0,
@@ -217,7 +222,7 @@ def review_drawer(proposal_id: str) -> None:
         )
         note = st.text_area(
             "Note",
-            value=draft.note if draft else "",
+            value=drafts().get(proposal_id, {}).get("note") or "",
             placeholder="Required to reject, or to change the quantity by more "
             f"than {policy.max_change_pct:.0f}%",
             max_chars=300,

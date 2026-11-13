@@ -15,11 +15,19 @@
 """Data access for the review queue: proposals, guardrails, and writeback.
 
 The queue lives in a local SQLite file through ``st.connection``. To use your
-own data, point ``connection`` at your warehouse (for example
-``st.connection("snowflake")``) and let your agent write its proposals to the
-``proposals`` table instead of ``seed_proposals``. Reads are cached and cleared
-after every write, so every session sees each decision. The sample database is
-``review_queue.db`` in the working directory; keep it out of version control.
+own data, replace ``connection()`` with your warehouse connection (for example
+``st.connection("snowflake")``) and have your agent write its proposals to the
+``proposals`` table. Before connecting real data:
+
+- Remove ``reset``, ``seed_proposals``, ``ensure_ready``, and the Reset menu
+  item. Reset replaces the ``proposals`` table and drops the audit log.
+  Create the ``decisions`` table once with ``_DECISIONS_SCHEMA``.
+- Gate decisions on ``st.user.is_logged_in`` (see the skill's
+  ``references/authentication.md``), so the audit log names real reviewers.
+
+Reads are cached and cleared after every write, so every session sees each
+decision. The sample database is ``review_queue.db`` in the working directory;
+keep it out of version control.
 """
 
 from __future__ import annotations
@@ -43,7 +51,7 @@ DATABASE_URL = "sqlite:///review_queue.db"
 CATEGORIES = ["Outerwear", "Footwear", "Camping", "Accessories"]
 PRIORITIES = ["Critical", "High", "Normal"]
 FLAGS = ["Over cap", "Low confidence", "New supplier", "Demand spike"]
-OPEN = ("pending", "held")
+OPEN = ("pending", "held")  # Also listed in the SQL in ``record``
 # Decision action -> proposal status written back.
 STATUSES = {"approve": "approved", "hold": "held", "reject": "rejected"}
 
@@ -94,6 +102,7 @@ CREATE TABLE IF NOT EXISTS decisions (
 
 
 def money(value: float) -> str:
+    """Dollars, in thousands ($12k) from $10,000 and millions ($1.20M) from $1M."""
     if abs(value) >= 1e6:
         return f"${value / 1e6:.2f}M"
     if abs(value) >= 1e4:

@@ -73,6 +73,11 @@ def sync_drafts(ids: list[str], key: str) -> None:
         review.drafts().setdefault(ids[int(position)], {}).update(changes)
 
 
+def open_review(ids: list[str]) -> None:
+    # Map the clicked row with the table as it was shown, not as it reloads.
+    st.session_state.reviewing = ids[st.session_state.review_click.row]
+
+
 def accept_low_risk(ids: list[str]) -> None:
     for proposal_id in ids:
         review.drafts()[proposal_id] = {"decision": "Approve"}
@@ -292,11 +297,13 @@ st.data_editor(
     on_change=sync_drafts,
     args=(ids, editor_key),
     column_config={
-        "_index": st.column_config.TextColumn("PO", width="small"),
+        "_index": st.column_config.TextColumn("PO", width="small", disabled=True),
         "review": st.column_config.ButtonColumn(
             "",
             type="tertiary",
             pinned=True,
+            on_click=open_review,
+            args=(ids,),
             key="review_click",
             help="See the agent's reasoning and decide in a drawer",
         ),
@@ -343,7 +350,7 @@ st.data_editor(
 
 # Decision bar: what will be written, and anything that blocks it
 checked = review.checked_drafts(queue)
-ready = [decision for decision, _ in checked]
+ready = [decision for decision, problem in checked if problem is None]
 problems = [
     f"**{d.proposal_id}** {store.row(queue, d.proposal_id)['product']}: {problem}"
     for d, problem in checked
@@ -363,7 +370,7 @@ with st.container(border=True):
             st.markdown(
                 f":primary[:material/edit_note:] **{len(ready)} ready** · {summary}"
             )
-        else:
+        elif not problems:
             st.markdown(
                 ":gray[:material/edit_note:] Set a row's **Decision**, or open "
                 "**Review** for the agent's reasoning."
@@ -407,8 +414,8 @@ with st.container(border=True):
     for problem in problems:
         st.markdown(f":red[:material/error:] {problem}")
 
-click = st.session_state.get("review_click")
-if click is not None:
-    review.review_drawer(ids[click.row])
+reviewing = st.session_state.pop("reviewing", None)
+if reviewing is not None:
+    review.review_drawer(reviewing)
 elif review_next:
     review.review_drawer(ids[0])

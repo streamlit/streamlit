@@ -16,8 +16,9 @@
 """Demand model and Monte Carlo simulation for the demand simulator.
 
 Plain NumPy and pandas that run next to the data. To use your own data, replace
-``load_history`` with a query and fit the ``Product`` parameters from it. The
-page only calls the cached functions and the ``Levers`` scenario type.
+``load_history`` with a query, fit the ``Product`` parameters from it, and move
+``AS_OF`` and ``PROMO_WEEKS`` to your calendar. The page only calls the cached
+functions and the ``Levers`` scenario type.
 """
 
 from __future__ import annotations

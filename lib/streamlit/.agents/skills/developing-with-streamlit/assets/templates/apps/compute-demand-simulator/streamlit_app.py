@@ -122,8 +122,6 @@ def fan_chart(
         end = weekly["week"].iloc[model.PROMO_WEEKS[1]] + pd.Timedelta(days=6)
         median["markArea"] = {
             "silent": True,
-            # The area takes the median's color, so keep it faint.
-            "itemStyle": {"opacity": 0.1},
             "label": {"formatter": "Promo", "position": "top"},
             "data": [[{"xAxis": start.isoformat()}, {"xAxis": end.isoformat()}]],
         }
@@ -290,14 +288,14 @@ def kpi_row(levers: model.Levers) -> None:
     plan = model.simulate(model.plan_for(levers.product)).summary
     with st.container(horizontal=True):
         for label, field, icon, chart_type in KPIS:
-            now, then = getattr(forecast.summary, field), getattr(plan, field)
+            scenario, planned = getattr(forecast.summary, field), getattr(plan, field)
             if field == "stockout_risk":
-                value = f"{now:.0%}"
-                change = (now - then) * 100
+                value = f"{scenario:.0%}"
+                change = (scenario - planned) * 100
                 delta = f"{change:+.0f} pts"
             else:
-                value = f"{now:,.0f}" if field == "units" else money(now)
-                change = pct_change(now, then)
+                value = f"{scenario:,.0f}" if field == "units" else money(scenario)
+                change = pct_change(scenario, planned)
                 delta = f"{change:+.1f}%"
             on_plan = abs(change) < 0.05
             delta_color: Literal["normal", "inverse", "gray"] = "normal"
