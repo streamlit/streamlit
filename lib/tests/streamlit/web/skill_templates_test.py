@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -105,6 +106,10 @@ def isolated_template(
     template_dir = _APPS_DIR / request.node.callspec.params["template"]
     names = [path.stem for path in template_dir.glob("*.py")]
     saved = {name: sys.modules.pop(name) for name in names if name in sys.modules}
+    # The templates sleep to simulate data-source latency. A cap, not a no-op,
+    # keeps short polling sleeps elsewhere from turning into busy loops.
+    real_sleep = time.sleep
+    monkeypatch.setattr(time, "sleep", lambda seconds: real_sleep(min(seconds, 0.01)))
     monkeypatch.chdir(tmp_path)
     st.cache_data.clear()
     st.cache_resource.clear()
