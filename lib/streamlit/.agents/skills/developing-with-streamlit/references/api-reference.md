@@ -35,13 +35,13 @@ Run this command with the Streamlit installation relevant to the code being edit
 | **Top-level commands** | |
 | `st.App` | ASGI-compatible Streamlit application. Use it for advanced server configuration, including custom routes, startup and shutdown lifecycle hooks, custom middleware, custom exception handlers, FastAPI integration, and programmatic secrets. |
 | `st.Page` | Configure a page for `st.navigation` in a multipage app. It creates a page object from a Python file or callable with optional title, icon, URL path, default status, and visibility. |
-| `st.altair_chart` | Display a chart using the Vega-Altair library. Use it when native charts are not expressive enough and you need Altair's encodings, layers, tooltips, or interactions. |
-| `st.area_chart` | Display an area chart. Use it for common area-chart cases with Streamlit-managed rendering. |
+| `st.altair_chart` | Display a chart using the Vega-Altair library. Use it for Vega-Lite features that ECharts lacks, such as faceting, or for an existing Altair chart. |
+| `st.area_chart` | Display an area chart. Use it for a quick area chart from a dataframe without customization. |
 | `st.audio` | Display an audio player. Accepts common audio data sources such as files, URLs, bytes, and arrays. |
 | `st.audio_input` | Display a widget that returns an audio recording from the user's microphone. Use it when an app needs recorded audio as input. |
 | `st.badge` | Display a colored badge with an icon and label. Useful for compact status, category, or metadata indicators. |
 | `st.balloons` | Draw celebratory balloons. Use sparingly for success moments or lightweight feedback. |
-| `st.bar_chart` | Display a bar chart. Use it for straightforward categorical or binned comparisons. |
+| `st.bar_chart` | Display a bar chart. Use it for a quick bar chart from a dataframe without customization. |
 | `st.button` | Display a button widget. It returns `True` on the script rerun triggered by a click. |
 | `st.cache_data` | Cache the return value of a function. Use it for expensive computations or data-loading steps that return serializable data; each caller receives a copy of the cached value. |
 | `st.cache_resource` | Cache a shared resource returned by a function. Use it for global objects such as database connections, ML models, or clients that should be reused across reruns and sessions. |
@@ -62,7 +62,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.dialog` | Function decorator to create a modal dialog or a modal side drawer. Use it to isolate short workflows while preserving Streamlit's rerun model. |
 | `st.divider` | Display a horizontal rule. Use it to separate sections without adding a heavy layout container. |
 | `st.download_button` | Display a download button widget. Use it for generated files, reports, transformed data, or other app outputs. |
-| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for chart types and in-chart controls that Vega-based charts lack, or for an existing ECharts option. |
+| `st.echarts_chart` | Display an interactive Apache ECharts chart. Use it for new charts by default, including dashboards, network and flow charts, and existing ECharts options. |
 | `st.echo` | Use in a `with` block to draw some code on the app, then execute it. Useful for tutorials, examples, and educational apps. |
 | `st.empty` | Insert a single-element container. Use it as a placeholder when you need to replace, update, or clear one element later. |
 | `st.error` | Display error message. Use it for failures or blocking conditions that require user attention. |
@@ -84,7 +84,7 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.info` | Display an informational message. Use it for neutral guidance, context, or non-blocking status. |
 | `st.json` | Display an object or string as a pretty-printed, interactive JSON string. Use it for structured debug output or data inspection. |
 | `st.latex` | Display mathematical expressions formatted as LaTeX. Use it for equations and scientific notation. |
-| `st.line_chart` | Display a line chart. Use it for trends, time series, and ordered numeric values. |
+| `st.line_chart` | Display a line chart. Use it for a quick line chart from a dataframe without customization. |
 | `st.link_button` | Display a link button element. Use it when the action is navigation to another URL. |
 | `st.login` | Initiate the login flow for the given provider. Use it with configured auth settings and inspect the local docs for provider-specific behavior. |
 | `st.logo` | Renders a logo in the upper-left corner of your app and its sidebar. Use it for app branding and optional navigation link behavior. |
@@ -101,14 +101,14 @@ Run this command with the Streamlit installation relevant to the code being edit
 | `st.pagination` | Display a pagination widget for navigating through pages of content. Use it when a dataset or workflow is split across numbered pages. |
 | `st.pdf` | Display a PDF viewer. Use it to render PDF files or bytes directly in the app. |
 | `st.pills` | Display a pills widget. Use it for compact single- or multi-select choices with pill-shaped options. |
-| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that Vega-based charts and ECharts cannot draw, or for an existing Plotly figure. |
+| `st.plotly_chart` | Display an interactive Plotly chart. Use it for 3D and scientific charts that ECharts and Vega-Lite cannot draw, or for an existing Plotly figure. |
 | `st.popover` | Insert a popover container. Use it for compact controls or details that should appear on demand without occupying page space. |
 | `st.progress` | Display a progress bar. Use it to communicate completion state for running tasks or staged workflows. |
 | `st.pydeck_chart` | Draw a chart using the PyDeck library. Use it for deck.gl-powered maps and geospatial visualizations. |
 | `st.pyplot` | Display a matplotlib.pyplot figure. Use it for existing Matplotlib visualizations or libraries that produce Matplotlib figures. |
 | `st.radio` | Display a radio button widget. Use it when users should choose exactly one option from a small visible set. |
 | `st.rerun` | Rerun the app or current fragment immediately. Use it to force a rerun after state changes or navigation-like actions. |
-| `st.scatter_chart` | Display a scatterplot chart. Use it for relationships between numeric variables, optionally with size and color encodings. |
+| `st.scatter_chart` | Display a scatterplot chart. Use it for a quick scatter chart from a dataframe without customization. |
 | `st.segmented_control` | Display a segmented control widget. Use it for compact mutually exclusive choices, especially mode or view switching. |
 | `st.select_slider` | Display a slider widget to select items from a list. Use it when options are ordered but not necessarily numeric. |
 | `st.selectbox` | Display a select widget. Use it for selecting one item from a medium or large set. |

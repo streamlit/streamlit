@@ -1350,24 +1350,29 @@ def _resolve_page(
 def _encode_query_params(query_params: Any) -> str:
     """Encode ``query_params`` as the query string a rerun sends.
 
-    Refuses one longer than the runtime accepts, which it would otherwise
-    replace with an empty query string, so the run would not see any of it.
+    A string value counts as a one-item list, as ``st.query_params`` accepts.
+    Refuses a query string longer than the runtime accepts, which it would
+    otherwise replace with an empty one, so the run would not see any of it.
     """
     if not isinstance(query_params, dict):
         raise AgentRequestError(
             "invalid_request",
-            "`query_params` must be an object mapping names to lists of strings.",
+            "`query_params` must be an object mapping names to strings or lists "
+            "of strings.",
         )
 
     pairs: list[tuple[str, str]] = []
     for name, values in query_params.items():
+        if isinstance(values, str):
+            pairs.append((name, values))
+            continue
         if not isinstance(values, list) or not all(
             isinstance(value, str) for value in values
         ):
             raise AgentRequestError(
                 "invalid_request",
-                f"Query parameter {name!r} must be a list of strings, such as "
-                '["2001"].',
+                f"Query parameter {name!r} must be a string or a list of strings, "
+                'such as "2001" or ["2001", "2002"].',
             )
         pairs.extend((name, value) for value in values)
     query_string = urlencode(pairs)
@@ -1434,7 +1439,7 @@ def _query_string_for_page_change(bindings: QueryParams, query_string: str) -> s
 
 
 def _widget_states_for_page_change(
-    session_state: SessionState, query_params: dict[str, list[str]] | None
+    session_state: SessionState, query_params: dict[str, str | list[str]] | None
 ) -> list[WidgetStateProto]:
     """Every widget's current value, as a browser sends it with a page change.
 

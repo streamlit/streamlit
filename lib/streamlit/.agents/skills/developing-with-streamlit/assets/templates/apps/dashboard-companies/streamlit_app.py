@@ -20,7 +20,8 @@ Demonstrates:
 - Interactive dataframe with sparkline and colored badge columns
 - Growth score calculation
 - A ``ButtonColumn`` that opens a company drawer
-  (``@st.dialog(position="right")``) with badges, metrics, and charts
+  (``@st.dialog(position="right")``) with badges, metrics, and
+  ``st.echarts_chart`` usage charts
 - ``@st.cache_data(ttl=...)`` loader with a custom spinner message
 
 This template uses synthetic data. Replace ``generate_company_data()`` with
@@ -28,6 +29,7 @@ your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
 from datetime import date, timedelta
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -212,6 +214,27 @@ def aggregate_companies(
     return agg
 
 
+def usage_chart_option(
+    credit_usage: pd.DataFrame, column: str, label: str, *, area: bool = False
+) -> dict[str, Any]:
+    """Build an ECharts line (or area) chart of one ``credit_usage`` column over time."""
+    return {
+        "dataset": {"source": credit_usage},
+        "tooltip": {"trigger": "axis", "valueFormatter": "%,.0f credits"},
+        "xAxis": {"type": "time"},
+        "yAxis": {"type": "value"},
+        "series": [
+            {
+                "type": "line",
+                "name": label,
+                "encode": {"x": "date", "y": column},
+                "showSymbol": False,
+                **({"areaStyle": {"opacity": 0.3}} if area else {}),
+            }
+        ],
+    }
+
+
 @st.dialog(
     "Company details", position="right", width="medium", icon=":material/business:"
 )
@@ -250,21 +273,22 @@ def company_drawer(company: pd.Series) -> None:
         height="stretch",
     )
 
+    credit_usage = usage[["date", "daily_credits"]].assign(
+        cumulative=usage["daily_credits"].cumsum()
+    )
     with st.container(border=True):
         st.markdown("**Daily usage**")
-        st.line_chart(
-            usage,
-            x="date",
-            y="daily_credits",
+        st.echarts_chart(
+            usage_chart_option(credit_usage, "daily_credits", "Daily credits"),
             height=250,
             alt="Daily credit usage over time",
         )
     with st.container(border=True):
         st.markdown("**Cumulative usage**")
-        st.area_chart(
-            usage.assign(cumulative=usage["daily_credits"].cumsum()),
-            x="date",
-            y="cumulative",
+        st.echarts_chart(
+            usage_chart_option(
+                credit_usage, "cumulative", "Cumulative credits", area=True
+            ),
             height=250,
             alt="Cumulative credit usage over time",
         )

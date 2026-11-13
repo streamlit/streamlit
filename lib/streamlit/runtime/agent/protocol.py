@@ -913,9 +913,15 @@ def _request_schema() -> dict[str, Any]:
         },
         "query_params": {
             "type": ["object", "null"],
-            "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            "additionalProperties": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"type": "array", "items": {"type": "string"}},
+                ]
+            },
             "description": (
-                "Replaces the URL parameters; omit it to keep them. A parameter "
+                "Replaces the URL parameters; omit it to keep them. Each value is "
+                "a list of strings, or one string for a single value. A parameter "
                 'bound to a widget (`bind="query-params"`) sets that widget, so '
                 "one creating call can open a parameterized report. One equal to "
                 "its widget's default is ignored, so move a widget back with "

@@ -60,6 +60,7 @@ from streamlit.testing.v1.element_tree import (
     DateTimeInput,
     Divider,
     DownloadButton,
+    EChartsChart,
     ElementList,
     ElementTree,
     Error,
@@ -1270,6 +1271,28 @@ class AppTest:
             ``at.download_button(key="my_key")`` for a widget with a given key.
         """
         return self._tree.download_button
+
+    @property
+    def echarts_chart(self) -> ElementList[EChartsChart]:
+        """Sequence of all ``st.echarts_chart`` elements.
+
+        - ``.spec`` and ``.value`` are the chart option as a dict.
+        - ``.datasets`` maps each ``dataset.source`` placeholder name to its
+          DataFrame.
+        - A keyed ``on_select`` chart's selection is ``at.session_state[key]``.
+        - ``set_value()`` raises ``AppTestError``.
+
+        Returns
+        -------
+        ElementList of EChartsChart
+            Sequence of all ``st.echarts_chart`` elements. Individual elements
+            can be accessed from an ElementList by index (order on the page)
+            or, when the chart has a key, by key. For example,
+            ``at.echarts_chart[0]`` for the first element
+            or ``at.echarts_chart(key="sales")`` for an element with a given
+            key. EChartsChart is an extension of the Element class.
+        """
+        return self._tree.echarts_chart
 
     @property
     def error(self) -> ElementList[Error]:
