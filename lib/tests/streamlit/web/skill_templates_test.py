@@ -55,6 +55,8 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
         "dashboard-companies",
         {"types": [], "ranking": "growth_asc", "window": "All time"},
     ),
+    # The MRR chart's share view, with its forecast range.
+    ("dashboard-revenue", {"growth_view": "%", "mrr_forecast": True}),
     ("dashboard-seattle-weather", {"years": [2015]}),
     ("dashboard-stock-peers", {"stocks": ["AAPL"], "horizon": "1 Year"}),
     ("dashboard-stock-peers", {"stocks": ["AAPL", "IBM"], "horizon": "All"}),
