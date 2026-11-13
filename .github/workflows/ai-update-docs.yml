@@ -199,8 +199,8 @@ jobs:
 
           Implement all PR-related documentation fixes directly. Do not ask for confirmation.
 
-          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc: this workflow cannot push them, so they are dropped.
-          List any needed updates to those files in work-tmp/changes.md instead.
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc. This job cannot push .github/workflows/, and workflows.mdc is generated from .github/workflows/AGENTS.md, so edits to either are dropped.
+          If those files need updates, describe them in a separate section of the work-tmp/changes.md summary below.
 
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
           modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
@@ -227,8 +227,8 @@ jobs:
 
           Implement ALL recommended changes from the review. Do not ask for confirmation - apply all fixes directly.
 
-          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc: this workflow cannot push them, so they are dropped.
-          List any needed updates to those files in work-tmp/changes.md instead.
+          Do not edit files under .github/workflows/ or .cursor/rules/workflows.mdc. This job cannot push .github/workflows/, and workflows.mdc is generated from .github/workflows/AGENTS.md, so edits to either are dropped.
+          If those files need updates, describe them in a separate section of the work-tmp/changes.md summary below.
 
           After completing the review and applying changes, write a summary to 'work-tmp/changes.md' listing all
           modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No documentation updates needed.' to work-tmp/changes.md
@@ -254,7 +254,16 @@ jobs:
           if [ -n "$WORKFLOW_CHANGES" ]; then
             echo "::warning::Dropped edits the workflow token cannot push. Apply them by hand:"
             echo "$WORKFLOW_CHANGES"
-            git diff -- .github/workflows .cursor/rules/workflows.mdc
+            {
+              echo "### Dropped workflow edits"
+              echo "Apply these by hand; the step log has the diff."
+              echo '```'
+              echo "$WORKFLOW_CHANGES"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            # Stage first so the logged diff includes staged and new files.
+            git add -A -- .github/workflows .cursor/rules/workflows.mdc
+            git diff --cached -- .github/workflows .cursor/rules/workflows.mdc
             git restore --source=HEAD --staged --worktree -- .github/workflows .cursor/rules/workflows.mdc
             git clean -fd -- .github/workflows
           fi
