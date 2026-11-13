@@ -212,8 +212,8 @@ raw JavaScript callbacks (e.g. `formatter` functions, `renderItem` for custom se
 parity with `st.plotly_chart`/`st.vega_lite_chart`/`st.altair_chart` (which are pure-JSON specs) and to avoid
 executing arbitrary JS, **v1 does not support JavaScript function values**. Use ECharts'
 [string templates](https://echarts.apache.org/en/option.html#series-bar.label.formatter)
-(e.g. `"formatter": "{b}: {c}"`) instead. For tooltips, Streamlit adds JSON-only formatting
-(see [Tooltip formatting](#tooltip-formatting)). JS callbacks are documented as
+(e.g. `"formatter": "{b}: {c}"`) instead. For tooltips and labels, Streamlit adds JSON-only
+formatting (see [Tooltip formatting](#tooltip-formatting)). JS callbacks are documented as
 [out of scope](#out-of-scope-future-work).
 
 **Unsupported chart families in v1.** Streamlit raises a `StreamlitAPIException` when the
@@ -311,10 +311,12 @@ ECharts formats tooltips through JavaScript callbacks, which a JSON spec cannot 
 string templates don't fill the gap: a tooltip template inserts raw values (`{c}` prints
 `1234567.891`), skips the theme's number shortening, and doesn't expand the `{@dim}` /
 `{@[n]}` placeholders that ECharts supports in series labels (they print literally). So
-currency, percentages, and units in tooltips would need JavaScript.
+currency, percentages, and units in tooltips would need JavaScript. Label templates can append
+a unit (`"{value}%"`) but can't scale or group the number, so a percent axis needs data
+rescaled to 0–100.
 
-Streamlit fills the gap without adding template syntax. It reuses an ECharts key and an
-ECharts placeholder syntax, and both conversions run in the frontend for both themes:
+Streamlit fills the gap without adding template syntax. It reuses ECharts keys and an ECharts
+placeholder syntax, and the conversions run in the frontend for both themes:
 
 ```python
 st.echarts_chart({
@@ -328,6 +330,13 @@ st.echarts_chart({
 
 # Heatmap cell: "Mon · 654 sessions"
 {"tooltip": {"formatter": "{a} · {@[2]} sessions"}, ...}
+
+# 0-1 shares: ticks "0%" to "100%", bar labels "42%"
+{
+    "yAxis": {"type": "value", "max": 1, "axisLabel": {"formatter": "percent"}},
+    "series": [{"type": "bar", "label": {"show": True, "formatter": "percent"}}],
+    ...
+}
 ```
 
 - **String `valueFormatter`.** ECharts' `tooltip.valueFormatter` (a function that formats each
@@ -350,10 +359,32 @@ st.echarts_chart({
   read the first series, as `{c}` means `{c0}`. Expanded values are HTML-escaped. Templates
   without `{@` stay strings, so existing charts don't change. Values are inserted without a
   number format.
+- **Number formats in labels.** The same number formats also work in label formatters, so
+  `"percent"` on a 0–1 share axis shows `5%` without rescaling the data.
+  - *Where:* a string `axisLabel.formatter` or `axisPointer.label.formatter` on each axis
+    (`xAxis`, `yAxis`, `radiusAxis`, `angleAxis`, `singleAxis`, `parallelAxis`, single or
+    list), and a series' `label.formatter` or `endLabel.formatter`.
+  - *Detection:* a string converts only when it contains no `{` (so `"{value}%"`, `"{b}: {c}"`,
+    time templates, and rich text keep their ECharts meaning) and passes the `valueFormatter`
+    number-format check. ECharts prints a label string without `{` literally on every tick or
+    mark, so no working spec changes meaning. Other strings without `{`, such as a malformed
+    printf string (`"%q"`), stay strings and print literally.
+  - *Axis labels:* axis labels and axis pointer labels format numeric values and numeric
+    strings, and keep other values such as category names.
+  - *Series labels:* a series label formats the value ECharts' default label shows: a scalar
+    `value`, or for a row the last finite number among the `encode` coordinate dimensions (the
+    y value of a vertical bar, the x value of a horizontal one, a heatmap cell's value). Like
+    ECharts, it skips the dimensions on a category or time axis, so numeric years and
+    timestamps aren't formatted, and categories and dataframe datetimes arrive as strings.
+    `encode.label` isn't read. State labels (`emphasis.label`, ...) fall back to the converted
+    `label.formatter` in ECharts.
+  - *Warnings:* Python logs a warning for unconverted label strings that contain an unescaped
+    `%`, since they look like a mistyped number format. Literal text such as `"Goal 100%"`
+    logs too.
 
-Both apply to `tooltip` and `series[*].tooltip` on the option, timeline `baseOption` /
-`options[*]`, and `media[*].option`. Per-data-item tooltips aren't converted, so large `data`
-arrays aren't walked.
+The tooltip conversions apply to `tooltip` and `series[*].tooltip`, and all three apply on the
+option, timeline `baseOption` / `options[*]`, and `media[*].option`. Per-data-item tooltips and
+labels aren't converted, so large `data` arrays aren't walked.
 
 The Streamlit theme's default `valueFormatter` and the number formats above also show the
 datetime strings of dataframe sources like [time labels](#theming): a midnight value as its date,
@@ -378,9 +409,12 @@ Also not included:
 - `{value}` templates in `valueFormatter` (e.g. `"{value} €"`, by analogy with
   `axisLabel.formatter`). Strings without a `%` are dropped, which leaves room to adopt them,
   or an upstream meaning, later. Use printf instead: `"%.2f €"`.
-- Per-dimension formats, custom date/time formats for tooltip values, number formats for axis labels,
-  and coordinate-system tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings
-  on each data item (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
+- Per-dimension formats, custom date/time formats for tooltip values, and coordinate-system
+  tooltips (`grid.tooltip`, `polar.tooltip`, ...). Pre-formatted strings on each data item
+  (`{"value": ..., "tooltip": {"formatter": "..."}}`) remain the workaround.
+- Number formats in `visualMap` / `dataZoom` labels, per-item and mark (`markPoint`,
+  `markLine`, `markArea`) labels, gauge `detail`, and shared axis pointers
+  (`tooltip.axisPointer`, the top-level `axisPointer`).
 
 #### Selections
 
@@ -797,8 +831,8 @@ st.echarts_chart(pie)
   builds is the [tooltip formatting](#tooltip-formatting) function, and it only replaces an
   author's string template, which ECharts already renders as HTML. It keeps the template's
   markup and escapes every value it inserts, and an e2e test covers an HTML payload expanded
-  through `{@[n]}`. A `valueFormatter` and the time axis label formatter return plain text,
-  which ECharts escapes.
+  through `{@[n]}`. A `valueFormatter`, the label number formatters, and the time axis label
+  formatter return plain text, which ECharts escapes or draws as text.
 - **Other JSON-reachable sinks.** Tooltip escaping is not the whole boundary. ECharts'
   [security guide](https://echarts.apache.org/handbook/en/best-practices/security/) also lists
   HTML/URL fields that a JSON spec can set (`toolbox.feature.dataView.title` / `lang`,
@@ -836,8 +870,8 @@ st.echarts_chart(pie)
   remain separate and are not bundled.
 - **JSON-only spec.** Power users who rely on JS `formatter`/`renderItem` callbacks are not
   served in v1 (see [Out of Scope](#out-of-scope-future-work)). String templates plus
-  Streamlit's [tooltip formatting](#tooltip-formatting) cover common formatting; number formats
-  on axis labels and per-dimension tooltip formats still need pre-formatted strings.
+  Streamlit's [tooltip formatting](#tooltip-formatting) cover common formatting; per-dimension
+  tooltip formats still need pre-formatted strings.
 
 ## Out of Scope (Future Work)
 
@@ -1039,6 +1073,10 @@ Required coverage for the implementation PR (not this spec-only diff):
   object rows, axis tooltips, time tokens, escaped values, templates without `{@` untouched).
   An item tooltip with `encode.tooltip` over a dataframe source labels each column and shows a
   midnight datetime as a date.
+- Label number formats: axis `axisLabel` / `axisPointer.label` on every axis key and axis
+  lists, series `label` / `endLabel` (scalar values and dataset rows, checked against ECharts'
+  default label), timeline and media variants; templates, literal text, and per-item labels
+  untouched; malformed printf strings left literal and warned in Python.
 - Time labels: midnight values show as dates in the axis tooltip header; other values keep
   their time; `useUTC` and timeline `baseOption` handled; author formatters, non-time axes, and
   `theme=None` left alone.

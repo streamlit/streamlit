@@ -16,11 +16,13 @@
 
 import * as echarts from "echarts"
 import type { EChartsOption } from "echarts"
+import { get } from "lodash-es"
 import { getLogger } from "loglevel"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { EChartsOptionObject } from "./CustomTheme"
 import {
+  applyLabelNumberFormats,
   applyTimeLabelFormatters,
   applyTooltipFormatters,
 } from "./tooltipFormatters"
@@ -831,5 +833,482 @@ describe("applyTimeLabelFormatters", () => {
     ],
   ])("returns the input for %s", (_case, option, theme) => {
     expect(applyTimeLabelFormatters(option, theme)).toBe(option)
+  })
+})
+
+type LabelFormatter = (argument: unknown) => string
+
+/** Read the converted formatter at ``path`` of an option. */
+function labelFormatterAt(option: unknown, path: string): LabelFormatter {
+  const formatter: unknown = get(option, path)
+  expect(formatter).toBeTypeOf("function")
+  return formatter as LabelFormatter
+}
+
+describe("applyLabelNumberFormats", () => {
+  let originalLanguages: readonly string[]
+
+  beforeEach(() => {
+    originalLanguages = navigator.languages
+    // Named formats such as "dollar" use the browser locale.
+    Object.defineProperty(navigator, "languages", {
+      value: ["en-US"],
+      configurable: true,
+    })
+  })
+
+  afterEach(() => {
+    Object.defineProperty(navigator, "languages", {
+      value: originalLanguages,
+      configurable: true,
+    })
+    vi.restoreAllMocks()
+  })
+
+  it.each([
+    ["percent", 0.05, "5%"],
+    ["dollar", 0, "$0"],
+    ["dollar", 50000, "$50,000"],
+    ["compact", 1_200_000, "1.2M"],
+    ["%,.0f", 98765.4, "98,765"],
+    ["%.1f%%", 12.34, "12.3%"],
+  ])("formats axis ticks with %j", (format, value, expected) => {
+    const option = { yAxis: { axisLabel: { formatter: format, rotate: 45 } } }
+
+    const result = applyLabelNumberFormats(option)
+
+    expect(labelFormatterAt(result, "yAxis.axisLabel.formatter")(value)).toBe(
+      expected
+    )
+    expect(get(result, "yAxis.axisLabel.rotate")).toBe(45)
+    // The input spec is not mutated.
+    expect(option.yAxis.axisLabel.formatter).toBe(format)
+  })
+
+  it("formats numeric category names and keeps other ones", () => {
+    const formatter = labelFormatterAt(
+      applyLabelNumberFormats({
+        xAxis: { type: "category", axisLabel: { formatter: "percent" } },
+      }),
+      "xAxis.axisLabel.formatter"
+    )
+
+    expect(formatter("0.25")).toBe("25%")
+    expect(formatter("Mon")).toBe("Mon")
+    expect(formatter(null)).toBe("")
+  })
+
+  it("converts every axis component and each axis in a list", () => {
+    const untouchedAxis = {
+      type: "value",
+      axisLabel: { formatter: "{value}" },
+    }
+    const result = applyLabelNumberFormats({
+      xAxis: [{ axisLabel: { formatter: "compact" } }, untouchedAxis],
+      radiusAxis: { axisLabel: { formatter: "compact" } },
+      angleAxis: { axisLabel: { formatter: "compact" } },
+      singleAxis: { axisLabel: { formatter: "compact" } },
+      parallelAxis: [{ dim: 0, axisLabel: { formatter: "compact" } }],
+    })
+
+    for (const path of [
+      "xAxis[0].axisLabel.formatter",
+      "radiusAxis.axisLabel.formatter",
+      "angleAxis.axisLabel.formatter",
+      "singleAxis.axisLabel.formatter",
+      "parallelAxis[0].axisLabel.formatter",
+    ]) {
+      expect(labelFormatterAt(result, path)(1500)).toBe("1.5K")
+    }
+    expect(get(result, "xAxis[1]")).toBe(untouchedAxis)
+  })
+
+  it.each([
+    ["an ECharts template", "{value}%"],
+    // eslint-disable-next-line no-template-curly-in-string -- An ECharts template.
+    ["a template with a dollar sign", "${value}K"],
+    ["a time template", "{yyyy}"],
+    ["a template next to a printf placeholder", "{value} %d"],
+    ["an empty string", ""],
+    ["a malformed printf string", "%q"],
+    ["a trailing percent sign", "100%"],
+    ["literal text", "km"],
+    ["a non-string value", 42],
+  ])("leaves %s alone without warning", (_case, formatter) => {
+    const warnSpy = vi.spyOn(LOG, "warn")
+    const option = {
+      xAxis: { axisLabel: { formatter } },
+      yAxis: { axisPointer: { label: { formatter } } },
+      series: [{ type: "bar", label: { show: true, formatter } }],
+    }
+
+    expect(applyLabelNumberFormats(option)).toBe(option)
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
+  it("formats the axis pointer value of an axis", () => {
+    const result = applyLabelNumberFormats({
+      xAxis: { axisPointer: { label: { formatter: "percent", show: true } } },
+    })
+
+    expect(
+      labelFormatterAt(
+        result,
+        "xAxis.axisPointer.label.formatter"
+      )({
+        value: 0.05,
+        axisDimension: "x",
+      })
+    ).toBe("5%")
+    expect(get(result, "xAxis.axisPointer.label.show")).toBe(true)
+  })
+
+  it("keeps an axis pointer number format on a time axis", () => {
+    const result = applyTimeLabelFormatters(
+      applyLabelNumberFormats({
+        xAxis: { type: "time", axisPointer: { label: { formatter: "%,d" } } },
+      }),
+      "streamlit"
+    )
+
+    expect(
+      labelFormatterAt(
+        result,
+        "xAxis.axisPointer.label.formatter"
+      )({
+        value: 1234,
+      })
+    ).toBe("1,234")
+  })
+
+  it.each([
+    ["a single value", { value: 1234.5 }, "$1,234.50"],
+    [
+      "a vertical bar row",
+      {
+        value: ["Mon", 1234.5],
+        encode: { x: [0], y: [1] },
+        dimensionNames: ["day", "sales"],
+      },
+      "$1,234.50",
+    ],
+    [
+      "a horizontal bar row",
+      { value: ["Mon", 1234.5], encode: { y: [0], x: [1] } },
+      "$1,234.50",
+    ],
+    [
+      "a row whose value comes first",
+      { value: [1234.5, "Mon", 7], encode: { y: [0], x: [1] } },
+      "$1,234.50",
+    ],
+    [
+      "an object row",
+      {
+        value: { day: "Mon", sales: 1234.5 },
+        encode: { x: [0], y: [1] },
+        dimensionNames: ["day", "sales"],
+      },
+      "$1,234.50",
+    ],
+    [
+      "a heatmap cell",
+      { value: [0, 1, 5.5], encode: { x: [0], y: [1], value: [2] } },
+      "$5.50",
+    ],
+    [
+      "a row with a numeric string",
+      { value: ["Mon", "1234.5"], encode: { x: [0], y: [1] } },
+      "$1,234.50",
+    ],
+    ["a row without encode", { value: [1.5, 2000.25] }, "$2,000.25"],
+    ["a text value", { value: "N/A" }, "N/A"],
+    [
+      "a row without numbers",
+      { value: ["Mon", "Tue"], encode: { x: [0], y: [1] } },
+      "Tue",
+    ],
+  ])("formats the series label value of %s", (_case, params, expected) => {
+    const result = applyLabelNumberFormats({
+      series: { type: "bar", label: { show: true, formatter: "dollar" } },
+    })
+
+    expect(labelFormatterAt(result, "series.label.formatter")(params)).toBe(
+      expected
+    )
+    expect(get(result, "series.label.show")).toBe(true)
+  })
+
+  it.each([
+    ["the chart's category axis in a timeline tick", undefined, "$1,500"],
+    // Non-cartesian series keep the last-number heuristic.
+    ["a polar series", "polar", "$2,024"],
+  ])(
+    "picks the label dimension from the series axes for %s",
+    (_case, coordinateSystem, expected) => {
+      const result = applyLabelNumberFormats({
+        baseOption: { xAxis: { type: "category" }, yAxis: {} },
+        options: [
+          {
+            series: [
+              {
+                type: "bar",
+                coordinateSystem,
+                label: { show: true, formatter: "dollar" },
+              },
+            ],
+          },
+        ],
+      })
+
+      expect(
+        labelFormatterAt(
+          result,
+          "options[0].series[0].label.formatter"
+        )({
+          value: [1500, 2024],
+          encode: { x: [1], y: [0] },
+        })
+      ).toBe(expected)
+    }
+  )
+
+  it("converts end labels but not per-data-item labels", () => {
+    const dataItem = { value: 5, label: { formatter: "dollar" } }
+    const result = applyLabelNumberFormats({
+      series: [
+        {
+          type: "line",
+          endLabel: { show: true, formatter: "compact" },
+          data: [dataItem],
+        },
+      ],
+    })
+
+    expect(
+      labelFormatterAt(result, "series[0].endLabel.formatter")({ value: 1500 })
+    ).toBe("1.5K")
+    expect(get(result, "series[0].data[0]")).toBe(dataItem)
+    expect(dataItem.label.formatter).toBe("dollar")
+  })
+
+  it("converts timeline and media variants", () => {
+    const untouchedTick = { yAxis: { axisLabel: { formatter: "{value}" } } }
+    const option = {
+      baseOption: {
+        yAxis: { axisLabel: { formatter: "percent" } },
+        media: [{ option: { series: { label: { formatter: "dollar" } } } }],
+      },
+      options: [
+        untouchedTick,
+        { xAxis: { axisLabel: { formatter: "compact" } } },
+      ],
+      media: [
+        { query: {}, option: { yAxis: { axisLabel: { formatter: "%d" } } } },
+      ],
+    }
+
+    const result = applyLabelNumberFormats(option)
+
+    expect(
+      labelFormatterAt(result, "baseOption.yAxis.axisLabel.formatter")(0.5)
+    ).toBe("50%")
+    expect(
+      labelFormatterAt(
+        result,
+        "baseOption.media[0].option.series.label.formatter"
+      )({ value: 5 })
+    ).toBe("$5")
+    expect(get(result, "options[0]")).toBe(untouchedTick)
+    expect(
+      labelFormatterAt(result, "options[1].xAxis.axisLabel.formatter")(1500)
+    ).toBe("1.5K")
+    expect(
+      labelFormatterAt(result, "media[0].option.yAxis.axisLabel.formatter")(7)
+    ).toBe("7")
+    // The input spec is not mutated.
+    expect(option.baseOption.yAxis.axisLabel.formatter).toBe("percent")
+  })
+
+  // These tests intentionally read ECharts' internal series model
+  // (``getModel().getSeriesByIndex().getFormattedLabel`` and
+  // ``mapDimensionsAll("defaultedLabel")``) as a parity check against ECharts'
+  // default label. If they fail after an ECharts upgrade, the internal API may
+  // have changed.
+  describe("in a rendered chart", () => {
+    const charts: echarts.ECharts[] = []
+
+    afterEach(() => {
+      charts.splice(0).forEach(chart => chart.dispose())
+    })
+
+    function render(option: EChartsOptionObject): echarts.ECharts {
+      const chart = echarts.init(null, null, {
+        renderer: "svg",
+        ssr: true,
+        width: 400,
+        height: 300,
+      })
+      charts.push(chart)
+      chart.setOption(applyLabelNumberFormats(option) as EChartsOption)
+      return chart
+    }
+
+    /** The parts of ECharts' internal series model the tests read. */
+    interface SeriesModel {
+      getFormattedLabel: (dataIndex: number, status: string) => string
+      getData: () => {
+        mapDimensionsAll: (coordDim: string) => string[]
+        get: (dim: string, dataIndex: number) => unknown
+      }
+    }
+
+    function firstSeries(chart: echarts.ECharts): SeriesModel {
+      return (
+        chart as unknown as {
+          getModel: () => { getSeriesByIndex: (index: number) => SeriesModel }
+        }
+      )
+        .getModel()
+        .getSeriesByIndex(0)
+    }
+
+    /** Read the label text the first series shows for one data item. */
+    function formattedLabel(
+      chart: echarts.ECharts,
+      dataIndex: number
+    ): string {
+      return firstSeries(chart).getFormattedLabel(dataIndex, "normal")
+    }
+
+    /**
+     * Read the value ECharts' default label (no ``formatter``) shows for one
+     * data item of the first series: the value of its ``defaultedLabel``
+     * dimension.
+     */
+    function defaultLabelValue(
+      chart: echarts.ECharts,
+      dataIndex: number
+    ): unknown {
+      const data = firstSeries(chart).getData()
+      const labelDimensions = data.mapDimensionsAll("defaultedLabel")
+      expect(labelDimensions).toHaveLength(1)
+      return data.get(labelDimensions[0], dataIndex)
+    }
+
+    it.each([
+      ["vertical", { x: "day", y: "sales" }, "category", "value"],
+      ["horizontal", { x: "sales", y: "day" }, "value", "category"],
+    ])(
+      "formats the value a %s bar label shows by default",
+      (_case, encode, xType, yType) => {
+        const chart = render({
+          dataset: {
+            source: [
+              ["Mon", 1234.5],
+              ["Tue", 98765.4],
+            ],
+            dimensions: ["day", "sales"],
+          },
+          xAxis: { type: xType },
+          yAxis: { type: yType },
+          series: [
+            { type: "bar", encode, label: { show: true, formatter: "%.2f" } },
+          ],
+        })
+
+        expect(formattedLabel(chart, 1)).toBe("98765.40")
+      }
+    )
+
+    const salesByYear = {
+      source: [
+        [1500, 2024],
+        [2500, 2025],
+      ],
+      dimensions: ["sales", "year"],
+    }
+
+    it.each([
+      [
+        "a numeric category column after the value column",
+        {
+          dataset: salesByYear,
+          xAxis: { type: "category" },
+          yAxis: { type: "value" },
+          series: [{ type: "bar", encode: { x: "year", y: "sales" } }],
+        },
+      ],
+      [
+        "a horizontal bar on a numeric category axis",
+        {
+          // An axis without a type or data is a value axis.
+          xAxis: {},
+          yAxis: { type: "category" },
+          series: [
+            {
+              type: "bar",
+              data: [
+                [1500, 2024],
+                [2500, 2025],
+              ],
+            },
+          ],
+        },
+      ],
+      [
+        "a category axis picked by xAxisIndex",
+        {
+          dataset: salesByYear,
+          xAxis: [{ type: "value" }, { type: "category" }],
+          yAxis: [{ type: "value" }],
+          series: [
+            { type: "bar", xAxisIndex: 1, encode: { x: "year", y: "sales" } },
+          ],
+        },
+      ],
+      [
+        "a horizontal line on a time axis",
+        {
+          xAxis: { type: "value" },
+          yAxis: { type: "time" },
+          series: [
+            {
+              type: "line",
+              data: [
+                [1500, Date.UTC(2024, 0, 1)],
+                [2500, Date.UTC(2025, 0, 1)],
+              ],
+            },
+          ],
+        },
+      ],
+    ])(
+      "formats the value ECharts' default label shows for %s",
+      (_case, option) => {
+        const chart = render({
+          ...option,
+          series: option.series.map(series => ({
+            ...series,
+            label: { show: true, formatter: "%.2f" },
+          })),
+        })
+
+        expect(defaultLabelValue(chart, 1)).toBe(2500)
+        expect(formattedLabel(chart, 1)).toBe("2500.00")
+      }
+    )
+
+    it("draws formatted axis ticks", () => {
+      const svg = render({
+        xAxis: { type: "category", data: ["A", "B"] },
+        yAxis: { type: "value", max: 1, axisLabel: { formatter: "percent" } },
+        series: [{ type: "bar", data: [0.25, 0.5] }],
+      }).renderToSVGString()
+
+      expect(svg).toContain(">20%<")
+      expect(svg).toContain(">100%<")
+      expect(svg).not.toContain(">percent<")
+    })
   })
 })

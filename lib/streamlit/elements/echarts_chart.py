@@ -138,10 +138,22 @@ _BARE_JS_FUNCTION: Final = re.compile(r"\bfunction\s*\(")
 # ``dump_options_with_quotes`` emits that encoding as a JSON string value.
 _PYECHARTS_JSCODE_SENTINEL: Final = "--x_x--"
 
-# The named formats a tooltip ``valueFormatter`` string accepts (the same set as
-# ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the frontend's
-# ``util/formatNumber.ts``.
+# The named formats a tooltip ``valueFormatter`` or label ``formatter`` string
+# accepts (the same set as ``st.metric``). Mirrors ``NAMED_NUMBER_FORMATS`` in the
+# frontend's ``util/formatNumber.ts``.
 _NAMED_NUMBER_FORMATS: Final = frozenset(get_args(column_types.NumberFormat))
+
+# The axis components whose ``axisLabel`` and ``axisPointer.label`` formatters
+# accept number formats. Mirrors ``NUMBER_FORMAT_AXIS_KEYS`` in the frontend's
+# ``EChartsChart/tooltipFormatters.ts``.
+_NUMBER_FORMAT_AXIS_KEYS: Final = (
+    "xAxis",
+    "yAxis",
+    "radiusAxis",
+    "angleAxis",
+    "singleAxis",
+    "parallelAxis",
+)
 
 # One token of a printf-style format string: literal text, an escaped ``%%``, or
 # a placeholder. The alternatives and their order mirror the parser of the
@@ -699,6 +711,53 @@ def _warn_on_unsupported_value_formatters(option: dict[str, Any]) -> None:
         _LOGGER.warning("%s", message, stack_info=True)
 
 
+def _iter_label_formatters(option: dict[str, Any]) -> Iterator[Any]:
+    """Yield the formatters of the labels that take number formats.
+
+    Covers ``axisLabel`` and ``axisPointer.label`` of each axis and ``label``
+    and ``endLabel`` of each series across option variants, the same locations
+    the frontend converts.
+    """
+    for variant in _iter_option_variants(option):
+        labels: list[Any] = []
+        for axis_key in _NUMBER_FORMAT_AXIS_KEYS:
+            for axis in _iter_config_entries(variant.get(axis_key)):
+                labels.append(axis.get("axisLabel"))
+                axis_pointer = axis.get("axisPointer")
+                if isinstance(axis_pointer, dict):
+                    labels.append(axis_pointer.get("label"))
+        for series in _iter_config_entries(variant.get("series")):
+            labels.extend((series.get("label"), series.get("endLabel")))
+        for label in labels:
+            if isinstance(label, dict):
+                yield label.get("formatter")
+
+
+def _warn_on_malformed_label_number_formats(option: dict[str, Any]) -> None:
+    """Log label formatters with an unescaped ``%`` that aren't number formats.
+
+    This covers formatters that are neither a number format nor an ECharts
+    template. ECharts prints such a string literally on every tick or label,
+    so it is likely a mistyped number format.
+    """
+    for formatter in _iter_label_formatters(option):
+        if (
+            not isinstance(formatter, str)
+            or "{" in formatter
+            or "%" not in formatter.replace("%%", "")
+            or _is_number_format(formatter)
+        ):
+            continue
+        message = (
+            "The provided ECharts spec sets an axis or series label `formatter` "
+            f"of {formatter!r}, which is neither a number format nor an ECharts "
+            "template, so ECharts shows it as literal text. Use a named format "
+            'such as "percent", a printf-style string such as "%.1f%%", or a '
+            'template such as "{value}%".'
+        )
+        _LOGGER.warning("%s", message, stack_info=True)
+
+
 def _convert_datasets_in_variant(
     option: dict[str, Any], arrow_datasets: dict[str, bytes]
 ) -> None:
@@ -788,6 +847,7 @@ def _normalize_spec(spec: EChartsSpec) -> tuple[dict[str, Any], dict[str, bytes]
 
     _validate_supported_features(option)
     _warn_on_unsupported_value_formatters(option)
+    _warn_on_malformed_label_number_formats(option)
     arrow_datasets = _convert_dataset_sources(option)
     return option, arrow_datasets
 
@@ -1126,8 +1186,8 @@ class EChartsMixin:
             ``st.echarts_chart`` supports only JSON-compatible option objects.
             Embedding JavaScript callbacks (e.g. ``formatter`` functions or
             ``renderItem``) is not supported. Use ECharts' string templates
-            instead (e.g. ``"formatter": "{b}: {c}"``). To format tooltip
-            values, see the tooltip note below.
+            instead (e.g. ``"formatter": "{b}: {c}"``). To format numbers in
+            tooltips and labels, see the formatting note below.
 
             Consequently, three families of ECharts charts are unavailable and
             raise an error: ``custom`` series (which require a ``renderItem``
@@ -1148,10 +1208,10 @@ class EChartsMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         .. note::
-            Streamlit extends two tooltip options so you can format tooltips
-            without JavaScript. Both work in ``tooltip`` and
-            ``series[i].tooltip``, but not in per-item tooltips inside
-            ``series[i].data``:
+            Streamlit extends some ECharts formatter options so you can
+            format tooltips and labels without JavaScript. The tooltip options
+            work in ``tooltip`` and ``series[i].tooltip``. None of them work in
+            per-item tooltips or labels inside ``series[i].data``:
 
             - ``valueFormatter`` accepts a number format, which formats each
               value in the default tooltip: a named format (``"plain"``,
@@ -1173,6 +1233,15 @@ class EChartsMixin:
               first series. Values are inserted as escaped text without a
               number format, while the template itself is HTML, as in any
               other ECharts tooltip string.
+            - A string ``axisLabel.formatter`` or ``axisPointer.label.formatter``
+              on an axis, and ``label.formatter`` or ``endLabel.formatter`` on
+              a series, also accept these number formats (e.g.
+              ``{"axisLabel": {"formatter": "percent"}}`` shows ``0.05`` as
+              ``5%``). Axis labels format numeric ticks and keep non-numeric
+              category names. Series labels format the value ECharts shows
+              by default, such as the y value of a vertical bar. A string with
+              a ``{...}`` placeholder stays an ECharts template, and
+              ``markPoint`` or ``markLine`` labels aren't converted.
 
             .. |st.metric| replace:: ``st.metric``
             .. _st.metric: https://docs.streamlit.io/develop/api-reference/data/st.metric
@@ -1295,9 +1364,9 @@ class EChartsMixin:
             configuration options ``theme.chartCategoricalColors`` and
             ``theme.chartSequentialColors``. Font configuration options are
             also applied, and long tooltip numbers are shortened unless you set
-            ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the tooltip
-            note above). Time, value, and log axes hide tick labels that would
-            overlap. To show every label on an axis, add
+            ``tooltip.valueFormatter`` or ``tooltip.formatter`` (see the
+            formatting note above). Time, value, and log axes hide tick labels
+            that would overlap. To show every label on an axis, add
             ``"hideOverlap": False`` to its ``axisLabel``. Unstacked bars
             without negative values get rounded outer corners that scale with
             the ``theme.baseRadius`` configuration option. To keep square bars,

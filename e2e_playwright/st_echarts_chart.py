@@ -973,3 +973,23 @@ with st.container(key="c_marks_and_area"):
         },
         height=_HEIGHT,
     )
+
+# Number formats in axis and series labels. The SVG renderer puts the tick and
+# label text in the DOM.
+with st.container(key="c_label_number_formats"):
+    st.echarts_chart(
+        {
+            "xAxis": {"type": "category", "data": ["A", "B"]},
+            "yAxis": {"type": "value", "max": 1, "axisLabel": {"formatter": "percent"}},
+            "series": [
+                {
+                    "type": "bar",
+                    "data": [0.25, 0.5],
+                    "label": {"show": True, "position": "top", "formatter": "%.2f pts"},
+                }
+            ],
+            **_NO_ANIM,
+        },
+        renderer="svg",
+        height=_HEIGHT,
+    )
