@@ -1,6 +1,6 @@
 ---
 name: developing-with-streamlit
-description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, testing, beautifying, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
+description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, debugging, testing, beautifying, modernizing, styling, theming, or optimizing Streamlit applications. Also required for building custom components (inline or packaged), using st.components.v2, or any HTML/JS/CSS component work. Triggers: streamlit, st., dashboard, app.py, beautify, style, CSS, color, background, theme, button, widget styling, custom component, st.components, packaged component, pyproject.toml, asset_dir, CCv2, HTML/JS component."
 ---
 
 # Developing with Streamlit
@@ -190,16 +190,16 @@ For **building a dashboard**, read:
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
 
-For **modernizing an existing app** (only when the user explicitly asks), update the whole app, not only the file in view. First show a short plan that names the riskiest changes (such as moving to `st.navigation` or rewriting charts) and wait for confirmation.
-1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML with native commands ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
-2. **Performance:** caching (e.g., `refresh_mode="background"`), `st.skeleton`, fragments (e.g., `parallel=True`), and forms ([performance.md](references/performance.md)).
-3. **Newer features where they fit:** for example `st.navigation` ([multipage-apps.md](references/multipage-apps.md)), `st.segmented_control`/`st.pills` ([selection-widgets.md](references/selection-widgets.md)), `st.menu_button` and side-drawer dialogs ([layouts.md](references/layouts.md)), `ButtonColumn` and `MultiselectColumn` ([data-display.md](references/data-display.md)), `bind="query-params"` ([session-state.md](references/session-state.md)), streaming and compact thinking or step expanders in chat apps ([chat-ui.md](references/chat-ui.md)), alert `title=`, and `alt=`. See [api-reference.md](references/api-reference.md) for others.
+For **modernizing an existing app** (only when the user explicitly asks), update the whole app, not only the file in view. Before editing, show the user a short plan that names the riskiest changes (such as moving to `st.navigation`, rewriting charts, or raising the app's Streamlit requirement) and wait for them to confirm.
+1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML where a native command covers the same behavior ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
+2. **Performance:** caching (e.g., `refresh_mode="background"` on caches with a `ttl`), `st.skeleton`, fragments (e.g., `parallel=True`), and forms ([performance.md](references/performance.md)).
+3. **Newer features where they fit:** for example `st.navigation` ([multipage-apps.md](references/multipage-apps.md)), `st.segmented_control`/`st.pills` ([selection-widgets.md](references/selection-widgets.md)), `st.menu_button` and side-drawer dialogs ([layouts.md](references/layouts.md)), `ButtonColumn` and `MultiselectColumn` ([data-display.md](references/data-display.md)), `bind="query-params"` ([session-state.md](references/session-state.md)), and streaming and compact thinking or step expanders in chat apps ([chat-ui.md](references/chat-ui.md)). See [api-reference.md](references/api-reference.md) for others.
 4. **Layouts:** bordered containers, horizontal containers and `st.grid`, aligned rows, and secondary details in popovers or dialogs ([layouts.md](references/layouts.md), [design.md](references/design.md)).
 5. **Charts:** move to `st.echarts_chart` where feasible, one engine per page ([charts.md](references/charts.md#choose-a-chart-command)).
-6. **Theme:** add one that fits the app's domain, starting from `assets/templates/themes/configs/` ([theme.md](references/theme.md)). For dashboards, aim for the `dashboard-revenue` template and the `bi-dashboard` theme ([dashboards.md](references/dashboards.md)).
-7. **Code organization:** split a large single-file app into modules ([code-organization.md](references/code-organization.md)).
+6. **Theme:** keep an existing brand theme or `theme.base`; otherwise add one that fits the app's domain, starting from `assets/templates/themes/configs/` ([theme.md](references/theme.md)). For dashboards, aim for the `dashboard-revenue` template and the `bi-dashboard` theme ([dashboards.md](references/dashboards.md)).
+7. **Code organization:** split a large single-file app into modules where [code-organization.md](references/code-organization.md) calls for it.
 
-Keep features, widget keys, query parameters, and data logic intact, raise the app's Streamlit requirement if new features need it ([environment-setup.md](references/environment-setup.md)), and verify every page with the agent API ([Step 4](#step-4-verify-the-change-in-the-running-app)).
+Keep features, widget keys, query parameters, page URLs, and data logic intact. Raise the app's Streamlit requirement if new features need it ([environment-setup.md](references/environment-setup.md)), and verify every page with the agent API ([Step 4](#step-4-verify-the-change-in-the-running-app)).
 
 **IMPORTANT - Use templates:**
 
@@ -301,6 +301,7 @@ For purely visual changes (theme, CSS, spacing), this only confirms that the app
 
 - **Step 4**: Ask before any request that could have external side effects, such as database writes, emails, or paid API calls. This includes the first load and widget changes, not only button triggers.
 - **Step 5**: Ask before starting the Streamlit app for the user
+- **Modernizing an app**: Show the plan and wait for the user to confirm before editing
 
 ## Resources
 
