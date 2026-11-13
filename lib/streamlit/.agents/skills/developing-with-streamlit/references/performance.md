@@ -173,7 +173,7 @@ Use this when a widget *outside* a fragment should trigger only that fragment's 
 ```python
 @st.fragment(key="charts")
 def charts():
-    st.line_chart(st.session_state.data)
+    st.line_chart(st.session_state.data, alt="Data over time")
 
 
 charts()
@@ -446,7 +446,7 @@ account = st.selectbox("Account", accounts)
 
 report = load_report(account)  # Slow query/API/model call
 
-st.line_chart(report.history)  # Depends on report
+st.line_chart(report.history, alt="Account history")  # Depends on report
 st.dataframe(report.transactions)  # Depends on report
 
 with st.sidebar:  # Independent of the report, but stuck behind it
@@ -473,7 +473,7 @@ st.caption("Data refreshes hourly. Email support@example.com for access.")
 
 with chart_slot.skeleton(height=300):  # The skeleton holds the reserved slot
     report = load_report(account)  # Slow work runs after the page is painted
-    st.line_chart(report.history)  # Fills the skeleton's slot; keeps state
+    st.line_chart(report.history, alt="Account history")  # Fills the slot; keeps state
 ```
 
 `st.container()` claims the chart's position up front, so the caption paints immediately instead of waiting behind `load_report`. Inside `with chart_slot.skeleton():`, bare `st.*` calls fill the skeleton's slot. On reruns the previous chart stays mounted there and updates in place rather than remounting — keeping its scroll, sort, and selection. The skeleton only covers it if the new data takes longer than half a second, so cached reruns don't flash it.
