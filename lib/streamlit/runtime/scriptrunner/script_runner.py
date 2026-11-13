@@ -32,6 +32,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
     format_uncaught_exception,
+    get_server_uptime_seconds,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -626,6 +627,7 @@ class ScriptRunner:
 
             _LOGGER.debug("Running script")
             start_time: float = timer()
+            server_uptime_seconds = get_server_uptime_seconds()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 
             if not rerun_data.fragment_id_queue:
@@ -990,6 +992,7 @@ class ScriptRunner:
                                 if uncaught_exception
                                 else None
                             ),
+                            server_uptime_seconds=server_uptime_seconds,
                         )
                     )
                 except Exception as ex:

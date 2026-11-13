@@ -1391,6 +1391,57 @@ def test_create_page_profile_message_reports_agent_api_usage() -> None:
     assert reported.instance_id
 
 
+def test_create_page_profile_message_reports_cache_usage() -> None:
+    """``cache_usage`` carries the run's totals per cache type, in microseconds,
+    and the server uptime.
+    """
+    ctx = create_mock_script_run_ctx()
+    stats = ctx.shared.cache_stats.current_thread_stats()
+    stats.open_call(0.0)
+    stats.cache_data.calls = 3
+    stats.cache_data.hits = 2
+    stats.cache_data.misses = 1
+    stats.cache_data.stale_hits = 1
+    stats.cache_data.compute_time = 1.5
+    stats.cache_data.wait_time = 0.25
+    stats.cache_data.overhead_time = 0.001
+    stats.close_call(2.0)
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message(
+            [], 0, 0, server_uptime_seconds=42
+        )
+
+    usage = msg.page_profile.cache_usage
+    assert usage.server_uptime_seconds == 42
+    assert not usage.HasField("cache_resource")
+    assert usage.cache_data.calls == 3
+    assert usage.cache_data.hits == 2
+    assert usage.cache_data.misses == 1
+    assert usage.cache_data.stale_hits == 1
+    assert usage.cache_data.compute_time == 1_500_000
+    assert usage.cache_data.wait_time == 250_000
+    assert usage.cache_data.overhead_time == 1_000
+
+
+def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
+    """``cache_usage`` stays unset without cached calls or a known uptime."""
+    msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not msg.page_profile.HasField("cache_usage")
+
+
+def test_server_uptime_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Uptime is unknown until the server starts, then counts whole seconds."""
+    monkeypatch.setattr(metrics_util, "_server_started_at", None)
+    assert metrics_util.get_server_uptime_seconds() is None
+
+    with patch("streamlit.runtime.metrics_util.time.monotonic", return_value=100.0):
+        metrics_util.mark_server_started()
+    with patch("streamlit.runtime.metrics_util.time.monotonic", return_value=161.9):
+        assert metrics_util.get_server_uptime_seconds() == 61
+
+
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
     """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
     skill_dir = base / harness_dir / skill_name

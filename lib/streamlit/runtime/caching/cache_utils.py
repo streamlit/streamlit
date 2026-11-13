@@ -51,7 +51,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching import (
+    cache_background_refresh,
+    cache_call_timer,
+    cache_metrics,
+)
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
@@ -817,6 +821,21 @@ class CachedFunc(Generic[P, R]):
         func_kwargs: dict[str, Any],
         spinner_message: str | None = None,
     ) -> R:
+        call_timer = cache_call_timer.start_call(self._info.cache_type)
+        try:
+            return self._lookup_or_compute(
+                func_args, func_kwargs, spinner_message, call_timer
+            )
+        finally:
+            call_timer.finish()
+
+    def _lookup_or_compute(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None,
+        call_timer: cache_call_timer.CacheCallTimer,
+    ) -> R:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
@@ -834,7 +853,8 @@ class CachedFunc(Generic[P, R]):
 
         # Each call counts as exactly one lookup, decided by this first read. The
         # re-read under the compute lock belongs to the same call, so a caller that
-        # waits for another caller's computation still counts as a miss.
+        # waits for another caller's computation still counts as a miss. The page
+        # profile's call_timer counts that caller as a hit and its wait separately.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:
@@ -844,6 +864,7 @@ class CachedFunc(Generic[P, R]):
         else:
             # A stale value served during a background refresh is still a hit.
             self._metrics.record_hit()
+            call_timer.record_hit(is_stale=read.is_stale)
             if read.is_stale:
                 # Background mode, stale grace window: return the stale value now and
                 # kick off a single deduplicated background refresh (no spinner).
@@ -870,7 +891,9 @@ class CachedFunc(Generic[P, R]):
             else contextlib.nullcontext()
         )
         with spinner_or_no_context:
-            return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+            return self._handle_cache_miss(
+                cache, value_key, func_args, func_kwargs, call_timer
+            )
 
     def _handle_cache_hit(self, result: CachedResult[R]) -> R:
         """Handle a cache hit: replay the result's cached messages, and return its
@@ -892,6 +915,7 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
+        call_timer: cache_call_timer.CacheCallTimer,
     ) -> R:
         """Handle a cache miss: compute a new cached value, write it back to the cache,
         and return that newly-computed value.
@@ -915,13 +939,16 @@ class CachedFunc(Generic[P, R]):
         #   no lock is acquired. But the unhappy path ("cache entry needs to be recomputed") is
         #   a wee bit slower, because we do two lookups for the entry.
 
+        call_timer.begin_wait()
         with _hold_compute_lock(cache.compute_value_lock(value_key)):
+            call_timer.end_wait()
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
             # before computing.
             try:
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
+                call_timer.record_hit()
                 return self._handle_cache_hit(cached_result)
             except CacheKeyNotFoundError:
                 # No cache hit -> we will call the cached function
@@ -929,6 +956,7 @@ class CachedFunc(Generic[P, R]):
                 pass
 
             # We acquired the lock before any other thread. Compute the value!
+            call_timer.begin_compute()
             compute_start = time.perf_counter()
             try:
                 with self._info.cached_message_replay_ctx.calling_cached_function(
@@ -936,6 +964,7 @@ class CachedFunc(Generic[P, R]):
                 ):
                     computed_value = self._info.func(*func_args, **func_kwargs)
             finally:
+                call_timer.end_compute()
                 self._metrics.record_compute_duration(
                     time.perf_counter() - compute_start
                 )
@@ -1025,6 +1054,21 @@ class CachedFunc(Generic[P, R]):
         is intentionally not driven here (it recomputes off the script thread, which
         cannot await a coroutine); async caches use the foreground path only.
         """
+        call_timer = cache_call_timer.start_call(self._info.cache_type)
+        try:
+            return await self._lookup_or_compute_async(
+                func_args, func_kwargs, spinner_message, call_timer
+            )
+        finally:
+            call_timer.finish()
+
+    async def _lookup_or_compute_async(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None,
+        call_timer: cache_call_timer.CacheCallTimer,
+    ) -> R:
         cache = self._info.get_function_cache(self._function_key)
 
         value_key = _make_value_key(
@@ -1043,6 +1087,7 @@ class CachedFunc(Generic[P, R]):
             self._metrics.record_miss()
         else:
             self._metrics.record_hit()
+            call_timer.record_hit()
             return self._handle_cache_hit(cached_result)
 
         is_nested_cache_function = in_cached_function.get()
@@ -1055,7 +1100,7 @@ class CachedFunc(Generic[P, R]):
         )
         with spinner_or_no_context:
             return await self._handle_cache_miss_async(
-                cache, value_key, func_args, func_kwargs
+                cache, value_key, func_args, func_kwargs, call_timer
             )
 
     async def _handle_cache_miss_async(
@@ -1064,6 +1109,7 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
+        call_timer: cache_call_timer.CacheCallTimer,
     ) -> R:
         """Await the underlying coroutine on a miss and cache its awaited result.
 
@@ -1080,13 +1126,16 @@ class CachedFunc(Generic[P, R]):
                 # Shield the shared signal because cancelling one task otherwise
                 # propagates through wrap_future and cancels it for the owner and all
                 # other waiters.
+                call_timer.begin_wait()
                 await asyncio.shield(asyncio.wrap_future(compute_future))
+                call_timer.end_wait()
                 try:
                     cached_result = cache.read_result(value_key)
                 except CacheKeyNotFoundError:
                     # The owner failed, was cancelled, or its result was cleared.
                     # Compete to become the owner of the retry.
                     continue
+                call_timer.record_hit()
                 return self._handle_cache_hit(cached_result)
 
             try:
@@ -1097,6 +1146,7 @@ class CachedFunc(Generic[P, R]):
                 except CacheKeyNotFoundError:
                     pass
                 else:
+                    call_timer.record_hit()
                     return self._handle_cache_hit(cached_result)
 
                 # Owners capture their invalidation token atomically with the claim.
@@ -1104,6 +1154,7 @@ class CachedFunc(Generic[P, R]):
                     raise RuntimeError(
                         "Async computation owner has no invalidation token"
                     )
+                call_timer.begin_compute()
                 compute_start = time.perf_counter()
                 try:
                     with self._info.cached_message_replay_ctx.calling_cached_function(
@@ -1116,6 +1167,7 @@ class CachedFunc(Generic[P, R]):
                             "Any", self._info.func(*func_args, **func_kwargs)
                         )
                 finally:
+                    call_timer.end_compute()
                     self._metrics.record_compute_duration(
                         time.perf_counter() - compute_start
                     )
