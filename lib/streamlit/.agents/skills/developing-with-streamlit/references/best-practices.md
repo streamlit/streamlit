@@ -328,7 +328,7 @@ if details.open:
 
 ## Data and charts
 
-Use `st.echarts_chart` for new charts, with the data as a dataframe in `dataset.source`. Fall back to the built-in charts for a quick one-line view, then `st.altair_chart` for Vega-Lite-only features such as faceting, then `st.plotly_chart` for 3D and scientific charts. Prefer one charting library per page. Use `st.echarts_chart` rather than a third-party ECharts component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
+Use `st.echarts_chart` for new charts, simple ones included, with the data as a dataframe in `dataset.source`. Fall back to the built-in charts for a quick look on a page without ECharts charts, then `st.altair_chart` for Vega-Lite-only features such as faceting, then `st.plotly_chart` for 3D and scientific charts. Prefer one charting library per page. Use `st.echarts_chart` rather than a third-party ECharts component. Pass `alt=` with the chart's takeaway (on ECharts, `alt` replaces the generated description). For choosing a chart command and chart selections, see [charts.md](charts.md).
 
 ```python
 # GOOD: ECharts for new charts
@@ -343,7 +343,7 @@ st.echarts_chart(
     alt="Monthly revenue, up 12% since January",
 )
 
-# OK: A built-in chart for a quick look while exploring data
+# OK: A built-in chart for a quick look on a page without ECharts charts
 st.line_chart(df, x="date", y="revenue", alt="Monthly revenue trend")
 
 # BAD: Matplotlib for a new chart (a static image that ignores the app theme)

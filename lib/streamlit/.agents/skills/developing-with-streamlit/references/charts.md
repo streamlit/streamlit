@@ -20,15 +20,15 @@ Choose a chart command, keep charts consistent, and use the chart APIs well.
 
 Default to `st.echarts_chart` for new charts. It follows the app theme, including light/dark switching, covers the widest range of chart types, animates when the data changes, supports a built-in zoom slider (`dataZoom`), and stays fast with large data. Rank chart commands in this order:
 
-1. **`st.echarts_chart`:** the recommended choice for dashboards and most charts.
-2. **Built-in charts** (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`): a quick one-line chart from a dataframe, for example while exploring data.
+1. **`st.echarts_chart`:** the recommended choice for dashboards and most charts, simple line, bar, area, and scatter charts included.
+2. **Built-in charts** (`st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart`): a one-line shortcut for a quick look at a dataframe, for example while exploring data. They render with Vega, so on a page or app that already has ECharts charts, draw simple charts with `st.echarts_chart` too.
 3. **`st.altair_chart` / `st.vega_lite_chart`:** Vega-Lite features that ECharts lacks, or an existing Altair chart or Vega-Lite spec.
 4. **`st.plotly_chart`:** 3D and scientific charts, or an existing Plotly figure.
 5. **Others** (`st.pyplot`, third-party chart components): only for a figure the user already has or a library that only produces that output.
 
 | Need | Use |
 | --- | --- |
-| Line, bar, area, scatter, pie, heatmap, or combined charts, including every chart on a dashboard | `st.echarts_chart` |
+| Line, bar, area, scatter, pie, heatmap, or combined charts, simple ones included, and every chart on a dashboard | `st.echarts_chart` |
 | Network graphs, trees, sankey, chord, sunburst, treemap, gauges, radar, funnel, calendar heatmaps, candlesticks | `st.echarts_chart` |
 | Titles, custom tooltips, dual axes, log scales, annotations (`markLine`, `markArea`) | `st.echarts_chart` |
 | Clicking a point, bar, network node, or sankey link to drive the app | `st.echarts_chart` (see [Chart selections](#chart-selections)) |
@@ -36,7 +36,7 @@ Default to `st.echarts_chart` for new charts. It follows the app theme, includin
 | Values that should animate when a widget changes the data | `st.echarts_chart` |
 | Line, bar, or scatter charts with more than about 100,000 points, or with tens of thousands of points whose data changes often | `st.echarts_chart` (see [Large datasets](#large-datasets)) |
 | An existing ECharts option, JSON string, or `pyecharts` chart | `st.echarts_chart` |
-| A quick line, bar, area, or scatter chart from a dataframe, without customization | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` |
+| A quick look at a dataframe as a line, bar, area, or scatter chart, on a page without ECharts charts | `st.line_chart`, `st.bar_chart`, `st.area_chart`, `st.scatter_chart` |
 | Faceting into small multiples, statistical transforms (regression, density, LOESS), or brushing one chart to filter linked charts without a rerun | `st.altair_chart` (Altair ships with Streamlit) |
 | An existing Altair chart or Vega-Lite JSON spec | `st.altair_chart` / `st.vega_lite_chart` |
 | 3D surfaces, meshes, or volumes; violin, ternary, or carpet plots; or an existing Plotly figure | `st.plotly_chart` (see [Plotly and Matplotlib](#plotly-and-matplotlib)) |
@@ -52,7 +52,7 @@ When a built-in chart runs out of options, move it to `st.echarts_chart`. Use `s
 
 Prefer one charting library per page, and ideally across the app. Libraries differ in tooltips, legends, toolbars, zoom behavior, and selection gestures, so mixing them costs some consistency. Combine them when a chart needs a type or feature the main library lacks.
 
-- Default to `st.echarts_chart` for every chart on the page. A built-in chart is fine as a lone quick view, but on a page with ECharts charts, draw the quick ones with `st.echarts_chart` too.
+- Default to `st.echarts_chart` for every chart on the page, simple ones included. When the page or app already has ECharts charts, draw simple charts with `st.echarts_chart` too. A built-in chart is fine as a quick view where no ECharts charts exist.
 - A single Altair chart for a Vega-Lite-only feature, such as faceting, on an otherwise ECharts page is fine.
 - The built-in charts and `st.altair_chart` are both Vega-based and share one look, so mixing those two is fine.
 - In an existing app with Vega-based charts, a small change can stay in that engine. Move the page to `st.echarts_chart` when you rework its charts.
