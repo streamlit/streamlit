@@ -773,6 +773,23 @@ class CachedFunc(Generic[P, R]):
         )
         if info.refresh_mode == "background":
             self._metrics.enable_background_refresh()
+        # Resolved on the first call with positional arguments, so a signature
+        # that can't be inspected only fails calls that need it.
+        self._positional_arg_names: tuple[str | None, ...] | None = None
+
+    def _build_value_key(
+        self, func_args: tuple[Any, ...], func_kwargs: dict[str, Any]
+    ) -> str:
+        if func_args and self._positional_arg_names is None:
+            self._positional_arg_names = _get_positional_arg_names(self._info.func)
+        return _make_value_key(
+            cache_type=self._info.cache_type,
+            func=self._info.func,
+            func_args=func_args,
+            func_kwargs=func_kwargs,
+            hash_funcs=self._info.hash_funcs,
+            positional_arg_names=self._positional_arg_names,
+        )
 
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
@@ -824,13 +841,7 @@ class CachedFunc(Generic[P, R]):
 
         # Generate the key for the cached value. This is based on the
         # arguments passed to the function.
-        value_key = _make_value_key(
-            cache_type=self._info.cache_type,
-            func=self._info.func,
-            func_args=func_args,
-            func_kwargs=func_kwargs,
-            hash_funcs=self._info.hash_funcs,
-        )
+        value_key = self._build_value_key(func_args, func_kwargs)
 
         # Each call counts as exactly one lookup, decided by this first read. The
         # re-read under the compute lock belongs to the same call, so a caller that
@@ -1027,13 +1038,7 @@ class CachedFunc(Generic[P, R]):
         """
         cache = self._info.get_function_cache(self._function_key)
 
-        value_key = _make_value_key(
-            cache_type=self._info.cache_type,
-            func=self._info.func,
-            func_args=func_args,
-            func_kwargs=func_kwargs,
-            hash_funcs=self._info.hash_funcs,
-        )
+        value_key = self._build_value_key(func_args, func_kwargs)
 
         # As in the sync path, this first read alone decides the call's lookup result.
         try:
@@ -1303,13 +1308,7 @@ class CachedFunc(Generic[P, R]):
         """
         cache = self._info.get_function_cache(self._function_key)
         if args or kwargs:
-            key = _make_value_key(
-                cache_type=self._info.cache_type,
-                func=self._info.func,
-                func_args=args,
-                func_kwargs=kwargs,
-                hash_funcs=self._info.hash_funcs,
-            )
+            key = self._build_value_key(args, kwargs)
         else:
             key = None
         cache.clear(key=key)
@@ -1321,11 +1320,16 @@ def _make_value_key(
     func_args: tuple[Any, ...],
     func_kwargs: dict[str, Any],
     hash_funcs: HashFuncsDict | None,
+    positional_arg_names: tuple[str | None, ...] | None = None,
 ) -> str:
     """Create the key for a value within a cache.
 
     This key is generated from the function's arguments. All arguments
     will be hashed, except for those named with a leading "_".
+
+    ``positional_arg_names`` is the result of ``_get_positional_arg_names(func)``.
+    Callers that build many keys for one function pass it in so the function's
+    signature is not inspected on every call.
 
     Raises
     ------
@@ -1337,9 +1341,15 @@ def _make_value_key(
     # Create a (name, value) list of all *args and **kwargs passed to the
     # function.
     arg_pairs: list[tuple[str | None, Any]] = []
-    for arg_idx in range(len(func_args)):
-        arg_name = _get_positional_arg_name(func, arg_idx)
-        arg_pairs.append((arg_name, func_args[arg_idx]))
+    if func_args and positional_arg_names is None:
+        positional_arg_names = _get_positional_arg_names(func)
+    for arg_idx, arg_value in enumerate(func_args):
+        arg_name = (
+            positional_arg_names[arg_idx]
+            if positional_arg_names is not None and arg_idx < len(positional_arg_names)
+            else None
+        )
+        arg_pairs.append((arg_name, arg_value))
 
     for kw_name, kw_val in func_kwargs.items():
         # **kwargs ordering is preserved, per PEP 468
@@ -1423,24 +1433,19 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     return func_hasher.hexdigest()
 
 
-def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | None:
-    """Return the name of a function's positional argument.
+def _get_positional_arg_names(func: Callable[..., Any]) -> tuple[str | None, ...]:
+    """Return the name of each of a function's parameters, by position.
 
-    If arg_index is out of range, or refers to a parameter that is not a
-    named positional argument (e.g. an *args, **kwargs, or keyword-only param),
-    return None instead.
+    Entries for parameters that are not named positional arguments (e.g. *args,
+    **kwargs, or keyword-only params) are None.
     """
-    if arg_index < 0:
-        return None
-
-    params = type_util.get_func_parameters(func)
-    if arg_index >= len(params):
-        return None
-
-    if params[arg_index].kind in {
-        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        inspect.Parameter.POSITIONAL_ONLY,
-    }:
-        return params[arg_index].name
-
-    return None
+    return tuple(
+        param.name
+        if param.kind
+        in {
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.POSITIONAL_ONLY,
+        }
+        else None
+        for param in type_util.get_func_parameters(func)
+    )

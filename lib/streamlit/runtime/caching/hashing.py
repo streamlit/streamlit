@@ -29,7 +29,6 @@ import sys
 import tempfile
 import threading
 import uuid
-import weakref
 from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
@@ -233,9 +232,8 @@ def update_hash(
     This is the main entrypoint to hashing.py.
     """
 
-    hash_stacks.current.hash_source = hash_source
-
     ch = _CacheFuncHasher(cache_type, hash_funcs)
+    ch.hash_stack.hash_source = hash_source
     ch.update(hasher, val)
 
 
@@ -283,23 +281,17 @@ class _HashStacks:
     """Stacks of what has been hashed, with at most 1 stack per thread."""
 
     def __init__(self) -> None:
-        self._stacks: weakref.WeakKeyDictionary[threading.Thread, _HashStack] = (
-            weakref.WeakKeyDictionary()
-        )
+        self._local = threading.local()
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     @property
     def current(self) -> _HashStack:
-        current_thread = threading.current_thread()
-
-        stack = self._stacks.get(current_thread, None)
-
-        if stack is None:
-            stack = _HashStack()
-            self._stacks[current_thread] = stack
-
+        try:
+            stack: _HashStack = self._local.stack
+        except AttributeError:
+            stack = self._local.stack = _HashStack()
         return stack
 
 
@@ -319,24 +311,28 @@ def _float_to_bytes(f: float) -> bytes:
     return struct.pack("<d", f)
 
 
+_MOCK_TYPE_NAMES: Final = frozenset({"unittest.mock.Mock", "unittest.mock.MagicMock"})
+
+
+def _is_simple(obj: Any) -> bool:
+    # Note: bytearray is excluded because it's unhashable and cannot be
+    # used as a dictionary key for memoization
+    return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
+
+
 def _key(obj: Any | None) -> Any:
     """Return key for memoization."""
 
     if obj is None:
         return None
 
-    def is_simple(obj: Any) -> bool:
-        # Note: bytearray is excluded because it's unhashable and cannot be
-        # used as a dictionary key for memoization
-        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
-
-    if is_simple(obj):
+    if _is_simple(obj):
         return obj
 
-    if isinstance(obj, tuple) and all(map(is_simple, obj)):
+    if isinstance(obj, tuple) and all(map(_is_simple, obj)):
         return obj
 
-    if isinstance(obj, list) and all(map(is_simple, obj)):
+    if isinstance(obj, list) and all(map(_is_simple, obj)):
         return ("__l", tuple(obj))
 
     if inspect.isbuiltin(obj) or inspect.isroutine(obj) or inspect.iscode(obj):
@@ -367,6 +363,8 @@ class _CacheFuncHasher:
         else:
             self._hash_funcs = {}
         self._hashes: dict[Any, bytes] = {}
+        # A hasher is used only on the thread that created it.
+        self.hash_stack = hash_stacks.current
 
         # The number of the bytes in the hash.
         self.size = 0
@@ -386,10 +384,11 @@ class _CacheFuncHasher:
             return self._hashes[key]
 
         # Break recursive cycles.
-        if obj in hash_stacks.current:
+        hash_stack = self.hash_stack
+        if obj in hash_stack:
             return _CYCLE_PLACEHOLDER
 
-        hash_stacks.current.push(obj)
+        hash_stack.push(obj)
 
         try:
             # Hash the input
@@ -405,7 +404,7 @@ class _CacheFuncHasher:
         finally:
             # In case an UnhashableTypeError (or other) error is thrown, clean up the
             # stack so we don't get false positives in future hashing calls
-            hash_stacks.current.pop()
+            hash_stack.pop()
 
         return b
 
@@ -421,11 +420,9 @@ class _CacheFuncHasher:
         runs.
         """
 
-        h = util.create_fast_hasher()
+        fqn_type = type_util.get_fqn_type(obj)
 
-        if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
-            obj, "unittest.mock.MagicMock"
-        ):
+        if fqn_type in _MOCK_TYPE_NAMES:
             # Mock objects can appear to be infinitely
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
@@ -436,9 +433,9 @@ class _CacheFuncHasher:
         if isinstance(obj, bytearray):
             return bytes(obj)
 
-        if type_util.get_fqn_type(obj) in self._hash_funcs:
+        if fqn_type in self._hash_funcs:
             # Escape hatch for unsupported objects
-            hash_func = self._hash_funcs[type_util.get_fqn_type(obj)]
+            hash_func = self._hash_funcs[fqn_type]
             try:
                 output = hash_func(obj)
             except Exception as ex:
@@ -461,6 +458,8 @@ class _CacheFuncHasher:
 
         if isinstance(obj, datetime):
             return obj.isoformat().encode()
+
+        h = util.create_fast_hasher()
 
         if isinstance(obj, (list, tuple)):
             for item in obj:

@@ -21,6 +21,7 @@ import hashlib
 import os
 import re
 import tempfile
+import threading
 import time
 import types
 import unittest
@@ -918,6 +919,47 @@ def test_hash_repr_helpers_use_compact_prefix(
 ) -> None:
     """Internal hash helpers use the shared compact ``__repr__`` style."""
     assert repr(make_obj()).startswith(prefix)
+
+
+def test_hash_stacks_are_per_thread() -> None:
+    """Each thread gets its own hash stack, reused across lookups."""
+    stacks = _HashStacks()
+    main_stack = stacks.current
+    assert stacks.current is main_stack
+
+    other_stacks: list[_HashStack] = []
+    thread = threading.Thread(target=lambda: other_stacks.append(stacks.current))
+    thread.start()
+    thread.join()
+
+    assert other_stacks[0] is not main_stack
+
+
+def test_concurrent_hashing_of_a_shared_value_is_consistent() -> None:
+    """Threads hashing the same nested and self-referencing values concurrently
+    get the single-threaded hashes, so cycle detection never sees another
+    thread's in-progress objects.
+    """
+    nested = {"rows": [[i, str(i), {"n": i}] for i in range(20)]}
+    cyclic: list[Any] = [1, 2]
+    cyclic.append(cyclic)
+    expected = (get_hash(nested), get_hash(cyclic))
+    threads = 8
+    start = threading.Barrier(threads)
+    results: list[tuple[bytes, bytes]] = []
+
+    def hash_many() -> None:
+        start.wait()
+        results.extend((get_hash(nested), get_hash(cyclic)) for _ in range(200))
+
+    workers = [threading.Thread(target=hash_many) for _ in range(threads)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+    assert len(results) == threads * 200
+    assert set(results) == {expected}
 
 
 def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
