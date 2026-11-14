@@ -245,6 +245,10 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "mediapipe",
 ]
 
+# The time.monotonic() value when the Streamlit runtime started, set by
+# mark_server_started().
+_server_started_at: float | None = None
+
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
@@ -761,11 +765,26 @@ def gather_metrics(
     return cast("F", wrapped_func)
 
 
+def mark_server_started() -> None:
+    """Record when the Streamlit runtime started, for ``get_server_uptime_seconds``."""
+    global _server_started_at  # noqa: PLW0603
+    _server_started_at = time.monotonic()
+
+
+def get_server_uptime_seconds() -> int | None:
+    """Whole seconds since ``mark_server_started``, or None before it is called."""
+    if _server_started_at is None:
+        return None
+    return int(time.monotonic() - _server_started_at)
+
+
 def create_page_profile_message(
     commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
+    *,
+    server_uptime_seconds: int | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
@@ -817,6 +836,9 @@ def create_page_profile_message(
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
+
+    if server_uptime_seconds is not None:
+        page_profile.cache_usage.server_uptime_seconds = server_uptime_seconds
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a
