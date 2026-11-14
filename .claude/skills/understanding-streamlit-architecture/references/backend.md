@@ -178,6 +178,8 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
+While `browser.gatherUsageStats` is on, each top-level cached call on a thread attached to a script run reports its hit, miss, wait, compute, and overhead time through a `CacheCallTimer` (`cache_call_timer.py`). The totals go into the run's `SharedRunState.cache_stats` (`runtime/scriptrunner_utils/cache_run_stats.py`), which the run's page profile reports as `cache_usage`, along with the server's uptime. A new lookup or compute path in `CachedFunc` needs the same timer hooks. Without them, the totals no longer add up to the cache's share of user-code time.
+
 Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay. A replayed description whose `data` has a `url` registers its Arrow copy again from the element's payload, under the replayed element's delta path; the entry stores no copy of its own.
 
 ## Web server (`lib/streamlit/web/server/`)

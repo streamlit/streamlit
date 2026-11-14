@@ -18,6 +18,7 @@ import collections
 import threading
 from typing import TYPE_CHECKING
 
+from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheStats
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
 if TYPE_CHECKING:
@@ -48,6 +49,10 @@ class SharedRunState:
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
 
+        # Replaced rather than cleared on reset, so a cached call still running
+        # from the previous run finishes into that run's totals.
+        self.cache_stats = RunCacheStats()
+
     def reset(self) -> None:
         """Re-initialize all shared mutable state for a new script run.
 
@@ -66,6 +71,8 @@ class SharedRunState:
             self._tracked_commands = []
             self._tracked_commands_counter = collections.Counter()
 
+        self.cache_stats = RunCacheStats()
+
     @property
     def tracked_commands(self) -> tuple[Command, ...]:
         """An immutable snapshot of tracked commands."""
@@ -80,7 +87,7 @@ class SharedRunState:
 
     def track_command(
         self, command: Command, *, max_per_command: int, max_total: int
-    ) -> None:
+    ) -> bool:
         """Atomically record a command, enforcing both caps.
 
         - If the list already holds ``max_total`` commands, drop the command
@@ -88,13 +95,17 @@ class SharedRunState:
           ``gather_metrics``.
         - Otherwise, count it, and append it if its name is under
           ``max_per_command``.
+
+        Returns whether the command was appended to the list.
         """
         with self._telemetry_lock:
             if len(self._tracked_commands) >= max_total:
-                return
-            if self._tracked_commands_counter[command.name] < max_per_command:
+                return False
+            is_appended = self._tracked_commands_counter[command.name] < max_per_command
+            if is_appended:
                 self._tracked_commands.append(command)
             self._tracked_commands_counter.update([command.name])
+            return is_appended
 
     def command_count_for(self, name: str) -> int:
         """Return how many times a command name has been tracked."""
