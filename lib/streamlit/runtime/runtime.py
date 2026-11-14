@@ -26,6 +26,7 @@ from streamlit.components.lib.local_component_registry import LocalComponentRegi
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime import metrics_util
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
@@ -418,6 +419,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        metrics_util.mark_server_started()
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.

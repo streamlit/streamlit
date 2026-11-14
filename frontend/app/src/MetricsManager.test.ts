@@ -380,6 +380,53 @@ describe("metrics helpers", () => {
     expect(withoutUsage).not.toHaveProperty("agentApiUsage")
   })
 
+  it("buildEventProto forwards cacheUsage through toJSON - pageProfile", async () => {
+    const decodedPageProfile = (
+      props: PageProfile.$Properties
+    ): ReturnType<typeof PageProfile.toObject> =>
+      PageProfile.toObject(
+        PageProfile.decode(
+          PageProfile.encode(PageProfile.create(props)).finish()
+        )
+      )
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          cacheUsage: {
+            serverUptimeSeconds: 12,
+            cacheData: {
+              calls: 3,
+              hits: 2,
+              misses: 1,
+              computeTime: 1500,
+              overheadTime: 40,
+            },
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // Unset cache types and zero values are left out.
+    expect(withUsage.cacheUsage).toStrictEqual({
+      serverUptimeSeconds: "12",
+      cacheData: {
+        calls: "3",
+        hits: "2",
+        misses: "1",
+        computeTime: "1500",
+        overheadTime: "40",
+      },
+    })
+    expect(withoutUsage).not.toHaveProperty("cacheUsage")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

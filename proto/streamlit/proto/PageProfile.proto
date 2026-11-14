@@ -53,6 +53,85 @@ message PageProfile {
   repeated string installed_agents = 14;
   // Agent API activity in this server process. Unset while every count is zero.
   AgentApiUsage agent_api_usage = 15;
+  // st.cache_data and st.cache_resource calls during this script run, and how
+  // long the Streamlit server had been running when the run started.
+  CacheUsage cache_usage = 16;
+}
+
+// Cached-function activity during one script run. Counts and durations only.
+//
+// The times are in microseconds, like exec_time, and come out of the time
+// that is otherwise user code (exec_time minus prep_time minus the command
+// times), so user code minus all cache times is the time spent outside the
+// cache. To make that hold, a cached call is recorded only when:
+// - It runs on a thread attached to this script run: the script thread,
+//   a parallel fragment worker, or a thread passed to add_script_run_ctx.
+//   Calls without a script run, such as background refreshes
+//   (refresh_mode="background") and st.App lifespan tasks, are not recorded.
+// - It is the outermost cached call. Nested calls are part of the outer
+//   call's time and are not counted: calls made while the outer function
+//   computes, including on threads it passes to add_script_run_ctx, and calls
+//   made while the outer call hashes its arguments or reads its result (for
+//   example, from a hash_funcs function). Calls on a thread the outer
+//   function attached, made after it returns, and calls on a thread that
+//   attaches itself with add_script_run_ctx, are recorded.
+// - It is not inside a tracked command (an st.* command timed for this
+//   profile, whether or not a limit left it out of commands), such as the
+//   st.cache_resource call inside st.connection, whose time is already in
+//   that command's time.
+// - It finished before this profile was built. A call still running on a
+//   thread the script didn't wait for is left out. Such a thread can also
+//   finish a call while this profile is being built, so that call may be
+//   partly counted, and a call it starts after the session's next run begins
+//   is counted in that run.
+// Tracked-command time during a recorded call (st.* calls inside the cached
+// function, and the cache write recorded as _cache_data_object or
+// _cache_resource_object) is excluded from that call's compute, wait, and
+// overhead times.
+//
+// Calls on concurrent threads (parallel fragment workers, or threads passed
+// to add_script_run_ctx) are added to the run's totals like their command
+// times, so with concurrent threads both can exceed the run's wall-clock
+// time. Async cached calls awaited concurrently on one thread are scaled
+// down, per group of overlapping calls, to the time during which any of them
+// ran. Calls that don't overlap are not scaled.
+message CacheUsage {
+  // Unset when no st.cache_data call was recorded.
+  CacheTypeUsage cache_data = 1;
+  // Unset when no st.cache_resource call was recorded.
+  CacheTypeUsage cache_resource = 2;
+  // Whole seconds since the Streamlit server started, taken when this script
+  // run started. A low value with many misses means the caches were empty
+  // because the server or container recently started (a container start,
+  // wake-up or restart).
+  // Set on every page profile, including as 0 in the server's first second.
+  optional int64 server_uptime_seconds = 3;
+}
+
+// Recorded calls for one cache type. hits + misses can be lower than calls
+// when a call fails or is interrupted before a value is read or computed:
+// for example, an argument can't be hashed, or the run is stopped or rerun
+// while waiting for another caller.
+message CacheTypeUsage {
+  int64 calls = 1;
+  // Calls that returned a cached value, including callers that waited for
+  // another caller to compute it.
+  int64 hits = 2;
+  // Calls that ran the cached function, including ones where it raised.
+  int64 misses = 3;
+  // Hits that returned a value past its time-to-live (the cache decorator's
+  // ttl) while a background refresh replaces it (refresh_mode="background").
+  int64 stale_hits = 4;
+  // Time running the cached function on misses.
+  int64 compute_time = 5;
+  // Time waiting for another caller (another session, thread, or background
+  // refresh) to finish computing the same value.
+  int64 wait_time = 6;
+  // All other time in the cache: hashing the arguments, reading (for
+  // st.cache_data, unpickling) the result, and replaying cached elements.
+  // Also includes writing the result when the cache write command isn't
+  // listed because a command tracking limit was reached.
+  int64 overhead_time = 7;
 }
 
 // Agent API activity in one server process. Cumulative since this process

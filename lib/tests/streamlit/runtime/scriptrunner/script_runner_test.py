@@ -1422,6 +1422,7 @@ class ScriptRunnerTest(unittest.TestCase):
             assert call_kwargs["exec_time"] > 0
             assert call_kwargs["prep_time"] > 0
             assert call_kwargs["uncaught_exception"] == "AttributeError"
+            assert "server_uptime_seconds" in call_kwargs
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))
