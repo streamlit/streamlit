@@ -23,6 +23,7 @@ New features should include:
 2. **Backend** in `lib/streamlit/`
    - New elements: add to `lib/streamlit/__init__.py`
    - Public `st.*` commands: decorate with `gather_metrics`. Use it only for those public APIs, not internal helpers.
+   - New widgets: pass `register_widget` the same `element_type` name given to `compute_and_register_element_id`. It is reported in usage telemetry (`PageProfile.rerun_element_type`), so it must be a fixed type name, never app content such as a key or a custom component's name.
    - New elements and parameters: describe them for the agent API with `agent_spec.element(...)` or `agent_spec.block(...)` where the proto is filled, and pass that as `agent_props=`. See "Agent API element descriptions" in `lib/streamlit/AGENTS.md`.
 
 3. **Python unit tests** in `lib/tests`

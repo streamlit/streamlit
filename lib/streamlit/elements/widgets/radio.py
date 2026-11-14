@@ -591,6 +591,7 @@ class RadioMixin:
 
         widget_state = register_widget(
             radio_proto.id,
+            element_type="radio",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

@@ -673,6 +673,7 @@ class PydeckMixin:
 
             widget_state = register_widget(
                 pydeck_proto.id,
+                element_type="deck_gl_json_chart",
                 ctx=ctx,
                 deserializer=serde.deserialize,
                 on_change_handler=on_select_callback,

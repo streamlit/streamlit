@@ -1183,6 +1183,7 @@ class TimeWidgetsMixin:
 
         widget_state = register_widget(
             time_input_proto.id,
+            element_type="time_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
@@ -1709,6 +1710,7 @@ class TimeWidgetsMixin:
         )
         widget_state = register_widget(
             date_time_input_proto.id,
+            element_type="date_time_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,
@@ -2313,6 +2315,7 @@ class TimeWidgetsMixin:
 
         widget_state = register_widget(
             date_input_proto.id,
+            element_type="date_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

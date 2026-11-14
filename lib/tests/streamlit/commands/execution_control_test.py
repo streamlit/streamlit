@@ -34,7 +34,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.navigation.page import Page
-from streamlit.runtime.scriptrunner import RerunData, RerunException
+from streamlit.runtime.scriptrunner import RerunData, RerunException, RerunReason
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     RunLocation,
     ThreadState,
@@ -100,6 +100,7 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_false(patched_get_script_run_ctx
             is_fragment_scoped_rerun=False,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
+            reason=RerunReason.ST_RERUN,
         )
     )
 
@@ -124,6 +125,7 @@ def test_st_rerun_is_fragment_scoped_rerun_flag_true(patched_get_script_run_ctx)
             is_fragment_scoped_rerun=True,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
+            reason=RerunReason.ST_RERUN,
         )
     )
 

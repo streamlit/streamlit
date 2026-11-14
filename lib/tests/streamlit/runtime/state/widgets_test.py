@@ -15,6 +15,7 @@
 """Tests widget-related functionality"""
 
 import inspect
+import re
 import unittest
 from typing import get_args
 from unittest.mock import ANY, MagicMock, call, patch
@@ -445,6 +446,38 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         with st.sidebar:
             widget_func()
 
+    @parameterized.expand(WIDGET_ELEMENTS)
+    def test_registers_element_type_used_for_element_id(
+        self, _element_name: str, widget_func
+    ):
+        """Test that each widget registers the element type its id was computed
+        with, which is a fixed name and not app content (it is sent in
+        telemetry)."""
+        element_type_by_id: dict[str, str] = {}
+
+        def record_element_type(element_type: str, *args, **kwargs) -> str:
+            element_id = _compute_element_id(element_type, *args, **kwargs)
+            element_type_by_id[element_id] = element_type
+            return element_id
+
+        with (
+            patch(
+                "streamlit.elements.lib.utils._compute_element_id",
+                side_effect=record_element_type,
+            ),
+            patch(
+                "streamlit.runtime.state.widgets.register_widget_from_metadata",
+                wraps=register_widget_from_metadata,
+            ) as patched_register,
+        ):
+            widget_func()
+
+        registered = [c.args[0] for c in patched_register.call_args_list]
+        assert registered
+        for metadata in registered:
+            assert metadata.element_type == element_type_by_id[metadata.id]
+            assert re.fullmatch(r"[a-z_]+", metadata.element_type)
+
     @parameterized.expand(
         [
             (st.camera_input, "camera_input"),
@@ -640,6 +673,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         with pytest.raises(errors.StreamlitIncompatibleParametersError):
             register_widget(
                 "el_id",
+                element_type="text_input",
                 deserializer=lambda x: x,
                 serializer=lambda x: x,
                 ctx=None,
@@ -656,6 +690,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         ):
             register_widget(
                 element_id="$$ID-some_hash-None",  # No user key (ends with -None)
+                element_type="text_input",
                 ctx=None,
                 on_change_handler=None,
                 args=None,
@@ -676,6 +711,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         # (it will return early due to ctx=None, but that's expected)
         result = register_widget(
             element_id="$$ID-some_hash-my_widget_key",  # Has user key
+            element_type="text_input",
             ctx=None,
             on_change_handler=None,
             args=None,
@@ -694,6 +730,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         with pytest.raises(ValueError, match="clearable must be explicitly set"):
             register_widget(
                 element_id="$$ID-some_hash-my_widget_key",  # Has user key
+                element_type="text_input",
                 ctx=None,
                 on_change_handler=None,
                 args=None,
@@ -710,6 +747,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         with pytest.raises(errors.StreamlitValueError, match="Invalid `bind` value"):
             register_widget(
                 element_id="$$ID-some_hash-my_widget_key",
+                element_type="text_input",
                 ctx=None,
                 on_change_handler=None,
                 args=None,
@@ -726,6 +764,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         # Should not raise even without a user key
         result = register_widget(
             element_id="$$ID-some_hash-None",  # No user key
+            element_type="text_input",
             ctx=None,
             on_change_handler=None,
             args=None,
@@ -744,6 +783,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         ):
             register_widget(
                 element_id="$$ID-some_hash-None",  # No user key (ends with -None)
+                element_type="text_input",
                 ctx=None,
                 on_change_handler=None,
                 args=None,
@@ -762,6 +802,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         ):
             register_widget(
                 element_id="$$ID-some_hash-my_widget_key",
+                element_type="text_input",
                 ctx=None,
                 on_change_handler=None,
                 args=None,
@@ -776,6 +817,7 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
         """persist_state=None does not record any persisted-id tracking."""
         register_widget(
             element_id="$$ID-some_hash-my_widget_key",
+            element_type="text_input",
             ctx=self.script_run_ctx,
             on_change_handler=None,
             args=None,

@@ -797,6 +797,19 @@ class QueryParams(MutableMapping[str, str]):
     def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
         self.set_corrected_value(param_key, value, value_type)
 
+    def matches_query_string(self, query_string: str) -> bool:
+        """Whether ``query_string`` encodes exactly the params held here.
+
+        Embed params are compared too. A key whose value is an empty list is
+        treated as absent, since it is not written to the URL.
+        """
+        current_params: dict[str, list[str]] = {}
+        for key, value in self._query_params.items():
+            values = value if isinstance(value, list) else [value]
+            if values:
+                current_params[key] = values
+        return current_params == _parse_query_string(query_string)
+
     def populate_from_query_string(
         self,
         query_string: str,

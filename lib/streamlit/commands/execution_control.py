@@ -43,6 +43,7 @@ from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
+    RerunReason,
     ScriptRunContext,
     get_script_run_ctx,
 )
@@ -347,6 +348,7 @@ def rerun(  # type: ignore[misc]
             is_fragment_scoped_rerun=_is_fragment_scoped(scope),
             cached_message_hashes=cached_message_hashes,
             context_info=ctx.context_info,
+            reason=RerunReason.ST_RERUN,
         )
 
         if ThreadState.get().run_location == RunLocation.CALLBACK:
@@ -529,6 +531,7 @@ def switch_page(  # type: ignore[misc]
             page_script_hash=page_script_hash,
             cached_message_hashes=ctx.cached_message_hashes,
             context_info=ctx.context_info,
+            reason=RerunReason.NAVIGATION,
         )
     )
     _force_yield_point()

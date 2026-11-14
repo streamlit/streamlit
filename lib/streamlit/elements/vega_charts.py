@@ -2996,6 +2996,7 @@ class VegaChartsMixin:
 
             widget_state = register_widget(
                 vega_lite_proto.id,
+                element_type="vega_lite_chart",
                 on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

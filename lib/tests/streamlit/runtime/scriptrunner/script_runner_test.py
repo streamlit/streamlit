@@ -51,6 +51,7 @@ from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import (
     RerunData,
     RerunException,
+    RerunReason,
     RunDescriptor,
     ScriptRunner,
     ScriptRunnerEvent,
@@ -2503,6 +2504,88 @@ def require_widgets_deltas(
         runner.join()
 
     raise RuntimeError(err_string)
+
+
+@pytest.mark.parametrize(
+    ("previous_page", "page", "rerun_data", "expected"),
+    [
+        pytest.param(
+            "",
+            "main",
+            RerunData(query_string="a=1", reason=RerunReason.MANUAL_RERUN),
+            RerunReason.INITIAL_LOAD,
+            id="first_run_of_session",
+        ),
+        pytest.param(
+            "main",
+            "other",
+            RerunData(reason=RerunReason.MANUAL_RERUN),
+            RerunReason.NAVIGATION,
+            id="page_changed",
+        ),
+        pytest.param(
+            "main",
+            "main",
+            RerunData(page_name="other", reason=RerunReason.MANUAL_RERUN),
+            RerunReason.NAVIGATION,
+            id="page_requested_by_name",
+        ),
+        pytest.param(
+            "main",
+            "main",
+            RerunData(query_string="a=2", reason=RerunReason.MANUAL_RERUN),
+            RerunReason.QUERY_PARAMS_CHANGE,
+            id="query_string_changed",
+        ),
+        pytest.param(
+            "main",
+            "main",
+            RerunData(query_string="a=2", reason=RerunReason.NAVIGATION),
+            RerunReason.NAVIGATION,
+            id="history_navigation_outranks_query_change",
+        ),
+        pytest.param(
+            "main",
+            "main",
+            RerunData(query_string="a=1", reason=RerunReason.ST_RERUN),
+            RerunReason.ST_RERUN,
+            id="nothing_changed_keeps_requested_reason",
+        ),
+    ],
+)
+def test_rerun_reason_at_run_start(
+    previous_page: str,
+    page: str,
+    rerun_data: RerunData,
+    expected: RerunReason,
+) -> None:
+    runner = TestScriptRunner("good_script.py")
+    with runner._session_state.query_params() as qp:
+        qp.populate_from_query_string("a=1")
+
+    reason = runner._rerun_reason_at_run_start(
+        rerun_data,
+        previous_page_script_hash=previous_page,
+        page_script_hash=page,
+    )
+
+    assert reason is expected
+
+
+def test_rerun_reason_at_run_start_falls_back_on_query_param_error() -> None:
+    runner = TestScriptRunner("good_script.py")
+
+    with patch(
+        "streamlit.runtime.state.query_params.QueryParams.matches_query_string",
+        side_effect=RuntimeError("boom"),
+    ):
+        reason = runner._rerun_reason_at_run_start(
+            RerunData(query_string="a=2", reason=RerunReason.ST_RERUN),
+            previous_page_script_hash="main",
+            page_script_hash="main",
+        )
+
+    assert reason is RerunReason.ST_RERUN
 
 
 def test_scriptrunner_repr_uses_util_repr_format() -> None:

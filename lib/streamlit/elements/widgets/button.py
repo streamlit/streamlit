@@ -1499,6 +1499,7 @@ class ButtonMixin:
 
         button_state = register_widget(
             download_button_proto.id,
+            element_type="download_button",
             on_change_handler=on_click_callback,
             args=args,
             kwargs=kwargs,
@@ -1626,6 +1627,7 @@ class ButtonMixin:
             serde = ButtonSerde()
             button_state = register_widget(
                 link_button_proto.id,
+                element_type="link_button",
                 on_change_handler=on_click_callback,
                 args=args,
                 kwargs=kwargs,
@@ -1836,8 +1838,9 @@ class ButtonMixin:
 
         # Only the form submitter button needs a form ID at the moment.
         form_id = current_form_id(self.dg) if is_form_submitter else ""
+        element_type = "form_submit_button" if is_form_submitter else "button"
         element_id = compute_and_register_element_id(
-            "form_submit_button" if is_form_submitter else "button",
+            element_type,
             user_key=key,
             key_as_main_identity=True,
             dg=self.dg,
@@ -1893,6 +1896,7 @@ class ButtonMixin:
 
         button_state = register_widget(
             button_proto.id,
+            element_type=element_type,
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
