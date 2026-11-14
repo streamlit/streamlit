@@ -4,7 +4,7 @@ description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, deb
 license: Apache-2.0
 metadata:
   author: streamlit
-  version: "1.68"
+  version: "1.67"
 ---
 
 # Developing with Streamlit
