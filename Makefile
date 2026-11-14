@@ -581,6 +581,27 @@ debug-e2e-test:
 		exit 1 \
 	)
 
+.PHONY: bi-performance-short
+# Run the canonical focused BI dashboard benchmark tier in Chromium.
+bi-performance-short:
+	cd e2e_playwright && \
+		uv run pytest bi_performance_dashboard_test.py \
+			--browser chromium -n 1 --reruns 0 \
+			-m "bi_performance_validation" && \
+		uv run pytest bi_performance_dashboard_test.py \
+			--browser chromium -n 1 --reruns 0 \
+			-m "bi_performance and not bi_performance_extended and not bi_performance_validation" \
+			--count=$${BI_PERFORMANCE_SAMPLES:-5}
+
+.PHONY: bi-performance-extended
+# Run the large-payload focused BI dashboard benchmark tier in Chromium.
+bi-performance-extended:
+	cd e2e_playwright && \
+		uv run pytest bi_performance_dashboard_test.py \
+			--browser chromium -n 1 --reruns 0 \
+			-m "bi_performance_extended and not bi_performance_validation" \
+			--count=$${BI_PERFORMANCE_SAMPLES:-3}
+
 .PHONY: run-e2e-test
 # Run a playwright e2e test. Use it via `make run-e2e-test st_command_test.py`.
 run-e2e-test:
