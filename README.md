@@ -2,137 +2,188 @@
 
 <img src="https://user-images.githubusercontent.com/7164864/217935870-c0bc60a3-6fc0-4047-b011-7b4c59488c91.png" alt="Streamlit logo" style="margin-top:50px"></img>
 
-# Welcome to Streamlit 👋
+# Streamlit
 
-**A faster way to build and share data apps.**
+### Built in Python. Made for people and agents. Owned by your team.
 
-## What is Streamlit?
+**Streamlit is the agent-native data app framework.** Use it for dashboards, forecasting
+tools, review-and-approval workflows, and any other app built around your data.
 
-Streamlit lets you transform Python scripts into interactive web apps in minutes, instead of weeks. Build dashboards, generate reports, or create chat apps. Once you’ve created an app, you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
+[![PyPI downloads](https://img.shields.io/pypi/dm/streamlit?label=PyPI%20downloads)](https://pypi.org/project/streamlit/)
+[![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/streamlit/streamlit/blob/develop/LICENSE)
 
-### Why choose Streamlit?
+A Streamlit app is just Python, with no separate frontend or API layer. Streamlit is
+batteries-included and takes care of the hard parts: a consistent, well-designed
+interface, state, caching, sign-in, theming, and upgrades. Your team keeps only its own
+logic, written in a language it already reads every day.
 
-- **Simple and Pythonic:** Write beautiful, easy-to-read code.
-- **Fast, interactive prototyping:** Let others interact with your data and provide feedback quickly.
-- **Live editing:** See your app update instantly as you edit your script.
-- **Open-source and free:** Join a vibrant community and contribute to Streamlit's future.
+**The No. 1 Python framework for data apps and dashboards.**
+[More than a million repositories](https://github.com/streamlit/streamlit/network/dependents)
+on GitHub depend on it. Used by millions. Trusted by thousands of companies, from startups
+to global enterprises.
 
-## Installation
+## What teams build
 
-Open a terminal and run:
-
-```bash
-$ pip install streamlit
-$ streamlit hello
-```
-
-If this opens our sweet _Streamlit Hello_ app in your browser, you're all set! If not, head over to [our docs](https://docs.streamlit.io/get-started) for specific installs.
-
-The app features a bunch of examples of what you can do with Streamlit. Jump to the [quickstart](#quickstart) section to understand how that all works.
-
-<img src="https://user-images.githubusercontent.com/7164864/217936487-1017784e-68ec-4e0d-a7f6-6b97525ddf88.gif" alt="Streamlit Hello" width=500 href="none"></img>
-
-## Quickstart
-
-### A little example
-
-Create a new file named `streamlit_app.py` in your project directory with the following code:
-```python
-import streamlit as st
-
-x = st.slider("Select a value")
-st.write(x, "squared is", x * x)
-```
-
-Now run it to open the app!
-```
-$ streamlit run streamlit_app.py
-```
-
-<img src="https://user-images.githubusercontent.com/7164864/215172915-cf087c56-e7ae-449a-83a4-b5fa0328d954.gif" width=300 alt="Little example"></img>
-
-### Give me more!
-
-Streamlit comes in with [a ton of additional powerful elements](https://docs.streamlit.io/develop/api-reference) to spice up your data apps and delight your viewers. Some examples:
-
-<table border="0">
+<table>
   <tr>
-    <td>
-      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/widgets">
-        <img src="https://user-images.githubusercontent.com/7164864/217936099-12c16f8c-7fe4-44b1-889a-1ac9ee6a1b44.png" style="max-height:150px; width:auto; display:block;">
-      </a>
+    <td width="33%" align="center">
+      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
     </td>
-    <td>
-      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/data/st.dataframe">
-        <img src="https://user-images.githubusercontent.com/7164864/215110064-5eb4e294-8f30-4933-9563-0275230e52b5.gif" style="max-height:150px; width:auto; display:block;">
-      </a>
+    <td width="33%" align="center">
+      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
-    <td>
-      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/charts">
-        <img src="https://user-images.githubusercontent.com/7164864/215174472-bca8a0d7-cf4b-4268-9c3b-8c03dad50bcd.gif" style="max-height:150px; width:auto; display:block;">
-      </a>
-    </td>
-    <td>
-      <a target="_blank" href="https://docs.streamlit.io/develop/api-reference/layout">
-        <img src="https://user-images.githubusercontent.com/7164864/217936149-a35c35be-0d96-4c63-8c6a-1c4b52aa8f60.png" style="max-height:150px; width:auto; display:block;">
-      </a>
-    </td>
-    <td>
-      <a target="_blank" href="https://docs.streamlit.io/develop/concepts/multipage-apps">
-        <img src="https://user-images.githubusercontent.com/7164864/215173883-eae0de69-7c1d-4d78-97d0-3bc1ab865e5b.gif" style="max-height:150px; width:auto; display:block;">
-      </a>
-    </td>
-    <td>
-      <a target="_blank" href="https://streamlit.io/gallery">
-        <img src="https://user-images.githubusercontent.com/7164864/215109229-6ae9111f-e5c1-4f0b-b3a2-87a79268ccc9.gif" style="max-height:150px; width:auto; display:block;">
-      </a>
+    <td width="33%" align="center">
+      <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png?v=2" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
     </td>
   </tr>
   <tr>
-    <td>Input widgets</td>
-    <td>Dataframes</td>
-    <td>Charts</td>
-    <td>Layout</td>
-    <td>Multi-page apps</td>
-    <td>Fun</td>
+    <td width="33%" valign="top">
+      <sub>APPS THAT COMPUTE</sub><br>
+      <b>Forecasts, simulations, and models with what-if levers</b><br>
+      Pricing and demand simulators, risk models, and AI analysis over your data. The
+      computation and the interface are the same Python.<br>
+      <a href="https://apps-that-compute-demo.streamlit.app/">Try the live demo →</a>
+    </td>
+    <td width="33%" valign="top">
+      <sub>APPS THAT ACT</sub><br>
+      <b>Review queues, approvals, sign-offs, and writeback</b><br>
+      Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
+      app as the data, including approving what an AI agent proposes.<br>
+      <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
+    </td>
+    <td width="33%" valign="top">
+      <sub>ADVANCED DASHBOARDS</sub><br>
+      <b>KPI dashboards with drill-down and cross-filtering</b><br>
+      Fast over large data. Coming from a BI tool? Move your dashboards to Streamlit, and
+      modernize them on the way.<br>
+      <a href="https://advanced-dashboard-demo.streamlit.app/">Try the live demo →</a>
+    </td>
   </tr>
 </table>
 
+The source for all three is in [streamlit/demos](https://github.com/streamlit/demos).
+Streamlit is also great for AI and chat apps over your data (`st.chat_input`,
+`st.write_stream`), ML and model tools, and internal data tools.
 
-Our vibrant creators community also extends Streamlit capabilities using  🧩 [Streamlit Components](https://streamlit.io/components).
+## Get started
 
-## Get inspired
+```bash
+pip install streamlit
+```
 
-There's so much you can build with Streamlit:
-- 🤖  [LLMs & chatbot apps](https://streamlit.io/gallery?category=llms)
-- 🧬  [Science & technology apps](https://streamlit.io/gallery?category=science-technology)
-- 💬  [NLP & language apps](https://streamlit.io/gallery?category=nlp-language)
-- 🏦  [Finance & business apps](https://streamlit.io/gallery?category=finance-business)
-- 🗺  [Geography & society apps](https://streamlit.io/gallery?category=geography-society)
-- and more!
+### Build with your coding agent
 
-**Check out [our gallery!](https://streamlit.io/gallery)** 🎈
+Run [`streamlit skills`](https://docs.streamlit.io/develop/api-reference/cli/skills) in
+your project folder. It installs our expert skills for Claude Code and any agent that
+reads the shared `.agents` skills folder, matched to your Streamlit version. So your agent
+follows current best practices instead of whatever it memorized two versions ago.
+
+Then ask, and mention Streamlit so the agent picks up the skills (in Claude Code,
+`/developing-with-streamlit` works too):
+
+> Build a Streamlit app that forecasts demand from `sales.csv`, with what-if levers for
+> price and growth.
+
+### Or write it yourself
+
+Here's a complete app: a demand forecast that planners can adjust and submit for sign-off.
+Save it as `streamlit_app.py` and run `streamlit run streamlit_app.py`:
+
+```python
+import sqlite3
+
+import numpy as np
+import pandas as pd
+import streamlit as st
+
+st.title("Demand plan")
+
+
+@st.cache_data
+def load_actuals() -> pd.DataFrame:
+    # Swap in your own query, e.g. st.connection("snowflake").query("...")
+    months = pd.date_range("2025-01-01", periods=12, freq="MS")
+    units = 1_000 + 40 * np.arange(12) + np.random.default_rng(0).normal(0, 50, 12)
+    return pd.DataFrame({"month": months, "actual": units.round()})
+
+
+actuals = load_actuals()
+growth = st.slider("Monthly growth (%)", -5.0, 10.0, 2.0, step=0.5)
+
+months = pd.date_range("2026-01-01", periods=6, freq="MS")
+baseline = actuals["actual"].iloc[-1] * (1 + growth / 100) ** np.arange(1, 7)
+forecast = pd.DataFrame({"month": months, "forecast": baseline.round()})
+
+# Planners edit the forecast, and the chart follows
+plan = st.data_editor(forecast, disabled=["month"], hide_index=True)
+st.line_chart(pd.concat([actuals, plan]), x="month")
+
+if st.button("Submit for sign-off", type="primary"):
+    with sqlite3.connect("plans.db") as db:  # Or your warehouse
+        plan.to_sql("plans", db, if_exists="append", index=False)
+    st.success(f"Submitted {len(plan)} months for sign-off.")
+```
+
+## Why Streamlit
+
+**Generating an app is cheap. Owning it isn't.** An agent can write a React frontend, a
+Python backend, and the API between them in an afternoon. Then someone has to review all
+three, keep them in sync, and patch them for years. With Streamlit, it's one layer of
+Python, and the plumbing is our job.
+
+- **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
+  table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
+  charts cover nearly every visualization, from KPI sparklines to maps and diagrams, and
+  Vega-Lite and ECharts charts switch to faster rendering on their own as the data grows.
+- **Fast dashboards.** Wrap a section in `@st.fragment`, and only that section reruns when
+  people use it. Cached queries can refresh in the background
+  (`@st.cache_data(ttl=..., refresh_mode="background")`), so nobody waits on a stale
+  query. Chart and table selections (`on_select`) let people cross-filter and drill down,
+  and filters bound to the URL (`bind="query-params"`) make every view shareable.
+- **Free on the logic. Opinionated on the design.** Write any logic you like, with any
+  Python library. The look comes from Streamlit: native charts, tables, and filters,
+  styled by one [brand theme](https://docs.streamlit.io/develop/concepts/configuration/theming)
+  that all your apps share. App number 200 looks like it belongs with app number one, no
+  matter who, or what, built it.
+- **Stable for years.** Breaking changes are extremely rare. Most apps written years ago
+  still run on the latest release, and every upgrade brings them new features, speed, and
+  security fixes.
+- **Built for agents.** Agents drive the running app without a browser, read the numbers
+  back as data, and leave tests behind for CI
+  ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)). Turn on the
+  experimental agent API (`server.enableAgentApi`), and Claude, ChatGPT, Cursor, or any
+  other MCP client can use your app with the same logic and access rules as a person in
+  the browser. There's no second API to build.
+- **Enterprise-ready.** Built-in sign-in (`st.login`), security scanning on every change
+  with fixes in regular releases, and accessibility built to WCAG 2.2 A and AA, with a
+  [published audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
+  Run it in your own cloud, on [Community Cloud](https://streamlit.io/cloud), or natively
+  [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
+- **Escape hatches.** Need a bespoke screen? Drop in a
+  [custom component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
+  written in React or anything else. Need a webhook or your own API route? Add it with
+  [`st.App`](https://docs.streamlit.io/develop/api-reference/server/st.app).
 
 ## Community Cloud
 
-Deploy, manage and share your apps for free using our [Community Cloud](https://streamlit.io/cloud)! Sign-up [here](https://share.streamlit.io/signup). <br><br>
-<img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400"></img>
+Deploy, manage, and share your apps for free on
+[Community Cloud](https://streamlit.io/cloud). Connect a GitHub repository, pick your app
+file, and your app gets its own `streamlit.app` URL.
+[Sign up here](https://share.streamlit.io/signup).
+
+<img src="https://user-images.githubusercontent.com/7164864/214965336-64500db3-0d79-4a20-8052-2dda883902d2.gif" width="400" alt="Deploying an app from a GitHub repository on Community Cloud">
 
 ## Resources
 
-- Explore our [docs](https://docs.streamlit.io) to learn how Streamlit works.
-- Ask questions and get help in our [community forum](https://discuss.streamlit.io).
-- Read our [blog](https://blog.streamlit.io) for tips from developers and creators.
-- Extend Streamlit's capabilities by installing or creating your own [Streamlit Components](https://streamlit.io/components).
-- Help others find and play with your app by using the Streamlit GitHub badge in your repository:
-```markdown
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](URL_TO_YOUR_APP)
-```
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/streamlit/roadmap)
+- [Docs](https://docs.streamlit.io) to learn how Streamlit works
+- [Community forum](https://discuss.streamlit.io) for questions and help
+- [Blog](https://blog.streamlit.io) for tips from developers and creators
+- [Components](https://streamlit.io/components) to extend Streamlit
 
 ## Contribute
 
-🎉 Thanks for your interest in helping improve Streamlit! 🎉
+Thanks for your interest in helping improve Streamlit!
 
 We have paused accepting pull requests from outside the Streamlit maintainer team. You can still
 make a valuable contribution by [reporting bugs](https://github.com/streamlit/streamlit/issues/new?template=bug_report.yml),

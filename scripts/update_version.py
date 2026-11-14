@@ -75,6 +75,14 @@ NODE_PACKAGES = [
     {"frontend/utils/package.json": regex},
 ]
 
+# The bundled agent skill's frontmatter `metadata.version` holds the release's
+# major.minor version.
+SKILLS = {
+    "lib/streamlit/.agents/skills/developing-with-streamlit/SKILL.md": (
+        r'(?P<pre>^  version: ").*(?P<post>"$)'
+    ),
+}
+
 
 def verify_pep440(version: str) -> packaging.version.Version:
     """Verify if version is PEP440 compliant.
@@ -103,7 +111,7 @@ def update_files(data: dict[str, str], version: str) -> None:
         file_path = os.path.join(BASE_DIR, filename)
         matched = False
         pattern = re.compile(regex)
-        for line in fileinput.input(file_path, inplace=True):
+        for line in fileinput.input(file_path, inplace=True, encoding="utf-8"):
             if pattern.match(line.rstrip()):
                 matched = True
             updated_line = re.sub(regex, rf"\g<pre>{version}\g<post>", line.rstrip())
@@ -140,6 +148,7 @@ def main() -> None:
     update_files(PYTHON, str(pep440_version))
     for package in NODE_PACKAGES:
         update_files(package, str(semver_version))
+    update_files(SKILLS, f"{pep440_version.major}.{pep440_version.minor}")
 
 
 if __name__ == "__main__":
