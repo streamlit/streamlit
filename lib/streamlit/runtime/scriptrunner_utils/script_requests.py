@@ -27,7 +27,7 @@ from streamlit.proto.Common_pb2 import StringTriggerValue as StringTriggerValueP
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from streamlit.proto.ClientState_pb2 import ContextInfo
 
@@ -80,9 +80,20 @@ class RerunData:
     cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     # context_info is used to store information from the user browser (e.g. timezone)
     context_info: ContextInfo | None = None
+    # Highest accepted interaction sequence number folded into this request.
+    # Zero for requests that did not come from the session's rerun mailbox.
+    batch_seq: int = 0
+    # Set on a placeholder request whose data must be claimed from the
+    # session's rerun mailbox at the next run boundary.
+    from_mailbox: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
+
+
+# Returned by a ScriptRequests or ScriptRunner yield check when the next run's
+# data lives in the session's rerun mailbox rather than the per-runner latch.
+MAILBOX_RERUN_PLACEHOLDER = RerunData(from_mailbox=True)
 
 
 @dataclass(frozen=True)
@@ -281,6 +292,118 @@ def _coalesce_replay_trigger_values(
     return coalesced_values or None
 
 
+def rerun_preempts_script(rerun_data: RerunData) -> bool:
+    """Whether a pending ``rerun_data`` should interrupt the run in progress."""
+    return not _fragment_run_should_not_preempt_script(
+        rerun_data.fragment_id_queue, rerun_data.is_fragment_scoped_rerun
+    )
+
+
+def coalesce_rerun_data(old_data: RerunData | None, new_data: RerunData) -> RerunData:
+    """Fold ``new_data`` into an older pending request.
+
+    With no older request, ``new_data`` is normalized: a bare ``fragment_id``
+    moves into ``fragment_id_queue`` and replay triggers are filtered to active
+    ones.
+    """
+    if old_data is None:
+        if new_data.fragment_id:
+            new_data = replace(
+                new_data,
+                fragment_id=None,
+                fragment_id_queue=[new_data.fragment_id],
+            )
+
+        coalesced_replay_states = _coalesce_replay_trigger_states(
+            None, new_data.replay_trigger_states
+        )
+        return replace(
+            new_data,
+            replay_trigger_states=coalesced_replay_states,
+            replay_trigger_values=_coalesce_replay_trigger_values(
+                new_states=new_data.replay_trigger_states,
+                old_values=None,
+                new_values=new_data.replay_trigger_values,
+                coalesced_states=coalesced_replay_states,
+            ),
+        )
+
+    coalesced_states = _coalesce_widget_states(
+        old_data.widget_states,
+        new_data.widget_states,
+    )
+    coalesced_replay_states = _coalesce_replay_trigger_states(
+        old_data.replay_trigger_states,
+        new_data.replay_trigger_states,
+    )
+    coalesced_replay_values = _coalesce_replay_trigger_values(
+        new_states=new_data.replay_trigger_states,
+        old_values=old_data.replay_trigger_values,
+        new_values=new_data.replay_trigger_values,
+        coalesced_states=coalesced_replay_states,
+    )
+
+    # Fold a bare fragment_id into fragment_id_queue so the coalescing
+    # below only has to read one field.
+    if new_data.fragment_id:
+        new_data = replace(
+            new_data,
+            fragment_id=None,
+            fragment_id_queue=[
+                new_data.fragment_id,
+                *new_data.fragment_id_queue,
+            ],
+        )
+
+    if _is_full_app_rerun(old_data) or _is_full_app_rerun(new_data):
+        # A full-app rerun anywhere in the interaction trumps every
+        # fragment-targeted one, since it reruns those fragments too.
+        # Collapse to a single full-app rerun, whichever arrived first.
+        fragment_id_queue: list[str] = []
+        is_fragment_scoped_rerun = False
+    else:
+        # Both requests still need their fragments to run, so take the
+        # union (deduped, order-preserving). Stay fragment-scoped if either
+        # request was, since that is what lets the coalesced rerun preempt
+        # the run in progress.
+        fragment_id_queue = [*old_data.fragment_id_queue]
+        for fragment_id in new_data.fragment_id_queue:
+            if fragment_id not in fragment_id_queue:
+                fragment_id_queue.append(fragment_id)
+        is_fragment_scoped_rerun = (
+            old_data.is_fragment_scoped_rerun or new_data.is_fragment_scoped_rerun
+        )
+
+    return RerunData(
+        query_string=new_data.query_string,
+        widget_states=coalesced_states,
+        page_script_hash=new_data.page_script_hash,
+        page_name=new_data.page_name,
+        fragment_id_queue=fragment_id_queue,
+        cached_message_hashes=new_data.cached_message_hashes,
+        is_fragment_scoped_rerun=is_fragment_scoped_rerun,
+        is_auto_rerun=new_data.is_auto_rerun,
+        # Use the newer request's history flag. Preserve a pending flag
+        # only across an automatic rerun so a timer cannot cancel URL
+        # restoration. A widget interaction that lands while a history
+        # rerun is still pending therefore drops the history bit: the
+        # coalesced run keeps the restored query_string, but stale
+        # widget state can win and will not be written back to the URL
+        # (has_param is already true). Leaving that desync until the
+        # next interaction is an accepted limitation; writing the
+        # surviving widget value back would fight the user's click and
+        # the restored URL.
+        is_history_navigation=(
+            new_data.is_history_navigation
+            or (old_data.is_history_navigation and new_data.is_auto_rerun)
+        ),
+        replay_trigger_states=coalesced_replay_states,
+        replay_trigger_values=coalesced_replay_values,
+        context_info=new_data.context_info,
+        batch_seq=max(old_data.batch_seq, new_data.batch_seq),
+    )
+
+
 class ScriptRequests:
     """An interface for communicating with a ScriptRunner. Thread-safe.
 
@@ -288,10 +411,25 @@ class ScriptRequests:
     ScriptRunner handles those requests.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, has_mailbox_work: Callable[[], bool] | None = None) -> None:
+        """
+        Parameters
+        ----------
+        has_mailbox_work
+            Called by ``on_scriptrunner_ready`` when no local rerun is pending.
+            Returns True when the session's rerun mailbox still holds work for
+            this runner; otherwise the callee retires the runner as a consumer
+            and the runner stops. Invoked while holding this object's lock, so
+            it must not call back into this ScriptRequests.
+        """
         self._lock = threading.Lock()
         self._state = ScriptRequestType.CONTINUE
         self._rerun_data = RerunData()
+        self._has_mailbox_work = has_mailbox_work
+
+    def is_stopped(self) -> bool:
+        """Whether a STOP request was recorded. Stopped requests never resume."""
+        return self._state == ScriptRequestType.STOP
 
     def request_stop(self) -> None:
         """Request that the ScriptRunner stop running. A stopped ScriptRunner
@@ -334,109 +472,11 @@ class ScriptRequests:
 
         if self._state == ScriptRequestType.CONTINUE:
             self._state = ScriptRequestType.RERUN
-
-            if new_data.fragment_id:
-                new_data = replace(
-                    new_data,
-                    fragment_id=None,
-                    fragment_id_queue=[new_data.fragment_id],
-                )
-
-            coalesced_replay_states = _coalesce_replay_trigger_states(
-                None, new_data.replay_trigger_states
-            )
-            new_data = replace(
-                new_data,
-                replay_trigger_states=coalesced_replay_states,
-                replay_trigger_values=_coalesce_replay_trigger_values(
-                    new_states=new_data.replay_trigger_states,
-                    old_values=None,
-                    new_values=new_data.replay_trigger_values,
-                    coalesced_states=coalesced_replay_states,
-                ),
-            )
-            self._rerun_data = new_data
+            self._rerun_data = coalesce_rerun_data(None, new_data)
             return True
 
         if self._state == ScriptRequestType.RERUN:
-            coalesced_states = _coalesce_widget_states(
-                self._rerun_data.widget_states,
-                new_data.widget_states,
-            )
-            coalesced_replay_states = _coalesce_replay_trigger_states(
-                self._rerun_data.replay_trigger_states,
-                new_data.replay_trigger_states,
-            )
-            coalesced_replay_values = _coalesce_replay_trigger_values(
-                new_states=new_data.replay_trigger_states,
-                old_values=self._rerun_data.replay_trigger_values,
-                new_values=new_data.replay_trigger_values,
-                coalesced_states=coalesced_replay_states,
-            )
-
-            # Fold a bare fragment_id into fragment_id_queue so the coalescing
-            # below only has to read one field.
-            if new_data.fragment_id:
-                new_data = replace(
-                    new_data,
-                    fragment_id=None,
-                    fragment_id_queue=[
-                        new_data.fragment_id,
-                        *new_data.fragment_id_queue,
-                    ],
-                )
-
-            if _is_full_app_rerun(self._rerun_data) or _is_full_app_rerun(new_data):
-                # A full-app rerun anywhere in the interaction trumps every
-                # fragment-targeted one, since it reruns those fragments too.
-                # Collapse to a single full-app rerun, whichever arrived first.
-                fragment_id_queue: list[str] = []
-                is_fragment_scoped_rerun = False
-            else:
-                # Both requests still need their fragments to run, so take the
-                # union (deduped, order-preserving). Stay fragment-scoped if either
-                # request was, since that is what lets the coalesced rerun preempt
-                # the run in progress.
-                fragment_id_queue = [*self._rerun_data.fragment_id_queue]
-                for fragment_id in new_data.fragment_id_queue:
-                    if fragment_id not in fragment_id_queue:
-                        fragment_id_queue.append(fragment_id)
-                is_fragment_scoped_rerun = (
-                    self._rerun_data.is_fragment_scoped_rerun
-                    or new_data.is_fragment_scoped_rerun
-                )
-
-            self._rerun_data = RerunData(
-                query_string=new_data.query_string,
-                widget_states=coalesced_states,
-                page_script_hash=new_data.page_script_hash,
-                page_name=new_data.page_name,
-                fragment_id_queue=fragment_id_queue,
-                cached_message_hashes=new_data.cached_message_hashes,
-                is_fragment_scoped_rerun=is_fragment_scoped_rerun,
-                is_auto_rerun=new_data.is_auto_rerun,
-                # Use the newer request's history flag. Preserve a pending flag
-                # only across an automatic rerun so a timer cannot cancel URL
-                # restoration. A widget interaction that lands while a history
-                # rerun is still pending therefore drops the history bit: the
-                # coalesced run keeps the restored query_string, but stale
-                # widget state can win and will not be written back to the URL
-                # (has_param is already true). Leaving that desync until the
-                # next interaction is an accepted limitation; writing the
-                # surviving widget value back would fight the user's click and
-                # the restored URL.
-                is_history_navigation=(
-                    new_data.is_history_navigation
-                    or (
-                        self._rerun_data.is_history_navigation
-                        and new_data.is_auto_rerun
-                    )
-                ),
-                replay_trigger_states=coalesced_replay_states,
-                replay_trigger_values=coalesced_replay_values,
-                context_info=new_data.context_info,
-            )
-
+            self._rerun_data = coalesce_rerun_data(self._rerun_data, new_data)
             return True
 
         # STOP, CONTINUE, and RERUN are all handled above.
@@ -497,7 +537,10 @@ class ScriptRequests:
         If we have a RERUN request, return the request and set
         our internal state to CONTINUE.
 
-        If we have a STOP request or no request, set our internal state
+        With no local request, return ``MAILBOX_RERUN_PLACEHOLDER`` if the
+        session's rerun mailbox still holds work for this runner.
+
+        Otherwise, or if we have a STOP request, set our internal state
         to STOP.
         """
         with self._lock:
@@ -509,6 +552,13 @@ class ScriptRequests:
                 if rerun_data.replay_trigger_values is not None:
                     self._rerun_data = replace(rerun_data, replay_trigger_values=None)
                 return ScriptRequest(ScriptRequestType.RERUN, rerun_data)
+
+            if (
+                self._state == ScriptRequestType.CONTINUE
+                and self._has_mailbox_work is not None
+                and self._has_mailbox_work()
+            ):
+                return ScriptRequest(ScriptRequestType.RERUN, MAILBOX_RERUN_PLACEHOLDER)
 
             # If we don't have a rerun request, unconditionally change our
             # state to STOP.
