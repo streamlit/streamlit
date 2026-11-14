@@ -61,7 +61,7 @@ Prefer one charting library per page, and ideally across the app. Libraries diff
 
 ## Accessible names (`alt`)
 
-Pass keyword-only `alt=` on every chart, map, and diagram. Write a short, plain-text name that states the chart's takeaway or the map's subject, not the chart type or a data dump. Markdown syntax is announced literally.
+Pass keyword-only `alt=` on every chart, map, and diagram. Write a short, plain-text name that states the chart's takeaway or the map's subject, not the chart type or a data dump. Markdown syntax is announced literally. Broader author/agent accessibility defaults are in [accessibility.md](accessibility.md).
 
 ```python
 st.bar_chart(
