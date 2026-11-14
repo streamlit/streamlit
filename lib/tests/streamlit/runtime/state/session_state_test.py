@@ -273,6 +273,31 @@ class WStateTests(unittest.TestCase):
         assert serialized.id == "widget_id_1"
         assert serialized.int_value == 5
 
+    def test_get_received_keeps_the_clients_proto_after_decoding(self):
+        """A decoded value still reports what the client sent, even when the
+        serializer would now produce something else."""
+        assert self.wstates["widget_id_1"] == "5"
+        # Like a format_func that reads the clock: the same value now
+        # serializes differently.
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="widget_id_1",
+                deserializer=str,
+                serializer=lambda value: int(value) + 1,
+                value_type="int_value",
+            )
+        )
+
+        received = self.wstates.get_received("widget_id_1")
+        assert received is not None
+        assert received.int_value == 5
+        assert self.wstates.get_serialized("widget_id_1").int_value == 6
+
+    def test_get_received_is_none_without_a_client_value(self):
+        """A value set on the server, or no value at all, was not received."""
+        assert self.wstates.get_received("widget_id_2") is None
+        assert self.wstates.get_received("nonexistent_id") is None
+
     def test_get_serialized_array_value(self):
         widget_state = WidgetStateProto()
         widget_state.id = "widget_id_1"

@@ -247,20 +247,18 @@ class RegisterWidgetResult(Generic[T_co]):
 
         Implies an update to the frontend is needed.
     incoming_serialized_value : str or None
-        The widget's stored serialized (wire) value as it entered this run,
-        captured before this run's serializer was applied. ``None`` for
-        non-string widgets or when no value is stored yet. Because it's the raw
-        wire form (not re-derived from the deserialized ``value``), callers can
-        reconcile a stored value against freshly computed state even when the
-        deserialized value is stale.
+        The serialized (wire) value the client sent for this run. ``None`` for
+        non-string widgets or when the client sent no value. Because it's the
+        raw wire form (not re-derived from the deserialized ``value``), callers
+        can reconcile a stored value against freshly computed state even when
+        the deserialized value is stale.
     incoming_serialized_values : list of str or None
         The array-widget counterpart of ``incoming_serialized_value``: the
-        stored serialized (wire) values as they entered this run, captured
-        before this run's serializer was applied. ``None`` for non-array
-        widgets or when no value is stored yet. Because these are the raw wire
-        labels (not re-derived from the deserialized ``value``), callers can
-        detect that a stored selection's formatted label changed between runs
-        even when the deserialized value is unchanged.
+        serialized (wire) values the client sent for this run. ``None`` for
+        non-array widgets or when the client sent no value. Because these are
+        the raw wire labels (not re-derived from the deserialized ``value``),
+        callers can detect that a stored selection's formatted label changed
+        between runs even when the deserialized value is unchanged.
     """
 
     value: T_co
