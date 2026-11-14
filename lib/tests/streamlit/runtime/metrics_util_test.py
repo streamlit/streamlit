@@ -1391,15 +1391,41 @@ def test_create_page_profile_message_reports_agent_api_usage() -> None:
     assert reported.instance_id
 
 
-def test_create_page_profile_message_reports_server_uptime() -> None:
-    """``cache_usage`` carries the server uptime passed in for the run."""
-    msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=42)
+def test_create_page_profile_message_reports_cache_usage() -> None:
+    """``cache_usage`` carries the run's totals per cache type, in microseconds,
+    and the server uptime.
+    """
+    ctx = create_mock_script_run_ctx()
+    stats = ctx.shared.cache_stats.current_thread_stats()
+    stats.open_call()
+    stats.cache_data.calls = 3
+    stats.cache_data.hits = 2
+    stats.cache_data.misses = 1
+    stats.cache_data.stale_hits = 1
+    stats.cache_data.compute_time = 1.5
+    stats.cache_data.wait_time = 0.25
+    stats.cache_data.overhead_time = 0.001
+    stats.close_call()
 
-    assert msg.page_profile.cache_usage.server_uptime_seconds == 42
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message(
+            [], 0, 0, server_uptime_seconds=42
+        )
+
+    usage = msg.page_profile.cache_usage
+    assert usage.server_uptime_seconds == 42
+    assert not usage.HasField("cache_resource")
+    assert usage.cache_data.calls == 3
+    assert usage.cache_data.hits == 2
+    assert usage.cache_data.misses == 1
+    assert usage.cache_data.stale_hits == 1
+    assert usage.cache_data.compute_time == 1_500_000
+    assert usage.cache_data.wait_time == 250_000
+    assert usage.cache_data.overhead_time == 1_000
 
 
 def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
-    """``cache_usage`` stays unset without a known uptime."""
+    """``cache_usage`` stays unset without cached calls or a known uptime."""
     msg = metrics_util.create_page_profile_message([], 0, 0)
 
     assert not msg.page_profile.HasField("cache_usage")

@@ -30,11 +30,12 @@ from streamlit import config, file_util, type_util, util
 from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.PageProfile_pb2 import Argument, Command
+from streamlit.proto.PageProfile_pb2 import Argument, Command, PageProfile
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -622,6 +623,23 @@ def format_uncaught_exception(exc: BaseException) -> str:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
+def _record_command_time(
+    ctx: ScriptRunContext | None,
+    command_telemetry: Command,
+    seconds: float,
+    *,
+    is_command_listed: bool,
+) -> None:
+    """Set a tracked command's time, and report it to the run's cache totals.
+
+    Only commands listed in the page profile are reported, because only their
+    time is subtracted from user code.
+    """
+    command_telemetry.time = to_microseconds(seconds)
+    if ctx is not None and is_command_listed:
+        ctx.shared.cache_stats.record_tracked_command_time(seconds)
+
+
 @overload
 def gather_metrics(
     name: str,
@@ -714,6 +732,7 @@ def gather_metrics(
         # Only the command that deactivated tracking may restore it, so nested
         # commands cannot reactivate tracking for an outer command.
         has_set_command_tracking_deactivated = False
+        is_command_listed = False
 
         if ctx and tracking_activated:
             try:
@@ -725,7 +744,7 @@ def gather_metrics(
                     **kwargs,
                 )
 
-                ctx.shared.track_command(
+                is_command_listed = ctx.shared.track_command(
                     command_telemetry,
                     max_per_command=_MAX_TRACKED_PER_COMMAND,
                     max_total=_MAX_TRACKED_COMMANDS,
@@ -743,7 +762,12 @@ def gather_metrics(
             # Duplicated from below, because static analysis tools get confused
             # by deferring the rethrow.
             if tracking_activated and command_telemetry:
-                command_telemetry.time = to_microseconds(timer() - exec_start)
+                _record_command_time(
+                    ctx,
+                    command_telemetry,
+                    timer() - exec_start,
+                    is_command_listed=is_command_listed,
+                )
             raise
         finally:
             if has_set_command_tracking_deactivated:
@@ -751,7 +775,12 @@ def gather_metrics(
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
-            command_telemetry.time = to_microseconds(timer() - exec_start)
+            _record_command_time(
+                ctx,
+                command_telemetry,
+                timer() - exec_start,
+                is_command_listed=is_command_listed,
+            )
 
         return result
 
@@ -776,6 +805,33 @@ def get_server_uptime_seconds() -> int | None:
     if _server_started_at is None:
         return None
     return int(time.monotonic() - _server_started_at)
+
+
+def _fill_cache_usage(
+    page_profile: PageProfile,
+    ctx: ScriptRunContext | None,
+    server_uptime_seconds: int | None,
+) -> None:
+    """Copy the run's cached-call totals and the server uptime onto the profile."""
+    cache_usage = page_profile.cache_usage
+    if server_uptime_seconds is not None:
+        cache_usage.server_uptime_seconds = server_uptime_seconds
+    if ctx is None:
+        return
+    cache_data, cache_resource = ctx.shared.cache_stats.totals()
+    for totals, usage in (
+        (cache_data, cache_usage.cache_data),
+        (cache_resource, cache_usage.cache_resource),
+    ):
+        if totals.calls == 0:
+            continue
+        usage.calls = totals.calls
+        usage.hits = totals.hits
+        usage.misses = totals.misses
+        usage.stale_hits = totals.stale_hits
+        usage.compute_time = to_microseconds(totals.compute_time)
+        usage.wait_time = to_microseconds(totals.wait_time)
+        usage.overhead_time = to_microseconds(totals.overhead_time)
 
 
 def create_page_profile_message(
@@ -837,8 +893,7 @@ def create_page_profile_message(
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
 
-    if server_uptime_seconds is not None:
-        page_profile.cache_usage.server_uptime_seconds = server_uptime_seconds
+    _fill_cache_usage(page_profile, ctx, server_uptime_seconds)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a
