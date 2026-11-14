@@ -818,7 +818,7 @@ def _fill_cache_usage(
         cache_usage.server_uptime_seconds = server_uptime_seconds
     if ctx is None:
         return
-    cache_data, cache_resource = ctx.shared.cache_stats.totals()
+    cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
     for totals, usage in (
         (cache_data, cache_usage.cache_data),
         (cache_resource, cache_usage.cache_resource),

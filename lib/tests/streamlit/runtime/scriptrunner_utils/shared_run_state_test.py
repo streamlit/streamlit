@@ -40,7 +40,7 @@ def test_reset_clears_all_fields() -> None:
     shared.reset()
 
     assert shared.cache_stats is not cache_stats
-    assert shared.cache_stats.totals()[0].calls == 0
+    assert shared.cache_stats.totals(0.0)[0].calls == 0
     assert "widget" not in shared.widget_ids_this_run
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run

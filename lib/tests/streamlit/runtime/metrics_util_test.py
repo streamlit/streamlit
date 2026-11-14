@@ -1397,7 +1397,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     """
     ctx = create_mock_script_run_ctx()
     stats = ctx.shared.cache_stats.current_thread_stats()
-    stats.open_call()
+    stats.open_call(0.0)
     stats.cache_data.calls = 3
     stats.cache_data.hits = 2
     stats.cache_data.misses = 1
@@ -1405,7 +1405,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     stats.cache_data.compute_time = 1.5
     stats.cache_data.wait_time = 0.25
     stats.cache_data.overhead_time = 0.001
-    stats.close_call()
+    stats.close_call(2.0)
 
     with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
         msg = metrics_util.create_page_profile_message(

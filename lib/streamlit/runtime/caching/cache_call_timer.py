@@ -19,8 +19,12 @@ those totals can be subtracted from user code:
 
 - It runs on a thread attached to a script run that gathers usage stats.
   Background refreshes and other threads without a script run are not recorded.
-- It is not inside another cached function. A nested call is part of the
-  outer call's compute time.
+- It is not nested inside another cached call. Nested calls belong to the
+  outer call's time: calls made while the outer function computes, including
+  on threads it attaches with ``add_script_run_ctx``, and calls made while the
+  outer call hashes its arguments or reads its result, such as from a
+  ``hash_funcs`` function. A thread that attaches itself has no parent state
+  to inherit, so its calls are still recorded.
 - It is not inside a tracked command, such as the ``st.cache_resource`` call
   inside ``st.connection``, whose time is already counted as command time.
 - It finishes before the run's page profile is built. Counts and times are
@@ -35,17 +39,21 @@ cached function or the cache write, is excluded from all three.
 
 from __future__ import annotations
 
+import contextlib
 import time
 from typing import TYPE_CHECKING, Final
 
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    CacheComputeScope,
     ThreadState,
     get_script_run_ctx,
     in_cached_function,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
         CacheTotals,
         ThreadCacheStats,
@@ -83,7 +91,7 @@ class CacheCallTimer:
             return
         self._start = time.perf_counter()
         self._command_time_at_start = thread_stats.tracked_command_time
-        thread_stats.open_call()
+        thread_stats.open_call(self._start)
 
     def record_hit(self, *, is_stale: bool = False) -> None:
         if self._totals is None:
@@ -94,11 +102,13 @@ class CacheCallTimer:
     def begin_wait(self) -> None:
         if self._thread_stats is not None:
             self._wait_start = time.perf_counter()
+            self._thread_stats.leave_cache_code()
 
     def end_wait(self) -> None:
-        if self._wait_start is not None:
+        if self._thread_stats is not None and self._wait_start is not None:
             self._wait_time += time.perf_counter() - self._wait_start
             self._wait_start = None
+            self._thread_stats.enter_cache_code()
 
     def begin_compute(self) -> None:
         """Start timing the cached function, and count the call as a miss."""
@@ -107,6 +117,7 @@ class CacheCallTimer:
         self._is_miss = True
         self._compute_start = time.perf_counter()
         self._command_time_at_compute_start = self._thread_stats.tracked_command_time
+        self._thread_stats.leave_cache_code()
 
     def end_compute(self) -> None:
         if self._thread_stats is None or self._compute_start is None:
@@ -117,6 +128,7 @@ class CacheCallTimer:
             - self._command_time_at_compute_start
         )
         self._compute_start = None
+        self._thread_stats.enter_cache_code()
 
     def finish(self) -> None:
         """Add the call's counts and times to the run totals.
@@ -131,6 +143,7 @@ class CacheCallTimer:
             self.end_wait()
         if self._compute_start is not None:
             self.end_compute()
+        totals = thread_stats.totals_for_finished_call(totals)
         totals.calls += 1
         if self._is_hit:
             totals.hits += 1
@@ -155,7 +168,7 @@ class CacheCallTimer:
             - (command_time - self._command_time_in_compute),
             0,
         )
-        thread_stats.close_call()
+        thread_stats.close_call(now)
 
 
 # Shared by every unrecorded call on every thread, so its methods must not set
@@ -171,15 +184,42 @@ def start_call(cache_type: CacheType) -> CacheCallTimer:
     if ctx is None or not ctx.gather_usage_stats:
         return _NOT_RECORDED
     try:
-        if ThreadState.get().command_tracking_deactivated:
-            return _NOT_RECORDED
+        thread_state = ThreadState.get()
     except RuntimeError:
         # A thread with a ScriptRunContext but no ThreadState.
         return _NOT_RECORDED
+    if thread_state.command_tracking_deactivated or thread_state.in_cache_compute:
+        return _NOT_RECORDED
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
+    if thread_stats.is_in_cache_code:
+        return _NOT_RECORDED
     totals = (
         thread_stats.cache_resource
         if cache_type is CacheType.RESOURCE
         else thread_stats.cache_data
     )
     return CacheCallTimer(thread_stats, totals)
+
+
+@contextlib.contextmanager
+def computing_cached_value() -> Generator[None, None, None]:
+    """Mark this context as computing a cached value.
+
+    Threads attached with ``add_script_run_ctx`` inherit the mark, so their
+    cached calls made before the computation ends stay part of it. A context
+    that is already marked, or has no script-run thread state, is left as is.
+    """
+    try:
+        thread_state = ThreadState.get()
+    except RuntimeError:
+        # A thread that isn't attached to a script run.
+        thread_state = None
+    if thread_state is None or thread_state.in_cache_compute:
+        yield
+        return
+    scope = CacheComputeScope()
+    try:
+        with ThreadState.scoped(cache_compute=scope):
+            yield
+    finally:
+        scope.is_active = False
