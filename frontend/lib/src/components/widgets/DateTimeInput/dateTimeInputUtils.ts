@@ -23,6 +23,7 @@ import {
   parseFormatOrder,
   SEGMENT_SELECTOR,
 } from "~lib/components/widgets/DateInput/dateInputUtils"
+import { snapTimeParts } from "~lib/components/widgets/timeStepSnap"
 import type { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -32,25 +33,30 @@ function pad(value: number, length: number): string {
   return String(Math.abs(value)).padStart(length, "0")
 }
 
-/** Parse an ISO datetime string (`YYYY-MM-DDTHH:mm` or `YYYY-MM-DDTHH:mm:ss`) into a CalendarDateTime. Seconds are accepted but discarded. */
+/**
+ * Parse an ISO datetime string (`YYYY-MM-DDTHH:mm` or `YYYY-MM-DDTHH:mm:ss`)
+ * into a CalendarDateTime. Optional seconds are preserved when present.
+ */
 export function isoToCalendarDateTime(
   value: string | null | undefined
 ): CalendarDateTime | null {
   if (isNullOrEmptyString(value)) return null
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::[0-5]\d)?$/.exec(
-    value.trim()
-  )
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::([0-5]\d))?$/.exec(
+      value.trim()
+    )
   if (!match) return null
-  const [, yearStr, monthStr, dayStr, hourStr, minuteStr] = match
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = match
   const year = Number(yearStr)
   const month = Number(monthStr)
   const day = Number(dayStr)
   const hour = Number(hourStr)
   const minute = Number(minuteStr)
+  const second = secondStr ? Number(secondStr) : 0
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
   try {
-    const result = new CalendarDateTime(year, month, day, hour, minute)
+    const result = new CalendarDateTime(year, month, day, hour, minute, second)
     if (result.day !== day) return null
     return result
   } catch {
@@ -58,9 +64,17 @@ export function isoToCalendarDateTime(
   }
 }
 
-/** Serialize a CalendarDateTime to the wire format (`YYYY-MM-DDTHH:mm`). */
-export function calendarDateTimeToIso(dt: CalendarDateTime): string {
-  return `${pad(dt.year, 4)}-${pad(dt.month, 2)}-${pad(dt.day, 2)}T${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+/**
+ * Serialize a CalendarDateTime to the wire format.
+ * Appends `:ss` only when `includeSeconds` is true. Callers set it for
+ * sub-minute steps.
+ */
+export function calendarDateTimeToIso(
+  dt: CalendarDateTime,
+  includeSeconds = false
+): string {
+  const base = `${pad(dt.year, 4)}-${pad(dt.month, 2)}-${pad(dt.day, 2)}T${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+  return includeSeconds ? `${base}:${pad(dt.second, 2)}` : base
 }
 
 /** Value-based equality for CalendarDateTime (avoids object-identity pitfalls). */
@@ -89,7 +103,8 @@ export function validateDateTime(
 /** Format a CalendarDateTime for error messages using the element's date format + time. */
 export function formatCalendarDateTime(
   dt: CalendarDateTime,
-  dateFormat: string
+  dateFormat: string,
+  includeSeconds = false
 ): string {
   const { order, separator } = parseFormatOrder(dateFormat)
   const datePart = order
@@ -99,7 +114,10 @@ export function formatCalendarDateTime(
       return pad(dt.day, 2)
     })
     .join(separator)
-  return `${datePart}, ${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+  const timePart = includeSeconds
+    ? `${pad(dt.hour, 2)}:${pad(dt.minute, 2)}:${pad(dt.second, 2)}`
+    : `${pad(dt.hour, 2)}:${pad(dt.minute, 2)}`
+  return `${datePart}, ${timePart}`
 }
 
 /** Build the user-facing error message for out-of-range datetimes.
@@ -122,7 +140,8 @@ export function createDateTimeErrorMessage(
 
 /**
  * Parse a pasted datetime string. Supports both the ISO wire format
- * (`YYYY-MM-DDTHH:mm`) and the display format (`DD/MM/YYYY, HH:mm` etc).
+ * (`YYYY-MM-DDTHH:mm` or with `:ss`) and the display format
+ * (`DD/MM/YYYY, HH:mm` or with `:ss`).
  */
 export function parsePastedDateTime(
   text: string,
@@ -136,7 +155,7 @@ export function parsePastedDateTime(
   const { order, separator } = parseFormatOrder(dateFormat)
   const escapedSep = separator.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")
   const datePartRe = `(\\d{1,4})${escapedSep}(\\d{1,4})${escapedSep}(\\d{1,4})`
-  const timePartRe = `(\\d{1,2}):(\\d{2})`
+  const timePartRe = `(\\d{1,2}):(\\d{2})(?::([0-5]\\d))?`
   const re = new RegExp(`^${datePartRe}[,\\s]+${timePartRe}$`)
   const match = re.exec(trimmed)
   if (!match) return null
@@ -148,39 +167,19 @@ export function parsePastedDateTime(
   const { Y: year, M: month, D: day } = parts
   const hour = Number(match[4])
   const minute = Number(match[5])
+  const second = match[6] ? Number(match[6]) : 0
   if (year === undefined || month === undefined || day === undefined)
     return null
   if (month < 1 || month > 12 || day < 1 || day > 31) return null
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null
 
   try {
-    const result = new CalendarDateTime(year, month, day, hour, minute)
+    const result = new CalendarDateTime(year, month, day, hour, minute, second)
     if (result.day !== day) return null
     return result
   } catch {
     return null
   }
-}
-
-// --- Step-snapping arithmetic ---
-
-/**
- * Compute the next step-snapped value given the current total, step size,
- * direction, and wrap boundary. Used for minute-granular (max=1440) and
- * hour-only (max=24) step snapping on ArrowUp/ArrowDown.
- */
-export function snapTimeStep(
-  current: number,
-  step: number,
-  up: boolean,
-  max: number
-): number {
-  const next = up
-    ? Math.floor(current / step) * step + step
-    : Math.ceil(current / step) * step - step
-  if (next >= max) return 0
-  if (next < 0) return Math.floor((max - 1) / step) * step
-  return next
 }
 
 /**
@@ -193,23 +192,18 @@ export function computeStepSnap(
   step: number,
   up: boolean
 ): CalendarDateTime | null {
-  if (segmentType === "minute" && step % 60 === 0) {
-    const stepMins = step / 60
-    if (stepMins <= 1) return null
-    const totalMins = current.hour * 60 + current.minute
-    const wrapped = snapTimeStep(totalMins, stepMins, up, 1440)
-    return current.set({
-      hour: Math.floor(wrapped / 60),
-      minute: wrapped % 60,
-    })
-  }
-  if (segmentType === "hour" && step % 3600 === 0) {
-    const stepHours = step / 3600
-    if (stepHours <= 1) return null
-    const wrapped = snapTimeStep(current.hour, stepHours, up, 24)
-    return current.set({ hour: wrapped, minute: 0 })
-  }
-  return null
+  const snapped = snapTimeParts(
+    {
+      hour: current.hour,
+      minute: current.minute,
+      second: current.second,
+    },
+    segmentType,
+    step,
+    up
+  )
+  if (!snapped) return null
+  return current.set(snapped)
 }
 
 // --- Segment state helper ---
@@ -240,6 +234,7 @@ export function getSegmentState(container: HTMLElement): SegmentState {
 const SEGMENT_MAX = {
   hour: 23,
   minute: 59,
+  second: 59,
   year: 9999,
   month: 12,
   day: 31,
@@ -279,26 +274,27 @@ function readSegment(
 }
 
 /**
- * Read hour and minute from a container's rendered segments, for the window
- * before the field has emitted an `onChange`. Returns null when neither is
- * filled.
+ * Read hour, minute, and optional second from a container's rendered segments,
+ * for the window before the field has emitted an `onChange`. Returns null when
+ * hour, minute, and second are all empty.
  *
  * `DateField` and `TimeField` both withhold `onChange` until every one of their
  * segments is filled, so a time entered while its partner segments are still
  * placeholders reaches no handler — the rendered segments are its only record.
- * An unfilled half of the pair counts as 0, so a lone hour or minute survives.
+ * Unfilled segments count as 0, so a lone hour, minute, or second still
+ * produces a time (e.g. seconds-only drafts with a sub-minute step).
  *
- * Assumes a 24-hour cycle and no seconds segment: with `hourCycle={12}` the hour
- * reports 1–12 and needs the `dayPeriod` segment to disambiguate, and a `second`
- * segment would be ignored.
+ * Assumes a 24-hour cycle: with `hourCycle={12}` the hour reports 1–12 and needs
+ * the `dayPeriod` segment to disambiguate.
  */
 export function getTypedTimeFromDom(
   container: HTMLElement | null
 ): Time | null {
   const hour = readSegment(container, "hour")
   const minute = readSegment(container, "minute")
-  if (hour === null && minute === null) return null
-  return new Time(hour ?? 0, minute ?? 0)
+  const second = readSegment(container, "second")
+  if (hour === null && minute === null && second === null) return null
+  return new Time(hour ?? 0, minute ?? 0, second ?? 0)
 }
 
 /**

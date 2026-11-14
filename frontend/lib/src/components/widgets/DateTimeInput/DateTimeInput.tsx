@@ -40,6 +40,7 @@ import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { requiredFieldError } from "~lib/components/widgets/BaseWidget/requiredField"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { stepIncludesSeconds } from "~lib/components/widgets/timeStepSnap"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -137,6 +138,7 @@ function DateTimeInput({
   // positive step.
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- see comment above
   const step = element.step ? Number(element.step) : 900
+  const includeSeconds = stepIncludesSeconds(step)
 
   const minDateTime = useMemo(
     () => isoToCalendarDateTime(element.min),
@@ -157,13 +159,17 @@ function DateTimeInput({
 
   const minDateString = useMemo(
     () =>
-      minDateTime ? formatCalendarDateTime(minDateTime, element.format) : "",
-    [minDateTime, element.format]
+      minDateTime
+        ? formatCalendarDateTime(minDateTime, element.format, includeSeconds)
+        : "",
+    [minDateTime, element.format, includeSeconds]
   )
   const maxDateString = useMemo(
     () =>
-      maxDateTime ? formatCalendarDateTime(maxDateTime, element.format) : "",
-    [maxDateTime, element.format]
+      maxDateTime
+        ? formatCalendarDateTime(maxDateTime, element.format, includeSeconds)
+        : "",
+    [maxDateTime, element.format, includeSeconds]
   )
 
   const buildErrorMessage = useCallback(
@@ -244,11 +250,11 @@ function DateTimeInput({
   const handleChange = useCallback(
     (dt: CalendarDateTime | null): boolean =>
       commitIsoValue({
-        iso: dt ? calendarDateTimeToIso(dt) : null,
+        iso: dt ? calendarDateTimeToIso(dt, includeSeconds) : null,
         fromUser: true,
         skipRequired: inForm,
       }),
-    [commitIsoValue, inForm]
+    [commitIsoValue, inForm, includeSeconds]
   )
 
   const handleEdit = useCallback((iso: string | null): void => {

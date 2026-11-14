@@ -37,7 +37,7 @@ from e2e_playwright.shared.app_utils import (
     type_date,
 )
 
-NUM_DATETIME_INPUTS = 24
+NUM_DATETIME_INPUTS = 26
 
 
 def test_datetime_input_widget_rendering(
@@ -97,6 +97,10 @@ def test_datetime_input_widget_rendering(
     assert_snapshot(
         get_datetime_input(app, "Datetime input 12 (width='stretch')"),
         name="st_datetime_input-width_stretch",
+    )
+    assert_snapshot(
+        get_datetime_input(app, "Datetime input step=30"),
+        name="st_datetime_input-step_30",
     )
 
 
@@ -211,12 +215,38 @@ def test_step_interval_applied(app: Page):
     datetime_field = get_datetime_input(
         app, "Datetime input 7 (step=60)"
     ).get_by_test_id("stDateTimeInputField")
+    expect(datetime_field.get_by_role("spinbutton")).to_have_count(5)
 
     # Type into segments: year, month, day, hour, minute
     type_date(datetime_field, "2025", "11", "19", "16", "46")
     wait_for_app_run(app)
 
     expect_markdown(app, "Value 7: 2025-11-19 16:46:00")
+
+
+def test_sub_minute_step_shows_seconds_and_snaps(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Sub-minute step shows a seconds segment and ArrowUp snaps by the step."""
+    datetime_input = get_datetime_input(app, "Datetime input step=30")
+    datetime_field = datetime_input.get_by_test_id("stDateTimeInputField")
+    segments = datetime_field.get_by_role("spinbutton")
+    expect(segments).to_have_count(6)
+
+    second_segment = segments.last
+    second_segment.click()
+    # Popover time row should also expose a seconds segment.
+    popover_time = app.get_by_test_id("stDateTimeInputPopoverTime")
+    expect(popover_time).to_be_visible()
+    expect(popover_time.get_by_role("spinbutton")).to_have_count(3)
+    assert_snapshot(popover_time, name="st_datetime_input-step_30_popover_time")
+
+    second_segment.press("ArrowUp")
+    # Commit by clicking away from the field.
+    app.get_by_text("Value step30:").click()
+    wait_for_app_run(app)
+
+    expect_markdown(app, "Value step30: 2025-11-19 16:45:30")
 
 
 def test_clearable_datetime_input(app: Page):
@@ -500,6 +530,26 @@ def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url
 
     expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))
+
+
+def test_datetime_input_query_param_sub_minute_seconds(page: Page, app_base_url: str):
+    """Sub-minute step keeps URL seconds and round-trips an edit with :ss."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_step30_dt": "2025-11-20T10:30:30"})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound step30 datetime:", "2025-11-20 10:30:30")
+    expect(page).to_have_url(re.compile(r"bound_step30_dt=2025-11-20T10%3A30%3A30"))
+
+    datetime_field = get_datetime_input(page, "Bound step30 datetime").get_by_test_id(
+        "stDateTimeInputField"
+    )
+    type_date(datetime_field, "2025", "11", "20", "11", "00", "30")
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound step30 datetime:", "2025-11-20 11:00:30")
+    expect(page).to_have_url(re.compile(r"bound_step30_dt=2025-11-20T11%3A00%3A30"))
 
 
 def test_year_picker_lists_boundary_year_when_bounds_cross_a_year(app: Page):
