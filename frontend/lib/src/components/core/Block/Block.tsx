@@ -16,6 +16,7 @@
 
 import {
   type JSX,
+  memo,
   type ReactElement,
   type ReactNode,
   useContext,
@@ -412,9 +413,16 @@ export interface BlockPropsWithoutWidth extends BaseBlockProps {
 const LARGE_STRETCH_BEHAVIOR = new Set(["tabContainer"])
 const MEDIUM_STRETCH_BEHAVIOR = new Set(["chatInput"])
 
-export const BlockNodeRenderer = (
+/**
+ * Renders a BlockNode and its children.
+ *
+ * Memoized so that an unchanged block skips rendering when its parent block
+ * re-renders. Nodes are immutable, so an equal `node` prop means neither the
+ * block nor its subtree changed.
+ */
+export const BlockNodeRenderer = memo(function BlockNodeRenderer(
   props: BlockPropsWithoutWidth
-): ReactElement | null => {
+): ReactElement | null {
   const { node } = props
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
@@ -727,7 +735,7 @@ export const BlockNodeRenderer = (
   }
 
   return child
-}
+})
 
 export const VerticalBlock = (props: BlockPropsWithoutWidth): ReactElement => {
   // Deprecated. Use FlexBoxContainer instead.

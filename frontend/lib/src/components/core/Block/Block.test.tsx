@@ -53,6 +53,8 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import { gridCellJustifyContent } from "./styled-components"
+import type * as BlockUtilsModule from "./utils"
+import { assignDividerColor } from "./utils"
 
 // SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
 // async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
@@ -60,6 +62,13 @@ import { gridCellJustifyContent } from "./styled-components"
 vi.mock("react-aria-components", async importOriginal => {
   const actual = await importOriginal<typeof ReactAriaComponents>()
   return { ...actual, SelectionIndicator: () => null }
+})
+
+// Spied on to observe which blocks render their children: every block
+// render assigns divider colors for its own node.
+vi.mock("./utils", async importOriginal => {
+  const mod = await importOriginal<typeof BlockUtilsModule>()
+  return { ...mod, assignDividerColor: vi.fn(mod.assignDividerColor) }
 })
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
@@ -3316,5 +3325,76 @@ describe("element retention", () => {
 
     expect(screen.getByText("replacement")).toBeVisible()
     expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull()
+  })
+})
+
+describe("BlockNodeRenderer memoization", () => {
+  const mockAssignDividerColor = vi.mocked(assignDividerColor)
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+  const endpoints = mockEndpoints()
+
+  function renderBlock(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error - uploadClient is required
+        uploadClient={undefined}
+        endpoints={endpoints}
+      />
+    )
+  }
+
+  function renderedBlockNodes(): unknown[] {
+    return mockAssignDividerColor.mock.calls.map(([node]) => node)
+  }
+
+  it("does not re-render an unchanged sibling block when another block changes", () => {
+    const unchangedBlock = makeVerticalBlock([text("unchanged")])
+    const { rerenderWithContexts } = renderWithContexts(
+      renderBlock(
+        makeVerticalBlock([unchangedBlock, makeVerticalBlock([text("old")])])
+      )
+    )
+    mockAssignDividerColor.mockClear()
+
+    const changedBlock = makeVerticalBlock([text("new")])
+    rerenderWithContexts(
+      renderBlock(makeVerticalBlock([unchangedBlock, changedBlock]))
+    )
+
+    expect(renderedBlockNodes()).toContain(changedBlock)
+    expect(renderedBlockNodes()).not.toContain(unchangedBlock)
+    expect(screen.getByText("unchanged")).toBeVisible()
+    expect(screen.getByText("new")).toBeVisible()
+    expect(screen.queryByText("old")).not.toBeInTheDocument()
+  })
+
+  it("marks elements in an unchanged block stale when a new run starts", () => {
+    const unchangedBlock = makeVerticalBlock([text("unchanged", "run0")])
+    const root = makeVerticalBlock([unchangedBlock])
+    const { rerenderWithContexts } = renderWithContexts(renderBlock(root), {
+      scriptRunContext: {
+        scriptRunId: "run0",
+        scriptRunState: ScriptRunState.NOT_RUNNING,
+      },
+    })
+    const container = screen
+      .getByText("unchanged")
+      .closest("[data-testid='stElementContainer']")
+    expect(container).toHaveAttribute("data-stale", "false")
+
+    rerenderWithContexts(renderBlock(root), {
+      scriptRunContext: {
+        scriptRunId: "run1",
+        scriptRunState: ScriptRunState.RUNNING,
+      },
+    })
+
+    expect(container).toHaveAttribute("data-stale", "true")
   })
 })
