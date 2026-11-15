@@ -15,4 +15,4 @@
 from importlib.metadata import version as _version
 from typing import Final
 
-STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit")
+STREAMLIT_VERSION_STRING: Final[str] = _version("streamlit-nightly")
