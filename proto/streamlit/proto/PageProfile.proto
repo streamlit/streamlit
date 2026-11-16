@@ -66,6 +66,8 @@ message PageProfile {
 // command times) and each cached call is counted once, so subtracting them
 // leaves the time spent outside the cache. Like command times, times from
 // concurrent threads are summed and can exceed wall-clock time.
+// lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
+// recorded.
 message CacheUsage {
   // Unset when no st.cache_data call was recorded.
   CacheTypeUsage cache_data = 1;
