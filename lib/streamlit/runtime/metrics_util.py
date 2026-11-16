@@ -838,7 +838,7 @@ def create_page_profile_message(
             app_dir = os.path.dirname(ctx.main_script_path)
 
     if server_uptime_seconds is not None:
-        page_profile.cache_usage.server_uptime_seconds = server_uptime_seconds
+        page_profile.server_uptime_seconds = server_uptime_seconds
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

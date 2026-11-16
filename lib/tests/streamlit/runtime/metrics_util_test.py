@@ -1392,25 +1392,27 @@ def test_create_page_profile_message_reports_agent_api_usage() -> None:
 
 
 def test_create_page_profile_message_reports_server_uptime() -> None:
-    """``cache_usage`` carries the server uptime passed in for the run."""
+    """The page profile carries the server uptime passed in for the run."""
     msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=42)
 
-    assert msg.page_profile.cache_usage.server_uptime_seconds == 42
+    assert msg.page_profile.server_uptime_seconds == 42
+    assert not msg.page_profile.HasField("cache_usage")
 
 
 def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
-    """``cache_usage`` stays unset without a known uptime."""
+    """``cache_usage`` and ``server_uptime_seconds`` stay unset without data."""
     msg = metrics_util.create_page_profile_message([], 0, 0)
 
     assert not msg.page_profile.HasField("cache_usage")
+    assert not msg.page_profile.HasField("server_uptime_seconds")
 
 
 def test_create_page_profile_message_sends_zero_uptime() -> None:
     """An uptime of 0, the server's first second, is still sent."""
     msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=0)
 
-    assert msg.page_profile.cache_usage.HasField("server_uptime_seconds")
-    assert msg.page_profile.cache_usage.server_uptime_seconds == 0
+    assert msg.page_profile.HasField("server_uptime_seconds")
+    assert msg.page_profile.server_uptime_seconds == 0
 
 
 def test_server_uptime_seconds(monkeypatch: pytest.MonkeyPatch) -> None:

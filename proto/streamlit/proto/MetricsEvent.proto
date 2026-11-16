@@ -87,8 +87,10 @@ message MetricsEvent {
   AgentApiUsage agent_api_usage = 49;
   // Same as PageProfile.cache_usage.
   CacheUsage cache_usage = 50;
+  // Same as PageProfile.server_uptime_seconds.
+  optional int64 server_uptime_seconds = 51;
 
-  // Next ID: 51
+  // Next ID: 52
 }
 
 message BrowserInfo {
