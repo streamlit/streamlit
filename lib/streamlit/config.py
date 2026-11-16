@@ -647,9 +647,10 @@ _create_option(
           and chart table views.
         - Disables clipboard copy and cut for st.dataframe, st.data_editor,
           and chart table views. Pasting into st.data_editor stays enabled.
-        - Shows st.download_button as disabled. It can't be clicked or
-          triggered by its shortcut, always returns False, and doesn't run
-          its on_click callback.
+        - Shows st.download_button as disabled. Viewers can't click it or
+          use its shortcut, so in the browser it returns False and doesn't
+          run on_click. Other clients, such as the agent API, can still
+          trigger it.
         - Hides chart and diagram image downloads (PNG/SVG), including
           Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Controls configured
           in the chart spec itself are not affected, including Plotly
@@ -664,8 +665,9 @@ _create_option(
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via
-        screenshots, browser developer tools, or network inspection), so it
-        should not be relied upon as a security or data-protection control.
+        screenshots, browser developer tools, network inspection, or the
+        agent API), so it should not be relied upon as a security or
+        data-protection control.
     """,
     default_val=False,
     type_=bool,

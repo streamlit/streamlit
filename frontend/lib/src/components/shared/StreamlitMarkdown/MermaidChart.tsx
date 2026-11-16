@@ -726,22 +726,22 @@ const MermaidChart = memo(function MermaidChart({
           labelContext={labelContext}
         >
           {!disableDataExport && (
-            <ToolbarAction
-              label="Download as PNG"
-              icon={FileDownload}
-              onClick={handleDownloadPng}
-              labelContext={labelContext}
-            />
-          )}
-          {!disableDataExport && (
-            <ToolbarAction
-              label={copyLabel}
-              icon={isCopied ? Check : ContentCopy}
-              onClick={handleCopySource}
-              // Skip context while on the transient copied label so the name
-              // stays "Copied" rather than "Copied: {context}".
-              labelContext={isCopied ? undefined : labelContext}
-            />
+            <>
+              <ToolbarAction
+                label="Download as PNG"
+                icon={FileDownload}
+                onClick={handleDownloadPng}
+                labelContext={labelContext}
+              />
+              <ToolbarAction
+                label={copyLabel}
+                icon={isCopied ? Check : ContentCopy}
+                onClick={handleCopySource}
+                // Skip context while on the transient copied label so the name
+                // stays "Copied" rather than "Copied: {context}".
+                labelContext={isCopied ? undefined : labelContext}
+              />
+            </>
           )}
         </Toolbar>
         <StyledMermaidContainer

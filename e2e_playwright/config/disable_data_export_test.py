@@ -37,6 +37,19 @@ def _expect_csv_export_hidden(dataframe: Locator) -> None:
     expect(toolbar.get_by_label("Download as CSV")).not_to_be_attached()
 
 
+def _expect_copy_blocked(app: Page, grid: Locator) -> None:
+    click_on_cell(grid, 1, 0, column_width="small")
+
+    app.evaluate("navigator.clipboard.writeText('sentinel')")
+    app.keyboard.press(f"{COMMAND_KEY}+c")
+    # Copy is expected to be blocked, so there is no observable clipboard change
+    # to poll for. Give any (unwanted) async copy a chance to run before we
+    # assert the clipboard is untouched.
+    app.wait_for_timeout(200)
+
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+
+
 def _get_read_only_dataframe(app: Page) -> Locator:
     return get_element_by_key(app, "read-only-dataframe").get_by_test_id("stDataFrame")
 
@@ -102,39 +115,15 @@ def test_hides_download_and_copy_controls(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
-def test_disables_data_editor_clipboard_copy(app: Page):
-    """Data editor copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
+def test_disables_dataframe_and_editor_clipboard_copy(app: Page):
+    """Read-only dataframe and data editor copy are blocked.
+
+    Chromium-only: reliable clipboard read/write in Playwright.
+    """
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
-    data_editor = _get_data_editor(app)
-    click_on_cell(data_editor, 1, 0, column_width="small")
-
-    app.evaluate("navigator.clipboard.writeText('sentinel')")
-    app.keyboard.press(f"{COMMAND_KEY}+c")
-    # Copy is expected to be blocked, so there is no observable clipboard change
-    # to poll for. Give any (unwanted) async copy a chance to run before we
-    # assert the clipboard is untouched.
-    app.wait_for_timeout(200)
-
-    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
-
-
-@pytest.mark.only_browser("chromium")
-def test_disables_dataframe_clipboard_copy(app: Page):
-    """Read-only dataframe copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
-    app.context.grant_permissions(["clipboard-read", "clipboard-write"])
-
-    read_only_dataframe = _get_read_only_dataframe(app)
-    click_on_cell(read_only_dataframe, 1, 0, column_width="small")
-
-    app.evaluate("navigator.clipboard.writeText('sentinel')")
-    app.keyboard.press(f"{COMMAND_KEY}+c")
-    # Copy is expected to be blocked, so there is no observable clipboard change
-    # to poll for. Give any (unwanted) async copy a chance to run before we
-    # assert the clipboard is untouched.
-    app.wait_for_timeout(200)
-
-    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+    _expect_copy_blocked(app, _get_read_only_dataframe(app))
+    _expect_copy_blocked(app, _get_data_editor(app))
 
 
 @pytest.mark.only_browser("chromium")
@@ -142,14 +131,4 @@ def test_disables_chart_table_view_clipboard_copy(app: Page):
     """Chart table view copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
-    chart_table_view = _show_chart_table_view(app)
-    click_on_cell(chart_table_view, 1, 0, column_width="small")
-
-    app.evaluate("navigator.clipboard.writeText('sentinel')")
-    app.keyboard.press(f"{COMMAND_KEY}+c")
-    # Copy is expected to be blocked, so there is no observable clipboard change
-    # to poll for. Give any (unwanted) async copy a chance to run before we
-    # assert the clipboard is untouched.
-    app.wait_for_timeout(200)
-
-    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+    _expect_copy_blocked(app, _show_chart_table_view(app))
