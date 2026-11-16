@@ -645,8 +645,8 @@ _create_option(
 
         - Hides the CSV download button for st.dataframe, st.data_editor,
           and chart table views.
-        - Disables clipboard copy for st.dataframe, st.data_editor, and chart
-          table views. Pasting into st.data_editor stays enabled.
+        - Disables clipboard copy and cut for st.dataframe, st.data_editor,
+          and chart table views. Pasting into st.data_editor stays enabled.
         - Shows st.download_button as disabled. It can't be clicked or
           triggered by its shortcut, always returns False, and doesn't run
           its on_click callback.
@@ -655,8 +655,8 @@ _create_option(
           in the chart spec itself are not affected.
         - Hides copy actions for code blocks (st.code and Markdown), Mermaid
           source, the Vega-Lite spec, st.json (value icons and path copy),
-          dataframe column names and JSON cells, and error and exception
-          text.
+          dataframe column names and JSON cells, and the exception link row
+          (Copy, Ask Google, and Ask ChatGPT).
 
         st.audio_input's "Download as WAV" action is not affected; it saves
         the viewer's own recording rather than app data.

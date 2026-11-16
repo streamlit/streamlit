@@ -74,9 +74,9 @@ When `client.disableDataExport = true`:
   dataframe is focused will not copy any cell data to the clipboard (applies to both single
   and multi-cell selections)
 - **Copy to clipboard** (`st.data_editor`): Disabled the same way as `st.dataframe`,
-  reversing the earlier exemption that kept editor copy enabled for editing workflows.
-  Pasting into cells stays enabled because it is part of editing, not export. Cut is also
-  disabled so cells are not cleared with an empty clipboard (the editor has no undo).
+  because editor copy exports the same cell data. Pasting into cells stays enabled
+  because it is part of editing, not export. Cut is also disabled so cells are not
+  cleared with an empty clipboard (the editor has no undo).
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
 - **`st.download_button`**: Remains visible but is disabled and does not start a download
@@ -84,7 +84,7 @@ When `client.disableDataExport = true`:
   Plotly `toImage`, Mermaid PNG)
 - **Other copy actions**: Hidden for code blocks (`st.code` and Markdown code blocks), Mermaid
   diagram source, Vega-Lite spec, `st.json` (copy icons and path copy), dataframe column names,
-  dataframe JSON cells, and error and exception text.
+  dataframe JSON cells, and the exception link row (Copy, Ask Google, and Ask ChatGPT).
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
 This applies to Streamlit's built-in export and copy controls. It does not cover:

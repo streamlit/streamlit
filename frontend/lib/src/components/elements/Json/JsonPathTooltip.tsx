@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  type ReactElement,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-} from "react"
+import { memo, type ReactElement, useCallback, useEffect, useRef } from "react"
 
 import { FloatingPortal } from "@floating-ui/react"
 
-import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
@@ -65,7 +57,6 @@ function JsonPathTooltip({
   clearTooltip,
 }: JsonPathTooltipProps): ReactElement {
   const { isCopied, copyToClipboard, label } = useCopyToClipboard()
-  const { disableDataExport = false } = useContext(LibConfigContext)
 
   const { refs, floatingStyles } = useFloatingOverlay({
     open: true,
@@ -164,21 +155,19 @@ function JsonPathTooltip({
       >
         <StyledPathTooltip data-testid="stJsonPathTooltip">
           <code>{path}</code>
-          {!disableDataExport && (
-            <StyledCopyButton
-              onClick={handleCopyPath}
-              title={label}
-              aria-label={label}
-              autoFocus
-            >
-              <DynamicIcon
-                size="sm"
-                iconValue={
-                  isCopied ? ":material/check:" : ":material/content_copy:"
-                }
-              />
-            </StyledCopyButton>
-          )}
+          <StyledCopyButton
+            onClick={handleCopyPath}
+            title={label}
+            aria-label={label}
+            autoFocus
+          >
+            <DynamicIcon
+              size="sm"
+              iconValue={
+                isCopied ? ":material/check:" : ":material/content_copy:"
+              }
+            />
+          </StyledCopyButton>
         </StyledPathTooltip>
       </StyledJsonPathTooltipBody>
     </FloatingPortal>

@@ -94,7 +94,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
-      {tooltip && !disableDataExport && (
+      {tooltip && (
         <JsonPathTooltip
           top={tooltip.y}
           left={tooltip.x}
