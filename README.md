@@ -31,10 +31,10 @@ to global enterprises.
       <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png?v=2" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
     </td>
     <td width="33%" align="center">
-      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
+      <a href="https://forecasting-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/forecasting-app/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
     </td>
     <td width="33%" align="center">
-      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
+      <a href="https://workflow-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/workflow-app/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
   </tr>
   <tr>
@@ -51,7 +51,7 @@ to global enterprises.
       <b>Simulations and models with what-if levers</b><br>
       Forecasts, scenario planning, pricing and demand simulators, and risk models. The
       computation and the interface are the same Python.<br>
-      <a href="https://apps-that-compute-demo.streamlit.app/">Try the live demo →</a>
+      <a href="https://forecasting-app-demo.streamlit.app/">Try the live demo →</a>
     </td>
     <td width="33%" valign="top">
       <sub>WORKFLOW APPS</sub><br>
@@ -59,7 +59,7 @@ to global enterprises.
       Approve what an AI agent proposes, sign off on a forecast, or triage data quality.
       Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
       app as the data.<br>
-      <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
+      <a href="https://workflow-app-demo.streamlit.app/">Try the live demo →</a>
     </td>
   </tr>
 </table>
