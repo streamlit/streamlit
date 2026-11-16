@@ -1427,7 +1427,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.cache_data.overhead_time == 1_000
 
 
-def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
+def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
     """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
     calls or a known uptime.
     """
