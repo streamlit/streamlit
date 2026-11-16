@@ -182,7 +182,7 @@ def marshall(
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
-        exception_proto.type = exception.alternate_name  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+        exception_proto.type = exception.alternate_name  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
     else:
         exception_proto.type = type(exception).__name__
 

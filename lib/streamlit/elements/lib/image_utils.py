@@ -268,7 +268,7 @@ def _ensure_image_size_and_format(
         # below.
         pil_image = pil_image.resize(
             (target_width, new_height),
-            resample=Image.BILINEAR,  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
+            resample=Image.BILINEAR,  # type: ignore[attr-defined] # ty: ignore[missing-attribute]
         )
         return _pil_to_bytes(pil_image, format=image_format, quality=90)
 

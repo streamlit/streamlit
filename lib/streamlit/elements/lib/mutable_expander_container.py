@@ -110,7 +110,7 @@ class ExpanderContainer(DeltaGenerator):
     def open(self, value: bool | None) -> None:
         self._open = value
 
-    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[incompatible-method-override]
         super().__enter__()
         return self
 

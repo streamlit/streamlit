@@ -1892,7 +1892,7 @@ class AudioInput(Widget):
         # field reads as 0, which is not that signal.
         self.sample_rate = proto.sample_rate if proto.HasField("sample_rate") else None
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[lost-keyword-for-regular-parameter]
         self,
         file: tuple[str, bytes, str] | None,
     ) -> Self:
@@ -2117,7 +2117,7 @@ class CameraInput(Widget):
         # an omitted resolution and any other unmapped height are both None.
         self.resolution = _CAMERA_RESOLUTION_BY_HEIGHT.get(proto.resolution_height)
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[lost-keyword-for-regular-parameter]
         self,
         file: tuple[str, bytes, str] | None,
     ) -> Self:
@@ -2297,7 +2297,7 @@ class FileUploader(Widget):
         """Allowed file types for upload. (list of str)"""  # noqa: D400
         return list(self.proto.type)
 
-    def set_value(  # ty: ignore[invalid-method-override]
+    def set_value(  # ty: ignore[lost-keyword-for-regular-parameter]
         self,
         files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
     ) -> Self:
