@@ -807,17 +807,9 @@ def get_server_uptime_seconds() -> int | None:
     return int(time.monotonic() - _server_started_at)
 
 
-def _fill_cache_usage(
-    page_profile: PageProfile,
-    ctx: ScriptRunContext | None,
-    server_uptime_seconds: int | None,
-) -> None:
-    """Copy the run's cached-call totals and the server uptime onto the profile."""
+def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
+    """Copy the run's cached-call totals onto the profile."""
     cache_usage = page_profile.cache_usage
-    if server_uptime_seconds is not None:
-        cache_usage.server_uptime_seconds = server_uptime_seconds
-    if ctx is None:
-        return
     cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
     for totals, usage in (
         (cache_data, cache_usage.cache_data),
@@ -893,7 +885,10 @@ def create_page_profile_message(
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
 
-    _fill_cache_usage(page_profile, ctx, server_uptime_seconds)
+    if server_uptime_seconds is not None:
+        page_profile.server_uptime_seconds = server_uptime_seconds
+    if ctx is not None:
+        _fill_cache_usage(page_profile, ctx)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a
