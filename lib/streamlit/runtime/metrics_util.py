@@ -246,10 +246,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "mediapipe",
 ]
 
-# The time.monotonic() value when the Streamlit runtime started, set by
-# mark_server_started().
-_server_started_at: float | None = None
-
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
@@ -792,19 +788,6 @@ def gather_metrics(
         wrapped_func.__dict__.update(non_optional_func.__dict__)
         wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
     return cast("F", wrapped_func)
-
-
-def mark_server_started() -> None:
-    """Record when the Streamlit runtime started, for ``get_server_uptime_seconds``."""
-    global _server_started_at  # noqa: PLW0603
-    _server_started_at = time.monotonic()
-
-
-def get_server_uptime_seconds() -> int | None:
-    """Whole seconds since ``mark_server_started``, or None before it is called."""
-    if _server_started_at is None:
-        return None
-    return int(time.monotonic() - _server_started_at)
 
 
 def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:

@@ -37,7 +37,6 @@ from streamlit.runtime import (
     RuntimeState,
     SessionClient,
     SessionClientDisconnectedError,
-    metrics_util,
 )
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -154,14 +153,14 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.stopped
         assert self.runtime.state == RuntimeState.STOPPED
 
-    async def test_start_marks_server_started(self):
-        """Starting the Runtime sets the uptime reported in page profiles."""
-        with patch.object(metrics_util, "_server_started_at", None):
-            assert metrics_util.get_server_uptime_seconds() is None
+    async def test_uptime_seconds(self):
+        """Uptime is unknown until the Runtime starts, then counts whole seconds."""
+        assert self.runtime.uptime_seconds is None
 
+        with patch("streamlit.runtime.runtime.time.monotonic", return_value=100.0):
             await self.runtime.start()
-
-            assert metrics_util.get_server_uptime_seconds() is not None
+        with patch("streamlit.runtime.runtime.time.monotonic", return_value=161.9):
+            assert self.runtime.uptime_seconds == 61
 
     async def test_connect_session(self):
         """We can create and remove a single session."""
