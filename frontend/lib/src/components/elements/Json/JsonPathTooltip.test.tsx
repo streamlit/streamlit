@@ -18,7 +18,7 @@ import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { FLOATING_OVERLAY_PORTAL_ID } from "~lib/components/core/Portal/constants"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import JsonPathTooltip, {
   type JsonPathTooltipProps,
@@ -69,6 +69,16 @@ describe("JsonPathTooltip", () => {
   it("renders the tooltip container with correct test id", () => {
     render(<JsonPathTooltip {...getProps()} />)
     expect(screen.getByTestId("stJsonPathTooltip")).toBeVisible()
+  })
+
+  it("hides the copy button but keeps the path when data export is disabled", () => {
+    renderWithContexts(<JsonPathTooltip {...getProps()} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+    expect(screen.getByText("data.items[0].name")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: /copy/i })
+    ).not.toBeInTheDocument()
   })
 
   it("renders a copy button", () => {

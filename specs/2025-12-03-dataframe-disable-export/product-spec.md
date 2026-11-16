@@ -62,7 +62,7 @@ st.set_option("client.disableDataExport", True)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, `st.download_button`, chart/diagram image downloads, and code block/diagram copy buttons) |
+| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, `st.download_button`, chart/diagram image downloads, and other copy actions such as code blocks, `st.json`, and error text) |
 
 ### Behavior
 
@@ -80,8 +80,10 @@ When `client.disableDataExport = true`:
 - **`st.download_button`**: Remains visible but is disabled and does not start a download
 - **Chart and diagram image downloads**: Hidden (Vega-Lite/Altair PNG, ECharts PNG/SVG,
   Plotly `toImage`, Mermaid PNG)
-- **Code block and diagram copy**: The copy button of code blocks (`st.code` and Markdown code
-  blocks) is hidden, and the copy-source action of Mermaid diagrams is hidden
+- **Other copy actions**: Hidden for code blocks (`st.code` and Markdown code blocks), Mermaid
+  diagram source, Vega-Lite spec, `st.json` (copy icons and path copy), dataframe column names,
+  dataframe JSON cells, and error and exception text. `st.data_editor` copy/paste stays enabled
+  as described above.
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
 This applies to all components with data export capabilities in the app.

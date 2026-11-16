@@ -18,7 +18,7 @@ import { screen } from "@testing-library/react"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import * as getColors from "~lib/theme/getColors"
 
 import Json, { type JsonProps } from "./Json"
@@ -60,6 +60,20 @@ describe("JSON element", () => {
     })
     render(<Json {...props} />)
     expect(screen.getByTestId("stJson")).toBeInTheDocument()
+  })
+
+  describe("copy actions", () => {
+    it("shows the clipboard copy icon by default", () => {
+      const { container } = render(<Json {...getProps()} />)
+      expect(container.querySelector(".copy-icon")).toBeInTheDocument()
+    })
+
+    it("hides the clipboard copy icon when data export is disabled", () => {
+      const { container } = renderWithContexts(<Json {...getProps()} />, {
+        libConfigContext: { disableDataExport: true },
+      })
+      expect(container.querySelector(".copy-icon")).not.toBeInTheDocument()
+    })
   })
 
   describe("getJsonTheme", () => {

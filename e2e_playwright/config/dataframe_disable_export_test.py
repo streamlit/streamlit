@@ -103,6 +103,13 @@ def test_hides_code_block_copy_button(app: Page):
     expect(code_block.get_by_label("Copy to clipboard")).not_to_be_attached()
 
 
+def test_hides_json_copy_icons(app: Page):
+    json_element = get_element_by_key(app, "json").get_by_test_id("stJson")
+    expect(json_element).to_be_visible()
+
+    expect(json_element.locator(".copy-icon")).to_have_count(0)
+
+
 @pytest.mark.only_browser("chromium")
 def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
     """Data editor copy stays enabled. Chromium-only: reliable clipboard read/write in Playwright."""

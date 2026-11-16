@@ -88,6 +88,12 @@ export interface LibConfigContextProps extends Omit<
    * @see PlotlyChart
    * @see MermaidChart
    * @see StreamlitSyntaxHighlighter
+   * @see StreamlitErrorCodeBlock
+   * @see Json
+   * @see JsonPathTooltip
+   * @see ExceptionElement
+   * @see ColumnMenu
+   * @see JsonViewer
    */
   disableDataExport?: boolean
 }

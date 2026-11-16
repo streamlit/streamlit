@@ -62,3 +62,7 @@ with st.container(key="download-button"):
 with st.container(key="code-block"):
     st.subheader("Code block")
     st.code("print('hello')", language="python")
+
+with st.container(key="json"):
+    st.subheader("JSON")
+    st.json({"name": "Alice", "value": 100})

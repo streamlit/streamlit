@@ -155,6 +155,17 @@ describe("ExceptionElement Element", () => {
     })
   })
 
+  it("hides the Copy link when data export is disabled", () => {
+    renderWithContexts(<ExceptionElement {...getProps()} />, {
+      libConfigContext: {
+        showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        disableDataExport: true,
+      },
+    })
+    expect(screen.queryByText("Copy")).not.toBeInTheDocument()
+    expect(screen.getByText("Ask Google")).toBeInTheDocument()
+  })
+
   describe("Skills install callout", () => {
     const SHOW_LINKS = Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
 

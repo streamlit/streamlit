@@ -408,8 +408,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   const { data, datasets, spec, baseSpecKey } = element
   const { isCopied, copyToClipboard } = useCopyToClipboard()
-  const showCopySpecAction = isLocalhost()
   const { disableDataExport = false } = useContext(LibConfigContext)
+  const showCopySpecAction = isLocalhost() && !disableDataExport
 
   const handleDownloadPng = useCallback(() => {
     void (async () => {

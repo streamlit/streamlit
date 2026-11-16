@@ -755,6 +755,16 @@ describe("ArrowVegaLiteChart", () => {
     expect(downloadFilename).toBe("2026-07-02T16-01_chart.png")
   })
 
+  it("hides the copy spec toolbar action when data export is disabled", () => {
+    renderWithContexts(<ArrowVegaLiteChart {...getProps()} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(
+      screen.queryByRole("button", { name: "Copy Vega-Lite spec" })
+    ).not.toBeInTheDocument()
+  })
+
   it("shows the copy spec toolbar action on localhost", () => {
     render(<ArrowVegaLiteChart {...getProps()} />)
 
