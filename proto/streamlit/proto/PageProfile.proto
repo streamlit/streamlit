@@ -61,25 +61,11 @@ message PageProfile {
   optional int64 server_uptime_seconds = 17;
 }
 
-// Cache activity during one script run, as counts and durations only.
-//
-// Times are in microseconds, like exec_time, and are part of user code time
-// (exec_time minus prep_time minus command times), so subtracting them gives
-// the time spent outside the cache. To count each cached call once:
-// - Only calls on threads attached to this run are recorded: the script
-//   thread, parallel fragment workers, and threads passed to
-//   add_script_run_ctx. Background refreshes and st.App lifespan tasks aren't.
-// - Only the outermost cached call is recorded. Cached calls made while it
-//   hashes, computes or reads (including from hash_funcs, or on threads it
-//   attaches while computing) are part of its time.
-// - Calls inside a tracked st.* command, such as the st.cache_resource call in
-//   st.connection, aren't recorded, because the command's time includes them.
-//   Tracked commands that run inside a cached call are subtracted from it.
-// - Calls still running when the profile is built aren't recorded.
-//
-// Times from concurrent threads are summed, like command times, so totals can
-// exceed wall-clock time. Overlapping async calls on one thread are scaled
-// down to the time during which any of them was running.
+// Cache activity during one script run: counts, and times in microseconds.
+// The times are part of user code time (exec_time minus prep_time minus
+// command times) and each cached call is counted once, so subtracting them
+// leaves the time spent outside the cache. Like command times, times from
+// concurrent threads are summed and can exceed wall-clock time.
 message CacheUsage {
   // Unset when no st.cache_data call was recorded.
   CacheTypeUsage cache_data = 1;
