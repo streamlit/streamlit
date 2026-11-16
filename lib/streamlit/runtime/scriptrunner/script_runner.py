@@ -627,7 +627,6 @@ class ScriptRunner:
 
             _LOGGER.debug("Running script")
             start_time: float = timer()
-            server_uptime_seconds = get_server_uptime_seconds()
             prep_time: float = 0  # This will be overwritten once preparations are done.
 
             if not rerun_data.fragment_id_queue:
@@ -663,6 +662,9 @@ class ScriptRunner:
             )
 
             ctx = self._get_script_run_ctx()
+            server_uptime_seconds = (
+                get_server_uptime_seconds() if ctx.gather_usage_stats else None
+            )
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
