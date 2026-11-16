@@ -73,8 +73,8 @@ When `client.disableDataExport = true`:
 - **Copy to clipboard** (`st.dataframe`): Completely disabled — pressing Ctrl/Cmd+C while a
   dataframe is focused will not copy any cell data to the clipboard (applies to both single
   and multi-cell selections)
-- **Copy to clipboard** (`st.data_editor`): Remains enabled because `st.data_editor` relies on
-  copy/paste for core editing workflows (e.g., pasting data into cells, copying rows)
+- **Copy to clipboard** (`st.data_editor`): Disabled the same way as `st.dataframe`. Pasting
+  into cells stays enabled because it is part of editing, not export
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
 - **`st.download_button`**: Remains visible but is disabled and does not start a download
@@ -82,8 +82,7 @@ When `client.disableDataExport = true`:
   Plotly `toImage`, Mermaid PNG)
 - **Other copy actions**: Hidden for code blocks (`st.code` and Markdown code blocks), Mermaid
   diagram source, Vega-Lite spec, `st.json` (copy icons and path copy), dataframe column names,
-  dataframe JSON cells, and error and exception text. `st.data_editor` copy/paste stays enabled
-  as described above.
+  dataframe JSON cells, and error and exception text.
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
 This applies to all components with data export capabilities in the app.

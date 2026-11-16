@@ -19,7 +19,6 @@ import sys
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import wait_until
 from e2e_playwright.shared.app_utils import get_element_by_key
 from e2e_playwright.shared.dataframe_utils import click_on_cell
 
@@ -111,8 +110,8 @@ def test_hides_json_copy_icons(app: Page):
 
 
 @pytest.mark.only_browser("chromium")
-def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
-    """Data editor copy stays enabled. Chromium-only: reliable clipboard read/write in Playwright."""
+def test_disables_data_editor_clipboard_copy(app: Page):
+    """Data editor copy is blocked. Chromium-only: reliable clipboard read/write in Playwright."""
     app.context.grant_permissions(["clipboard-read", "clipboard-write"])
 
     data_editor = _get_data_editor(app)
@@ -120,10 +119,12 @@ def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
 
     app.evaluate("navigator.clipboard.writeText('sentinel')")
     app.keyboard.press(f"{COMMAND_KEY}+c")
+    # Copy is expected to be blocked, so there is no observable clipboard change
+    # to poll for. Give any (unwanted) async copy a chance to run before we
+    # assert the clipboard is untouched.
+    app.wait_for_timeout(200)
 
-    # Poll until the copied cell value lands on the clipboard to avoid a fixed
-    # sleep, since a successful copy has an observable clipboard change.
-    wait_until(app, lambda: "Alice" in app.evaluate("navigator.clipboard.readText()"))
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
 
 
 @pytest.mark.only_browser("chromium")

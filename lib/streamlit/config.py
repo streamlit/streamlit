@@ -645,8 +645,8 @@ _create_option(
 
         - Hides the CSV download button for st.dataframe, st.data_editor,
           and chart table views.
-        - Disables clipboard copy for read-only tables (st.dataframe and
-          chart table views), while keeping st.data_editor copy/paste enabled.
+        - Disables clipboard copy for st.dataframe, st.data_editor, and chart
+          table views. Pasting into st.data_editor stays enabled.
         - Disables st.download_button.
         - Hides chart and diagram image downloads (PNG/SVG), including
           Vega-Lite/Altair, ECharts, Plotly, and Mermaid.

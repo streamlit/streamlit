@@ -267,8 +267,6 @@ function DataFrame({
   const editingMode =
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy messages omit editingMode
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
-  const isReadOnly = editingMode === DataframeProto.EditingMode.READ_ONLY
-  const isClipboardCopyDisabled = disableDataExport && isReadOnly
 
   // Number of rows of the table minus 1 for the header row. For lazy
   // dataframes the total row count comes from the lazy metadata, not from the
@@ -1299,7 +1297,7 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
-            copy: !isClipboardCopyDisabled,
+            copy: !disableDataExport,
             ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
