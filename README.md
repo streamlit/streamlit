@@ -42,8 +42,9 @@ to global enterprises.
       <sub>DASHBOARDS</sub><br>
       <b>KPI dashboards with drill-down and cross-filtering</b><br>
       Revenue, product metrics, and operating dashboards that stay fast over large data.
-      Coming from a BI tool? Move your dashboards to Streamlit, and modernize them on the
-      way.<br>
+      Coming from a BI tool?
+      <a href="https://streamlit.io/dashboards">Move your dashboards to Streamlit</a>, and
+      modernize them on the way.<br>
       <a href="https://advanced-dashboard-demo.streamlit.app/">Try the live demo →</a>
     </td>
     <td width="33%" valign="top">
@@ -65,9 +66,11 @@ to global enterprises.
 </table>
 
 The source for all three is in [streamlit/demos](https://github.com/streamlit/demos).
-Streamlit is also great for [AI chat and agent apps](https://agent-app-demo.streamlit.app/)
+Streamlit is also great for [AI chat and agent apps](https://streamlit.io/generative-ai)
 over your data (`st.chat_input`, `st.write_stream`, `st.status`), ML and model tools, and
-internal data tools.
+internal data tools. For more ideas, see
+[the apps each team asks for](https://streamlit.io/use-cases), from finance to supply
+chain.
 
 ## Get started
 
@@ -133,7 +136,8 @@ if st.button("Submit for sign-off", type="primary"):
 **Generating an app is cheap. Owning it isn't.** An agent can write a React frontend, a
 Python backend, and the API between them in an afternoon. Then someone has to review all
 three, keep them in sync, and patch them for years. With Streamlit, it's one layer of
-Python, and the plumbing is our job.
+Python, and the plumbing is our job. See
+[how it compares](https://streamlit.io/why-streamlit) to custom stacks and BI tools.
 
 - **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
   table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
@@ -157,14 +161,16 @@ Python, and the plumbing is our job.
   back as data, and leave tests behind for CI
   ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)). And every app is
   also a tool: Claude, ChatGPT, Cursor, or any other MCP client can use it with the same
-  logic and access rules as a person in the browser. There's no second API to build.
+  logic and access rules as a person in the browser. There's no second API to build. More
+  in [Streamlit for agents](https://streamlit.io/agents).
 - **Enterprise-ready.** Sign-in is built in (`st.login`), and security scans run on every
   change, with fixes in regular releases. Streamlit targets WCAG 2.2 Level A and AA for its
   commands and default themes, and publishes an
   [ongoing audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md),
   known gaps included. Run it in your own cloud, on
   [Community Cloud](https://streamlit.io/cloud), or natively
-  [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
+  [inside Snowflake](https://docs.streamlit.io/deploy/snowflake). More in
+  [Streamlit for the enterprise](https://streamlit.io/enterprise).
 - **Escape hatches.** Need a bespoke screen? Drop in a
   [custom component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)
   written in React or anything else. Need a webhook or your own API route? Add it with
