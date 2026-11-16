@@ -1298,6 +1298,9 @@ function DataFrame({
           keybindings={{
             downFill: true,
             copy: !disableDataExport,
+            // Cut copies then deletes. Keep it in lockstep with copy so
+            // cells are not cleared with an empty clipboard (no undo).
+            cut: !disableDataExport,
             ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues

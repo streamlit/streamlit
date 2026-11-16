@@ -647,12 +647,19 @@ _create_option(
           and chart table views.
         - Disables clipboard copy for st.dataframe, st.data_editor, and chart
           table views. Pasting into st.data_editor stays enabled.
-        - Disables st.download_button.
+        - Shows st.download_button as disabled. It can't be clicked or
+          triggered by its shortcut, always returns False, and doesn't run
+          its on_click callback.
         - Hides chart and diagram image downloads (PNG/SVG), including
-          Vega-Lite/Altair, ECharts, Plotly, and Mermaid.
-        - Hides the copy buttons of code blocks (st.code and Markdown code
-          blocks), Mermaid diagrams, st.json, and error and exception text,
-          and the copy action for dataframe column names.
+          Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Controls configured
+          in the chart spec itself are not affected.
+        - Hides copy actions for code blocks (st.code and Markdown), Mermaid
+          source, the Vega-Lite spec, st.json (value icons and path copy),
+          dataframe column names and JSON cells, and error and exception
+          text.
+
+        st.audio_input's "Download as WAV" action is not affected; it saves
+        the viewer's own recording rather than app data.
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via

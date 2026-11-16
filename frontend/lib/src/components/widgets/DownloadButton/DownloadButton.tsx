@@ -87,12 +87,15 @@ function DownloadButton(props: Props): ReactElement {
     const isDeferred = Boolean(deferredFileId?.length)
     // Skip the source check when there is no URL (e.g. a disabled callable
     // download): checking an empty URL would re-fetch the current page.
-    if (!isDeferred && url) {
+    // Also skip when export is disabled: the user can't save the file.
+    // Keep the probe for the author-set disabled path, because that flag
+    // can change on a later run.
+    if (!isDeferred && url && !disableDataExport) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
       void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
     }
-  }, [downloadUrl, endpoints, deferredFileId, url])
+  }, [downloadUrl, endpoints, deferredFileId, url, disableDataExport])
 
   const handleDeferredDownload = useCallback(async (): Promise<void> => {
     if (!backendOperationClient || isNullOrEmptyString(deferredFileId)) {

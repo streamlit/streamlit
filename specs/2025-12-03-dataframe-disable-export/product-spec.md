@@ -3,13 +3,13 @@ author: lukasmasuch
 created: 2025-12-03
 ---
 
-# Disable Data Export for `st.dataframe`
+# Disable Built-in Data Export
 
 ## Summary
 
-Add a `client.disableDataExport` config option that controls whether data export functionality
-(CSV download and clipboard copy) is disabled in `st.dataframe` and other components that
-provide data export capabilities (e.g., Vega charts via the table view).
+`client.disableDataExport` turns off built-in export controls across the app: dataframe CSV
+and clipboard copy, `st.download_button`, chart and diagram image downloads, and copy
+actions on code, JSON, and errors.
 
 ## Problem
 
@@ -73,8 +73,10 @@ When `client.disableDataExport = true`:
 - **Copy to clipboard** (`st.dataframe`): Completely disabled — pressing Ctrl/Cmd+C while a
   dataframe is focused will not copy any cell data to the clipboard (applies to both single
   and multi-cell selections)
-- **Copy to clipboard** (`st.data_editor`): Disabled the same way as `st.dataframe`. Pasting
-  into cells stays enabled because it is part of editing, not export
+- **Copy to clipboard** (`st.data_editor`): Disabled the same way as `st.dataframe`,
+  reversing the earlier exemption that kept editor copy enabled for editing workflows.
+  Pasting into cells stays enabled because it is part of editing, not export. Cut is also
+  disabled so cells are not cleared with an empty clipboard (the editor has no undo).
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
 - **`st.download_button`**: Remains visible but is disabled and does not start a download
@@ -85,7 +87,12 @@ When `client.disableDataExport = true`:
   dataframe JSON cells, and error and exception text.
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
-This applies to all components with data export capabilities in the app.
+This applies to Streamlit's built-in export and copy controls. It does not cover:
+
+- `st.audio_input`'s "Download as WAV" action, which saves the viewer's own recording
+  rather than app data
+- Chart controls configured by the author in the chart spec itself (for example ECharts
+  `toolbox.feature.saveAsImage` or `dataView`)
 
 ### Examples
 

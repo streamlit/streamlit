@@ -354,6 +354,7 @@ describe("DataFrame widget", () => {
         getCellsForSelection: true,
         keybindings: expect.objectContaining({
           copy: false,
+          cut: false,
         }),
       })
     )
@@ -374,6 +375,7 @@ describe("DataFrame widget", () => {
         getCellsForSelection: true,
         keybindings: expect.objectContaining({
           copy: false,
+          cut: false,
         }),
         onPaste: expect.any(Function),
       })

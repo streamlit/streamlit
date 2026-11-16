@@ -199,13 +199,11 @@ function ExceptionElement({
             {element.stackTrace.length > 0 ? (
               <StackTrace stackTrace={element.stackTrace} />
             ) : null}
-            {shouldShowLinks && (
+            {shouldShowLinks && !disableDataExport && (
               <StyledExceptionLinks>
-                {!disableDataExport && (
-                  <StyledExceptionLinkButton onClick={handleCopy}>
-                    Copy
-                  </StyledExceptionLinkButton>
-                )}
+                <StyledExceptionLinkButton onClick={handleCopy}>
+                  Copy
+                </StyledExceptionLinkButton>
                 <a href={searchUrl} target="_blank" rel="noopener noreferrer">
                   Ask Google
                 </a>

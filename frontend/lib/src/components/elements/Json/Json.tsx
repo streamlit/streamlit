@@ -84,7 +84,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         name={false}
         theme={jsonTheme}
         enableClipboard={disableDataExport ? false : handleCopy}
-        onSelect={handleSelect}
+        onSelect={disableDataExport ? undefined : handleSelect}
         showComma={false}
         style={{
           fontFamily: theme.genericFonts.codeFont,
@@ -94,7 +94,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
-      {tooltip && (
+      {tooltip && !disableDataExport && (
         <JsonPathTooltip
           top={tooltip.y}
           left={tooltip.x}

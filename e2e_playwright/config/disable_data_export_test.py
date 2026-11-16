@@ -64,7 +64,7 @@ def _show_chart_table_view(app: Page) -> Locator:
     return chart_table_view
 
 
-def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
+def test_hides_download_and_copy_controls(app: Page):
     read_only_dataframe = _get_read_only_dataframe(app)
     data_editor = _get_data_editor(app)
 
@@ -83,8 +83,6 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
     expect(chart_table_view.get_by_label("Show chart")).to_be_visible()
     _expect_csv_export_hidden(chart_table_view)
 
-
-def test_disables_download_button(app: Page):
     download_button = (
         get_element_by_key(app, "download-button")
         .get_by_test_id("stDownloadButton")
@@ -93,19 +91,13 @@ def test_disables_download_button(app: Page):
     expect(download_button).to_be_visible()
     expect(download_button).to_be_disabled()
 
-
-def test_hides_code_block_copy_button(app: Page):
     code_block = get_element_by_key(app, "code-block").get_by_test_id("stCode")
     expect(code_block).to_be_visible()
-
     code_block.hover()
     expect(code_block.get_by_label("Copy to clipboard")).not_to_be_attached()
 
-
-def test_hides_json_copy_icons(app: Page):
     json_element = get_element_by_key(app, "json").get_by_test_id("stJson")
     expect(json_element).to_be_visible()
-
     expect(json_element.locator(".copy-icon")).to_have_count(0)
 
 

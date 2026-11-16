@@ -258,6 +258,15 @@ describe("DownloadButton widget", () => {
     )
   })
 
+  it("does not check the source url when data export is disabled", () => {
+    const props = getProps()
+    renderWithContexts(<DownloadButton {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+  })
+
   it("does not check the source url when a callable download has no url", () => {
     const props = getProps({
       url: "",

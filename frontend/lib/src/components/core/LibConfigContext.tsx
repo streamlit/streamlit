@@ -78,22 +78,9 @@ export interface LibConfigContextProps extends Omit<
   showErrorLinks?: Config.ShowErrorLinks
 
   /**
-   * Whether built-in data export actions should be disabled. Defaults to false.
-   *
-   * Consumed by:
-   * @see DataFrame
-   * @see DownloadButton
-   * @see ArrowVegaLiteChart
-   * @see EChartsChart
-   * @see PlotlyChart
-   * @see MermaidChart
-   * @see StreamlitSyntaxHighlighter
-   * @see StreamlitErrorCodeBlock
-   * @see Json
-   * @see JsonPathTooltip
-   * @see ExceptionElement
-   * @see ColumnMenu
-   * @see JsonViewer
+   * Whether built-in export, download, and copy actions are disabled.
+   * Defaults to false. Components that offer such actions read this flag
+   * and hide or disable those controls.
    */
   disableDataExport?: boolean
 }

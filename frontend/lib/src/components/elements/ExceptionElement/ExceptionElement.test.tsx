@@ -155,7 +155,7 @@ describe("ExceptionElement Element", () => {
     })
   })
 
-  it("hides the Copy link when data export is disabled", () => {
+  it("hides error links when data export is disabled", () => {
     renderWithContexts(<ExceptionElement {...getProps()} />, {
       libConfigContext: {
         showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
@@ -163,7 +163,8 @@ describe("ExceptionElement Element", () => {
       },
     })
     expect(screen.queryByText("Copy")).not.toBeInTheDocument()
-    expect(screen.getByText("Ask Google")).toBeInTheDocument()
+    expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
+    expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
   })
 
   describe("Skills install callout", () => {
