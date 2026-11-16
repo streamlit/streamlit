@@ -203,7 +203,7 @@ For **building a dashboard**, read:
 3. `references/data-display.md`
 4. `references/theme.md` — when the user wants a branded or polished look, pair with a theme (`theme.base` for a shared brand file/URL; `dense-dashboard` or `bi-dashboard` when the app should keep the appearance toggle and use compact padding)
 
-For **an app that computes** (forecasts, what-if levers, simulations, pricing or risk models), start from the `compute-demand-simulator` template and read `references/performance.md` and `references/charts.md`. For **an app that acts** (review and approval queues, sign-offs, triage, approving what an AI agent proposes, writeback), start from the `act-review-queue` template and read `references/data-display.md` (editable tables) and `references/layouts.md` (dialogs and forms).
+For **a forecasting app** (forecasts, what-if levers, simulations, pricing or risk models), start from the `compute-demand-simulator` template and read `references/performance.md` and `references/charts.md`. For **a workflow app** (review and approval queues, sign-offs, triage, approving what an AI agent proposes, writeback), start from the `act-review-queue` template and read `references/data-display.md` (editable tables) and `references/layouts.md` (dialogs and forms).
 
 For **modernizing an existing app** (only when the user explicitly asks), if the app isn't on the latest Streamlit, first ask the user whether to upgrade the app's Streamlit requirement to the latest version, and if they agree, upgrade it ([environment-setup.md](references/environment-setup.md)). After the upgrade, re-read this skill and its references from the newly installed Streamlit, which can include newer features and guidance. Then analyze the whole app, not only the file in view, show the user a short plan that names the riskiest changes (such as moving to `st.navigation` or rewriting charts), and wait for them to confirm.
 1. **Best practices:** apply the [quick reference](#best-practices-quick-reference) and [best-practices.md](references/best-practices.md). Drop deprecated APIs, replace third-party components and custom HTML where a native command covers the same behavior ([third-party-components.md](references/third-party-components.md)), and fix copy and accessibility (sentence casing, Material Symbols, no empty labels).
@@ -227,8 +227,8 @@ When creating a **new dashboard or data app**, prefer starting from a template i
   - `dashboard-seattle-weather` — public dataset exploration
   - `dashboard-stock-peers` — financial peer analysis
   - `dashboard-background-report` — responsive page while a slow query loads in the background
-  - `compute-demand-simulator` — app that computes: what-if levers rerun a cached Monte Carlo forecast (copy the whole folder; it has a helper module)
-  - `act-review-queue` — app that acts: review queue with editable decisions, validation, and writeback (copy the whole folder; it has helper modules)
+  - `compute-demand-simulator` — forecasting app: what-if levers rerun a cached Monte Carlo forecast (copy the whole folder; it has a helper module)
+  - `act-review-queue` — workflow app: review queue with editable decisions, validation, and writeback (copy the whole folder; it has helper modules)
 - If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
 - When adapting a template, keep existing `alt=` and `page_title`; add `alt=` on every new chart/dataframe you introduce
 - When the user wants a branded or polished look, pair the dashboard with a theme from `assets/templates/themes/configs/` (`dense-dashboard`, or `bi-dashboard` for BI cards and KPIs, if the app should keep the appearance toggle and use compact padding), or point `theme.base` at an existing shared brand file or URL
