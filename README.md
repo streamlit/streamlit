@@ -4,19 +4,19 @@
 
 # Streamlit
 
-### Built in Python. Made for people and agents. Owned by your team.
+### Built in Python. Made for people and agents.
 
 **Streamlit is the agent-native data app framework.** Use it for dashboards, forecasting
-tools, review-and-approval workflows, and any other app built around your data.
+apps, workflow apps, and any other app built around your data.
 
 [![PyPI downloads](https://img.shields.io/pypi/dm/streamlit?label=PyPI%20downloads)](https://pypi.org/project/streamlit/)
 [![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/streamlit/streamlit/blob/develop/LICENSE)
 
-A Streamlit app is just Python, with no separate frontend or API layer. Streamlit is
-batteries-included and takes care of the hard parts: a consistent, well-designed
-interface, state, caching, sign-in, theming, and upgrades. Your team keeps only its own
-logic, written in a language it already reads every day.
+Each app is plain Python, written by you or your coding agent, with no separate frontend
+or API layer. Streamlit is batteries-included and takes care of the hard parts: a
+consistent, well-designed interface, state, caching, sign-in, theming, and upgrades. Your
+team keeps only its own logic, written in a language it already reads every day.
 
 **The No. 1 Python framework for data apps and dashboards.**
 [More than a million repositories](https://github.com/streamlit/streamlit/network/dependents)
@@ -28,43 +28,46 @@ to global enterprises.
 <table>
   <tr>
     <td width="33%" align="center">
-      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
-    </td>
-    <td width="33%" align="center">
-      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
-    </td>
-    <td width="33%" align="center">
       <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png?v=2" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
+    </td>
+    <td width="33%" align="center">
+      <a href="https://forecasting-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/forecasting-app/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
+    </td>
+    <td width="33%" align="center">
+      <a href="https://workflow-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/workflow-app/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
   </tr>
   <tr>
     <td width="33%" valign="top">
-      <sub>APPS THAT COMPUTE</sub><br>
-      <b>Forecasts, simulations, and models with what-if levers</b><br>
-      Pricing and demand simulators, risk models, and AI analysis over your data. The
-      computation and the interface are the same Python.<br>
-      <a href="https://apps-that-compute-demo.streamlit.app/">Try the live demo →</a>
-    </td>
-    <td width="33%" valign="top">
-      <sub>APPS THAT ACT</sub><br>
-      <b>Review queues, approvals, sign-offs, and writeback</b><br>
-      Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
-      app as the data, including approving what an AI agent proposes.<br>
-      <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
-    </td>
-    <td width="33%" valign="top">
-      <sub>ADVANCED DASHBOARDS</sub><br>
+      <sub>DASHBOARDS</sub><br>
       <b>KPI dashboards with drill-down and cross-filtering</b><br>
-      Fast over large data. Coming from a BI tool? Move your dashboards to Streamlit, and
-      modernize them on the way.<br>
+      Revenue, product metrics, and operating dashboards that stay fast over large data.
+      Coming from a BI tool? Move your dashboards to Streamlit, and modernize them on the
+      way.<br>
       <a href="https://advanced-dashboard-demo.streamlit.app/">Try the live demo →</a>
+    </td>
+    <td width="33%" valign="top">
+      <sub>FORECASTING APPS</sub><br>
+      <b>Simulations and models with what-if levers</b><br>
+      Forecasts, scenario planning, pricing and demand simulators, and risk models. The
+      computation and the interface are the same Python.<br>
+      <a href="https://forecasting-app-demo.streamlit.app/">Try the live demo →</a>
+    </td>
+    <td width="33%" valign="top">
+      <sub>WORKFLOW APPS</sub><br>
+      <b>Review queues, approvals, sign-offs, and writeback</b><br>
+      Approve what an AI agent proposes, sign off on a forecast, or triage data quality.
+      Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
+      app as the data.<br>
+      <a href="https://workflow-app-demo.streamlit.app/">Try the live demo →</a>
     </td>
   </tr>
 </table>
 
 The source for all three is in [streamlit/demos](https://github.com/streamlit/demos).
-Streamlit is also great for AI and chat apps over your data (`st.chat_input`,
-`st.write_stream`), ML and model tools, and internal data tools.
+Streamlit is also great for [AI chat and agent apps](https://agent-app-demo.streamlit.app/)
+over your data (`st.chat_input`, `st.write_stream`, `st.status`), ML and model tools, and
+internal data tools.
 
 ## Get started
 
@@ -135,7 +138,8 @@ Python, and the plumbing is our job.
 - **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
   table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
   charts cover nearly every visualization, from KPI sparklines to maps and diagrams, and
-  Vega-Lite and ECharts charts switch to faster rendering on their own as the data grows.
+  ECharts, Altair, and built-in charts switch to faster rendering on their own as the
+  data grows.
 - **Fast dashboards.** Wrap a section in `@st.fragment`, and only that section reruns when
   people use it. Cached queries can refresh in the background
   (`@st.cache_data(ttl=..., refresh_mode="background")`), so nobody waits on a stale
@@ -151,14 +155,15 @@ Python, and the plumbing is our job.
   security fixes.
 - **Built for agents.** Agents drive the running app without a browser, read the numbers
   back as data, and leave tests behind for CI
-  ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)). Turn on the
-  experimental agent API (`server.enableAgentApi`), and Claude, ChatGPT, Cursor, or any
-  other MCP client can use your app with the same logic and access rules as a person in
-  the browser. There's no second API to build.
-- **Enterprise-ready.** Built-in sign-in (`st.login`), security scanning on every change
-  with fixes in regular releases, and accessibility built to WCAG 2.2 A and AA, with a
-  [published audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md).
-  Run it in your own cloud, on [Community Cloud](https://streamlit.io/cloud), or natively
+  ([`AppTest`](https://docs.streamlit.io/develop/concepts/app-testing)). And every app is
+  also a tool: Claude, ChatGPT, Cursor, or any other MCP client can use it with the same
+  logic and access rules as a person in the browser. There's no second API to build.
+- **Enterprise-ready.** Sign-in is built in (`st.login`), and security scans run on every
+  change, with fixes in regular releases. Streamlit targets WCAG 2.2 Level A and AA for its
+  commands and default themes, and publishes an
+  [ongoing audit](https://github.com/streamlit/streamlit/blob/develop/wiki/accessibility-wcag.md),
+  known gaps included. Run it in your own cloud, on
+  [Community Cloud](https://streamlit.io/cloud), or natively
   [inside Snowflake](https://docs.streamlit.io/deploy/snowflake).
 - **Escape hatches.** Need a bespoke screen? Drop in a
   [custom component](https://docs.streamlit.io/develop/concepts/custom-components/components-v2)

@@ -14,7 +14,7 @@
 
 """Demand simulator: a what-if forecast that recomputes on every lever change.
 
-An "app that computes": the value is the computation, and it runs in Python
+A forecasting app: the value is the computation, and it runs in Python
 next to the data. Planners pull levers (price, a promo, marketing, supply), and
 every change reruns a Monte Carlo simulation of the next 26 weeks. The
 interface and the computation are the same code.
