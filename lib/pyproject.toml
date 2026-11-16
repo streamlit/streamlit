@@ -60,7 +60,7 @@ dependencies = [
   # (alt.XOffset/alt.YOffset) and the alt.selection_point/selection_interval
   # API that our built-in charts rely on.
   "altair>=5.0.0,<7,!=5.4.0,!=5.4.1",
-  "click>=7.0,<9",
+  "click>=8.5.1,<9",
   # The minimum-dependency job installs the locked Matplotlib 3.11, which
   # requires numpy>=1.25. NumPy 1.23.2 has Python 3.11 wheels, but that job
   # fails collection with it.
