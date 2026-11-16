@@ -138,7 +138,8 @@ Python, and the plumbing is our job.
 - **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
   table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
   charts cover nearly every visualization, from KPI sparklines to maps and diagrams, and
-  ECharts and Altair charts switch to faster rendering on their own as the data grows.
+  ECharts, Altair, and built-in charts switch to faster rendering on their own as the
+  data grows.
 - **Fast dashboards.** Wrap a section in `@st.fragment`, and only that section reruns when
   people use it. Cached queries can refresh in the background
   (`@st.cache_data(ttl=..., refresh_mode="background")`), so nobody waits on a stale
