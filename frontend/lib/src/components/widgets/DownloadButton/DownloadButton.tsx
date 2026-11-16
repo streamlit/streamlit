@@ -66,7 +66,9 @@ function DownloadButton(props: Props): ReactElement {
   const [error, setError] = useState<string | null>(null)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
+  const { enforceDownloadInNewTab = false, disableDataExport = false } =
+    useContext(LibConfigContext)
+  const isDisabled = disabled || disableDataExport
   const { backendOperationClient } = useContext(BackendOperationContext)
 
   let kind = BaseButtonKind.SECONDARY
@@ -135,7 +137,7 @@ function DownloadButton(props: Props): ReactElement {
   ])
 
   const handleDownloadClick = useCallback((): void => {
-    if (disabled) {
+    if (isDisabled) {
       return
     }
 
@@ -163,7 +165,6 @@ function DownloadButton(props: Props): ReactElement {
       link.click()
     }
   }, [
-    disabled,
     ignoreRerun,
     widgetMgr,
     element,
@@ -172,11 +173,12 @@ function DownloadButton(props: Props): ReactElement {
     handleDeferredDownload,
     downloadUrl,
     enforceDownloadInNewTab,
+    isDisabled,
   ])
 
   useRegisterShortcut({
     shortcut,
-    disabled,
+    disabled: isDisabled,
     onActivate: handleDownloadClick,
   })
 
@@ -204,7 +206,7 @@ function DownloadButton(props: Props): ReactElement {
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={disabled || isLoading}
+          disabled={isDisabled || isLoading}
           onClick={handleDownloadClick}
           containerWidth={true}
         >

@@ -668,7 +668,7 @@ describe("ArrowVegaLiteChart", () => {
     ).toBeTruthy()
   })
 
-  it("hides CSV export in table view when data export is disabled, but keeps PNG download", async () => {
+  it("hides CSV export in table view and PNG download when data export is disabled", async () => {
     const user = userEvent.setup()
     vegaEmbedMock.isViewReady = true
 
@@ -684,7 +684,10 @@ describe("ArrowVegaLiteChart", () => {
     // The toolbar is only shown (opacity > 0) on hover, so assert presence in
     // the DOM rather than visibility here.
     expect(
-      screen.getByRole("button", { name: "Download as PNG" })
+      screen.queryByRole("button", { name: "Download as PNG" })
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Show data" })
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Show data" }))

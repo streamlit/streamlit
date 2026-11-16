@@ -78,11 +78,21 @@ def test_hides_csv_export_for_dataframes_and_chart_table_view(app: Page):
 
     toolbar = chart.locator("..").get_by_test_id("stElementToolbar")
     chart.hover(force=True)
-    expect(toolbar.get_by_label("Download as PNG")).to_be_visible()
+    expect(toolbar.get_by_label("Download as PNG")).not_to_be_attached()
 
     chart_table_view = _show_chart_table_view(app)
     expect(chart_table_view.get_by_label("Show chart")).to_be_visible()
     _expect_csv_export_hidden(chart_table_view)
+
+
+def test_disables_download_button(app: Page):
+    download_button = (
+        get_element_by_key(app, "download-button")
+        .get_by_test_id("stDownloadButton")
+        .get_by_role("button")
+    )
+    expect(download_button).to_be_visible()
+    expect(download_button).to_be_disabled()
 
 
 @pytest.mark.only_browser("chromium")

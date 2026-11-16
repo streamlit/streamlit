@@ -78,11 +78,15 @@ export interface LibConfigContextProps extends Omit<
   showErrorLinks?: Config.ShowErrorLinks
 
   /**
-   * Whether data export actions should be disabled for components that support
-   * exporting data. Defaults to false.
+   * Whether built-in data export actions should be disabled. Defaults to false.
    *
    * Consumed by:
    * @see DataFrame
+   * @see DownloadButton
+   * @see ArrowVegaLiteChart
+   * @see EChartsChart
+   * @see PlotlyChart
+   * @see MermaidChart
    */
   disableDataExport?: boolean
 }

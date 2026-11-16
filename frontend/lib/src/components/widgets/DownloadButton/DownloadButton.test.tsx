@@ -189,6 +189,22 @@ describe("DownloadButton widget", () => {
       expect(downloadButton).toBeDisabled()
     })
 
+    it("disables the button and skips download when data export is disabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps()
+      renderWithContexts(<DownloadButton {...props} />, {
+        libConfigContext: { disableDataExport: true },
+      })
+
+      const downloadButton = screen.getByRole("button")
+      expect(downloadButton).toBeDisabled()
+
+      await user.click(downloadButton)
+
+      expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+      expect(anchorClickSpy).not.toHaveBeenCalled()
+    })
+
     it.each([
       { type: "primary", testId: "stBaseButton-primary" },
       { type: "tertiary", testId: "stBaseButton-tertiary" },

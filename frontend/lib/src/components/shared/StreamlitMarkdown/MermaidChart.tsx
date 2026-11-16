@@ -17,6 +17,7 @@
 import {
   memo,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useMemo,
@@ -34,6 +35,7 @@ import { getLogger } from "loglevel"
 
 import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
@@ -471,6 +473,7 @@ const MermaidChart = memo(function MermaidChart({
   source,
 }: Readonly<MermaidChartProps>) {
   const theme = useEmotionTheme()
+  const { disableDataExport = false } = useContext(LibConfigContext)
   const uniqueId = useId()
   const [svgBlobUrl, setSvgBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -722,12 +725,14 @@ const MermaidChart = memo(function MermaidChart({
           onCollapse={collapse}
           labelContext={labelContext}
         >
-          <ToolbarAction
-            label="Download as PNG"
-            icon={FileDownload}
-            onClick={handleDownloadPng}
-            labelContext={labelContext}
-          />
+          {!disableDataExport && (
+            <ToolbarAction
+              label="Download as PNG"
+              icon={FileDownload}
+              onClick={handleDownloadPng}
+              labelContext={labelContext}
+            />
+          )}
           <ToolbarAction
             label={copyLabel}
             icon={isCopied ? Check : ContentCopy}

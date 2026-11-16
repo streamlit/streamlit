@@ -483,6 +483,10 @@ class ButtonMixin:
         download button, wrap the download button in a `fragment
         <https://docs.streamlit.io/develop/concepts/architecture/fragments>`_.
 
+        To disable this widget (and other built-in export controls), set the
+        ``client.disableDataExport`` configuration option to ``True``. The
+        button stays visible but cannot be clicked.
+
         Parameters
         ----------
         label : str

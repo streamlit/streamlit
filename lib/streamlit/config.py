@@ -640,13 +640,16 @@ _create_option(
 _create_option(
     "client.disableDataExport",
     description="""
-        When true, hides the built-in controls for exporting data from
-        components that support it:
+        When true, hides or disables the built-in controls for exporting
+        data from components that support it:
 
         - Hides the CSV download button for st.dataframe, st.data_editor,
           and chart table views.
         - Disables clipboard copy for read-only tables (st.dataframe and
           chart table views), while keeping st.data_editor copy/paste enabled.
+        - Disables st.download_button.
+        - Hides chart and diagram image downloads (PNG/SVG), including
+          Vega-Lite/Altair, ECharts, Plotly, and Mermaid.
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via

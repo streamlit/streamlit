@@ -17,7 +17,7 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import { MermaidChart } from "./MermaidChart"
 
@@ -410,6 +410,20 @@ describe("MermaidChart", () => {
       await waitFor(() => {
         expect(mockWriteText).toHaveBeenCalledWith(SAMPLE_SOURCE)
       })
+    })
+
+    it("hides PNG download when data export is disabled", async () => {
+      renderWithContexts(<MermaidChart source={SAMPLE_SOURCE} />, {
+        libConfigContext: { disableDataExport: true },
+      })
+      await waitForChartImage()
+
+      expect(
+        screen.queryByRole("button", { name: /^Download as PNG$/ })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Copy to clipboard$/ })
+      ).toBeInTheDocument()
     })
 
     it("exposes download and copy toolbar actions after render", async () => {

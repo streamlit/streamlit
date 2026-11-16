@@ -23,6 +23,7 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import type { PlotParams } from "~lib/util/reactPlotlyCompat"
@@ -536,6 +537,40 @@ describe("PlotlyChart Component", () => {
     expect(fullscreenButton).toBeDefined()
     expect(fullscreenButton).toEqual(
       expect.objectContaining({ name: "Fullscreen", title: "Fullscreen" })
+    )
+  })
+
+  it("removes the image download button when data export is disabled", () => {
+    render(
+      <LibConfigContext.Provider
+        value={{
+          locale: "en-US",
+          disableDataExport: true,
+        }}
+      >
+        <FlexContext.Provider value={null}>
+          <ElementFullscreenContext.Provider
+            value={{
+              expanded: false,
+              width: 600,
+              height: 500,
+              expand: vi.fn(),
+              collapse: vi.fn(),
+            }}
+          >
+            <PlotlyChart
+              element={DEFAULT_ELEMENT}
+              widgetMgr={widgetMgr}
+              disabled={false}
+              width={600}
+            />
+          </ElementFullscreenContext.Provider>
+        </FlexContext.Provider>
+      </LibConfigContext.Provider>
+    )
+
+    expect(getLastPlotProps().config?.modeBarButtonsToRemove).toEqual(
+      expect.arrayContaining(["toImage"])
     )
   })
 

@@ -51,6 +51,7 @@ import {
   shouldHeightStretch,
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
@@ -408,6 +409,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const { data, datasets, spec, baseSpecKey } = element
   const { isCopied, copyToClipboard } = useCopyToClipboard()
   const showCopySpecAction = isLocalhost()
+  const { disableDataExport = false } = useContext(LibConfigContext)
 
   const handleDownloadPng = useCallback(() => {
     void (async () => {
@@ -674,7 +676,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
             labelContext={labelContext}
           />
         )}
-        {isViewReady && (
+        {isViewReady && !disableDataExport && (
           <ToolbarAction
             label="Download as PNG"
             icon={FileDownload}

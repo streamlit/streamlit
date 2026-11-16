@@ -18,6 +18,7 @@ import {
   memo,
   type ReactElement,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -41,6 +42,7 @@ import {
 } from "@streamlit/protobuf"
 import { isNullOrEmptyString } from "@streamlit/utils"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
@@ -245,6 +247,7 @@ export function EChartsChart({
 }: Readonly<EChartsChartProps>): ReactElement {
   const theme = useEmotionTheme()
   const isStretchHeight = heightConfig?.useStretch === true
+  const { disableDataExport = false } = useContext(LibConfigContext)
 
   const {
     expanded: isFullScreen,
@@ -885,7 +888,7 @@ export function EChartsChart({
                   labelContext={labelContext}
                 />
               )}
-              {chartInstance !== null && (
+              {chartInstance !== null && !disableDataExport && (
                 <ToolbarAction
                   label={`Download as ${downloadType.toUpperCase()}`}
                   icon={FileDownload}

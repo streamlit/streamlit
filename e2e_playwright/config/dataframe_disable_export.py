@@ -49,3 +49,12 @@ with st.container(key="editable-data-editor"):
 with st.container(key="chart-table-view"):
     st.subheader("Chart")
     st.line_chart(df.set_index("name"), width=350)
+
+with st.container(key="download-button"):
+    st.subheader("Download button")
+    st.download_button(
+        "Download file",
+        data="hello",
+        file_name="hello.txt",
+        mime="text/plain",
+    )

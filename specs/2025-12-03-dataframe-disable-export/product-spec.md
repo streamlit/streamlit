@@ -62,14 +62,14 @@ st.set_option("client.disableDataExport", True)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `client.disableDataExport` | `bool` | `false` | Whether to disable data export (CSV download and copying to clipboard) in components that support it |
+| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, `st.download_button`, and chart/diagram image downloads) |
 
 ### Behavior
 
 When `client.disableDataExport = true`:
 
-- **Download button**: Hidden from the toolbar in `st.dataframe`, `st.data_editor`, and chart
-  components
+- **CSV download**: Hidden from the toolbar in `st.dataframe`, `st.data_editor`, and chart
+  table views
 - **Copy to clipboard** (`st.dataframe`): Completely disabled — pressing Ctrl/Cmd+C while a
   dataframe is focused will not copy any cell data to the clipboard (applies to both single
   and multi-cell selections)
@@ -77,6 +77,9 @@ When `client.disableDataExport = true`:
   copy/paste for core editing workflows (e.g., pasting data into cells, copying rows)
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
+- **`st.download_button`**: Remains visible but is disabled and does not start a download
+- **Chart and diagram image downloads**: Hidden (Vega-Lite/Altair PNG, ECharts PNG/SVG,
+  Plotly `toImage`, Mermaid PNG)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
 This applies to all components with data export capabilities in the app.
