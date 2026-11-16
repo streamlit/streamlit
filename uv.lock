@@ -4389,7 +4389,7 @@ requires-dist = [
     { name = "httptools", marker = "extra == 'performance'", specifier = ">=0.6.3" },
     { name = "httpx", marker = "extra == 'auth'", specifier = ">=0.24.1" },
     { name = "itsdangerous", specifier = ">=2.1.2,<3" },
-    { name = "matplotlib", marker = "extra == 'charts'", specifier = ">=3.0.0" },
+    { name = "matplotlib", marker = "extra == 'charts'", specifier = ">=3.11.2" },
     { name = "numpy", specifier = ">=1.25.0,<3" },
     { name = "orjson", marker = "extra == 'charts'", specifier = ">=3.5.0" },
     { name = "orjson", marker = "extra == 'performance'", specifier = ">=3.5.0" },
