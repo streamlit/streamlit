@@ -13,10 +13,10 @@ apps, workflow apps, and any other app built around your data.
 [![GitHub stars](https://img.shields.io/github/stars/streamlit/streamlit?style=flat)](https://github.com/streamlit/streamlit/stargazers)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/streamlit/streamlit/blob/develop/LICENSE)
 
-You or your coding agent write each app in plain Python, with no separate frontend or API
-layer. Streamlit is batteries-included and takes care of the hard parts: a consistent,
-well-designed interface, state, caching, sign-in, theming, and upgrades. Your team keeps
-only its own logic, written in a language it already reads every day.
+Each app is plain Python, written by you or your coding agent, with no separate frontend
+or API layer. Streamlit is batteries-included and takes care of the hard parts: a
+consistent, well-designed interface, state, caching, sign-in, theming, and upgrades. Your
+team keeps only its own logic, written in a language it already reads every day.
 
 **The No. 1 Python framework for data apps and dashboards.**
 [More than a million repositories](https://github.com/streamlit/streamlit/network/dependents)
@@ -56,7 +56,7 @@ to global enterprises.
     <td width="33%" valign="top">
       <sub>WORKFLOW APPS</sub><br>
       <b>Review queues, approvals, sign-offs, and writeback</b><br>
-      Approve what an AI agent proposes, sign off a forecast, or triage data quality.
+      Approve what an AI agent proposes, sign off on a forecast, or triage data quality.
       Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
       app as the data.<br>
       <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
