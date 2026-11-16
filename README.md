@@ -65,7 +65,7 @@ to global enterprises.
 </table>
 
 The source for all three is in [streamlit/demos](https://github.com/streamlit/demos).
-Streamlit is also great for AI and chat apps over your data (`st.chat_input`,
+Streamlit is also great for AI chat and agent apps over your data (`st.chat_input`,
 `st.write_stream`), ML and model tools, and internal data tools.
 
 ## Get started
@@ -137,7 +137,7 @@ Python, and the plumbing is our job.
 - **Made for data.** Hand a pandas, Polars, Snowpark, or PySpark dataframe straight to a
   table or chart. Tables load rows as you scroll, so they stay fast on large data. Native
   charts cover nearly every visualization, from KPI sparklines to maps and diagrams, and
-  Vega-Lite and ECharts charts switch to faster rendering on their own as the data grows.
+  Altair and ECharts charts switch to faster rendering on their own as the data grows.
 - **Fast dashboards.** Wrap a section in `@st.fragment`, and only that section reruns when
   people use it. Cached queries can refresh in the background
   (`@st.cache_data(ttl=..., refresh_mode="background")`), so nobody waits on a stale
