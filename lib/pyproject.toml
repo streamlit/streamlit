@@ -97,7 +97,7 @@ dependencies = [
   # ASGI server:
   "uvicorn>=0.30.0,<1",
   # Required by starlette:
-  "anyio>=4.0.0,<5",
+  "anyio>=4.16.0,<5",
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
   # Required for websocket support:
