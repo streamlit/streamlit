@@ -129,7 +129,7 @@ charts = [
   "graphviz>=0.19.0",
   "plotly>=4.0.0",
   # orjson speeds up large plotly figure processing by 5-10x:
-  "orjson>=3.5.0",
+  "orjson>=3.13.0",
 ]
 # Optional SQL connection dependency:
 sql = ["SQLAlchemy>=2.0.0"]
@@ -140,7 +140,7 @@ performance = [
   # wheels; the floor stays 0.6.3 so older Python can keep earlier releases.
   "httptools>=0.6.3",
   # orjson speeds up large plotly figure processing by 5-10x:
-  "orjson>=3.5.0",
+  "orjson>=3.13.0",
   # uvloop speeds up the event loop:
   "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
 ]
