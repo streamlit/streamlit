@@ -66,7 +66,7 @@ to global enterprises.
 
 The source for all three is in [streamlit/demos](https://github.com/streamlit/demos).
 Streamlit is also great for AI chat and agent apps over your data (`st.chat_input`,
-`st.write_stream`), ML and model tools, and internal data tools.
+`st.write_stream`, `st.status`), ML and model tools, and internal data tools.
 
 ## Get started
 
