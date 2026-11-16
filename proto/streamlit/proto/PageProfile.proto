@@ -53,9 +53,14 @@ message PageProfile {
   repeated string installed_agents = 14;
   // Agent API activity in this server process. Unset while every count is zero.
   AgentApiUsage agent_api_usage = 15;
-  // st.cache_data and st.cache_resource calls during this script run, and how
-  // long the Streamlit server had been running when the run started.
+  // st.cache_data and st.cache_resource calls during this script run.
   CacheUsage cache_usage = 16;
+  // Whole seconds since the Streamlit runtime started in this process, taken
+  // when this script run started. Low values mark runs right after a server
+  // start (a container start, wake-up or restart), when in-memory caches are
+  // empty and one-time setup such as imports hasn't happened yet.
+  // Set on every page profile, including as 0 in the server's first second.
+  optional int64 server_uptime_seconds = 17;
 }
 
 // Cached-function activity during one script run. Counts and durations only.
@@ -100,12 +105,6 @@ message CacheUsage {
   CacheTypeUsage cache_data = 1;
   // Unset when no st.cache_resource call was recorded.
   CacheTypeUsage cache_resource = 2;
-  // Whole seconds since the Streamlit server started, taken when this script
-  // run started. A low value with many misses means the caches were empty
-  // because the server or container recently started (a container start,
-  // wake-up or restart).
-  // Set on every page profile, including as 0 in the server's first second.
-  optional int64 server_uptime_seconds = 3;
 }
 
 // Recorded calls for one cache type. hits + misses can be lower than calls
