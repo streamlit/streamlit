@@ -23,7 +23,7 @@ import threading
 import time
 import unittest
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 from parameterized import parameterized
@@ -1425,19 +1425,23 @@ class ScriptRunnerTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.scriptrunner.script_runner.create_page_profile_message")
-    @patch(
-        "streamlit.runtime.scriptrunner.script_runner.get_server_uptime_seconds",
-        return_value=42,
-    )
     def test_server_uptime_is_read_only_when_gathering_usage_stats(
         self,
         gather_usage_stats: bool,
-        patched_get_server_uptime_seconds: MagicMock,
         patched_create_page_profile_message: MagicMock,
     ):
         """The run reads the server uptime only when it sends a page profile."""
-        with testutil.patch_config_options(
-            {"browser.gatherUsageStats": gather_usage_stats}
+        uptime_seconds = PropertyMock(return_value=42)
+        with (
+            patch.object(
+                type(Runtime._instance),
+                "uptime_seconds",
+                new=uptime_seconds,
+                create=True,
+            ),
+            testutil.patch_config_options(
+                {"browser.gatherUsageStats": gather_usage_stats}
+            ),
         ):
             scriptrunner = TestScriptRunner("good_script.py")
             scriptrunner.request_rerun(RerunData())
@@ -1445,11 +1449,11 @@ class ScriptRunnerTest(unittest.TestCase):
             scriptrunner.join()
 
         if gather_usage_stats:
-            patched_get_server_uptime_seconds.assert_called_once()
+            uptime_seconds.assert_called_once()
             call_kwargs = patched_create_page_profile_message.call_args.kwargs
             assert call_kwargs["server_uptime_seconds"] == 42
         else:
-            patched_get_server_uptime_seconds.assert_not_called()
+            uptime_seconds.assert_not_called()
             patched_create_page_profile_message.assert_not_called()
 
     @parameterized.expand([(True,), (False,)])

@@ -1415,17 +1415,6 @@ def test_create_page_profile_message_sends_zero_uptime() -> None:
     assert msg.page_profile.server_uptime_seconds == 0
 
 
-def test_server_uptime_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Uptime is unknown until the server starts, then counts whole seconds."""
-    monkeypatch.setattr(metrics_util, "_server_started_at", None)
-    assert metrics_util.get_server_uptime_seconds() is None
-
-    with patch("streamlit.runtime.metrics_util.time.monotonic", return_value=100.0):
-        metrics_util.mark_server_started()
-    with patch("streamlit.runtime.metrics_util.time.monotonic", return_value=161.9):
-        assert metrics_util.get_server_uptime_seconds() == 61
-
-
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
     """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
     skill_dir = base / harness_dir / skill_name

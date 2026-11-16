@@ -26,7 +26,6 @@ from streamlit.components.lib.local_component_registry import LocalComponentRegi
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime import metrics_util
 from streamlit.runtime.app_session import AppSession
 from streamlit.runtime.caching import (
     get_data_cache_stats_provider,
@@ -217,6 +216,8 @@ class Runtime:
         self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
+        # The time.monotonic() value when start() was called.
+        self._started_at: float | None = None
 
         # Initialize managers
         self._component_registry = config.component_registry
@@ -263,6 +264,13 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
+
+    @property
+    def uptime_seconds(self) -> int | None:
+        """Whole seconds since the Runtime started, or None before it starts."""
+        if self._started_at is None:
+            return None
+        return int(time.monotonic() - self._started_at)
 
     @property
     def component_registry(self) -> BaseComponentRegistry:
@@ -419,7 +427,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        metrics_util.mark_server_started()
+        self._started_at = time.monotonic()
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.

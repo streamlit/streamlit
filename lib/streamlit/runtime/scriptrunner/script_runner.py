@@ -32,7 +32,6 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
     format_uncaught_exception,
-    get_server_uptime_seconds,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -663,7 +662,9 @@ class ScriptRunner:
 
             ctx = self._get_script_run_ctx()
             server_uptime_seconds = (
-                get_server_uptime_seconds() if ctx.gather_usage_stats else None
+                runtime.get_instance().uptime_seconds
+                if ctx.gather_usage_stats
+                else None
             )
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
