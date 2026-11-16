@@ -162,6 +162,7 @@ describe("ExceptionElement Element", () => {
         disableDataExport: true,
       },
     })
+    expect(screen.getByTestId("stException")).toBeVisible()
     expect(screen.queryByText("Copy")).not.toBeInTheDocument()
     expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
     expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()

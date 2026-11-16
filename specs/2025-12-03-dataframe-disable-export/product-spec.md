@@ -92,7 +92,7 @@ This applies to Streamlit's built-in export and copy controls. It does not cover
 - `st.audio_input`'s "Download as WAV" action, which saves the viewer's own recording
   rather than app data
 - Chart controls configured by the author in the chart spec itself (for example ECharts
-  `toolbox.feature.saveAsImage` or `dataView`)
+  `toolbox.feature.saveAsImage` or `dataView`, or Plotly `modeBarButtons`)
 
 ### Examples
 

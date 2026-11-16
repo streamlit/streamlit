@@ -1298,8 +1298,8 @@ function DataFrame({
           keybindings={{
             downFill: true,
             copy: !disableDataExport,
-            // Cut copies then deletes. Keep it in lockstep with copy so
-            // cells are not cleared with an empty clipboard (no undo).
+            // Keep cut disabled with copy. Otherwise Ctrl/Cmd+X clears cells
+            // and leaves the clipboard empty, and the editor has no undo.
             cut: !disableDataExport,
             ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {

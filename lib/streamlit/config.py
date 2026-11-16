@@ -652,7 +652,8 @@ _create_option(
           its on_click callback.
         - Hides chart and diagram image downloads (PNG/SVG), including
           Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Controls configured
-          in the chart spec itself are not affected.
+          in the chart spec itself are not affected, including Plotly
+          modeBarButtons.
         - Hides copy actions for code blocks (st.code and Markdown), Mermaid
           source, the Vega-Lite spec, st.json (value icons and path copy),
           dataframe column names and JSON cells, and the exception link row
