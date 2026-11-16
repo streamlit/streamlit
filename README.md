@@ -28,10 +28,10 @@ to global enterprises.
 <table>
   <tr>
     <td width="33%" align="center">
-      <a href="https://apps-that-compute-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-compute/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
+      <a href="https://forecasting-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/forecasting-app/preview.png?v=2" width="240" alt="Demand forecast app with scenario levers, KPI cards, and a forecast chart"></a>
     </td>
     <td width="33%" align="center">
-      <a href="https://apps-that-act-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/apps-that-act/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
+      <a href="https://workflow-app-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/workflow-app/preview.png?v=2" width="240" alt="Review queue where planners approve purchase orders proposed by an AI agent"></a>
     </td>
     <td width="33%" align="center">
       <a href="https://advanced-dashboard-demo.streamlit.app/"><img src="https://raw.githubusercontent.com/streamlit/demos/main/bi-dashboard/preview.png?v=2" width="240" alt="Revenue dashboard with KPI cards, a stacked area chart, and an MRR bridge"></a>
@@ -43,14 +43,14 @@ to global enterprises.
       <b>Forecasts, simulations, and models with what-if levers</b><br>
       Pricing and demand simulators, risk models, and AI analysis over your data. The
       computation and the interface are the same Python.<br>
-      <a href="https://apps-that-compute-demo.streamlit.app/">Try the live demo →</a>
+      <a href="https://forecasting-app-demo.streamlit.app/">Try the live demo →</a>
     </td>
     <td width="33%" valign="top">
       <sub>APPS THAT ACT</sub><br>
       <b>Review queues, approvals, sign-offs, and writeback</b><br>
       Editable tables (<code>st.data_editor</code>) and forms put the decision in the same
       app as the data, including approving what an AI agent proposes.<br>
-      <a href="https://apps-that-act-demo.streamlit.app/">Try the live demo →</a>
+      <a href="https://workflow-app-demo.streamlit.app/">Try the live demo →</a>
     </td>
     <td width="33%" valign="top">
       <sub>ADVANCED DASHBOARDS</sub><br>
