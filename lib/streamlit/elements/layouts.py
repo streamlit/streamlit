@@ -1782,6 +1782,7 @@ class LayoutsMixin:
 
             tabs_state = register_widget(
                 element_id,
+                element_type="tabs",
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -2235,6 +2236,7 @@ class LayoutsMixin:
 
             expander_state = register_widget(
                 element_id,
+                element_type="expander",
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,
@@ -2654,6 +2656,7 @@ class LayoutsMixin:
 
             popover_state = register_widget(
                 element_id,
+                element_type="popover",
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,
                 ctx=ctx,

@@ -1268,6 +1268,7 @@ class SliderMixin:
 
         widget_state = register_widget(
             slider_proto.id,
+            element_type="slider",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

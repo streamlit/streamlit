@@ -1401,6 +1401,7 @@ class ArrowMixin:
             )
             widget_state = register_widget(
                 proto.id,
+                element_type="dataframe",
                 on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

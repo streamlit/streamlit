@@ -569,6 +569,7 @@ def register_button_column_widgets(
         )
         register_widget(
             widget_id,
+            element_type="dataframe_button",
             on_change_handler=on_click,
             args=button_col.args,
             kwargs=button_col.kwargs,

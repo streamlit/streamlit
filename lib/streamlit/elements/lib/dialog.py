@@ -220,6 +220,7 @@ class Dialog(DeltaGenerator):
 
             register_widget(
                 element_id,
+                element_type="dialog",
                 on_change_handler=on_dismiss_callback,
                 deserializer=lambda x: x,  # Simple passthrough for trigger values
                 serializer=lambda x: x,  # Simple passthrough for trigger values

@@ -54,6 +54,7 @@ from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.media_file_storage import MediaFileStorageError
 from streamlit.runtime.scriptrunner import (
+    RerunReason,
     add_script_run_ctx,
     get_script_run_ctx,
     magic_funcs,
@@ -1371,6 +1372,70 @@ def test_create_page_profile_message_sets_uncaught_exception() -> None:
         [], 0, 0, uncaught_exception=exc_text
     )
     assert msg.page_profile.uncaught_exception == exc_text
+
+
+@pytest.mark.parametrize(
+    ("rerun_reason", "rerun_element_type", "expected_reason", "expected_type"),
+    [
+        pytest.param(RerunReason.ST_RERUN, None, "st_rerun", "", id="no_widget_change"),
+        pytest.param(
+            RerunReason.MANUAL_RERUN,
+            "slider",
+            "widget_interaction",
+            "slider",
+            id="widget_change_outranks_manual_rerun",
+        ),
+        pytest.param(
+            RerunReason.FRAGMENT_AUTO_RERUN,
+            "dataframe",
+            "widget_interaction",
+            "dataframe",
+            id="widget_change_outranks_auto_rerun",
+        ),
+        pytest.param(
+            RerunReason.NAVIGATION,
+            "slider",
+            "navigation",
+            "",
+            id="navigation_outranks_widget_change",
+        ),
+        pytest.param(
+            RerunReason.INITIAL_LOAD,
+            "slider",
+            "initial_load",
+            "",
+            id="initial_load_outranks_widget_change",
+        ),
+    ],
+)
+def test_create_page_profile_message_sets_rerun_reason(
+    rerun_reason: RerunReason,
+    rerun_element_type: str | None,
+    expected_reason: str,
+    expected_type: str,
+) -> None:
+    """The run's reason is raised to a widget interaction when a widget changed,
+    and the element type is only recorded for widget interactions.
+    """
+    ctx = MagicMock(
+        fragment_ids_this_run=None,
+        main_script_path="",
+        rerun_reason=rerun_reason,
+        rerun_element_type=rerun_element_type,
+    )
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert msg.page_profile.rerun_reason == expected_reason
+    assert msg.page_profile.rerun_element_type == expected_type
+
+
+def test_create_page_profile_message_without_ctx_has_no_rerun_reason() -> None:
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=None):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert msg.page_profile.rerun_reason == ""
+    assert msg.page_profile.rerun_element_type == ""
 
 
 def test_create_page_profile_message_reports_agent_api_usage() -> None:

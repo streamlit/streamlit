@@ -838,6 +838,7 @@ class MultiSelectMixin:
 
         widget_state = register_widget(
             proto.id,
+            element_type=widget_name,
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

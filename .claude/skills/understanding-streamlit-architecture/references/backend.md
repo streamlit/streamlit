@@ -112,6 +112,8 @@ Thread-local context during script execution.
 
 **Access**: `get_script_run_ctx()` from any code during script execution.
 
+**Rerun reason** (`RerunReason` in `scriptrunner_utils/script_requests.py`): every `RerunData` carries a `reason` set by whoever requested the run, such as `AppSession.request_rerun(reason=...)`, `st.rerun()`, or `st.switch_page()`. Coalesced requests keep the reason with the higher precedence. At run start, `ScriptRunner` replaces it with initial load, navigation, or query-params change when one of those applies and has higher precedence, and stores the result in `ScriptRunContext.rerun_reason`. `SessionState` stores the changed widgets' `element_type` in `ScriptRunContext.rerun_element_type` before callbacks run. `create_page_profile_message()` reports both in `PageProfile.rerun_reason` and `rerun_element_type`, whose proto comments define each value. A new rerun trigger should pass a specific reason instead of falling back to `MANUAL_RERUN` or `UNKNOWN`.
+
 ## DeltaGenerator (`lib/streamlit/delta_generator.py`)
 
 The `st` object users interact with.
@@ -153,12 +155,16 @@ Dictionary-like object for state persistence.
 ```python
 register_widget(
     element_id,
+    element_type="button",  # Same name passed to compute_and_register_element_id
     on_change_handler=callback,
     deserializer=serde.deserialize,
     serializer=serde.serialize,
+    ctx=ctx,
     value_type="trigger_value",  # Maps to WidgetState proto field
 )
 ```
+
+`element_type` is stored on `WidgetMetadata` and reported in usage telemetry when the widget triggers a rerun (see "Rerun reason" under ScriptRunContext), so it must be the fixed type name, never app content such as a key or a custom component's name.
 
 **Lifecycle hooks**:
 - `on_script_will_rerun()`: Process widget states from browser, run callbacks

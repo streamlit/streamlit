@@ -33,6 +33,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
 from streamlit.runtime.agent import usage as agent_usage
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunReason
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     FragmentThreadState,
     ThreadState,
@@ -815,6 +816,18 @@ def create_page_profile_message(
     app_dir: str | None = None
     if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
+        rerun_reason = ctx.rerun_reason
+        # A changed widget makes this a widget interaction unless a reason with
+        # higher precedence (initial load, navigation) applies. The element type
+        # is reported only for widget interactions.
+        if ctx.rerun_element_type is not None:
+            rerun_reason = rerun_reason.combine(RerunReason.WIDGET_INTERACTION)
+        page_profile.rerun_reason = rerun_reason.value
+        if (
+            rerun_reason is RerunReason.WIDGET_INTERACTION
+            and ctx.rerun_element_type is not None
+        ):
+            page_profile.rerun_element_type = ctx.rerun_element_type
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
 

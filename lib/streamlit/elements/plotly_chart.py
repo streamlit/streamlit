@@ -939,6 +939,7 @@ class PlotlyMixin:
 
             widget_state = register_widget(
                 plotly_chart_proto.id,
+                element_type="plotly_chart",
                 on_change_handler=on_select_callback,
                 deserializer=serde.deserialize,
                 serializer=serde.serialize,

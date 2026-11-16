@@ -51,6 +51,18 @@ const getMetricsManager = (
   return mm
 }
 
+/**
+ * Round-trips a PageProfile through the wire format and converts it like
+ * App.handlePageProfileMsg, so field presence and int64 handling match a
+ * message from the server.
+ */
+const decodedPageProfile = (
+  props: PageProfile.$Properties
+): ReturnType<typeof PageProfile.toObject> =>
+  PageProfile.toObject(
+    PageProfile.decode(PageProfile.encode(PageProfile.create(props)).finish())
+  )
+
 const originalWebdriver = window.navigator.webdriver
 
 // Mock fetch for our metrics config request
@@ -340,17 +352,6 @@ describe("metrics helpers", () => {
   })
 
   it("buildEventProto forwards agentApiUsage through toJSON - pageProfile", async () => {
-    // Round-trips through the wire format and converts like
-    // App.handlePageProfileMsg, so field presence and int64 handling match a
-    // message from the server.
-    const decodedPageProfile = (
-      props: PageProfile.$Properties
-    ): ReturnType<typeof PageProfile.toObject> =>
-      PageProfile.toObject(
-        PageProfile.decode(
-          PageProfile.encode(PageProfile.create(props)).finish()
-        )
-      )
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
@@ -378,6 +379,32 @@ describe("metrics helpers", () => {
       sessions: "1",
     })
     expect(withoutUsage).not.toHaveProperty("agentApiUsage")
+  })
+
+  it("buildEventProto forwards the rerun reason through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const widgetRun = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          rerunReason: "widget_interaction",
+          rerunElementType: "slider",
+        })
+      )
+      .toJSON()
+    const otherRun = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({ rerunReason: "st_rerun" })
+      )
+      .toJSON()
+
+    expect(widgetRun.rerunReason).toBe("widget_interaction")
+    expect(widgetRun.rerunElementType).toBe("slider")
+    expect(otherRun.rerunReason).toBe("st_rerun")
+    expect(otherRun).not.toHaveProperty("rerunElementType")
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

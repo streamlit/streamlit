@@ -899,6 +899,7 @@ class NumberInputMixin:
         )
         widget_state = register_widget(
             number_input_proto.id,
+            element_type="number_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

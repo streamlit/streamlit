@@ -843,6 +843,7 @@ class SelectboxMixin:
         )
         widget_state = register_widget(
             selectbox_proto.id,
+            element_type="selectbox",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

@@ -638,6 +638,7 @@ class FileUploaderMixin:
         # know about.
         widget_state = register_widget(
             file_uploader_proto.id,
+            element_type="file_uploader",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

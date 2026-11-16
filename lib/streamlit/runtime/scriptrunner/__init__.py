@@ -18,7 +18,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.run_descriptor import RunDescriptor
-from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.script_requests import (
+    RerunData,
+    RerunReason,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
@@ -29,6 +32,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 __all__ = [
     "RerunData",
     "RerunException",
+    "RerunReason",
     "RunDescriptor",
     "ScriptRunContext",
     "ScriptRunner",

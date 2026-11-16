@@ -57,6 +57,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner import (
     RerunData,
+    RerunReason,
     RunDescriptor,
     ScriptRunContext,
     ScriptRunner,
@@ -265,6 +266,61 @@ class AppSessionTest(unittest.TestCase):
         session = _create_test_session()
         session.request_rerun(None)
         mock_create_scriptrunner.assert_called_once_with(RerunData())
+
+    @parameterized.expand(
+        [
+            ("plain_request", ClientState(), RerunReason.MANUAL_RERUN),
+            (
+                "auto_rerun",
+                ClientState(is_auto_rerun=True),
+                RerunReason.FRAGMENT_AUTO_RERUN,
+            ),
+            (
+                "history_navigation",
+                ClientState(is_history_navigation=True),
+                RerunReason.NAVIGATION,
+            ),
+            (
+                "history_navigation_beats_auto_rerun",
+                ClientState(is_history_navigation=True, is_auto_rerun=True),
+                RerunReason.NAVIGATION,
+            ),
+        ]
+    )
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_rerun_reason_inferred_from_client_state(
+        self,
+        _name: str,
+        client_state: ClientState,
+        expected_reason: RerunReason,
+        mock_create_scriptrunner: MagicMock,
+    ) -> None:
+        """A browser request's reason comes from the flags in its ClientState."""
+        session = _create_test_session()
+        session.request_rerun(client_state)
+
+        rerun_data = mock_create_scriptrunner.call_args.args[0]
+        assert rerun_data.reason is expected_reason
+
+    @parameterized.expand(
+        [
+            ("with_client_state", ClientState(is_auto_rerun=True)),
+            ("without_client_state", None),
+        ]
+    )
+    @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
+    def test_explicit_rerun_reason_is_used(
+        self,
+        _name: str,
+        client_state: ClientState | None,
+        mock_create_scriptrunner: MagicMock,
+    ) -> None:
+        """An explicit reason overrides what the ClientState would imply."""
+        session = _create_test_session()
+        session.request_rerun(client_state, reason=RerunReason.FILE_CHANGE)
+
+        rerun_data = mock_create_scriptrunner.call_args.args[0]
+        assert rerun_data.reason is RerunReason.FILE_CHANGE
 
     @patch_config_options({"runner.fastReruns": False})
     @patch("streamlit.runtime.app_session.AppSession._create_scriptrunner")
@@ -651,7 +707,9 @@ class AppSessionTest(unittest.TestCase):
         session._on_source_file_changed()
 
         session._script_cache.clear.assert_called_once()
-        session.request_rerun.assert_called_once_with(session._client_state)
+        session.request_rerun.assert_called_once_with(
+            session._client_state, reason=RerunReason.FILE_CHANGE
+        )
 
     def test_schedules_file_change_message_when_run_on_save_disabled(self) -> None:
         """File-change notifications enqueue from the event-loop callback."""

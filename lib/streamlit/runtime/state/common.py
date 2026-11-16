@@ -223,6 +223,11 @@ class WidgetMetadata(Generic[T]):
     # suppressed, guarding against forged BackMsg/WidgetState values.
     disabled: bool = False
 
+    # The element type passed to compute_and_register_element_id (e.g. "slider").
+    # Recorded in PageProfile telemetry when a change to this widget reruns the
+    # app, so it must never contain app content such as a component's name.
+    element_type: str = ""
+
     def __repr__(self) -> str:
         return util.repr_(self)
 

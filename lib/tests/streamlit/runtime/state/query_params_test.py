@@ -68,6 +68,36 @@ class QueryParamsMethodTests(DeltaGeneratorTestCase):
         with pytest.raises(KeyError):
             self.query_params["nonexistent"]
 
+    @parameterized.expand(
+        [
+            ("same_params", "foo=bar&two=x&two=y", True),
+            ("different_key_order", "two=x&two=y&foo=bar", True),
+            ("different_value", "foo=baz&two=x&two=y", False),
+            ("different_repeated_value_order", "foo=bar&two=y&two=x", False),
+            ("missing_key", "foo=bar", False),
+            ("extra_key", "foo=bar&two=x&two=y&new=1", False),
+            ("extra_embed_key", "foo=bar&two=x&two=y&embed=true", False),
+            ("empty", "", False),
+        ]
+    )
+    def test_matches_query_string(
+        self, _name: str, query_string: str, expected: bool
+    ) -> None:
+        assert self.query_params.matches_query_string(query_string) is expected
+
+    def test_matches_query_string_after_populate(self) -> None:
+        query_string = "a=&b=1&b=2&embed=true"
+        self.query_params.populate_from_query_string(query_string)
+
+        assert self.query_params.matches_query_string(query_string)
+
+    def test_matches_query_string_treats_empty_list_as_absent(self) -> None:
+        """An empty list is not written to the URL, so it matches no key."""
+        self.query_params._query_params = {"foo": "bar", "empty": []}
+
+        assert self.query_params.matches_query_string("foo=bar")
+        assert not self.query_params.matches_query_string("foo=bar&empty=")
+
     def test__getitem__returns_last_element_of_list(self):
         assert self.query_params["two"] == "y"
 

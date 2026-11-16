@@ -355,6 +355,7 @@ class AudioInputMixin:
 
         audio_input_state = register_widget(
             audio_input_proto.id,
+            element_type="audio_input",
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

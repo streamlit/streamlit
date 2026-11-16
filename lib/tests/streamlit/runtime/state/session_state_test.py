@@ -77,6 +77,7 @@ from streamlit.runtime.state.session_state import (
     WStates,
     _CallbackRerunVotes,
     _is_stale_widget,
+    _rerun_element_type,
     _sanitize_url_array,
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
@@ -1107,6 +1108,124 @@ def test_rerun_exception_requeues_and_restores_run_location() -> None:
     assert ThreadState.get().in_fragment_callback is False
     # Rerun is re-queued rather than swallowed.
     mock_ctx.script_requests.request_rerun_batch.assert_called_once()
+
+
+def _metadata_for_element(
+    wid: str, element_type: str, value_type: str = "int_value", **kwargs: Any
+) -> WidgetMetadata[Any]:
+    return WidgetMetadata(
+        id=wid,
+        deserializer=lambda v: v,
+        serializer=lambda v: v,
+        value_type=value_type,
+        element_type=element_type,
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    ("changed_widgets", "expected"),
+    [
+        pytest.param([("slider", "int_value")], "slider", id="single_widget"),
+        pytest.param(
+            [("slider", "int_value"), ("slider", "int_value")],
+            "slider",
+            id="same_type",
+        ),
+        pytest.param(
+            [
+                ("text_input", "string_value"),
+                ("slider", "int_value"),
+                ("form_submit_button", "trigger_value"),
+            ],
+            "form_submit_button",
+            id="form_submit",
+        ),
+        pytest.param(
+            [("slider", "int_value"), ("checkbox", "bool_value")],
+            "multiple",
+            id="different_types_no_trigger",
+        ),
+        pytest.param(
+            [("button", "trigger_value"), ("chat_input", "chat_input_value")],
+            "multiple",
+            id="different_trigger_types",
+        ),
+    ],
+)
+def test_rerun_element_type(
+    changed_widgets: list[tuple[str, str]], expected: str
+) -> None:
+    metadata = [
+        _metadata_for_element(f"w{i}", element_type, value_type)
+        for i, (element_type, value_type) in enumerate(changed_widgets)
+    ]
+
+    assert _rerun_element_type(metadata) == expected
+
+
+def _call_callbacks_and_get_rerun_element_type(
+    ss: SessionState,
+) -> str | None:
+    mock_ctx = MagicMock(rerun_element_type=None, fragment_ids_this_run=None)
+    with patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=mock_ctx,
+    ):
+        ss._call_callbacks()
+    return mock_ctx.rerun_element_type
+
+
+def test_call_callbacks_records_changed_widget_element_type() -> None:
+    ss = SessionState()
+    ss._set_widget_metadata(_metadata_for_element("changed", "slider"))
+    ss._set_widget_metadata(_metadata_for_element("unchanged", "checkbox"))
+    ss._old_state["changed"] = 1
+    ss._old_state["unchanged"] = 1
+    ss._new_widget_state.set_from_value("changed", 2)
+    ss._new_widget_state.set_from_value("unchanged", 1)
+
+    assert _call_callbacks_and_get_rerun_element_type(ss) == "slider"
+
+
+def test_call_callbacks_records_nothing_without_changes() -> None:
+    ss = SessionState()
+    ss._set_widget_metadata(_metadata_for_element("w", "slider"))
+    ss._old_state["w"] = 1
+    ss._new_widget_state.set_from_value("w", 1)
+
+    assert _call_callbacks_and_get_rerun_element_type(ss) is None
+
+
+def test_call_callbacks_ignores_disabled_widget_changes() -> None:
+    ss = SessionState()
+    ss._set_widget_metadata(_metadata_for_element("w", "slider", disabled=True))
+    ss._old_state["w"] = 1
+    ss._new_widget_state.set_from_value("w", 2)
+
+    assert _call_callbacks_and_get_rerun_element_type(ss) is None
+
+
+def test_call_callbacks_records_element_type_when_callback_raises() -> None:
+    def cb() -> None:
+        raise RuntimeError("callback failed")
+
+    ss = SessionState()
+    ss._set_widget_metadata(_metadata_for_element("w", "slider", callback=cb))
+    ss._old_state["w"] = 1
+    ss._new_widget_state.set_from_value("w", 2)
+
+    mock_ctx = MagicMock(rerun_element_type=None, fragment_ids_this_run=None)
+    with (
+        patch(
+            "streamlit.runtime.state.session_state.get_script_run_ctx",
+            return_value=mock_ctx,
+        ),
+        pytest.raises(RuntimeError, match="callback failed"),
+    ):
+        ss._call_callbacks()
+
+    assert mock_ctx.rerun_element_type == "slider"
 
 
 def test_on_change_callback_rerun_is_requeued() -> None:

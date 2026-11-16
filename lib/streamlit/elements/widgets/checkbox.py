@@ -531,8 +531,11 @@ class CheckboxMixin:
         )
         label = maybe_raise_label_warnings(label, label_visibility)
 
+        element_type = (
+            "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox"
+        )
         element_id = compute_and_register_element_id(
-            "toggle" if type == CheckboxProto.StyleType.TOGGLE else "checkbox",
+            element_type,
             user_key=key,
             key_as_main_identity=True,
             dg=self.dg,
@@ -575,6 +578,7 @@ class CheckboxMixin:
 
         checkbox_state = register_widget(
             checkbox_proto.id,
+            element_type=element_type,
             on_change_handler=on_change_callback,
             args=args,
             kwargs=kwargs,

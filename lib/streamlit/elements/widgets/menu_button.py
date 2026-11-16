@@ -424,6 +424,7 @@ class MenuButtonMixin:
 
         widget_state = register_widget(
             menu_button_proto.id,
+            element_type="menu_button",
             on_change_handler=on_click,
             args=args,
             kwargs=kwargs,
