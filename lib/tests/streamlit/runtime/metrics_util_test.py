@@ -1399,7 +1399,7 @@ def test_create_page_profile_message_reports_server_uptime() -> None:
     assert not msg.page_profile.HasField("cache_usage")
 
 
-def test_create_page_profile_message_omits_cache_usage_without_data() -> None:
+def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
     """``cache_usage`` and ``server_uptime_seconds`` stay unset without data."""
     msg = metrics_util.create_page_profile_message([], 0, 0)
 

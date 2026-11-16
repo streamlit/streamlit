@@ -153,7 +153,7 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.stopped
         assert self.runtime.state == RuntimeState.STOPPED
 
-    async def test_uptime_seconds(self):
+    async def test_uptime_seconds_is_none_until_start_then_counts_whole_seconds(self):
         """Uptime is unknown until the Runtime starts, then counts whole seconds."""
         assert self.runtime.uptime_seconds is None
 

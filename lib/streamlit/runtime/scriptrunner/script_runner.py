@@ -661,6 +661,8 @@ class ScriptRunner:
             )
 
             ctx = self._get_script_run_ctx()
+            # Read at run start, so a slow first run still reports the uptime
+            # it started with.
             server_uptime_seconds = (
                 runtime.get_instance().uptime_seconds
                 if ctx.gather_usage_stats
