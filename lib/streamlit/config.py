@@ -650,6 +650,8 @@ _create_option(
         - Disables st.download_button.
         - Hides chart and diagram image downloads (PNG/SVG), including
           Vega-Lite/Altair, ECharts, Plotly, and Mermaid.
+        - Hides the copy button of code blocks (st.code and Markdown code
+          blocks) and the copy-source button of Mermaid diagrams.
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via

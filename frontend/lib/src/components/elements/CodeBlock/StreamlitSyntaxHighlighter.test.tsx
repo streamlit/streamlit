@@ -16,7 +16,7 @@
 
 import { screen, within } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import StreamlitSyntaxHighlighter, {
   exceedsLineLimit,
@@ -85,6 +85,21 @@ describe("CustomCodeTag Element", () => {
     expect(
       screen.getByTestId("stBaseButton-elementToolbar")
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it("hides copy action when data export is disabled", () => {
+    const props = getStreamlitSyntaxHighlighterProps()
+    renderWithContexts(<StreamlitSyntaxHighlighter {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+
+    expect(screen.getByTestId("stCode")).not.toHaveAttribute("tabindex")
+    expect(
+      screen.queryByTestId("stBaseButton-elementToolbar")
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: /copy to clipboard/i })
     ).not.toBeInTheDocument()

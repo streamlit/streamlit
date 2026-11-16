@@ -95,6 +95,14 @@ def test_disables_download_button(app: Page):
     expect(download_button).to_be_disabled()
 
 
+def test_hides_code_block_copy_button(app: Page):
+    code_block = get_element_by_key(app, "code-block").get_by_test_id("stCode")
+    expect(code_block).to_be_visible()
+
+    code_block.hover()
+    expect(code_block.get_by_label("Copy to clipboard")).not_to_be_attached()
+
+
 @pytest.mark.only_browser("chromium")
 def test_keeps_data_editor_clipboard_copy_enabled(app: Page):
     """Data editor copy stays enabled. Chromium-only: reliable clipboard read/write in Playwright."""

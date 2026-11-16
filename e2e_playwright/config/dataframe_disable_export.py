@@ -58,3 +58,7 @@ with st.container(key="download-button"):
         file_name="hello.txt",
         mime="text/plain",
     )
+
+with st.container(key="code-block"):
+    st.subheader("Code block")
+    st.code("print('hello')", language="python")

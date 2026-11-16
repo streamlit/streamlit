@@ -412,7 +412,7 @@ describe("MermaidChart", () => {
       })
     })
 
-    it("hides PNG download when data export is disabled", async () => {
+    it("hides PNG download and copy source when data export is disabled", async () => {
       renderWithContexts(<MermaidChart source={SAMPLE_SOURCE} />, {
         libConfigContext: { disableDataExport: true },
       })
@@ -422,7 +422,10 @@ describe("MermaidChart", () => {
         screen.queryByRole("button", { name: /^Download as PNG$/ })
       ).not.toBeInTheDocument()
       expect(
-        screen.getByRole("button", { name: /^Copy to clipboard$/ })
+        screen.queryByRole("button", { name: /Copy to clipboard/ })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /^Fullscreen$/ })
       ).toBeInTheDocument()
     })
 

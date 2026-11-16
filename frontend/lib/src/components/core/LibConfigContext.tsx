@@ -87,6 +87,7 @@ export interface LibConfigContextProps extends Omit<
    * @see EChartsChart
    * @see PlotlyChart
    * @see MermaidChart
+   * @see StreamlitSyntaxHighlighter
    */
   disableDataExport?: boolean
 }
