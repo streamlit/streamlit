@@ -191,7 +191,9 @@ def test_chat_analyst_answers_suggestions_and_retries(template: str) -> None:
     _assert_renders_cleanly(picked)
     assert picked.echarts_chart, "the suggested analysis should draw its chart"
 
-    # The follow-up to "Why revenue fell". AppTest lists options without icons.
+    # Follow-up to "Why revenue fell". set_value takes the full option string,
+    # icon included; AppTest's listed options drop the icon, so they can't be
+    # used to look it up.
     picked.pills[0].set_value(":material/leaderboard: Compare regions").run()
     _assert_renders_cleanly(picked)
     roles = [message["role"] for message in picked.session_state["chats"]["c0"]]

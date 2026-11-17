@@ -19,7 +19,9 @@ its work as it goes: it yields ``Running`` when a tool call starts, the finished
 ``Step`` when it ends, and the ``Reply`` last, with the answer and an optional
 chart. To use a real model, map your model's or agent framework's events to
 these: tool-call starts to ``Running``, tool results to ``Step``, and the final
-message to ``Reply``. To stream tokens, pass the model's stream to
+message to ``Reply``. Each ``Step`` must follow its own ``Running``, so if your
+framework only reports finished tool calls, yield a ``Running`` right before
+each ``Step``. To stream tokens, pass the model's stream to
 ``st.write_stream`` instead of ``stream``.
 """
 
@@ -83,6 +85,8 @@ def money(value: float) -> str:
     value = abs(value)
     if value >= 1e6:
         return f"{sign}${value / 1e6:.2f}M"
+    if value < 1e3:
+        return f"{sign}${value:,.0f}"
     return f"{sign}${value / 1e3:,.0f}k"
 
 

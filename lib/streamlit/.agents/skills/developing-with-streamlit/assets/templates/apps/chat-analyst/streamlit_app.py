@@ -29,7 +29,8 @@ Notes on this template:
   button. A stopped run, or one interrupted by switching chats, leaves a
   question without an answer, so the next run shows "This response was
   interrupted" with a retry button. A stop doesn't start a run, so the note
-  appears with the user's next interaction.
+  appears with the user's next interaction. Sending a new message instead
+  leaves the stopped question unanswered in the history.
 - The agent yields an event as each tool call starts and ends, and each one is
   drawn where the work runs: an ``st.status(type="step")`` with a
   ``:shimmer[...]`` label inside a compact "Thinking" ``st.status``. The

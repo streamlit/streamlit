@@ -80,7 +80,7 @@ prompt = st.chat_input("Ask a question", submit_mode="stop")
 - `"disable"`: the input is disabled after submission and re-enabled when the run completes—useful to avoid interrupting streaming responses.
 - `"stop"`: the submit button becomes a stop button during the run; clicking it stops the script, like the app's "Stop" button.
 
-A stopped run usually leaves the user's message in history without a reply. Offer a retry instead of rendering nothing. A stop ends the script without starting another run, so the retry appears on the next rerun; don't try to draw it from the stopped run. Set a flag in the button's callback and read it before drawing anything, so the retry run doesn't draw the "stopped" note above the new reply:
+A stopped run usually leaves the user's message without a reply, so offer a retry instead of rendering nothing. A stop doesn't start another run, so the retry appears on the next rerun, not from the stopped run. Set a flag in the button's callback and read it before drawing history, so the retry run doesn't also draw the "stopped" note:
 
 ```python
 def retry() -> None:
