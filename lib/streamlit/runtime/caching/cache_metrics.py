@@ -17,7 +17,8 @@ background-refresh metrics for cached functions.
 
 Each call to a cached function is one lookup: a hit if it returned a stored
 value, including one computed by another caller it waited for, or a miss if it
-ran the function. A call that fails or stops before either is not counted.
+ran the function. A call that stops or errors before it returns a stored value
+or runs the function is not counted.
 
 Counts live in a process-wide registry keyed by the same ``cache_type`` and
 ``cache`` labels as ``cache_memory_bytes``, so they outlive the cache objects
@@ -98,7 +99,7 @@ _EVICTION_REASONS: Final[dict[CacheType, tuple[EvictionReason, ...]]] = {
 
 
 class _DurationHistogram:
-    """Mutable state for one compute-duration histogram series."""
+    """Mutable state for one duration histogram series."""
 
     __slots__ = ("bucket_counts", "count", "sum")
 
@@ -230,7 +231,8 @@ class FunctionCacheMetrics:
                     help=(
                         "Total calls to a cached function by lookup result. A hit "
                         "returned a stored value, including after waiting for "
-                        "another caller to compute it. A miss ran the function."
+                        "another caller to compute it. A miss ran the function. "
+                        "A call stopped while waiting is not counted."
                     ),
                 )
                 for lookup_result, value in (("hit", hits), ("miss", misses))

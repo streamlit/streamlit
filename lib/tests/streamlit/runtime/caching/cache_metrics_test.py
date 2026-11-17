@@ -279,7 +279,8 @@ def test_concurrent_async_waiters_count_as_hits(
 
     @decorator(show_spinner=False)
     async def load(x: int) -> int:
-        # The other gathered calls run until they await this computation.
+        # Yield so every other gathered call starts waiting before this result
+        # is stored.
         await asyncio.sleep(0.01)
         return x
 
@@ -289,7 +290,76 @@ def test_concurrent_async_waiters_count_as_hits(
     assert asyncio.run(run()) == [1] * callers
     assert _lookups(registry, load) == {"hit": callers - 1, "miss": 1}
     assert _histogram(registry, load).observation_count == 1
-    assert _wait_histogram(registry, load).observation_count == callers - 1
+    waits = _wait_histogram(registry, load)
+    assert waits.observation_count == callers - 1
+    assert waits.observation_sum > 0
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_sync_waiter_that_retries_after_owner_fails_is_a_miss(
+    registry: CacheMetrics, name: str, decorator: Callable
+) -> None:
+    """A waiter that runs the function after the owner raised is a miss with a wait."""
+    waiting_threads: set[int] = set()
+    attempts: list[int] = []
+
+    def yield_check() -> None:
+        waiting_threads.add(threading.get_ident())
+
+    @decorator(show_spinner=False)
+    def load(x: int) -> int:
+        attempts.append(x)
+        if len(attempts) == 1:
+            _wait_for(lambda: len(waiting_threads) == 1)
+            raise ValueError("owner failed")
+        return x
+
+    def call() -> int | None:
+        try:
+            return load(1)
+        except ValueError:
+            return None
+
+    with (
+        patch.object(cache_utils, "get_run_yield_check", return_value=yield_check),
+        ThreadPoolExecutor(max_workers=2) as executor,
+    ):
+        results = sorted(executor.map(lambda _: call(), range(2)), key=str)
+
+    assert results == [1, None]
+    assert _lookups(registry, load) == {"hit": 0, "miss": 2}
+    assert _histogram(registry, load).observation_count == 2
+    assert _wait_histogram(registry, load).observation_count == 1
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
+    registry: CacheMetrics, name: str, decorator: Callable
+) -> None:
+    """An async waiter that retries after the owner raised is a miss with one wait."""
+    attempts: list[int] = []
+
+    @decorator(show_spinner=False)
+    async def load(x: int) -> int:
+        attempts.append(x)
+        # Yield so the other gathered call starts waiting on this computation.
+        await asyncio.sleep(0.01)
+        if len(attempts) == 1:
+            raise ValueError("owner failed")
+        return x
+
+    async def run() -> list[int | BaseException]:
+        return list(await asyncio.gather(load(1), load(1), return_exceptions=True))
+
+    results = asyncio.run(run())
+
+    assert sum(isinstance(r, ValueError) for r in results) == 1
+    assert 1 in results
+    assert _lookups(registry, load) == {"hit": 0, "miss": 2}
+    assert _histogram(registry, load).observation_count == 2
+    waits = _wait_histogram(registry, load)
+    assert waits.observation_count == 1
+    assert waits.observation_sum > 0
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
@@ -567,7 +637,10 @@ def test_wait_duration_uses_compute_duration_buckets() -> None:
             observation_count=2,
             labels={"cache_type": "st_cache_data", "cache": "module.load"},
             unit="seconds",
-            help=stat[0].help,
+            help=(
+                "Time a call spent blocked while another caller computed the "
+                "same value. One observation per call that waited."
+            ),
         )
     ]
 
@@ -810,7 +883,7 @@ def test_counts_survive_cache_replacement(
 def test_zero_valued_series_emitted_for_called_function(
     registry: CacheMetrics, name: str, decorator: Callable, reasons: set[str]
 ) -> None:
-    """Every hit, miss, and eviction-reason series exists even at zero."""
+    """Every hit, miss, eviction-reason, and wait series exists even at zero."""
 
     @decorator
     def load() -> int:
