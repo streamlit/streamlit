@@ -132,8 +132,8 @@ def _hold_compute_lock(
 ) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun.
 
-    Only time spent blocked on a lock held by another caller is recorded as
-    ``call_timer``'s wait, including when a stop or rerun ends the wait.
+    If ``call_timer`` is given, records how long this call was blocked on a lock
+    another caller holds as its wait, including a wait that a stop or rerun ends.
     """
     yield_check = None
     if not lock.acquire(blocking=False):
@@ -863,14 +863,14 @@ class CachedFunc(Generic[P, R]):
             hash_funcs=self._info.hash_funcs,
         )
 
-        # A call is a miss only once it runs the function, so a caller that finds
-        # a value under the compute lock, after waiting for another caller's
-        # computation, is a hit.
+        # Only a hit is recorded here. `_handle_cache_miss` records a miss just before
+        # it runs the function, and a hit if another caller's computation filled the
+        # entry while this call waited for the compute lock.
         try:
             read = cache.read_result_and_freshness(value_key)
         except CacheKeyNotFoundError:
-            # Hard miss (never computed or past the hard-eviction bound): fall through
-            # to a blocking foreground compute below.
+            # Not stored (never computed or past the hard-eviction bound): fall
+            # through to a blocking foreground compute below.
             pass
         else:
             # A stale value served during a background refresh is still a hit.
