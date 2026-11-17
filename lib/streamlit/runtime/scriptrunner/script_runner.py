@@ -661,6 +661,13 @@ class ScriptRunner:
             )
 
             ctx = self._get_script_run_ctx()
+            # Read at run start, so a slow first run still reports the uptime
+            # it started with.
+            server_uptime_seconds = (
+                runtime.get_instance().uptime_seconds
+                if ctx.gather_usage_stats
+                else None
+            )
             # Clear widget state on page change. This normally happens implicitly
             # in the script run cleanup steps, but doing it explicitly ensures
             # it happens even if a script run was interrupted.
@@ -990,6 +997,7 @@ class ScriptRunner:
                                 if uncaught_exception
                                 else None
                             ),
+                            server_uptime_seconds=server_uptime_seconds,
                         )
                     )
                 except Exception as ex:

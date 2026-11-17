@@ -53,6 +53,56 @@ message PageProfile {
   repeated string installed_agents = 14;
   // Agent API activity in this server process. Unset while every count is zero.
   AgentApiUsage agent_api_usage = 15;
+  // st.cache_data and st.cache_resource calls during this script run.
+  CacheUsage cache_usage = 16;
+  // Whole seconds since the Streamlit runtime started, taken when this run
+  // started. Low values mean this process started recently, so its in-memory
+  // caches are empty. Optional, so that 0 is still sent.
+  optional int64 server_uptime_seconds = 17;
+}
+
+// Cache activity during one script run: counts, and times in microseconds.
+// The times leave out time already recorded in commands, such as st.* calls
+// inside a cached function, so they are part of user code time (exec_time
+// minus prep_time minus command times). A cached call made inside another
+// cached function counts as part of the outer call, so subtracting the times
+// from user code time leaves the time spent outside the cache. Like command
+// times, times from concurrent threads are summed and can exceed wall-clock
+// time.
+message CacheUsage {
+  // Unset when no st.cache_data call was recorded.
+  CacheTypeUsage cache_data = 1;
+  // Unset when no st.cache_resource call was recorded.
+  CacheTypeUsage cache_resource = 2;
+}
+
+// Recorded calls for one cache type, with times in microseconds. stale_hits
+// are also counted in hits. hits + misses can be less than calls
+// when a call fails or stops before reading or computing a value, for example
+// on an unhashable argument or a rerun while waiting for another caller.
+message CacheTypeUsage {
+  int64 calls = 1;
+  // Calls that returned a cached value, including callers that waited for
+  // another caller to compute it.
+  int64 hits = 2;
+  // Calls that ran the cached function, including ones where it raised.
+  int64 misses = 3;
+  // Hits that returned an expired value (past the decorator's ttl) while
+  // refresh_mode="background" replaces it.
+  int64 stale_hits = 4;
+  // Time running the cached function on misses, excluding time recorded in
+  // commands.
+  int64 compute_time = 5;
+  // Time blocked while another session, thread or background refresh
+  // computes the same value.
+  int64 wait_time = 6;
+  // Calls that waited, counted once each even if a call waited more than once.
+  int64 waits = 8;
+  // All other cache time: hashing the arguments, reading the result (and for
+  // st.cache_data, unpickling it), and replaying cached elements. Includes
+  // the cache write when the limits on tracked commands (_MAX_TRACKED_COMMANDS
+  // and _MAX_TRACKED_PER_COMMAND in metrics_util.py) left it out of commands.
+  int64 overhead_time = 7;
 }
 
 // Agent API activity in one server process. Cumulative since this process
