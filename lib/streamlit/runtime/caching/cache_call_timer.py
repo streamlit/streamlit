@@ -20,8 +20,8 @@ Every call reports its hit or miss, compute time and wait to its function's
 calls the same way. A hit returned a stored value, including one computed by
 another caller it waited for. A miss ran the function.
 
-A call is added to the page profile only when its time would otherwise count as user code, so
-those totals can be subtracted from user code:
+A call is added to the page profile only when its time would otherwise count
+as user code, so those totals can be subtracted from user code:
 
 - It runs on a thread attached to a script run that gathers usage stats.
   Background refreshes and other threads without a script run are not recorded.
