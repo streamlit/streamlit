@@ -32,7 +32,7 @@ from e2e_playwright.shared.app_utils import (
 
 # Total number of st.echarts_chart elements rendered by st_echarts_chart.py
 # (including the ones inside the collapsed expander and the form).
-_EXPECTED_CHART_COUNT = 41
+_EXPECTED_CHART_COUNT = 42
 _XSS_PAYLOAD = "<img src=x onerror=alert(1)>"
 _XSS_LINES_PAYLOAD = "<img src=x onerror=alert(2)>"
 _XSS_TEMPLATE_PAYLOAD = "<img src=x onerror=alert(3)>"
@@ -355,10 +355,10 @@ def test_tooltip_and_label_xss_payloads_are_escaped(app: Page):
     assert dialogs == [], f"Unexpected dialog(s) fired from XSS payload: {dialogs}"
 
 
-def test_tooltip_formatting_without_javascript(app: Page):
+def test_tooltip_and_label_formatting_without_javascript(app: Page):
     """Tooltip templates expand ``{@[n]}`` and, on a pie, ``{@column}``;
-    ``valueFormatter`` formats numbers; and a daily time axis heads its tooltip
-    with a plain date.
+    ``valueFormatter`` formats numbers; a daily time axis heads its tooltip
+    with a plain date; and number formats work in axis and series labels.
     """
     template_chart = _get_chart(app, "c_tooltip_template")
     # Heatmaps draw on two canvas layers.
@@ -393,6 +393,14 @@ def test_tooltip_formatting_without_javascript(app: Page):
     expect(daily_tooltip).to_contain_text(re.compile(r"2026-0[78]-\d{2}"))
     # Must NOT happen: the header keeps ECharts' midnight time.
     expect(daily_tooltip).not_to_contain_text("00:00")
+
+    label_chart = _get_chart(app, "c_label_number_formats")
+    label_texts = label_chart.locator("svg text")
+    expect(label_texts.filter(has_text=re.compile(r"^20%$"))).to_have_count(1)
+    expect(label_texts.filter(has_text=re.compile(r"^100%$"))).to_have_count(1)
+    expect(label_texts.filter(has_text=re.compile(r"^0\.50 pts$"))).to_have_count(1)
+    # Must NOT happen: ECharts prints the format string on every tick.
+    expect(label_texts.filter(has_text=re.compile(r"^percent$"))).to_have_count(0)
 
 
 def test_encode_tooltip_labels_dataframe_columns(app: Page):
