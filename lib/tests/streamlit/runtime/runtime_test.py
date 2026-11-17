@@ -157,8 +157,10 @@ class RuntimeTest(RuntimeTestCase):
         """Uptime is unknown until the Runtime starts, then counts whole seconds."""
         assert self.runtime.uptime_seconds is None
 
-        with patch("streamlit.runtime.runtime.time.monotonic", return_value=100.0):
-            await self.runtime.start()
+        await self.runtime.start()
+        assert self.runtime.uptime_seconds is not None
+
+        self.runtime._started_at = 100.0
         with patch("streamlit.runtime.runtime.time.monotonic", return_value=161.9):
             assert self.runtime.uptime_seconds == 61
 

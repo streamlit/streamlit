@@ -1432,6 +1432,8 @@ class ScriptRunnerTest(unittest.TestCase):
     ):
         """The run reads the server uptime only when it sends a page profile."""
         uptime_seconds = PropertyMock(return_value=42)
+        # Runtime._instance is a MagicMock here, and a PropertyMock only records
+        # reads when it is set on the class.
         with (
             patch.object(
                 type(Runtime._instance),
