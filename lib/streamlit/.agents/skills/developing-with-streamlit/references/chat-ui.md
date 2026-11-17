@@ -1,7 +1,7 @@
 
 # Streamlit chat interfaces
 
-Build conversational UIs with Streamlit's chat elements.
+Build conversational UIs with Streamlit's chat elements. For a complete chat and agent app (recent chats, tool-call steps, streamed answers with charts, feedback, and stopped runs), start from the `chat-analyst` template in `assets/templates/apps/`.
 
 ## Basic chat structure
 
@@ -47,6 +47,8 @@ with st.chat_message("assistant"):
 st.session_state.messages.append({"role": "assistant", "content": response})
 ```
 
+Pass `cursor=` to show a cursor at the end of the text while it streams, for example `st.write_stream(stream, cursor=":primary[▍]")`.
+
 With OpenAI, you can pass the stream directly:
 
 ```python
@@ -77,6 +79,32 @@ prompt = st.chat_input("Ask a question", submit_mode="stop")
 - `"submit"` (default): the input stays enabled, so users can send new messages while the script runs.
 - `"disable"`: the input is disabled after submission and re-enabled when the run completes—useful to avoid interrupting streaming responses.
 - `"stop"`: the submit button becomes a stop button during the run; clicking it stops the script, like the app's "Stop" button.
+
+A stopped run usually leaves the user's message without a reply, so offer a retry instead of rendering nothing. A stop doesn't start another run, so the retry appears on the next rerun, not from the stopped run. Set a flag in the button's callback and read it before drawing history, so the retry run doesn't also draw the "stopped" note:
+
+```python
+def retry() -> None:
+    st.session_state.retry = True
+
+
+history = st.session_state.messages
+stopped = bool(history) and history[-1]["role"] == "user"
+retrying = not prompt and stopped and st.session_state.pop("retry", False)
+if retrying:
+    prompt = history[-1]["content"]
+
+# ... draw the history ...
+
+if not prompt and stopped:
+    with st.chat_message("assistant"):
+        st.caption("This response was interrupted.")
+        st.button(
+            "Try again", icon=":material/refresh:", type="tertiary", on_click=retry
+        )
+
+if prompt and not retrying:  # A retried question is already in history
+    history.append({"role": "user", "content": prompt})
+```
 
 ## Thinking and agent steps
 
@@ -130,6 +158,68 @@ with st.chat_message("assistant"):
 - A step with no content also ends the timeline, which is useful to split a chain into segments—not as a dummy "done" node before the answer.
 - `state` must be `"running"` (default), `"complete"`, or `"error"`—any other value raises an error, including via `status.update(state=...)`.
 - Put the status where the work runs so its steps appear as the task runs. Don't gate it behind a button whose only job is to launch the task—running it in response to real input, for example `if prompt := st.chat_input(...)`, is the normal case.
+- Leaving a status's `with` block marks it complete. When steps arrive as events from an agent loop, add each one with `thinking.status(...)` and write to it with `status.markdown(...)` instead of re-entering `with thinking:`, which would mark "Thinking" done after the first step.
+
+**Replaying from history.** Store each step's label and details and the thinking time with the message, not the containers. When you redraw history, render the steps complete and collapsed, without `:shimmer[...]`, and don't run the tools again:
+
+```python
+with st.chat_message("assistant"):
+    if steps := msg.get("steps"):  # A reply without tool calls has no toggle
+        s = msg["seconds"]
+        label = f"Thought for {s} second{'s' if s != 1 else ''}"
+        with st.status(label, type="compact", state="complete"):
+            for step in steps:
+                with st.status(step["label"], type="step", state="complete"):
+                    st.markdown(step["detail"])
+    st.markdown(msg["content"])
+```
+
+## Feedback and other per-message widgets
+
+Give every message a stable ID when you store it, and key per-message widgets with it. Keys built from the list index collide when the app keeps several conversations and shift when messages are removed:
+
+```python
+import uuid
+
+st.session_state.messages.append(
+    {"id": uuid.uuid4().hex, "role": "assistant", "content": response}
+)
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if msg["role"] == "assistant":
+            st.feedback("thumbs", key=f"feedback_{msg['id']}", persist_state="session")
+```
+
+Read a rating from `st.session_state[f"feedback_{msg_id}"]`, or pass `on_change=` with `args=(msg_id,)` to log it when it changes.
+
+- `persist_state="session"` keeps a rating while its message isn't drawn, such as when another conversation is open.
+- A reply generated in this run isn't in the history loop yet. Call `st.rerun()` after storing it to draw its widgets, or draw them right after streaming.
+
+## Charts and tables in messages
+
+Store the data that redraws a result with the message, such as an ECharts option and its alt text or a dataframe, not the element, and redraw it from history on every rerun. Key each chart by its message ID, so it keeps its identity and doesn't replay its entry animation when the messages above it change:
+
+```python
+st.session_state.messages.append(
+    {
+        "id": uuid.uuid4().hex,
+        "role": "assistant",
+        "content": response,
+        "chart": option,  # An ECharts option dict
+        "chart_alt": "Weekly revenue by region: the West drops in the last week",
+    }
+)
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+        if chart := msg.get("chart"):
+            st.echarts_chart(
+                chart, height=260, alt=msg["chart_alt"], key=f"chart_{msg['id']}"
+            )
+```
 
 ## Chat message avatars
 
@@ -173,6 +263,76 @@ if prompt:
 ```
 
 Show suggestions only while `st.session_state.messages` is empty, and route the selected suggestion through the same `if prompt:` handler as typed input. Appending the suggestion and calling `st.rerun()` skips the reply, because on that rerun `st.chat_input` returns `None`. Render the pills in an `st.empty()` placeholder and clear it once there is a prompt; otherwise they stay on screen above the first reply until the next rerun.
+
+### Follow-up suggestions
+
+Show follow-ups to the latest answer in one row right above the chat input, where people type and where a long answer can't push them out of view. Keep the start-screen suggestions centered in the empty chat, where they fill the page. Give follow-ups short labels mapped to full prompts, like `SUGGESTIONS`, so the row stays readable:
+
+```python
+followup_slot = st.bottom.empty()  # Before the chat input, so the row sits above it
+prompt = st.chat_input("Ask a question")
+
+history = st.session_state.messages
+followups = history[-1].get("followups", {}) if history else {}  # Label -> prompt
+if not prompt and followups:
+    key = f"followup_{history[-1]['id']}"
+    if picked := st.session_state.get(key):
+        prompt = followups[picked]
+    else:
+        with followup_slot.container():
+            st.pills(
+                "Follow up",
+                list(followups),
+                label_visibility="collapsed",
+                wrap=False,
+                key=key,
+            )
+```
+
+On the run that answers a prompt, the slot stays empty, which removes the pills right away. Put them in `slot.container()`: pills placed directly in the slot stay on screen until the run ends. Key them by the reply's message ID, so a new answer starts with nothing selected, and call `st.rerun()` after storing the reply so its follow-ups show.
+
+## Multiple conversations and recent chats
+
+Keep conversations in Session State by ID and track the open one. List recent chats in the sidebar as tertiary buttons with `wrap=False` inside `st.container(gap=None)`: compact rows whose long titles end in an ellipsis and show in full on hover. Switch chats in an `on_click` callback, so the run that follows draws the chosen chat:
+
+```python
+import uuid
+
+chats = st.session_state.setdefault("chats", {})  # Chat ID -> messages
+open_id = st.session_state.setdefault("chat_id", uuid.uuid4().hex)
+messages = chats.setdefault(open_id, [])
+
+
+def open_chat(chat_id: str) -> None:
+    st.session_state.chat_id = chat_id
+
+
+def new_chat() -> None:
+    if chats[st.session_state.chat_id]:  # An empty chat stays open
+        st.session_state.chat_id = uuid.uuid4().hex
+
+
+with st.sidebar:
+    st.button(
+        "New chat", icon=":material/edit_square:", width="stretch", on_click=new_chat
+    )
+    st.caption("Recent")
+    with st.container(gap=None):
+        for chat_id, chat in reversed(chats.items()):
+            if not chat:
+                continue
+            label = chat[0]["content"][:48]
+            st.button(
+                f"**{label}**" if chat_id == open_id else label,
+                type="tertiary",
+                wrap=False,
+                key=f"chat_{chat_id}",
+                on_click=open_chat,
+                args=(chat_id,),
+            )
+```
+
+Use `messages` wherever the examples above use `st.session_state.messages`. Dicts keep insertion order, so move a chat to the end when someone sends a message in it (`chats[open_id] = chats.pop(open_id)`) to list the most recently active chat first, and call `st.rerun()` after storing the reply so the sidebar shows the new order. Key per-chat widgets, such as start-screen suggestions, by the chat ID, so a new chat starts with nothing selected. Session State lasts for one browser session; store conversations in a database to keep them longer.
 
 ## File uploads
 
