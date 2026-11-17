@@ -495,3 +495,24 @@ def retry_interaction(
     if last_exception:
         raise last_exception
     return None
+
+
+def start_dragging_dataframe_resize_handle(
+    page: Page, dataframe: Locator, delta_px: int
+) -> None:
+    """Drag the dataframe's bottom-right resize handle, without releasing it.
+
+    A positive ``delta_px`` drags the table taller, a negative one shorter.
+    Call ``page.mouse.up()`` to finish the drag.
+    """
+    # Center the dataframe so the handle stays in the viewport while dragging.
+    dataframe.evaluate("el => el.scrollIntoView({block: 'center'})")
+    box = dataframe.get_by_test_id("stDataFrameResizable").bounding_box()
+    assert box is not None
+    # The resize handle straddles the bottom-right corner.
+    x = box["x"] + box["width"] - 2
+    y = box["y"] + box["height"] - 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x, y + delta_px / 2)
+    page.mouse.move(x, y + delta_px)

@@ -1,0 +1,130 @@
+# Warm editorial dual light/dark Streamlit theme
+# Serif headings (Fraunces) on paper-toned backgrounds, soft cards, and pill
+# buttons; the settings appearance toggle stays available.
+# Categorical palettes were checked for color-vision deficiencies in both modes
+# (adjacent pairs; the first three slots also pass all pairs, for scatter charts).
+
+[theme]
+font = "'Instrument Sans':https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap"
+headingFont = "'Fraunces':https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100..800&display=swap"
+baseFontSize = 14
+baseFontWeight = 400
+codeFontSize = "13px"
+headingFontSizes = ["34px", "22px", "17px", "15px", "14px", "12px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+metricValueFontSize = "1.85rem"
+metricValueFontWeight = 600
+baseRadius = "large"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = false
+linkUnderline = false
+paddingTop = "1rem"
+paddingBottom = "3rem"
+
+[theme.sidebar]
+paddingTop = "1rem"
+paddingBottom = "1.5rem"
+
+[theme.light]
+primaryColor = "#C2410C"
+backgroundColor = "#FBF9F4"
+secondaryBackgroundColor = "#F2EDE3"
+codeBackgroundColor = "#F2EDE3"
+textColor = "#1F1A14"
+linkColor = "#B23C0B"
+borderColor = "#E5DDCF"
+codeTextColor = "#4A4036"
+blueColor = "#0369A1"
+greenColor = "#3F7D20"
+yellowColor = "#B7791F"
+orangeColor = "#C2410C"
+redColor = "#B91C1C"
+violetColor = "#7C3AED"
+grayColor = "#7A7268"
+chartCategoricalColors = [
+    "#C2410C",
+    "#008A7B",
+    "#5B5BD6",
+    "#B7791F",
+    "#BE185D",
+    "#0369A1",
+    "#4D8A0C",
+    "#7C3AED",
+]
+chartSequentialColors = [
+    "#FBEEE4",
+    "#F7DCC8",
+    "#F0C2A1",
+    "#E7A377",
+    "#DC8350",
+    "#CF6532",
+    "#C2410C",
+    "#A13509",
+    "#802A07",
+    "#5F1F05",
+]
+dataframeBorderColor = "#E5DDCF"
+dataframeHeaderBackgroundColor = "#F5F0E7"
+dataframeHeaderTextColor = "#5E554A"
+
+[theme.dark]
+primaryColor = "#C8501E"
+backgroundColor = "#15130F"
+secondaryBackgroundColor = "#211D18"
+codeBackgroundColor = "#211D18"
+textColor = "#EEE8DE"
+linkColor = "#F0956A"
+borderColor = "#342E26"
+codeTextColor = "#D6CDBF"
+blueColor = "#3A9BDA"
+greenColor = "#7DB45A"
+yellowColor = "#D9A53A"
+orangeColor = "#E0703A"
+redColor = "#EF6A5A"
+violetColor = "#A58BF0"
+grayColor = "#948B80"
+chartCategoricalColors = [
+    "#E0703A",
+    "#1E9E93",
+    "#7B76EE",
+    "#C08A1C",
+    "#E0558F",
+    "#3A9BDA",
+    "#6A9E2E",
+    "#9273E6",
+]
+chartSequentialColors = [
+    "#2A1A12",
+    "#3A2014",
+    "#4C2716",
+    "#612F18",
+    "#78391B",
+    "#91441F",
+    "#AD5226",
+    "#C9663A",
+    "#E08A5F",
+    "#F2B48F",
+]
+dataframeBorderColor = "#342E26"
+dataframeHeaderBackgroundColor = "#1B1814"
+dataframeHeaderTextColor = "#B3A99B"
+
+[theme.light.sidebar]
+backgroundColor = "#F4EFE6"
+secondaryBackgroundColor = "#EAE3D6"
+codeBackgroundColor = "#EAE3D6"
+textColor = "#1F1A14"
+borderColor = "#E0D7C7"
+primaryColor = "#C2410C"
+linkColor = "#B23C0B"
+
+[theme.dark.sidebar]
+backgroundColor = "#1A1713"
+secondaryBackgroundColor = "#26211B"
+codeBackgroundColor = "#26211B"
+textColor = "#EEE8DE"
+borderColor = "#342E26"
+primaryColor = "#C8501E"
+linkColor = "#F0956A"

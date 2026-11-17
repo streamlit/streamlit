@@ -4460,9 +4460,15 @@ class TestMetaSkillPackaging:
         apps = f"{content}/assets/templates/apps"
         assert f"{apps}/dashboard-metrics/.streamlit/config.toml" in names
         assert f"{apps}/dashboard-revenue/.streamlit/config.toml" in names
-        # dashboard-revenue imports helper modules next to its entrypoint.
-        for module in ("components", "charts", "data"):
-            assert f"{apps}/dashboard-revenue/{module}.py" in names
+        assert f"{apps}/compute-demand-simulator/.streamlit/config.toml" in names
+        # These templates import helper modules next to their entrypoints.
+        for template, modules in (
+            ("dashboard-revenue", ("components", "charts", "data")),
+            ("compute-demand-simulator", ("model",)),
+            ("act-review-queue", ("store", "review")),
+        ):
+            for module in modules:
+                assert f"{apps}/{template}/{module}.py" in names
 
         allowed_prefixes = (f"{meta}/", f"{content}/")
         unexpected = [
@@ -4479,6 +4485,7 @@ class TestMetaSkillPackaging:
         [
             ("dashboard-metrics", "dense-dashboard"),
             ("dashboard-revenue", "bi-dashboard"),
+            ("compute-demand-simulator", "warm-editorial"),
         ],
     )
     def test_template_theme_matches_preset(self, template: str, theme: str) -> None:

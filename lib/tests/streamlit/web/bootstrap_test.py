@@ -18,9 +18,11 @@ import asyncio
 import os
 import os.path
 import sys
+import threading
 import types
 from contextlib import contextmanager
 from io import StringIO
+from typing import Any
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import Mock, mock_open, patch
 
@@ -376,6 +378,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch.object(Secrets, "_parse", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -499,6 +502,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch.object(Secrets, "_parse")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -508,6 +512,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch.object(Secrets, "_parse")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):
@@ -802,6 +807,7 @@ class BootstrapUvloopTest(TestCase):
 class BootstrapAsgiTest(IsolatedAsyncioTestCase):
     """Test bootstrap functions for ASGI app mode."""
 
+    @patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
     @patch("streamlit.web.bootstrap.report_watchdog_availability")
     @patch("streamlit.web.bootstrap._install_config_watchers")
     @patch("streamlit.web.bootstrap._fix_sys_argv")
@@ -957,6 +963,7 @@ class BootstrapPydeckMapboxTest(TestCase):
 @patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
 @patch("streamlit.web.bootstrap._print_url", Mock())
 @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background", Mock())
 @patch("streamlit.web.bootstrap.cli_util.open_browser")
 class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
     """Tests for the maybe_open_browser path inside _on_server_start."""
@@ -1079,3 +1086,94 @@ class BootstrapPrintUrlSpecificAddressTest(IsolatedAsyncioTestCase):
         # Should not also show the localhost/network URLs.
         assert "Local URL" not in out
         assert "Network URL" not in out
+
+
+@patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
+@patch("streamlit.web.bootstrap.prepare_streamlit_environment", Mock())
+@patch("streamlit.web.bootstrap._print_url", Mock())
+@patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background")
+def test_on_server_start_updates_global_skills(mock_update: Mock) -> None:
+    """Starting the server kicks off the background global skills update."""
+    bootstrap._on_server_start(Mock())
+
+    mock_update.assert_called_once_with()
+
+
+@patch("streamlit.web.bootstrap.report_watchdog_availability", Mock())
+@patch("streamlit.web.bootstrap._install_config_watchers", Mock())
+@patch("streamlit.web.bootstrap._fix_sys_argv", Mock())
+@patch("streamlit.web.bootstrap._fix_sys_path", Mock())
+@patch("streamlit.web.bootstrap._update_global_skills_in_background")
+def test_asgi_app_run_context_updates_global_skills(mock_update: Mock) -> None:
+    """Launching an st.App from the CLI also kicks off the global skills update."""
+    with patch.object(config, "_server_mode", None):
+        bootstrap._prepare_asgi_app_run_context("/path/to/main.py", [], {})
+
+    mock_update.assert_called_once_with()
+
+
+@patch_config_options({"server.headless": False})
+def test_global_skills_update_runs_in_a_daemon_thread() -> None:
+    """The update runs in a daemon thread, so it neither delays startup nor
+    blocks the process from exiting.
+    """
+    threads: list[threading.Thread] = []
+    real_thread = threading.Thread
+
+    def make_thread(*args: Any, **kwargs: Any) -> threading.Thread:
+        thread = real_thread(*args, **kwargs)
+        threads.append(thread)
+        return thread
+
+    with (
+        patch("streamlit.web.skills.update_global_skills") as mock_update,
+        patch.object(bootstrap.threading, "Thread", side_effect=make_thread),
+    ):
+        bootstrap._update_global_skills_in_background()
+        assert len(threads) == 1
+        threads[0].join(timeout=10)
+
+    assert threads[0].daemon
+    mock_update.assert_called_once_with()
+
+
+@patch_config_options({"server.headless": True})
+def test_headless_start_skips_global_skills_update() -> None:
+    """Headless starts, such as deployments and CI, never start the update."""
+    with patch.object(bootstrap.threading, "Thread") as mock_thread:
+        bootstrap._update_global_skills_in_background()
+
+    mock_thread.assert_not_called()
+
+
+@patch_config_options({"server.headless": False})
+def test_global_skills_update_errors_never_escape() -> None:
+    """Neither a failing update nor a thread that cannot start reaches the caller
+    or the thread exception hook.
+    """
+    with (
+        patch(
+            "streamlit.web.skills.update_global_skills",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch.object(threading, "excepthook") as mock_excepthook,
+    ):
+        bootstrap._update_global_skills_in_background()
+        for thread in threading.enumerate():
+            if thread.name == "GlobalSkillsUpdate":
+                thread.join(timeout=10)
+
+    mock_excepthook.assert_not_called()
+
+    with (
+        patch.object(
+            bootstrap.threading, "Thread", side_effect=RuntimeError("can't start")
+        ),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
+    ):
+        bootstrap._update_global_skills_in_background()
+
+    mock_logger.debug.assert_called_once_with(
+        "Could not start the global skills update", exc_info=True
+    )

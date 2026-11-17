@@ -69,8 +69,8 @@ from `develop` with:
 
 The workflow verifies the nightly marker, removes the nightly-only package-name
 and version commit, creates `release/<version>`, updates the Python and
-JavaScript package versions, regenerates `uv.lock`, commits those changes, and
-pushes the branch.
+JavaScript package versions and the bundled agent skill's `metadata.version`,
+regenerates `uv.lock`, commits those changes, and pushes the branch.
 
 ### 3. Add only essential post-cutoff changes
 

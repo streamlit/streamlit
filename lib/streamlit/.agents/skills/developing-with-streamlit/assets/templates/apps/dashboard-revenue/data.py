@@ -196,7 +196,9 @@ def _generate_book(n_accounts: int = 240) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 # The cards call this inside ``st.skeleton``, so the spinner text labels the
 # skeleton during a slow load instead of drawing a second indicator.
-@st.cache_data(ttl="1h", show_spinner="Loading the customer book...")
+@st.cache_data(
+    ttl="1h", refresh_mode="background", show_spinner="Loading the customer book..."
+)
 def load_book() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Load customer accounts and their monthly MRR history."""
     time.sleep(SIMULATED_LATENCY_S)

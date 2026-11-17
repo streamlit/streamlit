@@ -244,7 +244,7 @@ with st.container(border=True):
 
 Each block covers the runs that enter it, and the inner skeleton doesn't end the outer one. The inner block needs no height when it's the body's first element: on a full-app run, the outer skeleton covers it, and on the fragment's own rerun, the previous content keeps its size under the skeleton.
 
-A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` and `dashboard-compute` chart cards.
+A card with its own controls must draw them inside the fragment, so it draws its frame, title, and controls there, followed by `with st.skeleton(height=...)` around the slow part. A skeleton around the call can't hold this card's slot, because the visible controls end it at once. The card paints when its fragment runs, and the inner block also shows on the first load, so it needs the content's height, as in the `dashboard-metrics` chart cards.
 
 To keep the layout stable:
 
@@ -328,12 +328,11 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 | Template | Features |
 |----------|----------|
 | `dashboard-revenue` | Revenue BI dashboard: filter toolbar bound to the URL, certified KPIs, card headers with ⋮ menus and definition drawers, SQL popover, ECharts annotations and forecast, donut-to-table drill-down with a record drawer, parallel fragments with skeletons |
-| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, date filtering |
+| `dashboard-metrics` | Bordered `st.metric` KPI row with sparklines and skeletons drawn by the main script, `@st.fragment(parallel=True)` cards with `st.skeleton`, chart/table toggle, ECharts time series with zoom sliders, a category breakdown that morphs between lines and stacked bars, date filtering, reset callback |
 | `dashboard-companies` | Company leaderboard with a filter toolbar bound to the URL, sparkline and badge columns, a `ButtonColumn` that opens a company drawer, custom cache spinner |
-| `dashboard-compute` | `@st.fragment(parallel=True)` with `st.skeleton` for concurrent, independent updates, one loader cached per breakdown, popover filters, reset callback, ECharts charts that animate between line and bar |
 | `dashboard-feature-usage` | API endpoint usage analytics with a category control bound to the URL, starter kits, bordered cards, ECharts time series with a normalization toggle, conditional "Raw data" expander |
 | `dashboard-seattle-weather` | Exploratory weather data visualization: an `st.grid` of metrics from a spec loop, year pills bound to the URL, ECharts range bars, donut, lines, and stacked bars |
-| `dashboard-stock-peers` | Stock peer comparison with ECharts time series and URL-bound ticker and horizon filters |
+| `dashboard-stock-peers` | Stock peer comparison on the bundled Vega stocks dataset, with ECharts time series and URL-bound ticker and horizon filters |
 | `dashboard-background-report` | Slow query in a `@st.fragment(parallel=True)` with a URL-bound region filter in the main script, so the page stays responsive while the report loads; layout-first loading with skeletons drawn by the main script and the report's spinner text on its skeleton |
 
 Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.

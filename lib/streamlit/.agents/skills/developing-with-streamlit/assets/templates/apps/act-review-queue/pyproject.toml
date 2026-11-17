@@ -1,0 +1,11 @@
+[project]
+name = "act-review-queue"
+version = "1.0.0"
+description = "A review queue where planners approve, adjust, or reject agent-proposed orders, with validation and writeback"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26.0",
+    "pandas>=2.2.3",
+    "sqlalchemy>=2.0.0",
+    "streamlit",
+]

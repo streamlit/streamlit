@@ -366,7 +366,7 @@ st.image(logo, alt="Company logo")
 
 ## Design principles
 
-- **Contrast:** WCAG AA (~4.5:1) for body text; primary color must support white button labels.
+- **Contrast:** Prefer WCAG AA (~4.5:1) for body text and a primary color that supports white button labels. Brand colors can still win when requested — see [accessibility.md](accessibility.md#theme-override-hazards) for the trade-off tips.
 - **Harmony:** Neutral base + one brand accent, or a small semantic set (success/error) alongside primary.
 - **Type:** Body 14–16px / 400; clear heading scale; monospace code slightly smaller than body.
 - **Layers:** Keep `secondaryBackgroundColor` distinct from `backgroundColor`—slightly darker on a light theme, slightly lighter on a dark theme. Sidebar may match or deliberately contrast.
@@ -472,6 +472,7 @@ Copy from `assets/templates/themes/configs/` into `.streamlit/config.toml`, or a
 | **shadcn-dual** | Light + dark | `#18181B` / `#71717A` | Inter, JetBrains Mono | Default dual-mode + sidebars |
 | **dense-dashboard** | Light + dark | `#1D4ED8` / `#2563EB` | Inter, JetBrains Mono | Dual-mode + compact `paddingTop`/`paddingBottom` for KPI layouts |
 | **bi-dashboard** | Light + dark | `#5B5BD6` / `#5E5CE6` | Geist, Geist Mono | Dual-mode BI cards: compact bold metric values, rounder corners, color-blind-checked chart palettes |
+| **warm-editorial** | Light + dark | `#C2410C` / `#C8501E` | Instrument Sans, Fraunces headings, JetBrains Mono | Dual-mode editorial look: paper tones, pill buttons, color-blind-checked chart palettes |
 | **dracula** | Dark (locked) | `#BD93F9` | Fira Sans, JetBrains Mono | |
 | **financial-dashboard** | Dark (locked) | `#60A5FA` | Inter, JetBrains Mono | |
 | **fluent** | Light (locked) | `#0078D4` | Segoe UI, Cascadia Code | |
@@ -493,7 +494,6 @@ See `assets/templates/themes/README.md`. To support the toggle with a single-mod
 - `design.md` — Icons, badges, spacing polish
 - `ccv2-theme-css-variables.md` — `--st-*` variables for CCv2
 - [Theming overview](https://docs.streamlit.io/develop/concepts/configuration/theming)
-- [Colors and borders](https://docs.streamlit.io/develop/concepts/configuration/theming-customize-colors-and-borders)
-- [Fonts](https://docs.streamlit.io/develop/concepts/configuration/theming-customize-fonts)
+- [Colors and borders](https://docs.streamlit.io/develop/concepts/configuration/theming-customize-colors-and-borders) and [fonts](https://docs.streamlit.io/develop/concepts/configuration/theming-customize-fonts)
 - [config.toml reference](https://docs.streamlit.io/develop/api-reference/configuration/config.toml)
 - [st.context](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.context)
