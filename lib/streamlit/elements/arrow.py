@@ -719,9 +719,9 @@ class ArrowMixin:
         This command works with a wide variety of collection-like and
         dataframe-like object types.
 
-        To disable CSV download and clipboard copy, set
-        ``client.disableDataExport`` to ``True``. That option also disables
-        other built-in export controls in the app.
+        To disable CSV download and clipboard copy, set the
+        ``client.disableDataExport`` configuration option to ``True``. This
+        also hides other built-in export and copy controls across the app.
 
         Parameters
         ----------

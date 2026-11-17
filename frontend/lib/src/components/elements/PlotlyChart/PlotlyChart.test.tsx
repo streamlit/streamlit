@@ -543,17 +543,13 @@ describe("PlotlyChart Component", () => {
   it("removes the image download button when data export is disabled", () => {
     renderWithContexts(
       <ElementFullscreenContext.Provider
-        value={
-          {
-            expanded: false,
-            width: 600,
-            height: 500,
-            expand: vi.fn(),
-            collapse: vi.fn(),
-          } as React.ComponentProps<
-            typeof ElementFullscreenContext.Provider
-          >["value"]
-        }
+        value={{
+          expanded: false,
+          width: 600,
+          height: 500,
+          expand: vi.fn(),
+          collapse: vi.fn(),
+        }}
       >
         <PlotlyChart
           element={DEFAULT_ELEMENT}

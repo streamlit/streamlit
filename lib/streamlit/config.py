@@ -648,9 +648,9 @@ _create_option(
         - Disables clipboard copy and cut for st.dataframe, st.data_editor,
           and chart table views. Pasting into st.data_editor stays enabled.
         - Hides chart and diagram image downloads (PNG/SVG), including
-          Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Controls configured
-          in the chart spec itself are not affected, including Plotly
-          modeBarButtons.
+          Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Image-download
+          controls that the app configures itself, such as an ECharts
+          toolbox or a custom Plotly modeBarButtons list, are not affected.
         - Hides copy actions for code blocks (st.code and Markdown), Mermaid
           source, the Vega-Lite spec, st.json (value icons and path copy),
           dataframe column names and JSON cells, and the exception link row
