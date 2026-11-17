@@ -43,8 +43,8 @@ _APPS_DIR = (
 _TEMPLATES = sorted(path.name for path in _APPS_DIR.iterdir() if path.is_dir())
 # These templates import packages from the integration dependency group.
 _INTEGRATION_TEMPLATES = {"act-review-queue"}  # sqlalchemy, for st.connection
-# These templates draw charts only in a drawer that a table click opens.
-_NO_DEFAULT_CHART = {"act-review-queue", "dashboard-companies"}
+# These templates draw charts only after a table click or a chat message.
+_NO_DEFAULT_CHART = {"act-review-queue", "chat-analyst", "dashboard-companies"}
 
 
 def _param(template: str, *values: Any) -> Any:
@@ -63,6 +63,26 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
     (
         "act-review-queue",
         {"reviewing": "PO-1001", "drafts": {"PO-1001": {"decision": "Reject"}}},
+    ),
+    # A picked suggestion runs the agent, streams its reply, and draws its chart.
+    ("chat-analyst", {"suggestion": ":material/trending_down: Why revenue fell"}),
+    # A question whose run was stopped before the agent answered, and its retry.
+    (
+        "chat-analyst",
+        {
+            "chat_id": "c1",
+            "chats": {"c1": [{"role": "user", "id": "m1", "content": "Hello"}]},
+        },
+    ),
+    (
+        "chat-analyst",
+        {
+            "chat_id": "c1",
+            "chats": {
+                "c1": [{"role": "user", "id": "m1", "content": "Why did sales drop?"}]
+            },
+            "retry": True,
+        },
     ),
     (
         "compute-demand-simulator",
