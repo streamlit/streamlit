@@ -21,12 +21,14 @@ before its answer streams in, with a chart drawn from the same data.
 Notes on this template:
 - Conversations live in Session State by ID, and every message has its own ID,
   so widget keys such as each answer's feedback stay with their message.
+  ``persist_state="session"`` keeps a rating while its chat isn't open.
 - The sidebar lists recent chats as tertiary buttons with ``wrap=False`` in an
   ``st.container(gap=None)``: compact rows whose long titles end in an
   ellipsis. Sending a message moves its chat to the top.
 - ``st.chat_input(submit_mode="stop")`` turns the send button into a stop
-  button. A stopped run leaves a question without an answer, so the history
-  shows "You stopped this response" with a retry button.
+  button. A stopped run leaves a question without an answer, so the next run
+  shows "You stopped this response" with a retry button. A stop doesn't start
+  a run, so the note appears with the user's next interaction.
 - The agent yields an event as each tool call starts and ends, and each one is
   drawn where the work runs: an ``st.status(type="step")`` with a
   ``:shimmer[...]`` label inside a compact "Thinking" ``st.status``. The
@@ -43,8 +45,10 @@ Notes on this template:
 
 No model is called: ``agent.py`` runs scripted analyses over synthetic data.
 Replace ``agent.run`` with your model or agent framework, mapping its events to
-``Running``, ``Step``, and ``Reply``. Session State lasts for one browser session; store the
-conversations in a database to keep them longer.
+``Running``, ``Step``, and ``Reply``.
+
+Session State lasts for one browser session. Store the conversations in a
+database to keep them longer.
 """
 
 from __future__ import annotations
@@ -88,7 +92,7 @@ def messages() -> list[Message]:
     return chats().setdefault(chat_id(), [])
 
 
-def title(history: list[Message]) -> str:
+def chat_title(history: list[Message]) -> str:
     replies: list[agent.Reply] = [m["reply"] for m in history if "reply" in m]
     return replies[0].title if replies else str(history[0]["content"])[:48]
 
@@ -106,7 +110,7 @@ def retry() -> None:
     st.session_state.retry = True
 
 
-def thank(message_id: str) -> None:
+def thank_for_feedback(message_id: str) -> None:
     if st.session_state.get(f"feedback_{message_id}") is not None:
         st.toast("Thanks for the feedback.", icon=":material/thumb_up:")
 
@@ -142,7 +146,7 @@ def run_agent(prompt: str) -> tuple[agent.Reply, list[agent.Step], int]:
     """
     started = time.monotonic()
     steps: list[agent.Step] = []
-    thinking = status = None
+    thinking = step_status = None
     reply = None
     for event in agent.run(prompt):
         if isinstance(event, agent.Running):
@@ -152,12 +156,12 @@ def run_agent(prompt: str) -> tuple[agent.Reply, list[agent.Step], int]:
                 )
             # Leaving a status's ``with`` block marks it complete, so the
             # statuses stay open by writing to them directly instead.
-            status = thinking.status(
+            step_status = thinking.status(
                 f":shimmer[{event.label}]", type="step", expanded=True
             )
-        elif isinstance(event, agent.Step) and status is not None:
-            status.markdown(event.detail)
-            status.update(label=event.label, state="complete")
+        elif isinstance(event, agent.Step) and step_status is not None:
+            step_status.markdown(event.detail)
+            step_status.update(label=event.label, state="complete")
             steps.append(event)
         elif isinstance(event, agent.Reply):
             reply = event
@@ -175,7 +179,11 @@ def render_result(reply: agent.Reply, message_id: str) -> None:
             reply.chart, height=260, alt=reply.chart_alt, key=f"chart_{message_id}"
         )
     st.feedback(
-        "thumbs", key=f"feedback_{message_id}", on_change=thank, args=(message_id,)
+        "thumbs",
+        key=f"feedback_{message_id}",
+        persist_state="session",
+        on_change=thank_for_feedback,
+        args=(message_id,),
     )
 
 
@@ -216,7 +224,7 @@ with st.sidebar:
             st.caption("Recent")
             with st.container(gap=None):
                 for recent_id, chat in recent:
-                    label = title(chat)
+                    label = chat_title(chat)
                     st.button(
                         f"**{label}**" if recent_id == chat_id() else label,
                         type="tertiary",
@@ -242,9 +250,11 @@ retrying = (
 )
 prompt = submission or (latest["content"] if retrying and latest else None)
 
-# A picked suggestion or follow-up is a prompt too. It's read from Session State
-# before the pills render, so the pills are gone by the time the reply streams.
-if prompt is None and not history and (picked := st.session_state.get("suggestion")):
+# A picked suggestion or follow-up is a prompt too. Read it from Session State
+# before the pills render, so the pills disappear while the reply streams. Keyed
+# by chat, a suggestion picked in an interrupted run can't resend in a new chat.
+suggestion_key = f"suggestion_{chat_id()}"
+if prompt is None and not history and (picked := st.session_state.get(suggestion_key)):
     prompt = agent.SUGGESTIONS[picked]
 if prompt is None and latest and followups:
     followup_key = f"followup_{latest['id']}"
@@ -276,13 +286,13 @@ if not history and prompt is None:
             "Try asking",
             list(agent.SUGGESTIONS),
             label_visibility="collapsed",
-            key="suggestion",
+            key=suggestion_key,
         )
 elif history:
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
     ):
-        st.markdown(f"**{title(history)}**", width="content")
+        st.markdown(f"**{chat_title(history)}**", width="content")
         st.download_button(
             "",
             transcript(history),
@@ -312,7 +322,8 @@ elif history:
                 )
 
 if prompt is not None:
-    chats()[chat_id()] = chats().pop(chat_id())  # List this chat first in Recent
+    # Recent lists chats in reverse, so moving this one to the end lists it first
+    chats()[chat_id()] = chats().pop(chat_id())
     if not retrying:
         history.append({"role": "user", "id": new_id(), "content": prompt})
         with st.chat_message("user"):

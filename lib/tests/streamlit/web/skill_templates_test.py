@@ -64,26 +64,6 @@ _ALTERNATE_STATES: list[tuple[str, dict[str, Any]]] = [
         "act-review-queue",
         {"reviewing": "PO-1001", "drafts": {"PO-1001": {"decision": "Reject"}}},
     ),
-    # A picked suggestion runs the agent, streams its reply, and draws its chart.
-    ("chat-analyst", {"suggestion": ":material/trending_down: Why revenue fell"}),
-    # A question whose run was stopped before the agent answered, and its retry.
-    (
-        "chat-analyst",
-        {
-            "chat_id": "c1",
-            "chats": {"c1": [{"role": "user", "id": "m1", "content": "Hello"}]},
-        },
-    ),
-    (
-        "chat-analyst",
-        {
-            "chat_id": "c1",
-            "chats": {
-                "c1": [{"role": "user", "id": "m1", "content": "Why did sales drop?"}]
-            },
-            "retry": True,
-        },
-    ),
     (
         "compute-demand-simulator",
         {"product": "Tents", "price": 10, "promo": 20, "marketing": 0.0, "supply": 70},
@@ -187,3 +167,40 @@ def test_template_runs_with_alternate_state(
     """Templates also run with widget states that reach their other branches."""
     at = _run_template(template, state)
     _assert_renders_cleanly(at)
+
+
+def _stopped_chat() -> dict[str, Any]:
+    """A chat whose run was stopped before the agent answered its question."""
+    return {
+        "chat_id": "c1",
+        "chats": {
+            "c1": [{"role": "user", "id": "m1", "content": "Why did sales drop?"}]
+        },
+    }
+
+
+@pytest.mark.usefixtures("isolated_template")
+@pytest.mark.parametrize("template", ["chat-analyst"])
+def test_chat_analyst_answers_suggestions_and_retries(template: str) -> None:
+    """A picked suggestion gets an answer, and a stopped question gets one on retry."""
+    picked = _run_template(
+        template,
+        {"chat_id": "c0", "suggestion_c0": ":material/trending_down: Why revenue fell"},
+    )
+    _assert_renders_cleanly(picked)
+    assert picked.echarts_chart, "the suggested analysis should draw its chart"
+
+    stopped = _run_template(template, _stopped_chat())
+    _assert_renders_cleanly(stopped)
+    assert "You stopped this response." in [
+        caption.value for caption in stopped.caption
+    ]
+
+    retried = _run_template(template, {**_stopped_chat(), "retry": True})
+    _assert_renders_cleanly(retried)
+    # The retry answers the stored question without appending it again.
+    roles = [message["role"] for message in retried.session_state["chats"]["c1"]]
+    assert roles == ["user", "assistant"]
+    assert "You stopped this response." not in [
+        caption.value for caption in retried.caption
+    ]

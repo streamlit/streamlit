@@ -66,6 +66,8 @@ class Step:
 
 @dataclass
 class Reply:
+    """The agent's final message: the answer, an optional chart, and follow-ups."""
+
     title: str  # A short title for the conversation
     answer: str  # Markdown, streamed into the message
     chart: dict[str, Any] | None = None  # An ECharts option, redrawn from history
@@ -218,11 +220,14 @@ def help_reply(prompt: str) -> Iterator[Event]:
 
 
 def run(prompt: str) -> Iterator[Event]:
-    """The agent's work on a request, as it happens, ending with its ``Reply``."""
+    """Yield a ``Running`` and a ``Step`` per tool call, then the ``Reply``.
+
+    Region questions are matched first, so "revenue by region" compares regions.
+    """
     lowered = prompt.lower()
-    if re.search(r"region|grew|growth|compare|best", lowered):
+    if re.search(r"region|grew|growth", lowered):
         return regions_analysis()
-    if re.search(r"revenue|sales|fell|fall|drop|why", lowered):
+    if re.search(r"revenue|sales", lowered):
         return revenue_analysis()
     return help_reply(prompt)
 
