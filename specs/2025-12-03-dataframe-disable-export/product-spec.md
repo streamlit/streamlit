@@ -8,8 +8,8 @@ created: 2025-12-03
 ## Summary
 
 `client.disableDataExport` turns off built-in export controls across the app: dataframe CSV
-and clipboard copy, `st.download_button`, chart and diagram image downloads, and copy
-actions on code, JSON, and errors.
+and clipboard copy, chart and diagram image downloads, and copy actions on code, JSON, and
+errors. It does not disable `st.download_button`.
 
 ## Problem
 
@@ -62,7 +62,7 @@ st.set_option("client.disableDataExport", True)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, `st.download_button`, chart/diagram image downloads, and other copy actions such as code blocks, `st.json`, and error text) |
+| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, chart/diagram image downloads, and other copy actions such as code blocks, `st.json`, and error text) |
 
 ### Behavior
 
@@ -79,7 +79,6 @@ When `client.disableDataExport = true`:
   cleared with an empty clipboard (the editor has no undo).
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
-- **`st.download_button`**: Remains visible but is disabled and does not start a download
 - **Chart and diagram image downloads**: Hidden (Vega-Lite/Altair PNG, ECharts PNG/SVG,
   Plotly `toImage`, Mermaid PNG)
 - **Other copy actions**: Hidden for code blocks (`st.code` and Markdown code blocks), Mermaid
@@ -89,6 +88,9 @@ When `client.disableDataExport = true`:
 
 This applies to Streamlit's built-in export and copy controls. It does not cover:
 
+- `st.download_button`, which is author-placed. Gating it from config would change
+  the widget's return value and `on_click` (`$38`). Authors already control it with
+  `disabled=`
 - `st.audio_input`'s "Download as WAV" action, which saves the viewer's own recording
   rather than app data
 - Chart controls configured by the author in the chart spec itself (for example ECharts

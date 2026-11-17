@@ -647,10 +647,6 @@ _create_option(
           and chart table views.
         - Disables clipboard copy and cut for st.dataframe, st.data_editor,
           and chart table views. Pasting into st.data_editor stays enabled.
-        - Shows st.download_button as disabled. Viewers can't click it or
-          use its shortcut, so in the browser it returns False and doesn't
-          run on_click. Other clients, such as the agent API, can still
-          trigger it.
         - Hides chart and diagram image downloads (PNG/SVG), including
           Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Controls configured
           in the chart spec itself are not affected, including Plotly
@@ -660,8 +656,9 @@ _create_option(
           dataframe column names and JSON cells, and the exception link row
           (Copy, Ask Google, and Ask ChatGPT).
 
-        st.audio_input's "Download as WAV" action is not affected; it saves
-        the viewer's own recording rather than app data.
+        st.download_button is not affected; authors already control it with
+        disabled=. st.audio_input's "Download as WAV" action is also not
+        affected; it saves the viewer's own recording rather than app data.
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via

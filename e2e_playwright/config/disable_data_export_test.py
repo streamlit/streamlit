@@ -102,7 +102,7 @@ def test_hides_download_and_copy_controls(app: Page):
         .get_by_role("button")
     )
     expect(download_button).to_be_visible()
-    expect(download_button).to_be_disabled()
+    expect(download_button).to_be_enabled()
 
     code_block = get_element_by_key(app, "code-block").get_by_test_id("stCode")
     expect(code_block).to_be_visible()

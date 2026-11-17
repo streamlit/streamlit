@@ -483,12 +483,6 @@ class ButtonMixin:
         download button, wrap the download button in a `fragment
         <https://docs.streamlit.io/develop/concepts/architecture/fragments>`_.
 
-        If the ``client.disableDataExport`` configuration option is ``True``,
-        the download button is displayed as disabled. Viewers can't click it or
-        use its keyboard shortcut, so in the browser it returns ``False`` and
-        ``on_click`` doesn't run. This is a browser-side convenience, not a
-        security control.
-
         Parameters
         ----------
         label : str

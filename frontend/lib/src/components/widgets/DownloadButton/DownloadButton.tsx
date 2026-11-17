@@ -66,9 +66,7 @@ function DownloadButton(props: Props): ReactElement {
   const [error, setError] = useState<string | null>(null)
 
   // Default to false, if no libConfig, e.g. for tests
-  const { enforceDownloadInNewTab = false, disableDataExport = false } =
-    useContext(LibConfigContext)
-  const isDisabled = disabled || disableDataExport
+  const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
   const { backendOperationClient } = useContext(BackendOperationContext)
 
   let kind = BaseButtonKind.SECONDARY
@@ -85,18 +83,14 @@ function DownloadButton(props: Props): ReactElement {
 
   useEffect(() => {
     const isDeferred = Boolean(deferredFileId?.length)
-    // Probe the source URL to surface load errors, except when:
-    // - there is no URL (e.g. a disabled callable download): an empty URL
-    //   would re-fetch the current page.
-    // - export is disabled by config: the user can't save the file.
-    // The author-set `disabled` flag still probes because it can change on a
-    // later run.
-    if (!isDeferred && url && !disableDataExport) {
+    // Skip the source check when there is no URL (e.g. a disabled callable
+    // download): checking an empty URL would re-fetch the current page.
+    if (!isDeferred && url) {
       // Since we use a hidden link to download, we can't use the onerror event
       // to catch src url load errors. Catch with direct check instead.
       void endpoints.checkSourceUrlResponse(downloadUrl, "Download Button")
     }
-  }, [downloadUrl, endpoints, deferredFileId, url, disableDataExport])
+  }, [downloadUrl, endpoints, deferredFileId, url])
 
   const handleDeferredDownload = useCallback(async (): Promise<void> => {
     if (!backendOperationClient || isNullOrEmptyString(deferredFileId)) {
@@ -141,7 +135,7 @@ function DownloadButton(props: Props): ReactElement {
   ])
 
   const handleDownloadClick = useCallback((): void => {
-    if (isDisabled) {
+    if (disabled) {
       return
     }
 
@@ -169,6 +163,7 @@ function DownloadButton(props: Props): ReactElement {
       link.click()
     }
   }, [
+    disabled,
     ignoreRerun,
     widgetMgr,
     element,
@@ -177,12 +172,11 @@ function DownloadButton(props: Props): ReactElement {
     handleDeferredDownload,
     downloadUrl,
     enforceDownloadInNewTab,
-    isDisabled,
   ])
 
   useRegisterShortcut({
     shortcut,
-    disabled: isDisabled,
+    disabled,
     onActivate: handleDownloadClick,
   })
 
@@ -210,7 +204,7 @@ function DownloadButton(props: Props): ReactElement {
         <BaseButton
           kind={kind}
           size={BaseButtonSize.SMALL}
-          disabled={isDisabled || isLoading}
+          disabled={disabled || isLoading}
           onClick={handleDownloadClick}
           containerWidth={true}
         >
