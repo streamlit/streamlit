@@ -2819,7 +2819,7 @@ def test_pills_and_segmented_control_filtering():
 def test_bottom_container_query() -> None:
     """``at.bottom`` scopes queries to ``st.bottom``, like ``at.sidebar``."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         st.pills("Main", ["a", "b"], key="main")
@@ -2841,7 +2841,7 @@ def test_bottom_container_query() -> None:
 def test_bottom_container_empty() -> None:
     """``at.bottom`` is an empty block when the app writes nothing to ``st.bottom``."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         st.pills("Main", ["a", "b"])
@@ -2855,7 +2855,7 @@ def test_bottom_container_empty() -> None:
 def test_button_group_options_keep_leading_icon(command: str) -> None:
     """Options list the full labels, including a leading icon, and set_value accepts them."""
 
-    def script(command: str):
+    def script(command: str) -> None:
         import streamlit as st
 
         choice = getattr(st, command)(
@@ -2880,9 +2880,9 @@ def test_button_group_options_keep_leading_icon(command: str) -> None:
 
 
 def test_button_group_set_value_rejects_unknown_option() -> None:
-    """set_value raises instead of silently sending a label the widget won't match."""
+    """set_value rejects a value whose formatted label is not in ``options``."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         st.pills(
@@ -2906,7 +2906,7 @@ def test_button_group_set_value_rejects_unknown_option() -> None:
 def test_segmented_control_single_set_value_rejects_unknown_option() -> None:
     """Single-select set_value names the command and keeps the value unchanged."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         st.segmented_control(
@@ -2924,9 +2924,9 @@ def test_segmented_control_single_set_value_rejects_unknown_option() -> None:
 
 
 def test_button_group_set_value_accepts_raw_option_and_label() -> None:
-    """set_value accepts both the raw option and its format_func label."""
+    """set_value accepts both the raw option and its formatted label."""
 
-    def script():
+    def script() -> None:
         import streamlit as st
 
         labels = {0: ":material/zoom_in: Zoom in", 1: ":material/zoom_out: Zoom out"}

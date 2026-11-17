@@ -396,8 +396,8 @@ def _format_value_for_widget(format_func: Callable[[Any], str], value: Any) -> s
 def _button_group_option_label(option: ButtonGroupProto.Option) -> str:
     """Rebuild the full ``format_func`` label that the frontend sends as the value.
 
-    The backend moves a leading icon into ``content_icon``, but the widget's
-    value is still matched against the unsplit label. Must match
+    The backend stores a leading icon in ``content_icon`` and still matches the
+    submitted value against this unsplit label. Keep this in step with
     ``getOptionBaseContent`` in the frontend's ``ButtonGroup.tsx``.
     """
     if option.content_icon:
@@ -1728,9 +1728,9 @@ class ButtonGroup(Widget, Generic[T]):
 
         For single-select mode, pass a single value or None to clear the selection.
         For multi-select mode, pass a list of values (use empty list to clear).
-        Each value can be a raw option or, typically, its label from
-        ``options``. Raises ``AppTestError`` if a value does not format to one
-        of ``options``.
+        Each value can be a raw option, or its label from ``options`` when
+        ``format_func`` cannot format that label. Raises ``AppTestError`` if a
+        value matches no option.
         """
         self._assert_can_interact()
         if v is not None:
@@ -3861,7 +3861,7 @@ def format_dict(d: dict[Any, Any]) -> str:
 
 @dataclass(repr=False)
 class SpecialBlock(Block):
-    """Base class for the main body, sidebar, and bottom containers."""
+    """Base class for the root containers: main body, sidebar, event, and bottom."""
 
     def __init__(
         self,
