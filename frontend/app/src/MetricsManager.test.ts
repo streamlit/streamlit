@@ -191,6 +191,18 @@ describe("initialize", () => {
 })
 
 describe("metrics helpers", () => {
+  // Round-trips through the wire format and converts like
+  // App.handlePageProfileMsg, so field presence and int64 handling match a
+  // message from the server.
+  const decodedPageProfile = (
+    props: PageProfile.$Properties
+  ): ReturnType<typeof PageProfile.toObject> =>
+    PageProfile.toObject(
+      PageProfile.decode(
+        PageProfile.encode(PageProfile.create(props)).finish()
+      )
+    )
+
   const PAGE_PROFILE_DATA = {
     commands: [],
     execTime: 50,
@@ -294,17 +306,6 @@ describe("metrics helpers", () => {
   })
 
   it("buildEventProto forwards agentApiUsage through toJSON - pageProfile", async () => {
-    // Round-trips through the wire format and converts like
-    // App.handlePageProfileMsg, so field presence and int64 handling match a
-    // message from the server.
-    const decodedPageProfile = (
-      props: PageProfile.$Properties
-    ): ReturnType<typeof PageProfile.toObject> =>
-      PageProfile.toObject(
-        PageProfile.decode(
-          PageProfile.encode(PageProfile.create(props)).finish()
-        )
-      )
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 
@@ -335,14 +336,6 @@ describe("metrics helpers", () => {
   })
 
   it("buildEventProto forwards cacheUsage and serverUptimeSeconds through toJSON - pageProfile", async () => {
-    const decodedPageProfile = (
-      props: PageProfile.$Properties
-    ): ReturnType<typeof PageProfile.toObject> =>
-      PageProfile.toObject(
-        PageProfile.decode(
-          PageProfile.encode(PageProfile.create(props)).finish()
-        )
-      )
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
 

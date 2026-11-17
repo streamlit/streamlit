@@ -56,14 +56,15 @@ message PageProfile {
   // st.cache_data and st.cache_resource calls during this script run.
   CacheUsage cache_usage = 16;
   // Whole seconds since the Streamlit runtime started, taken when this run
-  // started. Low values mark runs right after a container start, wake-up or
-  // restart, when caches are empty. Optional, so that 0 is still sent.
+  // started. Low values mean this process started recently, so its in-memory
+  // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.
 // The times are part of user code time (exec_time minus prep_time minus
-// command times) and each cached call is counted once, so subtracting them
+// command times). A cached call made inside another cached function counts
+// as part of the outer call, so subtracting the times from user code time
 // leaves the time spent outside the cache. Like command times, times from
 // concurrent threads are summed and can exceed wall-clock time.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
@@ -75,7 +76,8 @@ message CacheUsage {
   CacheTypeUsage cache_resource = 2;
 }
 
-// Recorded calls for one cache type. hits + misses can be less than calls
+// Recorded calls for one cache type, with times in microseconds. stale_hits
+// are also counted in hits. hits + misses can be less than calls
 // when a call fails or stops before reading or computing a value, for example
 // on an unhashable argument or a rerun while waiting for another caller.
 message CacheTypeUsage {
@@ -95,7 +97,8 @@ message CacheTypeUsage {
   int64 wait_time = 6;
   // All other cache time: hashing the arguments, reading the result (and for
   // st.cache_data, unpickling it), and replaying cached elements. Includes
-  // the cache write when a command tracking limit left it out of commands.
+  // the cache write when the limits on tracked commands (_MAX_TRACKED_COMMANDS
+  // and _MAX_TRACKED_PER_COMMAND in metrics_util.py) left it out of commands.
   int64 overhead_time = 7;
 }
 
