@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Per-function lookup, compute-duration, eviction, and background-refresh metrics
-for cached functions.
+"""Per-function lookup, compute-duration, wait-duration, eviction, and
+background-refresh metrics for cached functions.
+
+Each call to a cached function is one lookup: a hit if it returned a stored
+value, including one computed by another caller it waited for, or a miss if it
+ran the function. A call that stops or errors before it returns a stored value
+or runs the function is not counted.
 
 Counts live in a process-wide registry keyed by the same ``cache_type`` and
 ``cache`` labels as ``cache_memory_bytes``, so they outlive the cache objects
@@ -38,6 +43,7 @@ if TYPE_CHECKING:
 
 CACHE_LOOKUPS_FAMILY: Final = "cache_lookups"
 CACHE_COMPUTE_DURATION_FAMILY: Final = "cache_compute_duration_seconds"
+CACHE_WAIT_DURATION_FAMILY: Final = "cache_wait_duration_seconds"
 CACHE_EVICTIONS_FAMILY: Final = "cache_evictions"
 CACHE_BACKGROUND_REFRESHES_FAMILY: Final = "cache_background_refreshes"
 
@@ -59,7 +65,8 @@ _BACKGROUND_REFRESH_RESULTS: Final[tuple[BackgroundRefreshResult, ...]] = (
 
 # Bucket upper bounds in seconds, excluding +Inf. Cached functions range from
 # millisecond lookups to multi-minute queries or model loads, so the buckets
-# extend Prometheus's default 5 ms to 10 s range up to 5 minutes.
+# extend Prometheus's default 5 ms to 10 s range up to 5 minutes. Waits use the
+# same buckets, because a caller waits on another caller's computation.
 COMPUTE_DURATION_BUCKETS: Final[tuple[float, ...]] = (
     0.005,
     0.01,
@@ -92,7 +99,7 @@ _EVICTION_REASONS: Final[dict[CacheType, tuple[EvictionReason, ...]]] = {
 
 
 class _DurationHistogram:
-    """Mutable state for one compute-duration histogram series."""
+    """Mutable state for one duration histogram series."""
 
     __slots__ = ("bucket_counts", "count", "sum")
 
@@ -102,8 +109,19 @@ class _DurationHistogram:
         self.sum = 0.0
         self.count = 0
 
+    def observe(self, bucket_index: int, seconds: float) -> None:
+        self.bucket_counts[bucket_index] += 1
+        self.sum += seconds
+        self.count += 1
+
     def snapshot(self) -> tuple[list[int], float, int]:
         return list(self.bucket_counts), self.sum, self.count
+
+
+def _bucket_index(seconds: float) -> int:
+    # bisect_left gives the first bucket whose bound is >= seconds, matching
+    # the inclusive ``le`` semantics of histogram buckets.
+    return bisect.bisect_left(COMPUTE_DURATION_BUCKETS, seconds)
 
 
 class FunctionCacheMetrics:
@@ -126,6 +144,7 @@ class FunctionCacheMetrics:
             "miss": _DurationHistogram(),
             "refresh": _DurationHistogram(),
         }
+        self._wait_durations = _DurationHistogram()
         self._evictions: dict[EvictionReason, int] = dict.fromkeys(
             _EVICTION_REASONS[cache_type], 0
         )
@@ -152,16 +171,17 @@ class FunctionCacheMetrics:
     def record_compute_duration(
         self, seconds: float, trigger: ComputeTrigger = "miss"
     ) -> None:
-        # bisect_left gives the first bucket whose bound is >= seconds, matching
-        # the inclusive ``le`` semantics of histogram buckets.
-        bucket_index = bisect.bisect_left(COMPUTE_DURATION_BUCKETS, seconds)
+        bucket_index = _bucket_index(seconds)
         with self._lock:
-            histogram = self._durations[trigger]
-            histogram.bucket_counts[bucket_index] += 1
-            histogram.sum += seconds
-            histogram.count += 1
+            self._durations[trigger].observe(bucket_index, seconds)
             if trigger == "refresh":
                 self._background_refresh = True
+
+    def record_wait_duration(self, seconds: float) -> None:
+        """Record one call's total time blocked on another caller's computation."""
+        bucket_index = _bucket_index(seconds)
+        with self._lock:
+            self._wait_durations.observe(bucket_index, seconds)
 
     def record_evictions(self, reason: EvictionReason, count: int = 1) -> None:
         with self._lock:
@@ -180,6 +200,7 @@ class FunctionCacheMetrics:
 
         want_lookups = requested(CACHE_LOOKUPS_FAMILY)
         want_durations = requested(CACHE_COMPUTE_DURATION_FAMILY)
+        want_waits = requested(CACHE_WAIT_DURATION_FAMILY)
         want_evictions = requested(CACHE_EVICTIONS_FAMILY)
         want_refreshes = requested(CACHE_BACKGROUND_REFRESHES_FAMILY)
 
@@ -195,6 +216,7 @@ class FunctionCacheMetrics:
                 durations = {
                     trigger: self._durations[trigger].snapshot() for trigger in triggers
                 }
+            waits = self._wait_durations.snapshot() if want_waits else None
             evictions = dict(self._evictions) if want_evictions else {}
             want_refreshes = want_refreshes and background_refresh
             refreshes = dict(self._refreshes) if want_refreshes else {}
@@ -206,14 +228,39 @@ class FunctionCacheMetrics:
                     family_name=CACHE_LOOKUPS_FAMILY,
                     value=value,
                     labels={**self.labels, "result": lookup_result},
-                    help="Total calls to a cached function by lookup result.",
+                    help=(
+                        "Total calls to a cached function by lookup result. A hit "
+                        "returned a stored value, including after waiting for "
+                        "another caller to compute it. A miss ran the function. "
+                        "A call stopped while waiting is not counted."
+                    ),
                 )
                 for lookup_result, value in (("hit", hits), ("miss", misses))
             ]
         if want_durations:
             result[CACHE_COMPUTE_DURATION_FAMILY] = [
-                self._histogram_stat(trigger, *snapshot)
+                self._histogram_stat(
+                    CACHE_COMPUTE_DURATION_FAMILY,
+                    snapshot,
+                    labels={**self.labels, "trigger": trigger},
+                    help_text=(
+                        "Time spent running a cached function, on a cache miss "
+                        "or a background refresh."
+                    ),
+                )
                 for trigger, snapshot in durations.items()
+            ]
+        if waits is not None:
+            result[CACHE_WAIT_DURATION_FAMILY] = [
+                self._histogram_stat(
+                    CACHE_WAIT_DURATION_FAMILY,
+                    waits,
+                    labels=self.labels,
+                    help_text=(
+                        "Time a call spent blocked while another caller computed "
+                        "the same value. One observation per call that waited."
+                    ),
+                )
             ]
         if want_evictions:
             result[CACHE_EVICTIONS_FAMILY] = [
@@ -243,13 +290,15 @@ class FunctionCacheMetrics:
             ]
         return result
 
+    @staticmethod
     def _histogram_stat(
-        self,
-        trigger: ComputeTrigger,
-        bucket_counts: list[int],
-        duration_sum: float,
-        duration_count: int,
+        family_name: str,
+        snapshot: tuple[list[int], float, int],
+        *,
+        labels: dict[str, str],
+        help_text: str,
     ) -> HistogramStat:
+        bucket_counts, duration_sum, duration_count = snapshot
         cumulative = 0
         buckets: list[tuple[float, int]] = []
         for bound, bucket_count in zip(
@@ -258,16 +307,13 @@ class FunctionCacheMetrics:
             cumulative += bucket_count
             buckets.append((bound, cumulative))
         return HistogramStat(
-            family_name=CACHE_COMPUTE_DURATION_FAMILY,
+            family_name=family_name,
             buckets=tuple(buckets),
             observation_sum=duration_sum,
             observation_count=duration_count,
-            labels={**self.labels, "trigger": trigger},
+            labels=labels,
             unit="seconds",
-            help=(
-                "Time spent running a cached function, on a cache miss or a "
-                "background refresh."
-            ),
+            help=help_text,
         )
 
 
@@ -285,6 +331,7 @@ class CacheMetrics(StatsProvider):
         return (
             CACHE_LOOKUPS_FAMILY,
             CACHE_COMPUTE_DURATION_FAMILY,
+            CACHE_WAIT_DURATION_FAMILY,
             CACHE_EVICTIONS_FAMILY,
             CACHE_BACKGROUND_REFRESHES_FAMILY,
         )
