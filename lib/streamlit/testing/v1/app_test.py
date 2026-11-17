@@ -662,6 +662,7 @@ class AppTest:
         )
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime.uptime_seconds = None
         if self._bidi_component_manager is None:
             bidi_component_manager = BidiComponentManager()
             bidi_component_manager.discover_and_register_components(
