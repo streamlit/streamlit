@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for per-function cache lookup, compute-duration, and eviction metrics."""
+"""Tests for per-function cache lookup, duration, and eviction metrics."""
 
 from __future__ import annotations
 
@@ -28,12 +28,17 @@ import pytest
 
 import streamlit as st
 from streamlit.runtime import Runtime
-from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching import (
+    cache_background_refresh,
+    cache_metrics,
+    cache_utils,
+)
 from streamlit.runtime.caching.cache_metrics import (
     CACHE_BACKGROUND_REFRESHES_FAMILY,
     CACHE_COMPUTE_DURATION_FAMILY,
     CACHE_EVICTIONS_FAMILY,
     CACHE_LOOKUPS_FAMILY,
+    CACHE_WAIT_DURATION_FAMILY,
     COMPUTE_DURATION_BUCKETS,
     CacheMetrics,
     FunctionCacheMetrics,
@@ -120,6 +125,16 @@ def _histogram(
         ):
             return stat
     raise AssertionError(f"No {trigger} histogram for {_cache_label(func)}")
+
+
+def _wait_histogram(registry: CacheMetrics, func: Any) -> HistogramStat:
+    stats = registry.get_stats([CACHE_WAIT_DURATION_FAMILY])[CACHE_WAIT_DURATION_FAMILY]
+    for stat in stats:
+        assert isinstance(stat, HistogramStat)
+        assert stat.labels is not None
+        if stat.labels == func._metrics.labels:
+            return stat
+    raise AssertionError(f"No wait histogram for {_cache_label(func)}")
 
 
 def _histogram_triggers(registry: CacheMetrics, func: Any) -> set[str]:
@@ -224,48 +239,94 @@ def test_async_hit_and_miss_counted_once_per_call(
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
-def test_concurrent_sync_misses_count_one_miss_per_caller(
+def test_concurrent_sync_waiters_count_as_hits(
     registry: CacheMetrics, name: str, decorator: Callable
 ) -> None:
-    """Callers that wait on another caller's computation count as misses only."""
+    """Callers that wait on another caller's computation are hits with a wait."""
     callers = 4
+    waiting_threads: set[int] = set()
+
+    def yield_check() -> None:
+        waiting_threads.add(threading.get_ident())
 
     @decorator(show_spinner=False)
     def load(x: int) -> int:
-        # Hold the computation until every caller has made its first lookup, so
-        # the others are waiting on the compute lock and re-read under it.
-        _wait_for(lambda: _lookups(registry, load)["miss"] == callers)
+        # Hold the computation until every other caller is blocked on the
+        # compute lock, which polls yield_check while it waits.
+        _wait_for(lambda: len(waiting_threads) == callers - 1)
         return x
 
-    with ThreadPoolExecutor(max_workers=callers) as executor:
+    with (
+        patch.object(cache_utils, "get_run_yield_check", return_value=yield_check),
+        ThreadPoolExecutor(max_workers=callers) as executor,
+    ):
         results = list(executor.map(lambda _: load(1), range(callers)))
 
     assert results == [1] * callers
-    assert _lookups(registry, load) == {"hit": 0, "miss": callers}
+    assert _lookups(registry, load) == {"hit": callers - 1, "miss": 1}
     assert _histogram(registry, load).observation_count == 1
+    waits = _wait_histogram(registry, load)
+    assert waits.observation_count == callers - 1
+    assert waits.observation_sum > 0
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
-def test_concurrent_async_misses_count_one_miss_per_caller(
+def test_concurrent_async_waiters_count_as_hits(
     registry: CacheMetrics, name: str, decorator: Callable
 ) -> None:
-    """Async callers that await another caller's computation count as misses only."""
+    """Async callers that await another caller's computation are hits with a wait."""
     callers = 4
 
     @decorator(show_spinner=False)
     async def load(x: int) -> int:
-        deadline = time.monotonic() + 5
-        while _lookups(registry, load)["miss"] < callers:
-            assert time.monotonic() < deadline
-            await asyncio.sleep(0.01)
+        # The other gathered calls run until they await this computation.
+        await asyncio.sleep(0.01)
         return x
 
     async def run() -> list[int]:
         return list(await asyncio.gather(*(load(1) for _ in range(callers))))
 
     assert asyncio.run(run()) == [1] * callers
-    assert _lookups(registry, load) == {"hit": 0, "miss": callers}
+    assert _lookups(registry, load) == {"hit": callers - 1, "miss": 1}
     assert _histogram(registry, load).observation_count == 1
+    assert _wait_histogram(registry, load).observation_count == callers - 1
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_waiter_stopped_by_rerun_records_wait_but_no_lookup(
+    registry: CacheMetrics, name: str, decorator: Callable
+) -> None:
+    """A wait ended by a stop or rerun counts its wait, but not a hit or miss."""
+
+    class StopWaitingError(Exception):
+        pass
+
+    computing = threading.Event()
+    waiter_stopped = threading.Event()
+
+    def yield_check() -> None:
+        waiter_stopped.set()
+        raise StopWaitingError
+
+    @decorator(show_spinner=False)
+    def load() -> int:
+        computing.set()
+        assert waiter_stopped.wait(timeout=5)
+        return 1
+
+    with (
+        patch.object(cache_utils, "get_run_yield_check", return_value=yield_check),
+        ThreadPoolExecutor(max_workers=2) as executor,
+    ):
+        owner = executor.submit(load)
+        assert computing.wait(timeout=5)
+        waiter = executor.submit(load)
+        with pytest.raises(StopWaitingError):
+            waiter.result(timeout=5)
+        assert owner.result(timeout=5) == 1
+
+    assert _lookups(registry, load) == {"hit": 0, "miss": 1}
+    assert _wait_histogram(registry, load).observation_count == 1
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
@@ -486,6 +547,29 @@ def test_compute_duration_lands_in_expected_bucket(
     )
     assert stat.observation_sum == seconds
     assert stat.observation_count == 1
+
+
+def test_wait_duration_uses_compute_duration_buckets() -> None:
+    """Each wait is one observation in the shared buckets, without a trigger."""
+    metrics = FunctionCacheMetrics(CacheType.DATA, "module.load")
+    metrics.record_wait_duration(0.3)
+    metrics.record_wait_duration(45.0)
+
+    stat = metrics.get_stats([CACHE_WAIT_DURATION_FAMILY])[CACHE_WAIT_DURATION_FAMILY]
+    assert stat == [
+        HistogramStat(
+            family_name=CACHE_WAIT_DURATION_FAMILY,
+            buckets=tuple(
+                (bound, (bound >= 0.5) + (bound >= 60.0))
+                for bound in (*COMPUTE_DURATION_BUCKETS, math.inf)
+            ),
+            observation_sum=45.3,
+            observation_count=2,
+            labels={"cache_type": "st_cache_data", "cache": "module.load"},
+            unit="seconds",
+            help=stat[0].help,
+        )
+    ]
 
 
 def test_histogram_buckets_are_cumulative() -> None:
@@ -737,6 +821,7 @@ def test_zero_valued_series_emitted_for_called_function(
     assert _lookups(registry, load) == {"hit": 0, "miss": 1}
     assert _evictions(registry, _cache_label(load)) == dict.fromkeys(reasons, 0)
     assert len(_histogram(registry, load).buckets) == len(COMPUTE_DURATION_BUCKETS) + 1
+    assert _wait_histogram(registry, load).observation_count == 0
 
 
 def test_get_stats_filters_families(registry: CacheMetrics) -> None:
@@ -751,6 +836,7 @@ def test_get_stats_filters_families(registry: CacheMetrics) -> None:
     assert set(registry.get_stats()) == {
         CACHE_LOOKUPS_FAMILY,
         CACHE_COMPUTE_DURATION_FAMILY,
+        CACHE_WAIT_DURATION_FAMILY,
         CACHE_EVICTIONS_FAMILY,
         CACHE_BACKGROUND_REFRESHES_FAMILY,
     }
