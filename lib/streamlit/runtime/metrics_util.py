@@ -766,6 +766,8 @@ def create_page_profile_message(
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,
+    *,
+    server_uptime_seconds: int | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
@@ -817,6 +819,9 @@ def create_page_profile_message(
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
+
+    if server_uptime_seconds is not None:
+        page_profile.server_uptime_seconds = server_uptime_seconds
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a
