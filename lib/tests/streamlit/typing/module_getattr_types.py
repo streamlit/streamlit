@@ -21,4 +21,4 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import streamlit as st
 
-    _unknown = st.not_a_streamlit_command  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+    _unknown = st.not_a_streamlit_command  # type: ignore[attr-defined]  # ty: ignore[missing-attribute]

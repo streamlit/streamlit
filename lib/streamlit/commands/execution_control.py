@@ -90,7 +90,7 @@ def _is_fragment_scoped(scope: str | Sequence[str]) -> bool:
 
 
 @gather_metrics("stop")
-def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-return-type]
+def stop() -> NoReturn:  # type: ignore[misc] # ty: ignore[invalid-implicit-return]
     """Stops execution immediately.
 
     Streamlit will not run any statements after `st.stop()`.
@@ -209,7 +209,7 @@ def _set_query_params_for_switch(
 @gather_metrics("rerun")
 def rerun(  # type: ignore[misc]
     scope: Literal["app", "fragment"] | str | int | Sequence[str | int] = "app",
-) -> NoReturn:  # ty: ignore[invalid-return-type]
+) -> NoReturn:  # ty: ignore[invalid-implicit-return]
     """Rerun the script immediately.
 
     When ``st.rerun()`` is called, Streamlit halts the current script run and
@@ -370,7 +370,7 @@ def switch_page(  # type: ignore[misc]
     page: str | Path | Page,
     *,
     query_params: QueryParamsInput | None = None,
-) -> NoReturn:  # ty: ignore[invalid-return-type]
+) -> NoReturn:  # ty: ignore[invalid-implicit-return]
     """Programmatically switch the current page in a multipage app.
 
     When ``st.switch_page`` is called, the current page execution stops and
