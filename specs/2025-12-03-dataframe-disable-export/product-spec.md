@@ -89,12 +89,12 @@ When `client.disableDataExport = true`:
 This applies to Streamlit's built-in export and copy controls. It does not cover:
 
 - `st.download_button`, which is author-placed. Gating it from config would change
-  the widget's return value and `on_click` (`$38`). Authors already control it with
-  `disabled=`
+  the widget's return value and `on_click`, which conflicts with $38 Config vs Code
+  in `specs/AGENTS.md`. Authors already control it with `disabled=`
 - `st.audio_input`'s "Download as WAV" action, which saves the viewer's own recording
   rather than app data
-- Chart controls configured by the author in the chart spec itself (for example ECharts
-  `toolbox.feature.saveAsImage` or `dataView`, or Plotly `modeBarButtons`)
+- Chart controls that the app configures itself (for example ECharts
+  `toolbox.feature.saveAsImage` or `dataView`, or a custom Plotly `modeBarButtons` list)
 
 ### Examples
 

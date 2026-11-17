@@ -95,8 +95,8 @@ def test_hides_export_and_copy_controls(app: Page):
     chart_container = _get_chart_container(app)
     chart = chart_container.get_by_test_id("stVegaLiteChart").first
     expect(chart).to_be_visible()
-    # Wait for the rendered chart so the PNG action is absent for the
-    # flag, not because the chart has not finished rendering yet.
+    # The PNG action appears only after the chart renders. Wait for the
+    # canvas or svg so a missing button means the flag hid it.
     expect(chart.locator("canvas, svg").first).to_be_visible()
 
     toolbar = chart.locator("..").get_by_test_id("stElementToolbar")

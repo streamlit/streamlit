@@ -653,8 +653,8 @@ _create_option(
           toolbox or a custom Plotly modeBarButtons list, are not affected.
         - Hides copy actions for code blocks (st.code and Markdown), Mermaid
           source, the Vega-Lite spec, st.json (value icons and path copy),
-          dataframe column names and JSON cells, and the exception link row
-          (Copy, Ask Google, and Ask ChatGPT).
+          dataframe column names and JSON cells, and the links shown below
+          exception messages (Copy, Ask Google, and Ask ChatGPT).
 
         st.download_button is not affected; authors already control it with
         disabled=. st.audio_input's "Download as WAV" action is also not
