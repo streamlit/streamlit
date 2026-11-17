@@ -12,9 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Records cached-call time for the page profile's per-run cache totals.
+"""Records cached calls for the server's cache metrics and the page profile's
+per-run cache totals.
 
-A call is recorded only when its time would otherwise count as user code, so
+Every call reports its hit or miss, compute time and wait to its function's
+``FunctionCacheMetrics``, so ``/_stcore/metrics`` and the page profile count
+calls the same way. A hit returned a stored value, including one computed by
+another caller it waited for. A miss ran the function.
+
+A call is added to the page profile only when its time would otherwise count as user code, so
 those totals can be subtracted from user code:
 
 - It runs on a thread attached to a script run that gathers usage stats.
@@ -36,7 +42,7 @@ cached function or the cache write, is excluded from all three.
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -46,6 +52,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 
 if TYPE_CHECKING:
+    from streamlit.runtime.caching.cache_metrics import FunctionCacheMetrics
     from streamlit.runtime.scriptrunner_utils.cache_run_stats import (
         CacheTotals,
         ThreadCacheStats,
@@ -53,7 +60,8 @@ if TYPE_CHECKING:
 
 
 class CacheCallTimer:
-    """Records one cached call into the current thread's run totals.
+    """Records one cached call into its function's metrics and, when the call
+    is attributed to a script run, into the current thread's run totals.
 
     Use ``start_call()`` to create one. Each ``begin_*`` is paired with its
     ``end_*``, and a phase may run more than once (an async waiter can retry);
@@ -65,6 +73,7 @@ class CacheCallTimer:
     _is_hit: bool = False
     _is_stale: bool = False
     _is_miss: bool = False
+    _waited: bool = False
     _wait_start: float | None = None
     _wait_time: float = 0.0
     _compute_start: float | None = None
@@ -73,8 +82,12 @@ class CacheCallTimer:
     _command_time_in_compute: float = 0.0
 
     def __init__(
-        self, thread_stats: ThreadCacheStats | None, totals: CacheTotals | None
+        self,
+        metrics: FunctionCacheMetrics,
+        thread_stats: ThreadCacheStats | None = None,
+        totals: CacheTotals | None = None,
     ) -> None:
+        self._metrics = metrics
         self._thread_stats = thread_stats
         self._totals = totals
         if thread_stats is None or totals is None:
@@ -86,14 +99,15 @@ class CacheCallTimer:
         thread_stats.open_call()
 
     def record_hit(self, *, is_stale: bool = False) -> None:
+        self._metrics.record_hit()
         if self._totals is None:
             return
         self._is_hit = True
         self._is_stale = is_stale
 
     def begin_wait(self) -> None:
-        if self._thread_stats is not None:
-            self._wait_start = time.perf_counter()
+        self._waited = True
+        self._wait_start = time.perf_counter()
 
     def end_wait(self) -> None:
         if self._wait_start is not None:
@@ -102,35 +116,44 @@ class CacheCallTimer:
 
     def begin_compute(self) -> None:
         """Start timing the cached function, and count the call as a miss."""
+        self._metrics.record_miss()
+        self._compute_start = time.perf_counter()
         if self._thread_stats is None:
             return
         self._is_miss = True
-        self._compute_start = time.perf_counter()
         self._command_time_at_compute_start = self._thread_stats.tracked_command_time
 
     def end_compute(self) -> None:
-        if self._thread_stats is None or self._compute_start is None:
+        if self._compute_start is None:
             return
-        self._compute_time += time.perf_counter() - self._compute_start
+        elapsed = time.perf_counter() - self._compute_start
+        self._compute_start = None
+        # The function's own compute time includes its st.* calls, so the
+        # metrics get the full duration.
+        self._metrics.record_compute_duration(elapsed)
+        if self._thread_stats is None:
+            return
+        self._compute_time += elapsed
         self._command_time_in_compute += (
             self._thread_stats.tracked_command_time
             - self._command_time_at_compute_start
         )
-        self._compute_start = None
 
     def finish(self) -> None:
-        """Add the call's counts and times to the run totals.
+        """Record the call's wait, and add its counts and times to the run totals.
 
-        Nothing is added before this, so a call still running when the run's
-        page profile is built is left out of it entirely.
+        Nothing is added to the run totals before this, so a call still running
+        when the run's page profile is built is left out of it entirely.
         """
-        thread_stats, totals = self._thread_stats, self._totals
-        if thread_stats is None or totals is None:
-            return
         if self._wait_start is not None:
             self.end_wait()
         if self._compute_start is not None:
             self.end_compute()
+        if self._waited:
+            self._metrics.record_wait_duration(self._wait_time)
+        thread_stats, totals = self._thread_stats, self._totals
+        if thread_stats is None or totals is None:
+            return
         totals.calls += 1
         if self._is_hit:
             totals.hits += 1
@@ -138,6 +161,8 @@ class CacheCallTimer:
                 totals.stale_hits += 1
         if self._is_miss:
             totals.misses += 1
+        if self._waited:
+            totals.waits += 1
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
         totals.compute_time += max(
@@ -158,28 +183,23 @@ class CacheCallTimer:
         thread_stats.close_call()
 
 
-# Shared by every unrecorded call on every thread, so its methods must not set
-# attributes when not recording.
-_NOT_RECORDED: Final = CacheCallTimer(None, None)
-
-
-def start_call(cache_type: CacheType) -> CacheCallTimer:
-    """Start timing a cached call, or return a no-op timer if it isn't recorded."""
+def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCallTimer:
+    """Start timing a cached call, adding it to the run totals if it's recorded."""
     if in_cached_function.get():
-        return _NOT_RECORDED
+        return CacheCallTimer(metrics)
     ctx = get_script_run_ctx(suppress_warning=True)
     if ctx is None or not ctx.gather_usage_stats:
-        return _NOT_RECORDED
+        return CacheCallTimer(metrics)
     try:
         if ThreadState.get().command_tracking_deactivated:
-            return _NOT_RECORDED
+            return CacheCallTimer(metrics)
     except RuntimeError:
         # A thread with a ScriptRunContext but no ThreadState.
-        return _NOT_RECORDED
+        return CacheCallTimer(metrics)
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
     totals = (
         thread_stats.cache_resource
         if cache_type is CacheType.RESOURCE
         else thread_stats.cache_data
     )
-    return CacheCallTimer(thread_stats, totals)
+    return CacheCallTimer(metrics, thread_stats, totals)

@@ -662,6 +662,7 @@ class AppTest:
         )
         mock_runtime.dataframe_source_mgr = DataframeSourceManager()
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        # An unset MagicMock attribute would be sent as an uptime of 1.
         mock_runtime.uptime_seconds = None
         if self._bidi_component_manager is None:
             bidi_component_manager = BidiComponentManager()

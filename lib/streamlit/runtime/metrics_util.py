@@ -804,6 +804,7 @@ def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
         usage.hits = totals.hits
         usage.misses = totals.misses
         usage.stale_hits = totals.stale_hits
+        usage.waits = totals.waits
         usage.compute_time = to_microseconds(totals.compute_time)
         usage.wait_time = to_microseconds(totals.wait_time)
         usage.overhead_time = to_microseconds(totals.overhead_time)
