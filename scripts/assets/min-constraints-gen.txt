@@ -12,7 +12,7 @@ pydeck==0.8.0b4
 python-multipart==0.0.10
 requests==2.27
 starlette==0.46.0
-typing-extensions==4.10.0
+typing-extensions==4.16.0
 uvicorn==0.30.0
 watchdog==2.1.5
 websockets==12.0.0

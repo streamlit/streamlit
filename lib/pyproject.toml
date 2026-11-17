@@ -88,8 +88,8 @@ dependencies = [
   # See https://github.com/apache/arrow/issues/50471.
   "pyarrow>=12.0.0,!=25.0.0,<27",
   "requests>=2.27,<3",
-  # Starlette requires typing-extensions >= 4.10.
-  "typing-extensions>=4.10.0,<5",
+  # anyio >= 4.16 requires typing-extensions >= 4.16.
+  "typing-extensions>=4.16.0,<5",
   # ASGI web-framework. 0.46.0 is the first version whose `GZipMiddleware`
   # excludes `DEFAULT_EXCLUDED_CONTENT_TYPES` (e.g. `text/event-stream`) from
   # compression, which our gzip wrapper relies on.
