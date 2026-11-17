@@ -164,11 +164,13 @@ export const StyledSpace = styled.div({
 
 /**
  * A retained element stays mounted but leaves the layout, unless it holds
- * focus. Hiding a focused control would blur it (committing a dirty text
- * input) in Chromium and Firefox, and would strand focus in WebKit.
+ * keyboard focus. Hiding a focused control would blur it (committing a dirty
+ * text input) in Chromium and Firefox, and would strand focus in WebKit.
+ * Focused text fields always match `:focus-visible`. A widget focused by the
+ * click that triggered the rerun doesn't, so it hides once displaced.
  */
 const RETAINED_STYLES = {
-  "&:not(:focus-within)": {
+  "&:not(:has(:focus-visible))": {
     display: "none",
   },
 }

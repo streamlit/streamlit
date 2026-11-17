@@ -31,6 +31,7 @@ import {
   StyledColumn,
   StyledElementContainer,
   StyledFlexContainerBlock,
+  StyledGridCell,
   StyledLayoutWrapper,
 } from "./styled-components"
 
@@ -403,6 +404,55 @@ describe("StyledElementContainer print layout", () => {
     expect(css).toMatch(
       /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none;[^}]*flex:0 0 auto;contain:none/
     )
+  })
+})
+
+/** Hides a retained copy unless it holds keyboard focus. */
+const HIDDEN_UNLESS_KEYBOARD_FOCUSED =
+  /:not\(:has\(:focus-visible\)\)\{display:none;?\}/
+
+describe("retained element styles", () => {
+  it("hides a retained element container unless it holds keyboard focus", () => {
+    const elementContainerProps = {
+      isStale: false,
+      width: "100%",
+      height: "auto",
+      elementType: "buttonGroup",
+      overflow: "visible",
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          ...elementContainerProps,
+          isRetained: true,
+        })
+      )
+    )
+    // A widget focused by the click that triggered the rerun only matches
+    // `:focus-within`, so that must not keep it visible.
+    expect(retained).toMatch(HIDDEN_UNLESS_KEYBOARD_FOCUSED)
+    expect(retained).not.toContain("focus-within")
+
+    const current = cssOf(
+      render(createElement(StyledElementContainer, elementContainerProps))
+    )
+    expect(current).not.toContain("display:none")
+  })
+
+  it("hides a retained grid cell unless it holds keyboard focus", () => {
+    const cellProps = {
+      verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+      $showBorder: false,
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledGridCell, { ...cellProps, $isRetained: true })
+      )
+    )
+    expect(retained).toMatch(HIDDEN_UNLESS_KEYBOARD_FOCUSED)
+
+    const current = cssOf(render(createElement(StyledGridCell, cellProps)))
+    expect(current).not.toContain("display:none")
   })
 })
 

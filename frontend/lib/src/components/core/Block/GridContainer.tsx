@@ -95,7 +95,7 @@ interface GridCellProps {
   columnSpan?: number
   columnSpanAll: boolean
   rowSpan?: number
-  /** Hides the cell of a retained element unless it holds focus. */
+  /** Hides the cell of a retained element unless it holds keyboard focus. */
   isRetained: boolean
   children: ReactNode
 }

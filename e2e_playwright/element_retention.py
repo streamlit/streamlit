@@ -49,6 +49,16 @@ with st.container(key="swap_section"):
     else:
         st.text_input("Label", key="label")
 
+with st.container(key="cleared_slot_section"):
+    slot = st.empty()
+    follow_up = st.session_state.get("follow_up")
+    if follow_up:
+        # The click keeps focus in the pills, and this run leaves their slot empty.
+        st.write(f"Picked {follow_up}")
+        time.sleep(1.5)
+    else:
+        slot.pills("Follow up", ["A", "B"], key="follow_up")
+
 with st.container(key="spinner_section"):
     notice_above_spinner = st.toggle(
         "Add notice before spinner", key="notice_above_spinner"

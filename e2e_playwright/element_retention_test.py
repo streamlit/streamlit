@@ -16,6 +16,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    get_button_group,
     get_element_by_key,
     get_number_input,
     get_text_input,
@@ -93,6 +94,22 @@ def test_replaced_widget_is_hidden_then_removed(app: Page):
     wait_for_app_run(app)
 
     expect(label).not_to_be_attached()
+
+
+def test_clicked_widget_hides_when_rerun_clears_its_slot(app: Page):
+    """A clicked widget leaves once the rerun empties its `st.empty()` slot."""
+    follow_up = get_button_group(app, "follow_up")
+    follow_up.get_by_role("radio", name="A").click()
+
+    expect(app.get_by_text("Picked A", exact=True)).to_be_visible()
+    # Focus stays in the clicked pill, which must not keep it visible.
+    expect(follow_up).to_be_hidden()
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
+    wait_for_app_run(app)
+
+    expect(follow_up).not_to_be_attached()
 
 
 def test_input_after_spinner_is_visible_during_run(app: Page):
