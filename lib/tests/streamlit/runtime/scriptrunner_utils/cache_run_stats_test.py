@@ -48,6 +48,7 @@ def test_totals_combine_threads() -> None:
     main_stats = run_stats.current_thread_stats()
     main_stats.open_call(0.0)
     main_stats.cache_data.calls = 2
+    main_stats.cache_data.waits = 1
     main_stats.cache_data.compute_time = 1.0
     main_stats.close_call(3.0)
 
@@ -55,6 +56,7 @@ def test_totals_combine_threads() -> None:
         stats = run_stats.current_thread_stats()
         stats.open_call(0.0)
         stats.cache_data.calls = 1
+        stats.cache_data.waits = 1
         stats.cache_resource.calls = 1
         stats.cache_resource.overhead_time = 0.5
         stats.close_call(3.0)
@@ -64,7 +66,7 @@ def test_totals_combine_threads() -> None:
     thread.join()
 
     cache_data, cache_resource = run_stats.totals(3.0)
-    assert (cache_data.calls, cache_data.compute_time) == (3, 1.0)
+    assert (cache_data.calls, cache_data.waits, cache_data.compute_time) == (3, 2, 1.0)
     assert (cache_resource.calls, cache_resource.overhead_time) == (1, 0.5)
 
 

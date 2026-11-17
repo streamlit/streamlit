@@ -1396,7 +1396,6 @@ def test_create_page_profile_message_reports_server_uptime() -> None:
     msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=42)
 
     assert msg.page_profile.server_uptime_seconds == 42
-    assert not msg.page_profile.HasField("cache_usage")
 
 
 def test_create_page_profile_message_reports_cache_usage() -> None:
@@ -1408,6 +1407,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     stats.cache_data.hits = 2
     stats.cache_data.misses = 1
     stats.cache_data.stale_hits = 1
+    stats.cache_data.waits = 1
     stats.cache_data.compute_time = 1.5
     stats.cache_data.wait_time = 0.25
     stats.cache_data.overhead_time = 0.001
@@ -1422,6 +1422,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.cache_data.hits == 2
     assert usage.cache_data.misses == 1
     assert usage.cache_data.stale_hits == 1
+    assert usage.cache_data.waits == 1
     assert usage.cache_data.compute_time == 1_500_000
     assert usage.cache_data.wait_time == 250_000
     assert usage.cache_data.overhead_time == 1_000

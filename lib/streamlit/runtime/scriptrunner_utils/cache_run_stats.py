@@ -34,6 +34,7 @@ class CacheTotals:
     hits: int = 0
     misses: int = 0
     stale_hits: int = 0
+    waits: int = 0
     compute_time: float = 0.0
     wait_time: float = 0.0
     overhead_time: float = 0.0
@@ -44,6 +45,7 @@ class CacheTotals:
         self.hits += other.hits
         self.misses += other.misses
         self.stale_hits += other.stale_hits
+        self.waits += other.waits
         self.compute_time += other.compute_time * time_scale
         self.wait_time += other.wait_time * time_scale
         self.overhead_time += other.overhead_time * time_scale

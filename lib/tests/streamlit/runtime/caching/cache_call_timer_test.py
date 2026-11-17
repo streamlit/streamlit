@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for the per-run cache totals recorded by cached calls."""
+"""Tests for the cache metrics and per-run cache totals recorded by cached calls."""
 
 from __future__ import annotations
 
@@ -29,7 +29,13 @@ import pytest
 import streamlit as st
 from streamlit.connections import BaseConnection
 from streamlit.runtime import Runtime, metrics_util
-from streamlit.runtime.caching import cache_background_refresh
+from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching.cache_metrics import (
+    CACHE_COMPUTE_DURATION_FAMILY,
+    CACHE_LOOKUPS_FAMILY,
+    CACHE_WAIT_DURATION_FAMILY,
+    CacheMetrics,
+)
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
@@ -78,6 +84,7 @@ def ctx(monkeypatch: pytest.MonkeyPatch) -> Iterator[ScriptRunContext]:
     mock_runtime = MagicMock(spec=Runtime)
     mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
     monkeypatch.setattr(Runtime, "_instance", mock_runtime)
+    monkeypatch.setattr(cache_metrics, "_cache_metrics", CacheMetrics())
     st.cache_data.clear()
     st.cache_resource.clear()
     yield run_ctx
@@ -98,6 +105,19 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
 def _cache_totals_for(ctx: ScriptRunContext, cache_name: str) -> CacheTotals:
     cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
     return cache_data if cache_name == "cache_data" else cache_resource
+
+
+def _server_counts(func: Any) -> tuple[int, int, int, int]:
+    """Return ``func``'s hits, misses, computes and waits from its cache metrics."""
+    stats = func._metrics.get_stats(None)
+    lookups = {
+        stat.labels["result"]: stat.value for stat in stats[CACHE_LOOKUPS_FAMILY]
+    }
+    computes = sum(
+        stat.observation_count for stat in stats[CACHE_COMPUTE_DURATION_FAMILY]
+    )
+    (waits,) = stats[CACHE_WAIT_DURATION_FAMILY]
+    return lookups["hit"], lookups["miss"], computes, waits.observation_count
 
 
 def _command_names(ctx: ScriptRunContext) -> list[str]:
@@ -215,7 +235,7 @@ def test_waiting_for_another_callers_computation(
     owner.join(5)
 
     totals = _cache_totals_for(ctx, name)
-    assert (totals.calls, totals.hits, totals.misses) == (1, 1, 0)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (1, 1, 0, 1)
     assert totals.wait_time >= 0.05
     assert totals.compute_time == 0
     # The waiting time is not overhead.
@@ -223,7 +243,9 @@ def test_waiting_for_another_callers_computation(
     other_totals = _cache_totals_for(other_ctx, name)
     assert (other_totals.calls, other_totals.hits, other_totals.misses) == (1, 0, 1)
     # Taking a compute lock no one else holds is not waiting.
-    assert other_totals.wait_time == 0
+    assert (other_totals.waits, other_totals.wait_time) == (0, 0)
+    # The server's metrics count both sessions' calls the same way.
+    assert _server_counts(load) == (1, 1, 1, 1)
 
 
 def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
@@ -246,12 +268,13 @@ def test_async_waiter_counts_as_hit_and_overlap_is_scaled(
     elapsed = time.perf_counter() - start
 
     totals = _cache_totals_for(ctx, "cache_data")
-    assert (totals.calls, totals.hits, totals.misses) == (2, 1, 1)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (2, 1, 1, 1)
     assert totals.wait_time > 0
     assert totals.compute_time > 0
     # Unscaled, compute (0.1s) plus the waiter's wait (0.1s) would be about twice
     # the elapsed time.
     assert totals.total_time <= elapsed
+    assert _server_counts(load) == (1, 1, 1, 1)
 
 
 def test_serial_call_after_overlapping_async_calls_is_not_scaled(
@@ -311,8 +334,9 @@ def test_async_waiter_that_retries_after_owner_fails_is_a_miss(
     assert second == 1
 
     totals = _cache_totals_for(ctx, "cache_data")
-    assert (totals.calls, totals.hits, totals.misses) == (2, 0, 2)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (2, 0, 2, 1)
     assert totals.wait_time > 0
+    assert _server_counts(load) == (0, 2, 2, 1)
 
 
 def test_stop_while_waiting_counts_call_and_wait_only(
@@ -347,8 +371,10 @@ def test_stop_while_waiting_counts_call_and_wait_only(
     owner.join(5)
 
     totals = _cache_totals_for(ctx, "cache_data")
-    assert (totals.calls, totals.hits, totals.misses) == (1, 0, 0)
+    assert (totals.calls, totals.hits, totals.misses, totals.waits) == (1, 0, 0, 1)
     assert totals.wait_time > 0
+    # Only the owner's computation is a lookup, but the stopped wait still counts.
+    assert _server_counts(load) == (0, 1, 1, 1)
 
 
 def test_cached_call_inside_tracked_command_is_not_recorded(
@@ -489,6 +515,9 @@ def test_nested_cached_calls_count_only_the_outermost(
     assert (data.calls, data.misses) == (1, 1)
     assert data.compute_time == pytest.approx(1.5)
     assert _cache_totals_for(ctx, "cache_resource").calls == 0
+    # Per function, the server's metrics still count the inner calls.
+    assert _server_counts(inner) == (1, 1, 1, 0)
+    assert _server_counts(outer) == (0, 1, 1, 0)
 
 
 def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
@@ -526,6 +555,8 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     resource = _cache_totals_for(ctx, "cache_resource")
     assert (resource.calls, resource.misses) == (1, 1)
     assert resource.compute_time == pytest.approx(1.0)
+    # The server's metrics count both of inner's calls.
+    assert _server_counts(inner) == (0, 2, 2, 0)
 
 
 def test_calls_on_attached_threads_after_the_cached_function_returns_are_recorded(
@@ -585,6 +616,7 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
     assert (data.calls, data.misses) == (1, 1)
     assert data.overhead_time == pytest.approx(1.0)
     assert _cache_totals_for(ctx, "cache_resource").calls == 0
+    assert _server_counts(key_hash) == (0, 1, 1, 0)
 
 
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:
@@ -669,8 +701,10 @@ def test_nothing_is_recorded_without_usage_stats(ctx: ScriptRunContext) -> None:
         return 1
 
     load()
+    load()
 
     assert ctx.shared.cache_stats._threads == []
+    assert _server_counts(load) == (1, 1, 1, 0)
 
 
 def test_failed_call_counts_as_call_only(ctx: ScriptRunContext) -> None:
