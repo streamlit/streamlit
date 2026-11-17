@@ -42,6 +42,28 @@ with st.container(key="focus_section"):
         time.sleep(1.5)
     st.text_input("Query", key="query")
 
+_ISOLATED_SEARCH = st.components.v2.component(
+    "element_retention_isolated_search",
+    html='<input aria-label="Isolated query" />',
+    js="""
+export default function({ parentElement, setStateValue }) {
+  const input = parentElement.querySelector("input")
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") setStateValue("query", input.value)
+  }
+  input.addEventListener("keydown", handleKeyDown)
+  return () => input.removeEventListener("keydown", handleKeyDown)
+}
+""",
+)
+
+with st.container(key="isolated_focus_section"):
+    isolated_query = st.session_state.get("isolated_query", {}).get("query")
+    if isolated_query:
+        st.info(f"Isolated search for {isolated_query}")
+        time.sleep(1.5)
+    _ISOLATED_SEARCH(key="isolated_query")
+
 with st.container(key="swap_section"):
     if st.toggle("Use number input", key="use_number"):
         st.number_input("Amount", key="amount")

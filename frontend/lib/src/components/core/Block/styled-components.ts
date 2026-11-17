@@ -34,6 +34,7 @@ import {
 } from "~lib/components/shared/printPageBreak"
 import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { ISOLATED_COMPONENT_HOST_CLASS } from "~lib/components/widgets/BidiComponent/classNames"
 import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -168,11 +169,14 @@ export const StyledSpace = styled.div({
  * text input) in Chromium and Firefox, and would strand focus in WebKit.
  * Focused text fields always match `:focus-visible`. A widget focused by the
  * click that triggered the rerun doesn't, so it hides once displaced.
+ * `:has()` can't see into a shadow root, so an isolated custom component
+ * stays visible whenever focus is inside it.
  */
 const RETAINED_STYLES = {
-  "&:not(:has(:focus-visible))": {
-    display: "none",
-  },
+  [`&:not(:has(:focus-visible)):not(:has(.${ISOLATED_COMPONENT_HOST_CLASS}:focus-within))`]:
+    {
+      display: "none",
+    },
 }
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(

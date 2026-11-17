@@ -82,6 +82,26 @@ def test_displaced_input_keeps_focus(app: Page):
     expect(query_input).to_have_value("streamlit")
 
 
+def test_displaced_isolated_component_keeps_focus(app: Page):
+    """Focus inside a custom component's shadow root also keeps it visible."""
+    component = get_element_by_key(app, "isolated_focus_section").get_by_test_id(
+        "stBidiComponentIsolated"
+    )
+    _mark(component)
+    component_input = component.get_by_role("textbox", name="Isolated query")
+
+    component_input.click()
+    component_input.press_sequentially("ada")
+    component_input.press("Enter")
+
+    expect(app.get_by_text("Isolated search for ada")).to_be_visible()
+    expect(component_input).to_be_visible()
+    wait_for_app_run(app)
+
+    expect(component_input).to_be_focused()
+    expect(component).to_have_attribute(_MARKER, "original")
+
+
 def test_replaced_widget_is_hidden_then_removed(app: Page):
     """A displaced element that the run never re-emits leaves no ghost."""
     label = get_element_by_key(app, "label")

@@ -407,9 +407,12 @@ describe("StyledElementContainer print layout", () => {
   })
 })
 
-/** Hides a retained copy unless it holds keyboard focus. */
+/**
+ * Hides a retained copy unless it holds keyboard focus or focus is inside an
+ * isolated component's shadow root.
+ */
 const HIDDEN_UNLESS_KEYBOARD_FOCUSED =
-  /:not\(:has\(:focus-visible\)\)\{display:none;?\}/
+  /:not\(:has\(:focus-visible\)\):not\(:has\(\.stBidiComponentIsolated:focus-within\)\)\{display:none;?\}/
 
 describe("retained element styles", () => {
   it("hides a retained element container unless it holds keyboard focus", () => {
@@ -431,7 +434,7 @@ describe("retained element styles", () => {
     // A widget focused by the click that triggered the rerun only matches
     // `:focus-within`, so that must not keep it visible.
     expect(retained).toMatch(HIDDEN_UNLESS_KEYBOARD_FOCUSED)
-    expect(retained).not.toContain("focus-within")
+    expect(retained).not.toContain(":not(:focus-within)")
 
     const current = cssOf(
       render(createElement(StyledElementContainer, elementContainerProps))
