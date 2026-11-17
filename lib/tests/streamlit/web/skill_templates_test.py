@@ -170,7 +170,7 @@ def test_template_runs_with_alternate_state(
 
 
 def _stopped_chat() -> dict[str, Any]:
-    """A chat whose run was stopped before the agent answered its question."""
+    """A chat whose run was interrupted before the agent answered its question."""
     return {
         "chat_id": "c1",
         "chats": {
@@ -180,9 +180,10 @@ def _stopped_chat() -> dict[str, Any]:
 
 
 @pytest.mark.usefixtures("isolated_template")
+# The isolated_template fixture reads the template name from this parameter.
 @pytest.mark.parametrize("template", ["chat-analyst"])
 def test_chat_analyst_answers_suggestions_and_retries(template: str) -> None:
-    """A picked suggestion gets an answer, and a stopped question gets one on retry."""
+    """Suggestions and follow-ups get answers, and an interrupted question gets one on retry."""
     picked = _run_template(
         template,
         {"chat_id": "c0", "suggestion_c0": ":material/trending_down: Why revenue fell"},
@@ -190,17 +191,20 @@ def test_chat_analyst_answers_suggestions_and_retries(template: str) -> None:
     _assert_renders_cleanly(picked)
     assert picked.echarts_chart, "the suggested analysis should draw its chart"
 
+    # The follow-up to "Why revenue fell". AppTest lists options without icons.
+    picked.pills[0].set_value(":material/leaderboard: Compare regions").run()
+    _assert_renders_cleanly(picked)
+    roles = [message["role"] for message in picked.session_state["chats"]["c0"]]
+    assert roles == ["user", "assistant"] * 2
+
+    interrupted = "This response was interrupted."
     stopped = _run_template(template, _stopped_chat())
     _assert_renders_cleanly(stopped)
-    assert "You stopped this response." in [
-        caption.value for caption in stopped.caption
-    ]
+    assert interrupted in [caption.value for caption in stopped.caption]
 
     retried = _run_template(template, {**_stopped_chat(), "retry": True})
     _assert_renders_cleanly(retried)
     # The retry answers the stored question without appending it again.
     roles = [message["role"] for message in retried.session_state["chats"]["c1"]]
     assert roles == ["user", "assistant"]
-    assert "You stopped this response." not in [
-        caption.value for caption in retried.caption
-    ]
+    assert interrupted not in [caption.value for caption in retried.caption]

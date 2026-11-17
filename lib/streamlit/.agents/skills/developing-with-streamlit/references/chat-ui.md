@@ -89,8 +89,9 @@ def retry() -> None:
 
 history = st.session_state.messages
 stopped = bool(history) and history[-1]["role"] == "user"
-if not prompt and stopped and st.session_state.pop("retry", False):
-    prompt = history[-1]["content"]  # Answer it again; don't append it again
+retrying = not prompt and stopped and st.session_state.pop("retry", False)
+if retrying:
+    prompt = history[-1]["content"]
 
 # ... draw the history ...
 
@@ -100,6 +101,9 @@ if not prompt and stopped:
         st.button(
             "Try again", icon=":material/refresh:", type="tertiary", on_click=retry
         )
+
+if prompt and not retrying:  # A retried question is already in history
+    history.append({"role": "user", "content": prompt})
 ```
 
 ## Thinking and agent steps
@@ -185,12 +189,13 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg["role"] == "assistant":
-            st.feedback(
-                "thumbs", key=f"feedback_{msg['id']}", persist_state="session"
-            )
+            st.feedback("thumbs", key=f"feedback_{msg['id']}", persist_state="session")
 ```
 
-Read a rating from `st.session_state[f"feedback_{msg_id}"]`, or pass `on_change=` with `args=(msg_id,)` to log it when it changes. `persist_state="session"` keeps a rating while its message isn't drawn, such as when another conversation is open. A reply generated in this run isn't in the history loop yet, so call `st.rerun()` after storing it to draw its widgets, or draw them right after streaming.
+Read a rating from `st.session_state[f"feedback_{msg_id}"]`, or pass `on_change=` with `args=(msg_id,)` to log it when it changes.
+
+- `persist_state="session"` keeps a rating while its message isn't drawn, such as when another conversation is open.
+- A reply generated in this run isn't in the history loop yet. Call `st.rerun()` after storing it to draw its widgets, or draw them right after streaming.
 
 ## Charts and tables in messages
 
@@ -281,6 +286,8 @@ On the run that answers a prompt, the slot stays empty, which removes the pills 
 Keep conversations in Session State by ID and track the open one. List recent chats in the sidebar as tertiary buttons with `wrap=False` inside `st.container(gap=None)`: compact rows whose long titles end in an ellipsis and show in full on hover. Switch chats in an `on_click` callback, so the run that follows draws the chosen chat:
 
 ```python
+import uuid
+
 chats = st.session_state.setdefault("chats", {})  # Chat ID -> messages
 open_id = st.session_state.setdefault("chat_id", uuid.uuid4().hex)
 messages = chats.setdefault(open_id, [])

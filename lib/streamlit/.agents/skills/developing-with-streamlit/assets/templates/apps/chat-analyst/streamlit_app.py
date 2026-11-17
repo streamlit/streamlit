@@ -26,9 +26,10 @@ Notes on this template:
   ``st.container(gap=None)``: compact rows whose long titles end in an
   ellipsis. Sending a message moves its chat to the top.
 - ``st.chat_input(submit_mode="stop")`` turns the send button into a stop
-  button. A stopped run leaves a question without an answer, so the next run
-  shows "You stopped this response" with a retry button. A stop doesn't start
-  a run, so the note appears with the user's next interaction.
+  button. A stopped run, or one interrupted by switching chats, leaves a
+  question without an answer, so the next run shows "This response was
+  interrupted" with a retry button. A stop doesn't start a run, so the note
+  appears with the user's next interaction.
 - The agent yields an event as each tool call starts and ends, and each one is
   drawn where the work runs: an ``st.status(type="step")`` with a
   ``:shimmer[...]`` label inside a compact "Thinking" ``st.status``. The
@@ -93,6 +94,7 @@ def messages() -> list[Message]:
 
 
 def chat_title(history: list[Message]) -> str:
+    """The agent's title for the first reply, or the opening question until then."""
     replies: list[agent.Reply] = [m["reply"] for m in history if "reply" in m]
     return replies[0].title if replies else str(history[0]["content"])[:48]
 
@@ -250,9 +252,9 @@ retrying = (
 )
 prompt = submission or (latest["content"] if retrying and latest else None)
 
-# A picked suggestion or follow-up is a prompt too. Read it from Session State
-# before the pills render, so the pills disappear while the reply streams. Keyed
-# by chat, a suggestion picked in an interrupted run can't resend in a new chat.
+# A picked suggestion or follow-up is a prompt too. Read it before the pills
+# render, so they disappear while the reply streams. Suggestions are keyed by
+# chat, so a pick from an interrupted run can't resend in a new chat.
 suggestion_key = f"suggestion_{chat_id()}"
 if prompt is None and not history and (picked := st.session_state.get(suggestion_key)):
     prompt = agent.SUGGESTIONS[picked]
@@ -313,7 +315,7 @@ elif history:
     if history[-1]["role"] == "user" and prompt is None:
         with st.chat_message("assistant"):
             with st.container(horizontal=True, vertical_alignment="center"):
-                st.caption("You stopped this response.")
+                st.caption("This response was interrupted.")
                 st.button(
                     "Try again",
                     icon=":material/refresh:",
