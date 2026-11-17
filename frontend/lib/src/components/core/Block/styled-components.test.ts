@@ -408,14 +408,14 @@ describe("StyledElementContainer print layout", () => {
 })
 
 /**
- * Hides a retained copy unless it holds keyboard focus or focus is inside an
- * isolated component's shadow root.
+ * Matches the rule that hides a retained copy unless a descendant matches
+ * `:focus-visible` or focus is inside an isolated component's shadow root.
  */
-const HIDDEN_UNLESS_KEYBOARD_FOCUSED =
+const RETAINED_HIDE_RULE =
   /:not\(:has\(:focus-visible\)\):not\(:has\(\.stBidiComponentIsolated:focus-within\)\)\{display:none;?\}/
 
 describe("retained element styles", () => {
-  it("hides a retained element container unless it holds keyboard focus", () => {
+  it("hides a retained element container unless focus should keep it visible", () => {
     const elementContainerProps = {
       isStale: false,
       width: "100%",
@@ -433,7 +433,7 @@ describe("retained element styles", () => {
     )
     // A widget focused by the click that triggered the rerun only matches
     // `:focus-within`, so that must not keep it visible.
-    expect(retained).toMatch(HIDDEN_UNLESS_KEYBOARD_FOCUSED)
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
     expect(retained).not.toContain(":not(:focus-within)")
 
     const current = cssOf(
@@ -442,7 +442,7 @@ describe("retained element styles", () => {
     expect(current).not.toContain("display:none")
   })
 
-  it("hides a retained grid cell unless it holds keyboard focus", () => {
+  it("hides a retained grid cell unless focus should keep it visible", () => {
     const cellProps = {
       verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
       $showBorder: false,
@@ -452,7 +452,7 @@ describe("retained element styles", () => {
         createElement(StyledGridCell, { ...cellProps, $isRetained: true })
       )
     )
-    expect(retained).toMatch(HIDDEN_UNLESS_KEYBOARD_FOCUSED)
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
 
     const current = cssOf(render(createElement(StyledGridCell, cellProps)))
     expect(current).not.toContain("display:none")

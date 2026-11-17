@@ -164,15 +164,22 @@ export const StyledSpace = styled.div({
 })
 
 /**
- * A retained element stays mounted but leaves the layout, unless it holds
- * keyboard focus. Hiding a focused control would blur it (committing a dirty
- * text input) in Chromium and Firefox, and would strand focus in WebKit.
- * A focused text field always matches `:focus-visible`. A widget focused by
- * the click that triggered the rerun usually doesn't, so it hides once
- * displaced. React Aria focuses checkbox, radio, and slider inputs from script
- * after a mouse press, so those match and stay visible until the run ends.
- * `:has()` can't see into a shadow root, so an isolated custom component
- * stays visible whenever focus is inside it.
+ * A retained element stays mounted but leaves the layout unless hiding it
+ * would drop focus the user is actively using. Hiding a focused control blurs
+ * it (committing a dirty text input) in Chromium and Firefox, and strands
+ * focus in WebKit.
+ *
+ * The element stays visible when:
+ * - A light-DOM descendant matches `:focus-visible`. A focused text field
+ *   always does, including the input of a selectbox or multiselect after a
+ *   pick. Checkbox, radio, and slider inputs also do after a mouse press,
+ *   because React Aria focuses them from script. These widgets stay visible
+ *   until the run ends.
+ * - Focus is inside an isolated custom component. `:has()` can't see into
+ *   its shadow root, so any focus within its host keeps it visible.
+ *
+ * A widget focused by a click without matching `:focus-visible` hides once
+ * displaced.
  */
 const RETAINED_STYLES = {
   [`&:not(:has(:focus-visible)):not(:has(.${ISOLATED_COMPONENT_HOST_CLASS}:focus-within))`]:

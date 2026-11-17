@@ -14,5 +14,9 @@
  * limitations under the License.
  */
 
-/** Marks the shadow host of a component that isolates its styles. */
+/**
+ * Marks the shadow host of a component that isolates its styles. Retained
+ * element styles in `Block` select it to detect focus inside the shadow root,
+ * which `:has()` can't see.
+ */
 export const ISOLATED_COMPONENT_HOST_CLASS = "stBidiComponentIsolated"

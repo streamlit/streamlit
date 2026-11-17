@@ -96,6 +96,9 @@ def test_displaced_isolated_component_keeps_focus(app: Page):
 
     expect(app.get_by_text("Isolated search for ada")).to_be_visible()
     expect(component_input).to_be_visible()
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
     wait_for_app_run(app)
 
     expect(component_input).to_be_focused()
@@ -117,7 +120,7 @@ def test_replaced_widget_is_hidden_then_removed(app: Page):
 
 
 def test_clicked_widget_hides_when_rerun_clears_its_slot(app: Page):
-    """A clicked widget leaves once the rerun empties its `st.empty()` slot."""
+    """A clicked widget in an emptied `st.empty()` slot hides, then is removed."""
     follow_up = get_button_group(app, "follow_up")
     follow_up.get_by_role("radio", name="A").click()
 
