@@ -97,7 +97,7 @@ if retrying:
 
 if not prompt and stopped:
     with st.chat_message("assistant"):
-        st.caption("You stopped this response.")
+        st.caption("This response was interrupted.")
         st.button(
             "Try again", icon=":material/refresh:", type="tertiary", on_click=retry
         )
@@ -164,11 +164,11 @@ with st.chat_message("assistant"):
 
 ```python
 with st.chat_message("assistant"):
-    if msg["steps"]:  # A reply without tool calls has no toggle
+    if steps := msg.get("steps"):  # A reply without tool calls has no toggle
         s = msg["seconds"]
         label = f"Thought for {s} second{'s' if s != 1 else ''}"
         with st.status(label, type="compact", state="complete"):
-            for step in msg["steps"]:
+            for step in steps:
                 with st.status(step["label"], type="step", state="complete"):
                     st.markdown(step["detail"])
     st.markdown(msg["content"])
@@ -202,6 +202,16 @@ Read a rating from `st.session_state[f"feedback_{msg_id}"]`, or pass `on_change=
 Store the data that redraws a result with the message, such as an ECharts option and its alt text or a dataframe, not the element, and redraw it from history on every rerun. Key each chart by its message ID, so it keeps its identity and doesn't replay its entry animation when the messages above it change:
 
 ```python
+st.session_state.messages.append(
+    {
+        "id": uuid.uuid4().hex,
+        "role": "assistant",
+        "content": response,
+        "chart": option,  # An ECharts option dict
+        "chart_alt": "Weekly revenue by region: the West drops in the last week",
+    }
+)
+
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])

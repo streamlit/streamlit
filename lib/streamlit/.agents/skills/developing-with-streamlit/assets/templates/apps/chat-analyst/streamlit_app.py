@@ -152,22 +152,24 @@ def run_agent(prompt: str) -> tuple[agent.Reply, list[agent.Step], int]:
     thinking = step_status = None
     reply = None
     for event in agent.run(prompt):
+        if isinstance(event, agent.Reply):
+            reply = event
+            continue
+        if thinking is None:
+            thinking = st.status(":shimmer[Thinking]", type="compact", expanded=True)
+        # Write to the statuses directly to keep them running. Leaving a
+        # status's ``with`` block would mark it complete.
         if isinstance(event, agent.Running):
-            if thinking is None:
-                thinking = st.status(
-                    ":shimmer[Thinking]", type="compact", expanded=True
-                )
-            # Leaving a status's ``with`` block marks it complete, so the
-            # statuses stay open by writing to them directly instead.
             step_status = thinking.status(
                 f":shimmer[{event.label}]", type="step", expanded=True
             )
-        elif isinstance(event, agent.Step) and step_status is not None:
+        else:
+            if step_status is None:  # A tool call reported only once it finished
+                step_status = thinking.status(event.label, type="step")
             step_status.markdown(event.detail)
             step_status.update(label=event.label, state="complete")
             steps.append(event)
-        elif isinstance(event, agent.Reply):
-            reply = event
+            step_status = None
     if reply is None:
         raise RuntimeError("The agent finished without a reply.")
     seconds = max(1, round(time.monotonic() - started))
@@ -177,6 +179,7 @@ def run_agent(prompt: str) -> tuple[agent.Reply, list[agent.Step], int]:
 
 
 def render_result(reply: agent.Reply, message_id: str) -> None:
+    """The reply's chart, if it has one, and its feedback, keyed by the message ID."""
     if reply.chart:
         st.echarts_chart(
             reply.chart, height=260, alt=reply.chart_alt, key=f"chart_{message_id}"
