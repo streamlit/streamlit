@@ -974,6 +974,22 @@ class AppTest:
         return self._tree.sidebar
 
     @property
+    def bottom(self) -> Block:
+        """Sequence of all elements within ``st.bottom``.
+
+        This includes an ``st.chat_input`` placed at the top level of the
+        app, which Streamlit pins to the bottom container.
+
+        Returns
+        -------
+        Block
+            A container of elements. Block can be queried for elements in the
+            same manner as ``AppTest``. For example, ``Block.checkbox`` will
+            return all ``st.checkbox`` within the associated container.
+        """
+        return self._tree.bottom
+
+    @property
     def audio_input(self) -> WidgetList[AudioInput]:
         """Sequence of all ``st.audio_input`` widgets.
 

@@ -74,7 +74,7 @@ def create_fast_hasher() -> _Hash:
     back to MD5. Both produce 32-character hex digests (16 bytes).
     """
     try:
-        return hashlib.blake2b(  # type: ignore[return-value]  # ty: ignore[invalid-return-type]  # noqa: TID251
+        return hashlib.blake2b(  # type: ignore[return-value]  # ty: ignore[invalid-explicit-return]  # noqa: TID251
             digest_size=16, usedforsecurity=False
         )
     except (TypeError, ValueError):

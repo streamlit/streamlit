@@ -1181,7 +1181,7 @@ def convert_anything_to_list(obj: OptionSequence[V_co]) -> list[V_co]:
 
     if isinstance(obj, (str, int, float, bool)):
         # Wrap basic objects into a list
-        return [obj]  # type: ignore[list-item] # ty: ignore[invalid-return-type]
+        return [obj]  # type: ignore[list-item] # ty: ignore[invalid-explicit-return]
 
     if isinstance(obj, EnumMeta):
         # Support for enum classes. For string enums, we return the string value

@@ -4466,6 +4466,7 @@ class TestMetaSkillPackaging:
             ("dashboard-revenue", ("components", "charts", "data")),
             ("compute-demand-simulator", ("model",)),
             ("act-review-queue", ("store", "review")),
+            ("chat-analyst", ("agent",)),
         ):
             for module in modules:
                 assert f"{apps}/{template}/{module}.py" in names

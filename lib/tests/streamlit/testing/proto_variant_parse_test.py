@@ -55,7 +55,9 @@ _EXCLUDED_BLOCK_TYPES: dict[str, str] = {
 
 # AppTest node.type values that are not Element/Block type oneofs
 # (unknown is a synthetic placeholder for intermediate delta-path segments).
-_NON_PROTO_NODE_TYPES = frozenset({"root", "main", "sidebar", "event", "unknown"})
+_NON_PROTO_NODE_TYPES = frozenset(
+    {"root", "main", "sidebar", "event", "bottom", "unknown"}
+)
 
 # Mock command name -> proto oneofs claimed for inventory coverage.
 # Empty frozenset: the mock emits nothing unique (logo is a top-level
