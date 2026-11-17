@@ -53,7 +53,7 @@ class GridContainer(DeltaGenerator):
         super().__init__(root_container, cursor, parent, block_type)
         self._declared_columns: Literal["auto"] | int = "auto"
 
-    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[incompatible-method-override]
         super().__enter__()
         return self
 

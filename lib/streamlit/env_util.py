@@ -19,7 +19,7 @@ import platform
 import re
 import sys
 
-SYSTEM = platform.system().lower()  # ty: ignore[unresolved-attribute]
+SYSTEM = platform.system().lower()  # ty: ignore[missing-attribute]
 IS_WINDOWS = SYSTEM == "windows"
 IS_DARWIN = SYSTEM == "darwin"
 IS_LINUX_OR_BSD = (SYSTEM == "linux") or ("bsd" in SYSTEM)
