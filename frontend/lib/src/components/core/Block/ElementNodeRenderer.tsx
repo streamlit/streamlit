@@ -84,6 +84,9 @@ import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
+// Imported statically: the wrapper lazy-loads the DataFrame chunk itself and
+// renders a pixel-height fallback while it loads.
+import { LazyDataFrame } from "~lib/components/widgets/DataFrame/LazyDataFrame"
 import { FormSubmitContent } from "~lib/components/widgets/Form/FormSubmitContent"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
@@ -150,9 +153,6 @@ const Video = lazy(() => import("~lib/components/elements/Video/Video"))
 // Lazy-load widgets.
 const AudioInput = lazy(
   () => import("~lib/components/widgets/AudioInput/AudioInput")
-)
-const ArrowDataFrame = lazy(
-  () => import("~lib/components/widgets/DataFrame/DataFrame")
 )
 const Button = lazy(() => import("~lib/components/widgets/Button/Button"))
 const ButtonGroup = lazy(
@@ -711,19 +711,32 @@ const RawElementNodeRenderer = (
       // Only needed in root where resize is enabled; disabled in nested containers.
       const needsFullWidth =
         node.element.widthConfig?.useContent === true && isInRoot
+      // Size the container to a pixel-height grid so a drag moves elements
+      // below it instead of painting over them or leaving a gap. LazyDataFrame
+      // holds the pixel height while its chunk loads. Horizontal layouts keep
+      // the pixel height because the drag handle is disabled there.
+      const followGridHeightOverrides =
+        node.element.heightConfig?.pixelHeight && !isInHorizontalLayout
+          ? { height: "auto", flex: "" }
+          : undefined
       const config = needsFullWidth
         ? new ElementContainerConfig({
             minStretchWidth: MinStretchWidth.LARGE,
-            styleOverrides: { overflow: "visible", width: "100%" },
+            styleOverrides: {
+              overflow: "visible",
+              width: "100%",
+              ...followGridHeightOverrides,
+            },
             printLayout: PrintLayout.FIXED_WIDTH,
           })
         : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE.with({
             printLayout: PrintLayout.FIXED_WIDTH,
+            styleOverrides: followGridHeightOverrides,
           })
 
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
-          <ArrowDataFrame
+          <LazyDataFrame
             // Arrow dataframe can be used as a widget (data_editor) or
             // an element (dataframe). We only want to set the key in case of
             // it being used as a widget. For the non-widget usage, the id will

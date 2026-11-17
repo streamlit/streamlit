@@ -19,6 +19,7 @@ import mimetypes
 import os
 import signal
 import sys
+import threading
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import cli_util, config, env_util, file_util, net_util, secrets
@@ -170,6 +171,7 @@ def _on_server_start(server: Server) -> None:
     _print_url(server.is_running_hello)
     _maybe_print_skills_recommendation()
     report_watchdog_availability()
+    _update_global_skills_in_background()
 
     def maybe_open_browser() -> None:
         if config.get_option("server.headless"):
@@ -376,6 +378,33 @@ def _maybe_print_skills_recommendation() -> None:
     cli_util.print_to_cli("")
 
 
+def _update_global_skills_in_background() -> None:
+    """Update outdated global Streamlit agent skills without delaying startup.
+
+    Skipped for headless starts, such as deployments and CI. Runs the update in
+    a daemon thread. Logs any failure, including failing to start the thread, at
+    debug level instead of letting it reach the app.
+    """
+
+    def update() -> None:
+        try:
+            # Import and run the update here so hashing and writing stay off
+            # the server thread.
+            from streamlit.web import skills
+
+            skills.update_global_skills()
+        except Exception:
+            _LOGGER.debug("Could not update global Streamlit skills", exc_info=True)
+
+    try:
+        if config.get_option("server.headless"):
+            return
+        threading.Thread(target=update, name="GlobalSkillsUpdate", daemon=True).start()
+    except Exception:
+        # The process can run out of threads; the next start tries again.
+        _LOGGER.debug("Could not start the global skills update", exc_info=True)
+
+
 def load_config_options(flag_options: dict[str, Any]) -> None:
     """Load config options from config.toml files, then overlay the ones set by
     flag_options.
@@ -438,6 +467,7 @@ def _prepare_asgi_app_run_context(
     config._server_mode = server_mode
 
     report_watchdog_availability()
+    _update_global_skills_in_background()
 
 
 def run_asgi_app(
