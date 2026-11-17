@@ -224,13 +224,13 @@ class WStates(MutableMapping[str, Any]):
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
 
-    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override] # ty: ignore[invalid-method-override]
+    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override] # ty: ignore[incompatible-method-override]
         return {(k, self[k]) for k in self}
 
-    def values(self) -> set[Any]:  # type: ignore[override] # ty: ignore[invalid-method-override]
+    def values(self) -> set[Any]:  # type: ignore[override] # ty: ignore[incompatible-method-override]
         return {self[wid] for wid in self}
 
-    def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[invalid-method-override]
+    def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[incompatible-method-override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """

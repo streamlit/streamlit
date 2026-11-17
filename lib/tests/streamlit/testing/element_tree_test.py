@@ -2816,6 +2816,132 @@ def test_pills_and_segmented_control_filtering():
     assert at.pills[0].value == "B"  # Pills value should be unchanged
 
 
+def test_bottom_container_query() -> None:
+    """``at.bottom`` scopes queries to ``st.bottom``, like ``at.sidebar``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.pills("Main", ["a", "b"], key="main")
+        st.bottom.pills("Bottom", ["x", "y"], key="bottom")
+        st.chat_input("Ask", key="chat")
+
+    at = AppTest.from_function(script).run()
+
+    assert [p.key for p in at.bottom.pills] == ["bottom"]
+    assert [p.key for p in at.main.pills] == ["main"]
+    assert len(at.pills) == 2
+    assert at.bottom.chat_input(key="chat") is not None
+    assert len(at.main.chat_input) == 0
+
+    at.bottom.pills(key="bottom").select("y").run()
+    assert at.bottom.pills(key="bottom").value == "y"
+
+
+def test_bottom_container_empty() -> None:
+    """``at.bottom`` is an empty block when the app writes nothing to ``st.bottom``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.pills("Main", ["a", "b"])
+
+    at = AppTest.from_function(script).run()
+
+    assert len(at.bottom.pills) == 0
+
+
+@pytest.mark.parametrize("command", ["pills", "segmented_control"])
+def test_button_group_options_keep_leading_icon(command: str) -> None:
+    """Options list the full labels, including a leading icon, and set_value accepts them."""
+
+    def script(command: str) -> None:
+        import streamlit as st
+
+        choice = getattr(st, command)(
+            "View",
+            [":material/leaderboard: Compare regions", "🔥 Hot", ":material/map:"],
+            key="view",
+        )
+        st.text(repr(choice))
+
+    at = AppTest.from_function(script, args=(command,)).run()
+    widget = getattr(at, command)(key="view")
+
+    assert widget.options == [
+        ":material/leaderboard: Compare regions",
+        "🔥 Hot",
+        ":material/map:",
+    ]
+
+    widget.set_value(widget.options[0]).run()
+    assert at.text[0].value == "':material/leaderboard: Compare regions'"
+    assert getattr(at, command)(key="view").indices == [0]
+
+
+def test_button_group_set_value_rejects_unknown_option() -> None:
+    """set_value rejects a value whose formatted label is not in ``options``."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.pills(
+            "View",
+            [":material/leaderboard: Compare regions", "Plain"],
+            selection_mode="multi",
+            key="view",
+        )
+
+    at = AppTest.from_function(script).run()
+    pills = at.pills(key="view")
+
+    with pytest.raises(AppTestError, match="'Compare regions'"):
+        pills.set_value(["Plain", "Compare regions"])
+    assert pills.value == []
+
+    with pytest.raises(AppTestError, match="'Missing'"):
+        pills.select("Missing")
+
+
+def test_segmented_control_single_set_value_rejects_unknown_option() -> None:
+    """Single-select set_value names the command and keeps the value unchanged."""
+
+    def script() -> None:
+        import streamlit as st
+
+        st.segmented_control(
+            "View", [":material/map: Map", "Plain"], default="Plain", key="view"
+        )
+
+    at = AppTest.from_function(script).run()
+    seg = at.segmented_control(key="view")
+
+    with pytest.raises(
+        AppTestError, match=r"Cannot set segmented_control \(key='view'\)"
+    ):
+        seg.set_value("Map")
+    assert seg.value == "Plain"
+
+
+def test_button_group_set_value_accepts_raw_option_and_label() -> None:
+    """set_value accepts both the raw option and its formatted label."""
+
+    def script() -> None:
+        import streamlit as st
+
+        labels = {0: ":material/zoom_in: Zoom in", 1: ":material/zoom_out: Zoom out"}
+        choice = st.pills("Zoom", [0, 1], format_func=labels.__getitem__, key="z")
+        st.text(repr(choice))
+
+    at = AppTest.from_function(script).run()
+
+    at.pills(key="z").set_value(1).run()
+    assert at.text[0].value == "1"
+
+    at.pills(key="z").set_value(":material/zoom_in: Zoom in").run()
+    assert at.text[0].value == "0"
+
+
 def test_dataframe_key():
     """Test st.dataframe key is accessible for interactive dataframes. (Issue #12199)"""
 

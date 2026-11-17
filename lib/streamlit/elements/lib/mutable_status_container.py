@@ -236,7 +236,7 @@ class StatusContainer(DeltaGenerator):
             return
         enqueue_message(msg)
 
-    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[invalid-method-override]
+    def __enter__(self) -> Self:  # type: ignore[override]  # ty: ignore[incompatible-method-override]
         # This is a little dubious: we're returning a different type than
         # our superclass' `__enter__` function. Maybe DeltaGenerator.__enter__
         # should always return `self`?

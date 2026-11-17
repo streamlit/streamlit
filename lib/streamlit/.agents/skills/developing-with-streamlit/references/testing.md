@@ -208,6 +208,10 @@ at.expander(key="details")  # keyed lookup, like container
 at.get_by_key("filters")  # unique key, any type
 ```
 
+`at.main`, `at.sidebar`, and `at.bottom` scope queries to the main body, `st.sidebar`, and `st.bottom` (which also holds a top-level `st.chat_input`). Unscoped queries such as `at.pills` search the whole app.
+
+Pills and segmented-control `.options` keep a leading icon (`":material/map: Map"`). `set_value` takes a raw option or a label from `.options` and raises `AppTestError` for anything else.
+
 `st.tabs(..., key=)` stores that key on the tab container, not on the panels in `at.tabs`. Use `at.get_by_key("sections")`. `at.tabs("sections")` raises `KeyError`.
 
 `at.get()` accepts public command names (`datetime_input`, `help`, `pills`, `segmented_control`, `columns`) as well as stored node types (`date_time_input`, `help_info`).

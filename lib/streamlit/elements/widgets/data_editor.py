@@ -1567,7 +1567,7 @@ class DataEditorMixin:
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
             styler_uuid = calc_hash(key or self.dg._get_delta_path_str())[:10]
-            data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
+            data.set_uuid(styler_uuid)  # ty: ignore[not-callable, missing-attribute]
             marshall_styler(proto.arrow_data, data, styler_uuid)
 
         proto.arrow_data.data = arrow_bytes
