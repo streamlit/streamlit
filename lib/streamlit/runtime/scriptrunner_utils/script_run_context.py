@@ -115,6 +115,10 @@ class FragmentThreadState:
     # True while a tracked st.* command runs in this context, so nested
     # commands aren't recorded.
     command_tracking_deactivated: bool = False
+    # True while a command listed in the page profile runs in this context.
+    # Commands past the limits on listed commands deactivate tracking without
+    # setting this, because their time isn't counted as command time.
+    in_listed_command: bool = False
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.
     in_skeleton_slot: bool = False
@@ -142,6 +146,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     pre_allocated_container_fragment_id: str | None
     is_parallel_worker: bool
     command_tracking_deactivated: bool
+    in_listed_command: bool
     in_skeleton_slot: bool
 
 
@@ -409,11 +414,11 @@ def add_script_run_ctx(
     Repeat attaches on the same not-yet-started thread are last-wins for
     both ``ctx`` and the FragmentThreadState snapshot.
 
-    ``command_tracking_deactivated`` always starts as ``False`` on the child,
-    because the child runs its own command stack. The child receives a
-    one-time copy of the parent's state, so inheriting ``True`` would
-    suppress telemetry for every command on the child. Self-attach on a
-    thread that already has ``ThreadState`` (a copied context) also starts
+    ``command_tracking_deactivated`` and ``in_listed_command`` always start as
+    ``False`` on the child, because the child runs its own command stack. The
+    child receives a one-time copy of the parent's state, so inheriting
+    ``True`` would suppress telemetry for every command on the child. Self-attach
+    on a thread that already has ``ThreadState`` (a copied context) also starts
     tracking on, for the same reason.
 
     Self-attach fallback: when called from inside the thread it is
@@ -464,6 +469,7 @@ def add_script_run_ctx(
         fields = dataclasses.asdict(parent_ts)
         # The child runs its own command stack; see the docstring.
         fields["command_tracking_deactivated"] = False
+        fields["in_listed_command"] = False
         setattr(
             thread,
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
@@ -491,7 +497,9 @@ def add_script_run_ctx(
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
         elif thread is threading.current_thread():
-            ThreadState.update(command_tracking_deactivated=False)
+            ThreadState.update(
+                command_tracking_deactivated=False, in_listed_command=False
+            )
     elif ctx is not None and thread is threading.current_thread():
         # Caller is attaching ctx from inside the currently-running
         # thread, so the thread.run wrap above is moot. Seed ThreadState

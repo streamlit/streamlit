@@ -359,6 +359,33 @@ def test_cached_call_inside_tracked_command_is_not_recorded(
     assert "external:tests:make_client" in _command_names(ctx)
 
 
+def test_cached_call_inside_command_past_the_limit_is_recorded(
+    ctx: ScriptRunContext, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A command past the per-command limit isn't listed, so its time stays in
+    user code and the cached call inside it is recorded.
+    """
+    monkeypatch.setattr(metrics_util, "_MAX_TRACKED_PER_COMMAND", 1)
+
+    @st.cache_resource(show_spinner=False)
+    def get_client() -> str:
+        clock.advance(1.0)
+        return "client"
+
+    @metrics_util.gather_metrics("make_client")
+    def make_client() -> str:
+        return get_client()
+
+    make_client()
+    make_client()
+
+    assert _command_names(ctx).count("external:tests:make_client") == 1
+    totals = _cache_totals_for(ctx, "cache_resource")
+    assert totals.calls == 1
+    assert totals.hits == 1
+    assert totals.misses == 0
+
+
 class _FakeConnection(BaseConnection[str]):
     def _connect(self, **kwargs: Any) -> str:
         return "raw connection"
