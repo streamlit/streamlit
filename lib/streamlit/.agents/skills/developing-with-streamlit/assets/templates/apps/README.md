@@ -1,12 +1,12 @@
 # Streamlit App Templates
 
-This directory contains ready-to-use data app templates for Streamlit: apps that compute, apps that act, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
+This directory contains ready-to-use data app templates for Streamlit: forecasting apps, workflow apps, and dashboards. Each template demonstrates best practices with modern UI patterns, and draws its charts with `st.echarts_chart`, the recommended chart command.
 
 ## Available Templates
 
-### Apps That Compute and Act
+### Forecasting and Workflow Apps
 
-Simplified versions of the official [apps that compute](https://apps-that-compute-demo.streamlit.app/) and [apps that act](https://apps-that-act-demo.streamlit.app/) demos, with synthetic data:
+Simplified versions of the official [forecasting app](https://forecasting-app-demo.streamlit.app/) and [workflow app](https://workflow-app-demo.streamlit.app/) demos, with synthetic data:
 
 | Template | Description | Key Features |
 |----------|-------------|--------------|
