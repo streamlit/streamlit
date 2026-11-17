@@ -429,6 +429,38 @@ describe("metrics helpers", () => {
     expect(atServerStart.serverUptimeSeconds).toBe("0")
   })
 
+  it("buildEventProto forwards CPU times through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withCpuTimes = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          scriptCpuTime: 1500,
+          commandCpuTime: 0,
+          parallelFragmentCpuTime: 700,
+          processCpuTime: 2500,
+        })
+      )
+      .toJSON()
+    const withoutCpuTimes = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // The fields are optional, so a CPU time of 0 is still sent.
+    expect(withCpuTimes).toMatchObject({
+      scriptCpuTime: "1500",
+      commandCpuTime: "0",
+      parallelFragmentCpuTime: "700",
+      processCpuTime: "2500",
+    })
+    expect(withoutCpuTimes).not.toHaveProperty("scriptCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("commandCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("parallelFragmentCpuTime")
+    expect(withoutCpuTimes).not.toHaveProperty("processCpuTime")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

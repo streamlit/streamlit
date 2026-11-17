@@ -24,7 +24,7 @@ import time
 import uuid
 from collections.abc import Callable, Sequence, Sized
 from functools import lru_cache, wraps
-from typing import Any, Final, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
 from streamlit.errors import LocalizableStreamlitException, StreamlitAPIException
@@ -38,6 +38,16 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     get_script_run_ctx,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
+    from streamlit.runtime.scriptrunner_utils.shared_run_state import (
+        SharedRunState,
+    )
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -541,6 +551,96 @@ def to_microseconds(seconds: float) -> int:
     return int(seconds * 1_000_000)
 
 
+def _resolve_thread_cpu_clock() -> Callable[[], float] | None:
+    """Return ``time.thread_time``, or None if the platform doesn't support it."""
+    thread_time: Callable[[], float] | None = getattr(time, "thread_time", None)
+    if thread_time is None:
+        return None
+    try:
+        thread_time()
+    except OSError:
+        return None
+    return thread_time
+
+
+# None on platforms without a per-thread CPU clock, where no CPU times are
+# recorded.
+_thread_cpu_clock: Final = _resolve_thread_cpu_clock()
+
+
+class CpuClocks(NamedTuple):
+    """CPU clock readings, in seconds."""
+
+    thread: float
+    process: float
+
+
+class RunCpuTimes(NamedTuple):
+    """CPU times of one script run, in microseconds.
+
+    See the ``*_cpu_time`` fields of ``PageProfile`` for what each one covers.
+    """
+
+    script: int
+    command: int
+    parallel_fragment: int
+    process: int
+
+
+def read_cpu_clocks() -> CpuClocks | None:
+    """Read the current thread's and the process's CPU clocks.
+
+    Returns None on platforms without a per-thread CPU clock.
+    """
+    if _thread_cpu_clock is None:
+        return None
+    return CpuClocks(thread=_thread_cpu_clock(), process=time.process_time())
+
+
+def get_run_cpu_times(
+    start: CpuClocks | None, shared: SharedRunState
+) -> RunCpuTimes | None:
+    """Return the CPU times of the run that read ``start`` on its script thread.
+
+    Must be called on the script thread once the run's parallel fragment
+    workers have finished.
+    """
+    end = read_cpu_clocks()
+    if start is None or end is None:
+        return None
+    return RunCpuTimes(
+        script=to_microseconds(end.thread - start.thread),
+        command=to_microseconds(shared.command_cpu_time),
+        parallel_fragment=to_microseconds(shared.parallel_fragment_cpu_time),
+        process=to_microseconds(end.process - start.process),
+    )
+
+
+@contextlib.contextmanager
+def recording_thread_cpu_time(
+    record: Callable[[float], None],
+) -> Generator[None, None, None]:
+    """Pass the CPU seconds the current thread spends in the block to ``record``.
+
+    Records nothing on platforms without a per-thread CPU clock.
+    """
+    if _thread_cpu_clock is None:
+        yield
+        return
+    start = _thread_cpu_clock()
+    try:
+        yield
+    finally:
+        record(_thread_cpu_clock() - start)
+
+
+def _add_command_cpu_time(
+    ctx: ScriptRunContext | None, cpu_start: float | None
+) -> None:
+    if ctx is not None and cpu_start is not None and _thread_cpu_clock is not None:
+        ctx.shared.add_command_cpu_time(_thread_cpu_clock() - cpu_start)
+
+
 def _is_streamlit_import_module(module: str) -> bool:
     """Return whether an import namespace is relevant to Streamlit internals."""
     return any(
@@ -707,12 +807,16 @@ def gather_metrics(
         )
 
         command_telemetry: Command | None = None
+        # Set only for commands kept in the tracked list, so command CPU time
+        # covers the same commands as the reported command times.
+        command_cpu_start: float | None = None
         # Only the command that deactivated tracking may restore it, so nested
         # commands cannot reactivate tracking for an outer command.
         has_set_command_tracking_deactivated = False
 
         if ctx and tracking_activated:
             try:
+                cpu_start = _thread_cpu_clock() if _thread_cpu_clock else None
                 command_telemetry = _get_command_telemetry(
                     non_optional_func,
                     name,
@@ -721,11 +825,12 @@ def gather_metrics(
                     **kwargs,
                 )
 
-                ctx.shared.track_command(
+                if ctx.shared.track_command(
                     command_telemetry,
                     max_per_command=_MAX_TRACKED_PER_COMMAND,
                     max_total=_MAX_TRACKED_COMMANDS,
-                )
+                ):
+                    command_cpu_start = cpu_start
                 # Deactivate tracking to prevent calls inside already tracked commands
                 ThreadState.update(command_tracking_deactivated=True)
                 has_set_command_tracking_deactivated = True
@@ -740,6 +845,7 @@ def gather_metrics(
             # by deferring the rethrow.
             if tracking_activated and command_telemetry:
                 command_telemetry.time = to_microseconds(timer() - exec_start)
+                _add_command_cpu_time(ctx, command_cpu_start)
             raise
         finally:
             if has_set_command_tracking_deactivated:
@@ -748,6 +854,7 @@ def gather_metrics(
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
             command_telemetry.time = to_microseconds(timer() - exec_start)
+            _add_command_cpu_time(ctx, command_cpu_start)
 
         return result
 
@@ -768,6 +875,7 @@ def create_page_profile_message(
     uncaught_exception: str | None = None,
     *,
     server_uptime_seconds: int | None = None,
+    cpu_times: RunCpuTimes | None = None,
 ) -> ForwardMsg:
     """Create and return the full PageProfile ForwardMsg."""
     msg = ForwardMsg()
@@ -822,6 +930,12 @@ def create_page_profile_message(
 
     if server_uptime_seconds is not None:
         page_profile.server_uptime_seconds = server_uptime_seconds
+
+    if cpu_times is not None:
+        page_profile.script_cpu_time = cpu_times.script
+        page_profile.command_cpu_time = cpu_times.command
+        page_profile.parallel_fragment_cpu_time = cpu_times.parallel_fragment
+        page_profile.process_cpu_time = cpu_times.process
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

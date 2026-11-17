@@ -47,6 +47,9 @@ class SharedRunState:
         self._telemetry_lock = threading.Lock()
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
+        # CPU seconds, summed over threads.
+        self._command_cpu_time = 0.0
+        self._parallel_fragment_cpu_time = 0.0
 
     def reset(self) -> None:
         """Re-initialize all shared mutable state for a new script run.
@@ -65,6 +68,8 @@ class SharedRunState:
         with self._telemetry_lock:
             self._tracked_commands = []
             self._tracked_commands_counter = collections.Counter()
+            self._command_cpu_time = 0.0
+            self._parallel_fragment_cpu_time = 0.0
 
     @property
     def tracked_commands(self) -> tuple[Command, ...]:
@@ -80,7 +85,7 @@ class SharedRunState:
 
     def track_command(
         self, command: Command, *, max_per_command: int, max_total: int
-    ) -> None:
+    ) -> bool:
         """Atomically record a command, enforcing both caps.
 
         - If the list already holds ``max_total`` commands, drop the command
@@ -88,13 +93,39 @@ class SharedRunState:
           ``gather_metrics``.
         - Otherwise, count it, and append it if its name is under
           ``max_per_command``.
+
+        Returns whether the command was appended to the list.
         """
         with self._telemetry_lock:
             if len(self._tracked_commands) >= max_total:
-                return
-            if self._tracked_commands_counter[command.name] < max_per_command:
+                return False
+            appended = self._tracked_commands_counter[command.name] < max_per_command
+            if appended:
                 self._tracked_commands.append(command)
             self._tracked_commands_counter.update([command.name])
+            return appended
+
+    @property
+    def command_cpu_time(self) -> float:
+        """CPU seconds spent inside tracked commands, summed over threads."""
+        with self._telemetry_lock:
+            return self._command_cpu_time
+
+    def add_command_cpu_time(self, seconds: float) -> None:
+        """Add the CPU time of one tracked command."""
+        with self._telemetry_lock:
+            self._command_cpu_time += seconds
+
+    @property
+    def parallel_fragment_cpu_time(self) -> float:
+        """CPU seconds of parallel fragment workers, summed over workers."""
+        with self._telemetry_lock:
+            return self._parallel_fragment_cpu_time
+
+    def add_parallel_fragment_cpu_time(self, seconds: float) -> None:
+        """Add the CPU time of one parallel fragment worker."""
+        with self._telemetry_lock:
+            self._parallel_fragment_cpu_time += seconds
 
     def command_count_for(self, name: str) -> int:
         """Return how many times a command name has been tracked."""

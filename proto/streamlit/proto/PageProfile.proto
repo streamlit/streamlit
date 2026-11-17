@@ -59,6 +59,41 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
+
+  // CPU time during this run, in microseconds, measured over the same span as
+  // exec_time minus prep_time (from the end of prep until the run finishes,
+  // including runs cut short by st.rerun(), st.stop() or st.switch_page()).
+  // Comparing CPU time with wall-clock time separates CPU-bound work from
+  // waiting on queries, APIs, sleeps, locks or the GIL. Waiting for the GIL
+  // is not CPU time, so these fields can't show GIL contention.
+  //
+  // User code CPU time is script_cpu_time + parallel_fragment_cpu_time -
+  // command_cpu_time, matching user code wall time (exec_time - prep_time -
+  // command times). Fragment-only runs, including nested fragments, run on
+  // the script thread and are counted in script_cpu_time.
+  //
+  // All four are set together, and unset when the platform has no per-thread
+  // CPU clock. On Windows, CPU clocks advance in steps of about 15.6 ms, so
+  // short spans often read as 0 and only aggregates are meaningful.
+  //
+  // CPU time of the script thread.
+  optional int64 script_cpu_time = 18;
+  // CPU time inside the commands in `commands`, on whichever thread ran them
+  // (the script thread, parallel fragment workers, or app threads attached
+  // with add_script_run_ctx). Like command times, it leaves out commands
+  // beyond the tracking limits (_MAX_TRACKED_COMMANDS and
+  // _MAX_TRACKED_PER_COMMAND in metrics_util.py) and calls that raised an
+  // exception other than a rerun, so their CPU time counts as user code.
+  optional int64 command_cpu_time = 19;
+  // CPU time of parallel fragment workers (st.fragment(parallel=True)) during
+  // full app runs, summed over workers, so it can exceed wall-clock time.
+  // A nested fragment counts toward the worker thread that runs it.
+  optional int64 parallel_fragment_cpu_time = 20;
+  // CPU time of the whole server process, which also counts other threads:
+  // library thread pools (for example NumPy, Polars or DuckDB), parallel
+  // fragment workers, app-created threads, the server itself and, on a shared
+  // server, other sessions' script runs.
+  optional int64 process_cpu_time = 21;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.
