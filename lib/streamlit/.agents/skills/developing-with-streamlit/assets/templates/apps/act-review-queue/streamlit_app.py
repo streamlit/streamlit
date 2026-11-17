@@ -14,7 +14,7 @@
 
 """Review queue: planners approve, adjust, hold, or reject what an AI agent proposes.
 
-An "app that acts": the decision happens in the same app as the data. A
+A workflow app: the decision happens in the same app as the data. A
 replenishment agent proposes purchase orders. Planners edit quantities, decide
 in an editable table or a review drawer, and every decision is checked against
 guardrails and written back to the database with an audit log.

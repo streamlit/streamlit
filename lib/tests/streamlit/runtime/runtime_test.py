@@ -153,6 +153,17 @@ class RuntimeTest(RuntimeTestCase):
         await self.runtime.stopped
         assert self.runtime.state == RuntimeState.STOPPED
 
+    async def test_uptime_seconds_is_none_until_start_then_counts_whole_seconds(self):
+        """Uptime is unknown until the Runtime starts, then counts whole seconds."""
+        assert self.runtime.uptime_seconds is None
+
+        await self.runtime.start()
+        assert self.runtime.uptime_seconds is not None
+
+        self.runtime._started_at = 100.0
+        with patch("streamlit.runtime.runtime.time.monotonic", return_value=161.9):
+            assert self.runtime.uptime_seconds == 61
+
     async def test_connect_session(self):
         """We can create and remove a single session."""
         await self.runtime.start()
