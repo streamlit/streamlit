@@ -1,7 +1,8 @@
 # Approves open Dependabot PRs whose full CI has passed. Merging stays manual.
 #
-# Runs on weekdays shortly before the Cursor Dependabot automation, which enables
-# auto-merge on green Dependabot PRs. A PR is approved when every PR workflow run for
+# Runs twice a day, every day. The morning run lands shortly before the Cursor Dependabot
+# automation, which enables auto-merge on green Dependabot PRs. The afternoon run picks up
+# PRs whose CI turned green later in the day. A PR is approved when every PR workflow run for
 # its head commit has finished and passed, no check run failed, and no commit status
 # (such as Snyk) failed or is still pending. That also covers checks from outside
 # GitHub Actions, such as code scanning alerts.
@@ -28,9 +29,10 @@ name: Autoapprove Dependabot PRs
 
 on:
   schedule:
-    # 11:30 UTC on weekdays, so approvals land before the Cursor Dependabot automation
+    # 11:30 UTC, so approvals land before the Cursor Dependabot automation
     # (12:00 UTC, configured in Cursor) enables auto-merge.
-    - cron: "30 11 * * 1-5"
+    - cron: "30 11 * * *"
+    - cron: "0 16 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
