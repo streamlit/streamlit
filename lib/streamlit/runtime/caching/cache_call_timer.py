@@ -31,10 +31,14 @@ as user code, so those totals can be subtracted from user code:
   outer call hashes its arguments or reads its result, such as from a
   ``hash_funcs`` function. A thread that attaches itself has no parent state
   to inherit, so its calls are still recorded.
-- It is not inside a tracked command, such as the ``st.cache_resource`` call
-  inside ``st.connection``, whose time is already counted as command time.
+- It is not inside a command listed in the page profile, such as the
+  ``st.cache_resource`` call inside ``st.connection``, whose time is already
+  counted as command time. Commands past the limits on listed commands
+  (``_MAX_TRACKED_COMMANDS`` and ``_MAX_TRACKED_PER_COMMAND`` in
+  ``metrics_util.py``) aren't counted, so cached calls inside them are recorded.
 - It finishes before the run's page profile is built. Counts and times are
-  added together when the call finishes.
+  added when the call finishes, so a call finishing on a thread the script
+  doesn't join, while the profile reads the totals, can be partly included.
 
 Each recorded call's time is split into waiting for another caller's
 computation, computing the value, and the remaining cache overhead (hashing
@@ -158,7 +162,9 @@ class CacheCallTimer:
         """Record the call's wait, and add its counts and times to the run totals.
 
         Nothing is added to the run totals before this, so a call still running
-        when the run's page profile is built is left out of it entirely.
+        when the run's page profile is built is left out of it entirely. The
+        totals are updated one at a time without a lock, so a profile read
+        while another thread runs this can include part of that call.
         """
         if self._wait_start is not None:
             self.end_wait()
@@ -211,7 +217,7 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
     except RuntimeError:
         # A thread with a ScriptRunContext but no ThreadState.
         return CacheCallTimer(metrics)
-    if thread_state.command_tracking_deactivated or thread_state.in_cache_compute:
+    if thread_state.in_listed_command or thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
     if thread_stats.is_in_cache_code:

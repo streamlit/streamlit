@@ -1151,6 +1151,7 @@ def _run_parallel_fragment(
         # in-flight parent command so it cannot suppress this worker's
         # top-level commands.
         command_tracking_deactivated=False,
+        in_listed_command=False,
     )
 
     coordinator = ctx.parallel_coordinator

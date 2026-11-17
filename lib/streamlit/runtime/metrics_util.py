@@ -746,7 +746,10 @@ def gather_metrics(
                     max_total=_MAX_TRACKED_COMMANDS,
                 )
                 # Deactivate tracking to prevent calls inside already tracked commands
-                ThreadState.update(command_tracking_deactivated=True)
+                ThreadState.update(
+                    command_tracking_deactivated=True,
+                    in_listed_command=is_command_listed,
+                )
                 has_set_command_tracking_deactivated = True
             except Exception as ex:
                 # Always capture all exceptions since we want to make sure that
@@ -767,7 +770,9 @@ def gather_metrics(
             raise
         finally:
             if has_set_command_tracking_deactivated:
-                ThreadState.update(command_tracking_deactivated=False)
+                ThreadState.update(
+                    command_tracking_deactivated=False, in_listed_command=False
+                )
 
         if tracking_activated and command_telemetry:
             # Set the execution time to the measured value
