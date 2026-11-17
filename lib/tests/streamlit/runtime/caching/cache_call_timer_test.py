@@ -586,6 +586,45 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     assert _server_counts(inner) == (0, 2, 2, 0)
 
 
+def test_commands_on_threads_attached_inside_a_cached_function_are_excluded(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A listed command on a thread the cached function attaches and joins is
+    already command time, so it comes out of the call's compute time.
+    """
+
+    @metrics_util.gather_metrics("worker_command")
+    def worker_command() -> None:
+        clock.advance(3.0)
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        clock.advance(0.5)
+        thread = add_script_run_ctx(threading.Thread(target=worker_command))
+        thread.start()
+        thread.join(5)
+        return 1
+
+    load()
+    # Once the cached function returns, the thread's commands are not part of
+    # its computation.
+    thread = add_script_run_ctx(threading.Thread(target=worker_command))
+    thread.start()
+    thread.join(5)
+
+    assert _command_names(ctx).count("external:tests:worker_command") == 2
+    totals = _cache_totals_for(ctx, "cache_data")
+    assert totals.compute_time == pytest.approx(0.5)
+    assert totals.overhead_time == pytest.approx(0.0)
+    # The server's compute duration still includes the attached thread's work.
+    (miss_durations,) = [
+        stat
+        for stat in load._metrics.get_stats(None)[CACHE_COMPUTE_DURATION_FAMILY]
+        if stat.labels["trigger"] == "miss"
+    ]
+    assert miss_durations.observation_sum == pytest.approx(3.5)
+
+
 def test_calls_on_attached_threads_after_the_cached_function_returns_are_recorded(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:

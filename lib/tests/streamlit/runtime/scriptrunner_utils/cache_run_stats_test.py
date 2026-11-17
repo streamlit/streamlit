@@ -74,14 +74,14 @@ def test_tracked_command_time_counts_only_inside_calls() -> None:
     """Command time is recorded only while a cached call runs on the thread."""
     run_stats = RunCacheStats()
     # Before the thread has any stats.
-    run_stats.record_tracked_command_time(1.0)
+    assert not run_stats.record_tracked_command_time(1.0)
     stats = run_stats.current_thread_stats()
     # Outside a call.
-    run_stats.record_tracked_command_time(1.0)
+    assert not run_stats.record_tracked_command_time(1.0)
     assert stats.tracked_command_time == 0
 
     stats.open_call(0.0)
-    run_stats.record_tracked_command_time(0.25)
+    assert run_stats.record_tracked_command_time(0.25)
     stats.close_call(1.0)
 
     assert stats.tracked_command_time == 0.25

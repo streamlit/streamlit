@@ -98,10 +98,30 @@ class CacheComputeScope:
     during it stops treating its own cached calls as part of that computation.
     """
 
-    __slots__ = ("is_active",)
+    __slots__ = ("_command_time", "_lock", "is_active")
 
     def __init__(self) -> None:
         self.is_active = True
+        # Time of listed commands that attached threads ran during the
+        # computation, which several threads can add to at once.
+        self._command_time = 0.0
+        self._lock = threading.Lock()
+
+    def add_command_time(self, seconds: float) -> None:
+        """Add a listed command's time from an attached thread, if the
+        computation hasn't ended.
+        """
+        with self._lock:
+            if self.is_active:
+                self._command_time += seconds
+
+    def end(self) -> float:
+        """End the computation and return the command time attached threads
+        added during it.
+        """
+        with self._lock:
+            self.is_active = False
+            return self._command_time
 
     def __deepcopy__(self, memo: dict[int, object]) -> CacheComputeScope:
         # add_script_run_ctx deep-copies the parent's FragmentThreadState for the

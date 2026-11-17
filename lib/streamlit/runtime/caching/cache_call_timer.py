@@ -44,7 +44,9 @@ Each recorded call's time is split into waiting for another caller's
 computation, computing the value, and the remaining cache overhead (hashing
 arguments, reading results, and replaying cached elements). The time of
 tracked commands that run during the call, such as ``st.*`` calls inside the
-cached function or the cache write, is excluded from all three.
+cached function or the cache write, is excluded from all three. That includes
+commands on threads the cached function attaches, run before its computation
+ends.
 """
 
 from __future__ import annotations
@@ -92,6 +94,7 @@ class CacheCallTimer:
     _compute_time: float = 0.0
     _command_time_at_compute_start: float = 0.0
     _command_time_in_compute: float = 0.0
+    _attached_command_time: float = 0.0
 
     def __init__(
         self,
@@ -158,6 +161,10 @@ class CacheCallTimer:
         )
         self._thread_stats.enter_cache_code()
 
+    def exclude_attached_command_time(self, seconds: float) -> None:
+        """Exclude listed commands run by threads attached during the compute."""
+        self._attached_command_time += seconds
+
     def finish(self) -> None:
         """Record the call's wait, and add its counts and times to the run totals.
 
@@ -187,8 +194,13 @@ class CacheCallTimer:
             totals.waits += 1
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
+        # Attached threads' commands ran outside this thread's command time, so
+        # they come out of compute time only, not out of the overhead below.
         totals.compute_time += max(
-            self._compute_time - self._command_time_in_compute, 0
+            self._compute_time
+            - self._command_time_in_compute
+            - self._attached_command_time,
+            0,
         )
         totals.wait_time += self._wait_time
         # Command time during the compute is already excluded from compute_time,
@@ -231,12 +243,14 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
 
 
 @contextlib.contextmanager
-def computing_cached_value() -> Generator[None, None, None]:
-    """Mark this context as computing a cached value.
+def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, None]:
+    """Mark this context as computing a cached value for ``call_timer``.
 
     Threads attached with ``add_script_run_ctx`` inherit the mark, so their
-    cached calls made before the computation ends stay part of it. A context
-    that is already marked, or has no script-run thread state, is left as is.
+    cached calls made before the computation ends stay part of it, and the
+    time of their listed commands is excluded from ``call_timer``'s compute
+    time. A context that is already marked, or has no script-run thread state,
+    is left as is.
     """
     try:
         thread_state = ThreadState.get()
@@ -251,4 +265,4 @@ def computing_cached_value() -> Generator[None, None, None]:
         with ThreadState.scoped(cache_compute=scope):
             yield
     finally:
-        scope.is_active = False
+        call_timer.exclude_attached_command_time(scope.end())

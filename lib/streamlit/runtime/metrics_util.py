@@ -625,15 +625,22 @@ def _record_command_time(
     seconds: float,
     *,
     is_command_listed: bool,
+    thread_state: FragmentThreadState | None,
 ) -> None:
     """Set a tracked command's time, and report it to the run's cache totals.
 
     Only commands listed in the page profile are reported, because only their
-    time is subtracted from user code.
+    time is subtracted from user code. A command on a thread attached during a
+    cached computation is reported to that computation, because the calling
+    cached function's compute time includes it if it joins the thread.
     """
     command_telemetry.time = to_microseconds(seconds)
-    if ctx is not None and is_command_listed:
-        ctx.shared.cache_stats.record_tracked_command_time(seconds)
+    if ctx is None or not is_command_listed:
+        return
+    if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+        return
+    if thread_state is not None and thread_state.cache_compute is not None:
+        thread_state.cache_compute.add_command_time(seconds)
 
 
 @overload
@@ -766,6 +773,7 @@ def gather_metrics(
                     command_telemetry,
                     timer() - exec_start,
                     is_command_listed=is_command_listed,
+                    thread_state=thread_state,
                 )
             raise
         finally:
@@ -781,6 +789,7 @@ def gather_metrics(
                 command_telemetry,
                 timer() - exec_start,
                 is_command_listed=is_command_listed,
+                thread_state=thread_state,
             )
 
         return result

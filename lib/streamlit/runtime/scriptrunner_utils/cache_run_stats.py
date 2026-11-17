@@ -234,15 +234,18 @@ class RunCacheStats:
                 self._threads.append(stats)
         return stats
 
-    def record_tracked_command_time(self, seconds: float) -> None:
+    def record_tracked_command_time(self, seconds: float) -> bool:
         """Record the time of a tracked command that ran on the calling thread.
 
         Only counts while a recorded cached call is running on the thread, so
-        that time can be subtracted from the call's cache times.
+        that time can be subtracted from the call's cache times. Returns whether
+        it was counted.
         """
         stats: ThreadCacheStats | None = getattr(self._local, "stats", None)
         if stats is not None and stats.is_in_call:
             stats.tracked_command_time += seconds
+            return True
+        return False
 
     def totals(self, now: float) -> tuple[CacheTotals, CacheTotals]:
         """Return the combined ``(cache_data, cache_resource)`` totals.
