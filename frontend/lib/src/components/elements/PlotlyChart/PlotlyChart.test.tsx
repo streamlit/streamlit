@@ -23,9 +23,9 @@ import {
   type IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
+import { renderWithContexts } from "~lib/test_util"
 import type { PlotParams } from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -541,36 +541,42 @@ describe("PlotlyChart Component", () => {
   })
 
   it("removes the image download button when data export is disabled", () => {
-    render(
-      <LibConfigContext.Provider
-        value={{
-          locale: "en-US",
-          disableDataExport: true,
-        }}
+    renderWithContexts(
+      <ElementFullscreenContext.Provider
+        value={
+          {
+            expanded: false,
+            width: 600,
+            height: 500,
+            expand: vi.fn(),
+            collapse: vi.fn(),
+          } as React.ComponentProps<
+            typeof ElementFullscreenContext.Provider
+          >["value"]
+        }
       >
-        <FlexContext.Provider value={null}>
-          <ElementFullscreenContext.Provider
-            value={{
-              expanded: false,
-              width: 600,
-              height: 500,
-              expand: vi.fn(),
-              collapse: vi.fn(),
-            }}
-          >
-            <PlotlyChart
-              element={DEFAULT_ELEMENT}
-              widgetMgr={widgetMgr}
-              disabled={false}
-              width={600}
-            />
-          </ElementFullscreenContext.Provider>
-        </FlexContext.Provider>
-      </LibConfigContext.Provider>
+        <PlotlyChart
+          element={DEFAULT_ELEMENT}
+          widgetMgr={widgetMgr}
+          disabled={false}
+          width={600}
+        />
+      </ElementFullscreenContext.Provider>,
+      { libConfigContext: { disableDataExport: true } }
     )
 
-    expect(getLastPlotProps().config?.modeBarButtonsToRemove).toEqual(
-      expect.arrayContaining(["toImage"])
+    expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
+    expect(getLastPlotProps().config?.modeBarButtonsToRemove).toContain(
+      "toImage"
+    )
+  })
+
+  it("keeps the image download button when data export is enabled", () => {
+    renderComponent()
+
+    expect(screen.getByTestId("stPlotlyChart")).toBeVisible()
+    expect(getLastPlotProps().config?.modeBarButtonsToRemove).not.toContain(
+      "toImage"
     )
   })
 

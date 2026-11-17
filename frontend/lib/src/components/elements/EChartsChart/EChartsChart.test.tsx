@@ -1570,6 +1570,7 @@ describe("EChartsChart", () => {
         libConfigContext: { disableDataExport: true },
       })
 
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
       expect(
         screen.queryByRole("button", { name: "Download as PNG" })
       ).not.toBeInTheDocument()

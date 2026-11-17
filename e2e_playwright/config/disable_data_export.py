@@ -39,12 +39,16 @@ with st.container(key="read-only-dataframe"):
 
 with st.container(key="editable-data-editor"):
     st.subheader("Editable data editor")
-    st.data_editor(
+    edited_df = st.data_editor(
         df,
+        key="editor",
         hide_index=True,
         column_config=column_config,
         width=350,
     )
+
+with st.container(key="editor-value"):
+    st.text(",".join(str(name) for name in edited_df["name"]))
 
 with st.container(key="chart-table-view"):
     st.subheader("Chart")
