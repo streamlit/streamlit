@@ -48,7 +48,7 @@ Refactor layout config validation logic
 
 **Format:** `[type] Description of change` (≤63 characters, to fit squash-merge commit subjects)
 
-Types: `[feature]`, `[fix]`, `[refactor]`, `[chore]`, `[docs]`
+Types: `[feature]`, `[fix]`, `[refactor]`, `[chore]`, `[docs]`, `[spec]` (spec-only PRs, see [`specs/README.md`](../specs/README.md))
 
 **Examples:**
 
