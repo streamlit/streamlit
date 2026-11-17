@@ -1391,6 +1391,29 @@ def test_create_page_profile_message_reports_agent_api_usage() -> None:
     assert reported.instance_id
 
 
+def test_create_page_profile_message_reports_server_uptime() -> None:
+    """The page profile carries the server uptime passed in for the run."""
+    msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=42)
+
+    assert msg.page_profile.server_uptime_seconds == 42
+
+
+def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
+    """``cache_usage`` and ``server_uptime_seconds`` stay unset without data."""
+    msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not msg.page_profile.HasField("cache_usage")
+    assert not msg.page_profile.HasField("server_uptime_seconds")
+
+
+def test_create_page_profile_message_sends_zero_uptime() -> None:
+    """An uptime of 0, the server's first second, is still sent."""
+    msg = metrics_util.create_page_profile_message([], 0, 0, server_uptime_seconds=0)
+
+    assert msg.page_profile.HasField("server_uptime_seconds")
+    assert msg.page_profile.server_uptime_seconds == 0
+
+
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
     """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
     skill_dir = base / harness_dir / skill_name

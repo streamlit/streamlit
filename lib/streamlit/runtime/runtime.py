@@ -216,6 +216,8 @@ class Runtime:
         self._is_hello = config.is_hello
 
         self._state = RuntimeState.INITIAL
+        # The time.monotonic() value when start() was called.
+        self._started_at: float | None = None
 
         # Initialize managers
         self._component_registry = config.component_registry
@@ -262,6 +264,13 @@ class Runtime:
     @property
     def state(self) -> RuntimeState:
         return self._state
+
+    @property
+    def uptime_seconds(self) -> int | None:
+        """Whole seconds since the Runtime started, or None before it starts."""
+        if self._started_at is None:
+            return None
+        return int(time.monotonic() - self._started_at)
 
     @property
     def component_registry(self) -> BaseComponentRegistry:
@@ -418,6 +427,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
+        self._started_at = time.monotonic()
 
         # Create our AsyncObjects. We need to have a running eventloop to
         # instantiate our various synchronization primitives.
