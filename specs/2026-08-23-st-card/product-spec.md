@@ -138,9 +138,11 @@ st.card(
 ```
 
 `label` is the only positional parameter. `None` raises
-`StreamlitMissingRequiredParameterError`, as in `st.expander`. An empty string logs the
-standard label accessibility warning. An empty or whitespace-only `caption`, `help`, or
-`icon` counts as not set. For an untitled bordered group, use `st.container(border=True)`.
+`StreamlitMissingRequiredParameterError`, as in `st.expander`. An empty string logs a
+card-specific accessibility warning that asks for a non-empty `label`. The standard
+widget warning would mention `label_visibility`, which the card doesn't have. An empty
+or whitespace-only `caption`, `help`, or `icon` counts as not set. For an untitled
+bordered group, use `st.container(border=True)`.
 
 | Parameter | Behavior |
 | --- | --- |
@@ -174,13 +176,10 @@ or skipped.
 | `card.header_extras` | Status chips and small items in the title cluster, after the label and help icon |
 | `card.actions` | Controls on the right of the title row |
 
-A content-height card with an empty body renders only its header, without an empty
-padded body. A card whose height is already known (see
-[Loading and fragments](#loading-and-fragments)) keeps that height with an empty body:
-the frame stays the size of its row or its integer `height`, and the body area is
-blank. A skeleton or other pending body content counts as content, so the body keeps
-its space while data loads. On a card whose height is already known, the built-in body
-skeleton is that pending content.
+A content-height card with an empty body shows only its header. A card whose height is
+already known keeps that height, and its body stays blank once the built-in skeleton
+clears (see [Loading and fragments](#loading-and-fragments)). A skeleton or other
+pending body content counts as content, so the body keeps its space while data loads.
 
 ### Header
 
@@ -210,9 +209,10 @@ the default font size), the default minimum column width of `st.grid`.
   If they don't fit on one row, they wrap inside the actions column — still on the right,
   still top-aligned — not as a full-width row under the caption. An empty `card.actions`
   takes no width and adds no row.
-- **Height:** at least one standard widget height (`2.5rem`), so a button or segmented
-  control beside the label does not make the header taller. A control taller than the
-  label extends down beside the caption instead of pushing the caption down.
+- **Height:** the header is at least one standard widget height (`2.5rem`) even when it
+  has no control, so adding a button or segmented control doesn't make it taller. A
+  control taller than the label extends down beside the caption instead of pushing the
+  caption down.
 - **Hover toolbars** from body elements don't cover either slot.
 - **Write order:** slots can be filled before or after the body, for example a row count
   after the data loads.
@@ -268,22 +268,26 @@ metric in a card, as in [Examples](#examples).
 The header shows as soon as the card is created. There is no spinner in the header, and
 the card's `icon` stays as the author set it.
 
-The body gets a built-in `st.skeleton` only when the card's height is already known:
+The body gets a built-in `st.skeleton` only when the card's height doesn't depend on
+its content: an integer `height`, or `height="stretch"` directly inside an integer-height
+container or an `st.grid` row with an integer `row_height`. Nested layout in between
+(for example `st.columns` or `st.tabs` inside `st.container(height=500)`) does not count.
+There is no opt-out in v1. A later parameter can add one if apps prefer stale content
+to a skeleton on reruns.
 
-- an integer `height` on the card
-- `st.grid(..., row_height=<int>)`
-- a parent with a fixed integer height, which the card fills
+The built-in skeleton behaves like `st.skeleton`:
 
-That skeleton fills the body until the first visible *body* element arrives, or until
-the run that created the card finishes, whichever comes first. Writes to
-`header_extras` and `actions`, `st.empty()`, and spinners don't clear it. A card whose
-body writes nothing in a run (an empty-data branch, `st.stop()`, or a header-only card)
-doesn't keep showing a skeleton afterward. This matches how `st.skeleton` clears. As
-with `st.skeleton`, a fast body element such as `st.caption("Updated 5 min ago")` above
-a slow chart still ends the skeleton, so draw the slow element first or wrap it in
-`st.skeleton(height=...)`. The skeleton appears after 0.5s, so fast or cached cards
-don't flash. On reruns, the previous body stays visible; if the rerun takes longer than
-0.5s, the skeleton covers it. An explicit `st.skeleton(height=...)` in the body wins.
+- It appears after 0.5s, so fast or cached cards don't flash.
+- It clears on the first visible body element, when the body raises, or when the run
+  that created the card ends.
+- Writes to `header_extras` and `actions`, `st.empty()`, and spinners don't clear it.
+- On reruns, the previous body stays visible, and the skeleton covers it only after 0.5s.
+- An explicit `st.skeleton` in the body replaces the built-in skeleton, and only the
+  author's skeleton is shown.
+
+A fast body element such as `st.caption("Updated 5 min ago")` above a slow chart still
+clears the skeleton, so draw the slow element first or wrap it in
+`st.skeleton(height=...)`.
 
 An exception in the body clears the skeleton. The error renders as it would in any
 container, and the script stops, so cards after it don't render. To keep one failing
@@ -318,12 +322,18 @@ Cards compose with fragments the same way:
 - **Data-dependent actions need the card inside the fragment.** A parallel fragment
   cannot write to containers created outside it, including `card.header_extras` and
   `card.actions`. To add a row count after the data loads, create the card inside the
-  fragment, or use a regular (non-parallel) fragment.
+  fragment, or use a regular (non-parallel) fragment. A regular fragment can write to
+  those slots on a later fragment-only rerun only if the last full run also wrote to
+  that slot. If the full run skips the write (for example `if rows:` while the data is
+  empty), the next fragment rerun that writes to the slot raises
+  `StreamlitInvalidLayoutContextError`. Write to the slot on every full run (for
+  example `card.header_extras.empty()`), or keep the card inside the fragment.
 
 ```python
 @st.fragment(parallel=True, key="mrr_body")
 def mrr_body():
-    share = st.session_state.mrr_view == "%"  # Always set, because required=True
+    # Set by the segmented control above; required=True keeps it from being None.
+    share = st.session_state.mrr_view == "%"
     with st.skeleton(height=320):
         st.area_chart(load_mrr(share=share), height=320)
 
@@ -404,7 +414,10 @@ the header, pass an integer `height` on the card.
 In a grid, `grid.card(...)` is one cell and `grid.cell(column_span=2).card(...)` is a wide
 card. `grid.cell()` already fills a content-height row the way direct grid children do
 ([#17891](https://github.com/streamlit/streamlit/pull/17891)), so a wide stretch card
-matches its neighbors. Body charts and dataframes with `height="stretch"` fill the card.
+matches its neighbors. A chart or dataframe written directly in the card with
+`height="stretch"` fills the space below the header. A chart inside a fragment does not:
+the fragment wraps its output in a plain `st.container()`, so stretch stops there. Give
+that chart a pixel height.
 
 ### Accessibility
 
@@ -424,8 +437,8 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
   is a separate target from `help` and does not apply on touch.
 - While a body skeleton is showing, the body is marked busy. Decorative skeletons stay
   out of the accessibility tree. Reduced-motion behavior is that of `st.skeleton`.
-- An empty `label` logs the standard label accessibility warning. `None` raises, as in
-  `st.expander`.
+- An empty `label` logs a card-specific warning that asks for a non-empty label. `None`
+  raises, as in `st.expander`.
 
 ### Other behavior
 
@@ -437,7 +450,8 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
   cards are allowed; use `border=False` on the inner card if both would otherwise draw a
   frame.
 - **State:** the card is not a widget. Widgets in slots keep their own identity, keys,
-  and values.
+  and values. Controls repeated across cards need distinct labels or a `key`, as in any
+  container.
 - **AppTest and agent API:** both use the public parameter names. `at.card[0]` exposes
   `label`, `icon`, `caption`, `help`, `key`, `border`, and `background`, plus the
   `header_extras` and `actions` slots as blocks. The agent API reports `label`, `icon`,
@@ -461,7 +475,9 @@ KPI with a menu:
 
 ```python
 kpi = st.card("ARR", caption="Annual recurring revenue")
-kpi.actions.menu_button("Actions", ["Export", "Open report"], type="tertiary")
+choice = kpi.actions.menu_button("Actions", ["Export", "Open report"], type="tertiary")
+if choice == "Export":
+    st.toast("Exported")
 kpi.metric("ARR", "$4.2M", "+8%", label_visibility="collapsed")
 ```
 
@@ -549,9 +565,9 @@ measured 99, 182, and 307 pixels. In the main page flow, the sidebar, and tabs,
 `"stretch"` falls back to the content height, so the default costs nothing there. In a
 fixed-height parent, a card fills the remaining space, and `height="content"` opts out.
 `"content"` would match `st.container` and `st.metric`, but nearly every card in the BI
-demo passes `height="stretch"`. This is a deliberate difference from the
-`st.container` default: the value means the same thing on both commands, but a card's
-main job is to line up with its neighbors, and `"content"` breaks that by default.
+demo passes `height="stretch"`. This deliberately differs from `st.container` and
+`st.metric`, which default to `"content"`: a card's main job is to line up with its
+neighbors. The value still means the same thing on both commands.
 
 ### Overflow: truncate vs. wrap
 
@@ -596,9 +612,8 @@ text the card title.
 
 **`caption` is preferred** because the slot uses the `st.caption` style and stays short.
 `description` suggests longer text, which belongs in `help` or the body. `caption` names
-the card under the label, not a header image. If a header image ships later, it is not
-`st.image(caption=...)`; that collision is why a follow-up image should not reuse this
-parameter for image copy.
+the card under the label, not a header image. A future header image gets its own
+parameter for image text instead of reusing `caption`.
 
 ### Command name
 
