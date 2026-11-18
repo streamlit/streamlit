@@ -49,8 +49,8 @@ class SharedRunState:
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
 
-        # Replaced rather than cleared on reset, so a cached call still running
-        # from the previous run finishes into that run's totals.
+        # reset() replaces this rather than clearing it, so a cached call still
+        # running from the previous run finishes into that run's totals.
         self.cache_stats = RunCacheStats()
 
     def reset(self) -> None:

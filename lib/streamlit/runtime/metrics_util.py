@@ -626,10 +626,9 @@ def _record_command_time(
     *,
     is_command_listed: bool,
 ) -> None:
-    """Set a tracked command's time, and report it to the run's cache totals.
-
-    Only commands listed in the page profile are reported, because only their
-    time is subtracted from user code.
+    """Set a tracked command's time and, if the command is listed, report it to the
+    run's cache totals, so a cached call running meanwhile leaves it out of its
+    times.
     """
     command_telemetry.time = to_microseconds(seconds)
     if ctx is not None and is_command_listed:

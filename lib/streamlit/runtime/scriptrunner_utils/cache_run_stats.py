@@ -68,8 +68,8 @@ class ThreadCacheStats:
     def __init__(self) -> None:
         self.cache_data = CacheTotals()
         self.cache_resource = CacheTotals()
-        # Time of the tracked commands that ran on this thread while a recorded
-        # cached call was running. Only commands listed in the page profile count.
+        # Time of listed commands that ran on this thread during a recorded
+        # cached call.
         self.tracked_command_time = 0.0
         self._open_calls = 0
 
@@ -104,7 +104,7 @@ class RunCacheStats:
         return stats
 
     def record_tracked_command_time(self, seconds: float) -> None:
-        """Record the time of a tracked command that ran on the calling thread.
+        """Record the time of a listed command that ran on the calling thread.
 
         Only counts while a recorded cached call is running on the thread, so
         that time can be subtracted from the call's cache times.

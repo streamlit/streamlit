@@ -132,8 +132,8 @@ def _hold_compute_lock(
 ) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun.
 
-    If ``call_timer`` is given, records how long this call was blocked on a lock
-    another caller holds as its wait, including a wait that a stop or rerun ends.
+    If ``call_timer`` is given, it times how long this call is blocked on a lock
+    another caller holds, including a wait that a stop or rerun ends.
     """
     yield_check = None
     if not lock.acquire(blocking=False):
