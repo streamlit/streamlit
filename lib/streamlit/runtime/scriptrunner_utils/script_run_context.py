@@ -153,9 +153,9 @@ class FragmentThreadState:
     # True while a tracked st.* command runs in this context, so nested
     # commands aren't recorded.
     command_tracking_deactivated: bool = False
-    # True while a command listed in the page profile runs in this context.
-    # Commands past the limits on listed commands deactivate tracking without
-    # setting this, because their time isn't counted as command time.
+    # True while a command listed in the page profile runs in this context, so
+    # cached calls inside it aren't added to the run's cache totals. A command past
+    # the listing limits deactivates tracking but leaves this False.
     in_listed_command: bool = False
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.

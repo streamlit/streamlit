@@ -208,7 +208,7 @@ def test_stale_value_counts_as_stale_hit(
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
-def test_waiting_for_another_callers_computation(
+def test_waiter_on_compute_lock_counts_as_hit(
     ctx: ScriptRunContext, name: str, decorator: Callable[..., Any]
 ) -> None:
     """A caller that waits on the compute lock and then reads the value is a hit
@@ -377,7 +377,7 @@ def test_stop_while_waiting_counts_call_and_wait_only(
     assert _server_counts(load) == (0, 1, 1, 1)
 
 
-def test_cached_call_inside_tracked_command_is_not_recorded(
+def test_cached_call_inside_listed_command_is_not_recorded(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A cached call inside a tracked command is already in that command's time."""
@@ -401,8 +401,8 @@ def test_cached_call_inside_tracked_command_is_not_recorded(
 def test_cached_call_inside_command_past_the_limit_is_recorded(
     ctx: ScriptRunContext, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A command past the per-command limit isn't listed, so its time stays in
-    user code and the cached call inside it is recorded.
+    """A command past the per-command limit isn't listed, so the cached call
+    inside it is recorded.
     """
     monkeypatch.setattr(metrics_util, "_MAX_TRACKED_PER_COMMAND", 1)
 
@@ -439,7 +439,7 @@ def test_st_connection_cache_resource_is_not_recorded(ctx: ScriptRunContext) -> 
     assert "connection" in _command_names(ctx)
 
 
-def test_tracked_commands_inside_cached_function_are_excluded(
+def test_listed_commands_inside_cached_function_are_not_compute_time(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """Tracked command time inside a cached function is not compute time."""
@@ -497,11 +497,11 @@ def test_cache_write_command_time_is_excluded_from_overhead(
     assert write.time == 750_000
 
 
-def test_commands_left_out_of_the_profile_stay_in_compute_time(
+def test_commands_past_the_limit_stay_in_compute_time(
     ctx: ScriptRunContext, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Commands past the per-command limit aren't subtracted from user code, so
-    their time stays in the cached call's compute time.
+    """A command past the per-command limit isn't listed, so the cached call
+    keeps its time in compute time.
     """
     monkeypatch.setattr(metrics_util, "_MAX_TRACKED_PER_COMMAND", 1)
 

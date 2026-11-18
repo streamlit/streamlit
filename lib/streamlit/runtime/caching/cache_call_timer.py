@@ -16,37 +16,32 @@
 per-run cache totals.
 
 Every call reports its hit or miss, compute time and wait to its function's
-``FunctionCacheMetrics``, so ``/_stcore/metrics`` and the page profile count
-calls the same way. A hit returned a stored value, including one computed by
-another caller it waited for. A miss ran the function.
+``FunctionCacheMetrics``. A hit returned a stored value, including one that
+another caller computed while this call waited. A miss ran the function.
 
-A call is added to the page profile only when its time would otherwise count
-as user code, so those totals can be subtracted from user code:
+The page profile records a call only if it ran as part of the script run and no
+other recorded time already covers it:
 
-- It runs on a thread attached to a script run that gathers usage stats.
-  Background refreshes and other threads without a script run are not recorded.
-- It is not nested inside another cached call. Nested calls belong to the
-  outer call's time: calls made while the outer function computes, including
-  on threads it attaches with ``add_script_run_ctx``, and calls made while the
-  outer call hashes its arguments or reads its result, such as from a
-  ``hash_funcs`` function. A thread that attaches itself has no parent state
-  to inherit, so its calls are still recorded.
-- It is not inside a command listed in the page profile, such as the
-  ``st.cache_resource`` call inside ``st.connection``, whose time is already
-  counted as command time. Commands past the limits on listed commands
-  (``_MAX_TRACKED_COMMANDS`` and ``_MAX_TRACKED_PER_COMMAND`` in
-  ``metrics_util.py``) aren't counted, so cached calls inside them are recorded.
-- It finishes before the run's page profile is built. Counts and times are
-  added when the call finishes, so a call finishing on a thread the script
-  doesn't join, while the profile reads the totals, can be partly included.
+- It runs on a thread attached to a script run that gathers usage stats, so
+  background refreshes and other threads without a script run aren't recorded.
+- It isn't nested inside another cached call, whose time covers it. That
+  includes calls made while the outer function computes, also on threads it
+  attaches with ``add_script_run_ctx``, and calls made while the outer call
+  hashes its arguments or reads its result, such as from a ``hash_funcs``
+  function. A thread that attaches itself has no parent state to inherit, so
+  its calls are recorded.
+- It isn't inside a command listed in the page profile, such as the
+  ``st.cache_resource`` call inside ``st.connection``, whose command time covers
+  it. A command past the listing limits in ``metrics_util.py`` isn't listed, so
+  a cached call inside it is recorded.
+- It finishes before the run's page profile is built.
 
-Each recorded call's time is split into waiting for another caller's
-computation, computing the value, and the remaining cache overhead (hashing
-arguments, reading results, and replaying cached elements). The time of
-tracked commands that run during the call, such as ``st.*`` calls inside the
-cached function or the cache write, is excluded from all three. That includes
-commands on threads the cached function attaches, run before its computation
-ends.
+A recorded call's time is split into waiting for another caller's computation,
+computing the value, and the remaining overhead (hashing the arguments, reading
+the result, and replaying cached elements). Listed commands that run during the
+call, such as ``st.*`` calls inside the cached function or the cache write, are
+left out of all three. That includes commands on threads the cached function
+attaches, until its computation ends.
 """
 
 from __future__ import annotations
@@ -74,8 +69,8 @@ if TYPE_CHECKING:
 
 
 class CacheCallTimer:
-    """Records one cached call into its function's metrics and, when the call
-    is attributed to a script run, into the current thread's run totals.
+    """Records one cached call in its function's metrics and, if the page
+    profile records the call, in the current thread's run totals.
 
     Use ``start_call()`` to create one. Each ``begin_*`` is paired with its
     ``end_*``, and a phase may run more than once (an async waiter can retry);
@@ -149,8 +144,8 @@ class CacheCallTimer:
             return
         elapsed = time.perf_counter() - self._compute_start
         self._compute_start = None
-        # The function's own compute time includes its st.* calls, so the
-        # metrics get the full duration.
+        # The server metrics get the full duration, including st.* calls in the
+        # function. Only the page profile totals leave command time out.
         self._metrics.record_compute_duration(elapsed)
         if self._thread_stats is None:
             return
@@ -169,9 +164,9 @@ class CacheCallTimer:
         """Record the call's wait, and add its counts and times to the run totals.
 
         Nothing is added to the run totals before this, so a call still running
-        when the run's page profile is built is left out of it entirely. The
-        totals are updated one at a time without a lock, so a profile read
-        while another thread runs this can include part of that call.
+        when the run's page profile is built is left out of it entirely. This
+        updates the totals one field at a time without a lock, so a page profile
+        built while another thread runs this can include part of that call.
         """
         if self._wait_start is not None:
             self.end_wait()
@@ -218,7 +213,11 @@ class CacheCallTimer:
 
 
 def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCallTimer:
-    """Start timing a cached call, adding it to the run totals if it's recorded."""
+    """Start timing a cached call.
+
+    The timer adds the call to the run totals only if the page profile records
+    it (see the module docstring).
+    """
     if in_cached_function.get():
         return CacheCallTimer(metrics)
     ctx = get_script_run_ctx(suppress_warning=True)

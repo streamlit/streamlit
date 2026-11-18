@@ -70,7 +70,7 @@ class _OverlapGroup:
     def __init__(self, start: float, command_start: float) -> None:
         self.cache_data = CacheTotals()
         self.cache_resource = CacheTotals()
-        # The perf_counter time and the thread's tracked command time when the
+        # The perf_counter time and the thread's listed command time when the
         # group's first call started, and when its last call finished.
         self.start = start
         self.command_start = command_start
@@ -103,11 +103,11 @@ class ThreadCacheStats:
     """Cached-call totals recorded by one thread during one script run.
 
     Concurrent async cached calls on one event loop overlap, so their summed
-    times can exceed the wall-clock time they took from user code. Overlapping
-    calls form a group that lasts from the first call opening until no call is
-    open. When the group closes, its totals are scaled down to its wall-clock
-    span minus tracked command time and added to the per-type totals. Calls
-    that run one at a time are added unscaled.
+    times can exceed the wall-clock time they took. Overlapping calls form a
+    group that lasts from the first call opening until no call is open. When the
+    group closes, its totals are scaled down to its wall-clock span minus listed
+    command time and added to the per-type totals. Calls that run one at a time
+    are added unscaled.
     """
 
     __slots__ = (
@@ -124,8 +124,8 @@ class ThreadCacheStats:
     def __init__(self) -> None:
         self.cache_data = CacheTotals()
         self.cache_resource = CacheTotals()
-        # Time of the tracked commands that ran on this thread while a recorded
-        # cached call was running. Only commands listed in the page profile count.
+        # Time of listed commands that ran on this thread during a recorded
+        # cached call.
         self.tracked_command_time = 0.0
         self._open_calls = 0
         # Open calls that aren't waiting for another caller or computing.
@@ -235,11 +235,10 @@ class RunCacheStats:
         return stats
 
     def record_tracked_command_time(self, seconds: float) -> bool:
-        """Record the time of a tracked command that ran on the calling thread.
+        """Record the time of a listed command that ran on the calling thread.
 
         Only counts while a recorded cached call is running on the thread, so
-        that time can be subtracted from the call's cache times. Returns whether
-        it was counted.
+        the call's cache times leave it out. Returns whether it was counted.
         """
         stats: ThreadCacheStats | None = getattr(self._local, "stats", None)
         if stats is not None and stats.is_in_call:

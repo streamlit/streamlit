@@ -627,12 +627,13 @@ def _record_command_time(
     is_command_listed: bool,
     thread_state: FragmentThreadState | None,
 ) -> None:
-    """Set a tracked command's time, and report it to the run's cache totals.
+    """Set a tracked command's time and, if the command is listed, report it to the
+    run's cache totals, so a cached call running meanwhile leaves it out of its
+    times.
 
-    Only commands listed in the page profile are reported, because only their
-    time is subtracted from user code. A command on a thread attached during a
-    cached computation is reported to that computation, because the calling
-    cached function's compute time includes it if it joins the thread.
+    On a thread attached during a cached computation, the command is reported to
+    that computation, because the cached function's compute time includes it when
+    the function joins the thread.
     """
     command_telemetry.time = to_microseconds(seconds)
     if ctx is None or not is_command_listed:
