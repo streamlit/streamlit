@@ -1,5 +1,5 @@
 ---
-author: mayagbarnes
+author: lukasmasuch, mayagbarnes
 created: 2026-08-23
 ---
 
@@ -9,7 +9,8 @@ created: 2026-08-23
 
 Add `st.card`, a titled panel for dashboards. A card has a header with slots for status
 chips and controls, and a body for any elements. Cards fill the height of their row by
-default, so side-by-side cards line up.
+default, so card bottoms line up. Chart tops line up when cards in the row use the same
+header fields.
 
 ```python
 with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
@@ -23,7 +24,8 @@ with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
 
 Dashboards are built from panels: a chart or table with a short title, a line of context,
 and a few controls on the right of the title row. Streamlit apps build each panel by hand.
-The [BI dashboard demo](https://github.com/streamlit/demos/tree/main/bi-dashboard) uses
+The [business intelligence (BI) dashboard demo](https://advanced-dashboard-demo.streamlit.app/)
+uses
 this helper for every panel:
 
 ```python
@@ -101,9 +103,11 @@ this design does not optimize for them.
 - Replacing `st.metric` for KPI tiles.
 - Compact widget density
   ([#6867](https://github.com/streamlit/streamlit/issues/6867)). Controls use the standard
-  widget height (`2.5rem`). Tighter padding is a [follow-up](#compatible-follow-ups).
+  widget height (`2.5rem`). Tighter padding is a
+  [follow-up](#compact-density).
 - A rerun scope on the card. Widgets in a card rerun what they were created in, as in any
-  container; `@st.fragment` limits reruns. See [Loading and fragments](#loading-and-fragments).
+  container; `@st.fragment` limits reruns. See
+  [Loading and fragments](#loading-and-fragments).
 - Card-specific options that existing elements cover: source text, empty states, "More"
   menus, and auto-refresh.
 
@@ -128,8 +132,8 @@ st.card(
 
 `label` is the only positional parameter. `None` raises
 `StreamlitMissingRequiredParameterError`, as in `st.expander`. An empty string logs the
-standard label accessibility warning. An empty or whitespace-only `caption` or `help`
-counts as not set. For an untitled bordered group, use `st.container(border=True)`.
+standard label accessibility warning. An empty or whitespace-only `caption`, `help`, or
+`icon` counts as not set. For an untitled bordered group, use `st.container(border=True)`.
 
 | Parameter | Behavior |
 | --- | --- |
@@ -143,7 +147,7 @@ returns the card:
 
 ```python
 with st.card("Revenue", caption="Last 12 months") as card:
-    card.actions.badge("Live", color="green")
+    card.header_extras.badge("Live", color="green")
     st.line_chart(revenue)
 
 revenue_card = st.card("Revenue")
@@ -167,25 +171,29 @@ while data loads. On a bounded card, the built-in body skeleton is that pending 
 
 ```
 [icon] [label] [help] [header_extras]          [actions]
-                [caption]
+       [wrapped extras]
+       [caption]
 ```
 
-The header must work in a card about `12.5rem` wide (200 pixels at the default font
-size), the default minimum column width of `st.grid`. At that width, actions wider than
-an icon button usually move to their own row.
+The header is two columns: the title cluster on the left, and `actions` on the right,
+top-aligned with the label. It must work in a card about `12.5rem` wide (200 pixels at
+the default font size), the default minimum column width of `st.grid`.
 
 - **Label:** one line, ending in an ellipsis. The icon and help icon stay visible. The
   label is the card's accessible name. It uses the body font at semibold weight. It is
   not a heading, so it has no anchor and is not part of the page's heading outline.
 - **Caption:** up to two lines in the `st.caption` style, then an ellipsis.
 - **`header_extras`:** `st.badge`, icon buttons such as a favorite, and short inline
-  text. Not for body-changing controls (use `actions`) or a second row of details (use
-  `caption` or the body). An empty extras slot takes no width.
+  text, in the title cluster after the label. Not for body-changing controls (use
+  `actions`) or a second row of details (use `caption` or the body). An empty extras slot
+  takes no width.
 - **`actions`:** a horizontal, right-aligned, content-width slot for buttons, menus,
-  popovers, segmented controls, pills, and toggles. Card filters go in an `st.popover`.
-  Widgets use `label_visibility="collapsed"`. Other elements are allowed but can break
-  the layout. If they don't fit on one row, they wrap inside the actions area. An empty
-  `card.actions` takes no width and adds no row.
+  popovers, segmented controls, pills, and toggles. It stays on the right, top-aligned
+  with the label. Card filters go in an `st.popover`. Widgets use
+  `label_visibility="collapsed"`. Other elements are allowed but can break the layout.
+  If they don't fit on one row, they wrap inside the actions column — still on the right,
+  still top-aligned — not as a full-width row under the caption. An empty `card.actions`
+  takes no width and adds no row.
 - **Height:** at least one standard widget height (`2.5rem`), so a button or segmented
   control beside the label does not make the header taller. A control taller than the
   label extends down beside the caption instead of pushing the caption down.
@@ -197,8 +205,10 @@ When the row is too narrow:
 
 1. The label truncates, down to a minimum width (about `8rem`; the final value comes
    from design).
-2. `header_extras` wrap under the caption.
-3. `actions` move to their own row under the caption.
+2. `header_extras` wrap below the label and help, still in the left cluster and still
+   above the caption.
+3. `actions` stay on the right, top-aligned with the label. They wrap only inside that
+   right column.
 
 A truncated label or caption shows its full text the same way as
 [`wrap=False` labels](../2026-07-23-horizontal-wrap-control/product-spec.md#tooltip-for-the-full-label):
@@ -209,7 +219,15 @@ When printing, the label and caption wrap instead of ending in an ellipsis, as
 
 The docstring recommends labels of about 30 characters or fewer. Captions should hold
 units, the time window, or one short hint. Longer explanations belong in `help` or the
-body. Cards in a row line up when they use the same header fields.
+body.
+
+**Cards in a row line up only when their headers match.** `height="stretch"` equalizes
+outer heights, so card bottoms line up. Chart *tops* follow the header. A caption (none,
+one, or two lines) and wrapped extras change that height. Use the same header fields —
+including caption present or absent — on every card in a row. Matching header heights
+when captions differ is a [follow-up](#layout). Footer, when added, has the same issue:
+an unused footer takes no space, so mixed footers would shift where stretch body charts
+end. Put a footer on every card in a row or on none.
 
 Focus order is label and help, `header_extras`, actions, then the body.
 
@@ -460,7 +478,7 @@ sit after the label, not in the right-aligned control cluster.
 - **A slot before the label, or a badge in `icon`:** the leading spot belongs to the
   icon, and `icon` means a glyph everywhere else.
 - **Only `actions`:** chips then compete with segmented controls for the right edge, and
-  wrap as one group instead of extras wrapping under the caption first.
+  wrap as one group instead of extras wrapping below the label, above the caption.
 
 ### Surface: outline by default vs. adaptive fill
 
@@ -528,7 +546,10 @@ text the card title.
 ### `caption` vs. `description`
 
 **`caption` is preferred** because the slot uses the `st.caption` style and stays short.
-`description` suggests longer text, which belongs in `help` or the body.
+`description` suggests longer text, which belongs in `help` or the body. `caption` names
+the card under the label, not a header image. If a header image ships later, it is not
+`st.image(caption=...)`; that collision is why a follow-up image should not reuse this
+parameter for image copy.
 
 ### Command name
 
@@ -563,7 +584,9 @@ Each follow-up is additive, so code written against v1 keeps working.
   come only if usage shows that preparing images by hand is too much work.
 - **Footer slot.** `card.footer` is a container pinned to the bottom of the card, for
   links, actions, and "last updated" text. Because cards in a row have equal heights,
-  their footers line up. No divider; an unused footer takes no space.
+  their footers line up. No divider; an unused footer takes no space. Mixed footers in a
+  row would shorten some bodies, so stretch charts would end at different heights unless
+  every card in the row uses a footer or none do.
 - **Header updates.** `card.update(label=..., caption=..., icon=...)` works like
   `st.status.update()`, for example to replace a `"spinner"` icon once the data loads.
 - **Automatic skeleton on unbounded cards.** v1 already skeletons bounded cards (integer
@@ -594,7 +617,7 @@ at `2.5rem`. This is a presentation change, not a new card parameter. Shipping i
 changes how existing card headers look. Click targets stay at least 24 by 24 pixels.
 Metric actions (#13212) should use the same density.
 
-### Surface
+### Surface follow-ups
 
 - **Shadow.** `shadow: bool = False` adds subtle elevation that stays visible in dark
   mode, for example with the adaptive shadow described in #14683.
@@ -621,8 +644,9 @@ Metric actions (#13212) should use the same density.
 
 - **Header alignment across a grid row.** Cards in one `st.grid` row share a header
   height, for example with CSS subgrid, so their bodies start at the same height even
-  when captions differ. This changes layout but not the API. It needs a design check,
-  because it adds space above shorter headers.
+  when captions or wrapped extras differ. This changes layout but not the API. It needs a
+  design check, because it adds space above shorter headers. The same pattern would apply
+  to mixed footers when `card.footer` exists.
 
 ## Design references
 
@@ -630,7 +654,7 @@ Metric actions (#13212) should use the same density.
 - [Material Design 3 cards](https://m3.material.io/components/cards/overview)
 - [Component Gallery card anatomy](https://component.gallery/components/card/)
 - [Streamlit design-system exploration](https://www.figma.com/design/svukmRMf0N9yQzdv8f7sgO/Streamlit-Open-Source-design-system?node-id=3924-321050)
-- [BI dashboard demo](https://github.com/streamlit/demos/tree/main/bi-dashboard)
+- [BI dashboard demo](https://advanced-dashboard-demo.streamlit.app/)
 - Dashboard background comparison in
   [#12418](https://github.com/streamlit/streamlit/issues/12418)
 
