@@ -16,6 +16,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    get_button_group,
     get_element_by_key,
     get_number_input,
     get_text_input,
@@ -81,6 +82,29 @@ def test_displaced_input_keeps_focus(app: Page):
     expect(query_input).to_have_value("streamlit")
 
 
+def test_displaced_isolated_component_keeps_focus(app: Page):
+    """Focus inside a custom component's shadow root also keeps it visible."""
+    component = get_element_by_key(app, "isolated_focus_section").get_by_test_id(
+        "stBidiComponentIsolated"
+    )
+    _mark(component)
+    component_input = component.get_by_role("textbox", name="Isolated query")
+
+    component_input.click()
+    component_input.press_sequentially("ada")
+    component_input.press("Enter")
+
+    expect(app.get_by_text("Isolated search for ada")).to_be_visible()
+    expect(component_input).to_be_visible()
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
+    wait_for_app_run(app)
+
+    expect(component_input).to_be_focused()
+    expect(component).to_have_attribute(_MARKER, "original")
+
+
 def test_replaced_widget_is_hidden_then_removed(app: Page):
     """A displaced element that the run never re-emits leaves no ghost."""
     label = get_element_by_key(app, "label")
@@ -93,6 +117,22 @@ def test_replaced_widget_is_hidden_then_removed(app: Page):
     wait_for_app_run(app)
 
     expect(label).not_to_be_attached()
+
+
+def test_clicked_widget_hides_when_rerun_clears_its_slot(app: Page):
+    """A clicked widget in an emptied `st.empty()` slot hides, then is removed."""
+    follow_up = get_button_group(app, "follow_up")
+    follow_up.get_by_role("radio", name="A").click()
+
+    expect(app.get_by_text("Picked A", exact=True)).to_be_visible()
+    # Focus stays in the clicked pill, which must not keep it visible.
+    expect(follow_up).to_be_hidden()
+    expect(app.get_by_test_id("stApp")).to_have_attribute(
+        "data-test-script-state", "running"
+    )
+    wait_for_app_run(app)
+
+    expect(follow_up).not_to_be_attached()
 
 
 def test_input_after_spinner_is_visible_during_run(app: Page):
