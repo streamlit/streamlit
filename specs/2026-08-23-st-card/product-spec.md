@@ -45,9 +45,7 @@ def card_header(title, caption=None, *, help=None):
 
 
 with st.container(border=True, height="stretch"):
-    controls = card_header(
-        "MRR by plan", "Monthly recurring revenue, stacked by plan"
-    )
+    controls = card_header("MRR by plan", "Monthly recurring revenue, stacked by plan")
     view = controls.segmented_control(
         "View",
         ["$", "%"],
