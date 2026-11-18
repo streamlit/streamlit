@@ -247,7 +247,7 @@ That skeleton fills the body until the first element arrives. It appears after 0
 fast or cached cards don't flash. On reruns, the previous body stays visible; if the
 rerun takes longer than 0.5s, the skeleton covers it. An explicit
 `st.skeleton(height=...)` in the body wins. An exception replaces the skeleton. The
-header stays, so it's clear which card failed. Failures stay inside the card ($44).
+header stays, so it's clear which card failed. Failures stay inside the card.
 
 Everywhere else (`height="content"`, the main flow, sidebar, tabs, `st.columns`, a grid
 with `row_height="content"`), the card does not invent a height. Wrap the body in
@@ -363,7 +363,7 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
   such as `st.subheader` above a group of cards give the page a structure to skim.
 - The card itself is not focusable. Widgets in `header_extras`, `actions`, and the body
   keep their own names and keyboard behavior. A widget with
-  `label_visibility="collapsed"` still has that label as its accessible name ($49).
+  `label_visibility="collapsed"` still has that label as its accessible name.
 - Focus order is label and help, `header_extras`, actions, then the body. Visual order
   matches DOM order.
 - Truncated text follows the tooltip rules in [Header](#header). The truncation tooltip
@@ -380,10 +380,10 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
   cards are allowed; use `border=False` on the inner card if both would otherwise draw a
   frame.
 - **State:** the card is not a widget. Widgets in slots keep their own identity, keys,
-  and values ($40).
+  and values.
 - **AppTest and agent API:** `at.card[0]` exposes `header_extras` and `actions` as
-  blocks. The agent API reports the label, caption, help, and slots ($54).
-- **Cost:** apps that don't call `st.card` pay nothing ($52).
+  blocks. The agent API reports the label, caption, help, and slots.
+- **Cost:** apps that don't call `st.card` pay nothing.
 
 ### Examples
 
@@ -591,8 +591,8 @@ slots, so they sit on the title line
 ([#6867](https://github.com/streamlit/streamlit/issues/6867),
 [#8822](https://github.com/streamlit/streamlit/issues/8822)). Widgets in the body stay
 at `2.5rem`. This is a presentation change, not a new card parameter. Shipping it later
-changes how existing card headers look. Click targets stay at least 24 by 24 pixels
-($49). Metric actions (#13212) should use the same density.
+changes how existing card headers look. Click targets stay at least 24 by 24 pixels.
+Metric actions (#13212) should use the same density.
 
 ### Surface
 
