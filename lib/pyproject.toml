@@ -95,7 +95,7 @@ dependencies = [
   # compression, which our gzip wrapper relies on.
   "starlette>=0.46.0,<2",
   # ASGI server:
-  "uvicorn>=0.30.0,<1",
+  "uvicorn>=0.54.0,<1",
   # Required by starlette:
   "anyio>=4.0.0,<5",
   # Required for file-upload support:
