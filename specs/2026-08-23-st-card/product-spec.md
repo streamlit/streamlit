@@ -287,7 +287,10 @@ don't flash. On reruns, the previous body stays visible; if the rerun takes long
 
 An exception in the body clears the skeleton. The error renders as it would in any
 container, and the script stops, so cards after it don't render. To keep one failing
-card from stopping the rest, put its body in an `@st.fragment`.
+card from stopping the rest on a full run, put its body in
+`@st.fragment(parallel=True)`, or catch the error in the body. A regular
+`@st.fragment` still stops the rest of the script on the first run; it only isolates
+on fragment-only reruns.
 
 Everywhere else (`height="content"`, the main flow, sidebar, tabs, `st.columns`, a grid
 with `row_height="content"`), the card does not invent a height. Wrap the body in
