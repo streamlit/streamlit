@@ -281,6 +281,29 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         # reconnect.
         assert reconnected_session_info.session.register_file_watchers.call_count == 2
 
+    @patch_config_options({"server.fileWatcherType": "none"})
+    def test_reconnect_does_not_create_local_sources_watcher_if_file_watching_disabled(
+        self,
+    ) -> None:
+        """Reconnect must not construct a LocalSourcesWatcher when watching is off.
+
+        Do not mock register_file_watchers: that would hide the bug this test
+        guards against. Override the class-level LocalSourcesWatcher patch so
+        construction is observable.
+        """
+        with patch(
+            "streamlit.runtime.app_session.LocalSourcesWatcher"
+        ) as patched_local_sources_watcher:
+            session_id = self.connect_session()
+            self.session_mgr.disconnect_session(session_id)
+            reconnected_session_id = self.connect_session(
+                existing_session_id=session_id
+            )
+            session = self.session_mgr.get_session_info(reconnected_session_id).session
+
+            patched_local_sources_watcher.assert_not_called()
+            assert session._local_sources_watcher is None
+
     @patch(
         "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
         new=MagicMock(),

@@ -254,8 +254,7 @@ class AppSession:
         self._stop_config_listener: Callable[[], None] | None = None
         self._stop_pages_listener: Callable[[], None] | None = None
 
-        if config.get_option("server.fileWatcherType") != "none":
-            self.register_file_watchers()
+        self.register_file_watchers()
 
         self._run_on_save = config.get_option("server.runOnSave")
 
@@ -336,9 +335,13 @@ class AppSession:
           - the project-level secrets.toml files
 
         This method is called automatically on AppSession construction, but it may be
-        called again in the case when a session is disconnected and is being reconnect
-        to.
+        called again in the case when a session is disconnected and is being
+        reconnected to. It is a no-op when file watching is disabled
+        (``server.fileWatcherType = "none"``).
         """
+        if config.get_option("server.fileWatcherType") == "none":
+            return
+
         if self._local_sources_watcher is None:
             self._local_sources_watcher = LocalSourcesWatcher(self._pages_manager)
 
