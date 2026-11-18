@@ -4414,7 +4414,7 @@ requires-dist = [
     { name = "streamlit", extras = ["auth", "charts", "snowflake", "sql", "pdf", "performance"], marker = "extra == 'all'" },
     { name = "streamlit-pdf", marker = "extra == 'pdf'", specifier = ">=2.1.0" },
     { name = "typing-extensions", specifier = ">=4.10.0,<5" },
-    { name = "uvicorn", specifier = ">=0.30.0,<1" },
+    { name = "uvicorn", specifier = ">=0.54.0,<1" },
     { name = "uvloop", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32' and extra == 'performance'", specifier = ">=0.15.2" },
     { name = "watchdog", marker = "sys_platform != 'darwin'", specifier = ">=2.1.5,<8" },
     { name = "websockets", specifier = ">=12.0.0,<18" },
