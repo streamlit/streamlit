@@ -7551,7 +7551,10 @@ describe("App", () => {
       vi.restoreAllMocks()
     })
 
-    /** Connects, starts a developer session, and clears the initial rerun. */
+    /**
+     * Connects and starts a developer session. Connecting requests a script
+     * run, so sent messages are cleared to leave only the action under test.
+     */
     function startConnectedDeveloperSession(): ConnectionManager {
       const connectionManager = getMockConnectionManager(true)
       act(() => {
@@ -8023,7 +8026,7 @@ describe("App", () => {
       delete window.iFrameResizer
     })
 
-    it("reports the lowest tagged element bottom as the iframe height", () => {
+    it("reports the rounded-up bottom of the lowest tagged element as the iframe height", () => {
       renderApp(getProps())
 
       expect(window.iFrameResizer.heightCalculationMethod()).toBe(0)
