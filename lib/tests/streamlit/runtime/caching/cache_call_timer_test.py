@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import pickle
 import threading
 import time
@@ -36,12 +37,17 @@ from streamlit.runtime.caching.cache_metrics import (
     CACHE_WAIT_DURATION_FAMILY,
     CacheMetrics,
 )
+from streamlit.runtime.caching.cache_utils import _make_value_key
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
 )
 from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.scriptrunner_utils.exceptions import StopException
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
@@ -442,7 +448,9 @@ def test_st_connection_cache_resource_is_not_recorded(ctx: ScriptRunContext) -> 
 def test_listed_commands_inside_cached_function_are_not_compute_time(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """Tracked command time inside a cached function is not compute time."""
+    """Tracked command time inside a cached function is not compute time, and is
+    not taken out of the overhead a second time.
+    """
 
     @metrics_util.gather_metrics("slow_command")
     def slow_command() -> None:
@@ -454,17 +462,51 @@ def test_listed_commands_inside_cached_function_are_not_compute_time(
         slow_command()
         return 1
 
-    load()
+    def slow_value_key(*args: Any, **kwargs: Any) -> str:
+        clock.advance(0.25)
+        return _make_value_key(*args, **kwargs)
+
+    with patch(
+        "streamlit.runtime.caching.cache_utils._make_value_key",
+        side_effect=slow_value_key,
+    ):
+        load()
 
     totals = _cache_totals_for(ctx, "cache_data")
     assert totals.compute_time == pytest.approx(0.5)
-    assert totals.overhead_time == pytest.approx(0.0)
+    assert totals.overhead_time == pytest.approx(0.25)
     command = next(
         command
         for command in ctx.shared.tracked_commands
         if command.name == "external:tests:slow_command"
     )
     assert command.time == 3_000_000
+
+
+def test_listed_command_that_reruns_inside_cached_function_is_not_compute_time(
+    ctx: ScriptRunContext, clock: FakeClock
+) -> None:
+    """A listed command that requests a rerun, like st.rerun, still leaves its time
+    out of the failed call's compute time.
+    """
+
+    @metrics_util.gather_metrics("rerunning_command")
+    def rerunning_command() -> None:
+        clock.advance(2.0)
+        raise RerunException(RerunData())
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        clock.advance(0.5)
+        rerunning_command()
+        return 1
+
+    with pytest.raises(RerunException):
+        load()
+
+    totals = _cache_totals_for(ctx, "cache_data")
+    assert (totals.calls, totals.misses) == (1, 1)
+    assert totals.compute_time == pytest.approx(0.5)
 
 
 def test_cache_write_command_time_is_excluded_from_overhead(
@@ -758,6 +800,23 @@ def test_calls_without_a_script_run_are_not_recorded(ctx: ScriptRunContext) -> N
     assert ctx.shared.cache_stats._threads == []
 
 
+def test_call_without_thread_state_is_not_recorded(ctx: ScriptRunContext) -> None:
+    """A thread with a ScriptRunContext but no ThreadState still runs the cached
+    function and reports it to the server metrics, but isn't recorded.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        return 1
+
+    # An empty context has no ThreadState, while the thread keeps its
+    # ScriptRunContext.
+    assert contextvars.Context().run(load) == 1
+
+    assert ctx.shared.cache_stats._threads == []
+    assert _server_counts(load) == (0, 1, 1, 0)
+
+
 def test_nothing_is_recorded_without_usage_stats(ctx: ScriptRunContext) -> None:
     """Respect browser.gatherUsageStats by not recording when it's off."""
     ctx.gather_usage_stats = False
@@ -820,3 +879,31 @@ def test_new_run_starts_from_zero(ctx: ScriptRunContext) -> None:
 
     totals = _cache_totals_for(ctx, "cache_data")
     assert (totals.calls, totals.hits, totals.misses) == (1, 1, 0)
+
+
+def test_call_running_across_a_reset_finishes_into_the_previous_run(
+    ctx: ScriptRunContext,
+) -> None:
+    """A call that starts before ``SharedRunState.reset()`` and finishes after it
+    adds to the previous run's totals, not the new run's.
+    """
+    computing = threading.Event()
+    release = threading.Event()
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        computing.set()
+        release.wait(5)
+        return 1
+
+    previous_run = ctx.shared.cache_stats
+    thread = add_script_run_ctx(threading.Thread(target=load), ctx)
+    thread.start()
+    assert computing.wait(5)
+    ctx.shared.reset()
+    release.set()
+    thread.join(5)
+
+    previous_data, _ = previous_run.totals(time.perf_counter())
+    assert (previous_data.calls, previous_data.misses) == (1, 1)
+    assert _cache_totals_for(ctx, "cache_data").calls == 0
