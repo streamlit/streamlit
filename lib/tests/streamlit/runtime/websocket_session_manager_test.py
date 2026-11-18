@@ -287,9 +287,9 @@ class WebsocketSessionManagerTests(unittest.TestCase):
     ) -> None:
         """Reconnect must not construct a LocalSourcesWatcher when watching is off.
 
-        Do not mock register_file_watchers: that would hide the bug this test
-        guards against. Override the class-level LocalSourcesWatcher patch so
-        construction is observable.
+        Uses the real register_file_watchers and patches LocalSourcesWatcher
+        locally, overriding the class-level mock, so the test can check whether
+        it is constructed.
         """
         with patch(
             "streamlit.runtime.app_session.LocalSourcesWatcher"
@@ -301,6 +301,7 @@ class WebsocketSessionManagerTests(unittest.TestCase):
             )
             session = self.session_mgr.get_session_info(reconnected_session_id).session
 
+            assert reconnected_session_id == session_id
             patched_local_sources_watcher.assert_not_called()
             assert session._local_sources_watcher is None
 

@@ -334,10 +334,9 @@ class AppSession:
           - project and user-level config.toml files
           - the project-level secrets.toml files
 
-        This method is called automatically on AppSession construction, but it may be
-        called again in the case when a session is disconnected and is being
-        reconnected to. It is a no-op when file watching is disabled
-        (``server.fileWatcherType = "none"``).
+        AppSession calls this on construction, and WebsocketSessionManager calls it
+        again when a disconnected session reconnects. Does nothing when
+        ``server.fileWatcherType`` is ``"none"``.
         """
         if config.get_option("server.fileWatcherType") == "none":
             return
