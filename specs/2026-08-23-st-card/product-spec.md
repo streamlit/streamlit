@@ -25,8 +25,7 @@ with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
 Dashboards are built from panels: a chart or table with a short title, a line of context,
 and a few controls on the right of the title row. Streamlit apps build each panel by hand.
 The [business intelligence (BI) dashboard demo](https://advanced-dashboard-demo.streamlit.app/)
-uses
-this helper for every panel:
+builds every panel with this helper:
 
 ```python
 def card_header(title, caption=None, *, help=None):
@@ -49,7 +48,7 @@ with st.container(border=True, height="stretch"):
     st.area_chart(mrr if view == "$" else mrr_share)
 ```
 
-![MRR by plan card from the BI dashboard demo](./mrr-by-plan-card.png)
+![MRR by plan card from the BI dashboard demo, including a status badge and menu built with additional helpers](./mrr-by-plan-card.png)
 
 The helper works, but:
 
@@ -137,8 +136,11 @@ standard label accessibility warning. An empty or whitespace-only `caption`, `he
 
 | Parameter | Behavior |
 | --- | --- |
-| `label`, `icon`, `help`, `key` | Same as `st.expander`. `icon` may be an emoji, a Material icon, or `"spinner"`. |
+| `label` | The card title. Inline Markdown, like other labels. |
+| `icon` | An emoji or Material icon before the label, as in `st.expander`. `"spinner"` is not accepted in v1, because nothing can stop it until [header updates](#header-and-content) ship. |
 | `caption` | Short line under the label. Inline Markdown, like other labels. |
+| `help` | A tooltip beside the label, as in `st.popover` and `st.metric`. |
+| `key` | Same as `st.container`: a stable identity and the `st-key-<key>` CSS class. The card is not a widget, so the key registers no widget state and writes nothing to session state. |
 | `border`, `background` | Choose the surface. See [Surface](#surface). |
 | `width`, `height` | Same values as `st.container`, except `height` defaults to `"stretch"`. |
 
@@ -209,6 +211,11 @@ When the row is too narrow:
    above the caption.
 3. `actions` stay on the right, top-aligned with the label. They wrap only inside that
    right column.
+4. If they still don't fit, the actions slot overflows locally, the same way a
+   `wrap=False` segmented control does. The label does not shrink below its minimum.
+   The page never scrolls horizontally because of a card header. The docstring
+   recommends moving extra controls into an `st.popover` for cards near the `12.5rem`
+   minimum.
 
 A truncated label or caption shows its full text the same way as
 [`wrap=False` labels](../2026-07-23-horizontal-wrap-control/product-spec.md#tooltip-for-the-full-label):
@@ -225,11 +232,7 @@ body.
 outer heights, so card bottoms line up. Chart *tops* follow the header. A caption (none,
 one, or two lines) and wrapped extras change that height. Use the same header fields —
 including caption present or absent — on every card in a row. Matching header heights
-when captions differ is a [follow-up](#layout). Footer, when added, has the same issue:
-an unused footer takes no space, so mixed footers would shift where stretch body charts
-end. Put a footer on every card in a row or on none.
-
-Focus order is label and help, `header_extras`, actions, then the body.
+when captions differ is a [follow-up](#layout).
 
 ```python
 with st.card("gtmhub", caption="go/gtmhub · 289 clicks") as card:
@@ -241,19 +244,14 @@ with st.card("gtmhub", caption="go/gtmhub · 289 clicks") as card:
 ```
 
 The same placement and truncation apply to the single `action` proposed for `st.metric`
-in #13212. A metric is a leaf, so it takes one parameter instead of a slot. A KPI that
-needs more, such as a menu, puts the metric in a card:
-
-```python
-kpi = st.card("ARR")
-kpi.actions.menu_button("Actions", ["Export", "Open report"], type="tertiary")
-kpi.metric("ARR", "$4.2M", "+8%", label_visibility="collapsed")
-```
+in [#13212](https://github.com/streamlit/streamlit/pull/13212). A metric is a leaf, so it
+takes one parameter instead of a slot. A KPI that needs more, such as a menu, puts the
+metric in a card, as in [Examples](#examples).
 
 ### Loading and fragments
 
 The header shows as soon as the card is created. There is no spinner in the header, and
-the card's `icon` never changes unless the author set it.
+the card's `icon` stays as the author set it.
 
 The body gets a built-in `st.skeleton` only when the card's height is already known:
 
@@ -261,11 +259,17 @@ The body gets a built-in `st.skeleton` only when the card's height is already kn
 - `st.grid(..., row_height=<int>)`
 - a parent with a fixed integer height, which the card fills
 
-That skeleton fills the body until the first element arrives. It appears after 0.5s, so
-fast or cached cards don't flash. On reruns, the previous body stays visible; if the
-rerun takes longer than 0.5s, the skeleton covers it. An explicit
-`st.skeleton(height=...)` in the body wins. An exception replaces the skeleton. The
-header stays, so it's clear which card failed. Failures stay inside the card.
+That skeleton fills the body until the first element arrives, or until the run that
+created the card finishes, whichever comes first. A card whose body writes nothing in a
+run (an empty-data branch, `st.stop()`, or a header-only card) doesn't keep showing a
+skeleton afterward. This matches how `st.skeleton` clears when its block ends. It
+appears after 0.5s, so fast or cached cards don't flash. On reruns, the previous body
+stays visible; if the rerun takes longer than 0.5s, the skeleton covers it. An explicit
+`st.skeleton(height=...)` in the body wins.
+
+An exception in the body clears the skeleton. The error renders as it would in any
+container, and the script stops, so cards after it don't render. To keep one failing
+card from stopping the rest, put its body in an `@st.fragment`.
 
 Everywhere else (`height="content"`, the main flow, sidebar, tabs, `st.columns`, a grid
 with `row_height="content"`), the card does not invent a height. Wrap the body in
@@ -299,7 +303,7 @@ Cards compose with fragments the same way:
 @st.fragment(parallel=True, key="mrr_body")
 def mrr_body():
     share = st.session_state.mrr_view == "%"
-    with st.skeleton():
+    with st.skeleton(height=320):
         st.area_chart(load_mrr(share=share), height=320)
 
 
@@ -326,7 +330,7 @@ cursor. Exact spacing is finalized in the design system.
 | --- | --- | --- |
 | `True` (default) | `False` (default) | Outlined card |
 | `True` | `True` | Filled card with an outline |
-| `False` | `True` | Filled card without an outline, the look requested in #12418 |
+| `False` | `True` | Filled card without an outline, the look requested in [#12418](https://github.com/streamlit/streamlit/issues/12418) |
 | `False` | `False` | Titled section with no frame and no padding, like `st.form(border=False)`, for use inside something already framed |
 
 The docstring recommends `border=False` for cards inside `st.grid(border=True)` or nested
@@ -340,6 +344,9 @@ the same technique as the sidebar:
 - Children that normally use the background use the secondary background, and the reverse.
 - Nested filled cards swap again.
 - In the sidebar, the swap uses the sidebar's theme colors.
+
+`st.card(background=...)` and a future `st.container(background=...)` must mean the same
+thing. Whichever lands second follows the first.
 
 White cards on a gray page come from theme options:
 
@@ -363,8 +370,14 @@ components that don't use Streamlit's theme may not adapt.
 | Main flow, sidebar, tabs, or `height="content"` | The content |
 
 `height="stretch"` follows the `st.container` contract: the card is as tall as the larger
-of its content and the parent's available height. Stretch never clips or scrolls content.
-`width="content"` sizes to the header and body, up to the parent width.
+of its content and the parent's available height. Stretch never clips or scrolls
+content. `width="content"` sizes to the header and body, up to the parent width.
+
+An integer height pins the header and scrolls the body. Body elements with
+`height="stretch"` fill the space below the header. This differs from `st.container`,
+which has no header and scrolls as a whole. In a grid with an integer `row_height`,
+overflow follows the grid spec: it scrolls inside the cell, header included. To pin
+the header, pass an integer `height` on the card.
 
 In a grid, `grid.card(...)` is one cell and `grid.cell(column_span=2).card(...)` is a wide
 card. `grid.cell()` already fills a content-height row the way direct grid children do
@@ -382,8 +395,9 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
 - The card itself is not focusable. Widgets in `header_extras`, `actions`, and the body
   keep their own names and keyboard behavior. A widget with
   `label_visibility="collapsed"` still has that label as its accessible name.
-- Focus order is label and help, `header_extras`, actions, then the body. Visual order
-  matches DOM order.
+- Keyboard focus order is the help icon (when `help` is set), `header_extras`,
+  `actions`, then the body. The label is not a tab stop; it is the group's accessible
+  name. Visual order matches DOM order.
 - Truncated text follows the tooltip rules in [Header](#header). The truncation tooltip
   is a separate target from `help` and does not apply on touch.
 - While a body skeleton is showing, the body is marked busy. Decorative skeletons stay
@@ -399,8 +413,11 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
   frame.
 - **State:** the card is not a widget. Widgets in slots keep their own identity, keys,
   and values.
-- **AppTest and agent API:** `at.card[0]` exposes `header_extras` and `actions` as
-  blocks. The agent API reports the label, caption, help, and slots.
+- **AppTest and agent API:** both use the public parameter names. `at.card[0]` exposes
+  `label`, `icon`, `caption`, `help`, `key`, `border`, and `background`, plus the
+  `header_extras` and `actions` slots as blocks. The agent API reports `label`, `icon`,
+  `caption`, `help`, `key`, and which slots have content. Like other block
+  descriptions, it leaves out presentation values such as `width` and `height`.
 - **Cost:** apps that don't call `st.card` pay nothing.
 
 ### Examples
@@ -410,20 +427,17 @@ Dashboard row:
 ```python
 grid = st.grid(3, row_height=360)
 with grid.cell(column_span=2).card("Revenue trend", background=True):
-    st.line_chart(revenue)
+    st.line_chart(revenue, height="stretch")
 with grid.card("Revenue by region", background=True):
-    st.bar_chart(revenue_by_region, horizontal=True)
+    st.bar_chart(revenue_by_region, horizontal=True, height="stretch")
 ```
 
-Table with a count after loading (unbounded card, so the skeleton is explicit; slots can
-be written after the body):
+KPI with a menu:
 
 ```python
-with st.card("Upcoming renewals", caption="Next 90 days") as card:
-    with st.skeleton(height=340):
-        renewals = load_renewals()
-        st.dataframe(renewals, height=340)
-    card.actions.badge(f"{len(renewals)} accounts", color="gray")
+kpi = st.card("ARR", caption="Annual recurring revenue")
+kpi.actions.menu_button("Actions", ["Export", "Open report"], type="tertiary")
+kpi.metric("ARR", "$4.2M", "+8%", label_visibility="collapsed")
 ```
 
 ## Alternatives considered
@@ -463,7 +477,8 @@ elements, and it can be filled after the body loads.
   Every card would also pay for a header container it may not use.
 
 The slot is named `actions`, matching the header `action` slot of MUI's `CardHeader` and
-the `action` proposed for `st.metric` in #13212. `card.header` is taken, since every
+the `action` proposed for `st.metric` in
+[#13212](https://github.com/streamlit/streamlit/pull/13212). `card.header` is taken, since every
 container exposes `st.header` as a method. `toolbar` would be confused with element
 toolbars.
 
@@ -479,6 +494,12 @@ sit after the label, not in the right-aligned control cluster.
   icon, and `icon` means a glyph everywhere else.
 - **Only `actions`:** chips then compete with segmented controls for the right edge, and
   wrap as one group instead of extras wrapping below the label, above the caption.
+- **Markdown badges in the label:** labels already render `:color-badge[...]`, so a
+  static chip works today, for example
+  `st.card("gtmhub :green-badge[:material/public: Public]")`. But the chip truncates with
+  the label, becomes part of the card's accessible name, can't update after the data
+  loads, and can't hold an icon button such as a favorite. That covers some static
+  chips, not the slot's use cases.
 
 ### Surface: outline by default vs. adaptive fill
 
@@ -492,7 +513,8 @@ mode out of the box. But cards would then look different from bordered metrics a
 containers on the same page. It would also add a third state to spell, either
 `bool | None` as on `st.container(border=...)` or `"auto"`. A fixed, designed surface
 with no parameter would be smaller, but the filled-canvas look is the main request in
-#10531 and #12418. Shadows are a follow-up.
+[#10531](https://github.com/streamlit/streamlit/issues/10531) and
+[#12418](https://github.com/streamlit/streamlit/issues/12418). Shadows are a follow-up.
 
 ### Height default: `"stretch"` vs. `"content"`
 
@@ -502,7 +524,9 @@ measured 99, 182, and 307 pixels. In the main page flow, the sidebar, and tabs,
 `"stretch"` falls back to the content height, so the default costs nothing there. In a
 fixed-height parent, a card fills the remaining space, and `height="content"` opts out.
 `"content"` would match `st.container` and `st.metric`, but nearly every card in the BI
-demo passes `height="stretch"`.
+demo passes `height="stretch"`. This is a deliberate difference from the
+`st.container` default: the value means the same thing on both commands, but a card's
+main job is to line up with its neighbors, and `"content"` breaks that by default.
 
 ### Overflow: truncate vs. wrap
 
@@ -520,7 +544,7 @@ demo passes `height="stretch"`.
 **A built-in skeleton only when height is already known is preferred.** Unbounded cards
 have no height to fill, so a default skeleton would jump when the content arrives. A
 skeleton on every card would need that invented height. Wrap-only, as in the first
-#16613 draft, keeps loading entirely on `st.skeleton` but repeats a wrap on every
+[#16613](https://github.com/streamlit/streamlit/pull/16613) draft, keeps loading entirely on `st.skeleton` but repeats a wrap on every
 dashboard panel that already has a `row_height`. An explicit `st.skeleton(height=...)`
 in the body still wins.
 
@@ -557,7 +581,7 @@ parameter for image copy.
 
 | Name | Used by | Pros | Cons |
 | --- | --- | --- | --- |
-| `st.card` ✅ | Material Design, Bootstrap, MUI, Ant Design; Shiny `ui.card`, Dash Bootstrap `dbc.Card`, NiceGUI `ui.card`, Reflex `rx.card` | The most widely recognized term; what #16379 asks for; the `st.grid` docs and bundled agent skill already call these cards | Power BI's "Card" visual is a single KPI number; can suggest image or product cards |
+| `st.card` ✅ | Material Design, Bootstrap, MUI, Ant Design; Shiny `ui.card`, Dash Bootstrap `dbc.Card`, NiceGUI `ui.card`, Reflex `rx.card` | The most widely recognized term; what [#16379](https://github.com/streamlit/streamlit/issues/16379) asks for; the `st.grid` docs and bundled agent skill already call these cards | Power BI's "Card" visual is a single KPI number; can suggest image or product cards |
 | `st.panel` | Grafana and Kibana dashboards | The most precise term for BI dashboards | Same name as the HoloViz Panel library; also suggests side panels and drawers |
 | `st.tile` | Looker and Power BI dashboards, IBM Carbon | Fits uniform grid cells | Suggests small, fixed-size squares rather than a card that holds a long table; "tiles" already means map tiles for `st.map` and `st.pydeck_chart` |
 | `st.section` | HTML `<section>` | Semantic | Suggests page structure rather than a framed surface; headings already structure a page |
@@ -588,16 +612,19 @@ Each follow-up is additive, so code written against v1 keeps working.
   row would shorten some bodies, so stretch charts would end at different heights unless
   every card in the row uses a footer or none do.
 - **Header updates.** `card.update(label=..., caption=..., icon=...)` works like
-  `st.status.update()`, for example to replace a `"spinner"` icon once the data loads.
+  `st.status.update()`. Once it exists, `icon="spinner"` can be accepted, because the
+  author can replace it when the data loads.
 - **Automatic skeleton on unbounded cards.** v1 already skeletons bounded cards (integer
   `height`, grid `row_height=<int>`, fixed-height parent). Extending that to content-
   height cards needs a height to reserve; a default skeleton height jumps when content
   is taller. An explicit `st.skeleton(height=...)` in the body should keep winning.
 - **Fragment reruns on the card skeleton.** A skeleton created with the card doesn't
   cover a fragment-only rerun. Covering those reruns without a second `st.skeleton`
-  inside the fragment follows #17756's decision on fragment skeletons.
+  inside the fragment follows the decision on fragment skeletons in
+  [#17756](https://github.com/streamlit/streamlit/pull/17756).
 - **Header loading state.** The header shows that the body is still loading, for example
-  with a spinner icon while the body's skeleton is visible, as suggested in #17756. v1
+  with a spinner icon while the body's skeleton is visible, as suggested in
+  [#17756](https://github.com/streamlit/streamlit/pull/17756). v1
   does not do this, because it replaces the author's `icon`.
 - **Selectable title.** Some dashboards make the title a dropdown that switches the
   shown metric, such as "Developers ▾". Today a selectbox goes in `actions` or the body.
@@ -614,19 +641,23 @@ slots, so they sit on the title line
 ([#6867](https://github.com/streamlit/streamlit/issues/6867),
 [#8822](https://github.com/streamlit/streamlit/issues/8822)). Widgets in the body stay
 at `2.5rem`. This is a presentation change, not a new card parameter. Shipping it later
-changes how existing card headers look. Click targets stay at least 24 by 24 pixels.
-Metric actions (#13212) should use the same density.
+changes how existing card headers look, so its release notes should call that out.
+Click targets stay at least 24 by 24 pixels. Metric actions
+([#13212](https://github.com/streamlit/streamlit/pull/13212)) should use the same
+density.
 
 ### Surface follow-ups
 
 - **Shadow.** `shadow: bool = False` adds subtle elevation that stays visible in dark
-  mode, for example with the adaptive shadow described in #14683.
+  mode, for example with the adaptive shadow described in
+  [#14683](https://github.com/streamlit/streamlit/pull/14683).
 - **Adaptive fill.** A third `background` value fills cards only in dark mode. `True` and
   `False` keep their meaning.
 - **Theme default.** A theme option makes filled cards the default, so a dashboard
   doesn't repeat `background=True` on every card. An explicit argument still wins.
 - **Card theme.** `st.card(theme=...)` takes the same mapping as
-  `st.container(theme=...)` in #16290, for brand or status colors such as a red
+  `st.container(theme=...)` in
+  [#16290](https://github.com/streamlit/streamlit/pull/16290), for brand or status colors such as a red
   `border_color` on an alerting panel. Until then, wrap the card in a themed container.
 - **Filled metric tiles.** `st.metric(border=True, background=True)` uses the card fill,
   so KPI tiles match filled cards.
@@ -637,7 +668,8 @@ Metric actions (#13212) should use the same density.
   actions included. Element fullscreen today shows only the chart or table, so the card's
   controls are unavailable there. Start as opt-in so existing cards don't gain a new
   hover button.
-- **Metric actions.** `st.metric(on_click=..., action=...)` from #13212 uses the header
+- **Metric actions.** `st.metric(on_click=..., action=...)` from
+  [#13212](https://github.com/streamlit/streamlit/pull/13212) uses the header
   actions placement and truncation rules defined here.
 
 ### Layout
