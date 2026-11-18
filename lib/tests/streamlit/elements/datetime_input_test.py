@@ -799,7 +799,7 @@ class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert list(c.default) == []
 
     def test_out_of_bounds_session_state_resets_and_clears_url_param(self) -> None:
-        """Test that an out-of-bounds bound value resets and removes its URL param."""
+        """An out-of-bounds bound value resets and removes its URL param."""
         st.session_state["my_key"] = datetime(2019, 6, 1, 8, 0)
         with get_session_state().query_params() as qp:
             qp.set_with_no_forward_msg("my_key", "2019-06-01T08:00")

@@ -207,7 +207,7 @@ class DateInputTest(DeltaGeneratorTestCase):
         assert c.max == max_date_value
 
     def test_today_as_min_and_max_value(self) -> None:
-        """Test that "today" is accepted as min_value and max_value."""
+        """The string "today" is accepted as min_value and max_value."""
         st.date_input(
             "the label",
             value=None,
@@ -1002,7 +1002,7 @@ class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert list(c.default) == ["2025-03-01", "2025-03-15"]
 
     def test_out_of_bounds_session_state_resets_and_clears_url_param(self) -> None:
-        """Test that an out-of-bounds bound value resets and removes its URL param."""
+        """An out-of-bounds bound value resets and removes its URL param."""
         st.session_state["my_key"] = date(2019, 6, 1)
         with get_session_state().query_params() as qp:
             qp.set_with_no_forward_msg("my_key", "2019-06-01")

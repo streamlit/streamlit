@@ -2066,7 +2066,7 @@ def _rejecting_frame(error: Exception) -> MagicMock:
     ids=["type_error", "value_error", "overflow_error"],
 )
 def test_assign_row_values_logs_and_skips_rejected_row(error: Exception) -> None:
-    """Test that a row pandas rejects is skipped with a logged warning."""
+    """A row pandas rejects is skipped with a logged warning."""
     frame = _rejecting_frame(error)
     with patch("streamlit.elements.widgets.data_editor._LOGGER") as mock_logger:
         assert _assign_row_values(frame, 3, [1, 2]) is False
@@ -2076,7 +2076,7 @@ def test_assign_row_values_logs_and_skips_rejected_row(error: Exception) -> None
 
 
 def test_assign_row_values_propagates_unexpected_errors() -> None:
-    """Test that errors outside the handled pandas rejection types propagate."""
+    """Errors outside the handled pandas rejection types propagate."""
     frame = _rejecting_frame(KeyError("missing"))
     with pytest.raises(KeyError, match="missing"):
         _assign_row_values(frame, 3, [1, 2])

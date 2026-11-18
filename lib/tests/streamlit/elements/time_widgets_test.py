@@ -182,7 +182,7 @@ def test_validate_date_value_resets_on_mode_mismatch(
     is_range: bool,
     expected: date | tuple[date, ...] | None,
 ) -> None:
-    """Test that a value whose shape does not match the widget mode is reset.
+    """A value whose shape does not match the widget mode is reset.
 
     The reset value is the parsed default, or an empty value matching the mode
     when no default is configured.
@@ -200,7 +200,7 @@ def test_validate_date_value_resets_on_mode_mismatch(
 
 
 def test_validate_date_value_skips_mismatch_without_explicit_bounds() -> None:
-    """Test that values are not validated when no explicit bounds were provided."""
+    """Values are not validated when no explicit bounds were provided."""
     parsed_values = _DateInputValues(
         value=None,
         is_range=True,
