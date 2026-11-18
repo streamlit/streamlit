@@ -8,15 +8,14 @@ created: 2026-08-23
 ## Summary
 
 Add `st.card`, a titled panel for dashboards. A card has a header with slots for status
-chips and controls, a body for any elements, and an optional footer for data status.
-Cards fill the height of their row by default, so side-by-side cards line up.
+chips and controls, and a body for any elements. Cards fill the height of their row by
+default, so side-by-side cards line up.
 
 ```python
 with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
     view = card.actions.segmented_control(
         "View", ["$", "%"], default="$", label_visibility="collapsed"
     )
-    card.footer.caption("Refreshed hourly")
     st.area_chart(mrr if view == "$" else mrr_share)
 ```
 
@@ -61,7 +60,6 @@ The helper works, but:
 - The panel has no name for assistive technology or the agent API.
 - Loading is hand-built: slow cards are wrapped in `st.skeleton(height=...)` with a height
   kept in sync by hand, and some apps hide the title too.
-- Data status ("Refreshed hourly", source, owner) has no place that lines up across a row.
 - The filled "cards on a tinted canvas" look needs custom CSS on private selectors.
 
 ### User requests
@@ -92,18 +90,20 @@ this design does not optimize for them.
 
 - A titled dashboard panel in one call, without CSS or a helper.
 - Consistent headers across cards and widths, and equal heights in a row by default.
-- Regular Streamlit elements for header controls and footer status.
-- The header visible immediately, with one loading indicator for the body.
+- Regular Streamlit elements for header controls.
+- The header visible immediately. Bounded cards reserve the body with a skeleton
+  while it loads.
 
 ### Non-goals
 
 - A styling API (custom colors, shadows, outline styles). Theming is a follow-up.
 - Clickable, selectable, or collapsible cards.
 - Replacing `st.metric` for KPI tiles.
-- Compact widget density in the header and footer. Controls use the standard widget
-  height (`2.5rem`). Tighter padding is a [follow-up](#compatible-follow-ups).
+- Compact widget density
+  ([#6867](https://github.com/streamlit/streamlit/issues/6867)). Controls use the standard
+  widget height (`2.5rem`). Tighter padding is a [follow-up](#compatible-follow-ups).
 - A rerun scope on the card. Widgets in a card rerun what they were created in, as in any
-  container; `@st.fragment` limits reruns.
+  container; `@st.fragment` limits reruns. See [Loading and fragments](#loading-and-fragments).
 - Card-specific options that existing elements cover: source text, empty states, "More"
   menus, and auto-refresh.
 
@@ -150,7 +150,7 @@ revenue_card = st.card("Revenue")
 revenue_card.line_chart(revenue)
 ```
 
-It has three slots. Each always refers to the same container. Unused slots take no space.
+It has two slots. Each always refers to the same container. Unused slots take no space.
 Slot positions are stable across reruns, so a chart in the body isn't remounted when a
 slot is written or skipped.
 
@@ -158,11 +158,10 @@ slot is written or skipped.
 | --- | --- |
 | `card.header_extras` | Status chips and small items right after the label |
 | `card.actions` | Controls on the right of the title row |
-| `card.footer` | Data status pinned to the bottom |
 
-A card with an empty body renders only its header (and footer, if used), without an empty
-padded body. A skeleton or other pending body content counts as content, so the body
-keeps its space while data loads.
+A card with an empty body renders only its header, without an empty padded body. A
+skeleton or other pending body content counts as content, so the body keeps its space
+while data loads. On a bounded card, the built-in body skeleton is that pending content.
 
 ### Header
 
@@ -212,7 +211,7 @@ The docstring recommends labels of about 30 characters or fewer. Captions should
 units, the time window, or one short hint. Longer explanations belong in `help` or the
 body. Cards in a row line up when they use the same header fields.
 
-Focus order is label and help, `header_extras`, actions, body, footer.
+Focus order is label and help, `header_extras`, actions, then the body.
 
 ```python
 with st.card("gtmhub", caption="go/gtmhub · 289 clicks") as card:
@@ -233,43 +232,70 @@ kpi.actions.menu_button("Actions", ["Export", "Open report"], type="tertiary")
 kpi.metric("ARR", "$4.2M", "+8%", label_visibility="collapsed")
 ```
 
-### Footer
+### Loading and fragments
 
-`card.footer` is a row at the bottom of the card, such as `st.caption`, `st.badge`, and
-`st.link_button`. It has caption styling and no divider.
+The header shows as soon as the card is created. There is no spinner in the header, and
+the card's `icon` never changes unless the author set it.
 
-- In a card with a set height, the body fills the space above the footer, so footers in a
-  row line up.
-- A card without a footer has no footer space. Cards in a row line up when they use the
-  same slots, so put a source line on every card or none.
-- To keep the footer's space while data loads, write a placeholder first:
+The body gets a built-in `st.skeleton` only when the card's height is already known:
+
+- an integer `height` on the card
+- `st.grid(..., row_height=<int>)`
+- a parent with a fixed integer height, which the card fills
+
+That skeleton fills the body until the first element arrives. It appears after 0.5s, so
+fast or cached cards don't flash. On reruns, the previous body stays visible; if the
+rerun takes longer than 0.5s, the skeleton covers it. An explicit
+`st.skeleton(height=...)` in the body wins. An exception replaces the skeleton. The
+header stays, so it's clear which card failed. Failures stay inside the card ($44).
+
+Everywhere else (`height="content"`, the main flow, sidebar, tabs, `st.columns`, a grid
+with `row_height="content"`), the card does not invent a height. Wrap the body in
+`st.skeleton` as today:
 
 ```python
 with st.card("Upcoming renewals", caption="Next 90 days") as card:
-    footer = card.footer.empty()
-    renewals, loaded_at = load_renewals()
-    st.dataframe(renewals, height="stretch")
-    footer.caption(f"{len(renewals)} accounts · Updated {loaded_at:%H:%M}")
+    with st.skeleton(height=340):
+        renewals = load_renewals()
+        st.dataframe(renewals, height=340)
+    card.actions.badge(f"{len(renewals)} accounts", color="gray")
 ```
 
-### Loading
+Widgets in a card rerun the script or fragment they were created in, as in any container.
+Cards compose with fragments the same way:
 
-The header and footer show as soon as they're written. The body shows an `st.skeleton`
-until its first element arrives. That's the only loading indicator: no spinner in the
-header, and the card's `icon` never changes unless the author set it.
+- **A fragment-only rerun isn't covered by the card's skeleton.** A rerun triggered from
+  `card.actions` doesn't re-enter the block around the card. Wrap a slow fragment body in
+  `st.skeleton`, as
+  [layout-first loading](https://github.com/streamlit/streamlit/pull/17756) describes.
+- **Header controls can rerun just the body.** Give the body fragment a `key` and trigger
+  it with an
+  [event-scoped rerun](../2026-06-23-event-scoped-fragment-reruns/product-spec.md). The
+  fragment reads the control's value from session state.
+- **Data-dependent actions need the card inside the fragment.** A parallel fragment
+  cannot write to containers created outside it, including `card.header_extras` and
+  `card.actions`. To add a row count after the data loads, create the card inside the
+  fragment, or use a regular (non-parallel) fragment.
 
-- **First load:** the skeleton appears after 0.5s, so fast or cached cards don't flash.
-- **Reruns:** the previous body stays visible. If the rerun takes longer than 0.5s, the
-  skeleton covers it.
-- **Height:** the skeleton fills the body when the card's height is set by a grid
-  `row_height`, an integer `height`, or a fixed-height parent. Otherwise it uses the
-  default skeleton height. An explicit `st.skeleton(height=...)` in the body wins.
-- **Errors:** an exception replaces the skeleton. The header stays, so it's clear which
-  card failed. Failures stay inside the card ($44).
+```python
+@st.fragment(parallel=True, key="mrr_body")
+def mrr_body():
+    share = st.session_state.mrr_view == "%"
+    with st.skeleton():
+        st.area_chart(load_mrr(share=share), height=320)
 
-Fragment reruns that don't re-enter the card aren't covered by this skeleton. That's a
-[follow-up](#compatible-follow-ups). Until then, wrap slow fragment bodies in
-`st.skeleton` as today.
+
+with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
+    card.actions.segmented_control(
+        "View",
+        ["$", "%"],
+        default="$",
+        key="mrr_view",
+        label_visibility="collapsed",
+        on_change=lambda: st.rerun("mrr_body"),
+    )
+    mrr_body()
+```
 
 ### Surface
 
@@ -315,7 +341,7 @@ components that don't use Streamlit's theme may not adapt.
 | --- | --- |
 | `st.grid(..., row_height=<int>)` | The row. Recommended for chart dashboards. |
 | `st.columns` | The tallest card in the row |
-| Integer `height` | That value. The header and footer stay pinned and the body scrolls. |
+| Integer `height` | That value. The header stays pinned and the body scrolls. |
 | Main flow, sidebar, tabs, or `height="content"` | The content |
 
 `height="stretch"` follows the `st.container` contract: the card is as tall as the larger
@@ -323,9 +349,9 @@ of its content and the parent's available height. Stretch never clips or scrolls
 `width="content"` sizes to the header and body, up to the parent width.
 
 In a grid, `grid.card(...)` is one cell and `grid.cell(column_span=2).card(...)` is a wide
-card. For a wide card to match neighbors in a content-height row, `grid.cell()` must fill
-the row the way direct grid children do ([#17891](https://github.com/streamlit/streamlit/pull/17891)).
-Body charts and dataframes with `height="stretch"` fill the card.
+card. `grid.cell()` already fills a content-height row the way direct grid children do
+([#17891](https://github.com/streamlit/streamlit/pull/17891)), so a wide stretch card
+matches its neighbors. Body charts and dataframes with `height="stretch"` fill the card.
 
 ### Other behavior
 
@@ -337,10 +363,10 @@ Body charts and dataframes with `height="stretch"` fill the card.
   and values ($40).
 - **Accessibility:** the card is a group named by the plain text of its label and
   described by the plain text of its caption, without Markdown syntax or icon shortcodes.
-  It isn't a heading, a landmark, or itself focusable. The body is marked busy while it
-  loads. Decorative skeletons stay out of the accessibility tree ($49).
-- **AppTest and agent API:** `at.card[0]` exposes `header_extras`, `actions`, and
-  `footer` as blocks. The agent API reports the label, caption, help, and slots ($54).
+  It isn't a heading, a landmark, or itself focusable. While a body skeleton is showing,
+  the body is marked busy. Decorative skeletons stay out of the accessibility tree ($49).
+- **AppTest and agent API:** `at.card[0]` exposes `header_extras` and `actions` as
+  blocks. The agent API reports the label, caption, help, and slots ($54).
 - **Cost:** apps that don't call `st.card` pay nothing ($52).
 
 ### Examples
@@ -349,20 +375,20 @@ Dashboard row:
 
 ```python
 grid = st.grid(3, row_height=360)
-with grid.cell(column_span=2).card("Revenue trend", background=True) as card:
-    card.footer.caption("Refreshed hourly")
+with grid.cell(column_span=2).card("Revenue trend", background=True):
     st.line_chart(revenue)
-with grid.card("Revenue by region", background=True) as card:
-    card.footer.caption("Refreshed hourly")
+with grid.card("Revenue by region", background=True):
     st.bar_chart(revenue_by_region, horizontal=True)
 ```
 
-Table with a count after loading (slots can be written after the body):
+Table with a count after loading (unbounded card, so the skeleton is explicit; slots can
+be written after the body):
 
 ```python
 with st.card("Upcoming renewals", caption="Next 90 days") as card:
-    renewals = load_renewals()
-    st.dataframe(renewals, height="stretch")
+    with st.skeleton(height=340):
+        renewals = load_renewals()
+        st.dataframe(renewals, height=340)
     card.actions.badge(f"{len(renewals)} accounts", color="gray")
 ```
 
@@ -382,10 +408,13 @@ with st.card("Upcoming renewals", caption="Next 90 days") as card:
   and `icon` means a glyph everywhere else.
 - **Card as a fragment** (automatic card-only reruns, `fragment=True`, or an `@st.card`
   decorator like `@st.dialog`): the same widget would rerun differently depending on its
-  container. Dialogs need it because a full rerun closes them; cards don't.
-- **`footer="..."` string:** can't hold badges or links, or update after the data loads.
+  container. Dialogs need it because a full rerun closes them; cards don't. Compose with
+  `@st.fragment` as in [Loading and fragments](#loading-and-fragments).
 - **Header spinner while loading:** two indicators at once, and it replaces the author's
   icon.
+- **A built-in skeleton on every card:** unbounded cards have no height to fill, so a
+  default skeleton would jump when the content arrives. Built-in only where the height is
+  already known; wrap everywhere else.
 - **`height="content"` default:** three cards in one grid row measured 99, 182, and 307
   pixels tall.
 - **Wrapping the label instead of truncating:** hides nothing, but header heights drift
@@ -398,18 +427,21 @@ with st.card("Upcoming renewals", caption="Next 90 days") as card:
 
 Each follow-up is additive, so code written against v1 keeps working.
 
-- **Compact density:** a shorter min-height (about `2rem`) for buttons, segmented
-  controls, and pills in `header_extras`, `actions`, and `footer`, so they sit on the
-  title line. Widgets in the body stay at `2.5rem`. This is a presentation change, not a
-  new parameter; `size="small"` on each widget would repeat on every call for a look that
-  only matters in these slots. Shipping it later changes how existing card headers look.
+- **Footer slot.** `card.footer` is a container pinned to the bottom of the card, for
+  links and "last updated" text. Because cards in a row have equal heights, their
+  footers line up. No divider; an unused footer takes no space.
+- **Compact density** ([#6867](https://github.com/streamlit/streamlit/issues/6867),
+  [#8822](https://github.com/streamlit/streamlit/issues/8822)): a shorter min-height
+  (about `2rem`) for buttons, segmented controls, and pills in header slots, so they sit
+  on the title line. Widgets in the body stay at `2.5rem`. This is a presentation change,
+  not a new card parameter. Shipping it later changes how existing card headers look.
   Metric actions (#13212) should use the same density.
-- **Fragments and cards:** writing into a card from a parallel fragment, and covering a
-  fragment's reruns with the card's skeleton.
+- **Automatic skeleton on unbounded cards**, and **fragment reruns on the card
+  skeleton:** covering a fragment-only rerun without a second `st.skeleton` inside the
+  fragment.
 - **Theming:** `st.card(theme=...)` for per-card colors, a shadow option, filled cards as
   a theme default, and adaptive fill in dark mode.
-- **Alignment across a grid row:** matching header and footer heights when captions or
-  footers differ.
+- **Alignment across a grid row:** matching header heights when captions differ.
 - **Card fullscreen** that keeps the header's controls. Start as opt-in so existing cards
   don't gain a hover button.
 - **Header updates:** `card.update(label=..., caption=...)`, like `st.status.update()`.
