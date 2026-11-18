@@ -2137,7 +2137,8 @@ class TestInstallSkillSymlinkEdgeCases:
             )
 
         assert success
-        assert ".agents/skills/developing-with-streamlit" in result.installed
+        expected_path = Path(".agents", "skills", "developing-with-streamlit")
+        assert str(expected_path) in result.installed
         assert (
             target.resolve()
             == (mock_source_skills_dir / "developing-with-streamlit").resolve()
