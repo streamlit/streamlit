@@ -1264,6 +1264,9 @@ describe("ChatInput widget", () => {
       await user.type(chatInput, LONG_TEXT)
       expect(getTextareaWrapper()).toHaveStyle(INLINE_STYLE)
 
+      // jsdom never fires resize events, so invoke the textarea observer's
+      // callback directly. It only refreshes the cached width; stacking is
+      // recomputed on the next value change, hence the extra keystroke.
       const textareaObserver = observers.findLast(({ observer }) =>
         vi
           .mocked(observer.observe)
