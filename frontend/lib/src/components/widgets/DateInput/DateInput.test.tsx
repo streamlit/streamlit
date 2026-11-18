@@ -4634,8 +4634,7 @@ describe("DateInput range-mode Escape with the calendar closed", () => {
   )
 })
 
-/** Moves focus to a control outside the widget while the calendar is
- * still open, so the field blur (not an outside pointerdown) closes it. */
+/** Renders the widget next to an "Outside" button that tests can focus. */
 const renderWithOutsideButton = (props: Props): void => {
   render(
     <>
@@ -4644,6 +4643,9 @@ const renderWithOutsideButton = (props: Props): void => {
     </>
   )
 }
+
+/** Moves focus to the "Outside" button while the calendar is still open,
+ * so the field blur (not an outside pointerdown) closes it. */
 const focusOutsideButton = (): void => {
   act(() => {
     screen.getByRole("button", { name: "Outside" }).focus()
