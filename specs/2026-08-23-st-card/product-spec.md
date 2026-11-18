@@ -15,7 +15,11 @@ header fields.
 ```python
 with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
     view = card.actions.segmented_control(
-        "View", ["$", "%"], default="$", label_visibility="collapsed"
+        "View",
+        ["$", "%"],
+        default="$",
+        required=True,
+        label_visibility="collapsed",
     )
     st.area_chart(mrr if view == "$" else mrr_share)
 ```
@@ -41,9 +45,15 @@ def card_header(title, caption=None, *, help=None):
 
 
 with st.container(border=True, height="stretch"):
-    controls = card_header("MRR by plan", "Monthly recurring revenue in $K")
+    controls = card_header(
+        "MRR by plan", "Monthly recurring revenue, stacked by plan"
+    )
     view = controls.segmented_control(
-        "View", ["$", "%"], default="$", label_visibility="collapsed"
+        "View",
+        ["$", "%"],
+        default="$",
+        required=True,
+        label_visibility="collapsed",
     )
     st.area_chart(mrr if view == "$" else mrr_share)
 ```
@@ -137,9 +147,9 @@ standard label accessibility warning. An empty or whitespace-only `caption`, `he
 | Parameter | Behavior |
 | --- | --- |
 | `label` | The card title. Inline Markdown, like other labels. |
-| `icon` | An emoji or Material icon before the label, as in `st.expander`. `"spinner"` is not accepted in v1, because nothing can stop it until [header updates](#header-and-content) ship. |
+| `icon` | An emoji or Material icon before the label, as in `st.expander`. `"spinner"` raises `StreamlitAPIException` in v1, because authors can't replace it until [header updates](#header-and-content) ship. |
 | `caption` | Short line under the label. Inline Markdown, like other labels. |
-| `help` | A tooltip beside the label, as in `st.popover` and `st.metric`. |
+| `help` | A help icon beside the label that shows a tooltip, as in `st.metric` and widget labels. |
 | `key` | Same as `st.container`: a stable identity and the `st-key-<key>` CSS class. The card is not a widget, so the key registers no widget state and writes nothing to session state. |
 | `border`, `background` | Choose the surface. See [Surface](#surface). |
 | `width`, `height` | Same values as `st.container`, except `height` defaults to `"stretch"`. |
@@ -156,18 +166,23 @@ revenue_card = st.card("Revenue")
 revenue_card.line_chart(revenue)
 ```
 
-It has two slots. Each always refers to the same container. Unused slots take no space.
-Slot positions are stable across reruns, so a chart in the body isn't remounted when a
-slot is written or skipped.
+The card has two header slots. `card.header_extras` and `card.actions` each return the
+same container every time you access them. Unused slots take no space. Slot positions
+are stable across reruns, so a chart in the body isn't remounted when a slot is written
+or skipped.
 
 | Slot | Holds |
 | --- | --- |
-| `card.header_extras` | Status chips and small items right after the label |
+| `card.header_extras` | Status chips and small items in the title cluster, after the label and help icon |
 | `card.actions` | Controls on the right of the title row |
 
-A card with an empty body renders only its header, without an empty padded body. A
-skeleton or other pending body content counts as content, so the body keeps its space
-while data loads. On a bounded card, the built-in body skeleton is that pending content.
+A content-height card with an empty body renders only its header, without an empty
+padded body. A card whose height is already known (see
+[Loading and fragments](#loading-and-fragments)) keeps that height with an empty body:
+the frame stays the size of its row or its integer `height`, and the body area is
+blank. A skeleton or other pending body content counts as content, so the body keeps
+its space while data loads. On a card whose height is already known, the built-in body
+skeleton is that pending content.
 
 ### Header
 
@@ -192,7 +207,8 @@ the default font size), the default minimum column width of `st.grid`.
 - **`actions`:** a horizontal, right-aligned, content-width slot for buttons, menus,
   popovers, segmented controls, pills, and toggles. It stays on the right, top-aligned
   with the label. Card filters go in an `st.popover`. Widgets use
-  `label_visibility="collapsed"`. Other elements are allowed but can break the layout.
+  `label_visibility="collapsed"`. Other elements are allowed, but taller or full-width
+  elements can push the header out of alignment.
   If they don't fit on one row, they wrap inside the actions column — still on the right,
   still top-aligned — not as a full-width row under the caption. An empty `card.actions`
   takes no width and adds no row.
@@ -211,8 +227,9 @@ When the row is too narrow:
    above the caption.
 3. `actions` stay on the right, top-aligned with the label. They wrap only inside that
    right column.
-4. If they still don't fit, the actions slot overflows locally, the same way a
-   `wrap=False` segmented control does. The label does not shrink below its minimum.
+4. If they still don't fit, the actions slot scrolls horizontally inside itself, the
+   same way a segmented control with `wrap=False` scrolls inside its own row. The label
+   does not shrink below its minimum.
    The page never scrolls horizontally because of a card header. The docstring
    recommends moving extra controls into an `st.popover` for cards near the `12.5rem`
    minimum.
@@ -259,13 +276,16 @@ The body gets a built-in `st.skeleton` only when the card's height is already kn
 - `st.grid(..., row_height=<int>)`
 - a parent with a fixed integer height, which the card fills
 
-That skeleton fills the body until the first element arrives, or until the run that
-created the card finishes, whichever comes first. A card whose body writes nothing in a
-run (an empty-data branch, `st.stop()`, or a header-only card) doesn't keep showing a
-skeleton afterward. This matches how `st.skeleton` clears when its block ends. It
-appears after 0.5s, so fast or cached cards don't flash. On reruns, the previous body
-stays visible; if the rerun takes longer than 0.5s, the skeleton covers it. An explicit
-`st.skeleton(height=...)` in the body wins.
+That skeleton fills the body until the first visible *body* element arrives, or until
+the run that created the card finishes, whichever comes first. Writes to
+`header_extras` and `actions`, `st.empty()`, and spinners don't clear it. A card whose
+body writes nothing in a run (an empty-data branch, `st.stop()`, or a header-only card)
+doesn't keep showing a skeleton afterward. This matches how `st.skeleton` clears. As
+with `st.skeleton`, a fast body element such as `st.caption("Updated 5 min ago")` above
+a slow chart still ends the skeleton, so draw the slow element first or wrap it in
+`st.skeleton(height=...)`. The skeleton appears after 0.5s, so fast or cached cards
+don't flash. On reruns, the previous body stays visible; if the rerun takes longer than
+0.5s, the skeleton covers it. An explicit `st.skeleton(height=...)` in the body wins.
 
 An exception in the body clears the skeleton. The error renders as it would in any
 container, and the script stops, so cards after it don't render. To keep one failing
@@ -280,7 +300,7 @@ with st.card("Upcoming renewals", caption="Next 90 days") as card:
     with st.skeleton(height=340):
         renewals = load_renewals()
         st.dataframe(renewals, height=340)
-    card.actions.badge(f"{len(renewals)} accounts", color="gray")
+    card.header_extras.badge(f"{len(renewals)} accounts", color="gray")
 ```
 
 Widgets in a card rerun the script or fragment they were created in, as in any container.
@@ -302,7 +322,7 @@ Cards compose with fragments the same way:
 ```python
 @st.fragment(parallel=True, key="mrr_body")
 def mrr_body():
-    share = st.session_state.mrr_view == "%"
+    share = st.session_state.mrr_view == "%"  # Always set, because required=True
     with st.skeleton(height=320):
         st.area_chart(load_mrr(share=share), height=320)
 
@@ -312,6 +332,7 @@ with st.card("MRR by plan", caption="Monthly recurring revenue") as card:
         "View",
         ["$", "%"],
         default="$",
+        required=True,
         key="mrr_view",
         label_visibility="collapsed",
         on_change=lambda: st.rerun("mrr_body"),
@@ -408,6 +429,9 @@ matches its neighbors. Body charts and dataframes with `height="stretch"` fill t
 ### Other behavior
 
 - **Placement:** works in the sidebar, dialogs, tabs, expanders, popovers, forms, and
+  cached functions. Display content in a cached function is replayed from the cache, but
+  a widget in `card.header_extras` or `card.actions` created inside one is only created
+  on cache misses and emits the usual `CachedWidgetWarning`. Create slot widgets outside
   cached functions. In forms, use `st.form_submit_button` instead of `st.button`. Nested
   cards are allowed; use `border=False` on the inner card if both would otherwise draw a
   frame.
@@ -632,7 +656,8 @@ Each follow-up is additive, so code written against v1 keeps working.
 - **Edge-to-edge tables.** A dataframe in a card draws its own frame inside the card's
   outline. A `border` parameter on `st.dataframe`, like `st.table(border=...)`, would let
   a table sit flush with the card.
-- **Content-shaped skeletons.**
+- **Content-shaped skeletons.** A chart- or table-shaped placeholder instead of a block
+  that fills the body.
 
 ### Compact density
 
@@ -652,7 +677,10 @@ density.
   mode, for example with the adaptive shadow described in
   [#14683](https://github.com/streamlit/streamlit/pull/14683).
 - **Adaptive fill.** A third `background` value fills cards only in dark mode. `True` and
-  `False` keep their meaning.
+  `False` keep their meaning. `background` is a `bool` in v1 to match
+  `st.container(background=...)` in
+  [#14683](https://github.com/streamlit/streamlit/pull/14683). This follow-up widens the
+  type, for example to `bool | Literal["dark"]`, and picks the final spelling then.
 - **Theme default.** A theme option makes filled cards the default, so a dashboard
   doesn't repeat `background=True` on every card. An explicit argument still wins.
 - **Card theme.** `st.card(theme=...)` takes the same mapping as
