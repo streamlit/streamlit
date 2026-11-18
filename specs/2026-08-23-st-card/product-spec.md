@@ -715,6 +715,7 @@ density.
 - [Material Design 3 cards](https://m3.material.io/components/cards/overview)
 - [Component Gallery card anatomy](https://component.gallery/components/card/)
 - [Streamlit design-system exploration](https://www.figma.com/design/svukmRMf0N9yQzdv8f7sgO/Streamlit-Open-Source-design-system?node-id=3924-321050)
+- [Streamlit design system (new theme) — layout](https://www.figma.com/design/hq1yDqooP7mw1SAcHWZUZJ/Streamlit-Open-Source-design-system---New-theme-?node-id=2149-76731)
 - [BI dashboard demo](https://advanced-dashboard-demo.streamlit.app/)
 - Dashboard background comparison in
   [#12418](https://github.com/streamlit/streamlit/issues/12418)
