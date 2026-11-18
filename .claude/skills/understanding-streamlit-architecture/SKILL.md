@@ -1,6 +1,6 @@
 ---
 name: understanding-streamlit-architecture
-description: Explains Streamlit's internal architecture including backend runtime, frontend rendering, and WebSocket communication. Use when debugging cross-layer issues, understanding how features work end-to-end, planning architectural changes, or onboarding to the codebase. Covers ForwardMsg/BackMsg protocol, script rerun model, element tree, widget state management, and the delta-path rules shared by the frontend and the agent snapshot.
+description: Explains Streamlit's internal architecture including backend runtime, frontend rendering, and WebSocket communication. Use when debugging cross-layer issues, understanding how features work end-to-end, planning architectural changes, or onboarding to the codebase. Covers ForwardMsg/BackMsg protocol, script rerun model, element tree, widget state management, telemetry (page profile, usage stats, server metrics), and the delta-path rules shared by the frontend and the agent snapshot.
 ---
 
 # Understanding Streamlit architecture
@@ -158,6 +158,8 @@ Streamlit's execution model differs from traditional web frameworks:
   - Deep dive: `references/element-identity.md`
 - **Fragments (`@st.fragment`)**: Fragment interactions usually trigger fragment-scoped reruns and update only affected regions. A widget callback can also target named fragments with `st.rerun("<key>")` when the fragment was declared with `@st.fragment(key=...)`.
   - Deep dive: [references/backend.md](references/backend.md#fragment-system-stfragment)
+- **Telemetry**: Each script run sends a `PageProfile` (commands, run timing, environment) that the browser forwards as a usage-stats event, gated by `browser.gatherUsageStats`. `/_stcore/metrics` serves per-process server metrics for hosts to scrape.
+  - Deep dive: [references/telemetry.md](references/telemetry.md), including the rules for adding fields
 
 ## Shared delta-path semantics
 
@@ -201,4 +203,4 @@ See `wiki/new-feature-guide.md` for a detailed implementation guide.
 
 ## Maintaining this documentation
 
-When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, element identity, etc.), update the relevant sections in this skill's files (`SKILL.md`, `references/backend.md`, `references/frontend.md`, `references/communication.md`, `references/element-identity.md`) to keep them accurate.
+When making changes that impact any of the concepts documented here (Runtime, AppSession, DeltaGenerator, element tree, communication protocol, element identity, etc.), update the relevant sections in this skill's files (`SKILL.md`, `references/backend.md`, `references/frontend.md`, `references/communication.md`, `references/element-identity.md`, `references/telemetry.md`) to keep them accurate.
