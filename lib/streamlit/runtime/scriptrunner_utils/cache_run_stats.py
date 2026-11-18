@@ -107,7 +107,7 @@ class RunCacheStats:
         """Record the time of a listed command that ran on the calling thread.
 
         Only counts while a recorded cached call is running on the thread, so
-        that time can be subtracted from the call's cache times.
+        the call's cache times leave it out.
         """
         stats: ThreadCacheStats | None = getattr(self._local, "stats", None)
         if stats is not None and stats.is_in_call:

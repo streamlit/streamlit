@@ -1432,7 +1432,10 @@ def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> No
     """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
     calls or a known uptime.
     """
-    msg = metrics_util.create_page_profile_message([], 0, 0)
+    ctx = create_mock_script_run_ctx()
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
 
     assert not msg.page_profile.HasField("cache_usage")
     assert not msg.page_profile.HasField("server_uptime_seconds")
