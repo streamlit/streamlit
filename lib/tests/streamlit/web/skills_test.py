@@ -1903,7 +1903,7 @@ class TestInstallSkillCopyEdgeCases:
     def test_skips_foreign_symlink(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A symlink whose name is not a bundled skill is left alone and skipped."""
+        """A symlink to a non-Streamlit target is left alone and skipped."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
@@ -2080,7 +2080,7 @@ class TestInstallSkillSymlinkEdgeCases:
     def test_skips_foreign_symlink(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A symlink whose name is not a bundled skill is reported, not replaced."""
+        """A symlink to a non-Streamlit target is reported, not replaced."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"
         target_dir.mkdir(parents=True)
@@ -2108,8 +2108,8 @@ class TestInstallSkillSymlinkEdgeCases:
     def test_replaces_owned_symlink_that_cannot_be_resolved(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """A resolution error on an existing symlink falls through to the
-        ownership check, so a Streamlit-owned link is still replaced.
+        """An owned symlink that can't be resolved is still replaced, because the
+        installer falls back to the ownership check.
         """
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"

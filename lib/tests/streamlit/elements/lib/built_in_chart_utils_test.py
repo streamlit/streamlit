@@ -566,4 +566,5 @@ def test_generate_chart_aliased_columns_keep_original_titles() -> None:
     assert encoding["color"]["title"] == "group.name"
     assert "." not in encoding["color"]["field"]
     tooltip_titles = [tooltip.get("title") for tooltip in encoding["tooltip"]]
+    # The unaliased "y" column has no title because its field name is unchanged.
     assert tooltip_titles == ["x.val", None, "group.name", "size.val"]

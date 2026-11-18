@@ -322,7 +322,9 @@ class CacheDataTest(unittest.TestCase):
         assert "session" not in _data_caches._function_caches
 
     def test_clear_all_clears_each_cache_after_individual_clear_error(self) -> None:
-        """Without a bulk clear, a failed cache clear does not skip later caches."""
+        """When the storage manager can't clear everything at once, a failing cache
+        clear doesn't skip the remaining caches.
+        """
         common = {
             "persist": None,
             "max_entries": None,

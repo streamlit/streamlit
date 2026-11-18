@@ -1050,8 +1050,8 @@ class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
         assert "localhost" in url
 
     async def test_opens_browser_at_manually_set_browser_server_address(
-        self, mock_open_browser
-    ):
+        self, mock_open_browser: Mock
+    ) -> None:
         """browser.serverAddress takes precedence over server.address."""
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": True, "server.address": True}

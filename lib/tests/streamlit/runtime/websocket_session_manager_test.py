@@ -619,7 +619,8 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         self.session_mgr.disconnect_session(session_id)
         self.session_mgr.mark_session_nonresumable(session_id)
 
-        # The early check in connect_session runs before logout publishes the id.
+        # Simulate a logout that lands after connect_session's early resume check
+        # but before the storage read.
         with patch.object(
             self.session_mgr, "_session_resume_forbidden", return_value=False
         ):
@@ -1323,7 +1324,7 @@ class WebsocketSessionManagerUserMetricsTests(unittest.TestCase):
         assert self._user_event_series(stats) == {}
 
     @patch("streamlit.runtime.websocket_session_manager._LOGGER.debug")
-    def test_fail_open_when_cached_identity_lookup_raises(
+    def test_disconnect_succeeds_when_recording_user_event_fails(
         self, patched_debug: MagicMock
     ) -> None:
         """A failure recording a disconnect event must not break disconnect_session."""
