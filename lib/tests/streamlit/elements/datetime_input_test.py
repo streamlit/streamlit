@@ -36,6 +36,7 @@ from streamlit.errors import (
     StreamlitValueOutOfRangeError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state import get_session_state
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -796,6 +797,27 @@ class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.date_time_input
         assert c.query_param_key == "my_key"
         assert list(c.default) == []
+
+    def test_out_of_bounds_session_state_resets_and_clears_url_param(self) -> None:
+        """Test that an out-of-bounds bound value resets and removes its URL param."""
+        st.session_state["my_key"] = datetime(2019, 6, 1, 8, 0)
+        with get_session_state().query_params() as qp:
+            qp.set_with_no_forward_msg("my_key", "2019-06-01T08:00")
+            qp.set_with_no_forward_msg("other", "1")
+
+        result = st.datetime_input(
+            "the label",
+            value=datetime(2025, 1, 15, 12, 30),
+            min_value=datetime(2020, 1, 1, 0, 0),
+            max_value=datetime(2030, 12, 31, 23, 59),
+            key="my_key",
+            bind="query-params",
+        )
+
+        assert result == datetime(2025, 1, 15, 12, 30)
+        assert st.session_state["my_key"] == datetime(2025, 1, 15, 12, 30)
+        assert "my_key" not in st.query_params
+        assert st.query_params["other"] == "1"
 
 
 class TestDateTimeInputSerdeISO:

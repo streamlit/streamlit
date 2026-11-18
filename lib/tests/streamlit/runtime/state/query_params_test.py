@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, time
+from unittest.mock import patch
 
 import pytest
 from parameterized import parameterized
@@ -412,6 +413,11 @@ class ProcessQueryParamsTest(DeltaGeneratorTestCase):
                 [("foo", "bar"), ("baz", "1"), ("baz", "2")],
                 "foo=bar&baz=1&baz=2",
             ),
+            (
+                "iterable_extends_duplicate_key_with_iterable_value",
+                [("foo", "a"), ("foo", ["b", 3])],
+                "foo=a&foo=b&foo=3",
+            ),
         ]
     )
     def test_process_query_params(
@@ -430,10 +436,14 @@ class ProcessQueryParamsTest(DeltaGeneratorTestCase):
             ("embed_key_mixed_case", {"Embed": "true"}),
             ("embed_options_key_uppercase", {"EMBED_OPTIONS": "show_toolbar"}),
             ("embed_options_key_mixed_case", {"Embed_Options": "show_toolbar"}),
+            (
+                "iterable_duplicate_key_dict_value",
+                [("foo", "bar"), ("foo", {"baz": "qux"})],
+            ),
         ]
     )
     def test_process_query_params_raises_on_invalid_input(
-        self, _name: str, params: dict
+        self, _name: str, params: dict | list
     ) -> None:
         """Test process_query_params raises exception on invalid input."""
         with pytest.raises(StreamlitAPIException):
@@ -1432,6 +1442,13 @@ class SetCorrectedValueTest(DeltaGeneratorTestCase):
         self.query_params.set_corrected_value("key", value, value_type)
         assert self.query_params._query_params["key"] == expected
 
+    def test_private_alias_sets_value_and_updates_url(self) -> None:
+        """The ``_set_corrected_value`` alias coerces the value and syncs the URL."""
+        self.query_params._set_corrected_value("key", 7, "int_value")
+
+        assert self.query_params._query_params["key"] == "7"
+        assert self.get_message_from_queue().page_info_changed.query_string == "key=7"
+
 
 class PopulateFromQueryStringTest(DeltaGeneratorTestCase):
     """Tests for populate_from_query_string method."""
@@ -1756,3 +1773,15 @@ def test_getitem_returns_empty_string_for_empty_list() -> None:
     query_params = QueryParams()
     query_params._query_params = {"empty": []}
     assert query_params["empty"] == ""
+
+
+def test_setitem_without_script_run_ctx_updates_params_only() -> None:
+    """Without a script run context, setting a param still stores it."""
+    query_params = QueryParams()
+
+    with patch(
+        "streamlit.runtime.state.query_params.get_script_run_ctx", return_value=None
+    ):
+        query_params["foo"] = "bar"
+
+    assert query_params._query_params == {"foo": "bar"}

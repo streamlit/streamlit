@@ -546,6 +546,97 @@ class WebsocketSessionManagerTests(unittest.TestCase):
         assert reconnected is not None
         assert reconnected.session.session_state is original_session_state
 
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
+    def test_logout_between_checks_blocks_active_same_user_handoff(
+        self, patched_warning: MagicMock
+    ) -> None:
+        """A logout landing after the first resume check still blocks the handoff.
+
+        The active session must stay connected to its original client instead of
+        being disconnected for the reconnecting client.
+        """
+        alice = {"email": "alice@example.com"}
+        original_client = MagicMock()
+        session_id = self.connect_session(client=original_client, user_info=alice)
+        original_session_info = self.session_mgr._active_session_info_by_id[session_id]
+
+        with patch.object(
+            self.session_mgr,
+            "_session_resume_forbidden",
+            side_effect=[False, True],
+        ):
+            new_session_id = self.connect_session(
+                existing_session_id=session_id,
+                client=MagicMock(),
+                user_info=alice,
+            )
+
+        assert new_session_id != session_id
+        assert (
+            self.session_mgr._active_session_info_by_id[session_id]
+            is original_session_info
+        )
+        assert original_session_info.client is original_client
+        original_session_info.session.request_script_stop.assert_not_called()
+        assert self.session_mgr._reconnect_count == 0
+        patched_warning.assert_called_once_with(
+            "Ignoring reconnect to logged-out session id %s. "
+            "Connecting to a new session instead.",
+            session_id,
+        )
+
+    @patch(
+        "streamlit.runtime.app_session.AppSession.disconnect_file_watchers",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.request_script_stop",
+        new=MagicMock(),
+    )
+    @patch(
+        "streamlit.runtime.app_session.AppSession.register_file_watchers",
+        new=MagicMock(),
+    )
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.warning")
+    def test_logout_before_storage_read_blocks_stored_session_resume(
+        self, patched_warning: MagicMock
+    ) -> None:
+        """A logout landing before the storage read prevents resuming the stored session."""
+        alice = {"email": "alice@example.com"}
+        session_id = self.connect_session(user_info=alice)
+        self.session_mgr.disconnect_session(session_id)
+        self.session_mgr.mark_session_nonresumable(session_id)
+
+        # The early check in connect_session runs before logout publishes the id.
+        with patch.object(
+            self.session_mgr, "_session_resume_forbidden", return_value=False
+        ):
+            new_session_id = self.connect_session(
+                existing_session_id=session_id, user_info=alice
+            )
+
+        assert new_session_id != session_id
+        assert self.session_mgr._session_storage.get(session_id) is not None
+        assert not self.session_mgr.is_active_session(session_id)
+        assert self.session_mgr._reconnect_count == 0
+        patched_warning.assert_called_once_with(
+            "Ignoring reconnect to logged-out session id %s. "
+            "Connecting to a new session instead.",
+            session_id,
+        )
+
     def test_disconnect_session_on_invalid_session_id(self):
         # Just check that no error is thrown.
         self.session_mgr.disconnect_session("nonexistent_session")
@@ -1230,6 +1321,30 @@ class WebsocketSessionManagerUserMetricsTests(unittest.TestCase):
             # No event was recorded since label resolution failed.
             stats = self.session_mgr.get_stats()
         assert self._user_event_series(stats) == {}
+
+    @patch("streamlit.runtime.websocket_session_manager._LOGGER.debug")
+    def test_fail_open_when_cached_identity_lookup_raises(
+        self, patched_debug: MagicMock
+    ) -> None:
+        """A failure recording a disconnect event must not break disconnect_session."""
+        with patch_config_options(_USER_ATTRS):
+            session_id = self.connect_session(user_info={"email": "alice@example.com"})
+            with patch.object(
+                self.session_mgr,
+                "_session_user_labels",
+                MagicMock(pop=MagicMock(side_effect=RuntimeError("boom"))),
+            ):
+                self.session_mgr.disconnect_session(session_id)
+            stats = self.session_mgr.get_stats()
+
+        assert not self.session_mgr.is_active_session(session_id)
+        assert self.session_mgr._disconnect_count == 1
+        patched_debug.assert_any_call(
+            "Failed to record per-user %s event", "disconnect", exc_info=True
+        )
+        series = self._user_event_series(stats)
+        email = ("email", "alice@example.com")
+        assert frozenset({email, ("type", "disconnect")}) not in series
 
     def test_disconnect_does_not_leak_identity_cache(self) -> None:
         """A disconnect without reconnect/close must drop the cached identity.

@@ -14,14 +14,17 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 from typing import TYPE_CHECKING, Any
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+import streamlit as st
 from streamlit.errors import StreamlitAPIException
-from streamlit.runtime.caching import cache_utils
+from streamlit.runtime.caching import cache_background_refresh, cache_utils
+from streamlit.runtime.caching.cache_errors import UnevaluatedDataFrameError
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import (
     BoundCachedFunc,
@@ -31,6 +34,7 @@ from streamlit.runtime.caching.cache_utils import (
     _get_positional_arg_name,
     get_session_id_or_throw,
 )
+from streamlit.runtime.caching.cached_message_replay import CachedResult
 from streamlit.runtime.scriptrunner_utils import script_run_context
 from tests.testutil import patch_config_options
 
@@ -293,3 +297,102 @@ def test_cache_clear_only_removes_specified_key() -> None:
     cache.clear()
     assert cache._value_locks == {}
     assert cleared_keys == ["remove_me", None]
+
+
+class _InMemoryCache(Cache[Any]):
+    """Minimal concrete cache backed by a dict, for exercising base-class logic."""
+
+    def __init__(self, fresh_ttl_seconds: float | None = None) -> None:
+        super().__init__()
+        self.fresh_ttl_seconds = fresh_ttl_seconds
+        self.entries: dict[str, CachedResult[Any]] = {}
+
+    def read_result(self, value_key: str) -> CachedResult[Any]:
+        return self.entries[value_key]
+
+    def _clear(self, key: str | None = None) -> None:
+        self.entries.clear()
+
+
+def test_base_cache_never_reports_stale_entries() -> None:
+    """Caches that don't override ``_is_stale`` always read entries as fresh."""
+    cache = _InMemoryCache(fresh_ttl_seconds=1)
+    entry = CachedResult("value", [], "main", "sidebar", stored_at=0.0)
+    cache.entries["vk"] = entry
+
+    with patch.object(cache_utils, "TTLCACHE_TIMER", return_value=1_000.0):
+        read = cache.read_result_and_freshness("vk")
+
+    assert read.result is entry
+    assert read.is_stale is False
+
+
+def test_record_refresh_written_keeps_records_without_fresh_ttl() -> None:
+    """Without a fresh TTL, refresh records are never pruned as expired."""
+    cache = _InMemoryCache(fresh_ttl_seconds=None)
+
+    with patch.object(cache_utils, "TTLCACHE_TIMER", side_effect=[10.0, 10_000.0]):
+        cache.record_refresh_written("old", triggered_at=5.0)
+        cache.record_refresh_written("new", triggered_at=9_000.0)
+
+    assert list(cache._refresh_written) == ["old", "new"]
+    assert cache.refreshed_since("old", stored_at=1.0) is True
+    assert cache.refreshed_since("old", stored_at=5.0) is False
+
+
+def test_complete_async_compute_ignores_unregistered_future() -> None:
+    """Completing with a future that isn't the registered claim is a no-op."""
+    cache = _InMemoryCache()
+    registered_future, is_owner, _ = cache.claim_async_compute("vk")
+    assert is_owner is True
+
+    stray_future: concurrent.futures.Future[None] = concurrent.futures.Future()
+    cache.complete_async_compute("vk", stray_future)
+
+    assert cache._async_compute_futures["vk"] is registered_future
+    assert not registered_future.done()
+    assert not stray_future.done()
+
+
+def test_failed_background_refresh_submit_is_logged_and_releases_lock() -> None:
+    """A scheduling error keeps serving stale data and leaves the key retryable."""
+    cached_func = _build_cached_func()
+    metrics = MagicMock()
+    cached_func._metrics = metrics
+    cache = _InMemoryCache(fresh_ttl_seconds=10)
+
+    with (
+        patch.object(
+            cache_background_refresh.get_background_refresh_manager(),
+            "submit",
+            side_effect=RuntimeError("scheduler broken"),
+        ),
+        patch.object(cache_utils._LOGGER, "warning") as mock_warning,
+    ):
+        cached_func._maybe_trigger_background_refresh(cache, "vk", None, (), {})
+
+    mock_warning.assert_called_once_with(
+        "Failed to trigger background cache refresh.", exc_info=True
+    )
+    metrics.record_background_refresh.assert_called_once_with("skipped")
+    lock = cache.compute_value_lock("vk")
+    assert lock.acquire(blocking=False)
+    lock.release()
+
+
+def test_unserializable_unevaluated_data_object_raises_specific_error() -> None:
+    """An unevaluated data object that can't be cached gets a dedicated error."""
+
+    @st.cache_data
+    def load_lazy_frame() -> object:
+        # Lambdas can't be pickled, so writing the result to the cache fails.
+        return lambda: 1
+
+    try:
+        with (
+            patch.object(cache_utils, "is_unevaluated_data_object", return_value=True),
+            pytest.raises(UnevaluatedDataFrameError, match="unevaluated data object"),
+        ):
+            load_lazy_frame()
+    finally:
+        st.cache_data.clear()

@@ -34,6 +34,7 @@ from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.runtime.caching import cache_utils
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
+    CacheKeyNotFoundError,
 )
 from streamlit.testing.v1 import AppTest
 
@@ -573,6 +574,85 @@ def test_invalidated_async_data_result_does_not_require_serialization() -> None:
         return await owner
 
     assert asyncio.run(main())() == 42
+
+
+@pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)
+def test_async_owner_uses_result_stored_after_optimistic_read(
+    name: str, decorator: Callable, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An owner re-reads the cache after claiming and skips a redundant compute.
+
+    Parameters
+    ----------
+    name : str
+        The cache decorator name, used only for test ids.
+    decorator : Callable
+        The cache decorator under test.
+    monkeypatch : pytest.MonkeyPatch
+        Fixture used to simulate a result stored right after the first read.
+    """
+    calls = 0
+
+    @decorator
+    async def load() -> int:
+        nonlocal calls
+        calls += 1
+        return 7
+
+    assert asyncio.run(load()) == 7
+
+    cache = load._info.get_function_cache(load._function_key)
+    original_read = cache.read_result
+    reads = 0
+
+    def miss_first_read(value_key: str) -> Any:
+        nonlocal reads
+        reads += 1
+        if reads == 1:
+            raise CacheKeyNotFoundError()
+        return original_read(value_key)
+
+    monkeypatch.setattr(cache, "read_result", miss_first_read)
+
+    assert asyncio.run(load()) == 7
+    assert calls == 1
+    assert reads == 2
+    assert cache._async_compute_futures == {}
+
+
+def test_async_owner_without_invalidation_token_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An owner claim lacking an invalidation token fails instead of computing.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Fixture used to drop the token from the async compute claim.
+    """
+    calls = 0
+
+    @st.cache_data
+    async def load() -> int:
+        nonlocal calls
+        calls += 1
+        return 1
+
+    cache = load._info.get_function_cache(load._function_key)
+    original_claim = cache.claim_async_compute
+
+    def claim_without_token(value_key: str) -> cache_utils.AsyncComputeClaim:
+        future, is_owner, _ = original_claim(value_key)
+        return future, is_owner, None
+
+    monkeypatch.setattr(cache, "claim_async_compute", claim_without_token)
+
+    with pytest.raises(RuntimeError, match="no invalidation token"):
+        asyncio.run(load())
+
+    assert calls == 0
+    # The claim is still released so later callers aren't left waiting.
+    assert cache._async_compute_futures == {}
 
 
 @pytest.mark.parametrize(("name", "decorator"), CACHE_DECORATORS)

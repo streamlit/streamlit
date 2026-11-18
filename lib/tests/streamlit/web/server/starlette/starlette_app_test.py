@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from starlette.applications import Starlette
@@ -1419,6 +1419,36 @@ def test_static_files_skipped_in_dev_mode(tmp_path: Path) -> None:
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
+@pytest.mark.parametrize("enable_static_serving", [True, False])
+def test_app_static_serving_follows_config(
+    tmp_path: Path, enable_static_serving: bool
+) -> None:
+    """Files next to the main script under ``static/`` are served only when
+    ``server.enableStaticServing`` is on.
+    """
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (tmp_path / "static").mkdir()
+    (tmp_path / "static" / "data.txt").write_text("app static file")
+    runtime = _DummyRuntime(component_dir)
+    runtime._main_script_path = str(tmp_path / "streamlit_app.py")  # type: ignore[attr-defined]
+
+    with patch_config_options(
+        {
+            "global.developmentMode": True,
+            "server.enableStaticServing": enable_static_serving,
+        }
+    ):
+        client = TestClient(create_starlette_app(runtime))
+        response = client.get("/app/static/data.txt")
+
+    if enable_static_serving:
+        assert response.status_code == HTTPStatus.OK
+        assert response.text == "app static file"
+    else:
+        assert response.status_code == HTTPStatus.NOT_FOUND
+
+
 @patch_config_options(
     {
         "server.enableXsrfProtection": True,
@@ -2351,6 +2381,26 @@ class TestAppLifespan:
             # Trigger __call__ which builds the starlette app
             asyncio.run(app({"type": "http"}, None, None))
 
+    def test_combined_lifespan_without_runtime_raises_error(
+        self, simple_script: Path
+    ) -> None:
+        """Entering the lifespan before the runtime is created raises RuntimeError."""
+        app = App(simple_script)
+
+        async def enter_lifespan() -> None:
+            async with app._combined_lifespan(Starlette()):
+                pass
+
+        with (
+            patch(
+                "streamlit.web.bootstrap.prepare_streamlit_environment"
+            ) as mock_prepare,
+            pytest.raises(RuntimeError, match="Runtime not initialized"),
+        ):
+            asyncio.run(enter_lifespan())
+
+        mock_prepare.assert_not_called()
+
 
 class TestAppServerModeTracking:
     """Tests for server mode tracking in App."""
@@ -3105,7 +3155,6 @@ class TestAppAutoStart:
     ) -> None:
         """Test that a warning is logged when user provides lifespan but mounts without using it."""
         from contextlib import asynccontextmanager
-        from unittest.mock import MagicMock
 
         from starlette.applications import Starlette
 
@@ -3194,6 +3243,51 @@ class TestAppAutoStart:
         assert auto_start_call_count == 1
         assert app._auto_started is True
         assert config._server_mode == "asgi-mounted"
+
+    def test_auto_start_without_runtime_is_a_no_op(self, simple_script: Path) -> None:
+        """Auto-start does nothing when no runtime has been created."""
+        from streamlit import config
+
+        app = App(simple_script)
+
+        with patch(
+            "streamlit.web.bootstrap.prepare_streamlit_environment"
+        ) as mock_prepare:
+            asyncio.run(app._auto_start_runtime())
+
+        mock_prepare.assert_not_called()
+        assert app._auto_started is False
+        assert config._server_mode is None
+
+    @pytest.mark.parametrize(
+        "stop_error",
+        [None, RuntimeError("Event loop is closed")],
+        ids=["stops", "loop_already_closed"],
+    )
+    def test_auto_start_registers_exit_cleanup_that_stops_runtime(
+        self, simple_script: Path, stop_error: Exception | None
+    ) -> None:
+        """The exit hook stops an auto-started runtime and ignores a closed loop."""
+        app = App(simple_script)
+        runtime = MagicMock()
+        runtime.start = AsyncMock()
+        runtime.stop.side_effect = stop_error
+        app._runtime = runtime
+
+        with (
+            patch("streamlit.web.bootstrap.prepare_streamlit_environment"),
+            patch("atexit.register") as mock_register,
+        ):
+            asyncio.run(app._auto_start_runtime())
+
+        runtime.start.assert_awaited_once()
+        mock_register.assert_called_once()
+        runtime.stop.assert_not_called()
+
+        cleanup = mock_register.call_args.args[0]
+        cleanup()
+
+        runtime.stop.assert_called_once_with()
 
 
 # --- Tests for App secrets parameter ---

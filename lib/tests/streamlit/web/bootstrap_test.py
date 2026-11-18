@@ -1049,6 +1049,35 @@ class BootstrapOnServerStartBrowserTest(IsolatedAsyncioTestCase):
         url = mock_open_browser.call_args.args[0]
         assert "localhost" in url
 
+    async def test_opens_browser_at_manually_set_browser_server_address(
+        self, mock_open_browser
+    ):
+        """browser.serverAddress takes precedence over server.address."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": True, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "browser.serverAddress": "example.com",
+                "browser.serverPort": 8501,
+                "server.address": "10.0.0.5",
+                "server.port": 8501,
+                "global.developmentMode": False,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            await self._run_on_server_start()
+
+        mock_open_browser.assert_called_once()
+        url = mock_open_browser.call_args.args[0]
+        assert "example.com" in url
+        assert "10.0.0.5" not in url
+
 
 class BootstrapPrintUrlSpecificAddressTest(IsolatedAsyncioTestCase):
     """Tests for the manually-set non-wildcard server.address branch in _print_url."""
@@ -1177,3 +1206,66 @@ def test_global_skills_update_errors_never_escape() -> None:
     mock_logger.debug.assert_called_once_with(
         "Could not start the global skills update", exc_info=True
     )
+
+
+def test_try_install_uvloop_skips_windows() -> None:
+    """uvloop is never installed on Windows, even when importable."""
+    fake_uvloop = types.ModuleType("uvloop")
+    fake_uvloop.install = Mock(name="install")
+
+    with (
+        patch.object(bootstrap.env_util, "IS_WINDOWS", True),
+        patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+    ):
+        bootstrap._try_install_uvloop()
+
+    fake_uvloop.install.assert_not_called()
+
+
+def test_try_install_uvloop_skips_when_uvloop_missing() -> None:
+    """A missing uvloop is not an error and logs nothing."""
+    with (
+        patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+        patch.dict("sys.modules", {"uvloop": None}),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
+    ):
+        bootstrap._try_install_uvloop()
+
+    assert mock_logger.method_calls == []
+
+
+def test_try_install_uvloop_installs_policy() -> None:
+    """An older uvloop with install() is installed as the event-loop policy."""
+    fake_uvloop = types.ModuleType("uvloop")
+    fake_uvloop.install = Mock(name="install")
+
+    with (
+        patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+        patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
+    ):
+        bootstrap._try_install_uvloop()
+
+    fake_uvloop.install.assert_called_once_with()
+    mock_logger.debug.assert_called_once_with(
+        "uvloop installed as default event loop policy."
+    )
+    mock_logger.warning.assert_not_called()
+
+
+def test_try_install_uvloop_warns_when_install_fails() -> None:
+    """A failing install() is logged as a warning instead of aborting startup."""
+    fake_uvloop = types.ModuleType("uvloop")
+    fake_uvloop.install = Mock(name="install", side_effect=RuntimeError("boom"))
+
+    with (
+        patch.object(bootstrap.env_util, "IS_WINDOWS", False),
+        patch.dict("sys.modules", {"uvloop": fake_uvloop}),
+        patch.object(bootstrap, "_LOGGER") as mock_logger,
+    ):
+        bootstrap._try_install_uvloop()
+
+    mock_logger.warning.assert_called_once_with(
+        "Failed to install uvloop. Falling back to default loop.", exc_info=True
+    )
+    mock_logger.debug.assert_not_called()

@@ -33,6 +33,7 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.state import get_session_state
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -204,6 +205,20 @@ class DateInputTest(DeltaGeneratorTestCase):
         assert c.label == "the label"
         assert c.min == min_date_value
         assert c.max == max_date_value
+
+    def test_today_as_min_and_max_value(self) -> None:
+        """Test that "today" is accepted as min_value and max_value."""
+        st.date_input(
+            "the label",
+            value=None,
+            min_value="today",
+            max_value="today",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_input
+        today = date.today().isoformat()
+        assert c.min == today
+        assert c.max == today
 
     @parameterized.expand(
         [
@@ -985,6 +1000,27 @@ class DateInputBindQueryParamsTest(DeltaGeneratorTestCase):
         assert c.query_param_key == "my_key"
         assert c.is_range is True
         assert list(c.default) == ["2025-03-01", "2025-03-15"]
+
+    def test_out_of_bounds_session_state_resets_and_clears_url_param(self) -> None:
+        """Test that an out-of-bounds bound value resets and removes its URL param."""
+        st.session_state["my_key"] = date(2019, 6, 1)
+        with get_session_state().query_params() as qp:
+            qp.set_with_no_forward_msg("my_key", "2019-06-01")
+            qp.set_with_no_forward_msg("other", "1")
+
+        result = st.date_input(
+            "the label",
+            value=date(2025, 1, 15),
+            min_value=date(2020, 1, 1),
+            max_value=date(2030, 12, 31),
+            key="my_key",
+            bind="query-params",
+        )
+
+        assert result == date(2025, 1, 15)
+        assert st.session_state["my_key"] == date(2025, 1, 15)
+        assert "my_key" not in st.query_params
+        assert st.query_params["other"] == "1"
 
 
 class TestDateInputSerdeISO:

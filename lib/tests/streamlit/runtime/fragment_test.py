@@ -644,6 +644,15 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         with pytest.raises(StreamlitAPIException, match="No fragment found for target"):
             self._storage.resolve_target("unknown")
 
+    def test_resolve_target_empty_scope_raises(self) -> None:
+        """Resolving an empty list of names raises instead of returning no ids."""
+        self._storage.register("frag_a", "fragment_a", target_key="charts")
+
+        with pytest.raises(StreamlitAPIException, match="empty scope") as exc_info:
+            self._storage.resolve_target([])
+
+        assert exc_info.value.error_id == "rerun-empty-scope"
+
     def test_remove_prunes_target_key_index(self):
         """Removing a fragment drops it from the name index."""
         self._storage.register("frag_a", "fragment_a", target_key="charts")
@@ -2510,9 +2519,12 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
         """_check_not_parallel_worker does not raise when ThreadState is not initialized."""
         import contextvars
 
-        ctx = contextvars.copy_context()
+        # An empty Context does not inherit this thread's FragmentThreadState.
+        ctx = contextvars.Context()
 
         def run_in_fresh_context() -> None:
+            with pytest.raises(RuntimeError, match="not initialized"):
+                ThreadState.get()
             _check_not_parallel_worker("st.test_api")
 
         ctx.run(run_in_fresh_context)
@@ -2744,6 +2756,21 @@ def test_fragment_reserved_key_raises(reserved_key: str) -> None:
     """@st.fragment(key=<reserved>) raises StreamlitAPIException immediately."""
     with pytest.raises(StreamlitAPIException, match="reserved name"):
         fragment(key=reserved_key)
+
+
+def test_fragment_without_script_run_ctx_is_noop() -> None:
+    """Calling a fragment outside a script run returns None without running it."""
+    calls: list[str] = []
+
+    @fragment
+    def my_fragment() -> str:
+        calls.append("ran")
+        return "result"
+
+    with patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=None):
+        assert my_fragment() is None
+
+    assert calls == []
 
 
 def test_fragment_duplicate_key_different_definitions_raises() -> None:

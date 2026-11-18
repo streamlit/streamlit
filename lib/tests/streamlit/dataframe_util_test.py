@@ -1996,6 +1996,7 @@ def test_convert_xarray_to_pandas(
         ("is_polars_lazyframe", dataframe_util.DataFormat.POLARS_LAZYFRAME),
         ("is_xarray_dataset", dataframe_util.DataFormat.XARRAY_DATASET),
         ("is_xarray_data_array", dataframe_util.DataFormat.XARRAY_DATA_ARRAY),
+        ("is_duckdb_relation", dataframe_util.DataFormat.DUCKDB_RELATION),
     ],
     ids=[
         "polars_series",
@@ -2003,6 +2004,7 @@ def test_convert_xarray_to_pandas(
         "polars_lazyframe",
         "xarray_dataset",
         "xarray_data_array",
+        "duckdb_relation",
     ],
 )
 def test_determine_data_format_optional_dataframe_types(
@@ -2053,6 +2055,68 @@ def test_convert_anything_to_arrow_bytes_truncates_polars_lazyframe() -> None:
     lazy_table = pa.RecordBatchStreamReader(lazy_bytes).read_all()
     assert lazy_table.column("a").to_pylist() == [0, 1, 2]
     mock_info.assert_called_once()
+
+
+def test_convert_anything_to_arrow_bytes_falls_back_when_polars_series_fails() -> None:
+    """A failing Polars Series Arrow path falls back to pandas conversion."""
+    series = _FakePolarsSeries([5, 6])
+    with (
+        _as_polars(series=True),
+        patch.object(
+            dataframe_util,
+            "_convert_polars_to_arrow_bytes",
+            side_effect=RuntimeError("boom"),
+        ) as mock_direct,
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(series)
+    mock_direct.assert_called_once()
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("s").to_pylist() == [5, 6]
+
+
+def test_convert_anything_to_arrow_bytes_lazyframe_fallback_reuses_collected() -> None:
+    """A failing LazyFrame Arrow path converts the already collected frame.
+
+    The LazyFrame must not be collected a second time, so the truncation
+    caption is only shown once.
+    """
+    lazy = _FakePolarsLazyFrame(n=6)
+    with (
+        patch.object(
+            dataframe_util,
+            "is_polars_dataframe",
+            side_effect=lambda obj: isinstance(obj, _FakePolarsDataFrame),
+        ),
+        patch.object(dataframe_util, "is_polars_series", return_value=False),
+        patch.object(
+            dataframe_util,
+            "is_polars_lazyframe",
+            side_effect=lambda obj: isinstance(obj, _FakePolarsLazyFrame),
+        ),
+        patch.object(
+            dataframe_util,
+            "_convert_polars_to_arrow_bytes",
+            side_effect=RuntimeError("boom"),
+        ),
+        patch.object(dataframe_util, "_show_data_information") as mock_info,
+    ):
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lazy, max_unevaluated_rows=3
+        )
+    table = pa.RecordBatchStreamReader(result).read_all()
+    assert table.column("a").to_pylist() == [0, 1, 2]
+    mock_info.assert_called_once()
+
+
+def test_show_data_information_writes_caption_to_main_container() -> None:
+    """``_show_data_information`` shows the message as a caption in the main area."""
+    mock_singleton = MagicMock()
+    with patch(
+        "streamlit.delta_generator_singletons.get_dg_singleton_instance",
+        return_value=mock_singleton,
+    ):
+        dataframe_util._show_data_information("Showing only 10k rows.")
+    mock_singleton.main_dg.caption.assert_called_once_with("Showing only 10k rows.")
 
 
 @pytest.mark.parametrize(

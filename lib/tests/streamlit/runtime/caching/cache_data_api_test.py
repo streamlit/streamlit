@@ -284,6 +284,72 @@ class CacheDataTest(unittest.TestCase):
         second_close.assert_called_once()
         assert budget.total_bytes == 0
 
+    def test_session_clear_continues_cleanup_after_storage_close_error(self) -> None:
+        """A failed storage close during session clear still closes later caches."""
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "session_close",
+            "scope": "session",
+        }
+
+        with patch(
+            "streamlit.runtime.caching.cache_data_api.get_session_id_or_throw",
+            return_value="session",
+        ):
+            first = _data_caches.get_cache(key="first", **common)
+            second = _data_caches.get_cache(key="second", **common)
+
+        with (
+            patch.object(
+                first.storage, "close", side_effect=RuntimeError("close failed")
+            ),
+            patch.object(
+                second.storage, "close", wraps=second.storage.close
+            ) as second_close,
+            patch.object(
+                second.storage,
+                "clear",
+                side_effect=RuntimeError("later clear failed"),
+            ),
+            pytest.raises(RuntimeError, match=r"^close failed$"),
+        ):
+            clear_session_cache("session")
+
+        second_close.assert_called_once()
+        assert first.is_active is False
+        assert "session" not in _data_caches._function_caches
+
+    def test_clear_all_clears_each_cache_after_individual_clear_error(self) -> None:
+        """Without a bulk clear, a failed cache clear does not skip later caches."""
+        common = {
+            "persist": None,
+            "max_entries": None,
+            "ttl": None,
+            "display_name": "individual_clear",
+        }
+        first = _data_caches.get_cache(key="first", **common)
+        second = _data_caches.get_cache(key="second", **common)
+        first.write_result("value", 1, [])
+        second.write_result("value", 2, [])
+
+        with (
+            patch.object(first, "clear", side_effect=RuntimeError("clear failed")),
+            patch.object(
+                second, "clear", side_effect=RuntimeError("later clear failed")
+            ) as second_clear,
+            patch.object(
+                first.storage, "close", wraps=first.storage.close
+            ) as first_close,
+            pytest.raises(RuntimeError, match=r"^clear failed$"),
+        ):
+            _data_caches.clear_all()
+
+        second_clear.assert_called_once()
+        first_close.assert_called_once()
+        assert _data_caches._function_caches == {}
+
     @patch.object(st, "exception")
     def test_mutate_return(self, exception):
         """Mutating a memoized return value is legal, and *won't* affect
@@ -904,6 +970,20 @@ class CacheDataStatsProviderTest(unittest.TestCase):
         assert family_stats
         assert all(stat.byte_length > 0 for stat in family_stats)
 
+    def test_data_cache_get_stats_empty_for_non_stats_provider_storage(self) -> None:
+        """DataCache.get_stats reports nothing when storage cannot provide stats."""
+        cache: DataCache[Any] = DataCache(
+            key="no_stats_key",
+            storage=DummyCacheStorage(),
+            persist=None,
+            max_entries=None,
+            max_size_bytes=None,
+            ttl_seconds=None,
+            display_name="no_stats_fn",
+        )
+
+        assert cache.get_stats() == {}
+
 
 class CacheDataValidateParamsTest(DeltaGeneratorTestCase):
     """st.cache_data disk persistence tests"""
@@ -1431,6 +1511,30 @@ class CacheDataBackgroundRefreshTest(unittest.TestCase):
                 cache.write_result_if_current("vk", 1, [], invalidation_token=token)
                 is False
             )
+
+    def test_write_result_if_current_discards_result_invalidated_after_pickle(
+        self,
+    ) -> None:
+        """A clear landing after serialization prevents the stale write."""
+        cache = self._cache("pickle_then_invalidated")
+        token = cache.capture_invalidation_token("vk")
+        original_pickle = cache._pickle_result
+
+        def _pickle_then_clear(*args: Any, **kwargs: Any) -> bytes:
+            pickled = original_pickle(*args, **kwargs)
+            cache.clear()
+            return pickled
+
+        with (
+            patch.object(cache, "_pickle_result", side_effect=_pickle_then_clear),
+            patch.object(cache.storage, "set") as mock_set,
+        ):
+            assert (
+                cache.write_result_if_current("vk", 1, [], invalidation_token=token)
+                is False
+            )
+
+        mock_set.assert_not_called()
 
     def test_background_writeback_raises_on_unpicklable_value(self) -> None:
         """Unpicklable background refresh results surface as CacheError."""

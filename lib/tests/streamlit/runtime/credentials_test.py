@@ -21,6 +21,7 @@ import re
 import textwrap
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, call, mock_open, patch
 
 import pytest
@@ -28,6 +29,7 @@ import requests_mock
 from testfixtures import tempdir
 
 from streamlit import file_util
+from streamlit.runtime import credentials
 from streamlit.runtime.credentials import (
     Credentials,
     _Activation,
@@ -35,6 +37,9 @@ from streamlit.runtime.credentials import (
     _verify_email,
     email_prompt,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 PROMPT = "click.prompt"
 MOCK_PATH = "/mock/home/folder/.streamlit/credentials.toml"
@@ -522,3 +527,105 @@ class CredentialsModulesTest(unittest.TestCase):
     @patch.dict(os.environ, {"WT_SESSION": ""}, clear=False)
     def test_show_emojis_windows(self):
         assert "👋" not in email_prompt()
+
+
+@pytest.fixture
+def fresh_credentials() -> Iterator[Credentials]:
+    """Provide a new ``Credentials`` singleton backed by ``MOCK_PATH``."""
+    Credentials._singleton = None
+    with patch(
+        "streamlit.runtime.credentials.file_util.get_streamlit_file_path",
+        mock_get_path,
+    ):
+        yield Credentials.get_current()
+    Credentials._singleton = None
+
+
+def test_send_email_skips_post_when_no_https_destinations() -> None:
+    """A metrics config without HTTPS destinations logs and posts nothing."""
+    with (
+        requests_mock.mock() as m,
+        patch("streamlit.runtime.credentials._LOGGER") as mock_logger,
+    ):
+        m.get(
+            "https://data.streamlit.io/metrics.json",
+            status_code=200,
+            json={"url": "http://insecure.example.com"},
+        )
+        credentials._send_email("email@example.com")
+
+    assert [req.method for req in m.request_history] == ["GET"]
+    mock_logger.debug.assert_called_once_with(
+        "metrics.json lists no HTTPS destinations; skipping email metrics"
+    )
+
+
+def test_load_without_general_section_raises(
+    fresh_credentials: Credentials,
+) -> None:
+    """A credentials file lacking a ``[general]`` table is reported as unloadable."""
+    m = mock_open(read_data=b'[other]\nemail = "user@domain.com"\n')
+    with (
+        patch("streamlit.runtime.credentials.open", m, create=True),
+        pytest.raises(RuntimeError, match="Unable to load credentials"),
+    ):
+        fresh_credentials.load()
+
+    assert fresh_credentials.activation is None
+
+
+@pytest.mark.parametrize(
+    ("open_error", "expect_reset"),
+    [
+        (FileNotFoundError(), False),
+        (PermissionError("denied"), True),
+    ],
+    ids=["file_not_found", "permission_error"],
+)
+def test_load_auto_resolve_activates_without_instructions(
+    fresh_credentials: Credentials,
+    open_error: Exception,
+    expect_reset: bool,
+) -> None:
+    """With ``auto_resolve``, load errors trigger activation instead of raising.
+
+    Parameters
+    ----------
+    fresh_credentials : Credentials
+        The credentials singleton under test.
+    open_error : Exception
+        The error raised when opening the credentials file.
+    expect_reset : bool
+        Whether the existing credentials file should be reset first.
+    """
+    with (
+        patch("streamlit.runtime.credentials.open", side_effect=open_error),
+        patch.object(Credentials, "reset") as mock_reset,
+        patch.object(fresh_credentials, "activate") as mock_activate,
+    ):
+        fresh_credentials.load(auto_resolve=True)
+
+    mock_activate.assert_called_once_with(show_instructions=False)
+    assert mock_reset.called is expect_reset
+
+
+@pytest.mark.parametrize("exists", [True, False], ids=["exists", "missing"])
+def test_check_credential_file_exists(tmp_path: Path, exists: bool) -> None:
+    """The existence check reflects whether the credentials file is on disk.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory for the credentials file.
+    exists : bool
+        Whether to create the credentials file before checking.
+    """
+    conf_file = tmp_path / "credentials.toml"
+    if exists:
+        conf_file.write_text("[general]\n", encoding="utf-8")
+
+    with patch(
+        "streamlit.runtime.credentials._get_credential_file_path",
+        return_value=str(conf_file),
+    ):
+        assert credentials._check_credential_file_exists() is exists
