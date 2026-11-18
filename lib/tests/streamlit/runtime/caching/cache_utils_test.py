@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import threading
 from typing import TYPE_CHECKING, Any
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
@@ -385,8 +386,8 @@ def test_unserializable_unevaluated_data_object_raises_specific_error() -> None:
 
     @st.cache_data
     def load_lazy_frame() -> object:
-        # Lambdas can't be pickled, so writing the result to the cache fails.
-        return lambda: 1
+        # Locks raise TypeError when pickled, so writing the result to the cache fails.
+        return threading.Lock()
 
     try:
         with (
