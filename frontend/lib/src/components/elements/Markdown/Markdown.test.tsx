@@ -459,6 +459,26 @@ describe("Markdown wrap", () => {
     expect(marginBottom).toBeLessThan(0)
   })
 
+  it("keeps a zero bottom margin when help sits beside a rule because HTML is allowed", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          help: "Details",
+          allowHtml: true,
+        })}
+      />
+    )
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("hr")).toBeTruthy()
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(container).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
   it("keeps the negative bottom margin when a rule is part of a longer markdown body", () => {
     render(
       <Markdown
