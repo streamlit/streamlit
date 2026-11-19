@@ -211,3 +211,26 @@ with st.container(key="columns_bordered_bottom"):
     for line in range(4):
         tall_col.write(f"Tall column line {line}")
     short_col.write("Short column content")
+
+with st.container(key="columns_divider"):
+    d1, d2, d3 = st.columns(3, divider=True)
+    d1.write("One")
+    d2.write("Two")
+    d3.write("Three")
+
+with st.container(key="columns_divider_gap_none"):
+    n1, n2, n3 = st.columns(3, divider=True, gap=None)
+    n1.write("Flush one")
+    n2.write("Flush two")
+    n3.write("Flush three")
+
+with st.container(key="columns_divider_and_border"):
+    b1, b2 = st.columns(2, divider=True, border=True)
+    b1.write("Bordered one")
+    b2.write("Bordered two")
+
+with st.container(key="columns_divider_wrap"):
+    w1, w2, w3 = st.columns(3, divider=True, wrap=True)
+    w1.write("Wrap one")
+    w2.write("Wrap two")
+    w3.write("Wrap three")

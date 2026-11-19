@@ -89,6 +89,7 @@ _OMITTED_EVERYWHERE: dict[str, str] = {
     "text_alignment": _PRESENTATION,
     "icon_position": _PRESENTATION,
     "border": _PRESENTATION,
+    "divider": _PRESENTATION,
     "gap": _PRESENTATION,
     "vertical_alignment": _PRESENTATION,
     "horizontal_alignment": _PRESENTATION,

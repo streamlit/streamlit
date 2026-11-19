@@ -493,6 +493,55 @@ describe("StyledColumn print layout", () => {
       /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
     )
   })
+
+  it("draws a gutter rule on columns after the first", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+        })
+      )
+    )
+
+    expect(css).toContain(":not(:first-of-type)::before")
+    expect(css).toContain("background-color:")
+  })
+
+  it("hides gutter rules when wrapping columns stack", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+          $wrap: true,
+        })
+      )
+    )
+
+    expect(css).toMatch(/@media \(max-width:[^)]+\)[\s\S]*display:none/)
+  })
+
+  it("keeps gutter rules when wrap is disabled", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: true,
+          $wrap: false,
+        })
+      )
+    )
+
+    expect(css).toContain(":not(:first-of-type)::before")
+    expect(css).not.toMatch(/@media \(max-width:[^)]+\)[\s\S]*display:none/)
+  })
 })
 
 describe("StyledLayoutWrapper print layout", () => {

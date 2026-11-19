@@ -106,6 +106,9 @@ message Block {
 
     optional streamlit.GapConfig gap_config = 5;
 
+    // Vertical rule in the gutter before this column (not the first column).
+    bool show_divider = 6;
+
     reserved 2;
   }
 

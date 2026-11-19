@@ -429,3 +429,56 @@ def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
         return second_box["y"] > first_box["y"] + first_box["height"] / 2
 
     wait_until(app, _columns_are_stacked)
+
+
+def _gutter_rule_display(column: Locator) -> str:
+    return column.evaluate(
+        "el => getComputedStyle(el, '::before').getPropertyValue('display')"
+    )
+
+
+def test_columns_with_divider(themed_app: Page, assert_snapshot: ImageCompareFunction):
+    """Vertical rules sit in the gutters between neighboring columns."""
+    container = get_element_by_key(themed_app, "columns_divider")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+    expect(columns.nth(1)).to_be_visible()
+    assert _gutter_rule_display(columns.nth(1)) != "none"
+    assert_snapshot(column_group, name="st_columns-with_divider")
+
+
+def test_columns_divider_with_no_gap(app: Page, assert_snapshot: ImageCompareFunction):
+    """gap=None still draws a rule on the shared edge."""
+    container = get_element_by_key(app, "columns_divider_gap_none")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    expect(column_group.get_by_test_id("stColumn")).to_have_count(3)
+    assert_snapshot(column_group, name="st_columns-with_divider_gap_none")
+
+
+def test_columns_divider_with_border(app: Page, assert_snapshot: ImageCompareFunction):
+    """Border and divider can be enabled together."""
+    container = get_element_by_key(app, "columns_divider_and_border")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    expect(column_group.get_by_test_id("stColumn")).to_have_count(2)
+    assert_snapshot(column_group, name="st_columns-with_divider_and_border")
+
+
+def test_columns_divider_hides_when_stacked(app: Page):
+    """Wrapping stacked columns do not keep leftover vertical gutter rules."""
+    app.set_viewport_size({"width": 640, "height": 800})
+
+    container = get_element_by_key(app, "columns_divider_wrap")
+    column_group = container.get_by_test_id("stHorizontalBlock")
+    columns = column_group.get_by_test_id("stColumn")
+    expect(columns).to_have_count(3)
+
+    def _columns_are_stacked() -> bool:
+        first_box = columns.nth(0).bounding_box()
+        second_box = columns.nth(1).bounding_box()
+        if first_box is None or second_box is None:
+            return False
+        return second_box["y"] > first_box["y"] + first_box["height"] / 2
+
+    wait_until(app, _columns_are_stacked)
+    assert _gutter_rule_display(columns.nth(1)) == "none"

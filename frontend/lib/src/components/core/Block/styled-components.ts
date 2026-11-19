@@ -301,6 +301,7 @@ interface StyledColumnProps {
   weight: number
   gap: streamlit.GapConfig.$Properties | undefined
   showBorder: boolean
+  showDivider?: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
   /**
    * Whether the parent row allows wrapping/stacking. When true (default),
@@ -316,7 +317,15 @@ interface StyledColumnProps {
  * bordered column with a chart avoids page breaks on its own.
  */
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
+  ({
+    theme,
+    weight,
+    gap,
+    showBorder,
+    showDivider = false,
+    verticalAlignment,
+    $wrap = true,
+  }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -324,6 +333,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       gapWidth === theme.spacing.none
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
+    const dividerOffset =
+      gapWidth === theme.spacing.none
+        ? `calc(-1 * ${theme.sizes.borderWidth} / 2)`
+        : `calc(-1 * ${gapWidth} / 2 - ${theme.sizes.borderWidth} / 2)`
 
     // Columns don't shift themselves for vertical alignment: the row stretches
     // each column (so bordered columns match), and ContainerContentsWrapper
@@ -333,10 +346,28 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
+      ...(showDivider && {
+        position: "relative",
+        "&:not(:first-of-type)::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: dividerOffset,
+          width: theme.sizes.borderWidth,
+          backgroundColor: theme.colors.borderColor,
+          pointerEvents: "none",
+        },
+      }),
       ...($wrap
         ? {
             [`@media (max-width: ${theme.breakpoints.columns})`]: {
               minWidth: `calc(100% - ${theme.spacing.twoXL})`,
+              ...(showDivider && {
+                "&:not(:first-of-type)::before": {
+                  display: "none",
+                },
+              }),
             },
           }
         : {
