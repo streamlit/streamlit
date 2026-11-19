@@ -1598,6 +1598,11 @@ class Divider(Markdown):
         super().__init__(proto, root)
         self.type = "divider"
 
+    @property
+    def gap(self) -> str | int | None:
+        """The ``gap`` argument passed to ``st.divider`` (``"medium"`` when omitted)."""
+        return _public_gap_value(self.proto.gap_config)
+
 
 @dataclass(repr=False)
 class Latex(Markdown):

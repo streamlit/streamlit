@@ -47,6 +47,23 @@ def _vertical_gap(above: Locator, below: Locator) -> float:
     return below_box["y"] - (above_box["y"] + above_box["height"])
 
 
+def _symmetric_space_around_rule(
+    app: Page, key: str, above_text: str, below_text: str
+) -> float:
+    """Return the average space around the rule after asserting it is equal."""
+    block = get_element_by_key(app, key)
+    rule = block.locator("hr")
+    expect(rule).to_be_visible()
+
+    space_above = _vertical_gap(block.get_by_text(above_text, exact=True), rule)
+    space_below = _vertical_gap(rule, block.get_by_text(below_text, exact=True))
+    assert abs(space_above - space_below) <= _EQUAL_SPACE_TOLERANCE_PX, (
+        f"Expected equal space around {key}, got {space_above:.1f}px above "
+        f"and {space_below:.1f}px below"
+    )
+    return (space_above + space_below) / 2
+
+
 def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction):
     markdown_elements = themed_app.get_by_test_id("stMarkdown")
     expect(themed_app.get_by_test_id("stMarkdown").first).to_be_visible()
@@ -59,22 +76,41 @@ def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction
     expect(container.locator("hr")).to_be_visible()
     assert_snapshot(container, name="st_divider-equal_space_standalone")
 
+    large_container = get_element_by_key(themed_app, "divider_gap_large")
+    expect(large_container.locator("hr")).to_be_visible()
+    assert_snapshot(large_container, name="st_divider-gap_large")
+
 
 def test_divider_has_equal_space_above_and_below(app: Page):
     """Rules sit equally between neighboring text, both standalone and inside a markdown block."""
     for key, above_text, below_text in _SPACING_CASES:
-        block = get_element_by_key(app, key)
-        rule = block.locator("hr")
-        expect(rule).to_be_visible()
-
-        space_above = _vertical_gap(block.get_by_text(above_text, exact=True), rule)
-        space_below = _vertical_gap(rule, block.get_by_text(below_text, exact=True))
-        assert abs(space_above - space_below) <= _EQUAL_SPACE_TOLERANCE_PX, (
-            f"Expected equal space around {key}, got {space_above:.1f}px above "
-            f"and {space_below:.1f}px below"
-        )
+        _symmetric_space_around_rule(app, key, above_text, below_text)
 
 
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stMarkdown")
+
+
+def test_divider_gap_sets_symmetric_space(app: Page):
+    """st.divider(gap=) sets equal space above and below, added to the parent gap."""
+    spaces = {
+        key: _symmetric_space_around_rule(app, key, above_text, below_text)
+        for key, above_text, below_text in (
+            ("divider_gap_none", "Above none gap", "Below none gap"),
+            ("divider_gap_large", "Above large gap", "Below large gap"),
+            ("divider_gap_pixels", "Above pixel gap", "Below pixel gap"),
+        )
+    }
+
+    default_block = get_element_by_key(app, "divider_spacing_standalone")
+    default_rule = default_block.locator("hr")
+    default_space = _vertical_gap(
+        default_block.get_by_text("Above standalone divider", exact=True),
+        default_rule,
+    )
+
+    assert spaces["divider_gap_none"] < default_space < spaces["divider_gap_large"]
+    # Parent container gap is 1rem (16px); pixel gap is 40px plus that.
+    assert abs(spaces["divider_gap_none"] - 16) <= _EQUAL_SPACE_TOLERANCE_PX
+    assert abs(spaces["divider_gap_pixels"] - 56) <= _EQUAL_SPACE_TOLERANCE_PX

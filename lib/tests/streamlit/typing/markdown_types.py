@@ -243,6 +243,12 @@ if TYPE_CHECKING:
     # No-arg call is valid (width is optional) and returns DeltaGenerator
     assert_type(divider(), DeltaGenerator)
 
+    # gap is keyword-only; named sizes, pixel ints, and None are valid
+    assert_type(divider(gap="small"), DeltaGenerator)
+    assert_type(divider(gap=0), DeltaGenerator)
+    assert_type(divider(gap=None), DeltaGenerator)
+    assert_type(divider(gap="xxlarge", width=300), DeltaGenerator)
+
     # width is keyword-only; accepts only "stretch" or an int (not "content")
     assert_type(divider(width="stretch"), DeltaGenerator)
     assert_type(divider(width=300), DeltaGenerator)
@@ -257,8 +263,12 @@ if TYPE_CHECKING:
     divider(width="auto")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     divider(width=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
-    # Passing width as positional argument (should be keyword-only)
-    divider("stretch")  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
+    # Invalid gap value
+    divider(gap="huge")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    divider(gap=1.5)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+
+    # Passing a value as a positional argument (should be keyword-only)
+    divider("stretch")  # type: ignore[call-arg, arg-type]  # ty: ignore[too-many-positional-arguments]
 
     # st.divider does not take markdown-only keywords
     divider(help="A rule")  # type: ignore[call-arg]  # ty: ignore[unknown-argument]

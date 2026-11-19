@@ -275,6 +275,12 @@ export interface Props {
    * above and below the rule stays equal.
    */
   isDivider?: boolean
+
+  /**
+   * CSS length for the space above and below a standalone divider's rule.
+   * Defaults to `2em`.
+   */
+  dividerGap?: string
 }
 
 /**
@@ -1560,6 +1566,7 @@ const StreamlitMarkdown: FC<Props> = ({
   unterminatedParsing,
   hideAnchors,
   isDivider = false,
+  dividerGap,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1574,6 +1581,7 @@ const StreamlitMarkdown: FC<Props> = ({
       isToast={isToast}
       truncate={truncate}
       isDivider={isDivider}
+      dividerGap={dividerGap}
       style={style}
       className={truncate ? MARKDOWN_ELLIPSIS_CLASS : undefined}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}

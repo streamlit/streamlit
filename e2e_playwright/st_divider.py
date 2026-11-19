@@ -30,3 +30,18 @@ with st.container(key="divider_spacing_write", border=True):
 
 with st.container(key="divider_spacing_markdown", border=True):
     st.markdown("Above markdown divider\n\n---\n\nBelow markdown divider")
+
+with st.container(key="divider_gap_none", border=True):
+    st.write("Above none gap")
+    st.divider(gap=None)
+    st.write("Below none gap")
+
+with st.container(key="divider_gap_large", border=True):
+    st.write("Above large gap")
+    st.divider(gap="large")
+    st.write("Below large gap")
+
+with st.container(key="divider_gap_pixels", border=True):
+    st.write("Above pixel gap")
+    st.divider(gap=40)
+    st.write("Below pixel gap")

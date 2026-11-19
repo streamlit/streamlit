@@ -43,6 +43,7 @@ interface StyledStreamlitMarkdownProps {
   isToast?: boolean
   truncate?: boolean
   isDivider?: boolean
+  dividerGap?: string
 }
 
 function convertRemToEm(s: string): string {
@@ -208,6 +209,7 @@ export const StyledStreamlitMarkdown =
       isToast = false,
       truncate = false,
       isDivider = false,
+      dividerGap,
     }) => {
       // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
       // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
@@ -375,9 +377,10 @@ export const StyledStreamlitMarkdown =
           fontWeight: theme.fontWeights.codeBold,
         },
 
-        // Handles the horizontal divider:
+        // Space above and below the rule. Native markdown keeps 2em when
+        // dividerGap is unset; st.divider(gap=) supplies the length.
         hr: {
-          margin: "2em 0",
+          margin: `${dividerGap ?? "2em"} 0`,
           padding: 0,
           // Reset Firefox's gray color:
           color: "inherit",

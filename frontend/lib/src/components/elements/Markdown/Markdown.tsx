@@ -18,10 +18,12 @@ import { memo, type ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
+import { translateGapWidth } from "~lib/components/core/Block/styled-components"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
 import { StyledMarkdownTitleTarget } from "./styled-components"
@@ -62,6 +64,7 @@ function isStandaloneDivider(
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
+  const theme = useEmotionTheme()
   const {
     allowHtml,
     body,
@@ -96,6 +99,16 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // A sibling help icon (`unsafe_allow_html`) leaves the rule intact.
   const isDivider = isStandaloneRuleBody && !shouldInlineHelpDirective
   const source = shouldInlineHelpDirective ? `${body} :help[]` : body
+  // Named sizes are rem in the layout scale; convert to em so they match the
+  // hr's default `2em` margin (em follows the markdown font size).
+  const translatedGap =
+    isDividerElement && element.gapConfig
+      ? translateGapWidth(element.gapConfig, theme)
+      : undefined
+  const dividerGap =
+    translatedGap?.endsWith("rem") === true
+      ? translatedGap.replace(/rem$/, "em")
+      : translatedGap
 
   const streamlitMarkdown = (
     <StreamlitMarkdown
@@ -112,6 +125,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       truncate={truncate}
       inheritFont={truncate && !isCaption}
       isDivider={isDivider}
+      dividerGap={dividerGap}
     />
   )
   // Title lives on this box (not the outer .stMarkdown) so a sibling help
