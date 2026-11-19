@@ -101,7 +101,7 @@ dependencies = [
   # Required for file-upload support:
   "python-multipart>=0.0.10,<1",
   # Required for websocket support:
-  "websockets>=12.0.0,<18",
+  "websockets>=17.4,<18",
   # Required for cookie signing:
   "itsdangerous>=2.1.2,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
