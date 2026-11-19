@@ -67,7 +67,7 @@ dependencies = [
   "numpy>=1.25.0,<3",
   # The "packaging" package isn't version-capped because they use calendar-based
   # versioning, i.e. "major" version increase != breaking changes
-  "packaging>=20",
+  "packaging>=26.3",
   # pandas 1.5.0–1.5.2 expose the dataframe interchange `Column.size` as an
   # attribute instead of a method, which crashes interchange conversion of
   # string columns.
