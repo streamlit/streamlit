@@ -4029,6 +4029,8 @@ class Column(Block):
     proto: BlockProto.Column = field(repr=False)
     weight: float
     gap: str | None
+    # `divider` is already the accessor for nested ``st.divider`` elements.
+    show_divider: bool
 
     # Mapping from GapSize enum to string
     _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
@@ -4053,6 +4055,7 @@ class Column(Block):
         self.type = "column"
         self.weight = proto.weight
         self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
+        self.show_divider = proto.show_divider
 
 
 @dataclass(repr=False)

@@ -773,12 +773,13 @@ class LayoutsMixin:
             border is shown around each column.
 
         divider : bool
-            Whether to draw vertical rules between neighboring columns. If
-            this is ``False`` (default), no rules are shown. If this is
-            ``True``, a rule is drawn in each gutter after the first column.
-            The rules use the theme border color. They are hidden when
-            ``wrap=True`` and the columns stack on a narrow viewport.
-            ``divider`` can be combined with ``border``.
+            Whether to show a vertical line between adjacent columns. If this
+            is ``False`` (default), no lines are shown. If this is ``True``, a
+            line in the theme's border color is shown between each pair of
+            columns. The lines are hidden when ``wrap=True`` and the columns
+            stack on a narrow screen. You can combine ``divider`` with
+            ``border``. Unlike ``divider`` in ``st.header``, this parameter
+            doesn't accept a color.
 
         width : "stretch" or int
             The width of the column group. This can be one of the following:

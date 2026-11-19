@@ -92,6 +92,10 @@ describe("StyledFlexContainerBlock print layout", () => {
     expect(css).toContain(".stVerticalBlock{display:block")
     expect(css).toContain("margin-bottom:1rem")
     expect(css).toContain(">.stColumn{display:block;width:100%;min-width:0")
+    // A stacked column has no side-by-side gap, so it draws no divider.
+    expect(css).toMatch(
+      />\.stColumn:not\(:first-of-type\)::before\{display:none/
+    )
   })
 
   it("emits a fit-content rule for stacked columns with an intrinsic-width chart", () => {
@@ -493,8 +497,10 @@ describe("StyledColumn print layout", () => {
       /@media print\{[^}]*:has\(\.stPrintGraphic[^{]*:not\(:has\(\.stPrintFixedWidth[^{]*\{break-inside:avoid/
     )
   })
+})
 
-  it("draws a gutter rule on columns after the first", () => {
+describe("StyledColumn divider", () => {
+  it("draws a divider before every column except the first", () => {
     const css = cssOf(
       render(
         createElement(StyledColumn, {
@@ -508,9 +514,43 @@ describe("StyledColumn print layout", () => {
 
     expect(css).toContain(":not(:first-of-type)::before")
     expect(css).toContain("background-color:")
+    expect(css).toContain("top:0")
   })
 
-  it("hides gutter rules when wrapping columns stack", () => {
+  it("draws no divider by default", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: false,
+          showDivider: false,
+        })
+      )
+    )
+
+    expect(css).not.toContain("::before")
+  })
+
+  it("centers the divider in the gap of a bordered column", () => {
+    const css = cssOf(
+      render(
+        createElement(StyledColumn, {
+          weight: 0.5,
+          gap: undefined,
+          showBorder: true,
+          showDivider: true,
+        })
+      )
+    )
+
+    // The line is offset from the padding box, so it moves out by the
+    // column's own border and spans the border box.
+    expect(css).toMatch(/left:calc\(-1 \* \([^)]*\+ 1px\)\)/)
+    expect(css).toContain("top:calc(-1 * 1px)")
+  })
+
+  it("hides dividers when wrapping columns stack", () => {
     const css = cssOf(
       render(
         createElement(StyledColumn, {
@@ -526,7 +566,7 @@ describe("StyledColumn print layout", () => {
     expect(css).toMatch(/@media \(max-width:[^)]+\)[\s\S]*display:none/)
   })
 
-  it("keeps gutter rules when wrap is disabled", () => {
+  it("keeps dividers when wrap is disabled", () => {
     const css = cssOf(
       render(
         createElement(StyledColumn, {

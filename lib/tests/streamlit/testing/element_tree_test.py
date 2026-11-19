@@ -267,6 +267,17 @@ def test_columns():
     assert at.columns[1].radio[0].value == "a"
 
     repr(at.columns[0])
+    assert not at.columns[0].show_divider
+
+
+def test_columns_divider():
+    def script():
+        import streamlit as st
+
+        st.columns(2, divider=True)
+
+    at = AppTest.from_function(script).run()
+    assert [column.show_divider for column in at.columns] == [True, True]
 
 
 def test_loading_blocks_parse_as_containers() -> None:

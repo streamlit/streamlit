@@ -355,7 +355,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[2].add_block.column.show_border
 
     def test_columns_with_divider(self):
-        """divider=True is stored on every column proto."""
+        """st.columns stores divider=True on every column proto."""
         st.columns(3, divider=True)
 
         columns_blocks = self.get_all_deltas_from_queue()[1:4]
@@ -364,7 +364,7 @@ class ColumnsTest(DeltaGeneratorTestCase):
         assert columns_blocks[2].add_block.column.show_divider
 
     def test_columns_divider_with_border(self):
-        """border and divider can be enabled together."""
+        """st.columns allows enabling border and divider together."""
         st.columns(3, border=True, divider=True)
 
         columns_blocks = self.get_all_deltas_from_queue()[1:4]

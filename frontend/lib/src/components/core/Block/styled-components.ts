@@ -301,6 +301,10 @@ interface StyledColumnProps {
   weight: number
   gap: streamlit.GapConfig.$Properties | undefined
   showBorder: boolean
+  /**
+   * Whether to draw a vertical line in the gap before this column. The first
+   * column of a row never draws one.
+   */
   showDivider?: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
   /**
@@ -333,10 +337,15 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       gapWidth === theme.spacing.none
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
-    const dividerOffset =
-      gapWidth === theme.spacing.none
-        ? `calc(-1 * ${theme.sizes.borderWidth} / 2)`
-        : `calc(-1 * ${gapWidth} / 2 - ${theme.sizes.borderWidth} / 2)`
+    // Centers the line in the gap to this column's left: half the gap plus
+    // half the line's width. An absolutely positioned line is offset from the
+    // padding box, so a bordered column also moves it out by its border.
+    const { borderWidth } = theme.sizes
+    const halfGap = gapWidth === theme.spacing.none ? "0px" : `${gapWidth} / 2`
+    const dividerOffset = `calc(-1 * (${halfGap} + ${borderWidth} / 2${
+      showBorder ? ` + ${borderWidth}` : ""
+    }))`
+    const dividerBleed = showBorder ? `calc(-1 * ${borderWidth})` : 0
 
     // Columns don't shift themselves for vertical alignment: the row stretches
     // each column (so bordered columns match), and ContainerContentsWrapper
@@ -351,10 +360,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         "&:not(:first-of-type)::before": {
           content: '""',
           position: "absolute",
-          top: 0,
-          bottom: 0,
+          top: dividerBleed,
+          bottom: dividerBleed,
           left: dividerOffset,
-          width: theme.sizes.borderWidth,
+          width: borderWidth,
           backgroundColor: theme.colors.borderColor,
           pointerEvents: "none",
         },
@@ -610,6 +619,10 @@ export const StyledFlexContainerBlock =
                   display: "block",
                   width: "100%",
                   minWidth: 0,
+                  // Stacked columns have no side-by-side gap to divide.
+                  "&:not(:first-of-type)::before": {
+                    display: "none",
+                  },
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
                       "&:not(:last-of-type)": {
