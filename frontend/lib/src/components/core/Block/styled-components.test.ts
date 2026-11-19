@@ -31,6 +31,7 @@ import {
   StyledColumn,
   StyledElementContainer,
   StyledFlexContainerBlock,
+  StyledGridCell,
   StyledLayoutWrapper,
 } from "./styled-components"
 
@@ -403,6 +404,58 @@ describe("StyledElementContainer print layout", () => {
     expect(css).toMatch(
       /:has\(\.stDataFramePrintTable\)\{height:auto;max-height:none;[^}]*flex:0 0 auto;contain:none/
     )
+  })
+})
+
+/**
+ * Matches the rule that hides a retained copy unless a descendant matches
+ * `:focus-visible` or focus is inside an isolated component's shadow root.
+ */
+const RETAINED_HIDE_RULE =
+  /:not\(:has\(:focus-visible\)\):not\(:has\(\.stBidiComponentIsolated:focus-within\)\)\{display:none;?\}/
+
+describe("retained element styles", () => {
+  it("hides a retained element container unless focus should keep it visible", () => {
+    const elementContainerProps = {
+      isStale: false,
+      width: "100%",
+      height: "auto",
+      elementType: "buttonGroup",
+      overflow: "visible",
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledElementContainer, {
+          ...elementContainerProps,
+          isRetained: true,
+        })
+      )
+    )
+    // A widget focused by the click that triggered the rerun only matches
+    // `:focus-within`, so that must not keep it visible.
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
+    expect(retained).not.toContain(":not(:focus-within)")
+
+    const current = cssOf(
+      render(createElement(StyledElementContainer, elementContainerProps))
+    )
+    expect(current).not.toContain("display:none")
+  })
+
+  it("hides a retained grid cell unless focus should keep it visible", () => {
+    const cellProps = {
+      verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+      $showBorder: false,
+    }
+    const retained = cssOf(
+      render(
+        createElement(StyledGridCell, { ...cellProps, $isRetained: true })
+      )
+    )
+    expect(retained).toMatch(RETAINED_HIDE_RULE)
+
+    const current = cssOf(render(createElement(StyledGridCell, cellProps)))
+    expect(current).not.toContain("display:none")
   })
 })
 

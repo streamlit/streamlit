@@ -34,6 +34,7 @@ import {
 } from "~lib/components/shared/printPageBreak"
 import { PRINT_INTRINSIC_WIDTH_GRAPHIC_CLASS } from "~lib/components/shared/printWidthCap"
 import { getBareEmbedOverlayToolbarPadding } from "~lib/components/shared/Toolbar/overlayToolbarSpacing"
+import { ISOLATED_COMPONENT_HOST_CLASS } from "~lib/components/widgets/BidiComponent/classNames"
 import { DATAFRAME_PRINT_TABLE_CLASS } from "~lib/components/widgets/DataFrame/printClassNames"
 import { STALE_STYLES } from "~lib/theme/consts"
 import type { EmotionTheme } from "~lib/theme/types"
@@ -163,14 +164,28 @@ export const StyledSpace = styled.div({
 })
 
 /**
- * A retained element stays mounted but leaves the layout, unless it holds
- * focus. Hiding a focused control would blur it (committing a dirty text
- * input) in Chromium and Firefox, and would strand focus in WebKit.
+ * A retained element stays mounted but leaves the layout unless hiding it
+ * would drop focus the user is actively using. Hiding a focused control blurs
+ * it (committing a dirty text input) in Chromium and Firefox, and strands
+ * focus in WebKit.
+ *
+ * The element stays visible when:
+ * - A light-DOM descendant matches `:focus-visible`. A focused text field
+ *   always does, including the input of a selectbox or multiselect after a
+ *   pick. Checkbox, radio, and slider inputs also do after a mouse press,
+ *   because React Aria focuses them from script. These widgets stay visible
+ *   until the run ends.
+ * - Focus is inside an isolated custom component. `:has()` can't see into
+ *   its shadow root, so any focus within its host keeps it visible.
+ *
+ * A widget focused by a click without matching `:focus-visible` hides once
+ * displaced.
  */
 const RETAINED_STYLES = {
-  "&:not(:focus-within)": {
-    display: "none",
-  },
+  [`&:not(:has(:focus-visible)):not(:has(.${ISOLATED_COMPONENT_HOST_CLASS}:focus-within))`]:
+    {
+      display: "none",
+    },
 }
 
 export const StyledElementContainer = styled.div<StyledElementContainerProps>(
