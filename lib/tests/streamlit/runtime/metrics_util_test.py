@@ -18,6 +18,7 @@ import builtins
 import contextlib
 import contextvars
 import inspect
+import itertools
 import sys
 import threading
 import unittest
@@ -1412,6 +1413,207 @@ def test_create_page_profile_message_sends_zero_uptime() -> None:
 
     assert msg.page_profile.HasField("server_uptime_seconds")
     assert msg.page_profile.server_uptime_seconds == 0
+
+
+def test_create_page_profile_message_reports_cpu_times() -> None:
+    """The page profile carries the run's CPU times, including zeros."""
+    msg = metrics_util.create_page_profile_message(
+        [],
+        0,
+        0,
+        cpu_times=metrics_util.RunCpuTimes(
+            script=1500, command=0, parallel_fragment=700, process=2500
+        ),
+    )
+
+    profile = msg.page_profile
+    assert profile.script_cpu_time == 1500
+    assert profile.HasField("command_cpu_time")
+    assert profile.command_cpu_time == 0
+    assert profile.parallel_fragment_cpu_time == 700
+    assert profile.process_cpu_time == 2500
+
+
+def test_create_page_profile_message_leaves_cpu_times_unset() -> None:
+    """Without CPU times, all four CPU fields stay unset."""
+    profile = metrics_util.create_page_profile_message([], 0, 0).page_profile
+
+    for field in (
+        "script_cpu_time",
+        "command_cpu_time",
+        "parallel_fragment_cpu_time",
+        "process_cpu_time",
+    ):
+        assert not profile.HasField(field)
+
+
+def _fake_cpu_clock() -> MagicMock:
+    """A thread CPU clock that advances one second per reading."""
+    return MagicMock(side_effect=itertools.count())
+
+
+def test_gather_metrics_records_command_cpu_time(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Each tracked command adds the CPU time between its start and end, and
+    a nested command adds nothing on top of the outer one.
+    """
+
+    @metrics_util.gather_metrics("inner")
+    def inner() -> None:
+        pass
+
+    @metrics_util.gather_metrics("outer")
+    def outer() -> None:
+        inner()
+
+    with patch.object(metrics_util, "_thread_cpu_clock", _fake_cpu_clock()):
+        outer()
+        outer()
+
+    assert _command_names(tracking_ctx) == ["outer", "outer"]
+    assert tracking_ctx.shared.command_cpu_time == 2.0
+
+
+def test_gather_metrics_records_command_cpu_time_on_rerun(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command stopped by a rerun still records its CPU time, like its time."""
+
+    @metrics_util.gather_metrics("raises_rerun")
+    def raises_rerun() -> None:
+        raise RerunException(None)
+
+    with (
+        patch.object(metrics_util, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(RerunException),
+    ):
+        raises_rerun()
+
+    assert tracking_ctx.shared.command_cpu_time == 1.0
+
+
+def test_gather_metrics_skips_command_cpu_time_on_other_exceptions(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A command that raises records neither its time nor its CPU time."""
+
+    @metrics_util.gather_metrics("raises")
+    def raises() -> None:
+        raise ValueError("boom")
+
+    with (
+        patch.object(metrics_util, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(ValueError, match="boom"),
+    ):
+        raises()
+
+    assert tracking_ctx.shared.tracked_commands[0].time == 0
+    assert tracking_ctx.shared.command_cpu_time == 0.0
+
+
+def test_gather_metrics_skips_command_cpu_time_beyond_per_command_limit(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """Calls left out of the tracked list don't add CPU time, so command CPU
+    time covers the same calls as the reported command times.
+    """
+
+    @metrics_util.gather_metrics("repeated")
+    def repeated() -> None:
+        pass
+
+    with (
+        patch.object(metrics_util, "_MAX_TRACKED_PER_COMMAND", 2),
+        patch.object(metrics_util, "_thread_cpu_clock", _fake_cpu_clock()),
+    ):
+        for _ in range(5):
+            repeated()
+
+    assert _command_names(tracking_ctx) == ["repeated", "repeated"]
+    assert tracking_ctx.shared.command_cpu_time == 2.0
+
+
+def test_cpu_times_are_not_recorded_without_a_thread_cpu_clock(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """On platforms without a per-thread CPU clock, no CPU times are recorded."""
+
+    @metrics_util.gather_metrics("command")
+    def command() -> None:
+        pass
+
+    record = MagicMock()
+    with patch.object(metrics_util, "_thread_cpu_clock", None):
+        command()
+        with metrics_util.recording_thread_cpu_time(record):
+            pass
+        start = metrics_util.read_cpu_clocks()
+        run_cpu_times = metrics_util.get_run_cpu_times(
+            metrics_util.CpuClocks(thread=0.0, process=0.0), tracking_ctx.shared
+        )
+
+    assert _command_names(tracking_ctx) == ["command"]
+    assert tracking_ctx.shared.command_cpu_time == 0.0
+    record.assert_not_called()
+    assert start is None
+    assert run_cpu_times is None
+
+
+@pytest.mark.parametrize(
+    "time_module",
+    [
+        pytest.param(MagicMock(spec=[]), id="missing"),
+        pytest.param(
+            MagicMock(thread_time=MagicMock(side_effect=OSError)), id="failing"
+        ),
+    ],
+)
+def test_resolve_thread_cpu_clock_handles_unsupported_platforms(
+    time_module: MagicMock,
+) -> None:
+    """A missing or failing ``time.thread_time`` disables CPU times."""
+    with patch.object(metrics_util, "time", time_module):
+        assert metrics_util._resolve_thread_cpu_clock() is None
+
+
+def test_get_run_cpu_times_combines_clocks_and_shared_totals() -> None:
+    """Run CPU times are clock differences plus the shared per-run totals."""
+    shared = SharedRunState()
+    shared.add_command_cpu_time(0.25)
+    shared.add_parallel_fragment_cpu_time(0.5)
+
+    with patch.object(
+        metrics_util,
+        "read_cpu_clocks",
+        return_value=metrics_util.CpuClocks(thread=3.0, process=7.0),
+    ):
+        run_cpu_times = metrics_util.get_run_cpu_times(
+            metrics_util.CpuClocks(thread=1.0, process=2.0), shared
+        )
+
+    assert run_cpu_times == metrics_util.RunCpuTimes(
+        script=2_000_000, command=250_000, parallel_fragment=500_000, process=5_000_000
+    )
+
+
+def test_get_run_cpu_times_is_none_without_start() -> None:
+    """A run that didn't read its start clocks reports no CPU times."""
+    assert metrics_util.get_run_cpu_times(None, SharedRunState()) is None
+
+
+def test_recording_thread_cpu_time_records_on_exception() -> None:
+    """The block's CPU time is recorded even when it raises."""
+    record = MagicMock()
+
+    with (
+        patch.object(metrics_util, "_thread_cpu_clock", _fake_cpu_clock()),
+        pytest.raises(ValueError, match="boom"),
+        metrics_util.recording_thread_cpu_time(record),
+    ):
+        raise ValueError("boom")
+
+    record.assert_called_once_with(1)
 
 
 def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:

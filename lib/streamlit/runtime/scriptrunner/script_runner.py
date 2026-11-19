@@ -32,6 +32,8 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import (
     create_page_profile_message,
     format_uncaught_exception,
+    get_run_cpu_times,
+    read_cpu_clocks,
     to_microseconds,
 )
 from streamlit.runtime.pages_manager import PagesManager
@@ -965,6 +967,7 @@ class ScriptRunner:
                     self._maybe_handle_execution_control_request()
 
             prep_time = timer() - start_time
+            cpu_clocks_at_start = read_cpu_clocks() if ctx.gather_usage_stats else None
             (
                 _,
                 run_without_errors,
@@ -986,6 +989,7 @@ class ScriptRunner:
 
             if ctx.gather_usage_stats:
                 try:
+                    cpu_times = get_run_cpu_times(cpu_clocks_at_start, ctx.shared)
                     # Create and send page profile information
                     ctx.enqueue(
                         create_page_profile_message(
@@ -998,6 +1002,7 @@ class ScriptRunner:
                                 else None
                             ),
                             server_uptime_seconds=server_uptime_seconds,
+                            cpu_times=cpu_times,
                         )
                     )
                 except Exception as ex:

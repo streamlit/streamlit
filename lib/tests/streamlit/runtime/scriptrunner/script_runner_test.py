@@ -91,6 +91,9 @@ text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 # and can outlast these tests' waits under coverage. This timeout is only
 # slack for a busy runner.
 _CACHE_WAITER_THREAD_TIMEOUT_SECS = 5
+# CPU clocks advance in steps of about 15.6 ms on Windows, so readings from
+# different clocks can differ by a step.
+_CPU_CLOCK_SLACK_US = 20_000
 
 
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
@@ -1457,6 +1460,93 @@ class ScriptRunnerTest(unittest.TestCase):
         else:
             uptime_seconds.assert_not_called()
             patched_create_page_profile_message.assert_not_called()
+
+    def _run_and_get_page_profile_kwargs(self, script_name: str) -> dict[str, Any]:
+        """Run the script with usage stats on and return the page profile kwargs."""
+        with (
+            patch(
+                "streamlit.runtime.scriptrunner.script_runner.create_page_profile_message"
+            ) as patched_create_page_profile_message,
+            testutil.patch_config_options({"browser.gatherUsageStats": True}),
+        ):
+            scriptrunner = TestScriptRunner(script_name)
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        patched_create_page_profile_message.assert_called_once()
+        return patched_create_page_profile_message.call_args.kwargs
+
+    def test_cpu_bound_script_reports_script_cpu_time(self):
+        """A busy loop's CPU time counts toward the script and the process."""
+        kwargs = self._run_and_get_page_profile_kwargs("cpu_busy_loop.py")
+        cpu_times = kwargs["cpu_times"]
+        script_wall_time = kwargs["exec_time"] - kwargs["prep_time"]
+
+        assert cpu_times.script >= 200_000
+        # A thread can't use more CPU time than the wall-clock time it ran for.
+        assert cpu_times.script <= script_wall_time + _CPU_CLOCK_SLACK_US
+        assert cpu_times.script >= script_wall_time / 2
+        assert cpu_times.process >= cpu_times.script - _CPU_CLOCK_SLACK_US
+        assert cpu_times.command < 50_000
+        assert cpu_times.parallel_fragment == 0
+
+    def test_waiting_script_reports_little_cpu_time(self):
+        """Sleeping takes wall-clock time but almost no CPU time."""
+        kwargs = self._run_and_get_page_profile_kwargs("cpu_sleep.py")
+        cpu_times = kwargs["cpu_times"]
+
+        assert kwargs["exec_time"] - kwargs["prep_time"] >= 200_000
+        assert cpu_times.script < 50_000
+
+    def test_command_cpu_time_is_separate_from_user_code(self):
+        """CPU time inside a tracked command counts as command CPU time, so
+        user code CPU time (script minus command) leaves it out.
+        """
+        kwargs = self._run_and_get_page_profile_kwargs("cpu_in_command.py")
+        cpu_times = kwargs["cpu_times"]
+
+        assert [command.name for command in kwargs["commands"]] == [
+            "external:__main__:burn_cpu"
+        ]
+        assert cpu_times.command >= 200_000
+        assert cpu_times.script >= cpu_times.command
+        assert cpu_times.script - cpu_times.command < 50_000
+
+    def test_parallel_fragment_cpu_time_is_summed_over_workers(self):
+        """Parallel fragment workers, including a nested fragment they run, count
+        toward parallel_fragment_cpu_time and not toward the script thread.
+        """
+        kwargs = self._run_and_get_page_profile_kwargs("cpu_parallel_fragments.py")
+        cpu_times = kwargs["cpu_times"]
+
+        assert cpu_times.parallel_fragment >= 200_000
+        assert cpu_times.script < 50_000
+        assert (
+            cpu_times.process
+            >= cpu_times.script + cpu_times.parallel_fragment - _CPU_CLOCK_SLACK_US
+        )
+
+    @patch("streamlit.runtime.fragment.recording_thread_cpu_time")
+    @patch("streamlit.runtime.scriptrunner.script_runner.read_cpu_clocks")
+    def test_cpu_clocks_are_not_read_without_usage_stats(
+        self,
+        patched_read_cpu_clocks: MagicMock,
+        patched_recording_thread_cpu_time: MagicMock,
+    ):
+        """With usage stats off, neither the script thread nor parallel
+        fragment workers read the CPU clocks.
+        """
+        with testutil.patch_config_options({"browser.gatherUsageStats": False}):
+            scriptrunner = TestScriptRunner("cpu_parallel_fragments.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        patched_read_cpu_clocks.assert_not_called()
+        patched_recording_thread_cpu_time.assert_not_called()
 
     @parameterized.expand([(True,), (False,)])
     @patch("streamlit.runtime.runtime.Runtime.exists", MagicMock(return_value=True))

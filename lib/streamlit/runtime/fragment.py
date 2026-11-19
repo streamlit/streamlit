@@ -35,7 +35,7 @@ from streamlit.errors import (
 )
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.metrics_util import gather_metrics, recording_thread_cpu_time
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -1157,15 +1157,22 @@ def _run_parallel_fragment(
     if coordinator is None:  # pragma: no cover - defensive
         return
 
-    try:
-        wrapped_fragment()
-    except RerunException as e:
-        coordinator.request_rerun(e)
-    except StopException:
-        coordinator.request_stop()
-    except FragmentHandledException:
-        # This exception indicates fragment-level handling already occurred.
-        # Intentionally swallow it at the worker boundary.
-        return
-    except Exception:  # pragma: no cover - defensive
-        _LOGGER.exception("Uncaught exception in parallel fragment worker")
+    # Recorded before the coordinator counts this worker as finished, so the
+    # script thread sees it once join() or drain() returns.
+    with (
+        recording_thread_cpu_time(ctx.shared.add_parallel_fragment_cpu_time)
+        if ctx.gather_usage_stats
+        else contextlib.nullcontext()
+    ):
+        try:
+            wrapped_fragment()
+        except RerunException as e:
+            coordinator.request_rerun(e)
+        except StopException:
+            coordinator.request_stop()
+        except FragmentHandledException:
+            # This exception indicates fragment-level handling already occurred.
+            # Intentionally swallow it at the worker boundary.
+            return
+        except Exception:  # pragma: no cover - defensive
+            _LOGGER.exception("Uncaught exception in parallel fragment worker")
