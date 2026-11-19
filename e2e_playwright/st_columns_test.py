@@ -432,8 +432,10 @@ def test_columns_wrap_true_still_stacks_at_narrow_viewport(app: Page):
 
 
 def _gutter_rule_display(column: Locator) -> str:
-    return column.evaluate(
-        "el => getComputedStyle(el, '::before').getPropertyValue('display')"
+    return str(
+        column.evaluate(
+            "el => getComputedStyle(el, '::before').getPropertyValue('display')"
+        )
     )
 
 
