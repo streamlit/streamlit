@@ -23,7 +23,10 @@ The page profile records a call only if it ran as part of the script run and no
 other recorded time already covers it:
 
 - It runs on a thread attached to a script run that gathers usage stats, so
-  background refreshes and other threads without a script run aren't recorded.
+  cached calls made from background refreshes, ``st.App`` lifespan tasks and
+  other threads without a script run aren't recorded. A background refresh
+  itself isn't a lookup; its compute time and result go only to the server
+  metrics.
 - It isn't inside another cached function, whose compute time covers it.
 - It isn't inside a command listed in the page profile, such as the
   ``st.cache_resource`` call inside ``st.connection``, whose command time covers

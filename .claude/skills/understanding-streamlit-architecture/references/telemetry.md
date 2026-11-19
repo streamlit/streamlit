@@ -87,7 +87,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 
 `CachedFunc` (`lib/streamlit/runtime/caching/cache_utils.py`) times each `st.cache_data` and `st.cache_resource` call with a `CacheCallTimer` (`cache_call_timer.py`). The timer updates the function's server metrics on every call. It adds the call to the run's `cache_usage` only if no other recorded time already covers it. The module docstring lists the rules. In short, a call is recorded when it:
 
-- Runs on a thread attached to a run that gathers usage stats. Background refreshes and `st.App` lifespan tasks aren't recorded.
+- Runs on a thread attached to a run that gathers usage stats. Background refreshes and `st.App` lifespan tasks run outside a script run, so cached calls made from them aren't recorded. A refresh itself isn't a lookup: the call that finds the stale value counts as a stale hit, and the refresh's compute time appears only in the server metrics.
 - Is the outermost cached call. A nested call's time is in the outer call's compute time.
 - Isn't inside a listed command, such as the `st.cache_resource` inside `st.connection`. A cached call inside a command past the tracking limits is recorded, because that command's time isn't listed.
 - Finishes before the page profile is built.
