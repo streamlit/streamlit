@@ -11,6 +11,8 @@ metadata:
 
 This is a **routing skill** that directs you to specialized references for Streamlit development.
 
+**Read the matching reference before you edit.** This file summarizes the references but doesn't replace them. Before changing code, read the reference that the [routing table](#reference-routing-table) lists for the task; for a slow app or a request to make an app faster, read `references/performance.md`. Read each reference in its own read, in full: no `head`, `limit`, or line range, and not combined with other files, because long combined output can be cut off.
+
 ## When to Use
 
 Invoke this skill when the user's request involves:
@@ -41,7 +43,7 @@ Invoke this skill when the user's request involves:
 - Set a descriptive `st.set_page_config(page_title=...)` when needed; on multipage apps prefer per-page `st.Page` titles over one flattening global `page_title`.
 - Never claim WCAG certification; prefer native `st.*`; do not CSS-patch known library gaps. When customizing theme or markdown colors, prefer checking contrast (see `references/accessibility.md`) — brand colors can still win when the user asks for them. Do not report the task done until the Step 4 accessibility gate passes.
 
-Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them: before you edit, also read the reference that the [routing table](#reference-routing-table) lists for the task (for a slow app, `references/performance.md`). For examples, read `references/best-practices.md`.
+Apply these defaults unless the user's app or request clearly needs a different approach. They summarize the references but don't replace them. For examples, read `references/best-practices.md`.
 - Do not use `use_container_width`; use `width="stretch"` or `width="content"` instead.
 - Prefer native Streamlit elements over recreating UI with custom HTML. This includes UI created with `st.html`, `st.markdown(..., unsafe_allow_html=True)`, or deprecated `st.components.v1.html`. Use custom HTML only when no native element provides the required UI or behavior.
 - When a native Streamlit command covers the need, use it instead of a third-party package or a new custom component (for example, `st.text_input(..., live=True)` instead of `streamlit-keyup`). See `references/third-party-components.md` for the full mapping and the cases that still need a package.
