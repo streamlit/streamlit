@@ -68,7 +68,7 @@ message PageProfile {
 // cached function counts as part of the outer call, so subtracting the times
 // from user code time leaves the time spent outside the cache. Like command
 // times, times from concurrent threads are summed and can exceed wall-clock
-// time; threads says when that can happen.
+// time; the threads field shows when that can happen.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
 // recorded.
 message CacheUsage {

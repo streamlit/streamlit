@@ -123,7 +123,7 @@ def test_tracked_command_time_counts_only_inside_calls() -> None:
     assert stats.tracked_command_time == 0.25
 
 
-def _read_totals(stats: ThreadCacheStats, now: float) -> tuple[CacheTotals, ...]:
+def _thread_totals(stats: ThreadCacheStats, now: float) -> tuple[CacheTotals, ...]:
     cache_data, cache_resource = CacheTotals(), CacheTotals()
     stats.add_to(cache_data, cache_resource, now)
     return cache_data, cache_resource
@@ -152,7 +152,7 @@ def test_overlapping_calls_are_scaled_to_their_span(
     stats.close_call(11.0)
     stats.close_call(12.0)
 
-    cache_data, _ = _read_totals(stats, 12.0)
+    cache_data, _ = _thread_totals(stats, 12.0)
     assert cache_data.compute_time == pytest.approx(expected)
 
 
@@ -173,7 +173,7 @@ def test_calls_that_dont_overlap_are_not_scaled() -> None:
     stats.totals_for_finished_call(stats.cache_resource).compute_time += 2.0
     stats.close_call(3.0)
 
-    cache_data, cache_resource = _read_totals(stats, 3.0)
+    cache_data, cache_resource = _thread_totals(stats, 3.0)
     assert cache_data.compute_time == pytest.approx(1.0)
     assert cache_resource.compute_time == pytest.approx(2.0)
 
@@ -188,8 +188,8 @@ def test_open_overlapping_group_counts_up_to_now() -> None:
     stats.totals_for_finished_call(stats.cache_data).overhead_time += 2.0
     stats.close_call(2.0)
 
-    assert _read_totals(stats, 1.0)[0].overhead_time == pytest.approx(1.0)
-    assert _read_totals(stats, 4.0)[0].overhead_time == pytest.approx(2.0)
+    assert _thread_totals(stats, 1.0)[0].overhead_time == pytest.approx(1.0)
+    assert _thread_totals(stats, 4.0)[0].overhead_time == pytest.approx(2.0)
 
 
 def test_closed_group_keeps_its_own_span() -> None:
@@ -216,7 +216,7 @@ def test_closed_group_keeps_its_own_span() -> None:
     assert cache_data.compute_time == pytest.approx(1.0)
 
 
-def test_group_with_no_recorded_time_is_not_scaled() -> None:
+def test_group_whose_commands_fill_its_span_does_not_divide_by_zero() -> None:
     """A group whose commands took longer than its span doesn't divide by zero."""
     stats = ThreadCacheStats()
     stats.open_call(0.0)
@@ -226,7 +226,7 @@ def test_group_with_no_recorded_time_is_not_scaled() -> None:
     stats.close_call(1.0)
     stats.close_call(1.0)
 
-    cache_data, _ = _read_totals(stats, 1.0)
+    cache_data, _ = _thread_totals(stats, 1.0)
     assert (cache_data.calls, cache_data.total_time) == (1, 0)
 
 

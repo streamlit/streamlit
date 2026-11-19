@@ -592,9 +592,9 @@ def test_nested_cached_calls_count_only_the_outermost(
 def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
-    """A thread a cached function attaches with add_script_run_ctx inherits that
-    it runs inside the cached function, so its cached calls stay part of the
-    outer call's compute time.
+    """Cached calls on a thread that a cached function attaches with
+    add_script_run_ctx are part of the outer call's compute time, so they aren't
+    recorded.
     """
 
     @st.cache_resource(show_spinner=False)

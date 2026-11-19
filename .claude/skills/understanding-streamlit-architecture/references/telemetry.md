@@ -22,7 +22,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Commands | `commands` | Tracked `st.*` commands in call order: name, arguments (keyword, type name, position, and `len:<n>` or `val:<bool>` metadata) and time. See [Command tracking](#command-tracking). |
 | Run timing | `exec_time`, `prep_time` | Microseconds. See [Run timing](#run-timing). |
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
-| Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits, and the time spent computing on misses, waiting for another caller's computation, and on other cache overhead. Also the number of threads that recorded calls. See [Cache totals](#cache-totals). |
+| Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits, and the time spent computing on misses, waiting for another caller's computation, and on other cache overhead, and how many threads recorded them. See [Cache totals](#cache-totals). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
 | Errors | `uncaught_exception` | The exception type name, with a suffix only from fixed categories (see `format_uncaught_exception`). |
@@ -66,7 +66,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
   - Command times from parallel fragment workers and other attached threads are summed, so they can exceed the wall-clock time they overlap.
   - Commands past the tracking limits aren't listed, and a command that raises anything other than a rerun request is listed with time 0. Both stay inside `exec_time` and aren't subtracted, so their time counts as user code.
   - Work that happens inside a command counts as command time, for example a lazy Snowpark DataFrame passed to `st.dataframe` runs its query inside the command, and `st.write_stream` consumes its generator.
-  - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Their times are reported separately in `cache_usage` and leave out listed command time, so subtracting them as well leaves the time spent outside the cache. Like command times, cache times from concurrent threads are summed. `cache_usage.threads` shows when that can happen.
+  - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Their times are reported separately in `cache_usage` and leave out listed command time, so subtracting them as well leaves the time spent outside the cache. Like command times, cache times from concurrent threads are summed; `cache_usage.threads` shows when.
   - Queries count as user code too: `st.connection` times only creating or fetching the connection.
 
 `totalLoadTime` is an optimistic lower bound on what the user waits for. It leaves out loading the page and JavaScript, opening the WebSocket, the time between a widget interaction and the run starting, and drawing after the `PageProfile` message arrives.
@@ -94,7 +94,9 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 
 A hit returned a stored value, including one another caller computed while this call waited. A miss ran the function. `cache_lookups` in the server metrics uses the same rule. The two differ only in which calls they cover: the server metrics count every call over the life of the process.
 
-A recorded call's times leave out listed commands that run during it, including commands on threads the cached function attaches, until its computation ends. Concurrent async cached calls on one thread's event loop overlap, so `ThreadCacheStats` scales each group of overlapping calls down to the wall-clock time the group spans, minus listed command time. Times from different threads are still summed, so `cache_usage.threads` reports how many threads finished a recorded call. When it's above 1, the times can exceed wall-clock time, and analysis should treat the run as concurrent rather than subtract them from `exec_time` directly.
+A recorded call's times leave out listed commands that run during it, including commands on threads the cached function attaches, until its computation ends. Concurrent async cached calls on one thread's event loop overlap, so `ThreadCacheStats` scales each group of overlapping calls down to the wall-clock time the group spans, minus listed command time.
+
+Times from different threads are still summed. `cache_usage.threads` counts the threads that finished a recorded call. When it's above 1, the times can exceed wall-clock time, so treat the run as concurrent instead of subtracting them from `exec_time`.
 
 Each thread adds to its own `ThreadCacheStats` without a lock, which keeps a cache hit's added cost to one or two microseconds. A thread takes `RunCacheStats`'s lock only once per run, to register. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
 

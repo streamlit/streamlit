@@ -627,13 +627,14 @@ def _record_command_time(
     is_command_listed: bool,
     thread_state: FragmentThreadState | None,
 ) -> None:
-    """Set a tracked command's time and, if the command is listed, report it to the
-    run's cache totals, so a cached call running meanwhile leaves it out of its
-    times.
+    """Set a tracked command's time, and report it if the command is listed.
 
-    On a thread attached during a cached computation, the command is reported to
-    that computation, because the cached function's compute time includes it when
-    the function joins the thread.
+    The report lets cached calls leave the command out of their times. It goes:
+
+    - to the run's cache totals, while a recorded cached call runs on this thread;
+    - otherwise, on a thread attached during a cached computation, to that
+      computation, whose compute time includes the command once the function
+      joins the thread.
     """
     command_telemetry.time = to_microseconds(seconds)
     if ctx is None or not is_command_listed:
@@ -809,6 +810,8 @@ def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
     """Copy the run's cached-call totals onto the profile."""
     cache_usage = page_profile.cache_usage
     run_totals = ctx.shared.cache_stats.totals(time.perf_counter())
+    # Setting any field makes cache_usage present, so leave it unset for runs
+    # without recorded calls.
     if run_totals.threads:
         cache_usage.threads = run_totals.threads
     for totals, usage in (

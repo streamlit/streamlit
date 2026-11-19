@@ -96,6 +96,8 @@ class CacheComputeScope:
 
     ``is_active`` turns False when the computation ends, so a thread attached
     during it stops treating its own cached calls as part of that computation.
+    It also collects the listed command time those threads report, which the
+    cached call subtracts from its compute time.
     """
 
     __slots__ = ("_command_time", "_lock", "is_active")
@@ -160,11 +162,10 @@ class FragmentThreadState:
     # True inside a `with st.skeleton()` block, so spinners there don't add a
     # second loading indicator.
     in_skeleton_slot: bool = False
-    # Set while a cached function computes in this context. Unlike the
-    # in_cached_function ContextVar, it is copied to threads attached with
-    # add_script_run_ctx, so their cached calls made during that computation
-    # aren't recorded in the page profile's cache totals on top of the outer
-    # call's compute time.
+    # The cached computation running in this context, if any. Unlike the
+    # in_cached_function ContextVar, add_script_run_ctx copies it to attached
+    # threads, so their cached calls during the computation aren't recorded on
+    # top of the outer call's compute time.
     cache_compute: CacheComputeScope | None = None
 
     @property

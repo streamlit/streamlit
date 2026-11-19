@@ -27,12 +27,16 @@ other recorded time already covers it:
   other threads without a script run aren't recorded. A background refresh
   itself isn't a lookup; its compute time and result go only to the server
   metrics.
-- It isn't nested inside another cached call, whose time covers it. That
-  includes calls made while the outer function computes, also on threads it
-  attaches with ``add_script_run_ctx``, and calls made while the outer call
-  hashes its arguments or reads its result, such as from a ``hash_funcs``
-  function. A thread that attaches itself has no parent state to inherit, so
-  its calls are recorded.
+- It isn't nested inside another cached call, whose time covers it. Nested
+  calls include calls made:
+
+  - while the outer function computes, also on threads it attaches with
+    ``add_script_run_ctx``;
+  - while the outer call hashes its arguments or reads its result, such as
+    from a ``hash_funcs`` function.
+
+  A thread that calls ``add_script_run_ctx()`` on itself doesn't inherit the
+  outer call's state, so its calls are recorded.
 - It isn't inside a command listed in the page profile, such as the
   ``st.cache_resource`` call inside ``st.connection``, whose command time covers
   it. A command past the listing limits in ``metrics_util.py`` isn't listed, so
@@ -160,7 +164,9 @@ class CacheCallTimer:
         self._thread_stats.enter_cache_code()
 
     def exclude_attached_command_time(self, seconds: float) -> None:
-        """Exclude listed commands run by threads attached during the compute."""
+        """Leave ``seconds`` of listed commands, run by threads attached during the
+        computation, out of the compute time.
+        """
         self._attached_command_time += seconds
 
     def finish(self) -> None:
@@ -192,8 +198,8 @@ class CacheCallTimer:
             totals.waits += 1
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
-        # Attached threads' commands ran outside this thread's command time, so
-        # they come out of compute time only, not out of the overhead below.
+        # Attached threads' commands aren't in this thread's command time, so only
+        # compute time leaves them out, not the overhead below.
         totals.compute_time += max(
             self._compute_time
             - self._command_time_in_compute
@@ -231,9 +237,14 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
     except RuntimeError:
         # A thread with a ScriptRunContext but no ThreadState.
         return CacheCallTimer(metrics)
-    if thread_state.in_listed_command or thread_state.in_cache_compute:
+    if thread_state.in_listed_command:
+        return CacheCallTimer(metrics)
+    # Nested inside another cached call's computation, possibly on a thread it
+    # attached.
+    if thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
+    # Nested inside another recorded call's hashing or result reading.
     if thread_stats.is_in_cache_code:
         return CacheCallTimer(metrics)
     totals = (
@@ -246,13 +257,16 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
 
 @contextlib.contextmanager
 def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, None]:
-    """Mark this context as computing a cached value for ``call_timer``.
+    """Mark the current context as computing ``call_timer``'s value.
 
-    Threads attached with ``add_script_run_ctx`` inherit the mark, so their
-    cached calls made before the computation ends stay part of it, and the
-    time of their listed commands is excluded from ``call_timer``'s compute
-    time. A context that is already marked, or has no script-run thread state,
-    is left as is.
+    Threads attached with ``add_script_run_ctx`` during the computation inherit
+    the mark, so:
+
+    - their cached calls are part of this computation, not recorded separately;
+    - their listed commands' time comes out of ``call_timer``'s compute time.
+
+    A context that is already marked keeps the outer computation's mark. A
+    thread without script-run thread state has nothing to mark.
     """
     try:
         thread_state = ThreadState.get()
