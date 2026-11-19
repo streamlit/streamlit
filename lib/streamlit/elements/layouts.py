@@ -775,7 +775,7 @@ class LayoutsMixin:
         divider : bool
             Whether to show a vertical line between adjacent columns. If this
             is ``False`` (default), no lines are shown. If this is ``True``, a
-            line in the theme's border color is shown between each pair of
+            line in the theme's border color is shown between adjacent
             columns. The lines are hidden when the columns stack: on a narrow
             screen when ``wrap=True``, and in print when the row contains a
             chart, dataframe, or table. You can combine ``divider`` with

@@ -339,8 +339,10 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         : `calc(${percentage}% - ${gapWidth})`
     // Centers the line in the gap to this column's left: half the gap plus
     // half the line's width. An absolutely positioned line is offset from the
-    // padding box, so a bordered column also moves it out by its border.
+    // padding box, so a bordered column moves it out by its border width on
+    // every side to span the full card height.
     const { borderWidth } = theme.sizes
+    // `theme.spacing.none` is the unitless "0", which is not a length in calc().
     const halfGap = gapWidth === theme.spacing.none ? "0px" : `${gapWidth} / 2`
     const dividerOffset = `calc(-1 * (${halfGap} + ${borderWidth} / 2${
       showBorder ? ` + ${borderWidth}` : ""
