@@ -161,8 +161,9 @@ class ThreadCacheStats:
     def is_in_cache_code(self) -> bool:
         """Whether a recorded call is hashing, reading, or replaying on this thread.
 
-        Those steps never yield the thread, so a cached call started meanwhile
-        is nested inside that call, for example in a ``hash_funcs`` function.
+        Those steps don't yield to the event loop, so a cached call that starts
+        meanwhile is nested inside that call, for example in a ``hash_funcs``
+        function.
         """
         return self._calls_in_cache_code > 0
 

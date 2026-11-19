@@ -30,7 +30,7 @@ other recorded time already covers it:
 - It isn't nested inside another cached call, whose time covers it. Nested
   calls include calls made:
 
-  - while the outer function computes, also on threads it attaches with
+  - while the outer function computes, including on threads it attaches with
     ``add_script_run_ctx``;
   - while the outer call hashes its arguments or reads its result, such as
     from a ``hash_funcs`` function.
@@ -164,8 +164,8 @@ class CacheCallTimer:
         self._thread_stats.enter_cache_code()
 
     def exclude_attached_command_time(self, seconds: float) -> None:
-        """Leave ``seconds`` of listed commands, run by threads attached during the
-        computation, out of the compute time.
+        """Subtract ``seconds`` of listed commands that attached threads ran
+        during the computation from the compute time.
         """
         self._attached_command_time += seconds
 

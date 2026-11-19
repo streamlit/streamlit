@@ -633,8 +633,7 @@ def _record_command_time(
 
     - to the run's cache totals, while a recorded cached call runs on this thread;
     - otherwise, on a thread attached during a cached computation, to that
-      computation, whose compute time includes the command once the function
-      joins the thread.
+      computation, which subtracts it from its compute time.
     """
     command_telemetry.time = to_microseconds(seconds)
     if ctx is None or not is_command_listed:
