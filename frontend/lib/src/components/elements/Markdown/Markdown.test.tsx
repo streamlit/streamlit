@@ -459,7 +459,7 @@ describe("Markdown wrap", () => {
     expect(marginBottom).toBeLessThan(0)
   })
 
-  it("keeps a zero bottom margin when help sits beside a rule because HTML is allowed", () => {
+  it("keeps a zero bottom margin when help sits beside a rule because HTML is allowed", async () => {
     render(
       <Markdown
         {...getProps({
@@ -471,8 +471,13 @@ describe("Markdown wrap", () => {
       />
     )
 
+    // The HTML plugin loads lazily, so wait for the rule to render.
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("stMarkdownContainer").querySelector("hr")
+      ).toBeTruthy()
+    })
     const container = screen.getByTestId("stMarkdownContainer")
-    expect(container.querySelector("hr")).toBeTruthy()
     const marginBottom = Number.parseFloat(
       getComputedStyle(container).marginBottom
     )
