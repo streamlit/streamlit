@@ -4397,7 +4397,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.25.0,<3" },
     { name = "orjson", marker = "extra == 'charts'", specifier = ">=3.5.0" },
     { name = "orjson", marker = "extra == 'performance'", specifier = ">=3.5.0" },
-    { name = "packaging", specifier = ">=20" },
+    { name = "packaging", specifier = ">=26.3" },
     { name = "pandas", specifier = ">=1.5.3,<4" },
     { name = "pillow", specifier = ">=9.2.0,<14" },
     { name = "plotly", marker = "extra == 'charts'", specifier = ">=4.0.0" },
