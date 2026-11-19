@@ -22,6 +22,7 @@ import {
   StyledIconLogo,
   StyledLogo,
   StyledLogoButton,
+  StyledLogoInnerWrap,
   StyledLogoLink,
 } from "@streamlit/app/src/components/Sidebar/styled-components"
 import type { StreamlitEndpoints } from "@streamlit/connection"
@@ -42,6 +43,33 @@ const LOGO_SIZE_TO_ICON_SIZE: Partial<Record<string, IconSize>> = {
   small: "lg", // 1.25rem
   medium: "xl", // 1.5rem
   large: "twoXL", // 1.8rem
+}
+
+interface LogoDisplaySize {
+  size: string
+  sizePx?: number
+}
+
+function resolveLogoDisplaySize(
+  appLogo: Logo,
+  collapsed: boolean
+): LogoDisplaySize {
+  const sidebarSize: LogoDisplaySize =
+    appLogo.sizePx > 0
+      ? { size: "medium", sizePx: appLogo.sizePx }
+      : { size: appLogo.size || "medium" }
+
+  if (!collapsed) {
+    return sidebarSize
+  }
+
+  if (appLogo.iconSizePx > 0) {
+    return { size: "medium", sizePx: appLogo.iconSizePx }
+  }
+  if (appLogo.iconSize) {
+    return { size: appLogo.iconSize }
+  }
+  return sidebarSize
 }
 
 interface LogoComponentProps {
@@ -114,7 +142,8 @@ const LogoComponent = ({
     displayImageType === Logo.ImageType.ICON ||
     displayImageType === Logo.ImageType.EMOJI
 
-  const iconSize = LOGO_SIZE_TO_ICON_SIZE[appLogo.size] ?? "xl"
+  const { size, sizePx } = resolveLogoDisplaySize(appLogo, collapsed)
+  const iconSize = sizePx ? "inherit" : (LOGO_SIZE_TO_ICON_SIZE[size] ?? "xl")
 
   // Linked / home-nav wrappers name the control. Unlinked icon/emoji logos are
   // otherwise nameless once Material/emoji glyphs are aria-hidden (#12873).
@@ -126,7 +155,8 @@ const LogoComponent = ({
 
   const logo = isIconOrEmoji ? (
     <StyledIconLogo
-      size={appLogo.size}
+      size={size}
+      sizePx={sizePx}
       className="stLogo"
       data-testid={dataTestId}
       role={nameUnlinkedIconLogo ? "img" : undefined}
@@ -137,7 +167,8 @@ const LogoComponent = ({
   ) : (
     <StyledLogo
       src={source}
-      size={appLogo.size}
+      size={size}
+      sizePx={sizePx}
       alt="Logo"
       className="stLogo"
       data-testid={dataTestId}
@@ -181,7 +212,7 @@ const LogoComponent = ({
   // handle the width in all cases. It already gets wrapped via a
   // link element (<a>) above when link is provided.
   // https://github.com/streamlit/streamlit/issues/12326
-  return <div>{logo}</div>
+  return <StyledLogoInnerWrap>{logo}</StyledLogoInnerWrap>
 }
 
 export default LogoComponent

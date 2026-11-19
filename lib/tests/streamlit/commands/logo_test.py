@@ -21,8 +21,10 @@ import streamlit as st
 from streamlit.commands.logo import _invalid_logo_text
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidURLError,
     StreamlitValueError,
+    StreamlitValueOutOfRangeError,
 )
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.web.server.server import MEDIA_ENDPOINT
@@ -45,6 +47,9 @@ class LogoTest(DeltaGeneratorTestCase):
         assert c.link == ""
         assert c.icon_image == ""
         assert c.size == "medium"
+        assert c.size_px == 0
+        assert c.icon_size == ""
+        assert c.icon_size_px == 0
 
     def test_image_and_link(self):
         """Test that it can be called with image & link."""
@@ -124,6 +129,77 @@ class LogoTest(DeltaGeneratorTestCase):
         )
         with pytest.raises(StreamlitValueError):
             st.logo(streamlit, size="corgi")
+
+    def test_pixel_image_size(self):
+        """Test that size accepts a pixel integer."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, size=40)
+
+        c = self.get_message_from_queue().logo
+        assert c.size == ""
+        assert c.size_px == 40
+        assert c.icon_size == ""
+        assert c.icon_size_px == 0
+
+    def test_icon_size_preset(self):
+        """Test that icon_size can differ from size."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, size=40, icon_size="small")
+
+        c = self.get_message_from_queue().logo
+        assert c.size == ""
+        assert c.size_px == 40
+        assert c.icon_size == "small"
+        assert c.icon_size_px == 0
+
+    def test_icon_size_pixels(self):
+        """Test that icon_size accepts a pixel integer."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        st.logo(streamlit, size="large", icon_size=24)
+
+        c = self.get_message_from_queue().logo
+        assert c.size == "large"
+        assert c.size_px == 0
+        assert c.icon_size == ""
+        assert c.icon_size_px == 24
+
+    def test_invalid_pixel_size(self):
+        """Test that non-positive pixel sizes raise."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            st.logo(streamlit, size=0)
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            st.logo(streamlit, size=-1)
+
+    def test_invalid_size_type(self):
+        """Test that unsupported size types raise."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.logo(streamlit, size=True)  # type: ignore[arg-type]
+        with pytest.raises(StreamlitInvalidParameterTypeError):
+            st.logo(streamlit, size=3.5)  # type: ignore[arg-type]
+        with pytest.raises(StreamlitValueError):
+            st.logo(streamlit, size="40")
+
+    def test_invalid_icon_size(self):
+        """Test that icon_size uses the same validator as size."""
+        streamlit = Image.open(
+            str(pathlib.Path(__file__).parent / "full-streamlit.png")
+        )
+        with pytest.raises(StreamlitValueError):
+            st.logo(streamlit, icon_size="corgi")
+        with pytest.raises(StreamlitValueOutOfRangeError):
+            st.logo(streamlit, icon_size=0)
 
     def test_material_icon(self):
         """Test that it can be called with a material icon."""

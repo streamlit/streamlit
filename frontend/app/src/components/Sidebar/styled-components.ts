@@ -227,7 +227,28 @@ export const StyledSidebarHeaderContainer =
     }
   )
 
+export const StyledSidebarLogoSlot = styled.div({
+  display: "flex",
+  alignItems: "center",
+  flex: "1 1 auto",
+  minWidth: 0,
+  maxWidth: "100%",
+  overflow: "hidden",
+})
+
+export const StyledLogoInnerWrap = styled.div({
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "flex",
+})
+
+const logoChromeMaxHeight = (theme: EmotionTheme): string =>
+  `calc(${theme.sizes.headerHeight} - 2 * ${theme.spacing.twoXS})`
+
 export const StyledLogoLink = styled.a({
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "flex",
   "&:hover": {
     opacity: "0.7",
   },
@@ -239,6 +260,9 @@ export const StyledLogoButton = styled.button({
   border: "none",
   padding: 0,
   cursor: "pointer",
+  maxWidth: "100%",
+  minWidth: 0,
+  display: "flex",
   "&:hover": {
     opacity: "0.7",
   },
@@ -246,10 +270,18 @@ export const StyledLogoButton = styled.button({
 
 interface StyledLogoProps {
   size: string
+  sizePx?: number
   sidebarWidth?: string
 }
 
-function translateLogoHeight(theme: EmotionTheme, size: string): string {
+function translateLogoHeight(
+  theme: EmotionTheme,
+  size: string,
+  sizePx?: number
+): string {
+  if (sizePx && sizePx > 0) {
+    return `${sizePx}px`
+  }
   if (size === "small") {
     return theme.sizes.smallLogoHeight
   } else if (size === "large") {
@@ -259,33 +291,64 @@ function translateLogoHeight(theme: EmotionTheme, size: string): string {
   return theme.sizes.defaultLogoHeight
 }
 
-export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
-  height: translateLogoHeight(theme, size),
-  // Extra margin to align small logo with sidebar collapse arrow
-  marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
-  marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
-  marginLeft: theme.spacing.none,
-  zIndex: theme.zIndices.header,
-  objectFit: "contain",
-  objectPosition: "left",
-  verticalAlign: "middle",
-  maxWidth: `100%`,
-}))
+function logoVerticalMargin(
+  theme: EmotionTheme,
+  size: string,
+  sizePx?: number
+): string {
+  // Extra margin to align the small preset with the sidebar collapse arrow.
+  // Pixel sizes use the default (non-small) margin.
+  if (!sizePx && size === "small") {
+    return theme.spacing.xs
+  }
+  return theme.spacing.twoXS
+}
+
+const logoBoxStyles = ({
+  theme,
+  size,
+  sizePx,
+}: {
+  theme: EmotionTheme
+  size: string
+  sizePx?: number
+}): Record<string, string> => {
+  const height = translateLogoHeight(theme, size, sizePx)
+  const verticalMargin = logoVerticalMargin(theme, size, sizePx)
+  return {
+    height,
+    maxHeight: logoChromeMaxHeight(theme),
+    marginTop: verticalMargin,
+    marginBottom: verticalMargin,
+    marginLeft: theme.spacing.none,
+    maxWidth: "100%",
+  }
+}
+
+export const StyledLogo = styled.img<StyledLogoProps>(
+  ({ theme, size, sizePx }) => ({
+    ...logoBoxStyles({ theme, size, sizePx }),
+    zIndex: theme.zIndices.header,
+    objectFit: "contain",
+    objectPosition: "left",
+    verticalAlign: "middle",
+  })
+)
 
 export const StyledIconLogo = styled.div<StyledLogoProps>(
-  ({ theme, size }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    height: translateLogoHeight(theme, size),
-    marginTop: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginBottom: size === "small" ? theme.spacing.xs : theme.spacing.twoXS,
-    marginLeft: theme.spacing.none,
-    zIndex: theme.zIndices.header,
-    fontSize: translateLogoHeight(theme, size),
-    lineHeight: theme.lineHeights.none,
-    color: theme.colors.bodyText,
-  })
+  ({ theme, size, sizePx }) => {
+    const height = translateLogoHeight(theme, size, sizePx)
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      ...logoBoxStyles({ theme, size, sizePx }),
+      zIndex: theme.zIndices.header,
+      fontSize: height,
+      lineHeight: theme.lineHeights.none,
+      color: theme.colors.bodyText,
+    }
+  }
 )
 
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
@@ -301,6 +364,7 @@ export const StyledCollapseSidebarButton =
     ({ showSidebarCollapse, theme }) => {
       return {
         display: "inline",
+        flexShrink: 0,
         visibility: showSidebarCollapse ? "visible" : "hidden",
         marginLeft: theme.spacing.sm,
         transition: "left 300ms",

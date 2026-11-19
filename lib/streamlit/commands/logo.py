@@ -16,13 +16,18 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Final, Literal, TypeAlias
 
 from streamlit import url_util
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
-from streamlit.elements.lib.layout_utils import LayoutConfig
+from streamlit.elements.lib.layout_utils import (
+    LayoutConfig,
+    is_int,
+    validate_uint32_max,
+)
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidParameterTypeError,
     StreamlitInvalidURLError,
     StreamlitValueError,
 )
@@ -31,6 +36,16 @@ from streamlit.proto.Logo_pb2 import Logo as LogoProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import is_emoji, validate_material_icon
+
+LogoSize: TypeAlias = Literal["small", "medium", "large"] | int
+
+_LOGO_SIZE_PRESETS: Final = ("small", "medium", "large")
+_LOGO_SIZE_VALID_VALUES: Final = [
+    "'small'",
+    "'medium'",
+    "'large'",
+    "a positive integer",
+]
 
 
 def _invalid_logo_text(field_name: str) -> str:
@@ -87,13 +102,32 @@ def _process_logo_image(
     return ImageType.IMAGE, image_url
 
 
+def _validate_logo_size(parameter: str, size: LogoSize) -> tuple[str, int]:
+    """Return ``(preset, size_px)``. One of the two is set; the other is empty/0."""
+    if isinstance(size, str):
+        image_size = size.lower()
+        if image_size in _LOGO_SIZE_PRESETS:
+            return image_size, 0
+        raise StreamlitValueError(parameter, _LOGO_SIZE_VALID_VALUES)
+
+    if is_int(size):
+        size_px = int(size)
+        validate_uint32_max(parameter, size_px)
+        return "", size_px
+
+    raise StreamlitInvalidParameterTypeError(
+        parameter, type(size).__name__, ["str", "int"]
+    )
+
+
 @gather_metrics("logo")
 def logo(
     image: AtomicImage | str,
     *,  # keyword-only args:
-    size: Literal["small", "medium", "large"] = "medium",
+    size: LogoSize = "medium",
     link: str | None = None,
     icon_image: AtomicImage | str | None = None,
+    icon_size: LogoSize | None = None,
 ) -> None:
     r"""
     Renders a logo in the upper-left corner of your app and its sidebar.
@@ -133,18 +167,22 @@ def logo(
           font library.
 
         Streamlit scales the image to a max height set by ``size`` and a max
-        width to fit within the sidebar.
+        width to fit within the sidebar header.
 
         .. |st.image| replace:: ``st.image``
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
 
-    size : "small", "medium", or "large"
-        The size of the image displayed in the upper-left corner of the app and its
-        sidebar. The possible values are as follows:
+    size : "small", "medium", "large", or int
+        The size of the image displayed in the sidebar when the sidebar is
+        open. If ``icon_size`` is ``None`` (default), this also sizes the
+        image in the upper-left corner of the app when the sidebar is closed.
+        The possible values are as follows:
 
         - ``"small"``: 20px max height
         - ``"medium"`` (default): 24px max height
         - ``"large"``: 32px max height
+        - An integer: A max height in pixels. The frontend also caps the
+          height so the logo fits in the sidebar and app header.
 
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
@@ -160,13 +198,19 @@ def logo(
         Otherwise, Streamlit will render ``icon_image`` in the upper-left
         corner of the app when the sidebar is closed.
 
-        Streamlit scales the image to a max height set by ``size`` and a max
-        width to fit within the sidebar. If the sidebar is closed, the max
-        width is retained from when it was last open.
+        Streamlit scales the image to a max height set by ``icon_size`` (or
+        ``size`` if ``icon_size`` is ``None``) and a max width that fits the
+        app header.
 
         For best results, pass a wide or horizontal image to ``image`` and a
         square image to ``icon_image``. Or, pass a square image to ``image``
         and leave ``icon_image=None``.
+
+    icon_size : "small", "medium", "large", int, or None
+        The size of the image displayed in the upper-left corner of the app
+        when the sidebar is closed. This uses the same values as ``size``.
+        If ``icon_size`` is ``None`` (default), Streamlit uses ``size`` for
+        both the sidebar and the header.
 
     Examples
     --------
@@ -239,16 +283,13 @@ def logo(
                 error_id="logo-invalid-icon-image",
             ) from ex
 
-    def validate_size(size: str) -> str:
-        if isinstance(size, str):
-            image_size = size.lower()
-            valid_sizes = ["small", "medium", "large"]
+    size_preset, size_px = _validate_logo_size("size", size)
+    fwd_msg.logo.size = size_preset
+    fwd_msg.logo.size_px = size_px
 
-            if image_size in valid_sizes:
-                return image_size
-
-        raise StreamlitValueError("size", ["'small'", "'medium'", "'large'"])
-
-    fwd_msg.logo.size = validate_size(size)
+    if icon_size is not None:
+        icon_size_preset, icon_size_px = _validate_logo_size("icon_size", icon_size)
+        fwd_msg.logo.icon_size = icon_size_preset
+        fwd_msg.logo.icon_size_px = icon_size_px
 
     ctx.enqueue(fwd_msg)

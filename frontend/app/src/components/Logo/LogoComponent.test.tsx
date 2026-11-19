@@ -357,6 +357,112 @@ describe("LogoComponent", () => {
     expect(logo).toHaveStyle("height: 2rem")
   })
 
+  it("applies pixel size to the expanded logo", () => {
+    const pixelLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      sizePx: 40,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: pixelLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stSidebarLogo")).toHaveStyle("height: 40px")
+  })
+
+  it("uses icon_size for the collapsed logo when set", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      sizePx: 40,
+      iconSize: "small",
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stHeaderLogo")
+    expect(logo).toHaveAttribute("src", "https://example.com/icon.png")
+    expect(logo).toHaveStyle("height: 1.25rem")
+  })
+
+  it("does not apply icon_size to the expanded sidebar logo", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      sizePx: 40,
+      iconSize: "small",
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stSidebarLogo")
+    expect(logo).toHaveAttribute("src", "https://example.com/logo.png")
+    expect(logo).toHaveStyle("height: 40px")
+    expect(logo).not.toHaveStyle("height: 1.25rem")
+  })
+
+  it("uses iconSizePx for the collapsed logo when set", () => {
+    const mixedSizeLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      iconImage: "https://example.com/icon.png",
+      size: "large",
+      iconSizePx: 24,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: mixedSizeLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle("height: 24px")
+  })
+
+  it("falls back to size for the collapsed logo when icon_size is unset", () => {
+    const pixelLogo = LogoProto.create({
+      image: "https://example.com/logo.png",
+      sizePx: 40,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: pixelLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle("height: 40px")
+  })
+
   describe("icon and emoji logos", () => {
     it("renders DynamicIcon when imageType is ICON", () => {
       const iconLogo = LogoProto.create({

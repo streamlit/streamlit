@@ -20,6 +20,10 @@ import type { EmotionTheme } from "@streamlit/lib"
 
 export const StyledLogoContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.lg,
+  maxWidth: theme.sizes.minSidebarWidth,
+  overflow: "hidden",
+  display: "flex",
+  alignItems: "center",
 }))
 
 interface StyledHeaderProps {

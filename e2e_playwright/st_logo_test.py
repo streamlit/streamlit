@@ -87,6 +87,60 @@ def test_medium_logo_w_sidebar(
     )
 
 
+def test_pixel_logo_w_sidebar(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    select_subtest(themed_app, "pixel_logo_w_sidebar_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-pixel_w_sidebar_expanded",
+    )
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-pixel_w_sidebar_collapsed",
+    )
+
+
+def test_pixel_logo_icon_size_small_w_sidebar(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    select_subtest(themed_app, "pixel_logo_icon_size_small_w_sidebar_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-pixel_icon_small_w_sidebar_expanded",
+    )
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-pixel_icon_small_w_sidebar_collapsed",
+    )
+
+
 def test_large_logo_w_sidebar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
