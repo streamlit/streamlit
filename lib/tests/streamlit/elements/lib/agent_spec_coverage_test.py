@@ -116,7 +116,7 @@ _OMITTED: dict[str, dict[str, str]] = {
     "checkbox": {"value": _STARTING_VALUE},
     "code": {"wrap_lines": _PRESENTATION},
     "color_picker": {"value": _STARTING_VALUE},
-    "columns": {"spec": _PRESENTATION},
+    "columns": {"spec": _PRESENTATION, "divider": _PRESENTATION},
     "container": {"autoscroll": _BROWSER_AFFORDANCE, "horizontal": _PRESENTATION},
     "data_editor": {"row_height": _PRESENTATION},
     "dataframe": {

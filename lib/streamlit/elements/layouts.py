@@ -509,6 +509,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator]: ...
@@ -521,6 +522,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
@@ -533,6 +535,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
@@ -545,6 +548,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
@@ -557,6 +561,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[
@@ -575,6 +580,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[
@@ -595,6 +601,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator]: ...
@@ -607,6 +614,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator]: ...
@@ -619,6 +627,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
@@ -631,6 +640,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[DeltaGenerator, DeltaGenerator, DeltaGenerator, DeltaGenerator]: ...
@@ -643,6 +653,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[
@@ -668,6 +679,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> tuple[
@@ -687,6 +699,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> list[DeltaGenerator]: ...
@@ -702,6 +715,7 @@ class LayoutsMixin:
         gap: Gap | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
+        divider: bool = False,
         width: WidthWithoutContent = "stretch",
         wrap: bool = True,
     ) -> Sequence[DeltaGenerator]:
@@ -757,6 +771,16 @@ class LayoutsMixin:
             Whether to show a border around the column containers. If this is
             ``False`` (default), no border is shown. If this is ``True``, a
             border is shown around each column.
+
+        divider : bool
+            Whether to show a vertical line between adjacent columns. If this
+            is ``False`` (default), no lines are shown. If this is ``True``, a
+            line in the theme's border color is shown between adjacent
+            columns. The lines are hidden when the columns stack: on a narrow
+            screen when ``wrap=True``, and in print when the row contains a
+            chart, dataframe, or table. You can combine ``divider`` with
+            ``border``. Unlike ``divider`` in ``st.header``, this parameter
+            only accepts a boolean, and the line always uses the border color.
 
         width : "stretch" or int
             The width of the column group. This can be one of the following:
@@ -895,7 +919,18 @@ class LayoutsMixin:
             https://doc-columns-borders.streamlit.app/
             height: 250px
 
-        **Example 6: Disable wrapping for a thumbnail row**
+        **Example 6: Add vertical dividers**
+
+        Show vertical lines between columns without a border around each one.
+
+        >>> import streamlit as st
+        >>>
+        >>> left, middle, right = st.columns(3, divider=True)
+        >>> left.metric("Users", "1.2k")
+        >>> middle.metric("Revenue", "$1.2M")
+        >>> right.metric("Conversion", "3.4%")
+
+        **Example 7: Disable wrapping for a thumbnail row**
 
         Use ``wrap=False`` to keep columns in one row and scroll horizontally
         when they do not fit.
@@ -945,6 +980,7 @@ class LayoutsMixin:
             raise StreamlitInvalidColumnSpecError()
 
         validate_wrap(wrap)
+        validate_bool_arg("divider", divider)
 
         vertical_alignment_mapping: dict[
             str, BlockProto.Column.VerticalAlignment.ValueType
@@ -971,6 +1007,7 @@ class LayoutsMixin:
                 vertical_alignment
             ]
             col_proto.column.show_border = border
+            col_proto.column.show_divider = divider
             col_proto.allow_empty = True
             return col_proto
 

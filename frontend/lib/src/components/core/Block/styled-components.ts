@@ -301,6 +301,11 @@ interface StyledColumnProps {
   weight: number
   gap: streamlit.GapConfig.$Properties | undefined
   showBorder: boolean
+  /**
+   * Whether to draw a vertical line in the gap before this column. The first
+   * column of a row never draws one.
+   */
+  showDivider?: boolean
   verticalAlignment?: BlockProto.Column.VerticalAlignment
   /**
    * Whether the parent row allows wrapping/stacking. When true (default),
@@ -316,7 +321,15 @@ interface StyledColumnProps {
  * bordered column with a chart avoids page breaks on its own.
  */
 export const StyledColumn = styled.div<StyledColumnProps>(
-  ({ theme, weight, gap, showBorder, verticalAlignment, $wrap = true }) => {
+  ({
+    theme,
+    weight,
+    gap,
+    showBorder,
+    showDivider = false,
+    verticalAlignment,
+    $wrap = true,
+  }) => {
     const { VerticalAlignment } = BlockProto.Column
     const percentage = weight * 100
     const gapWidth = translateGapWidth(gap, theme)
@@ -324,6 +337,17 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       gapWidth === theme.spacing.none
         ? `${percentage}%`
         : `calc(${percentage}% - ${gapWidth})`
+    // Centers the line in the gap to this column's left: half the gap plus
+    // half the line's width. An absolutely positioned line is offset from the
+    // padding box, so a bordered column moves it out by its border width on
+    // every side to span the full card height.
+    const { borderWidth } = theme.sizes
+    // `theme.spacing.none` is the unitless "0", which is not a length in calc().
+    const halfGap = gapWidth === theme.spacing.none ? "0px" : `${gapWidth} / 2`
+    const dividerOffset = `calc(-1 * (${halfGap} + ${borderWidth} / 2${
+      showBorder ? ` + ${borderWidth}` : ""
+    }))`
+    const dividerVerticalOffset = showBorder ? `calc(-1 * ${borderWidth})` : 0
 
     // Columns don't shift themselves for vertical alignment: the row stretches
     // each column (so bordered columns match), and ContainerContentsWrapper
@@ -333,10 +357,29 @@ export const StyledColumn = styled.div<StyledColumnProps>(
       // e.g. if it overflows to next row.
       width,
       flex: `1 1 ${width}`,
+      ...(showDivider && {
+        position: "relative",
+        "&:not(:first-of-type)::before": {
+          content: '""',
+          position: "absolute",
+          top: dividerVerticalOffset,
+          bottom: dividerVerticalOffset,
+          left: dividerOffset,
+          // A border, unlike a background, stays visible in forced-colors mode.
+          width: 0,
+          borderLeft: `${borderWidth} solid ${theme.colors.borderColor}`,
+          pointerEvents: "none",
+        },
+      }),
       ...($wrap
         ? {
             [`@media (max-width: ${theme.breakpoints.columns})`]: {
               minWidth: `calc(100% - ${theme.spacing.twoXL})`,
+              ...(showDivider && {
+                "&:not(:first-of-type)::before": {
+                  display: "none",
+                },
+              }),
             },
           }
         : {
@@ -579,6 +622,10 @@ export const StyledFlexContainerBlock =
                   display: "block",
                   width: "100%",
                   minWidth: 0,
+                  // Stacked columns have no side-by-side gap to divide.
+                  "&:not(:first-of-type)::before": {
+                    display: "none",
+                  },
                   ...(gapWidth &&
                     gapWidth !== theme.spacing.none && {
                       "&:not(:last-of-type)": {
