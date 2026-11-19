@@ -432,10 +432,22 @@ def _columns_are_stacked(columns: Locator) -> bool:
     return second_box["y"] > first_box["y"] + first_box["height"] / 2
 
 
-def _divider_display(column: Locator) -> str:
-    return str(
+def _has_divider(column: Locator) -> bool:
+    """Whether the column draws a divider line before it.
+
+    A column without the pseudo-element reports `content: none`, and a
+    stacked column hides it with `display: none`.
+    """
+    return bool(
         column.evaluate(
-            "el => getComputedStyle(el, '::before').getPropertyValue('display')"
+            """el => {
+                const style = getComputedStyle(el, '::before');
+                return (
+                    style.content !== 'none' &&
+                    style.content !== 'normal' &&
+                    style.display !== 'none'
+                );
+            }"""
         )
     )
 
@@ -447,8 +459,8 @@ def test_columns_with_divider(themed_app: Page, assert_snapshot: ImageCompareFun
     columns = column_group.get_by_test_id("stColumn")
     expect(columns).to_have_count(3)
     expect(columns.nth(1)).to_be_visible()
-    assert _divider_display(columns.nth(0)) == "none"
-    assert _divider_display(columns.nth(1)) != "none"
+    assert not _has_divider(columns.nth(0))
+    assert _has_divider(columns.nth(1))
     assert_snapshot(column_group, name="st_columns-with_divider")
 
 
@@ -466,7 +478,7 @@ def test_columns_divider_with_border(app: Page, assert_snapshot: ImageCompareFun
     column_group = container.get_by_test_id("stHorizontalBlock")
     columns = column_group.get_by_test_id("stColumn")
     expect(columns).to_have_count(2)
-    assert _divider_display(columns.nth(1)) != "none"
+    assert _has_divider(columns.nth(1))
     assert_snapshot(column_group, name="st_columns-with_divider_and_border")
 
 
@@ -480,4 +492,4 @@ def test_columns_divider_hides_when_stacked(app: Page):
     expect(columns).to_have_count(3)
 
     wait_until(app, lambda: _columns_are_stacked(columns))
-    assert _divider_display(columns.nth(1)) == "none"
+    assert not _has_divider(columns.nth(1))
