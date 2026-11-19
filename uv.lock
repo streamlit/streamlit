@@ -4403,7 +4403,7 @@ requires-dist = [
     { name = "plotly", marker = "extra == 'charts'", specifier = ">=4.0.0" },
     { name = "protobuf", specifier = ">=5.26.1,<8" },
     { name = "pyarrow", specifier = ">=12.0.0,!=25.0.0,<27" },
-    { name = "pydeck", specifier = ">=0.8.0b4,<1" },
+    { name = "pydeck", specifier = ">=0.9.3,<1" },
     { name = "python-multipart", specifier = ">=0.0.10,<1" },
     { name = "requests", specifier = ">=2.27,<3" },
     { name = "rich", marker = "extra == 'all'", specifier = ">=11.0.0" },
