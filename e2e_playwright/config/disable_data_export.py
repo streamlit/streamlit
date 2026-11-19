@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import pandas as pd
+import plotly.graph_objects as go
 
 import streamlit as st
 
@@ -70,3 +71,32 @@ with st.container(key="code-block"):
 with st.container(key="json"):
     st.subheader("JSON")
     st.json({"name": "Alice", "value": 100})
+
+with st.container(key="plotly"):
+    st.subheader("Plotly")
+    fig = go.Figure(go.Bar(x=["A"], y=[1]))
+    fig.update_layout(
+        height=220, width=350, margin={"l": 20, "r": 20, "t": 20, "b": 20}
+    )
+    st.plotly_chart(fig, width=350)
+
+with st.container(key="echarts"):
+    st.subheader("ECharts")
+    st.echarts_chart(
+        {
+            "animation": False,
+            "xAxis": {"type": "category", "data": ["A"]},
+            "yAxis": {"type": "value"},
+            "series": [{"type": "bar", "data": [1]}],
+        },
+        height=220,
+        width=350,
+    )
+
+with st.container(key="mermaid"):
+    st.subheader("Mermaid")
+    st.mermaid_chart("graph TD\n    A-->B")
+
+with st.container(key="exception"):
+    st.subheader("Exception")
+    st.exception(RuntimeError("export-test error"))

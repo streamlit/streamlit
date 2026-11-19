@@ -58,6 +58,21 @@ def _expect_paste_allowed(app: Page, grid: Locator) -> None:
     expect(get_element_by_key(app, "editor-value")).to_contain_text("pasted-value")
 
 
+def _expect_cut_blocked(app: Page, grid: Locator) -> None:
+    click_on_cell(grid, 2, 0, column_width="small")
+
+    app.evaluate("navigator.clipboard.writeText('sentinel')")
+    app.keyboard.press(f"{COMMAND_KEY}+x")
+    app.wait_for_timeout(200)
+
+    assert app.evaluate("navigator.clipboard.readText()") == "sentinel"
+    expect(get_element_by_key(app, "editor-value")).to_contain_text("Bob")
+
+
+def _chart_toolbar(chart: Locator) -> Locator:
+    return chart.locator("..").get_by_test_id("stElementToolbar")
+
+
 def _get_read_only_dataframe(app: Page) -> Locator:
     return get_element_by_key(app, "read-only-dataframe").get_by_test_id("stDataFrame")
 
@@ -68,6 +83,22 @@ def _get_data_editor(app: Page) -> Locator:
 
 def _get_chart_container(app: Page) -> Locator:
     return get_element_by_key(app, "chart-table-view")
+
+
+def _get_plotly(app: Page) -> Locator:
+    return get_element_by_key(app, "plotly").get_by_test_id("stPlotlyChart")
+
+
+def _get_echarts_container(app: Page) -> Locator:
+    return get_element_by_key(app, "echarts")
+
+
+def _get_mermaid_frame(app: Page) -> Locator:
+    return get_element_by_key(app, "mermaid").get_by_test_id("stFullScreenFrame")
+
+
+def _get_exception(app: Page) -> Locator:
+    return get_element_by_key(app, "exception").get_by_test_id("stException")
 
 
 def _show_chart_table_view(app: Page) -> Locator:
@@ -99,9 +130,11 @@ def test_hides_export_and_copy_controls(app: Page):
     # canvas or svg so a missing button means the flag hid it.
     expect(chart.locator("canvas, svg").first).to_be_visible()
 
-    toolbar = chart.locator("..").get_by_test_id("stElementToolbar")
+    toolbar = _chart_toolbar(chart)
     chart.hover(force=True)
     expect(toolbar.get_by_label("Download as PNG")).not_to_be_attached()
+    expect(toolbar.get_by_label("Copy Vega-Lite spec")).not_to_be_attached()
+    expect(toolbar.get_by_label("Show Data")).to_be_visible()
 
     chart_table_view = _show_chart_table_view(app)
     expect(chart_table_view.get_by_label("Show chart")).to_be_visible()
@@ -124,10 +157,49 @@ def test_hides_export_and_copy_controls(app: Page):
     expect(json_element).to_be_visible()
     expect(json_element.locator(".copy-icon")).to_have_count(0)
 
+    plotly = _get_plotly(app)
+    plotly.scroll_into_view_if_needed()
+    expect(plotly.locator(".main-svg, canvas").first).to_be_visible()
+    plotly.hover()
+    expect(
+        plotly.get_by_role("button", name="Download plot as a PNG")
+    ).not_to_be_attached()
+    expect(plotly.get_by_role("button", name="Fullscreen")).to_be_visible()
+
+    echarts_container = _get_echarts_container(app)
+    echarts = echarts_container.get_by_test_id("stEChartsChart")
+    echarts.scroll_into_view_if_needed()
+    expect(echarts.locator("canvas")).to_be_visible()
+    echarts.hover()
+    expect(
+        echarts_container.get_by_role("button", name="Download as PNG")
+    ).not_to_be_attached()
+
+    mermaid_frame = _get_mermaid_frame(app)
+    mermaid_frame.scroll_into_view_if_needed()
+    expect(
+        mermaid_frame.get_by_test_id("stMermaidChart").locator("img")
+    ).to_be_visible()
+    mermaid_frame.hover()
+    mermaid_toolbar = mermaid_frame.get_by_test_id("stElementToolbar")
+    expect(
+        mermaid_toolbar.get_by_role("button", name="Download as PNG")
+    ).not_to_be_attached()
+    expect(
+        mermaid_toolbar.get_by_role("button", name="Copy to clipboard")
+    ).not_to_be_attached()
+
+    exception = _get_exception(app)
+    exception.scroll_into_view_if_needed()
+    expect(exception).to_be_visible()
+    expect(exception.get_by_role("button", name="Copy")).not_to_be_attached()
+    expect(exception.get_by_role("link", name="Ask Google")).not_to_be_attached()
+    expect(exception.get_by_role("link", name="Ask ChatGPT")).not_to_be_attached()
+
 
 @pytest.mark.only_browser("chromium")
 def test_disables_dataframe_and_editor_clipboard_copy(app: Page):
-    """Read-only dataframe and data editor copy are blocked, and data editor paste still works.
+    """Read-only dataframe and data editor copy/cut are blocked; paste still works.
 
     Chromium-only: reliable clipboard read/write in Playwright.
     """
@@ -135,6 +207,7 @@ def test_disables_dataframe_and_editor_clipboard_copy(app: Page):
 
     _expect_copy_blocked(app, _get_read_only_dataframe(app))
     _expect_copy_blocked(app, _get_data_editor(app))
+    _expect_cut_blocked(app, _get_data_editor(app))
     _expect_paste_allowed(app, _get_data_editor(app))
 
 
