@@ -84,6 +84,9 @@ decides per session, when the session connects. The browser shows the controls o
 the server allows it, because browser flags like `client.toolbarMode` aren't a trust
 boundary ($48).
 
+Allowing tracing only makes the controls available. A run is slower and a trace file is
+written only when a developer explicitly records a trace, one run at a time.
+
 A new config option, `server.allowLoadTrace`, sets which sessions may trace:
 
 | Value | Who can trace | Use |
@@ -113,19 +116,7 @@ options, so it's hidden wherever `client.toolbarMode` hides those options. The
   can make a remote viewer look local. An `Origin` check catches those proxies (see the
   tech spec's "Per-session policy").
 
-**Option 2: Reuse `global.developmentMode`**
-
-- Pros: No new option.
-- Cons: That option is for developing Streamlit itself; it changes asset serving and
-  other behavior.
-
-**Option 3: Follow `client.toolbarMode` or the host's `isOwner` flag**
-
-- Pros: Already decides who sees developer options. `isOwner` is set by an embedding host
-  over postMessage.
-- Cons: Both are browser-side. A viewer could flip them and receive a trace.
-
-**Option 4: CLI flag only (`streamlit run --trace`)**
+**Option 2: CLI flag only (`streamlit run --trace`)**
 
 - Pros: Explicit.
 - Cons: A second spelling for a config value ($46), and agents would need to restart the
