@@ -54,9 +54,14 @@ def test_divider_renders(themed_app: Page, assert_snapshot: ImageCompareFunction
     assert_snapshot(markdown_elements.nth(1), name="st_divider_width_600")
     assert_snapshot(markdown_elements.nth(2), name="st_divider_width_stretch")
 
+    # Neighboring text plus the rule, so spacing regressions are visible.
+    container = get_element_by_key(themed_app, "divider_spacing_standalone")
+    expect(container.locator("hr")).to_be_visible()
+    assert_snapshot(container, name="st_divider-equal_space_standalone")
+
 
 def test_divider_has_equal_space_above_and_below(app: Page):
-    """Standalone rules should sit equally between neighboring text (issue #12265)."""
+    """Rules sit equally between neighboring text, both standalone and inside a markdown block."""
     for key, above_text, below_text in _SPACING_CASES:
         block = get_element_by_key(app, key)
         rule = block.locator("hr")
@@ -68,15 +73,6 @@ def test_divider_has_equal_space_above_and_below(app: Page):
             f"Expected equal space around {key}, got {space_above:.1f}px above "
             f"and {space_below:.1f}px below"
         )
-
-
-def test_divider_equal_space_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
-    """Neighboring text plus the rule, so spacing is visible in the screenshot."""
-    container = get_element_by_key(themed_app, "divider_spacing_standalone")
-    expect(container.locator("hr")).to_be_visible()
-    assert_snapshot(container, name="st_divider-equal_space_standalone")
 
 
 def test_check_top_level_class(app: Page):

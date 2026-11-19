@@ -270,9 +270,9 @@ export interface Props {
   hideAnchors?: boolean
 
   /**
-   * Standalone horizontal rule (`st.divider` / a markdown body that is only
-   * `---`). Skips the body-markdown negative bottom margin so space above and
-   * below the rule stays equal.
+   * Standalone horizontal rule (`st.divider` or a markdown body that is only
+   * a thematic break). Skips the body-markdown negative bottom margin so space
+   * above and below the rule stays equal.
    */
   isDivider?: boolean
 }

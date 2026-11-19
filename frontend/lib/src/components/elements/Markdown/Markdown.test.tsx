@@ -388,7 +388,7 @@ describe("Markdown wrap", () => {
       body: "***",
     },
   ])(
-    "does not pull following content up for a standalone $name",
+    "keeps a zero bottom margin for a standalone $name",
     ({ elementType, body }) => {
       render(<Markdown {...getProps({ body, elementType })} />)
 
@@ -400,7 +400,39 @@ describe("Markdown wrap", () => {
     }
   )
 
-  it("keeps the body-markdown negative margin when a rule is inline", () => {
+  it("treats a native rule with surrounding whitespace as a standalone divider", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "\n---\n",
+          elementType: MarkdownProto.Type.NATIVE,
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
+  it("keeps wrap=false markdown inline-only, so a native rule is not a divider", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          wrap: false,
+        })}
+      />
+    )
+
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container.querySelector("hr")).toBeNull()
+    expect(container).toHaveStyle("white-space: nowrap")
+  })
+
+  it("keeps the negative bottom margin when a rule is part of a longer markdown body", () => {
     render(
       <Markdown
         {...getProps({

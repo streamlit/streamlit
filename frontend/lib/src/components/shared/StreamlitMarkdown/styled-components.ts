@@ -226,10 +226,10 @@ export const StyledStreamlitMarkdown =
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
         fontWeight: inheritFont ? "inherit" : undefined,
-        // Body markdown uses a negative bottom margin so leftover paragraph
+        // Body markdown uses a negative bottom margin so trailing paragraph
         // margin does not stack with the vertical flex gap. A standalone
-        // divider has no paragraph, so that pull-up made space below the
-        // rule smaller than space above it (issue #12265).
+        // divider has no paragraph, so it keeps a zero bottom margin and the
+        // space above and below the rule stays equal.
         marginBottom: isDivider
           ? theme.spacing.none
           : isLabel || isInHorizontalLayout

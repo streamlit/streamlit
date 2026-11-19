@@ -36,17 +36,23 @@ export interface MarkdownProps {
 // Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
-// CommonMark thematic break used as a whole markdown body (`st.write("---")`).
+// A markdown body that is only a solid `---`, `***`, or `___` rule.
 const STANDALONE_HORIZONTAL_RULE_REGEX = /^(?:-{3,}|\*{3,}|_{3,})$/
 
+/**
+ * True when the element renders only a horizontal rule: `st.divider()` or a
+ * markdown body that is just a solid rule (e.g. `st.write("---")`). With
+ * `wrap=False` a markdown body stays inline-only, so it is never a divider.
+ */
 function isStandaloneDivider(
-  elementType: MarkdownProto.Type,
-  body: string
+  element: MarkdownProto,
+  trimmedBody: string
 ): boolean {
   return (
-    elementType === MarkdownProto.Type.DIVIDER ||
-    (elementType === MarkdownProto.Type.NATIVE &&
-      STANDALONE_HORIZONTAL_RULE_REGEX.test(body.trim()))
+    element.elementType === MarkdownProto.Type.DIVIDER ||
+    (element.elementType === MarkdownProto.Type.NATIVE &&
+      element.wrap !== false &&
+      STANDALONE_HORIZONTAL_RULE_REGEX.test(trimmedBody))
   )
 }
 
@@ -65,7 +71,8 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
-  const isDivider = isStandaloneDivider(elementType, body)
+  const trimmedBody = body.trim()
+  const isDivider = isStandaloneDivider(element, trimmedBody)
   // wrap=false ellipsizes. Latex and divider never truncate: clipping would
   // hide formulas and horizontal rules.
   const truncate = element.wrap === false && !isLatex && !isDivider
@@ -73,7 +80,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
     elementType === MarkdownProto.Type.NATIVE &&
-    SINGLE_BADGE_REGEX.test(body.trim())
+    SINGLE_BADGE_REGEX.test(trimmedBody)
 
   const { titleRef, labelTextRef } = useLabelTitleTooltip(truncate, body)
 
