@@ -371,6 +371,51 @@ describe("Markdown wrap", () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each([
+    {
+      name: "st.divider",
+      elementType: MarkdownProto.Type.DIVIDER,
+      body: "---",
+    },
+    {
+      name: "native ---",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "---",
+    },
+    {
+      name: "native ***",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "***",
+    },
+  ])(
+    "does not pull following content up for a standalone $name",
+    ({ elementType, body }) => {
+      render(<Markdown {...getProps({ body, elementType })} />)
+
+      const marginBottom = Number.parseFloat(
+        getComputedStyle(screen.getByTestId("stMarkdownContainer"))
+          .marginBottom
+      )
+      expect(marginBottom).toBe(0)
+    }
+  )
+
+  it("keeps the body-markdown negative margin when a rule is inline", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "Above\n\n---\n\nBelow",
+          elementType: MarkdownProto.Type.NATIVE,
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
+  })
+
   it("does not truncate a badge when wrap is unset", () => {
     const props = getProps({
       body: ":blue-badge[Label]",

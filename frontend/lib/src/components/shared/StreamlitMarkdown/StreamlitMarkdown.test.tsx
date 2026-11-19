@@ -1499,6 +1499,22 @@ describe("StreamlitMarkdown", () => {
     expect(container).not.toHaveStyle("white-space: nowrap")
   })
 
+  it("does not apply a negative bottom margin to a standalone divider", () => {
+    render(<StreamlitMarkdown source="---" allowHTML={false} isDivider />)
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBe(0)
+  })
+
+  it("applies a negative bottom margin to body markdown", () => {
+    render(<StreamlitMarkdown source="Hello" allowHTML={false} />)
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
+  })
+
   it("does not stretch truncated widget labels to 100% width", () => {
     render(
       <StreamlitMarkdown

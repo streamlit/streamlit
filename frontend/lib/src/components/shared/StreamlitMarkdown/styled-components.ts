@@ -42,6 +42,7 @@ interface StyledStreamlitMarkdownProps {
   boldLabel?: boolean
   isToast?: boolean
   truncate?: boolean
+  isDivider?: boolean
 }
 
 function convertRemToEm(s: string): string {
@@ -206,6 +207,7 @@ export const StyledStreamlitMarkdown =
       boldLabel = false,
       isToast = false,
       truncate = false,
+      isDivider = false,
     }) => {
       // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
       // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
@@ -224,8 +226,15 @@ export const StyledStreamlitMarkdown =
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
         fontWeight: inheritFont ? "inherit" : undefined,
-        marginBottom:
-          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
+        // Body markdown uses a negative bottom margin so leftover paragraph
+        // margin does not stack with the vertical flex gap. A standalone
+        // divider has no paragraph, so that pull-up made space below the
+        // rule smaller than space above it (issue #12265).
+        marginBottom: isDivider
+          ? theme.spacing.none
+          : isLabel || isInHorizontalLayout
+            ? ""
+            : `-${theme.spacing.lg}`,
         opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:

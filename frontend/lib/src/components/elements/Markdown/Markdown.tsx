@@ -36,6 +36,20 @@ export interface MarkdownProps {
 // Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
+// CommonMark thematic break used as a whole markdown body (`st.write("---")`).
+const STANDALONE_HORIZONTAL_RULE_REGEX = /^(?:-{3,}|\*{3,}|_{3,})$/
+
+function isStandaloneDivider(
+  elementType: MarkdownProto.Type,
+  body: string
+): boolean {
+  return (
+    elementType === MarkdownProto.Type.DIVIDER ||
+    (elementType === MarkdownProto.Type.NATIVE &&
+      STANDALONE_HORIZONTAL_RULE_REGEX.test(body.trim()))
+  )
+}
+
 /**
  * Functional element representing Markdown formatted text.
  */
@@ -51,7 +65,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
 
   const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
-  const isDivider = elementType === MarkdownProto.Type.DIVIDER
+  const isDivider = isStandaloneDivider(elementType, body)
   // wrap=false ellipsizes. Latex and divider never truncate: clipping would
   // hide formulas and horizontal rules.
   const truncate = element.wrap === false && !isLatex && !isDivider
@@ -83,6 +97,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       isLabel={truncate}
       truncate={truncate}
       inheritFont={truncate && !isCaption}
+      isDivider={isDivider}
     />
   )
   // Title lives on this box (not the outer .stMarkdown) so a sibling help
