@@ -388,6 +388,16 @@ describe("Markdown wrap", () => {
       body: "***",
     },
     {
+      name: "native ___",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "___",
+    },
+    {
+      name: "native _ _ _",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "_ _ _",
+    },
+    {
       name: "native - - -",
       elementType: MarkdownProto.Type.NATIVE,
       body: "- - -",

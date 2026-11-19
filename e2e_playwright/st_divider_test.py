@@ -17,7 +17,7 @@ from playwright.sync_api import Locator, Page, expect
 from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class, get_element_by_key
 
-# Subpixel layout plus paragraph line-boxes can differ by a pixel or two.
+# Subpixel rounding can make the two gaps differ by a few pixels.
 _EQUAL_SPACE_TOLERANCE_PX = 3
 
 _SPACING_CASES = (

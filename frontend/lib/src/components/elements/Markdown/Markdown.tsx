@@ -43,10 +43,8 @@ const STANDALONE_HORIZONTAL_RULE_REGEX =
 
 /**
  * True when the element renders only a horizontal rule: `st.divider()` or a
- * markdown body that is just a thematic break (e.g. `st.write("---")`). With
- * `wrap=False` a markdown body stays inline-only, so it is never a divider.
- * Inline help turns a native rule into a paragraph, so that case is excluded
- * later once we know whether help is inlined.
+ * markdown body that is just a thematic break (e.g. `st.write("---")`).
+ * `wrap=False` markdown is inline-only, so it never counts as a rule.
  */
 function isStandaloneDivider(
   element: MarkdownProto,
@@ -77,9 +75,11 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   const isLatex = elementType === MarkdownProto.Type.LATEX
   const trimmedBody = body.trim()
   const isStandaloneRuleBody = isStandaloneDivider(element, trimmedBody)
-  // wrap=false ellipsizes. Latex and divider never truncate: clipping would
-  // hide formulas and horizontal rules.
-  const truncate = element.wrap === false && !isLatex && !isStandaloneRuleBody
+  // wrap=false ellipsizes. Latex and st.divider never truncate: clipping
+  // would hide formulas and horizontal rules. Native wrap=False markdown is
+  // never a standalone rule, so this is the DIVIDER element type only.
+  const isDividerElement = elementType === MarkdownProto.Type.DIVIDER
+  const truncate = element.wrap === false && !isLatex && !isDividerElement
 
   // Determine if the markdown is a single badge only
   const isSingleBadgeOnly =
@@ -92,8 +92,8 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // clipped by truncation. Otherwise render the help icon as a sibling.
   const shouldInlineHelpDirective =
     Boolean(help) && !truncate && !isSingleBadgeOnly && !isLatex && !allowHtml
-  // Inline help turns `---` into a paragraph, so it is not a divider.
-  // Sibling help (`allowHtml`, truncation) leaves the rule intact.
+  // Inline help appends `:help[]`, which turns `---` into a paragraph.
+  // A sibling help icon (`unsafe_allow_html`) leaves the rule intact.
   const isDivider = isStandaloneRuleBody && !shouldInlineHelpDirective
   const source = shouldInlineHelpDirective ? `${body} :help[]` : body
 
