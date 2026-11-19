@@ -23,7 +23,7 @@ combined when the run's page profile is built.
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(slots=True)
@@ -53,6 +53,17 @@ class CacheTotals:
     @property
     def total_time(self) -> float:
         return self.compute_time + self.wait_time + self.overhead_time
+
+
+@dataclass(slots=True)
+class RunCacheTotals:
+    """A run's cached-call totals, combined across threads."""
+
+    cache_data: CacheTotals = field(default_factory=CacheTotals)
+    cache_resource: CacheTotals = field(default_factory=CacheTotals)
+    # Threads with a finished recorded call. When more than one, the times are
+    # summed across threads that may have run at the same time.
+    threads: int = 0
 
 
 class _OverlapGroup:
@@ -246,8 +257,8 @@ class RunCacheStats:
             return True
         return False
 
-    def totals(self, now: float) -> tuple[CacheTotals, CacheTotals]:
-        """Return the combined ``(cache_data, cache_resource)`` totals.
+    def totals(self, now: float) -> RunCacheTotals:
+        """Return the totals combined across threads.
 
         ``now`` is the current ``time.perf_counter()`` value. It ends the span of
         any overlap group that is still open, so that group is scaled to the time
@@ -255,8 +266,10 @@ class RunCacheStats:
         """
         with self._threads_lock:
             threads = list(self._threads)
-        cache_data = CacheTotals()
-        cache_resource = CacheTotals()
+        totals = RunCacheTotals()
         for stats in threads:
-            stats.add_to(cache_data, cache_resource, now)
-        return cache_data, cache_resource
+            calls_before = totals.cache_data.calls + totals.cache_resource.calls
+            stats.add_to(totals.cache_data, totals.cache_resource, now)
+            if totals.cache_data.calls + totals.cache_resource.calls > calls_before:
+                totals.threads += 1
+        return totals

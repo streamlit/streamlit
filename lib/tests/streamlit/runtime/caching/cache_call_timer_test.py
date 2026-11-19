@@ -109,8 +109,8 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
 
 
 def _cache_totals_for(ctx: ScriptRunContext, cache_name: str) -> CacheTotals:
-    cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
-    return cache_data if cache_name == "cache_data" else cache_resource
+    totals = ctx.shared.cache_stats.totals(time.perf_counter())
+    return totals.cache_data if cache_name == "cache_data" else totals.cache_resource
 
 
 def _server_counts(func: Any) -> tuple[int, int, int, int]:
@@ -624,6 +624,8 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     resource = _cache_totals_for(ctx, "cache_resource")
     assert (resource.calls, resource.misses) == (1, 1)
     assert resource.compute_time == pytest.approx(1.0)
+    # The thread attached inside outer recorded nothing, so it isn't counted.
+    assert ctx.shared.cache_stats.totals(time.perf_counter()).threads == 2
     # The server's metrics count both of inner's calls.
     assert _server_counts(inner) == (0, 2, 2, 0)
 
@@ -753,6 +755,7 @@ def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> No
     assert (totals.calls, totals.hits, totals.misses) == (20, 16, 4)
     # The main thread and each of the four workers keep their own totals.
     assert len(ctx.shared.cache_stats._threads) == 5
+    assert ctx.shared.cache_stats.totals(time.perf_counter()).threads == 5
 
 
 def test_call_still_running_is_not_counted(ctx: ScriptRunContext) -> None:
@@ -904,6 +907,6 @@ def test_call_running_across_a_reset_finishes_into_the_previous_run(
     release.set()
     thread.join(5)
 
-    previous_data, _ = previous_run.totals(time.perf_counter())
+    previous_data = previous_run.totals(time.perf_counter()).cache_data
     assert (previous_data.calls, previous_data.misses) == (1, 1)
     assert _cache_totals_for(ctx, "cache_data").calls == 0

@@ -398,6 +398,7 @@ describe("metrics helpers", () => {
               computeTime: 1500,
               overheadTime: 40,
             },
+            threads: 2,
           },
         })
       )
@@ -421,6 +422,7 @@ describe("metrics helpers", () => {
         computeTime: "1500",
         overheadTime: "40",
       },
+      threads: "2",
     })
     expect(withUsage.serverUptimeSeconds).toBe("12")
     expect(withoutUsage).not.toHaveProperty("cacheUsage")

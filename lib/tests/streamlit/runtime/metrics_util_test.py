@@ -1417,6 +1417,7 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
         msg = metrics_util.create_page_profile_message([], 0, 0)
 
     usage = msg.page_profile.cache_usage
+    assert usage.threads == 1
     assert not usage.HasField("cache_resource")
     assert usage.cache_data.calls == 3
     assert usage.cache_data.hits == 2

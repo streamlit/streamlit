@@ -68,7 +68,7 @@ message PageProfile {
 // cached function counts as part of the outer call, so subtracting the times
 // from user code time leaves the time spent outside the cache. Like command
 // times, times from concurrent threads are summed and can exceed wall-clock
-// time.
+// time; threads says when that can happen.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
 // recorded.
 message CacheUsage {
@@ -76,6 +76,10 @@ message CacheUsage {
   CacheTypeUsage cache_data = 1;
   // Unset when no st.cache_resource call was recorded.
   CacheTypeUsage cache_resource = 2;
+  // Threads that finished a recorded call. Above 1, the times are summed
+  // across threads that may have run at the same time, such as parallel
+  // fragments or threads attached with add_script_run_ctx.
+  int64 threads = 3;
 }
 
 // Recorded calls for one cache type, with times in microseconds. stale_hits

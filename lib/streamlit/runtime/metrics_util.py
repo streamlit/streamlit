@@ -808,10 +808,12 @@ def gather_metrics(
 def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
     """Copy the run's cached-call totals onto the profile."""
     cache_usage = page_profile.cache_usage
-    cache_data, cache_resource = ctx.shared.cache_stats.totals(time.perf_counter())
+    run_totals = ctx.shared.cache_stats.totals(time.perf_counter())
+    if run_totals.threads:
+        cache_usage.threads = run_totals.threads
     for totals, usage in (
-        (cache_data, cache_usage.cache_data),
-        (cache_resource, cache_usage.cache_resource),
+        (run_totals.cache_data, cache_usage.cache_data),
+        (run_totals.cache_resource, cache_usage.cache_resource),
     ):
         if totals.calls == 0:
             continue
