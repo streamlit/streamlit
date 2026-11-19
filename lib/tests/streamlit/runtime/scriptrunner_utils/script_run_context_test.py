@@ -483,20 +483,24 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_add_script_run_ctx_does_not_copy_command_tracking_deactivated(self):
         """Helper threads start with tracking on even if the parent is nested.
 
-        ``command_tracking_deactivated`` is per execution stack. Copying a
-        parent's ``True`` would leave helper-thread commands untracked for
-        the thread's life because the snapshot is not live-shared.
+        ``command_tracking_deactivated`` and ``in_listed_command`` are per
+        execution stack. Copying a parent's ``True`` would leave helper-thread
+        commands untracked for the thread's life because the snapshot is not
+        live-shared.
         """
         pages_manager = PagesManager("/main/script/path")
         enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
-        ThreadState.initialize(command_tracking_deactivated=True)
+        ThreadState.initialize(
+            command_tracking_deactivated=True, in_listed_command=True
+        )
         captured: dict[str, object] = {}
         try:
 
             def child_target() -> None:
                 captured["flag"] = ThreadState.get().command_tracking_deactivated
+                captured["listed"] = ThreadState.get().in_listed_command
 
             t = threading.Thread(target=child_target)
             add_script_run_ctx(t, ctx)
@@ -505,7 +509,9 @@ class ScriptRunContextTest(unittest.TestCase):
 
             assert not t.is_alive()
             assert captured["flag"] is False
+            assert captured["listed"] is False
             assert ThreadState.get().command_tracking_deactivated is True
+            assert ThreadState.get().in_listed_command is True
         finally:
             ThreadState.initialize()
 
@@ -517,7 +523,9 @@ class ScriptRunContextTest(unittest.TestCase):
         enable_mpa_v2_mode(pages_manager)
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
-        ThreadState.initialize(command_tracking_deactivated=True)
+        ThreadState.initialize(
+            command_tracking_deactivated=True, in_listed_command=True
+        )
         copied = contextvars.copy_context()
         captured: dict[str, object] = {}
         try:
@@ -525,10 +533,12 @@ class ScriptRunContextTest(unittest.TestCase):
             def in_copied_context() -> None:
                 add_script_run_ctx(ctx=ctx)
                 captured["flag"] = ThreadState.get().command_tracking_deactivated
+                captured["listed"] = ThreadState.get().in_listed_command
 
             copied.run(in_copied_context)
 
             assert captured["flag"] is False
+            assert captured["listed"] is False
             assert ThreadState.get().command_tracking_deactivated is True
         finally:
             ThreadState.initialize()

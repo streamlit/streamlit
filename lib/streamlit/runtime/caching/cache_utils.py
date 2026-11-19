@@ -51,7 +51,11 @@ from streamlit.errors import (
     StreamlitValueError,
 )
 from streamlit.logger import get_logger
-from streamlit.runtime.caching import cache_background_refresh, cache_metrics
+from streamlit.runtime.caching import (
+    cache_background_refresh,
+    cache_call_timer,
+    cache_metrics,
+)
 from streamlit.runtime.caching.cache_errors import (
     CachedFunctionReturnedAwaitableError,
     CachedStFunctionInBackgroundModeWarning,
@@ -122,29 +126,29 @@ _COMPUTE_LOCK_POLL_SECONDS: Final = 0.1
 
 @contextlib.contextmanager
 def _hold_compute_lock(
-    lock: threading.Lock, *, metrics: cache_metrics.FunctionCacheMetrics | None = None
+    lock: threading.Lock,
+    *,
+    call_timer: cache_call_timer.CacheCallTimer | None = None,
 ) -> Generator[None, None, None]:
     """Acquire a compute lock while allowing a waiting run to stop or rerun.
 
-    If ``metrics`` is given, records how long this call was blocked on a lock
+    If ``call_timer`` is given, it times how long this call is blocked on a lock
     another caller holds, including a wait that a stop or rerun ends.
     """
     yield_check = None
     if not lock.acquire(blocking=False):
-        wait_start = time.perf_counter()
-        try:
-            # Stopping inside a cached function would discard its outer
-            # computation. A thread without a script run has no stop/rerun
-            # callback.
-            yield_check = None if in_cached_function.get() else get_run_yield_check()
-            if yield_check is None:
-                lock.acquire()
-            else:
-                while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
-                    yield_check()
-        finally:
-            if metrics is not None:
-                metrics.record_wait_duration(time.perf_counter() - wait_start)
+        if call_timer is not None:
+            call_timer.begin_wait()
+        # Stopping inside a cached function would discard its outer computation.
+        # A thread without a script run has no stop/rerun callback.
+        yield_check = None if in_cached_function.get() else get_run_yield_check()
+        if yield_check is None:
+            lock.acquire()
+        else:
+            while not lock.acquire(timeout=_COMPUTE_LOCK_POLL_SECONDS):
+                yield_check()
+        if call_timer is not None:
+            call_timer.end_wait()
 
     try:
         # A stop or rerun may arrive during the timed acquire just before the
@@ -829,6 +833,21 @@ class CachedFunc(Generic[P, R]):
         func_kwargs: dict[str, Any],
         spinner_message: str | None = None,
     ) -> R:
+        call_timer = cache_call_timer.start_call(self._info.cache_type, self._metrics)
+        try:
+            return self._lookup_or_compute(
+                func_args, func_kwargs, spinner_message, call_timer
+            )
+        finally:
+            call_timer.finish()
+
+    def _lookup_or_compute(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None,
+        call_timer: cache_call_timer.CacheCallTimer,
+    ) -> R:
         # Retrieve the function's cache object. We must do this "just-in-time"
         # (as opposed to in the constructor), because caches can be invalidated
         # at any time.
@@ -855,7 +874,7 @@ class CachedFunc(Generic[P, R]):
             pass
         else:
             # A stale value served during a background refresh is still a hit.
-            self._metrics.record_hit()
+            call_timer.record_hit(is_stale=read.is_stale)
             if read.is_stale:
                 # Background mode, stale grace window: return the stale value now and
                 # kick off a single deduplicated background refresh (no spinner).
@@ -882,7 +901,9 @@ class CachedFunc(Generic[P, R]):
             else contextlib.nullcontext()
         )
         with spinner_or_no_context:
-            return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+            return self._handle_cache_miss(
+                cache, value_key, func_args, func_kwargs, call_timer
+            )
 
     def _handle_cache_hit(self, result: CachedResult[R]) -> R:
         """Handle a cache hit: replay the result's cached messages, and return its
@@ -904,6 +925,7 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
+        call_timer: cache_call_timer.CacheCallTimer,
     ) -> R:
         """Handle a cache miss: compute a new cached value, write it back to the cache,
         and return that newly-computed value.
@@ -928,7 +950,7 @@ class CachedFunc(Generic[P, R]):
         #   a wee bit slower, because we do two lookups for the entry.
 
         with _hold_compute_lock(
-            cache.compute_value_lock(value_key), metrics=self._metrics
+            cache.compute_value_lock(value_key), call_timer=call_timer
         ):
             # We've acquired the lock - but another thread may have acquired it first
             # and already computed the value. So we need to test for a cache hit again,
@@ -936,7 +958,7 @@ class CachedFunc(Generic[P, R]):
             try:
                 cached_result = cache.read_result(value_key)
                 # Another thread computed the value before us. Early exit!
-                self._metrics.record_hit()
+                call_timer.record_hit()
                 return self._handle_cache_hit(cached_result)
             except CacheKeyNotFoundError:
                 # No cache hit -> we will call the cached function
@@ -944,17 +966,14 @@ class CachedFunc(Generic[P, R]):
                 pass
 
             # We acquired the lock before any other thread. Compute the value!
-            self._metrics.record_miss()
-            compute_start = time.perf_counter()
+            call_timer.begin_compute()
             try:
                 with self._info.cached_message_replay_ctx.calling_cached_function(
                     self._info.func
                 ):
                     computed_value = self._info.func(*func_args, **func_kwargs)
             finally:
-                self._metrics.record_compute_duration(
-                    time.perf_counter() - compute_start
-                )
+                call_timer.end_compute()
 
             _reject_awaitable_return_value(
                 self._info.cache_type, self._info.func, computed_value
@@ -1041,6 +1060,21 @@ class CachedFunc(Generic[P, R]):
         is intentionally not driven here (it recomputes off the script thread, which
         cannot await a coroutine); async caches use the foreground path only.
         """
+        call_timer = cache_call_timer.start_call(self._info.cache_type, self._metrics)
+        try:
+            return await self._lookup_or_compute_async(
+                func_args, func_kwargs, spinner_message, call_timer
+            )
+        finally:
+            call_timer.finish()
+
+    async def _lookup_or_compute_async(
+        self,
+        func_args: tuple[Any, ...],
+        func_kwargs: dict[str, Any],
+        spinner_message: str | None,
+        call_timer: cache_call_timer.CacheCallTimer,
+    ) -> R:
         cache = self._info.get_function_cache(self._function_key)
 
         value_key = _make_value_key(
@@ -1058,7 +1092,7 @@ class CachedFunc(Generic[P, R]):
             # Hard miss: fall through to the awaiting compute below.
             pass
         else:
-            self._metrics.record_hit()
+            call_timer.record_hit()
             return self._handle_cache_hit(cached_result)
 
         is_nested_cache_function = in_cached_function.get()
@@ -1071,7 +1105,7 @@ class CachedFunc(Generic[P, R]):
         )
         with spinner_or_no_context:
             return await self._handle_cache_miss_async(
-                cache, value_key, func_args, func_kwargs
+                cache, value_key, func_args, func_kwargs, call_timer
             )
 
     async def _handle_cache_miss_async(
@@ -1080,6 +1114,7 @@ class CachedFunc(Generic[P, R]):
         value_key: str,
         func_args: tuple[Any, ...],
         func_kwargs: dict[str, Any],
+        call_timer: cache_call_timer.CacheCallTimer,
     ) -> R:
         """Await the underlying coroutine on a miss and cache its awaited result.
 
@@ -1088,78 +1123,64 @@ class CachedFunc(Generic[P, R]):
         different script threads can wait for the same result. A failed or cancelled
         owner wakes waiters, and one waiter retries the computation.
         """
-        # A waiter whose owner fails can wait again. Sum those waits into one
-        # observation so the histogram counts calls, not wakeups.
-        wait_time: float | None = None
-        try:
-            while True:
-                compute_future, is_owner, invalidation_token = (
-                    cache.claim_async_compute(value_key)
-                )
-                if not is_owner:
-                    # Shield the shared signal because cancelling one task otherwise
-                    # propagates through wrap_future and cancels it for the owner and all
-                    # other waiters.
-                    wait_start = time.perf_counter()
-                    try:
-                        await asyncio.shield(asyncio.wrap_future(compute_future))
-                    finally:
-                        wait_time = (wait_time or 0.0) + (
-                            time.perf_counter() - wait_start
-                        )
-                    try:
-                        cached_result = cache.read_result(value_key)
-                    except CacheKeyNotFoundError:
-                        # The owner failed, was cancelled, or its result was cleared.
-                        # Compete to become the owner of the retry.
-                        continue
-                    self._metrics.record_hit()
+        while True:
+            compute_future, is_owner, invalidation_token = cache.claim_async_compute(
+                value_key
+            )
+            if not is_owner:
+                # Shield the shared signal because cancelling one task otherwise
+                # propagates through wrap_future and cancels it for the owner and all
+                # other waiters.
+                call_timer.begin_wait()
+                await asyncio.shield(asyncio.wrap_future(compute_future))
+                call_timer.end_wait()
+                try:
+                    cached_result = cache.read_result(value_key)
+                except CacheKeyNotFoundError:
+                    # The owner failed, was cancelled, or its result was cleared.
+                    # Compete to become the owner of the retry.
+                    continue
+                call_timer.record_hit()
+                return self._handle_cache_hit(cached_result)
+
+            try:
+                # A result may have been stored after the first optimistic read but
+                # before this caller registered as the owner.
+                try:
+                    cached_result = cache.read_result(value_key)
+                except CacheKeyNotFoundError:
+                    pass
+                else:
+                    call_timer.record_hit()
                     return self._handle_cache_hit(cached_result)
 
-                try:
-                    # A result may have been stored after the first optimistic read but
-                    # before this caller registered as the owner.
-                    try:
-                        cached_result = cache.read_result(value_key)
-                    except CacheKeyNotFoundError:
-                        pass
-                    else:
-                        self._metrics.record_hit()
-                        return self._handle_cache_hit(cached_result)
-
-                    # Owners capture their invalidation token atomically with the claim.
-                    if invalidation_token is None:
-                        raise RuntimeError(
-                            "Async computation owner has no invalidation token"
-                        )
-                    self._metrics.record_miss()
-                    compute_start = time.perf_counter()
-                    try:
-                        with self._info.cached_message_replay_ctx.calling_cached_function(
-                            self._info.func
-                        ):
-                            # `is_async` guarantees the call returns a coroutine; cast so
-                            # the type checker allows awaiting it (the wrapper's `R` is the
-                            # coroutine type for an `async def`, not the awaited value type).
-                            computed_value = await cast(
-                                "Any", self._info.func(*func_args, **func_kwargs)
-                            )
-                    finally:
-                        self._metrics.record_compute_duration(
-                            time.perf_counter() - compute_start
-                        )
-
-                    return self._store_computed_value(
-                        cache,
-                        value_key,
-                        computed_value,
-                        invalidation_token=invalidation_token,
+                # Owners capture their invalidation token atomically with the claim.
+                if invalidation_token is None:
+                    raise RuntimeError(
+                        "Async computation owner has no invalidation token"
                     )
+                call_timer.begin_compute()
+                try:
+                    with self._info.cached_message_replay_ctx.calling_cached_function(
+                        self._info.func
+                    ):
+                        # `is_async` guarantees the call returns a coroutine; cast so
+                        # the type checker allows awaiting it (the wrapper's `R` is the
+                        # coroutine type for an `async def`, not the awaited value type).
+                        computed_value = await cast(
+                            "Any", self._info.func(*func_args, **func_kwargs)
+                        )
                 finally:
-                    cache.complete_async_compute(value_key, compute_future)
-        finally:
-            if wait_time is not None:
-                self._metrics.record_wait_duration(wait_time)
+                    call_timer.end_compute()
+
+                return self._store_computed_value(
+                    cache,
+                    value_key,
+                    computed_value,
+                    invalidation_token=invalidation_token,
+                )
+            finally:
+                cache.complete_async_compute(value_key, compute_future)
 
     def _maybe_trigger_background_refresh(
         self,

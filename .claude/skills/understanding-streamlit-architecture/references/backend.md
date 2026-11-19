@@ -178,6 +178,8 @@ register_widget(
 - No serialization (stores objects directly)
 - Cleanup hooks on cache clear
 
+Cached calls report to telemetry through a `CacheCallTimer`, so changes to how `CachedFunc` looks up or computes values must keep its hooks. See [telemetry.md](telemetry.md#cache-totals).
+
 Replay of a cached element or block message copies its stored `agent_props` only when the replaying session is recording. The stored value is the description from the session that filled the entry. Media recorded with an element is registered again on replay. A replayed description whose `data` has a `url` registers its Arrow copy again from the element's payload, under the replayed element's delta path; the entry stores no copy of its own.
 
 ## Web server (`lib/streamlit/web/server/`)

@@ -22,7 +22,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Commands | `commands` | Tracked `st.*` commands in call order: name, arguments (keyword, type name, position, and `len:<n>` or `val:<bool>` metadata) and time. See [Command tracking](#command-tracking). |
 | Run timing | `exec_time`, `prep_time` | Microseconds. See [Run timing](#run-timing). |
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
-| Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits, and the time spent computing on misses, waiting for another caller's computation, and on other cache overhead. Defined in the proto but not filled yet. |
+| Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits, and the time spent computing on misses, waiting for another caller's computation, and on other cache overhead. See [Cache totals](#cache-totals). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
 | Errors | `uncaught_exception` | The exception type name, with a suffix only from fixed categories (see `format_uncaught_exception`). |
@@ -66,7 +66,8 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
   - Command times from parallel fragment workers and other attached threads are summed, so they can exceed the wall-clock time they overlap.
   - Commands past the tracking limits aren't listed, and a command that raises anything other than a rerun request is listed with time 0. Both stay inside `exec_time` and aren't subtracted, so their time counts as user code.
   - Work that happens inside a command counts as command time, for example a lazy Snowpark DataFrame passed to `st.dataframe` runs its query inside the command, and `st.write_stream` consumes its generator.
-  - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Queries count as user code too: `st.connection` times only creating or fetching the connection.
+  - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Their times are reported separately in `cache_usage` and leave out listed command time, so subtracting them as well leaves the time spent outside the cache. Like command times, cache times from concurrent threads are summed.
+  - Queries count as user code too: `st.connection` times only creating or fetching the connection.
 
 `totalLoadTime` is an optimistic lower bound on what the user waits for. It leaves out loading the page and JavaScript, opening the WebSocket, the time between a widget interaction and the run starting, and drawing after the `PageProfile` message arrives.
 
@@ -77,9 +78,23 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 - Builds a `Command` from the function name and arguments. Commands defined outside Streamlit are named `external:<module>:<name>`. Custom components are named `component:<name>` (v1) and `component_v2:<name>` (v2).
 - Adds it with `SharedRunState.track_command`, which enforces `_MAX_TRACKED_COMMANDS` (400 per run) and `_MAX_TRACKED_PER_COMMAND` (25 per name). Calls past the per-name limit increment an internal counter that isn't sent, and are left out of `commands`. Once `commands` holds 400 entries, further calls are ignored.
 - Sets `command_tracking_deactivated` in `ThreadState` while the command runs, so commands nested inside it aren't tracked. Threads attached with `add_script_run_ctx` and parallel fragment workers start with tracking on, so a helper thread's top-level commands are tracked.
+- Sets `in_listed_command` in `ThreadState` while a listed command runs, and reports the command's time to the run's cache totals when it ends. See [Cache totals](#cache-totals).
 - Swallows any telemetry error, logging it at debug level, so telemetry can't break the app.
 
-`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state in place at the start of each run, before any parallel fragment workers start.
+`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `cache_stats` with a new `RunCacheStats`, so a cached call still running from the previous run finishes into that run's totals.
+
+## Cache totals
+
+`CachedFunc` (`lib/streamlit/runtime/caching/cache_utils.py`) times each `st.cache_data` and `st.cache_resource` call with a `CacheCallTimer` (`cache_call_timer.py`). The timer updates the function's server metrics on every call. It adds the call to the run's `cache_usage` only if no other recorded time already covers it. A new lookup or compute path in `CachedFunc` needs the same timer calls, or its calls are missing from both. The module docstring lists the rules. In short, a call is recorded when it:
+
+- Runs on a thread attached to a run that gathers usage stats. Background refreshes and `st.App` lifespan tasks run outside a script run, so cached calls made from them aren't recorded. A refresh itself isn't a lookup: the call that finds the stale value counts as a stale hit, and the refresh's compute time appears only in the server metrics.
+- Is the outermost cached call. A nested call's time is in the outer call's compute time.
+- Isn't inside a listed command, such as the `st.cache_resource` inside `st.connection`. A cached call inside a command past the tracking limits is recorded, because that command's time isn't listed.
+- Finishes before the page profile is built.
+
+A hit returned a stored value, including one another caller computed while this call waited. A miss ran the function. `cache_lookups` in the server metrics uses the same rule. The two differ only in which calls they cover: the server metrics count every call over the life of the process.
+
+Each thread adds to its own `ThreadCacheStats` without a lock, which keeps a cache hit's added cost to one or two microseconds. A thread takes `RunCacheStats`'s lock only once per run, to register. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
 
 ## Server metrics
 

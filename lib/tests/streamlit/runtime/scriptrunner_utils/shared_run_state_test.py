@@ -34,9 +34,13 @@ def test_reset_clears_all_fields() -> None:
     shared.form_ids_this_run.check_and_add("form")
     shared.new_fragment_ids.check_and_add("fragment")
     shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
+    cache_stats = shared.cache_stats
+    cache_stats.current_thread_stats().cache_data.calls = 1
 
     shared.reset()
 
+    assert shared.cache_stats is not cache_stats
+    assert shared.cache_stats.totals()[0].calls == 0
     assert "widget" not in shared.widget_ids_this_run
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run
@@ -66,9 +70,12 @@ def test_track_command_appends_and_counts() -> None:
 def test_track_command_respects_per_command_cap() -> None:
     """Past ``max_per_command``, a name is still counted but no longer appended."""
     shared = SharedRunState()
-    for _ in range(5):
+    appended = [
         shared.track_command(_make_command("markdown"), max_per_command=2, max_total=10)
+        for _ in range(5)
+    ]
 
+    assert appended == [True, True, False, False, False]
     assert shared.tracked_commands_count == 2
     assert all(cmd.name == "markdown" for cmd in shared.tracked_commands)
     assert shared.command_count_for("markdown") == 5
@@ -77,9 +84,12 @@ def test_track_command_respects_per_command_cap() -> None:
 def test_track_command_respects_total_cap() -> None:
     """``track_command()`` drops commands without counting them once the list is full."""
     shared = SharedRunState()
-    for name in ["markdown", "button", "markdown", "text"]:
+    appended = [
         shared.track_command(_make_command(name), max_per_command=5, max_total=2)
+        for name in ["markdown", "button", "markdown", "text"]
+    ]
 
+    assert appended == [True, True, False, False]
     assert [cmd.name for cmd in shared.tracked_commands] == ["markdown", "button"]
     assert shared.command_count_for("markdown") == 1
     assert shared.command_count_for("button") == 1
