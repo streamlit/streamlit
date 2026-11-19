@@ -387,6 +387,16 @@ describe("Markdown wrap", () => {
       elementType: MarkdownProto.Type.NATIVE,
       body: "***",
     },
+    {
+      name: "native - - -",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "- - -",
+    },
+    {
+      name: "native * * *",
+      elementType: MarkdownProto.Type.NATIVE,
+      body: "* * *",
+    },
   ])(
     "keeps a zero bottom margin for a standalone $name",
     ({ elementType, body }) => {
@@ -430,6 +440,23 @@ describe("Markdown wrap", () => {
     const container = screen.getByTestId("stMarkdownContainer")
     expect(container.querySelector("hr")).toBeNull()
     expect(container).toHaveStyle("white-space: nowrap")
+  })
+
+  it("keeps the negative bottom margin when inline help turns a rule into a paragraph", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          help: "Details",
+        })}
+      />
+    )
+
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(screen.getByTestId("stMarkdownContainer")).marginBottom
+    )
+    expect(marginBottom).toBeLessThan(0)
   })
 
   it("keeps the negative bottom margin when a rule is part of a longer markdown body", () => {

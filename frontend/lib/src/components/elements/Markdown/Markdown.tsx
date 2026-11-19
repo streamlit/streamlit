@@ -36,13 +36,16 @@ export interface MarkdownProps {
 // Does not match: :blue-badge[Label] text, :blue-badge[Label] :grey-badge[Label]
 const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
 
-// A markdown body that is only a solid `---`, `***`, or `___` rule.
-const STANDALONE_HORIZONTAL_RULE_REGEX = /^(?:-{3,}|\*{3,}|_{3,})$/
+// A markdown body that is only a thematic break of three or more `-`, `*`, or
+// `_`, optionally separated by spaces or tabs (e.g. `---` or `* * *`).
+const STANDALONE_HORIZONTAL_RULE_REGEX =
+  /^(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/
 
 /**
  * True when the element renders only a horizontal rule: `st.divider()` or a
- * markdown body that is just a solid rule (e.g. `st.write("---")`). With
- * `wrap=False` a markdown body stays inline-only, so it is never a divider.
+ * markdown body that is just a thematic break (e.g. `st.write("---")`). With
+ * `wrap=False` a markdown body stays inline-only, and with `help` the inline
+ * help directive turns the body into a paragraph, so neither is a divider.
  */
 function isStandaloneDivider(
   element: MarkdownProto,
@@ -52,6 +55,7 @@ function isStandaloneDivider(
     element.elementType === MarkdownProto.Type.DIVIDER ||
     (element.elementType === MarkdownProto.Type.NATIVE &&
       element.wrap !== false &&
+      !element.help &&
       STANDALONE_HORIZONTAL_RULE_REGEX.test(trimmedBody))
   )
 }
