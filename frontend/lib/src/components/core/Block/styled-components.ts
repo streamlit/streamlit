@@ -345,7 +345,7 @@ export const StyledColumn = styled.div<StyledColumnProps>(
     const dividerOffset = `calc(-1 * (${halfGap} + ${borderWidth} / 2${
       showBorder ? ` + ${borderWidth}` : ""
     }))`
-    const dividerBleed = showBorder ? `calc(-1 * ${borderWidth})` : 0
+    const dividerVerticalOffset = showBorder ? `calc(-1 * ${borderWidth})` : 0
 
     // Columns don't shift themselves for vertical alignment: the row stretches
     // each column (so bordered columns match), and ContainerContentsWrapper
@@ -360,11 +360,12 @@ export const StyledColumn = styled.div<StyledColumnProps>(
         "&:not(:first-of-type)::before": {
           content: '""',
           position: "absolute",
-          top: dividerBleed,
-          bottom: dividerBleed,
+          top: dividerVerticalOffset,
+          bottom: dividerVerticalOffset,
           left: dividerOffset,
-          width: borderWidth,
-          backgroundColor: theme.colors.borderColor,
+          // A border, unlike a background, stays visible in forced-colors mode.
+          width: 0,
+          borderLeft: `${borderWidth} solid ${theme.colors.borderColor}`,
           pointerEvents: "none",
         },
       }),

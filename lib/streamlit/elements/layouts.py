@@ -776,10 +776,11 @@ class LayoutsMixin:
             Whether to show a vertical line between adjacent columns. If this
             is ``False`` (default), no lines are shown. If this is ``True``, a
             line in the theme's border color is shown between each pair of
-            columns. The lines are hidden when ``wrap=True`` and the columns
-            stack on a narrow screen. You can combine ``divider`` with
+            columns. The lines are hidden when the columns stack: on a narrow
+            screen when ``wrap=True``, and in print when the row contains a
+            chart, dataframe, or table. You can combine ``divider`` with
             ``border``. Unlike ``divider`` in ``st.header``, this parameter
-            doesn't accept a color.
+            only accepts a boolean, and the line always uses the border color.
 
         width : "stretch" or int
             The width of the column group. This can be one of the following:
@@ -920,7 +921,7 @@ class LayoutsMixin:
 
         **Example 6: Add vertical dividers**
 
-        Draw rules between columns without boxing each one.
+        Show vertical lines between columns without a border around each one.
 
         >>> import streamlit as st
         >>>

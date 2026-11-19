@@ -465,7 +465,7 @@ def test_columns_with_divider(themed_app: Page, assert_snapshot: ImageCompareFun
 
 
 def test_columns_divider_with_no_gap(app: Page, assert_snapshot: ImageCompareFunction):
-    """gap=None still draws a rule on the shared edge."""
+    """With gap=None, the divider still appears on the shared edge."""
     container = get_element_by_key(app, "columns_divider_gap_none")
     column_group = container.get_by_test_id("stHorizontalBlock")
     expect(column_group.get_by_test_id("stColumn")).to_have_count(3)

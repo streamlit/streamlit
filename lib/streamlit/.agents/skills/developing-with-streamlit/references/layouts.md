@@ -70,8 +70,9 @@ Don't use too many columns for content layouts—they get cramped. By default
 (`wrap=True`), columns stack vertically when the viewport is at most `640px`
 wide. Pass `wrap=False` to keep columns in one row: they shrink to a usable
 minimum width, then the column group scrolls horizontally instead of stacking.
-Use `divider=True` to draw vertical rules between neighboring columns without
-boxing each one; `border=True` still draws a full card around every column.
+Use `divider=True` to draw vertical lines between neighboring columns without a
+border around each one; `border=True` still draws a full card around every
+column.
 
 ```python
 # GOOD

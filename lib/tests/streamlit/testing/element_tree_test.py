@@ -270,7 +270,9 @@ def test_columns():
     assert not at.columns[0].show_divider
 
 
-def test_columns_divider():
+def test_columns_divider() -> None:
+    """``Column.show_divider`` reflects ``st.columns(..., divider=True)``."""
+
     def script():
         import streamlit as st
 

@@ -4029,7 +4029,7 @@ class Column(Block):
     proto: BlockProto.Column = field(repr=False)
     weight: float
     gap: str | None
-    # `divider` is already the accessor for nested ``st.divider`` elements.
+    # Named show_divider because Block.divider already returns nested st.divider elements.
     show_divider: bool
 
     # Mapping from GapSize enum to string

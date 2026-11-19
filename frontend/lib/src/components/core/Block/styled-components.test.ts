@@ -513,7 +513,7 @@ describe("StyledColumn divider", () => {
     )
 
     expect(css).toContain(":not(:first-of-type)::before")
-    expect(css).toContain("background-color:")
+    expect(css).toMatch(/border-left:1px solid/)
     expect(css).toContain("top:0")
   })
 

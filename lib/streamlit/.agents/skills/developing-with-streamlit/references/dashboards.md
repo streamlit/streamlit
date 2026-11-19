@@ -22,12 +22,6 @@ st.metric("Revenue", "$1.2M", "+12%", border=True)
 for col in st.columns(3, border=True):
     with col:
         st.metric("Users", "1.2k")
-
-# Split without boxing each column
-users, revenue, conversion = st.columns(3, divider=True)
-users.metric("Users", "1.2k")
-revenue.metric("Revenue", "$1.2M")
-conversion.metric("Conversion", "3.4%")
 ```
 
 ## Card labels
