@@ -88,11 +88,13 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 `CachedFunc` (`lib/streamlit/runtime/caching/cache_utils.py`) times each `st.cache_data` and `st.cache_resource` call with a `CacheCallTimer` (`cache_call_timer.py`). The timer updates the function's server metrics on every call. It adds the call to the run's `cache_usage` only if no other recorded time already covers it. The module docstring lists the rules. In short, a call is recorded when it:
 
 - Runs on a thread attached to a run that gathers usage stats. Background refreshes and `st.App` lifespan tasks aren't recorded.
-- Is the outermost cached call. A nested call's time is in the outer call's compute time.
+- Is the outermost cached call. A nested call's time is in the outer call's time. That includes calls on threads the outer function attaches with `add_script_run_ctx`, and calls from a `hash_funcs` function while the outer call hashes its arguments.
 - Isn't inside a listed command, such as the `st.cache_resource` inside `st.connection`. A cached call inside a command past the tracking limits is recorded, because that command's time isn't listed.
 - Finishes before the page profile is built.
 
 A hit returned a stored value, including one another caller computed while this call waited. A miss ran the function. `cache_lookups` in the server metrics uses the same rule. The two differ only in which calls they cover: the server metrics count every call over the life of the process.
+
+A recorded call's times leave out listed commands that run during it, including commands on threads the cached function attaches, until its computation ends. Concurrent async cached calls on one thread's event loop overlap, so `ThreadCacheStats` scales each group of overlapping calls down to the wall-clock time the group spans, minus listed command time. Times from different threads are still summed.
 
 Each thread adds to its own `ThreadCacheStats` without a lock, which keeps a cache hit's added cost to one or two microseconds. A thread takes `RunCacheStats`'s lock only once per run, to register. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
 
