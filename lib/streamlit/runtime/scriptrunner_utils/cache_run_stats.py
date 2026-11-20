@@ -67,7 +67,13 @@ class RunCacheTotals:
 
 
 class _OverlapGroup:
-    """The totals of a group of overlapping calls on one thread, and its span."""
+    """Totals of async cached calls that overlap on one thread's event loop.
+
+    Overlapping calls each count the wall-clock time they share, so their summed
+    times can exceed the time that passed. The group holds the finished calls'
+    totals until its last call finishes, then ``add_scaled_to`` scales them down
+    to the group's span.
+    """
 
     __slots__ = (
         "cache_data",
@@ -81,10 +87,10 @@ class _OverlapGroup:
     def __init__(self, start: float, command_start: float) -> None:
         self.cache_data = CacheTotals()
         self.cache_resource = CacheTotals()
-        # start and command_start: the perf_counter time and the thread's listed
-        # command time when the group's first call started. end and command_end:
-        # the same when its last call finished; end is None while the group is
-        # open.
+        # The span runs from the group's first call starting to its last call
+        # finishing. start and end are perf_counter times; command_start and
+        # command_end are the thread's listed command time at those points. end is
+        # None while the group is open.
         self.start = start
         self.command_start = command_start
         self.end: float | None = None
@@ -100,7 +106,8 @@ class _OverlapGroup:
     ) -> None:
         """Add the group's totals to ``cache_data`` and ``cache_resource``, scaled
         down if they exceed its span: its wall-clock time minus listed command
-        time.
+        time. Command time is left out of the span because the calls' own times
+        already leave it out.
 
         For a group that is still open, ``now`` and ``command_time`` mark the
         end of its span so far.
@@ -143,10 +150,11 @@ class ThreadCacheStats:
         # cached call.
         self.tracked_command_time = 0.0
         self._open_calls = 0
-        # Open calls that aren't waiting for another caller or computing.
+        # Open calls running the cache's own code (hashing, reading the result,
+        # replaying elements), rather than waiting or running the cached function.
         self._calls_in_cache_code = 0
-        # When the first of the thread's open calls started, and the listed
-        # command time then.
+        # When the current open calls began, and the listed command time then. An
+        # overlap group starts here if a second call opens.
         self._span_start = 0.0
         self._span_command_start = 0.0
         # The current group of overlapping calls, or None while calls run one
@@ -159,19 +167,24 @@ class ThreadCacheStats:
 
     @property
     def is_in_cache_code(self) -> bool:
-        """Whether a recorded call is hashing, reading, or replaying on this thread.
+        """Whether an open call on this thread is running the cache's own code:
+        hashing, reading the result, or replaying elements.
 
-        Those steps don't yield to the event loop, so a cached call that starts
-        meanwhile is nested inside that call, for example in a ``hash_funcs``
+        That code never yields to the event loop, so a cached call that starts
+        meanwhile must come from inside it, for example from a ``hash_funcs``
         function.
         """
         return self._calls_in_cache_code > 0
 
     def open_call(self, now: float) -> None:
         if self._open_calls == 0:
+            # Remember when this call started, in case another opens before it
+            # finishes.
             self._span_start = now
             self._span_command_start = self.tracked_command_time
         elif self._overlap is None:
+            # A second call opened while the first is still open: start a group
+            # that spans back to when the first call started.
             self._overlap = _OverlapGroup(self._span_start, self._span_command_start)
         self._open_calls += 1
         self._calls_in_cache_code += 1
@@ -181,9 +194,9 @@ class ThreadCacheStats:
         self._open_calls -= 1
         if self._open_calls == 0 and self._overlap is not None:
             group, self._overlap = self._overlap, None
-            # Set the group's end before adding it, so a page profile reading the
-            # group at the same time scales it to this span, not to the thread's
-            # later calls.
+            # Set the end before adding the totals: a page profile built on
+            # another thread may already hold this group, and must scale it to
+            # this span rather than to its own `now`.
             group.command_end = self.tracked_command_time
             group.end = now
             group.add_scaled_to(
@@ -194,18 +207,20 @@ class ThreadCacheStats:
             )
 
     def leave_cache_code(self) -> None:
-        """Mark that an open call started waiting or computing."""
+        """Mark that an open call left the cache's own code to wait or run the
+        cached function.
+        """
         self._calls_in_cache_code -= 1
 
     def enter_cache_code(self) -> None:
-        """Mark that an open call stopped waiting or computing."""
+        """Mark that an open call returned to the cache's own code."""
         self._calls_in_cache_code += 1
 
     def totals_for_finished_call(self, totals: CacheTotals) -> CacheTotals:
-        """Return the totals a finishing call adds to.
+        """Return where a finishing call adds its counts and times.
 
-        That is the open overlap group's totals of the same type, or ``totals``
-        itself when no calls overlap.
+        That is the open overlap group's totals of the same type, which the group
+        scales when it closes, or ``totals`` when no calls overlap.
         """
         group = self._overlap
         if group is None:
@@ -221,8 +236,9 @@ class ThreadCacheStats:
         """
         cache_data.add(self.cache_data)
         cache_resource.add(self.cache_resource)
-        # Read after the totals above, so a group that closes meanwhile is left
-        # out rather than counted twice.
+        # Read the open group after the thread's totals. If the owning thread
+        # closes the group in between, its totals are missed rather than counted
+        # twice.
         group = self._overlap
         if group is not None:
             group.add_scaled_to(
@@ -256,7 +272,9 @@ class RunCacheStats:
         """Record the time of a listed command that ran on the calling thread.
 
         Only counts while a recorded cached call is running on the thread, so
-        the call's cache times leave it out. Returns whether it was counted.
+        the call's cache times leave it out. Returns False otherwise, so the
+        caller can report the time to an attached thread's ``CacheComputeScope``
+        instead.
         """
         stats: ThreadCacheStats | None = getattr(self._local, "stats", None)
         if stats is not None and stats.is_in_call:
@@ -275,6 +293,7 @@ class RunCacheStats:
             threads = list(self._threads)
         totals = RunCacheTotals()
         for stats in threads:
+            # Count only threads that added a finished call.
             calls_before = totals.cache_data.calls + totals.cache_resource.calls
             stats.add_to(totals.cache_data, totals.cache_resource, now)
             if totals.cache_data.calls + totals.cache_resource.calls > calls_before:

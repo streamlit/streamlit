@@ -94,7 +94,9 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 
 A hit returned a stored value, including one another caller computed while this call waited. A miss ran the function. `cache_lookups` in the server metrics uses the same rule. The two differ only in which calls they cover: the server metrics count every call over the life of the process.
 
-A recorded call's times leave out listed commands that run during it, including commands on threads the cached function attaches, until its computation ends. Concurrent async cached calls on one thread's event loop overlap, so `ThreadCacheStats` scales each group of overlapping calls down to the wall-clock time the group spans, minus listed command time.
+A recorded call's times leave out listed commands that run during it. That includes commands on threads the cached function attaches, while the function is still computing.
+
+Async cached calls awaited concurrently on one event loop each count the wall-clock time they share. `ThreadCacheStats` groups overlapping calls and scales each group's times down to the wall-clock time it spans, minus listed command time, so the sum can't exceed the time that passed.
 
 Times from different threads are still summed. `cache_usage.threads` counts the threads that finished a recorded call. When it's above 1, the times can exceed wall-clock time, so treat the run as concurrent instead of subtracting them from `exec_time`.
 

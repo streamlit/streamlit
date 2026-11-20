@@ -92,12 +92,14 @@ _fragment_callback_warning_suppressed: contextvars.ContextVar[bool] = (
 
 
 class CacheComputeScope:
-    """A cached function's computation, shared with the threads it attaches.
+    """State shared between a cached function's computation and the threads it
+    attaches.
 
-    ``is_active`` turns False when the computation ends, so a thread attached
-    during it stops treating its own cached calls as part of that computation.
-    It also collects the listed command time those threads report, which the
-    cached call subtracts from its compute time.
+    - ``is_active`` is True until the computation ends. Until then, the attached
+      threads' cached calls count as part of the computation and aren't
+      recorded.
+    - It collects the listed command time those threads report, which the
+      cached call subtracts from its compute time.
     """
 
     __slots__ = ("_command_time", "_lock", "is_active")
@@ -110,8 +112,10 @@ class CacheComputeScope:
         self._lock = threading.Lock()
 
     def add_command_time(self, seconds: float) -> None:
-        """Add a listed command's time from an attached thread, if the
-        computation hasn't ended.
+        """Add a listed command's time from an attached thread.
+
+        Ignored once the computation ends, because the cached call has already
+        read the total.
         """
         with self._lock:
             if self.is_active:

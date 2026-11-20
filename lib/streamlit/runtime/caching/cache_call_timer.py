@@ -35,8 +35,9 @@ other recorded time already covers it:
   - while the outer call hashes its arguments or reads its result, such as
     from a ``hash_funcs`` function.
 
-  A thread that calls ``add_script_run_ctx()`` on itself doesn't inherit the
-  outer call's state, so its calls are recorded.
+  Exception: a thread started without ``add_script_run_ctx`` that later
+  attaches itself doesn't inherit the outer call's state, so its calls are
+  recorded even during the outer computation.
 - It isn't inside a command listed in the page profile, such as the
   ``st.cache_resource`` call inside ``st.connection``, whose command time covers
   it. A command past the listing limits in ``metrics_util.py`` isn't listed, so
@@ -198,8 +199,8 @@ class CacheCallTimer:
             totals.waits += 1
         now = time.perf_counter()
         command_time = thread_stats.tracked_command_time - self._command_time_at_start
-        # Attached threads' commands aren't in this thread's command time, so only
-        # compute time leaves them out, not the overhead below.
+        # Attached threads' commands ran during the computation, so only compute
+        # time contains them. The overhead below never included them.
         totals.compute_time += max(
             self._compute_time
             - self._command_time_in_compute
@@ -239,8 +240,8 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
         return CacheCallTimer(metrics)
     if thread_state.in_listed_command:
         return CacheCallTimer(metrics)
-    # Nested inside another cached call's computation, possibly on a thread it
-    # attached.
+    # On a thread attached during another cached call's computation. Nesting on
+    # the same thread is caught by in_cached_function above.
     if thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
@@ -265,8 +266,9 @@ def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, 
     - their cached calls are part of this computation, not recorded separately;
     - their listed commands' time comes out of ``call_timer``'s compute time.
 
-    A context that is already marked keeps the outer computation's mark. A
-    thread without script-run thread state has nothing to mark.
+    A context that is already marked keeps the outer mark, so threads that a
+    nested cached function attaches still report to the outermost recorded
+    call. A thread without script-run thread state has nothing to mark.
     """
     try:
         thread_state = ThreadState.get()
