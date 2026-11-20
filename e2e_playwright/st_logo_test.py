@@ -182,6 +182,23 @@ def test_logo_w_sidebar_and_nav(
     assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
 
 
+def test_wide_header_logo_stays_within_width_cap(app: Page) -> None:
+    """Wide image with no icon_image is capped in the header next to top nav."""
+    select_subtest(app, "wide_logo_header_no_icon_w_nav_subtest")
+
+    logo = app.get_by_test_id("stHeaderLogo")
+    expect(logo).to_be_visible()
+    expect(app.get_by_test_id("stTopNav")).to_be_visible()
+    expect(app.get_by_test_id("stHeaderLogoContainer")).to_have_css(
+        "max-width", "200px"
+    )
+    expect(logo).to_have_css("object-fit", "contain")
+
+    box = logo.bounding_box()
+    assert box is not None
+    assert box["width"] <= 200
+
+
 def test_material_icon_logo(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:

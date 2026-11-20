@@ -84,7 +84,8 @@ def emoji_logo_subtest():
     st.sidebar.write("Hi")
 
 
-# NOTE: Must be run last, since st.navigation will linger in all other tests.
+# NOTE: Navigation subtests must run last; st.navigation lingers if you
+# switch to another subtest in the same session.
 def logo_w_sidebar_and_nav_subtest():
     st.logo(
         STATIC_ASSETS_DIR / "streamlit-logo.png",
@@ -97,6 +98,17 @@ def logo_w_sidebar_and_nav_subtest():
             st.Page("multipage_apps_v2/page_2.py"),
             st.Page("multipage_apps_v2/page_3.py"),
         ]
+    )
+
+
+def wide_logo_header_no_icon_w_nav_subtest():
+    st.logo(STATIC_ASSETS_DIR / "streamlit-logo.png", size=40)
+    st.navigation(
+        [
+            st.Page("multipage_apps_v2/page_2.py"),
+            st.Page("multipage_apps_v2/page_3.py"),
+        ],
+        position="top",
     )
 
 
