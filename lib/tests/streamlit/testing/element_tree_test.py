@@ -1151,6 +1151,9 @@ def test_divider():
         import streamlit as st
 
         st.divider()
+        st.divider(gap=None)
+        st.divider(gap=12)
+        st.divider(gap="large")
         """,
     )
     sr = script.run()
@@ -1158,6 +1161,10 @@ def test_divider():
     assert sr.divider
     assert sr.divider[0].type == "divider"
     assert sr.divider[0].value == MARKDOWN_HORIZONTAL_RULE_EXPRESSION
+    assert sr.divider[0].gap == "medium"
+    assert sr.divider[1].gap is None
+    assert sr.divider[2].gap == 12
+    assert sr.divider[3].gap == "large"
 
     repr(sr.divider[0])
 

@@ -14,11 +14,18 @@
 
 """Divider unit test."""
 
+from typing import Any
+
 import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+    StreamlitValueOutOfRangeError,
+)
+from streamlit.proto.GapSize_pb2 import GapSize
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -32,6 +39,9 @@ class DividerTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element
         assert c.markdown.body == "---"
         assert not c.markdown.HasField("wrap")
+        assert c.markdown.HasField("gap_config")
+        assert c.markdown.gap_config.WhichOneof("gap_spec") == "gap_size"
+        assert c.markdown.gap_config.gap_size == GapSize.MEDIUM
 
     @parameterized.expand(
         [
@@ -67,3 +77,57 @@ class DividerTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an exception."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.divider(width=width_value)
+
+    @parameterized.expand(
+        [
+            ("xxsmall", GapSize.XXSMALL),
+            ("xsmall", GapSize.XSMALL),
+            ("small", GapSize.SMALL),
+            ("medium", GapSize.MEDIUM),
+            ("large", GapSize.LARGE),
+            ("xlarge", GapSize.XLARGE),
+            ("xxlarge", GapSize.XXLARGE),
+            ("Large", GapSize.LARGE),
+            (None, GapSize.NONE),
+        ]
+    )
+    def test_divider_gap_size(self, gap: str | None, expected: GapSize.ValueType):
+        """Named sizes, mixed case, and None map to GapSize."""
+        st.divider(gap=gap)  # type: ignore[arg-type]
+        c = self.get_delta_from_queue().new_element
+        assert c.markdown.gap_config.WhichOneof("gap_spec") == "gap_size"
+        assert c.markdown.gap_config.gap_size == expected
+
+    @parameterized.expand([(0,), (24,)])
+    def test_divider_pixel_gap(self, gap: int):
+        """Non-negative integer gaps map to pixel_gap."""
+        st.divider(gap=gap)
+        c = self.get_delta_from_queue().new_element
+        assert c.markdown.gap_config.WhichOneof("gap_spec") == "pixel_gap"
+        assert c.markdown.gap_config.pixel_gap == gap
+
+    @parameterized.expand(
+        [
+            ("huge", StreamlitValueError),
+            (-1, StreamlitValueError),
+            (1.5, StreamlitValueError),
+            (True, StreamlitValueError),
+            (2**32, StreamlitValueOutOfRangeError),
+        ]
+    )
+    def test_divider_invalid_gap(self, gap: Any, expected_error: type[Exception]):
+        """Invalid gap values raise before anything is enqueued."""
+        with pytest.raises(expected_error):
+            st.divider(gap=gap)
+        assert self.get_all_deltas_from_queue() == []
+
+    def test_divider_width_and_gap(self):
+        """Width and gap can be set together."""
+        st.divider(gap="large", width=300)
+        c = self.get_delta_from_queue().new_element
+        assert c.markdown.gap_config.gap_size == GapSize.LARGE
+        assert (
+            c.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.PIXEL_WIDTH.value
+        )
+        assert c.width_config.pixel_width == 300

@@ -18,10 +18,12 @@ from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib import agent_spec
 from streamlit.elements.lib.layout_utils import (
+    Gap,
     TextAlignment,
     Width,
     WidthWithoutContent,
     create_layout_config,
+    get_gap_config,
     validate_wrap,
 )
 from streamlit.errors import StreamlitIncompatibleParametersError
@@ -517,15 +519,39 @@ class MarkdownMixin:
         )
 
     @gather_metrics("divider")
-    def divider(self, *, width: WidthWithoutContent = "stretch") -> DeltaGenerator:
+    def divider(
+        self, *, gap: Gap | None = "medium", width: WidthWithoutContent = "stretch"
+    ) -> DeltaGenerator:
         """Display a horizontal rule.
 
         .. note::
-            You can achieve the same effect with st.write("---") or
-            even just "---" in your script (via magic).
+            ``st.divider(gap=...)`` is the only horizontal rule with
+            configurable spacing. ``st.markdown("---")``,
+            ``st.write("---")``, and ``"---"`` (via magic) keep the default
+            spacing.
 
         Parameters
         ----------
+        gap : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", int, or None
+            The size of the space above and below the divider. This can be one
+            of the following:
+
+            - ``"xxsmall"``: 0.25rem space above and below the divider.
+            - ``"xsmall"``: 0.5rem space above and below the divider.
+            - ``"small"``: 1rem space above and below the divider.
+            - ``"medium"`` (default): 2rem space above and below the divider.
+            - ``"large"``: 4rem space above and below the divider.
+            - ``"xlarge"``: 6rem space above and below the divider.
+            - ``"xxlarge"``: 8rem space above and below the divider.
+            - A non-negative integer specifying the space in pixels. For
+              example, ``gap=20`` sets 20 pixels of space above and below.
+            - ``None``: No extra space above and below the divider.
+
+            This space is added to the gap of the parent container.
+
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
+
         width : "stretch" or int
             The width of the divider element. This can be one of the following:
 
@@ -538,15 +564,26 @@ class MarkdownMixin:
 
         Examples
         --------
+        **Example 1: Display a divider**
+
         >>> import streamlit as st
         >>>
         >>> st.divider()
+
+        **Example 2: Tighten the space around a divider**
+
+        >>> import streamlit as st
+        >>>
+        >>> st.write("Tight")
+        >>> st.divider(gap="xsmall")
+        >>> st.write("Spacing")
 
         """
 
         divider_proto = MarkdownProto()
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
+        divider_proto.gap_config.CopyFrom(get_gap_config(gap))
 
         layout_config = create_layout_config(width=width)
 
@@ -554,7 +591,8 @@ class MarkdownMixin:
             "markdown",
             divider_proto,
             layout_config=layout_config,
-            # st.divider takes no arguments; its body is a rendering detail.
+            # The agent spec omits width, gap, and the body because they only
+            # affect presentation.
             agent_props=agent_spec.element("divider"),
         )
 

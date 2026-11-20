@@ -18,10 +18,13 @@ import { memo, type ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { convertRemToEm } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useLabelTitleTooltip } from "~lib/hooks/useLabelTitleTooltip"
 
 import { StyledMarkdownTitleTarget } from "./styled-components"
@@ -62,6 +65,7 @@ function isStandaloneDivider(
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
+  const theme = useEmotionTheme()
   const {
     allowHtml,
     body,
@@ -96,6 +100,12 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // A sibling help icon (`unsafe_allow_html`) leaves the rule intact.
   const isDivider = isStandaloneRuleBody && !shouldInlineHelpDirective
   const source = shouldInlineHelpDirective ? `${body} :help[]` : body
+  // Use em so named gaps scale with the markdown font, like the default
+  // 2em rule margin.
+  const dividerGap =
+    isDividerElement && element.gapConfig
+      ? convertRemToEm(translateGapWidth(element.gapConfig, theme))
+      : undefined
 
   const streamlitMarkdown = (
     <StreamlitMarkdown
@@ -112,6 +122,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
       truncate={truncate}
       inheritFont={truncate && !isCaption}
       isDivider={isDivider}
+      dividerGap={dividerGap}
     />
   )
   // Title lives on this box (not the outer .stMarkdown) so a sibling help

@@ -510,6 +510,80 @@ describe("Markdown wrap", () => {
     expect(marginBottom).toBeLessThan(0)
   })
 
+  it.each([
+    {
+      name: "GapSize.MEDIUM",
+      gapConfig: { gapSize: streamlit.GapSize.MEDIUM },
+      expected: "2em",
+    },
+    {
+      name: "GapSize.LARGE",
+      gapConfig: { gapSize: streamlit.GapSize.LARGE },
+      expected: "4em",
+    },
+    {
+      name: "pixelGap 10",
+      gapConfig: { pixelGap: 10 },
+      expected: "10px",
+    },
+    {
+      name: "GapSize.NONE",
+      gapConfig: { gapSize: streamlit.GapSize.NONE },
+      expected: "0px",
+    },
+  ])(
+    "applies $name as the hr margin for st.divider",
+    ({ gapConfig, expected }) => {
+      render(
+        <Markdown
+          {...getProps({
+            body: "---",
+            elementType: MarkdownProto.Type.DIVIDER,
+            gapConfig,
+          })}
+        />
+      )
+
+      const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+      expect(hr).not.toBeNull()
+      expect(getComputedStyle(hr as HTMLElement).marginTop).toBe(expected)
+      expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe(expected)
+    }
+  )
+
+  it("defaults the hr margin to 2em when gapConfig is absent", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.DIVIDER,
+        })}
+      />
+    )
+
+    const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+    expect(hr).not.toBeNull()
+    expect(getComputedStyle(hr as HTMLElement).marginTop).toBe("2em")
+    expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe("2em")
+  })
+
+  it("ignores gapConfig on a native markdown rule", () => {
+    render(
+      <Markdown
+        {...getProps({
+          body: "---",
+          elementType: MarkdownProto.Type.NATIVE,
+          gapConfig: { gapSize: streamlit.GapSize.LARGE },
+        })}
+      />
+    )
+
+    const hr = screen.getByTestId("stMarkdownContainer").querySelector("hr")
+    expect(hr).not.toBeNull()
+    expect(getComputedStyle(hr as HTMLElement).marginTop).toBe("2em")
+    expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe("2em")
+  })
+
   it("does not truncate a badge when wrap is unset", () => {
     const props = getProps({
       body: ":blue-badge[Label]",

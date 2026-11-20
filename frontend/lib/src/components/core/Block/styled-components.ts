@@ -21,6 +21,7 @@ import styled, { type CSSObject } from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import {
   STEP_CONNECTOR_BOTTOM_VAR,
   STEP_FOLLOWED_BY_STEP_SELECTOR,
@@ -102,35 +103,6 @@ function printBlockGapMargins(
     "& > :not(:last-child)": {
       marginBottom: gapWidth,
     },
-  }
-}
-
-export function translateGapWidth(
-  gap: streamlit.GapConfig.$Properties | undefined,
-  theme: EmotionTheme
-): string {
-  if (typeof gap?.pixelGap === "number") {
-    return `${gap.pixelGap}px`
-  }
-  switch (gap?.gapSize) {
-    case streamlit.GapSize.XXSMALL:
-      return theme.spacing.twoXS
-    case streamlit.GapSize.XSMALL:
-      return theme.spacing.sm
-    case streamlit.GapSize.SMALL:
-      return theme.spacing.lg
-    case streamlit.GapSize.MEDIUM:
-      return theme.spacing.threeXL
-    case streamlit.GapSize.LARGE:
-      return theme.spacing.fourXL
-    case streamlit.GapSize.XLARGE:
-      return theme.spacing.fiveXL
-    case streamlit.GapSize.XXLARGE:
-      return theme.spacing.sixXL
-    case streamlit.GapSize.NONE:
-      return theme.spacing.none
-    default:
-      return theme.spacing.lg
   }
 }
 

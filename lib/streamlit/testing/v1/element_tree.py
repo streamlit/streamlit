@@ -1598,6 +1598,11 @@ class Divider(Markdown):
         super().__init__(proto, root)
         self.type = "divider"
 
+    @property
+    def gap(self) -> GapValue:
+        """The ``gap`` argument passed to ``st.divider`` (``"medium"`` when omitted)."""
+        return _public_gap_value(self.proto.gap_config)
+
 
 @dataclass(repr=False)
 class Latex(Markdown):
@@ -3906,7 +3911,7 @@ class ChatMessage(Block):
 
 
 # Public gap names. None is the "no gap" value, matching GapSize.NONE.
-_GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
+_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.NONE: None,
     GapSize.XXSMALL: "xxsmall",
     GapSize.XSMALL: "xsmall",
@@ -3917,17 +3922,17 @@ _GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.XXLARGE: "xxlarge",
 }
 
-GridGapValue: TypeAlias = str | int | None
+GapValue: TypeAlias = str | int | None
 GridSizeValue: TypeAlias = int | float | str
 
 
-def _public_gap_value(gap_config: Any) -> GridGapValue:
-    """Rebuild one ``st.grid`` gap argument from a ``GapConfig``."""
+def _public_gap_value(gap_config: Any) -> GapValue:
+    """Rebuild a public ``gap`` argument from a ``GapConfig``."""
     spec = gap_config.WhichOneof("gap_spec")
     if spec == "pixel_gap":
         return int(gap_config.pixel_gap)
     if spec == "gap_size":
-        return _GRID_GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
+        return _GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
     return "small"
 
 
@@ -3972,7 +3977,7 @@ class Grid(Block):
     border: bool
     row_height: int | str
     min_column_width: int | str
-    gap: GridGapValue | tuple[GridGapValue, GridGapValue]
+    gap: GapValue | tuple[GapValue, GapValue]
     vertical_alignment: str
     dense: bool
     width: GridSizeValue
