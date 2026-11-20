@@ -1562,7 +1562,9 @@ def test_create_page_profile_message_reports_unfinished_parallel_fragment() -> N
     assert 0 < entry.exec_time <= metrics_util.to_microseconds(built - run.start)
 
 
-@pytest.mark.parametrize("run_start", [None, 0.0])
+@pytest.mark.parametrize(
+    "run_start", [None, 0.0], ids=["without run_start", "without fragments"]
+)
 def test_create_page_profile_message_leaves_parallel_fragment_usage_unset(
     run_start: float | None,
 ) -> None:

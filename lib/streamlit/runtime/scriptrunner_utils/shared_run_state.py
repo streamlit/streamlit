@@ -52,8 +52,9 @@ class SharedRunState:
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
 
-        # reset() replaces these rather than clearing them, so a cached call
-        # still running from the previous run finishes into that run's totals.
+        # reset() replaces these rather than clearing them, so a cached call or
+        # parallel fragment still running from the previous run finishes into
+        # that run's totals.
         self.cache_stats = RunCacheStats()
         self.parallel_fragments = RunParallelFragmentStats(self.cache_stats)
 

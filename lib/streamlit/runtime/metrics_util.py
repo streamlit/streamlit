@@ -60,8 +60,9 @@ _MAX_TRACKED_COMMANDS: Final = 400
 # commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
-# Parallel fragment runs listed one by one in the page profile. Later runs are
-# added together, since apps can start a fragment per item in a loop.
+# Most parallel fragment runs that get their own page profile entry. Later runs
+# are combined into one overflow entry, which caps the payload for apps that
+# start a fragment per item in a loop.
 _MAX_PARALLEL_FRAGMENT_RUNS: Final = 25
 
 # A mapping to convert from the actual name to preferred/shorter representations
@@ -644,13 +645,13 @@ def _record_command_time(
 ) -> None:
     """Set a tracked command's time, and report it if the command is listed.
 
-    On a parallel fragment's worker thread, the time is added to the fragment's
-    run. The report also lets cached calls leave the command out of their
-    times. It goes:
+    A listed command's time is added to:
 
-    - to the run's cache totals, while a recorded cached call runs on this thread;
-    - otherwise, on a thread attached during a cached computation, to that
-      computation, which subtracts it from its compute time.
+    - the parallel fragment's run, on a parallel fragment's worker thread;
+    - the run's cache totals, while a recorded cached call runs on this thread,
+      so that call leaves the command out of its times;
+    - otherwise, the cached computation that attached this thread, which
+      subtracts it from its compute time.
     """
     command_telemetry.time = to_microseconds(seconds)
     if ctx is None or not is_command_listed:
@@ -917,7 +918,7 @@ def create_page_profile_message(
     """Create and return the full PageProfile ForwardMsg.
 
     ``run_start`` is the ``time.perf_counter()`` value when the script run
-    started. Parallel fragment times are left out without it.
+    started. Without it, the profile has no ``parallel_fragment_usage``.
     """
     msg = ForwardMsg()
     page_profile = msg.page_profile

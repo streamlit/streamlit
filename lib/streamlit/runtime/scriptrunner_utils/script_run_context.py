@@ -175,7 +175,8 @@ class FragmentThreadState:
     # top of the outer call's compute time.
     cache_compute: CacheComputeScope | None = None
     # The parallel fragment run this worker is recording, if usage stats are
-    # on. Its listed commands' times go to the run as well as to commands.
+    # on. The worker's listed commands add their time to it as well as to
+    # PageProfile.commands.
     parallel_fragment_run: ParallelFragmentRun | None = None
 
     @property

@@ -1165,7 +1165,9 @@ def _run_parallel_fragment(
             # top-level commands.
             command_tracking_deactivated=False,
             in_listed_command=False,
-            # Replaces the run a nested fragment's parent worker was recording.
+            # A nested parallel fragment inherits its parent worker's thread
+            # state. Replace the parent's run so this fragment's commands aren't
+            # added to the parent.
             parallel_fragment_run=fragment_run,
         )
         try:

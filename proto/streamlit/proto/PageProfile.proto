@@ -110,22 +110,24 @@ message CacheTypeUsage {
   int64 overhead_time = 7;
 }
 
-// Parallel fragments (st.fragment(parallel=True)) that ran during one script
-// run, with times in microseconds. Each runs on a worker thread alongside the
-// main script, and its listed commands and cached calls are also included in
-// PageProfile.commands and PageProfile.cache_usage. Subtracting the values
-// here from those leaves the main script's share. Threads that a fragment
-// attaches with add_script_run_ctx count toward the main script.
+// Times of the parallel fragments (st.fragment(parallel=True)) in one script
+// run, in microseconds, so analysis can separate them from the main script.
+// Fragment commands and cached calls are also in PageProfile.commands and
+// PageProfile.cache_usage; subtract the values here to get the main script's
+// share. Threads a fragment attaches with add_script_run_ctx count toward the
+// main script.
 message ParallelFragmentUsage {
-  // The first runs to start, in start order, up to _MAX_PARALLEL_FRAGMENT_RUNS
-  // in metrics_util.py.
+  // One entry per run, in the order the runs started, for at most
+  // _MAX_PARALLEL_FRAGMENT_RUNS (in metrics_util.py) runs.
   repeated ParallelFragmentRun runs = 1;
-  // The runs past that limit, added together, with start_time unset. Unset
-  // when every run is listed.
+  // Runs after the first _MAX_PARALLEL_FRAGMENT_RUNS, combined into one entry:
+  // each time is the sum across those runs, and start_time is unset. Unset
+  // when no run went past the limit.
   ParallelFragmentRun overflow = 2;
-  // All runs, including those added into overflow.
+  // Number of parallel fragment runs, including those combined into overflow.
   int64 run_count = 3;
-  // Cached calls made by all runs.
+  // Cached calls made by all runs, including those combined into overflow.
+  // Cache counts appear only here, not per run.
   CacheUsage cache_usage = 4;
   // Time the main script thread spent waiting for runs to finish after the
   // script ended, including when it ended early, for example with st.stop(),
@@ -142,10 +144,11 @@ message ParallelFragmentRun {
   // Wall-clock time from the run's start until it finished, or until the
   // page profile was built if it had not.
   int64 exec_time = 2;
-  // Time of the run's listed commands.
+  // Total time of the run's commands in PageProfile.commands, from the worker
+  // thread only.
   int64 command_time = 3;
-  // CacheTypeUsage times of the run's cached calls, combining both cache
-  // types.
+  // The run's cache compute, wait and overhead times, as defined in
+  // CacheTypeUsage, summed across cache_data and cache_resource.
   int64 cache_compute_time = 4;
   int64 cache_wait_time = 5;
   int64 cache_overhead_time = 6;

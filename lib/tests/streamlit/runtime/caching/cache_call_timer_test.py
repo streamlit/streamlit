@@ -656,7 +656,7 @@ def test_calls_on_threads_attached_inside_a_cached_function_are_not_recorded(
     assert _server_counts(inner) == (0, 2, 2, 0)
 
 
-def test_commands_on_threads_attached_inside_a_cached_function_are_excluded(
+def test_commands_on_threads_attached_inside_a_cached_function_are_excluded_from_compute_time(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A listed command on a thread the cached function attaches and joins is
@@ -695,7 +695,7 @@ def test_commands_on_threads_attached_inside_a_cached_function_are_excluded(
     assert miss_durations.observation_sum == pytest.approx(3.5)
 
 
-def test_commands_on_threads_attached_by_a_nested_cached_function_are_excluded(
+def test_commands_on_threads_attached_by_a_nested_cached_function_count_against_the_outermost_call(
     ctx: ScriptRunContext, clock: FakeClock
 ) -> None:
     """A nested cached function's attached threads belong to the outermost

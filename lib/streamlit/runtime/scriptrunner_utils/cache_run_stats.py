@@ -155,8 +155,9 @@ class ThreadCacheStats:
         # Open calls running the cache's own code (hashing, reading the result,
         # replaying elements), rather than waiting or running the cached function.
         self._calls_in_cache_code = 0
-        # When the current open calls began, and the listed command time then. An
-        # overlap group starts here if a second call opens.
+        # When the first currently open call began, and the thread's listed
+        # command time then. If a second call opens before it closes, the
+        # overlap group starts here.
         self._span_start = 0.0
         self._span_command_start = 0.0
         # The current group of overlapping calls, or None while calls run one
@@ -219,10 +220,9 @@ class ThreadCacheStats:
         self._calls_in_cache_code += 1
 
     def totals_for_finished_call(self, totals: CacheTotals) -> CacheTotals:
-        """Return where a finishing call adds its counts and times.
-
-        That is the open overlap group's totals of the same type, which the group
-        scales when it closes, or ``totals`` when no calls overlap.
+        """Return the totals a finishing call should add to: the open overlap
+        group's totals of the same type, which the group scales when it closes,
+        or ``totals`` if no calls overlap.
         """
         group = self._overlap
         if group is None:

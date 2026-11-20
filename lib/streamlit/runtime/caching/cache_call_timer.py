@@ -165,8 +165,8 @@ class CacheCallTimer:
         self._thread_stats.enter_cache_code()
 
     def exclude_attached_command_time(self, seconds: float) -> None:
-        """Subtract ``seconds`` of listed commands that attached threads ran
-        during the computation from the compute time.
+        """Leave out of the compute time the ``seconds`` that attached threads
+        spent in listed commands during the computation.
         """
         self._attached_command_time += seconds
 
@@ -240,12 +240,14 @@ def start_call(cache_type: CacheType, metrics: FunctionCacheMetrics) -> CacheCal
         return CacheCallTimer(metrics)
     if thread_state.in_listed_command:
         return CacheCallTimer(metrics)
-    # On a thread attached during another cached call's computation. Nesting on
-    # the same thread is caught by in_cached_function above.
+    # Skip calls on a thread attached during another cached call's computation;
+    # that call's compute time covers them. in_cached_function above catches
+    # nesting on the same thread.
     if thread_state.in_cache_compute:
         return CacheCallTimer(metrics)
     thread_stats = ctx.shared.cache_stats.current_thread_stats()
-    # Nested inside another recorded call's hashing or result reading.
+    # Skip calls made while another call on this thread hashes its arguments or
+    # reads its result, such as from hash_funcs; that call's overhead covers them.
     if thread_stats.is_in_cache_code:
         return CacheCallTimer(metrics)
     totals = (

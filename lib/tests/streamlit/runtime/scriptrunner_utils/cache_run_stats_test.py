@@ -182,7 +182,6 @@ def test_closed_group_keeps_its_own_span() -> None:
 
 
 def test_group_whose_commands_fill_its_span_does_not_divide_by_zero() -> None:
-    """A group whose commands took longer than its span doesn't divide by zero."""
     stats = ThreadCacheStats()
     stats.open_call(0.0)
     stats.open_call(0.0)
@@ -195,7 +194,7 @@ def test_group_whose_commands_fill_its_span_does_not_divide_by_zero() -> None:
     assert (cache_data.calls, cache_data.total_time) == (1, 0)
 
 
-def test_cache_code_excludes_waiting_and_computing() -> None:
+def test_is_in_cache_code_is_false_while_waiting_or_computing() -> None:
     """``is_in_cache_code`` is True only while an open call isn't waiting or
     computing.
     """

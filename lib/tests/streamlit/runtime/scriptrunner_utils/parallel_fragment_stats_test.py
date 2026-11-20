@@ -93,13 +93,15 @@ def test_command_time_counts_only_on_the_worker_thread() -> None:
 
 
 def test_deepcopy_shares_the_run() -> None:
-    """add_script_run_ctx deep-copies the thread state, which holds the run."""
+    """Attached threads get the same run, so its worker-thread check can ignore
+    them.
+    """
     run = ParallelFragmentRun(0.0)
 
     assert deepcopy({"run": run})["run"] is run
 
 
-def test_wait_time_adds_up() -> None:
+def test_wait_time_accumulates_across_waits() -> None:
     stats = RunParallelFragmentStats(RunCacheStats())
     stats.add_wait_time(0.25)
     stats.add_wait_time(0.5)

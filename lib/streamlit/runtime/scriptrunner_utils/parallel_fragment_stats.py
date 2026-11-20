@@ -62,8 +62,9 @@ class ParallelFragmentRun:
 
     def __deepcopy__(self, memo: dict[int, object]) -> ParallelFragmentRun:
         # add_script_run_ctx deep-copies the worker's FragmentThreadState for
-        # threads it attaches. Sharing the run, rather than copying its cache
-        # stats, lets add_command_time ignore those threads.
+        # threads it attaches. Returning the same run avoids copying its cache
+        # stats, and add_command_time's worker-thread check then ignores those
+        # threads.
         return self
 
 
