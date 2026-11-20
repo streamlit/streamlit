@@ -61,9 +61,6 @@ class RunCacheTotals:
 
     cache_data: CacheTotals = field(default_factory=CacheTotals)
     cache_resource: CacheTotals = field(default_factory=CacheTotals)
-    # Threads with a finished recorded call. When more than one, the times are
-    # summed across threads that may have run at the same time.
-    threads: int = 0
 
 
 class _OverlapGroup:
@@ -293,9 +290,5 @@ class RunCacheStats:
             threads = list(self._threads)
         totals = RunCacheTotals()
         for stats in threads:
-            # Count only threads that added a finished call.
-            calls_before = totals.cache_data.calls + totals.cache_resource.calls
             stats.add_to(totals.cache_data, totals.cache_resource, now)
-            if totals.cache_data.calls + totals.cache_resource.calls > calls_before:
-                totals.threads += 1
         return totals

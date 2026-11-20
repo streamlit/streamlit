@@ -69,41 +69,6 @@ def test_totals_combine_threads() -> None:
     cache_data, cache_resource = totals.cache_data, totals.cache_resource
     assert (cache_data.calls, cache_data.waits, cache_data.compute_time) == (3, 2, 1.0)
     assert (cache_resource.calls, cache_resource.overhead_time) == (1, 0.5)
-    assert totals.threads == 2
-
-
-def test_threads_count_only_threads_with_finished_calls() -> None:
-    """A thread whose only call is still running isn't counted, nor is one with
-    stats but no calls. A call finished inside an open overlap group is.
-    """
-    run_stats = RunCacheStats()
-    main_stats = run_stats.current_thread_stats()
-    main_stats.open_call(0.0)
-    main_stats.cache_data.calls = 1
-    main_stats.close_call(1.0)
-    assert run_stats.totals(1.0).threads == 1
-
-    def idle_worker() -> None:
-        run_stats.current_thread_stats()
-
-    def running_worker() -> None:
-        run_stats.current_thread_stats().open_call(0.0)
-
-    def overlapping_worker() -> None:
-        stats = run_stats.current_thread_stats()
-        stats.open_call(0.0)
-        stats.open_call(0.0)
-        group_totals = stats.totals_for_finished_call(stats.cache_resource)
-        group_totals.calls = 1
-        stats.close_call(1.0)
-
-    for target in (idle_worker, running_worker, overlapping_worker):
-        thread = threading.Thread(target=target)
-        thread.start()
-        thread.join()
-
-    assert len(run_stats._threads) == 4
-    assert run_stats.totals(1.0).threads == 2
 
 
 def test_tracked_command_time_counts_only_inside_calls() -> None:
