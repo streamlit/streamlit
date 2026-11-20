@@ -103,8 +103,10 @@ def _process_logo_image(
 
 
 def _validate_logo_size(parameter: str, size: _LogoSize) -> tuple[str, int]:
-    """Return ``(preset, size_px)``. A preset uses an empty size_px of 0.
-    A pixel size uses an empty preset string.
+    """Validate a logo size and return ``(preset, size_px)``.
+
+    A preset returns ``(preset, 0)`` and a pixel size returns ``("", size_px)``.
+    Raises if ``size`` is not a preset or a positive integer.
     """
     if isinstance(size, str):
         image_size = size.lower()
@@ -168,8 +170,9 @@ def logo(
           <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
           font library.
 
-        Streamlit scales the image to a max height set by ``size`` and a max
-        width to fit within the sidebar header.
+        Streamlit scales the image to a max height set by ``size`` (or
+        ``icon_size`` in the app header) and a max width that fits the sidebar
+        or app header.
 
         .. |st.image| replace:: ``st.image``
         .. _st.image: https://docs.streamlit.io/develop/api-reference/media/st.image
@@ -177,14 +180,14 @@ def logo(
     size : "small", "medium", "large", or int
         The size of the image displayed in the sidebar when the sidebar is
         open. If ``icon_size`` is ``None`` (default), this also sizes the
-        image in the upper-left corner of the app when the sidebar is closed.
-        The possible values are as follows:
+        image in the upper-left corner of the app when the sidebar is closed
+        or the app has no sidebar. The possible values are as follows:
 
         - ``"small"``: 20px max height
         - ``"medium"`` (default): 24px max height
         - ``"large"``: 32px max height
-        - An integer: A max height in pixels. Streamlit also limits the
-          height so the logo fits in the sidebar and app header.
+        - A positive integer: The max height in pixels. Streamlit caps the
+          height so the logo fits in the sidebar header and the app header.
 
     link : str or None
         The external URL to open when a user clicks on the logo. The URL must
@@ -210,7 +213,8 @@ def logo(
 
     icon_size : "small", "medium", "large", int, or None
         The size of the image displayed in the upper-left corner of the app
-        when the sidebar is closed. This uses the same values as ``size``.
+        when the sidebar is closed or the app has no sidebar. This uses the
+        same values as ``size``.
         If ``icon_size`` is ``None`` (default), Streamlit uses ``size`` for
         both the sidebar and the header.
 

@@ -50,8 +50,13 @@ interface LogoDisplaySize {
   sizePx?: number
 }
 
-/** Expanded sidebar uses size/sizePx. Collapsed header prefers iconSizePx,
- * then iconSize, then the sidebar size. "medium" is unused when sizePx is set.
+/**
+ * Returns the logo size for the slot being rendered:
+ * - Open sidebar: `sizePx`, else `size`.
+ * - Header (sidebar closed or absent): `iconSizePx`, else `iconSize`, else
+ *   the open-sidebar size.
+ * When a pixel size is set, `size` is a "medium" placeholder that the styles
+ * ignore.
  */
 function resolveLogoDisplaySize(
   appLogo: Logo,

@@ -315,6 +315,8 @@ const logoBoxStyles = ({
   sizePx?: number
 }): Record<string, string> => {
   const requestedHeight = translateLogoHeight(theme, size, sizePx)
+  // Presets always fit the header row; only author-supplied pixel heights
+  // need the cap.
   const height =
     sizePx && sizePx > 0
       ? `min(${requestedHeight}, ${logoMaxHeight(theme)})`

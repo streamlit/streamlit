@@ -58,7 +58,7 @@ def pixel_logo_w_sidebar_subtest():
 def pixel_logo_icon_size_small_w_sidebar_subtest():
     st.logo(
         STATIC_ASSETS_DIR / "streamlit-logo.png",
-        size=40,
+        size=200,
         icon_image=STATIC_ASSETS_DIR / "streamlit-mark.png",
         icon_size="small",
     )

@@ -22,6 +22,8 @@ import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
 
+/** Expected CSS for a pixel height capped to the header row
+ * (headerHeight - 2 * spacing.twoXS). */
 const cappedLogoHeight = (requestedHeight: string): string =>
   `min(${requestedHeight}, calc(3.75rem - 2 * 0.25rem))`
 
@@ -490,6 +492,29 @@ describe("LogoComponent", () => {
     )
 
     const logo = screen.getByTestId("stSidebarLogo")
+    const cappedHeight = cappedLogoHeight("80px")
+    expect(logo).toHaveStyle(`height: ${cappedHeight}`)
+    expect(logo).toHaveStyle(`font-size: ${cappedHeight}`)
+  })
+
+  it("caps a collapsed emoji header logo set by iconSizePx", () => {
+    const emojiLogo = LogoProto.create({
+      image: "🚀",
+      imageType: LogoProto.ImageType.EMOJI,
+      iconSizePx: 80,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: emojiLogo,
+          dataTestId: "stHeaderLogo",
+          collapsed: true,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stHeaderLogo")
     const cappedHeight = cappedLogoHeight("80px")
     expect(logo).toHaveStyle(`height: ${cappedHeight}`)
     expect(logo).toHaveStyle(`font-size: ${cappedHeight}`)

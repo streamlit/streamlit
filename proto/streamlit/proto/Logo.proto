@@ -38,6 +38,7 @@ message Logo {
   // Preset size for the header logo (sidebar closed or no sidebar).
   // Empty means follow size / size_px.
   string icon_size = 8;
-  // Pixel max height for the header logo. 0 means unset.
+  // Pixel max height for the header logo. 0 means unset (use icon_size, then
+  // size / size_px).
   uint32 icon_size_px = 9;
 }

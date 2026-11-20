@@ -125,7 +125,8 @@ def test_pixel_logo_icon_size_small_w_sidebar(
 
     themed_app.get_by_test_id("stSidebar").hover()
     expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
-    expect(themed_app.get_by_test_id("stSidebarLogo")).to_have_css("height", "40px")
+    # size=200 is capped to the header row (3.75rem - 2 * 0.25rem).
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_have_css("height", "52px")
 
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
