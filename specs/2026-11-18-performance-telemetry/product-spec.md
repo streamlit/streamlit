@@ -60,15 +60,17 @@ exec_time
     │   └── miss compute can include query time (time_in_cache)
     ├── query time outside cached calls and commands:
     │   time − time_in_cache − time_in_commands
+    ├── parallel fragment wait: the main script waiting for its fragments
     └── everything else
 ```
 
 - **Cache time** leaves out time already in command time: `st.*` calls inside a cached function, and the cache write. It also leaves out cached calls made inside a command, such as the `st.cache_resource` call inside `st.connection`. A cached call nested inside another counts only toward the outer call.
 - **Query time** reports the part that overlaps cache and command time separately, so it can be subtracted without counting any span twice (see [Query time](#query-time)).
 - **CPU time** is a second view of the same spans rather than another slice. User code CPU time is the script thread's CPU time minus CPU time inside commands, and each parallel fragment reports its own. Comparing it with user code wall time splits user code into computing and waiting.
-- **Concurrency**: parallel fragments report their own spans (see below), so their times aren't mixed into the main script's. Times from other threads that run at the same time, such as threads attached with `add_script_run_ctx`, are still added together, like command times today, so they can exceed wall-clock time. Concurrent async cached calls on one event loop are scaled down to the wall-clock time they overlap.
+- **Parallel fragment wait** is the time the main script spent waiting for its parallel fragments to finish after it ended, including when it ended early, for example with `st.stop()`. In a run with parallel fragments, the tree describes the main script: use the command, cache and query times minus the fragment entries (see below). Each fragment's own time breaks down the same way from its wall time.
+- **Concurrency**: parallel fragments report their own spans (see below), so their share can be subtracted from the main script's. Times from other threads that run at the same time, such as threads attached with `add_script_run_ctx`, count toward the main script and are still added together, like command times today, so they can exceed wall-clock time. That includes threads a parallel fragment attaches. Concurrent async cached calls on one event loop are scaled down to the wall-clock time they overlap, minus command time, which the calls' own times already leave out.
 
-**Parallel fragments.** Fragments with `parallel=True` that run during a full run report into the same page profile, on worker threads that run alongside the main script. A fragment rerun is a run of its own with its own page profile, so it needs no entry.
+**Parallel fragments.** Fragments with `parallel=True` that run during a full run report into the same page profile, on worker threads that run alongside the main script. A parallel fragment started inside another one gets its own entry, and its parent doesn't wait for it, so its time isn't part of the parent's. A fragment rerun is a run of its own with its own page profile, so it needs no entry.
 
 Each parallel fragment gets an entry with:
 
