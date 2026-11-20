@@ -15,8 +15,8 @@
 """Per-thread page profile values recorded during a script run.
 
 Each thread that records something during a run gets its own
-``ThreadRunStats``, written only by that thread, so recording a command or a
-cached call takes no lock. The page profile adds the threads' values together
+``ThreadRunStats``, written only by that thread, so recording a command, a
+cached call or a query takes no lock. The page profile adds the threads' values together
 when it's built.
 """
 
@@ -27,6 +27,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import ThreadCacheStats
+from streamlit.runtime.scriptrunner_utils.query_run_stats import QueryStats
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -37,13 +38,14 @@ class ThreadRunStats:
     worker thread, during one script run.
     """
 
-    __slots__ = ("cache", "command_time")
+    __slots__ = ("cache", "command_time", "query")
 
     def __init__(self) -> None:
         # Time of listed commands that ran on this thread. The page profile
         # reports it only for parallel fragment runs.
         self.command_time = 0.0
         self.cache = ThreadCacheStats()
+        self.query = QueryStats()
 
 
 class RunStats:

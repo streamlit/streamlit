@@ -1493,6 +1493,61 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.async_overlap_time == 125_000
 
 
+def test_create_page_profile_message_reports_query_usage() -> None:
+    """``query_usage`` carries the run's totals per query source, in
+    microseconds, and the run's query IDs.
+    """
+    ctx = create_mock_script_run_ctx()
+    query_stats = ctx.shared.stats.current_thread_stats().query
+    totals = query_stats.snowflake_connector
+    totals.queries = 4
+    totals.failed = 1
+    totals.async_queries = 1
+    totals.describe_queries = 1
+    totals.queries_in_cache = 2
+    totals.queries_in_commands = 1
+    totals.time = 2.5
+    totals.time_in_cache = 1.0
+    totals.time_in_commands = 0.5
+    query_stats.snowpark.queries = 2
+    query_stats.snowpark.queries_in_cache = 1
+    query_ids = ctx.shared.query_ids
+    query_ids.add("01b2-a", in_cache=False)
+    query_ids.add("01b2-cached", in_cache=True)
+    query_ids.add("01b2-b", in_cache=False)
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    usage = msg.page_profile.query_usage
+    assert not usage.HasField("sqlalchemy")
+    connector = usage.snowflake_connector
+    assert connector.queries == 4
+    assert connector.failed == 1
+    assert connector.async_queries == 1
+    assert connector.describe_queries == 1
+    assert connector.queries_in_cache == 2
+    assert connector.queries_in_commands == 1
+    assert connector.time == 2_500_000
+    assert connector.time_in_cache == 1_000_000
+    assert connector.time_in_commands == 500_000
+    assert usage.snowpark.queries == 2
+    assert usage.snowpark.queries_in_cache == 1
+    assert usage.snowpark.time == 0
+    assert list(usage.query_ids) == ["01b2-a", "01b2-b"]
+    assert list(usage.query_ids_in_cache) == ["01b2-cached"]
+
+
+def test_create_page_profile_message_leaves_query_usage_unset() -> None:
+    """``query_usage`` stays unset when the run recorded no query."""
+    ctx = create_mock_script_run_ctx()
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not msg.page_profile.HasField("query_usage")
+
+
 def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
     """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
     calls or a known uptime.
@@ -1513,8 +1568,11 @@ def _record_parallel_fragment_run(
     compute_time: float = 0.0,
     wait_time: float = 0.0,
     async_overlap_time: float = 0.0,
+    query_time: float = 0.0,
 ) -> ParallelFragmentRunStats:
-    """Record a finished parallel fragment run with one cached call of each type."""
+    """Record a finished parallel fragment run with one cached call of each type,
+    and a query from each of two sources taking ``query_time`` between them.
+    """
     with ctx.shared.parallel_fragments.recording_run() as run:
         thread_stats = ctx.shared.stats.current_thread_stats()
         thread_stats.command_time = command_time
@@ -1526,6 +1584,15 @@ def _record_parallel_fragment_run(
         stats.cache_resource.calls = 1
         stats.cache_resource.wait_time = wait_time
         stats.cache_resource.overhead_time = 0.001
+        query_stats = thread_stats.query
+        query_stats.sqlalchemy.queries = 1
+        query_stats.sqlalchemy.queries_in_cache = 1
+        query_stats.sqlalchemy.time = query_time / 2
+        query_stats.sqlalchemy.time_in_cache = query_time / 2
+        query_stats.snowflake_connector.queries = 1
+        query_stats.snowflake_connector.queries_in_commands = 1
+        query_stats.snowflake_connector.time = query_time / 2
+        query_stats.snowflake_connector.time_in_commands = query_time / 2
     return run
 
 
@@ -1534,7 +1601,11 @@ def test_create_page_profile_message_reports_parallel_fragments() -> None:
     ctx = create_mock_script_run_ctx()
     run_start = time.perf_counter()
     first = _record_parallel_fragment_run(
-        ctx, command_time=0.25, compute_time=1.5, async_overlap_time=0.125
+        ctx,
+        command_time=0.25,
+        compute_time=1.5,
+        async_overlap_time=0.125,
+        query_time=1.0,
     )
     second = _record_parallel_fragment_run(ctx, wait_time=0.5)
     ctx.shared.parallel_fragments.add_wait_time(0.75)
@@ -1568,6 +1639,15 @@ def test_create_page_profile_message_reports_parallel_fragments() -> None:
     assert usage.cache_usage.async_overlap_time == 125_000
     assert msg.page_profile.cache_usage.cache_data.calls == 2
     assert msg.page_profile.cache_usage.async_overlap_time == 125_000
+    # Query sources are combined, and the run totals still include the queries.
+    assert (
+        first_entry.query_time,
+        first_entry.query_time_in_cache,
+        first_entry.query_time_in_commands,
+    ) == (1_000_000, 500_000, 500_000)
+    assert second_entry.query_time == 0
+    assert msg.page_profile.query_usage.sqlalchemy.queries == 2
+    assert msg.page_profile.query_usage.sqlalchemy.time == 500_000
     assert second.end is not None
 
 
@@ -1577,7 +1657,10 @@ def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() ->
     run_start = time.perf_counter()
     for command_time in (0.25, 0.5, 1.0):
         _record_parallel_fragment_run(
-            ctx, command_time=command_time, async_overlap_time=command_time / 2
+            ctx,
+            command_time=command_time,
+            async_overlap_time=command_time / 2,
+            query_time=command_time,
         )
 
     with (
@@ -1592,6 +1675,8 @@ def test_create_page_profile_message_adds_parallel_fragments_past_the_limit() ->
     assert usage.overflow.command_time == 1_500_000
     assert usage.overflow.cache_overhead_time == 4_000
     assert usage.overflow.cache_async_overlap_time == 750_000
+    assert usage.overflow.query_time == 1_500_000
+    assert usage.overflow.query_time_in_cache == 750_000
     assert usage.overflow.start_time == 0
     assert usage.cache_usage.cache_data.calls == 3
 

@@ -92,8 +92,10 @@ message MetricsEvent {
   // 52-55 are held for planned CPU-time fields.
   // Same as PageProfile.parallel_fragment_usage.
   ParallelFragmentUsage parallel_fragment_usage = 56;
+  // Same as PageProfile.query_usage.
+  QueryUsage query_usage = 57;
 
-  // Next ID: 57
+  // Next ID: 58
 }
 
 message BrowserInfo {

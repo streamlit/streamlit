@@ -62,6 +62,82 @@ message PageProfile {
   // 18-21 are held for planned CPU-time fields.
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
+  // Database queries during this script run. Unset when no query was recorded.
+  QueryUsage query_usage = 23;
+}
+
+// Database queries during one script run: counts, and times in microseconds.
+// A query is recorded when it runs on a thread attached to the script run and
+// finishes before the page profile is built. Queries saved by a cache hit
+// never run, so they aren't recorded. Each retry is a separate query.
+// Query times are part of user code time, except where they overlap other
+// recorded times, which time_in_cache and time_in_commands report. Like
+// command times, times from threads that ran at the same time are added
+// together and can exceed wall-clock time; ParallelFragmentUsage reports the
+// share of parallel fragments.
+// lib/streamlit/connections/query_telemetry.py lists which queries are
+// recorded.
+message QueryUsage {
+  // Snowflake Connector for Python cursors created by Streamlit:
+  // SnowflakeConnection.query() and SnowflakeConnection.cursor().
+  // Unset when no such query was recorded.
+  QuerySourceUsage snowflake_connector = 1;
+  // SQLAlchemy engines, including the one behind SQLConnection.
+  // Unset when no such query was recorded.
+  QuerySourceUsage sqlalchemy = 2;
+  // Snowpark sessions from SnowflakeConnection.session(), and the active
+  // Snowpark session, on Snowpark 1.26 and later. Snowpark reports queries
+  // only after they finish, so their times aren't measured, but they're
+  // counted in queries_in_cache and queries_in_commands.
+  // Unset when no such query was recorded.
+  QuerySourceUsage snowpark = 3;
+  // Snowflake query IDs of the recorded queries from all sources that aren't
+  // counted in queries_in_cache, in the order they finished. A query ID
+  // contains no SQL, and only someone with access to the Snowflake account can
+  // look it up, for example to get compile, queue and execution time from the
+  // account's query history.
+  repeated string query_ids = 4;
+  // Snowflake query IDs of the recorded queries counted in queries_in_cache,
+  // in the order they finished. query_ids and query_ids_in_cache together hold
+  // at most the first 50 IDs per run.
+  repeated string query_ids_in_cache = 5;
+}
+
+// Recorded queries from one source, with times in microseconds. A query that
+// overlaps other recorded times is counted in queries_in_commands if it ran
+// inside a listed command, or else in queries_in_cache if it ran inside a
+// cached function's computation, never in both, so that
+// time - time_in_cache - time_in_commands is the query time that's otherwise
+// part of user code.
+message QuerySourceUsage {
+  // All recorded queries, including failed, async and describe queries.
+  int64 queries = 1;
+  // Queries that raised an error. Snowpark reports only some failures, so
+  // some failed Snowpark queries are counted only in queries.
+  int64 failed = 2;
+  // Queries submitted without waiting for them to finish. Their time covers
+  // only the submission.
+  int64 async_queries = 3;
+  // Queries that only look up the shape of a result, such as the ones Snowpark
+  // runs to work out a DataFrame's columns.
+  int64 describe_queries = 4;
+  // Queries inside a cached function's computation, on the thread computing
+  // it. Threads it attaches with add_script_run_ctx record their queries as
+  // their own, so their time is also in the cached call's compute_time.
+  int64 queries_in_cache = 5;
+  // Queries inside a listed command.
+  int64 queries_in_commands = 6;
+  // Time blocked in the driver's execute call: sending the query, and for a
+  // query that isn't async, waiting for it to finish. Fetching the results
+  // afterwards isn't included.
+  int64 time = 7;
+  // Time of the queries in queries_in_cache, which cache_usage already counts
+  // in compute_time.
+  int64 time_in_cache = 8;
+  // Time of the queries in queries_in_commands, which those commands' times
+  // already count. For example, a lazy DataFrame passed to st.dataframe runs
+  // its query inside the command.
+  int64 time_in_commands = 9;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.
@@ -120,11 +196,11 @@ message CacheTypeUsage {
 
 // Times of the parallel fragments (st.fragment(parallel=True)) in one script
 // run, in microseconds, so analysis can separate them from the main script.
-// Fragment commands and cached calls are also in PageProfile.commands and
-// PageProfile.cache_usage; subtract the values here to get the main script's
-// share. Threads a fragment attaches with add_script_run_ctx count toward the
-// main script. Their time usually overlaps wait_time, so the main script's
-// user code time can come out negative.
+// Fragment commands, cached calls and queries are also in PageProfile.commands,
+// PageProfile.cache_usage and PageProfile.query_usage; subtract the values here
+// to get the main script's share. Threads a fragment attaches with
+// add_script_run_ctx count toward the main script. Their time usually overlaps
+// wait_time, so the main script's user code time can come out negative.
 message ParallelFragmentUsage {
   // One entry per run, in the order the runs started, for at most
   // _MAX_PARALLEL_FRAGMENT_RUNS (in metrics_util.py) runs.
@@ -147,7 +223,9 @@ message ParallelFragmentUsage {
 
 // One parallel fragment run on its worker thread, with times in microseconds.
 // Its user code time is exec_time minus command_time and the cache time:
-// compute, wait and overhead time minus cache_async_overlap_time.
+// compute, wait and overhead time minus cache_async_overlap_time. Of that,
+// query_time minus query_time_in_cache and query_time_in_commands was spent in
+// queries.
 message ParallelFragmentRun {
   // When the run started, measured from the start of the script run.
   int64 start_time = 1;
@@ -162,7 +240,12 @@ message ParallelFragmentRun {
   int64 cache_compute_time = 4;
   int64 cache_wait_time = 5;
   int64 cache_overhead_time = 6;
-  // 7-10 are held for planned query-time and CPU-time fields.
+  // The run's query time and its parts inside cached functions and listed
+  // commands, as defined in QuerySourceUsage, summed across query sources.
+  int64 query_time = 7;
+  int64 query_time_in_cache = 8;
+  int64 query_time_in_commands = 9;
+  // 10 is held for a planned CPU-time field.
   // The run's CacheUsage.async_overlap_time.
   int64 cache_async_overlap_time = 11;
 }
