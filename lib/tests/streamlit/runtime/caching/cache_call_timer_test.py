@@ -827,6 +827,40 @@ def test_cached_calls_from_hash_funcs_are_not_recorded(
     assert _server_counts(key_hash) == (0, 1, 1, 0)
 
 
+@pytest.mark.usefixtures("ctx")
+@pytest.mark.parametrize(
+    "failing_step",
+    [
+        "streamlit.runtime.caching.cache_call_timer._new_compute_scope",
+        "streamlit.runtime.scriptrunner_utils.script_run_context.CacheComputeScope.end",
+        "streamlit.runtime.scriptrunner_utils.cache_run_stats.ThreadCacheStats.close_call",
+    ],
+    ids=["marking the computation", "ending the computation", "adding to totals"],
+)
+@pytest.mark.parametrize("raises", [False, True], ids=["returns", "raises"])
+def test_telemetry_errors_dont_reach_the_cached_function_caller(
+    failing_step: str, raises: bool
+) -> None:
+    """A telemetry failure leaves the cached function's result or error
+    unchanged.
+    """
+
+    @st.cache_data(show_spinner=False)
+    def load() -> int:
+        if raises:
+            raise ValueError("user error")
+        return 1
+
+    with patch(failing_step, side_effect=RuntimeError("bug")) as step:
+        if raises:
+            with pytest.raises(ValueError, match="user error"):
+                load()
+        else:
+            assert load() == 1
+
+    step.assert_called_once()
+
+
 def test_parallel_worker_calls_are_added_to_the_run(ctx: ScriptRunContext) -> None:
     """Calls from parallel fragment workers count toward the run, per thread."""
 

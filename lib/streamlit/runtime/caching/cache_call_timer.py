@@ -58,8 +58,9 @@ from __future__ import annotations
 
 import contextlib
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
+from streamlit.logger import get_logger
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     CacheComputeScope,
@@ -76,6 +77,8 @@ if TYPE_CHECKING:
         CacheTotals,
         ThreadCacheStats,
     )
+
+_LOGGER: Final = get_logger(__name__)
 
 
 class CacheCallTimer:
@@ -190,6 +193,16 @@ class CacheCallTimer:
         thread_stats, totals = self._thread_stats, self._totals
         if thread_stats is None or totals is None:
             return
+        try:
+            self._add_to_run_totals(thread_stats, totals)
+        except Exception as ex:
+            # finish() runs in a finally block around every recorded call, so
+            # telemetry must never raise into it.
+            _LOGGER.debug("Failed to record a cached call", exc_info=ex)
+
+    def _add_to_run_totals(
+        self, thread_stats: ThreadCacheStats, totals: CacheTotals
+    ) -> None:
         totals = thread_stats.totals_for_finished_call(totals)
         totals.calls += 1
         if self._is_hit:
@@ -273,24 +286,42 @@ def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, 
 
     A context that is already marked keeps the outer mark, so threads that a
     nested cached function attaches still report to the outermost recorded
-    call. Nothing is marked when the run doesn't gather usage stats, or on a
-    thread without script-run thread state.
+    call. Nothing is marked when the run doesn't gather usage stats, on a thread
+    without script-run thread state, or if marking fails.
+    """
+    scope: CacheComputeScope | None = None
+    with contextlib.ExitStack() as stack:
+        try:
+            scope = _new_compute_scope()
+            if scope is not None:
+                stack.enter_context(ThreadState.scoped(cache_compute=scope))
+        except Exception as ex:
+            # Telemetry must never stop the cached function from running.
+            _LOGGER.debug("Failed to mark a cached computation", exc_info=ex)
+            scope = None
+        try:
+            yield
+        finally:
+            if scope is not None:
+                try:
+                    call_timer.exclude_attached_command_time(scope.end())
+                except Exception as ex:
+                    # Telemetry must never replace the function's result or error.
+                    _LOGGER.debug("Failed to end a cached computation", exc_info=ex)
+
+
+def _new_compute_scope() -> CacheComputeScope | None:
+    """Return a scope for a computation starting in this context, or None if
+    ``computing_cached_value`` shouldn't mark it.
     """
     ctx = get_script_run_ctx(suppress_warning=True)
     if ctx is None or not ctx.gather_usage_stats:
-        yield
-        return
+        return None
     try:
         thread_state = ThreadState.get()
     except RuntimeError:
         # A thread that isn't attached to a script run.
-        thread_state = None
-    if thread_state is None or thread_state.in_cache_compute:
-        yield
-        return
-    scope = CacheComputeScope()
-    try:
-        with ThreadState.scoped(cache_compute=scope):
-            yield
-    finally:
-        call_timer.exclude_attached_command_time(scope.end())
+        return None
+    if thread_state.in_cache_compute:
+        return None
+    return CacheComputeScope()

@@ -2210,6 +2210,33 @@ def test_run_parallel_fragment_records_its_own_run(gather_usage_stats: bool) -> 
         assert runs_seen == [None]
 
 
+def test_run_parallel_fragment_runs_when_recording_fails() -> None:
+    """A failure to start recording leaves the fragment running, unrecorded."""
+    mock_ctx = MagicMock()
+    mock_ctx.shared = SharedRunState()
+    mock_ctx.gather_usage_stats = True
+    runs_seen: list[ParallelFragmentRun | None] = []
+
+    def fragment() -> None:
+        runs_seen.append(ThreadState.get().parallel_fragment_run)
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        patch.object(
+            mock_ctx.shared.parallel_fragments,
+            "recording_run",
+            side_effect=RuntimeError("bug"),
+        ),
+    ):
+        ThreadState.initialize(parallel_fragment_run=ParallelFragmentRun(0.0))
+        _run_parallel_fragment("test_id", fragment, [])
+
+    assert runs_seen == [None]
+    mock_ctx.parallel_coordinator.request_rerun.assert_not_called()
+    mock_ctx.parallel_coordinator.request_stop.assert_not_called()
+
+
 def test_nested_parallel_fragment_dispatches_from_worker() -> None:
     """Nested parallel fragment inside a worker also dispatches to the coordinator.
 

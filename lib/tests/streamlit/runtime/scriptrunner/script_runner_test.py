@@ -61,6 +61,7 @@ from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner.script_runner import (
     _clean_problem_modules,
     _log_if_error,
+    _recording_parallel_fragment_wait,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequest,
@@ -2676,3 +2677,22 @@ def test_log_if_error_logs_exception_and_does_not_raise() -> None:
         _log_if_error(raises)
 
     mock_logger.warning.assert_called_once()
+
+
+def test_parallel_fragment_wait_errors_dont_replace_the_scripts_exception() -> None:
+    """A failure while recording the fragment wait never replaces the exception
+    the wait block is re-raising, and never raises on its own.
+    """
+    ctx = MagicMock()
+    ctx.gather_usage_stats = True
+    ctx.shared.parallel_fragments.add_wait_time.side_effect = RuntimeError("bug")
+
+    with _recording_parallel_fragment_wait(ctx):
+        pass
+    with (
+        pytest.raises(StopException),
+        _recording_parallel_fragment_wait(ctx),
+    ):
+        raise StopException
+
+    assert ctx.shared.parallel_fragments.add_wait_time.call_count == 2

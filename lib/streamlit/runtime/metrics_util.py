@@ -653,18 +653,24 @@ def _record_command_time(
     - otherwise, the cached computation that attached this thread, which
       subtracts it from its compute time.
     """
-    command_telemetry.time = to_microseconds(seconds)
-    if ctx is None or not is_command_listed:
-        return
-    if thread_state is not None and thread_state.parallel_fragment_run is not None:
-        thread_state.parallel_fragment_run.add_command_time(seconds)
-    if ctx.shared.cache_stats.record_tracked_command_time(seconds):
-        return
-    scope = thread_state.cache_compute if thread_state is not None else None
-    # A long-lived attached thread keeps the scope after the computation ends;
-    # skip it then rather than take its lock for nothing.
-    if scope is not None and scope.is_active:
-        scope.add_command_time(seconds)
+    try:
+        command_telemetry.time = to_microseconds(seconds)
+        if ctx is None or not is_command_listed:
+            return
+        run = thread_state.parallel_fragment_run if thread_state is not None else None
+        if run is not None:
+            run.add_command_time(seconds)
+        if ctx.shared.cache_stats.record_tracked_command_time(seconds):
+            return
+        scope = thread_state.cache_compute if thread_state is not None else None
+        # A long-lived attached thread keeps the scope after the computation
+        # ends; skip it then rather than take its lock for nothing.
+        if scope is not None and scope.is_active:
+            scope.add_command_time(seconds)
+    except Exception as ex:
+        # This runs after the command returns or raises RerunException, so
+        # telemetry must never replace its result.
+        _LOGGER.debug("Failed to record command time", exc_info=ex)
 
 
 @overload

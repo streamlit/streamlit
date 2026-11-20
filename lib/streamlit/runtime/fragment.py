@@ -1151,12 +1151,16 @@ def _run_parallel_fragment(
         return
 
     context_dg_stack.set(dg_stack_snapshot)
-    recording: contextlib.AbstractContextManager[ParallelFragmentRun | None] = (
-        ctx.shared.parallel_fragments.recording_run()
-        if ctx.gather_usage_stats
-        else contextlib.nullcontext()
-    )
-    with recording as fragment_run:
+    with contextlib.ExitStack() as stack:
+        fragment_run: ParallelFragmentRun | None = None
+        if ctx.gather_usage_stats:
+            try:
+                fragment_run = stack.enter_context(
+                    ctx.shared.parallel_fragments.recording_run()
+                )
+            except Exception as ex:
+                # Telemetry must never stop the fragment from running.
+                _LOGGER.debug("Failed to record a parallel fragment run", exc_info=ex)
         ThreadState.update(
             pre_allocated_container_fragment_id=fragment_id,
             is_parallel_worker=True,

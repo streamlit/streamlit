@@ -923,6 +923,33 @@ def test_listed_command_time_goes_to_the_parallel_fragment_run(
     assert run.command_time == 0.25
 
 
+def test_command_time_errors_dont_reach_the_caller(
+    tracking_ctx: ScriptRunContext,
+) -> None:
+    """A failure while recording a command's time leaves its result, or its
+    RerunException, unchanged.
+    """
+
+    @metrics_util.gather_metrics("cmd")
+    def cmd() -> int:
+        return 1
+
+    @metrics_util.gather_metrics("rerun_cmd")
+    def rerun_cmd() -> None:
+        raise RerunException(None)
+
+    with patch.object(
+        tracking_ctx.shared.cache_stats,
+        "record_tracked_command_time",
+        side_effect=RuntimeError("bug"),
+    ) as record:
+        assert cmd() == 1
+        with pytest.raises(RerunException):
+            rerun_cmd()
+
+    assert record.call_count == 2
+
+
 def test_nested_commands_are_suppressed_in_the_same_context(
     tracking_ctx: ScriptRunContext,
 ) -> None:

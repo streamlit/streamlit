@@ -1109,7 +1109,12 @@ def _recording_parallel_fragment_wait(
         yield
     finally:
         if ctx.gather_usage_stats:
-            ctx.shared.parallel_fragments.add_wait_time(timer() - start)
+            try:
+                ctx.shared.parallel_fragments.add_wait_time(timer() - start)
+            except Exception as ex:
+                # The block can be re-raising a script-control exception or the
+                # script's error, which telemetry must never replace.
+                _LOGGER.debug("Failed to record parallel fragment wait", exc_info=ex)
 
 
 # The reason this is not a decorator is because we want to make it clear at the
