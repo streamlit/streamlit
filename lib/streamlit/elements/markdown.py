@@ -525,8 +525,10 @@ class MarkdownMixin:
         """Display a horizontal rule.
 
         .. note::
-            ``st.write("---")`` and ``"---"`` (via magic) also draw a
-            rule, but always use the default spacing.
+            ``st.divider(gap=...)`` is the only horizontal rule with
+            configurable spacing. ``st.markdown("---")``,
+            ``st.write("---")``, and ``"---"`` (via magic) keep the default
+            spacing.
 
         Parameters
         ----------
@@ -547,8 +549,10 @@ class MarkdownMixin:
 
             This space is added to the gap of the parent container.
 
-            The rem unit is relative to the ``theme.baseFontSize``
-            configuration option.
+            Named values use the shared layout gap scale and are applied
+            relative to the divider's text size, which follows the
+            ``theme.baseFontSize`` configuration option. Integer values are
+            pixels.
 
         width : "stretch" or int
             The width of the divider element. This can be one of the following:
@@ -589,7 +593,8 @@ class MarkdownMixin:
             "markdown",
             divider_proto,
             layout_config=layout_config,
-            # Width and gap are presentation; the body is a rendering detail.
+            # The agent spec omits width, gap, and the body because they only
+            # affect presentation.
             agent_props=agent_spec.element("divider"),
         )
 

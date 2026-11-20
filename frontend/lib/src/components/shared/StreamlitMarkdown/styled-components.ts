@@ -46,7 +46,7 @@ interface StyledStreamlitMarkdownProps {
   dividerGap?: string
 }
 
-function convertRemToEm(s: string): string {
+export function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
@@ -377,8 +377,7 @@ export const StyledStreamlitMarkdown =
           fontWeight: theme.fontWeights.codeBold,
         },
 
-        // Space above and below the rule. Native markdown keeps 2em when
-        // dividerGap is unset; st.divider(gap=) supplies the length.
+        // st.divider(gap=) sets dividerGap; every other rule uses 2em.
         hr: {
           margin: `${dividerGap ?? "2em"} 0`,
           padding: 0,

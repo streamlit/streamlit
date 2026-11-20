@@ -3911,7 +3911,7 @@ class ChatMessage(Block):
 
 
 # Public gap names. None is the "no gap" value, matching GapSize.NONE.
-_GRID_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
+_GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.NONE: None,
     GapSize.XXSMALL: "xxsmall",
     GapSize.XSMALL: "xsmall",
@@ -3927,12 +3927,12 @@ GridSizeValue: TypeAlias = int | float | str
 
 
 def _public_gap_value(gap_config: Any) -> GridGapValue:
-    """Rebuild one ``st.grid`` gap argument from a ``GapConfig``."""
+    """Rebuild a public ``gap`` argument from a ``GapConfig``."""
     spec = gap_config.WhichOneof("gap_spec")
     if spec == "pixel_gap":
         return int(gap_config.pixel_gap)
     if spec == "gap_size":
-        return _GRID_GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
+        return _GAP_SIZE_TO_PUBLIC.get(gap_config.gap_size, "small")
     return "small"
 
 

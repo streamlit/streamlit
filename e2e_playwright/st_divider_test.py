@@ -50,7 +50,7 @@ def _vertical_gap(above: Locator, below: Locator) -> float:
 def _symmetric_space_around_rule(
     app: Page, key: str, above_text: str, below_text: str
 ) -> float:
-    """Return the average space around the rule after asserting it is equal."""
+    """Assert equal space above and below the rule and return the average gap in pixels."""
     block = get_element_by_key(app, key)
     rule = block.locator("hr")
     expect(rule).to_be_visible()

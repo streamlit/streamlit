@@ -567,7 +567,7 @@ describe("Markdown wrap", () => {
     expect(getComputedStyle(hr as HTMLElement).marginBottom).toBe("2em")
   })
 
-  it("does not honor gapConfig on a native markdown rule", () => {
+  it("ignores gapConfig on a native markdown rule", () => {
     render(
       <Markdown
         {...getProps({

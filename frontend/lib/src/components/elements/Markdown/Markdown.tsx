@@ -21,6 +21,7 @@ import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 import { translateGapWidth } from "~lib/components/core/Block/styled-components"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { convertRemToEm } from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -99,16 +100,12 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
   // A sibling help icon (`unsafe_allow_html`) leaves the rule intact.
   const isDivider = isStandaloneRuleBody && !shouldInlineHelpDirective
   const source = shouldInlineHelpDirective ? `${body} :help[]` : body
-  // Named sizes are rem in the layout scale; convert to em so they match the
-  // hr's default `2em` margin (em follows the markdown font size).
-  const translatedGap =
-    isDividerElement && element.gapConfig
-      ? translateGapWidth(element.gapConfig, theme)
-      : undefined
+  // Use em so named gaps scale with the markdown font, like the default
+  // 2em rule margin.
   const dividerGap =
-    translatedGap?.endsWith("rem") === true
-      ? translatedGap.replace(/rem$/, "em")
-      : translatedGap
+    isDividerElement && element.gapConfig
+      ? convertRemToEm(translateGapWidth(element.gapConfig, theme))
+      : undefined
 
   const streamlitMarkdown = (
     <StreamlitMarkdown
