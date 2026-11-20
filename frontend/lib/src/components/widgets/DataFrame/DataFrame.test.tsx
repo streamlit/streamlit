@@ -354,12 +354,13 @@ describe("DataFrame widget", () => {
         getCellsForSelection: true,
         keybindings: expect.objectContaining({
           copy: false,
+          cut: false,
         }),
       })
     )
   })
 
-  it("keeps clipboard editing enabled for data editors when data export is disabled", () => {
+  it("disables clipboard copy for data editors but keeps paste when data export is disabled", () => {
     renderWithContexts(
       <DataFrame
         {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
@@ -373,7 +374,8 @@ describe("DataFrame widget", () => {
       expect.objectContaining({
         getCellsForSelection: true,
         keybindings: expect.objectContaining({
-          copy: true,
+          copy: false,
+          cut: false,
         }),
         onPaste: expect.any(Function),
       })

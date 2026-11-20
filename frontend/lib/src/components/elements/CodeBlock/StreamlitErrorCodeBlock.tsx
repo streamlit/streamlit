@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { memo, type ReactElement } from "react"
+import { memo, type ReactElement, useContext } from "react"
+
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 
 import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
 import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
@@ -26,8 +28,11 @@ export interface StreamlitErrorCodeBlockProps {
 function StreamlitErrorCodeBlock({
   children,
 }: Readonly<StreamlitErrorCodeBlockProps>): ReactElement {
+  const { disableDataExport = false } = useContext(LibConfigContext)
   const shouldShowCopyButton =
-    typeof children === "string" && children.trim().length > 0
+    typeof children === "string" &&
+    children.trim().length > 0 &&
+    !disableDataExport
 
   return (
     <StyledCodeBlock

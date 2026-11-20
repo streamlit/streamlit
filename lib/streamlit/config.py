@@ -640,18 +640,31 @@ _create_option(
 _create_option(
     "client.disableDataExport",
     description="""
-        When true, hides the built-in controls for exporting data from
-        components that support it:
+        When true, hides or disables the built-in controls for exporting
+        data from components that support it:
 
         - Hides the CSV download button for st.dataframe, st.data_editor,
           and chart table views.
-        - Disables clipboard copy for read-only tables (st.dataframe and
-          chart table views), while keeping st.data_editor copy/paste enabled.
+        - Disables clipboard copy and cut for st.dataframe, st.data_editor,
+          and chart table views. Pasting into st.data_editor stays enabled.
+        - Hides chart and diagram image downloads (PNG/SVG), including
+          Vega-Lite/Altair, ECharts, Plotly, and Mermaid. Image-download
+          controls that the app configures itself, such as an ECharts
+          toolbox or a custom Plotly modeBarButtons list, are not affected.
+        - Hides copy actions for code blocks (st.code and Markdown), Mermaid
+          source, the Vega-Lite spec, st.json (value icons and path copy),
+          dataframe column names and JSON cells, and the links shown below
+          exception messages (Copy, Ask Google, and Ask ChatGPT).
+
+        st.download_button is not affected; authors already control it with
+        disabled=. st.audio_input's "Download as WAV" action is also not
+        affected; it saves the viewer's own recording rather than app data.
 
         This only hides the built-in export and copy controls. It does not
         prevent users from otherwise accessing the underlying data (e.g. via
-        screenshots, browser developer tools, or network inspection), so it
-        should not be relied upon as a security or data-protection control.
+        screenshots, browser developer tools, network inspection, or the
+        agent API), so it should not be relied upon as a security or
+        data-protection control.
     """,
     default_val=False,
     type_=bool,

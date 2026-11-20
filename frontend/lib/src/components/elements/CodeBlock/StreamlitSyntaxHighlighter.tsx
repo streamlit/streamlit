@@ -19,6 +19,7 @@ import {
   type ReactElement,
   type ReactNode,
   useCallback,
+  useContext,
   useMemo,
 } from "react"
 
@@ -29,6 +30,8 @@ import {
 } from "react-syntax-highlighter"
 
 import { isNullOrUndefined } from "@streamlit/utils"
+
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 
 import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
 import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
@@ -95,6 +98,7 @@ function StreamlitSyntaxHighlighter({
   wrapLines,
   children,
 }: Readonly<StreamlitSyntaxHighlighterProps>): ReactElement {
+  const { disableDataExport = false } = useContext(LibConfigContext)
   const renderer = useCallback(
     ({ rows, stylesheet, useInlineStyles }: RendererProps): ReactNode => {
       return rows.map((row, index) => {
@@ -136,7 +140,7 @@ function StreamlitSyntaxHighlighter({
   }, [children])
 
   const isEmpty = !text || text.trim().length === 0
-  const shouldShowCopyButton = !isEmpty
+  const shouldShowCopyButton = !isEmpty && !disableDataExport
 
   const isTooLongToHighlight = useMemo(
     () => exceedsLineLimit(text, MAX_HIGHLIGHTED_LINES),

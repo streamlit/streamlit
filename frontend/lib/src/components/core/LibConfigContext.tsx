@@ -78,11 +78,9 @@ export interface LibConfigContextProps extends Omit<
   showErrorLinks?: Config.ShowErrorLinks
 
   /**
-   * Whether data export actions should be disabled for components that support
-   * exporting data. Defaults to false.
-   *
-   * Consumed by:
-   * @see DataFrame
+   * Whether built-in export, download, and copy actions are disabled.
+   * Defaults to false. Components that offer such actions read this flag
+   * and hide or disable those controls.
    */
   disableDataExport?: boolean
 }

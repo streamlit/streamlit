@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { useContext } from "react"
+
 import styled from "@emotion/styled"
 import {
   type Theme as GlideTheme,
@@ -24,6 +26,7 @@ import JSON5 from "json5"
 
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { toJsonString } from "~lib/components/widgets/DataFrame/columns/utils"
 import ReactJson from "~lib/util/reactJsonViewCompat"
 
@@ -54,6 +57,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
   jsonValue,
   theme,
 }) => {
+  const { disableDataExport = false } = useContext(LibConfigContext)
   let parsedJson = undefined
 
   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions -- null, undefined, and empty strings have nothing to parse
@@ -94,7 +98,7 @@ export const JsonViewer: React.FC<JsonViewerProps> = ({
         displayDataTypes={false}
         displayObjectSize={false}
         name={false}
-        enableClipboard={true}
+        enableClipboard={!disableDataExport}
         showComma={false}
         style={{
           fontFamily: theme.fontFamily,

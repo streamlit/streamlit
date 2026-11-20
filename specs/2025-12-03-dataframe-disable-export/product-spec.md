@@ -3,13 +3,13 @@ author: lukasmasuch
 created: 2025-12-03
 ---
 
-# Disable Data Export for `st.dataframe`
+# Disable Built-in Data Export
 
 ## Summary
 
-Add a `client.disableDataExport` config option that controls whether data export functionality
-(CSV download and clipboard copy) is disabled in `st.dataframe` and other components that
-provide data export capabilities (e.g., Vega charts via the table view).
+`client.disableDataExport` turns off built-in export controls across the app: dataframe CSV
+and clipboard copy, chart and diagram image downloads, and copy actions on code, JSON, and
+errors. It does not disable `st.download_button`.
 
 ## Problem
 
@@ -62,24 +62,39 @@ st.set_option("client.disableDataExport", True)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `client.disableDataExport` | `bool` | `false` | Whether to disable data export (CSV download and copying to clipboard) in components that support it |
+| `client.disableDataExport` | `bool` | `false` | Whether to disable built-in data export (CSV download, clipboard copy, chart/diagram image downloads, and other copy actions such as code blocks, `st.json`, and error text) |
 
 ### Behavior
 
 When `client.disableDataExport = true`:
 
-- **Download button**: Hidden from the toolbar in `st.dataframe`, `st.data_editor`, and chart
-  components
+- **CSV download**: Hidden from the toolbar in `st.dataframe`, `st.data_editor`, and chart
+  table views
 - **Copy to clipboard** (`st.dataframe`): Completely disabled — pressing Ctrl/Cmd+C while a
   dataframe is focused will not copy any cell data to the clipboard (applies to both single
   and multi-cell selections)
-- **Copy to clipboard** (`st.data_editor`): Remains enabled because `st.data_editor` relies on
-  copy/paste for core editing workflows (e.g., pasting data into cells, copying rows)
+- **Copy to clipboard** (`st.data_editor`): Disabled the same way as `st.dataframe`,
+  because editor copy exports the same cell data. Pasting into cells stays enabled
+  because it is part of editing, not export. Cut is also disabled so cells are not
+  cleared with an empty clipboard (the editor has no undo).
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
+- **Chart and diagram image downloads**: Hidden (Vega-Lite/Altair PNG, ECharts PNG/SVG,
+  Plotly `toImage`, Mermaid PNG)
+- **Other copy actions**: Hidden for code blocks (`st.code` and Markdown code blocks), Mermaid
+  diagram source, Vega-Lite spec, `st.json` (copy icons and path copy), dataframe column names,
+  dataframe JSON cells, and the exception link row (Copy, Ask Google, and Ask ChatGPT).
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
-This applies to all components with data export capabilities in the app.
+This applies to Streamlit's built-in export and copy controls. It does not cover:
+
+- `st.download_button`, which is author-placed. Gating it from config would change
+  the widget's return value and `on_click`, which conflicts with $38 Config vs Code
+  in `specs/AGENTS.md`. Authors already control it with `disabled=`
+- `st.audio_input`'s "Download as WAV" action, which saves the viewer's own recording
+  rather than app data
+- Chart controls that the app configures itself (for example ECharts
+  `toolbox.feature.saveAsImage` or `dataView`, or a custom Plotly `modeBarButtons` list)
 
 ### Examples
 

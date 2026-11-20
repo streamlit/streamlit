@@ -37,7 +37,7 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import type * as LazyReadOnlyGridModule from "~lib/components/widgets/DataFrame/LazyReadOnlyGrid"
 import type * as FormClearHelperModule from "~lib/components/widgets/Form/FormClearHelper"
 import { mockTheme } from "~lib/mocks/mockTheme"
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { EChartsChart } from "./EChartsChart"
@@ -1562,6 +1562,17 @@ describe("EChartsChart", () => {
       ).toBeInTheDocument()
       expect(
         screen.queryByRole("button", { name: "Show data" })
+      ).not.toBeInTheDocument()
+    })
+
+    it("hides PNG download when data export is disabled", () => {
+      renderWithContexts(<Wrapper element={createElement()} />, {
+        libConfigContext: { disableDataExport: true },
+      })
+
+      expect(screen.getByTestId("stEChartsChart")).toBeVisible()
+      expect(
+        screen.queryByRole("button", { name: "Download as PNG" })
       ).not.toBeInTheDocument()
     })
 

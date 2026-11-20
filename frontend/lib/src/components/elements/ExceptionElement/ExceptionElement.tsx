@@ -123,8 +123,10 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
-  const { showErrorLinks = Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO } =
-    useContext(LibConfigContext)
+  const {
+    showErrorLinks = Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+    disableDataExport = false,
+  } = useContext(LibConfigContext)
 
   const shouldShowLinks =
     showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE ||
@@ -197,7 +199,7 @@ function ExceptionElement({
             {element.stackTrace.length > 0 ? (
               <StackTrace stackTrace={element.stackTrace} />
             ) : null}
-            {shouldShowLinks && (
+            {shouldShowLinks && !disableDataExport && (
               <StyledExceptionLinks>
                 <StyledExceptionLinkButton onClick={handleCopy}>
                   Copy

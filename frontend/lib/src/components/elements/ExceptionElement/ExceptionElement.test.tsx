@@ -155,6 +155,19 @@ describe("ExceptionElement Element", () => {
     })
   })
 
+  it("hides error links when data export is disabled", () => {
+    renderWithContexts(<ExceptionElement {...getProps()} />, {
+      libConfigContext: {
+        showErrorLinks: Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        disableDataExport: true,
+      },
+    })
+    expect(screen.getByTestId("stException")).toBeVisible()
+    expect(screen.queryByText("Copy")).not.toBeInTheDocument()
+    expect(screen.queryByText("Ask Google")).not.toBeInTheDocument()
+    expect(screen.queryByText("Ask ChatGPT")).not.toBeInTheDocument()
+  })
+
   describe("Skills install callout", () => {
     const SHOW_LINKS = Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
 

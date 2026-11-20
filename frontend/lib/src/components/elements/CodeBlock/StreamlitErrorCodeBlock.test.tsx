@@ -16,7 +16,7 @@
 
 import { screen } from "@testing-library/react"
 
-import { render } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 
 import StreamlitErrorCodeBlock, {
   type StreamlitErrorCodeBlockProps,
@@ -52,6 +52,19 @@ describe("StreamlitErrorCodeBlock", () => {
 
     const codeBlock = screen.getByTestId("stErrorCodeBlock")
     expect(codeBlock).toHaveClass("stErrorCodeBlock")
+  })
+
+  it("should not render copy button when data export is disabled", () => {
+    const props = getStreamlitCodeBlockProps()
+    renderWithContexts(<StreamlitErrorCodeBlock {...props} />, {
+      libConfigContext: { disableDataExport: true },
+    })
+    const codeBlock = screen.getByTestId("stErrorCodeBlock")
+
+    expect(codeBlock).not.toHaveAttribute("tabindex")
+    expect(
+      screen.queryByRole("button", { name: /copy/i })
+    ).not.toBeInTheDocument()
   })
 
   it("should render copy button when children is a non-empty string", () => {
