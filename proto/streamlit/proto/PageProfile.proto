@@ -128,7 +128,9 @@ message ParallelFragmentUsage {
   // Cached calls made by all runs.
   CacheUsage cache_usage = 4;
   // Time the main script thread spent waiting for runs to finish after the
-  // script ended. Part of exec_time, but not of the main script's user code.
+  // script ended, including when it ended early, for example with st.stop(),
+  // st.rerun() or an uncaught exception. Part of exec_time, but not of the main
+  // script's user code.
   int64 wait_time = 5;
 }
 

@@ -2045,6 +2045,29 @@ class ScriptRunnerTest(unittest.TestCase):
             slow.command_time + fast.command_time
         )
 
+    @testutil.patch_config_options({"browser.gatherUsageStats": True})
+    def test_page_profile_wait_time_includes_drain_after_early_stop(self):
+        """When the script stops early, the time spent draining running
+        parallel fragments counts as wait time.
+        """
+        scriptrunner = TestScriptRunner("parallel_fragment_stop.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        (page_profile,) = (
+            msg.page_profile
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("page_profile")
+        )
+        usage = page_profile.parallel_fragment_usage
+        assert usage.run_count == 1
+        # st.stop() runs right after dispatch, so the drain waits for most of the
+        # fragment's 0.2s sleep.
+        assert usage.wait_time >= 100_000
+        assert usage.wait_time <= page_profile.exec_time
+
     def _start_cache_compute_owner_and_create_waiter(
         self,
     ) -> tuple[TestScriptRunner, TestScriptRunner, threading.Event, threading.Event]:
