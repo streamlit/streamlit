@@ -196,12 +196,14 @@ def logo(
 
     icon_image : Anything supported by st.image (except list), str, or None
         An optional, typically smaller image to replace ``image`` in the
-        upper-left corner when the sidebar is closed. This can be any of the
+        upper-left corner when the sidebar is closed or the app has no
+        sidebar. This can be any of the
         types allowed for the ``image`` parameter. If ``icon_image`` is
         ``None`` (default), Streamlit will always display ``image`` in the
         upper-left corner, regardless of whether the sidebar is open or closed.
         Otherwise, Streamlit will render ``icon_image`` in the upper-left
-        corner of the app when the sidebar is closed.
+        corner of the app when the sidebar is closed or the app has no
+        sidebar.
 
         Streamlit scales the image to a max height set by ``icon_size`` (or
         ``size`` if ``icon_size`` is ``None``) and a max width that fits the
@@ -213,7 +215,7 @@ def logo(
 
     icon_size : "small", "medium", "large", int, or None
         The size of the image displayed in the upper-left corner of the app
-        when the sidebar is closed or the app has no sidebar. This uses the
+        when the sidebar is closed or the app has no sidebar. It accepts the
         same values as ``size``.
         If ``icon_size`` is ``None`` (default), Streamlit uses ``size`` for
         both the sidebar and the header.

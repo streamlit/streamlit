@@ -227,6 +227,8 @@ export const StyledSidebarHeaderContainer =
     }
   )
 
+/** Logo wrappers set minWidth: 0 so a wide image can shrink below its
+ * intrinsic width instead of crowding the collapse button. */
 export const StyledSidebarLogoSlot = styled.div({
   display: "flex",
   alignItems: "center",

@@ -46,6 +46,7 @@ const LOGO_SIZE_TO_ICON_SIZE: Partial<Record<string, IconSize>> = {
 }
 
 interface LogoDisplaySize {
+  /** Preset name, or a "medium" placeholder that the styles ignore when sizePx is set. */
   size: string
   sizePx?: number
 }
