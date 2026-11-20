@@ -37,14 +37,14 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.string_util import is_emoji, validate_material_icon
 
-LogoSize: TypeAlias = Literal["small", "medium", "large"] | int
+_LogoSize: TypeAlias = Literal["small", "medium", "large"] | int
 
 _LOGO_SIZE_PRESETS: Final = ("small", "medium", "large")
 _LOGO_SIZE_VALID_VALUES: Final = [
     "'small'",
     "'medium'",
     "'large'",
-    "a positive integer",
+    "a positive integer (pixels)",
 ]
 
 
@@ -102,8 +102,10 @@ def _process_logo_image(
     return ImageType.IMAGE, image_url
 
 
-def _validate_logo_size(parameter: str, size: LogoSize) -> tuple[str, int]:
-    """Return ``(preset, size_px)``. One of the two is set; the other is empty/0."""
+def _validate_logo_size(parameter: str, size: _LogoSize) -> tuple[str, int]:
+    """Return ``(preset, size_px)``. A preset uses an empty size_px of 0.
+    A pixel size uses an empty preset string.
+    """
     if isinstance(size, str):
         image_size = size.lower()
         if image_size in _LOGO_SIZE_PRESETS:
@@ -124,10 +126,10 @@ def _validate_logo_size(parameter: str, size: LogoSize) -> tuple[str, int]:
 def logo(
     image: AtomicImage | str,
     *,  # keyword-only args:
-    size: LogoSize = "medium",
+    size: _LogoSize = "medium",
     link: str | None = None,
     icon_image: AtomicImage | str | None = None,
-    icon_size: LogoSize | None = None,
+    icon_size: _LogoSize | None = None,
 ) -> None:
     r"""
     Renders a logo in the upper-left corner of your app and its sidebar.
@@ -181,7 +183,7 @@ def logo(
         - ``"small"``: 20px max height
         - ``"medium"`` (default): 24px max height
         - ``"large"``: 32px max height
-        - An integer: A max height in pixels. The frontend also caps the
+        - An integer: A max height in pixels. Streamlit also limits the
           height so the logo fits in the sidebar and app header.
 
     link : str or None

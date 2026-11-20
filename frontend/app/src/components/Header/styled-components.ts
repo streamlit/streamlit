@@ -20,8 +20,9 @@ import type { EmotionTheme } from "@streamlit/lib"
 
 export const StyledLogoContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.lg,
+  // Match the sidebar's minimum width so a wide wordmark in the header
+  // cannot crowd top nav or the expand control.
   maxWidth: theme.sizes.minSidebarWidth,
-  overflow: "hidden",
   display: "flex",
   alignItems: "center",
 }))

@@ -22,6 +22,9 @@ import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
 
+const cappedLogoHeight = (requestedHeight: string): string =>
+  `min(${requestedHeight}, calc(3.75rem - 2 * 0.25rem))`
+
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
   const actual = await vi.importActual("@streamlit/utils")
@@ -373,7 +376,9 @@ describe("LogoComponent", () => {
       />
     )
 
-    expect(screen.getByTestId("stSidebarLogo")).toHaveStyle("height: 40px")
+    expect(screen.getByTestId("stSidebarLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("40px")}`
+    )
   })
 
   it("uses icon_size for the collapsed logo when set", () => {
@@ -419,7 +424,7 @@ describe("LogoComponent", () => {
 
     const logo = screen.getByTestId("stSidebarLogo")
     expect(logo).toHaveAttribute("src", "https://example.com/logo.png")
-    expect(logo).toHaveStyle("height: 40px")
+    expect(logo).toHaveStyle(`height: ${cappedLogoHeight("40px")}`)
     expect(logo).not.toHaveStyle("height: 1.25rem")
   })
 
@@ -441,7 +446,9 @@ describe("LogoComponent", () => {
       />
     )
 
-    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle("height: 24px")
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("24px")}`
+    )
   })
 
   it("falls back to size for the collapsed logo when icon_size is unset", () => {
@@ -460,7 +467,32 @@ describe("LogoComponent", () => {
       />
     )
 
-    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle("height: 40px")
+    expect(screen.getByTestId("stHeaderLogo")).toHaveStyle(
+      `height: ${cappedLogoHeight("40px")}`
+    )
+  })
+
+  it("caps icon logo fontSize at the header row height", () => {
+    const iconLogo = LogoProto.create({
+      image: ":material/home:",
+      imageType: LogoProto.ImageType.ICON,
+      sizePx: 80,
+    })
+
+    render(
+      <LogoComponent
+        {...getProps({
+          appLogo: iconLogo,
+          dataTestId: "stSidebarLogo",
+          collapsed: false,
+        })}
+      />
+    )
+
+    const logo = screen.getByTestId("stSidebarLogo")
+    const cappedHeight = cappedLogoHeight("80px")
+    expect(logo).toHaveStyle(`height: ${cappedHeight}`)
+    expect(logo).toHaveStyle(`font-size: ${cappedHeight}`)
   })
 
   describe("icon and emoji logos", () => {

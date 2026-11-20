@@ -233,7 +233,6 @@ export const StyledSidebarLogoSlot = styled.div({
   flex: "1 1 auto",
   minWidth: 0,
   maxWidth: "100%",
-  overflow: "hidden",
 })
 
 export const StyledLogoInnerWrap = styled.div({
@@ -242,7 +241,9 @@ export const StyledLogoInnerWrap = styled.div({
   display: "flex",
 })
 
-const logoChromeMaxHeight = (theme: EmotionTheme): string =>
+// Keeps logos inside the header row. The sidebar header and app header share
+// theme.sizes.headerHeight.
+const logoMaxHeight = (theme: EmotionTheme): string =>
   `calc(${theme.sizes.headerHeight} - 2 * ${theme.spacing.twoXS})`
 
 export const StyledLogoLink = styled.a({
@@ -313,11 +314,14 @@ const logoBoxStyles = ({
   size: string
   sizePx?: number
 }): Record<string, string> => {
-  const height = translateLogoHeight(theme, size, sizePx)
+  const requestedHeight = translateLogoHeight(theme, size, sizePx)
+  const height =
+    sizePx && sizePx > 0
+      ? `min(${requestedHeight}, ${logoMaxHeight(theme)})`
+      : requestedHeight
   const verticalMargin = logoVerticalMargin(theme, size, sizePx)
   return {
     height,
-    maxHeight: logoChromeMaxHeight(theme),
     marginTop: verticalMargin,
     marginBottom: verticalMargin,
     marginLeft: theme.spacing.none,
@@ -337,14 +341,14 @@ export const StyledLogo = styled.img<StyledLogoProps>(
 
 export const StyledIconLogo = styled.div<StyledLogoProps>(
   ({ theme, size, sizePx }) => {
-    const height = translateLogoHeight(theme, size, sizePx)
+    const boxStyles = logoBoxStyles({ theme, size, sizePx })
     return {
       display: "flex",
       alignItems: "center",
       justifyContent: "flex-start",
-      ...logoBoxStyles({ theme, size, sizePx }),
+      ...boxStyles,
       zIndex: theme.zIndices.header,
-      fontSize: height,
+      fontSize: boxStyles.height,
       lineHeight: theme.lineHeights.none,
       color: theme.colors.bodyText,
     }

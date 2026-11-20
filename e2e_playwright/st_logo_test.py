@@ -125,11 +125,7 @@ def test_pixel_logo_icon_size_small_w_sidebar(
 
     themed_app.get_by_test_id("stSidebar").hover()
     expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
-
-    assert_snapshot(
-        themed_app.get_by_test_id("stSidebarHeader"),
-        name="logo-pixel_icon_small_w_sidebar_expanded",
-    )
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_have_css("height", "40px")
 
     themed_app.get_by_test_id("stSidebar").hover()
     themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()

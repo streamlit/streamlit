@@ -28,15 +28,16 @@ message Logo {
   string image = 1;
   string link = 2;
   string icon_image = 3;
-  // Preset size for the sidebar / expanded slot: "small", "medium", or "large".
+  // Preset size for the open-sidebar logo: "small", "medium", or "large".
   // Empty when size_px is set.
   string size = 4;
   ImageType image_type = 5;
   ImageType icon_image_type = 6;
-  // Pixel max height for the sidebar / expanded slot. 0 means unset (use size).
+  // Pixel max height for the open-sidebar logo. 0 means unset (use size).
   uint32 size_px = 7;
-  // Preset size for the header / collapsed slot. Empty means follow size / size_px.
+  // Preset size for the header logo (sidebar closed or no sidebar).
+  // Empty means follow size / size_px.
   string icon_size = 8;
-  // Pixel max height for the header / collapsed slot. 0 means unset.
+  // Pixel max height for the header logo. 0 means unset.
   uint32 icon_size_px = 9;
 }

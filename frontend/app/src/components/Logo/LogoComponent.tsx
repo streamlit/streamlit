@@ -50,6 +50,9 @@ interface LogoDisplaySize {
   sizePx?: number
 }
 
+/** Expanded sidebar uses size/sizePx. Collapsed header prefers iconSizePx,
+ * then iconSize, then the sidebar size. "medium" is unused when sizePx is set.
+ */
 function resolveLogoDisplaySize(
   appLogo: Logo,
   collapsed: boolean
