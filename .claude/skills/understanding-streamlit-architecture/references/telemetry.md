@@ -13,7 +13,7 @@ There are two channels:
 
 ### Page profile
 
-At the end of every script run, full or fragment-only, `script_runner.py` calls `create_page_profile_message` (`lib/streamlit/runtime/metrics_util.py`) and enqueues a `PageProfile` ForwardMsg (`proto/streamlit/proto/PageProfile.proto`). This happens only when `ctx.gather_usage_stats` is set, which comes from `browser.gatherUsageStats`. Runs cut short by `st.rerun()` or `st.stop()` still send one. Runs that fail to compile don't.
+At the end of every script run, full or fragment-only, `script_runner.py` calls `create_page_profile_message` (`lib/streamlit/runtime/metrics_util.py`) and enqueues a `PageProfile` ForwardMsg (`proto/streamlit/proto/PageProfile.proto`). This happens only when `ctx.gather_usage_stats` is set, which comes from `browser.gatherUsageStats`. Runs cut short by `st.stop()` still send one. Runs that fail to compile don't. A run cut short by a rerun request, from `st.rerun()` or a user interaction, also enqueues one, but the next run clears the forward message queue when it starts (`AppSession._clear_queue`), which doesn't keep `page_profile` messages. So that profile usually never reaches the browser.
 
 The proto field comments are the source of truth for each field's meaning. The fields by group:
 
@@ -111,9 +111,9 @@ Fragments with `parallel=True` run on worker threads alongside the main script, 
 - The time of its listed commands. `_record_command_time` adds it through `ThreadState.parallel_fragment_run`, but only for commands on the worker thread.
 - Its cache compute, wait and overhead times. `RunCacheStats.recording_into` gives the worker thread a new `ThreadCacheStats` while the fragment runs, because one worker thread can run several fragments one after another.
 
-The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended: in `ParallelFragmentCoordinator.join()`, or in `drain()` when the script ended early with `st.stop()`, `st.rerun()` or an uncaught exception.
+The first `_MAX_PARALLEL_FRAGMENT_RUNS` (25) runs to start are listed, and later ones are added together into `overflow`. `run_count` and the cache counts in `cache_usage` cover every run. `wait_time` is how long the script thread waited for the fragments after the script ended: in `ParallelFragmentCoordinator.join()`, or in `drain()` when the script ended early, for example with `st.stop()` or an uncaught exception.
 
-The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
+The fragments' commands and cached calls are also in the top-level `commands` and `cache_usage`. A fragment's user code time is its `exec_time` minus its command and cache times. The main script's is `exec_time - prep_time - wait_time`, minus the top-level command and cache times less the fragments'. Threads that a fragment attaches with `add_script_run_ctx` count toward the main script. Their time usually overlaps `wait_time`, while the script thread waits for the fragment, so subtracting both can make the main script's user code time negative. A nested parallel fragment is a run of its own, and its parent doesn't wait for it.
 
 ## Server metrics
 

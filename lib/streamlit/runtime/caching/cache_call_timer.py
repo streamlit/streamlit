@@ -37,7 +37,9 @@ other recorded time already covers it:
 
   Exception: a thread started without ``add_script_run_ctx`` that later
   attaches itself doesn't inherit the outer call's state, so its calls are
-  recorded even during the outer computation.
+  recorded even during the outer computation. Conversely, a task that an async
+  cached function starts with ``asyncio.create_task()`` inherits it for good,
+  so its cached calls aren't recorded even after the outer computation ends.
 - It isn't inside a command listed in the page profile, such as the
   ``st.cache_resource`` call inside ``st.connection``, whose command time covers
   it. A command past the listing limits in ``metrics_util.py`` isn't listed, so
@@ -165,8 +167,9 @@ class CacheCallTimer:
         self._thread_stats.enter_cache_code()
 
     def exclude_attached_command_time(self, seconds: float) -> None:
-        """Leave out of the compute time the ``seconds`` that attached threads
-        spent in listed commands during the computation.
+        """Remember ``seconds`` of listed commands that attached threads ran
+        during the computation, so ``finish()`` leaves them out of the compute
+        time.
         """
         self._attached_command_time += seconds
 
@@ -270,8 +273,13 @@ def computing_cached_value(call_timer: CacheCallTimer) -> Generator[None, None, 
 
     A context that is already marked keeps the outer mark, so threads that a
     nested cached function attaches still report to the outermost recorded
-    call. A thread without script-run thread state has nothing to mark.
+    call. Nothing is marked when the run doesn't gather usage stats, or on a
+    thread without script-run thread state.
     """
+    ctx = get_script_run_ctx(suppress_warning=True)
+    if ctx is None or not ctx.gather_usage_stats:
+        yield
+        return
     try:
         thread_state = ThreadState.get()
     except RuntimeError:

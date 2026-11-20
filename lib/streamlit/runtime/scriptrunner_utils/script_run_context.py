@@ -133,8 +133,9 @@ class CacheComputeScope:
             return self._command_time
 
     def __deepcopy__(self, memo: dict[int, object]) -> CacheComputeScope:
-        # add_script_run_ctx deep-copies the parent's FragmentThreadState for the
-        # child thread, which must still see this scope end.
+        # add_script_run_ctx copies FragmentThreadState with dataclasses.asdict,
+        # which deep-copies this field. Return the same scope so the child sees
+        # is_active turn False when the computation ends.
         return self
 
 

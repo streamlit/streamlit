@@ -89,12 +89,12 @@ class _OverlapGroup:
     def __init__(self, start: float, command_start: float) -> None:
         self.cache_data = CacheTotals()
         self.cache_resource = CacheTotals()
-        # The span runs from the group's first call starting to its last call
-        # finishing. start and end are perf_counter times; command_start and
-        # command_end are the thread's listed command time at those points. end is
-        # None while the group is open.
+        # perf_counter time and the thread's listed command time when the
+        # group's first call started.
         self.start = start
         self.command_start = command_start
+        # The same values when the group's last call finished. end stays None
+        # while the group is open.
         self.end: float | None = None
         self.command_end = 0.0
 
@@ -272,7 +272,8 @@ class RunCacheStats:
 
     @contextlib.contextmanager
     def recording_into(self, stats: ThreadCacheStats) -> Generator[None, None, None]:
-        """Record the calling thread's cached calls into ``stats`` meanwhile.
+        """Record the calling thread's cached calls into ``stats`` until the
+        block exits.
 
         A parallel fragment uses this to keep its calls apart from other
         fragments that run on the same worker thread. ``stats`` still counts

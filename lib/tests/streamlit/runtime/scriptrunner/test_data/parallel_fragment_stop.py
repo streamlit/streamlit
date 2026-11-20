@@ -12,16 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import time
 
 import streamlit as st
 
+started = threading.Event()
+
 
 @st.fragment(parallel=True)
 def slow() -> None:
+    started.set()
     time.sleep(0.2)
     st.text("slow")
 
 
 slow()
+# Stop only once the fragment is running, so drain() waits for it instead of
+# cancelling it before a worker picks it up.
+started.wait(5)
 st.stop()

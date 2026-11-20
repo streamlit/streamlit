@@ -1100,8 +1100,9 @@ def _clean_problem_modules() -> None:
 def _recording_parallel_fragment_wait(
     ctx: ScriptRunContext,
 ) -> Generator[None, None, None]:
-    """Count the time spent in the block, where the script thread waits for
-    parallel fragments, toward ``parallel_fragment_usage.wait_time``.
+    """Add the block's duration to ``parallel_fragment_usage.wait_time``.
+
+    The block is where the script thread waits for parallel fragments to finish.
     """
     start = timer()
     try:

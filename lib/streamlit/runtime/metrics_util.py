@@ -660,8 +660,11 @@ def _record_command_time(
         thread_state.parallel_fragment_run.add_command_time(seconds)
     if ctx.shared.cache_stats.record_tracked_command_time(seconds):
         return
-    if thread_state is not None and thread_state.cache_compute is not None:
-        thread_state.cache_compute.add_command_time(seconds)
+    scope = thread_state.cache_compute if thread_state is not None else None
+    # A long-lived attached thread keeps the scope after the computation ends;
+    # skip it then rather than take its lock for nothing.
+    if scope is not None and scope.is_active:
+        scope.add_command_time(seconds)
 
 
 @overload

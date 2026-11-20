@@ -48,6 +48,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
 )
@@ -917,16 +918,21 @@ def test_call_without_thread_state_is_not_recorded(ctx: ScriptRunContext) -> Non
 
 
 def test_nothing_is_recorded_without_usage_stats(ctx: ScriptRunContext) -> None:
-    """Respect browser.gatherUsageStats by not recording when it's off."""
+    """Respect browser.gatherUsageStats by not recording when it's off, and
+    skip setting up a compute scope for attached threads on a miss.
+    """
     ctx.gather_usage_stats = False
+    scopes_seen: list[object] = []
 
     @st.cache_data(show_spinner=False)
     def load() -> int:
+        scopes_seen.append(ThreadState.get().cache_compute)
         return 1
 
     load()
     load()
 
+    assert scopes_seen == [None]
     assert ctx.shared.cache_stats._threads == []
     assert _server_counts(load) == (1, 1, 1, 0)
 

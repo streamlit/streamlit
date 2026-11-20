@@ -36,11 +36,21 @@ def test_reset_clears_all_fields() -> None:
     shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
     cache_stats = shared.cache_stats
     cache_stats.current_thread_stats().cache_data.calls = 1
+    parallel_fragments = shared.parallel_fragments
+    with parallel_fragments.recording_run():
+        pass
 
     shared.reset()
 
     assert shared.cache_stats is not cache_stats
     assert shared.cache_stats.totals(0.0).cache_data.calls == 0
+    assert shared.parallel_fragments is not parallel_fragments
+    assert shared.parallel_fragments.runs == ()
+    # The new fragment stats record into the new run's cache totals.
+    with shared.parallel_fragments.recording_run():
+        shared.cache_stats.current_thread_stats().cache_data.calls = 1
+    assert shared.cache_stats.totals(0.0).cache_data.calls == 1
+    assert cache_stats.totals(0.0).cache_data.calls == 1
     assert "widget" not in shared.widget_ids_this_run
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run

@@ -59,6 +59,7 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
+  // 18-21 are held for planned CPU-time fields.
   // Parallel fragments that ran during this script run. Unset when none ran.
   ParallelFragmentUsage parallel_fragment_usage = 22;
 }
@@ -115,7 +116,8 @@ message CacheTypeUsage {
 // Fragment commands and cached calls are also in PageProfile.commands and
 // PageProfile.cache_usage; subtract the values here to get the main script's
 // share. Threads a fragment attaches with add_script_run_ctx count toward the
-// main script.
+// main script. Their time usually overlaps wait_time, so the main script's
+// user code time can come out negative.
 message ParallelFragmentUsage {
   // One entry per run, in the order the runs started, for at most
   // _MAX_PARALLEL_FRAGMENT_RUNS (in metrics_util.py) runs.
@@ -130,9 +132,9 @@ message ParallelFragmentUsage {
   // Cache counts appear only here, not per run.
   CacheUsage cache_usage = 4;
   // Time the main script thread spent waiting for runs to finish after the
-  // script ended, including when it ended early, for example with st.stop(),
-  // st.rerun() or an uncaught exception. Part of exec_time, but not of the main
-  // script's user code.
+  // script ended, including when it ended early, for example with st.stop() or
+  // an uncaught exception. Part of exec_time, but not of the main script's user
+  // code.
   int64 wait_time = 5;
 }
 
