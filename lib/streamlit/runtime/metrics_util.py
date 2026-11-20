@@ -814,6 +814,27 @@ def _fill_cache_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
         usage.overhead_time = to_microseconds(totals.overhead_time)
 
 
+def _fill_query_usage(page_profile: PageProfile, ctx: ScriptRunContext) -> None:
+    """Copy the run's query totals and query IDs onto the profile."""
+    query_stats = ctx.shared.query_stats
+    query_usage = page_profile.query_usage
+    for source, totals in query_stats.totals().items():
+        if totals.queries == 0:
+            continue
+        usage = getattr(query_usage, source)
+        usage.queries = totals.queries
+        usage.failed = totals.failed
+        usage.async_queries = totals.async_queries
+        usage.describe_queries = totals.describe_queries
+        usage.timed_queries = totals.timed_queries
+        usage.time = to_microseconds(totals.time)
+        usage.time_in_cache = to_microseconds(totals.time_in_cache)
+        usage.time_in_commands = to_microseconds(totals.time_in_commands)
+    query_ids = query_stats.query_ids()
+    if query_ids:
+        query_usage.query_ids.extend(query_ids)
+
+
 def create_page_profile_message(
     commands: Sequence[Command],
     exec_time: int,
@@ -877,6 +898,7 @@ def create_page_profile_message(
         page_profile.server_uptime_seconds = server_uptime_seconds
     if ctx is not None:
         _fill_cache_usage(page_profile, ctx)
+        _fill_query_usage(page_profile, ctx)
 
     # Skill/agent detection lives in ``streamlit.web.skills`` (co-located with
     # the installer it must stay aligned with); imported lazily to avoid a

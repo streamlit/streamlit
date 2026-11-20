@@ -1428,6 +1428,54 @@ def test_create_page_profile_message_reports_cache_usage() -> None:
     assert usage.cache_data.overhead_time == 1_000
 
 
+def test_create_page_profile_message_reports_query_usage() -> None:
+    """``query_usage`` carries the run's totals per query source, in
+    microseconds, and the run's query IDs.
+    """
+    ctx = create_mock_script_run_ctx()
+    query_stats = ctx.shared.query_stats
+    totals = query_stats.current_thread_stats().snowflake_connector
+    totals.queries = 4
+    totals.failed = 1
+    totals.async_queries = 1
+    totals.describe_queries = 1
+    totals.timed_queries = 4
+    totals.time = 2.5
+    totals.time_in_cache = 1.0
+    totals.time_in_commands = 0.5
+    query_stats.current_thread_stats().snowpark.queries = 2
+    query_stats.add_query_id("01b2-a")
+    query_stats.add_query_id("01b2-b")
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    usage = msg.page_profile.query_usage
+    assert not usage.HasField("sqlalchemy")
+    connector = usage.snowflake_connector
+    assert connector.queries == 4
+    assert connector.failed == 1
+    assert connector.async_queries == 1
+    assert connector.describe_queries == 1
+    assert connector.timed_queries == 4
+    assert connector.time == 2_500_000
+    assert connector.time_in_cache == 1_000_000
+    assert connector.time_in_commands == 500_000
+    assert usage.snowpark.queries == 2
+    assert usage.snowpark.timed_queries == 0
+    assert list(usage.query_ids) == ["01b2-a", "01b2-b"]
+
+
+def test_create_page_profile_message_leaves_query_usage_unset() -> None:
+    """``query_usage`` stays unset when the run recorded no query."""
+    ctx = create_mock_script_run_ctx()
+
+    with patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+
+    assert not msg.page_profile.HasField("query_usage")
+
+
 def test_create_page_profile_message_leaves_cache_usage_and_uptime_unset() -> None:
     """``cache_usage`` and ``server_uptime_seconds`` stay unset without cached
     calls or a known uptime.

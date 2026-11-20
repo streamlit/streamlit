@@ -23,6 +23,7 @@ The proto field comments are the source of truth for each field's meaning. The f
 | Run timing | `exec_time`, `prep_time` | Microseconds. See [Run timing](#run-timing). |
 | Run type | `is_fragment_run` | Whether the run was fragment-only. |
 | Cache | `cache_usage` | For `st.cache_data` and `st.cache_resource` separately, the run's cached calls, hits, misses, stale hits and waits, and the time spent computing on misses, waiting for another caller's computation, and on other cache overhead. See [Cache totals](#cache-totals). |
+| Queries | `query_usage` | For the Snowflake connector, SQLAlchemy and Snowpark separately, the run's queries, failures, async and describe queries, and their time, with the parts inside listed commands and cached functions. Also the first 50 Snowflake query IDs. Unset when no query was recorded. See [Query totals](#query-totals). |
 | Server process | `server_uptime_seconds` | Seconds since the runtime started, read at the start of the run. `optional`, so 0 is still sent. |
 | | `agent_api_usage` | Agent API counts since the process started. Unset while every count is zero. |
 | Errors | `uncaught_exception` | The exception type name, with a suffix only from fixed categories (see `format_uncaught_exception`). |
@@ -67,7 +68,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
   - Commands past the tracking limits aren't listed, and a command that raises anything other than a rerun request is listed with time 0. Both stay inside `exec_time` and aren't subtracted, so their time counts as user code.
   - Work that happens inside a command counts as command time, for example a lazy Snowpark DataFrame passed to `st.dataframe` runs its query inside the command, and `st.write_stream` consumes its generator.
   - Cached function calls count as user code, except the cache write, which is tracked as a command (`_cache_data_object` or `_cache_resource_object`). Their times are reported separately in `cache_usage` and leave out listed command time, so subtracting them as well leaves the time spent outside the cache. Like command times, cache times from concurrent threads are summed.
-  - Queries count as user code too: `st.connection` times only creating or fetching the connection.
+  - Queries count as user code too: `st.connection` times only creating or fetching the connection. Recorded query times are reported separately in `query_usage`, which says how much of each time is already inside listed command time or cache time.
 
 `totalLoadTime` is an optimistic lower bound on what the user waits for. It leaves out loading the page and JavaScript, opening the WebSocket, the time between a widget interaction and the run starting, and drawing after the `PageProfile` message arrives.
 
@@ -81,7 +82,7 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 - Sets `in_listed_command` in `ThreadState` while a listed command runs, and reports the command's time to the run's cache totals when it ends. See [Cache totals](#cache-totals).
 - Swallows any telemetry error, logging it at debug level, so telemetry can't break the app.
 
-`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `cache_stats` with a new `RunCacheStats`, so a cached call still running from the previous run finishes into that run's totals.
+`SharedRunState` (`lib/streamlit/runtime/scriptrunner_utils/shared_run_state.py`) holds the per-run telemetry state shared by the script thread and its workers. `reset()` clears that state at the start of each run, before any parallel fragment workers start, and workers keep the same `SharedRunState`. It replaces `cache_stats` with a new `RunCacheStats` and `query_stats` with a new `RunQueryStats`, so a cached call or query still running from the previous run finishes into that run's totals.
 
 ## Cache totals
 
@@ -95,6 +96,18 @@ All server times are wall-clock times in microseconds. `exec_time` and `prep_tim
 A hit returned a stored value, including one another caller computed while this call waited. A miss ran the function. `cache_lookups` in the server metrics uses the same rule. The two differ only in which calls they cover: the server metrics count every call over the life of the process.
 
 Each thread adds to its own `ThreadCacheStats` without a lock, which keeps a cache hit's added cost to one or two microseconds. A thread takes `RunCacheStats`'s lock only once per run, to register. `create_page_profile_message` combines the threads' totals. A thread the script doesn't join can still be adding to its totals while they're read, so its calls can be partly included.
+
+## Query totals
+
+`lib/streamlit/connections/query_telemetry.py` records database queries into the run's `RunQueryStats` (`lib/streamlit/runtime/scriptrunner_utils/query_run_stats.py`), with one `ThreadQueryStats` per thread, like the cache totals. Its module docstring lists what each source covers. In short:
+
+- **Snowflake connector**: cursors from `SnowflakeConnection.query()` and `.cursor()` are created with a `SnowflakeCursor` subclass that times `execute`. Other cursors, such as from `raw_connection` or `write_pandas`, aren't recorded.
+- **SQLAlchemy**: cursor execute events on the `Engine` class, so every engine is recorded, including ones the app creates. They're installed when a `SQLConnection` connects or a run starts after the app imported SQLAlchemy.
+- **Snowpark**: a query listener on sessions from `SnowflakeConnection.session()` and on the active session. Snowpark notifies listeners only after a query finishes, so these queries are counted but not timed.
+
+A query's time covers only the driver's execute call, not fetching results. It's also counted in `time_in_commands` if it ran inside a listed command, or else in `time_in_cache` if it ran inside a cached function, so analysis can subtract it without counting it twice. A query answered by a cache hit doesn't run, so it isn't recorded. Nothing is installed when `browser.gatherUsageStats` is off.
+
+`query_ids` holds the first 50 Snowflake query IDs of the run, in the order the queries finished. They're the one exception to the anonymity rule below: a query ID reveals nothing without access to the Snowflake account that ran it, and lets the account's owner look the query up.
 
 ## Server metrics
 
@@ -115,7 +128,7 @@ Choose the channel first. The page profile is for understanding how apps behave 
 
 Rules for new page profile fields:
 
-- **Anonymous.** Record counts, durations, values from a small fixed set, and random IDs. Never record names, keys, labels, paths, argument values or query text, and never hashes of them, because hashes of common names can be reversed. Older fields predate this rule: `pageScriptHash` and the component and `external:` names in `commands`. Keep them as they are, and don't copy them for new fields.
+- **Anonymous.** Record counts, durations, values from a small fixed set, and random IDs. Never record names, keys, labels, paths, argument values or query text, and never hashes of them, because hashes of common names can be reversed. Older fields predate this rule: `pageScriptHash` and the component and `external:` names in `commands`. Keep them as they are, and don't copy them for new fields. Snowflake query IDs in `query_usage` are a deliberate exception, see [Query totals](#query-totals).
 - **Fixed size per run.** Prefer per-run totals. If a list is needed, cap it and document what happens past the cap.
 - **Only what varies between real apps.** Record values that depend on the app, its data, its hosting, the network, the device or how people use it. Costs that are fixed for a given input, such as how long one element type takes to draw, belong in the performance suite (`.github/workflows/performance.yml`).
 - **Measure where the value is already known.** Don't add a serialization pass or a lock to the hot path to get a number. Keep overhead negligible next to the work being measured, for example a cache hit's argument hashing.

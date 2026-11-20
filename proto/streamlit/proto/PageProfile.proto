@@ -59,6 +59,67 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
+  // Database queries during this script run. Unset when no query was recorded.
+  QueryUsage query_usage = 18;
+}
+
+// Database queries during one script run: counts, and times in microseconds.
+// A query is recorded when it runs on a thread attached to the script run and
+// finishes before the page profile is built. Queries saved by a cache hit
+// never run, so they aren't recorded. Each retry is a separate query.
+// Query times are part of user code time, except where they overlap other
+// recorded times, which time_in_cache and time_in_commands report. Like
+// command times, times from concurrent threads are summed and can exceed
+// wall-clock time.
+// lib/streamlit/connections/query_telemetry.py lists which queries are
+// recorded.
+message QueryUsage {
+  // Snowflake Connector for Python cursors created by Streamlit:
+  // SnowflakeConnection.query() and SnowflakeConnection.cursor().
+  // Unset when no such query was recorded.
+  QuerySourceUsage snowflake_connector = 1;
+  // SQLAlchemy engines, including the one behind SQLConnection.
+  // Unset when no such query was recorded.
+  QuerySourceUsage sqlalchemy = 2;
+  // Snowpark sessions from SnowflakeConnection.session(), and the active
+  // Snowpark session, on Snowpark 1.26 and later. Snowpark reports queries
+  // only after they finish, so their times aren't measured.
+  // Unset when no such query was recorded.
+  QuerySourceUsage snowpark = 3;
+  // Snowflake query IDs of the recorded queries from all sources, in the order
+  // they finished, up to the first 50 per run. A query ID contains no SQL, and
+  // only someone with access to the Snowflake account can look it up, for
+  // example to get compile, queue and execution time from the account's query
+  // history.
+  repeated string query_ids = 4;
+}
+
+// Recorded queries from one source, with times in microseconds.
+message QuerySourceUsage {
+  // All recorded queries, including failed, async and describe queries.
+  int64 queries = 1;
+  // Queries that raised an error. Snowpark reports only some failures, so
+  // some failed Snowpark queries are counted only in queries.
+  int64 failed = 2;
+  // Queries submitted without waiting for them to finish. Their time covers
+  // only the submission.
+  int64 async_queries = 3;
+  // Queries that only look up the shape of a result, such as the ones Snowpark
+  // runs to work out a DataFrame's columns.
+  int64 describe_queries = 4;
+  // Queries whose time is included in time.
+  int64 timed_queries = 5;
+  // Time blocked in the driver's execute call: sending the query, and for a
+  // query that isn't async, waiting for it to finish. Fetching the results
+  // afterwards isn't included.
+  int64 time = 6;
+  // Part of time spent inside a cached function's computation, which
+  // cache_usage already counts in compute_time.
+  int64 time_in_cache = 7;
+  // Part of time spent inside a listed command, which that command's time
+  // already counts. For example, a lazy DataFrame passed to st.dataframe runs
+  // its query inside the command.
+  int64 time_in_commands = 8;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.

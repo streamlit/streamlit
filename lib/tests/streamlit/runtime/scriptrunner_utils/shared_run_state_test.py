@@ -36,11 +36,17 @@ def test_reset_clears_all_fields() -> None:
     shared.track_command(_make_command("markdown"), max_per_command=5, max_total=10)
     cache_stats = shared.cache_stats
     cache_stats.current_thread_stats().cache_data.calls = 1
+    query_stats = shared.query_stats
+    query_stats.current_thread_stats().sqlalchemy.queries = 1
+    query_stats.add_query_id("01b2-query")
 
     shared.reset()
 
     assert shared.cache_stats is not cache_stats
     assert shared.cache_stats.totals()[0].calls == 0
+    assert shared.query_stats is not query_stats
+    assert shared.query_stats.totals()["sqlalchemy"].queries == 0
+    assert shared.query_stats.query_ids() == []
     assert "widget" not in shared.widget_ids_this_run
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run

@@ -19,6 +19,7 @@ import threading
 from typing import TYPE_CHECKING
 
 from streamlit.runtime.scriptrunner_utils.cache_run_stats import RunCacheStats
+from streamlit.runtime.scriptrunner_utils.query_run_stats import RunQueryStats
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
 if TYPE_CHECKING:
@@ -49,9 +50,11 @@ class SharedRunState:
         self._tracked_commands: list[Command] = []
         self._tracked_commands_counter: collections.Counter[str] = collections.Counter()
 
-        # reset() replaces this rather than clearing it, so a cached call still
-        # running from the previous run finishes into that run's totals.
+        # reset() replaces these rather than clearing them, so a cached call or
+        # query still running from the previous run finishes into that run's
+        # totals.
         self.cache_stats = RunCacheStats()
+        self.query_stats = RunQueryStats()
 
     def reset(self) -> None:
         """Re-initialize all shared mutable state for a new script run.
@@ -72,6 +75,7 @@ class SharedRunState:
             self._tracked_commands_counter = collections.Counter()
 
         self.cache_stats = RunCacheStats()
+        self.query_stats = RunQueryStats()
 
     @property
     def tracked_commands(self) -> tuple[Command, ...]:

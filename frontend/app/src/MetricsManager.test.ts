@@ -429,6 +429,45 @@ describe("metrics helpers", () => {
     expect(atServerStart.serverUptimeSeconds).toBe("0")
   })
 
+  it("buildEventProto forwards queryUsage through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          queryUsage: {
+            snowflakeConnector: {
+              queries: 2,
+              failed: 1,
+              timedQueries: 2,
+              time: 3000,
+              timeInCache: 2500,
+            },
+            queryIds: ["01b2c3d4-0000-0001-0000-000000000001"],
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    // Unset sources and zero values are left out.
+    expect(withUsage.queryUsage).toStrictEqual({
+      snowflakeConnector: {
+        queries: "2",
+        failed: "1",
+        timedQueries: "2",
+        time: "3000",
+        timeInCache: "2500",
+      },
+      queryIds: ["01b2c3d4-0000-0001-0000-000000000001"],
+    })
+    expect(withoutUsage).not.toHaveProperty("queryUsage")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
