@@ -94,6 +94,7 @@ app shell ready → connected → first content → script finished → fully lo
 
 - **Script finished** is the end point of today's `totalLoadTime`, so the two can be compared.
 - **Fully loaded** waits only for elements the user can see. Content in collapsed expanders, unselected tabs or a closed sidebar doesn't count.
+- **Visible elements and viewport size** say how much fully loaded waited for. The number of visible elements separates a screen full of charts from one with a single table, which the `commands` list can't do because it counts every call, including content off screen. The viewport size bucket explains why that number varies, since a larger screen shows more of the page. The size is rounded into buckets so exact dimensions aren't sent. Together they add a few bytes per run.
 - **The time after the script**, from script finished to fully loaded, reports how long the screen was waiting on element code or media (images, video and iframes) to load. Each is the time when at least one visible element was waiting on it, not the time of any one element, so the two can overlap. The rest of that time includes drawing charts and dataframes, which performance suite benchmarks measure. Drawing time depends somewhat on the data, so it could be split out later if analysis needs it.
 - **Parallel fragments** are included. A full run waits for its parallel fragments to finish before it sends its `PageProfile` message, and their elements belong to that run, so its milestones cover them.
 
