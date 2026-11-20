@@ -22,8 +22,13 @@ combined when the run's page profile is built.
 
 from __future__ import annotations
 
+import contextlib
 import threading
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 @dataclass(slots=True)
@@ -264,6 +269,23 @@ class RunCacheStats:
             with self._threads_lock:
                 self._threads.append(stats)
         return stats
+
+    @contextlib.contextmanager
+    def recording_into(self, stats: ThreadCacheStats) -> Generator[None, None, None]:
+        """Record the calling thread's cached calls into ``stats`` meanwhile.
+
+        A parallel fragment uses this to keep its calls apart from other
+        fragments that run on the same worker thread. ``stats`` still counts
+        toward ``totals()``.
+        """
+        with self._threads_lock:
+            self._threads.append(stats)
+        previous: ThreadCacheStats | None = getattr(self._local, "stats", None)
+        self._local.stats = stats
+        try:
+            yield
+        finally:
+            self._local.stats = previous
 
     def record_tracked_command_time(self, seconds: float) -> bool:
         """Record the time of a listed command that ran on the calling thread.

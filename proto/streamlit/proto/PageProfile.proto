@@ -59,6 +59,8 @@ message PageProfile {
   // started. Low values mean this process started recently, so its in-memory
   // caches are empty. Optional, so that 0 is still sent.
   optional int64 server_uptime_seconds = 17;
+  // Parallel fragments that ran during this script run. Unset when none ran.
+  ParallelFragmentUsage parallel_fragment_usage = 22;
 }
 
 // Cache activity during one script run: counts, and times in microseconds.
@@ -68,7 +70,8 @@ message PageProfile {
 // cached function counts as part of the outer call, so subtracting the times
 // from user code time leaves the time spent outside the cache. Like command
 // times, times from threads that ran at the same time are added together and
-// can exceed wall-clock time.
+// can exceed wall-clock time; ParallelFragmentUsage reports the share of
+// parallel fragments.
 // lib/streamlit/runtime/caching/cache_call_timer.py lists which calls are
 // recorded.
 message CacheUsage {
@@ -105,6 +108,45 @@ message CacheTypeUsage {
   // the cache write when the limits on tracked commands (_MAX_TRACKED_COMMANDS
   // and _MAX_TRACKED_PER_COMMAND in metrics_util.py) left it out of commands.
   int64 overhead_time = 7;
+}
+
+// Parallel fragments (st.fragment(parallel=True)) that ran during one script
+// run, with times in microseconds. Each runs on a worker thread alongside the
+// main script, and its listed commands and cached calls are also included in
+// PageProfile.commands and PageProfile.cache_usage. Subtracting the values
+// here from those leaves the main script's share. Threads that a fragment
+// attaches with add_script_run_ctx count toward the main script.
+message ParallelFragmentUsage {
+  // The first runs to start, in start order, up to _MAX_PARALLEL_FRAGMENT_RUNS
+  // in metrics_util.py.
+  repeated ParallelFragmentRun runs = 1;
+  // The runs past that limit, added together, with start_time unset. Unset
+  // when every run is listed.
+  ParallelFragmentRun overflow = 2;
+  // All runs, including those added into overflow.
+  int64 run_count = 3;
+  // Cached calls made by all runs.
+  CacheUsage cache_usage = 4;
+  // Time the main script thread spent waiting for runs to finish after the
+  // script ended. Part of exec_time, but not of the main script's user code.
+  int64 wait_time = 5;
+}
+
+// One parallel fragment run on its worker thread, with times in microseconds.
+// Its user code time is exec_time minus the command and cache times.
+message ParallelFragmentRun {
+  // When the run started, measured from the start of the script run.
+  int64 start_time = 1;
+  // Wall-clock time from the run's start until it finished, or until the
+  // page profile was built if it had not.
+  int64 exec_time = 2;
+  // Time of the run's listed commands.
+  int64 command_time = 3;
+  // CacheTypeUsage times of the run's cached calls, combining both cache
+  // types.
+  int64 cache_compute_time = 4;
+  int64 cache_wait_time = 5;
+  int64 cache_overhead_time = 6;
 }
 
 // Agent API activity in one server process. Cumulative since this process

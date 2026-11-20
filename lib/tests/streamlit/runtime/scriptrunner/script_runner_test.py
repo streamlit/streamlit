@@ -2006,6 +2006,45 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_no_exceptions(scriptrunner)
         assert len(join_calls) == 1
 
+    @testutil.patch_config_options({"browser.gatherUsageStats": True})
+    def test_page_profile_reports_each_parallel_fragment(self):
+        """Each parallel fragment run reports its own times, which are also in
+        the run's commands and cache usage.
+        """
+        st.cache_resource.clear()
+        scriptrunner = TestScriptRunner("parallel_fragment_usage.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        (page_profile,) = (
+            msg.page_profile
+            for msg in scriptrunner.forward_msgs()
+            if msg.HasField("page_profile")
+        )
+        usage = page_profile.parallel_fragment_usage
+        assert usage.run_count == 2
+        assert not usage.HasField("overflow")
+        slow, fast = sorted(usage.runs, key=lambda run: -run.cache_compute_time)
+
+        # The slow fragment computes the cached value for 0.1s, then sleeps 0.1s.
+        assert slow.cache_compute_time >= 100_000
+        assert slow.exec_time >= 200_000
+        assert fast.cache_compute_time == 0
+        for run in (slow, fast):
+            assert 0 < run.command_time <= run.exec_time
+            assert 0 <= run.start_time <= page_profile.exec_time
+        # The main script ends long before the slow fragment.
+        assert usage.wait_time >= 100_000
+        assert slow.start_time + slow.exec_time <= page_profile.exec_time
+
+        assert usage.cache_usage.cache_resource.calls == 1
+        assert page_profile.cache_usage.cache_resource.calls == 1
+        assert sum(command.time for command in page_profile.commands) >= (
+            slow.command_time + fast.command_time
+        )
+
     def _start_cache_compute_owner_and_create_waiter(
         self,
     ) -> tuple[TestScriptRunner, TestScriptRunner, threading.Event, threading.Event]:

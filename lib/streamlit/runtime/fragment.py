@@ -55,6 +55,9 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.outside_container_wrapper import OutsideContainerWrapper
+    from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
+        ParallelFragmentRun,
+    )
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -1143,30 +1146,37 @@ def _run_parallel_fragment(
     if ctx is None:  # pragma: no cover - defensive
         return
 
-    context_dg_stack.set(dg_stack_snapshot)
-    ThreadState.update(
-        pre_allocated_container_fragment_id=fragment_id,
-        is_parallel_worker=True,
-        # Workers are a new nesting stack. Clear a flag copied from an
-        # in-flight parent command so it cannot suppress this worker's
-        # top-level commands.
-        command_tracking_deactivated=False,
-        in_listed_command=False,
-    )
-
     coordinator = ctx.parallel_coordinator
     if coordinator is None:  # pragma: no cover - defensive
         return
 
-    try:
-        wrapped_fragment()
-    except RerunException as e:
-        coordinator.request_rerun(e)
-    except StopException:
-        coordinator.request_stop()
-    except FragmentHandledException:
-        # This exception indicates fragment-level handling already occurred.
-        # Intentionally swallow it at the worker boundary.
-        return
-    except Exception:  # pragma: no cover - defensive
-        _LOGGER.exception("Uncaught exception in parallel fragment worker")
+    context_dg_stack.set(dg_stack_snapshot)
+    recording: contextlib.AbstractContextManager[ParallelFragmentRun | None] = (
+        ctx.shared.parallel_fragments.recording_run()
+        if ctx.gather_usage_stats
+        else contextlib.nullcontext()
+    )
+    with recording as fragment_run:
+        ThreadState.update(
+            pre_allocated_container_fragment_id=fragment_id,
+            is_parallel_worker=True,
+            # Workers are a new nesting stack. Clear a flag copied from an
+            # in-flight parent command so it cannot suppress this worker's
+            # top-level commands.
+            command_tracking_deactivated=False,
+            in_listed_command=False,
+            # Replaces the run a nested fragment's parent worker was recording.
+            parallel_fragment_run=fragment_run,
+        )
+        try:
+            wrapped_fragment()
+        except RerunException as e:
+            coordinator.request_rerun(e)
+        except StopException:
+            coordinator.request_stop()
+        except FragmentHandledException:
+            # This exception indicates fragment-level handling already occurred.
+            # Intentionally swallow it at the worker boundary.
+            return
+        except Exception:  # pragma: no cover - defensive
+            _LOGGER.exception("Uncaught exception in parallel fragment worker")

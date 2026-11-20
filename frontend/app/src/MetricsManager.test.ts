@@ -429,6 +429,36 @@ describe("metrics helpers", () => {
     expect(atServerStart.serverUptimeSeconds).toBe("0")
   })
 
+  it("buildEventProto forwards parallelFragmentUsage through toJSON - pageProfile", async () => {
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    const withUsage = mm
+      .buildEventProto(
+        "pageProfile",
+        decodedPageProfile({
+          parallelFragmentUsage: {
+            runs: [{ startTime: 10, execTime: 900, cacheComputeTime: 600 }],
+            runCount: 1,
+            cacheUsage: { cacheData: { calls: 1, misses: 1 } },
+            waitTime: 700,
+          },
+        })
+      )
+      .toJSON()
+    const withoutUsage = mm
+      .buildEventProto("pageProfile", decodedPageProfile({ execTime: 5 }))
+      .toJSON()
+
+    expect(withUsage.parallelFragmentUsage).toStrictEqual({
+      runs: [{ startTime: "10", execTime: "900", cacheComputeTime: "600" }],
+      runCount: "1",
+      cacheUsage: { cacheData: { calls: "1", misses: "1" } },
+      waitTime: "700",
+    })
+    expect(withoutUsage).not.toHaveProperty("parallelFragmentUsage")
+  })
+
   it("buildEventProto populates expected fields - menuClick", async () => {
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })

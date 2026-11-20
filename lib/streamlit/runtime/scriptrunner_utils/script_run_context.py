@@ -54,6 +54,9 @@ if TYPE_CHECKING:
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.scriptrunner_utils.parallel_fragment_stats import (
+        ParallelFragmentRun,
+    )
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -171,6 +174,9 @@ class FragmentThreadState:
     # threads, so their cached calls during the computation aren't recorded on
     # top of the outer call's compute time.
     cache_compute: CacheComputeScope | None = None
+    # The parallel fragment run this worker is recording, if usage stats are
+    # on. Its listed commands' times go to the run as well as to commands.
+    parallel_fragment_run: ParallelFragmentRun | None = None
 
     @property
     def in_cache_compute(self) -> bool:
@@ -205,6 +211,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     in_listed_command: bool
     in_skeleton_slot: bool
     cache_compute: CacheComputeScope | None
+    parallel_fragment_run: ParallelFragmentRun | None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(

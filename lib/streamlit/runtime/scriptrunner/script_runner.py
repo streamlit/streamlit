@@ -947,7 +947,14 @@ class ScriptRunner:
                                 _mpa_v1(self._main_script_path)
                             else:
                                 exec(code, module.__dict__)  # noqa: S102
-                            coordinator.join()
+                            join_start = timer()
+                            try:
+                                coordinator.join()
+                            finally:
+                                if ctx.gather_usage_stats:
+                                    ctx.shared.parallel_fragments.add_wait_time(
+                                        timer() - join_start
+                                    )
                         except BaseException:
                             # Always drain so in-flight worker fragments
                             # don't outlive the script run, regardless of
@@ -998,6 +1005,7 @@ class ScriptRunner:
                                 else None
                             ),
                             server_uptime_seconds=server_uptime_seconds,
+                            run_start=start_time,
                         )
                     )
                 except Exception as ex:
