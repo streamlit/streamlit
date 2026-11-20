@@ -18,7 +18,7 @@ import { memo, type ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
-import { translateGapWidth } from "~lib/components/core/Block/styled-components"
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { convertRemToEm } from "~lib/components/shared/StreamlitMarkdown/styled-components"

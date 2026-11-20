@@ -1599,7 +1599,7 @@ class Divider(Markdown):
         self.type = "divider"
 
     @property
-    def gap(self) -> str | int | None:
+    def gap(self) -> GapValue:
         """The ``gap`` argument passed to ``st.divider`` (``"medium"`` when omitted)."""
         return _public_gap_value(self.proto.gap_config)
 
@@ -3922,11 +3922,11 @@ _GAP_SIZE_TO_PUBLIC: Final[dict[int, str | None]] = {
     GapSize.XXLARGE: "xxlarge",
 }
 
-GridGapValue: TypeAlias = str | int | None
+GapValue: TypeAlias = str | int | None
 GridSizeValue: TypeAlias = int | float | str
 
 
-def _public_gap_value(gap_config: Any) -> GridGapValue:
+def _public_gap_value(gap_config: Any) -> GapValue:
     """Rebuild a public ``gap`` argument from a ``GapConfig``."""
     spec = gap_config.WhichOneof("gap_spec")
     if spec == "pixel_gap":
@@ -3977,7 +3977,7 @@ class Grid(Block):
     border: bool
     row_height: int | str
     min_column_width: int | str
-    gap: GridGapValue | tuple[GridGapValue, GridGapValue]
+    gap: GapValue | tuple[GapValue, GapValue]
     vertical_alignment: str
     dense: bool
     width: GridSizeValue

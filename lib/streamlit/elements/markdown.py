@@ -549,10 +549,8 @@ class MarkdownMixin:
 
             This space is added to the gap of the parent container.
 
-            Named values use the shared layout gap scale and are applied
-            relative to the divider's text size, which follows the
-            ``theme.baseFontSize`` configuration option. Integer values are
-            pixels.
+            The rem unit is relative to the ``theme.baseFontSize``
+            configuration option.
 
         width : "stretch" or int
             The width of the divider element. This can be one of the following:

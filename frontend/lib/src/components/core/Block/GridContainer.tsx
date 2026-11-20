@@ -38,6 +38,7 @@ import {
   FlexContext,
   FlexContextProvider,
 } from "~lib/components/core/Layout/FlexContext"
+import { translateGapWidth } from "~lib/components/core/Layout/gapWidth"
 import { Direction } from "~lib/components/core/Layout/utils"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
@@ -71,7 +72,6 @@ import {
   StyledGridContainerBlock,
   StyledGridContentMeasure,
   StyledGridScrollBody,
-  translateGapWidth,
 } from "./styled-components"
 import {
   assignDividerColor,
