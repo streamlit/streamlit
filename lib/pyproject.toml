@@ -103,7 +103,7 @@ dependencies = [
   # Required for websocket support:
   "websockets>=12.0.0,<18",
   # Required for cookie signing:
-  "itsdangerous>=2.1.2,<3",
+  "itsdangerous>=2.2.0,<3",
   # Don't require watchdog on MacOS, since it'll fail without xcode tools.
   # Without watchdog, we fallback to a polling file watcher to check for app changes.
   "watchdog>=2.1.5,<8; platform_system != 'Darwin'",
