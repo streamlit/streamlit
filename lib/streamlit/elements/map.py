@@ -139,14 +139,16 @@ class MapMixin:
             the datapoints in the chart.
 
             If None, the latitude data will come from any column named 'lat',
-            'latitude', 'LAT', or 'LATITUDE'.
+            'latitude', 'LAT', or 'LATITUDE'. If the data has more than one of
+            these columns, you must set ``latitude``.
 
         longitude : str or None
             The name of the column containing the longitude coordinates of
             the datapoints in the chart.
 
             If None, the longitude data will come from any column named 'lon',
-            'longitude', 'LON', or 'LONGITUDE'.
+            'longitude', 'LON', or 'LONGITUDE'. If the data has more than one
+            of these columns, you must set ``longitude``.
 
         color : str or tuple or None
             The color of the circles representing each datapoint.
@@ -406,14 +408,18 @@ def _get_lat_or_lon_col_name(
 
     else:
         # Try one of the default col_names:
-        candidate_col_name = None
+        candidate_col_names = [c for c in data.columns if c in default_col_names]
 
-        for c in default_col_names:
-            if c in data.columns:
-                candidate_col_name = c
-                break
+        if len(candidate_col_names) > 1:
+            formatted_candidates = ", ".join(map(repr, candidate_col_names))
+            raise StreamlitAPIException(
+                f"Map data contains more than one {human_readable_name} column: "
+                f"{formatted_candidates}. Use the `{human_readable_name}` parameter "
+                "to choose which one to use.",
+                error_id="map-ambiguous-lat-lon-column",
+            )
 
-        if candidate_col_name is None:
+        if not candidate_col_names:
             formatted_allowed_col_name = ", ".join(map(repr, sorted(default_col_names)))
             formmated_col_names = ", ".join(map(repr, list(data.columns)))
 
@@ -422,7 +428,7 @@ def _get_lat_or_lon_col_name(
                 f"{formatted_allowed_col_name}. Existing columns: {formmated_col_names}",
                 error_id="map-missing-lat-lon-column",
             )
-        col_name = candidate_col_name
+        col_name = candidate_col_names[0]
 
     # Check that the column is well-formed.
     # IMPLEMENTATION NOTE: We can't use isnull().values.any() because .values can return

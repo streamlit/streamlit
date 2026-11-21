@@ -396,6 +396,38 @@ class StMapTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException, match=re.escape(exception_message)):
             st.map(df)
 
+    @parameterized.expand(
+        [
+            [
+                {"lat": [1], "latitude": [2], "lon": [3]},
+                "Map data contains more than one latitude column: 'lat', 'latitude'.",
+            ],
+            [
+                {"lat": [1], "LON": [2], "longitude": [3]},
+                "Map data contains more than one longitude column: 'LON', 'longitude'.",
+            ],
+        ]
+    )
+    def test_ambiguous_default_columns(self, data, exception_message):
+        """Test that st.map raises instead of guessing between default column names."""
+        with pytest.raises(StreamlitAPIException, match=re.escape(exception_message)):
+            st.map(pd.DataFrame(data))
+
+    def test_explicit_columns_resolve_ambiguity(self):
+        """Test that explicit latitude/longitude pick among several default names."""
+        df = pd.DataFrame(
+            {
+                "latitude": [34.0522, 37.7749],
+                "longitude": [-118.2437, -122.4194],
+                "lat": [0.0, 0.0],
+                "lon": [0.0, 0.0],
+            }
+        )
+        st.map(df, latitude="latitude", longitude="longitude")
+
+        c = json.loads(self.get_delta_from_queue().new_element.deck_gl_json_chart.json)
+        assert c.get("layers")[0].get("getPosition") == "@@=[longitude, latitude]"
+
     def test_nan_exception(self):
         """Test st.map with NaN in data."""
         df = pd.DataFrame({"lat": [1, 2, np.nan], "lon": [11, 12, 13]})
