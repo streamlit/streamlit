@@ -87,6 +87,58 @@ def test_medium_logo_w_sidebar(
     )
 
 
+def test_pixel_logo_w_sidebar(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    select_subtest(themed_app, "pixel_logo_w_sidebar_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+
+    assert_snapshot(
+        themed_app.get_by_test_id("stSidebarHeader"),
+        name="logo-pixel_w_sidebar_expanded",
+    )
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-pixel_w_sidebar_collapsed",
+    )
+
+
+def test_pixel_logo_icon_size_small_w_sidebar(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+) -> None:
+    select_subtest(themed_app, "pixel_logo_icon_size_small_w_sidebar_subtest")
+
+    expect(themed_app.get_by_test_id("stSidebar")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_be_visible()
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
+    # size=200 is taller than the header row, so the logo is capped to
+    # headerHeight - 2 * spacing.twoXS (52px at the default root font size).
+    expect(themed_app.get_by_test_id("stSidebarLogo")).to_have_css("height", "52px")
+
+    themed_app.get_by_test_id("stSidebar").hover()
+    themed_app.get_by_test_id("stSidebarCollapseButton").locator("button").click()
+    expect(themed_app.get_by_test_id("stHeader")).to_be_visible()
+    expect(themed_app.get_by_test_id("stHeaderLogo")).to_be_visible()
+    assert_snapshot(
+        themed_app.get_by_test_id("stHeader"),
+        name="logo-pixel_icon_small_w_sidebar_collapsed",
+    )
+
+
 def test_large_logo_w_sidebar(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ) -> None:
@@ -129,6 +181,23 @@ def test_logo_w_sidebar_and_nav(
     expect(themed_app.get_by_test_id("stSidebarCollapseButton")).to_be_visible()
 
     assert_snapshot(themed_app.get_by_test_id("stSidebarHeader"), name="logo-navbar")
+
+
+def test_wide_header_logo_stays_within_width_cap(app: Page) -> None:
+    """Wide image with no icon_image is capped in the header next to top nav."""
+    select_subtest(app, "wide_logo_header_no_icon_w_nav_subtest")
+
+    logo = app.get_by_test_id("stHeaderLogo")
+    expect(logo).to_be_visible()
+    expect(app.get_by_test_id("stTopNav")).to_be_visible()
+    expect(app.get_by_test_id("stHeaderLogoContainer")).to_have_css(
+        "max-width", "200px"
+    )
+    expect(logo).to_have_css("object-fit", "contain")
+
+    box = logo.bounding_box()
+    assert box is not None
+    assert box["width"] <= 200
 
 
 def test_material_icon_logo(
